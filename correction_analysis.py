@@ -69,6 +69,14 @@ def js_div(p, q, eps=1e-10):
     return float(0.5 * (p * (p / m).log()).sum() + 0.5 * (q * (q / m).log()).sum())
 
 
+def kl_div(p, q, eps=1e-10):
+    """KL(p || q) — forward KL from true distribution p to proxy q."""
+    p = p.clamp(min=0)
+    q = q.clamp(min=eps)
+    mask = p > 0
+    return float((p[mask] * (p[mask] / q[mask]).log()).sum())
+
+
 def residual_dist(p, q, eps=1e-10):
     """[p - q]_+, normalized. Returns None if zero-mass."""
     r = (p - q).clamp(min=0)
@@ -204,20 +212,51 @@ def analyze_window(
         all_hidden = torch.stack([hs[0, hs_pos, :] for hs in out.hidden_states])  # [n_layers+1, D]
         all_probs  = batch_hidden_to_probs(all_hidden, t_norm, t_head, t_norm_dev)  # [n_layers+1, V]
 
+        # ── Raw distribution metrics: early-exit p_E vs final p_T ──
+        final_top5  = set(p_T.topk(5).indices.tolist())
+        final_top10 = set(p_T.topk(10).indices.tolist())
+
+        # ── Per-layer metrics ──
         jsd_list  = []
+        kl_list   = []
         top1_list = []
         top5_list = []
         top5_recall_list = []
+        # Raw distribution divergence (p_E vs p_T, not residual)
+        raw_jsd_list = []
+        raw_kl_list  = []
+        # Mirror-SD style top-k mass overlap
+        topk_overlap_5_list  = []   # |top5(p_E) ∩ top5(p_T)| / 5
+        topk_overlap_10_list = []   # |top10(p_E) ∩ top10(p_T)| / 10
+        topk_mass_5_list  = []      # Σ p_T(v) for v in top5(p_E)
+        topk_mass_10_list = []      # Σ p_T(v) for v in top10(p_E)
+
         for k in range(all_probs.shape[0]):
             p_E   = all_probs[k]
+
+            # Raw distribution: early-exit vs final
+            raw_jsd_list.append(js_div(p_T, p_E))
+            raw_kl_list.append(kl_div(p_T, p_E))
+
+            # Mirror-SD top-k mass overlap
+            ek_top5  = set(p_E.topk(5).indices.tolist())
+            ek_top10 = set(p_E.topk(10).indices.tolist())
+            topk_overlap_5_list.append(len(ek_top5 & final_top5) / 5)
+            topk_overlap_10_list.append(len(ek_top10 & final_top10) / 10)
+            topk_mass_5_list.append(float(p_T[list(ek_top5)].sum()))
+            topk_mass_10_list.append(float(p_T[list(ek_top10)].sum()))
+
+            # Residual distribution: correction proxy
             r_hat = residual_dist(p_E, p_D)
             if r_hat is None:
                 jsd_list.append(float("nan"))
+                kl_list.append(float("nan"))
                 top1_list.append(False)
                 top5_list.append(False)
                 top5_recall_list.append(0.0)
             else:
                 jsd_list.append(js_div(r_true, r_hat))
+                kl_list.append(kl_div(r_true, r_hat))
                 rhat_top5 = set(r_hat.topk(5).indices.tolist())
                 top1_list.append(r_hat.argmax().item() == true_top1)
                 top5_list.append(true_top1 in rhat_top5)
@@ -226,11 +265,21 @@ def analyze_window(
         results.append({
             "reject_pos":     i,
             "accept_prob":    accept_prob,
+            # Correction (residual) distribution metrics
             "jsd_layers":     jsd_list,
+            "kl_layers":      kl_list,
             "top1_match":     top1_list,
             "top5_cover":     top5_list,
             "top5_recall":    top5_recall_list,
             "draft_baseline": draft_baseline,
+            # Raw distribution metrics (p_E vs p_T)
+            "raw_jsd_layers": raw_jsd_list,
+            "raw_kl_layers":  raw_kl_list,
+            # Mirror-SD top-k overlap
+            "topk_overlap_5":  topk_overlap_5_list,
+            "topk_overlap_10": topk_overlap_10_list,
+            "topk_mass_5":     topk_mass_5_list,
+            "topk_mass_10":    topk_mass_10_list,
         })
         break  # SD stops at first reject
 
@@ -252,9 +301,21 @@ def run(target_path, draft_path, n_samples, output_dir, cache_dir, suffix=""):
         return {
             "jsd_sum":    np.zeros(nl + 1),
             "jsd_cnt":    np.zeros(nl + 1),
+            "kl_sum":     np.zeros(nl + 1),
+            "kl_cnt":     np.zeros(nl + 1),
             "top1_sum":   np.zeros(nl + 1),
             "top5_sum":   np.zeros(nl + 1),
             "top5_recall_sum": np.zeros(nl + 1),
+            # Raw distribution (p_E vs p_T)
+            "raw_jsd_sum": np.zeros(nl + 1),
+            "raw_kl_sum":  np.zeros(nl + 1),
+            "raw_cnt":     np.zeros(nl + 1),
+            # Mirror-SD top-k overlap
+            "topk_overlap_5_sum":  np.zeros(nl + 1),
+            "topk_overlap_10_sum": np.zeros(nl + 1),
+            "topk_mass_5_sum":     np.zeros(nl + 1),
+            "topk_mass_10_sum":    np.zeros(nl + 1),
+            #
             "count":      0,
             "all_accept_count": 0,
             "reject_pos": [],
@@ -316,9 +377,22 @@ def run(target_path, draft_path, n_samples, output_dir, cache_dir, suffix=""):
                     if jv == jv:  # not NaN
                         d["jsd_sum"][k] += jv
                         d["jsd_cnt"][k] += 1
+                    kv = result["kl_layers"][k]
+                    if kv == kv:  # not NaN
+                        d["kl_sum"][k] += kv
+                        d["kl_cnt"][k] += 1
                     d["top1_sum"][k] += float(result["top1_match"][k])
                     d["top5_sum"][k] += float(result["top5_cover"][k])
                     d["top5_recall_sum"][k] += result["top5_recall"][k]
+                    # Raw distribution
+                    d["raw_jsd_sum"][k] += result["raw_jsd_layers"][k]
+                    d["raw_kl_sum"][k]  += result["raw_kl_layers"][k]
+                    d["raw_cnt"][k]     += 1
+                    # Mirror-SD top-k
+                    d["topk_overlap_5_sum"][k]  += result["topk_overlap_5"][k]
+                    d["topk_overlap_10_sum"][k] += result["topk_overlap_10"][k]
+                    d["topk_mass_5_sum"][k]     += result["topk_mass_5"][k]
+                    d["topk_mass_10_sum"][k]    += result["topk_mass_10"][k]
 
     # Finalize averages
     for lbl in CP_LABELS:
@@ -327,9 +401,21 @@ def run(target_path, draft_path, n_samples, output_dir, cache_dir, suffix=""):
         d["jsd_layers"] = np.where(
             d["jsd_cnt"] > 0, d["jsd_sum"] / np.maximum(d["jsd_cnt"], 1), float("nan")
         )
+        d["kl_layers"] = np.where(
+            d["kl_cnt"] > 0, d["kl_sum"] / np.maximum(d["kl_cnt"], 1), float("nan")
+        )
         d["top1_match"]  = d["top1_sum"] / c
         d["top5_cover"]  = d["top5_sum"] / c
         d["top5_recall"] = d["top5_recall_sum"] / c
+        # Raw distribution averages
+        rc = np.maximum(d["raw_cnt"], 1)
+        d["raw_jsd_layers"] = d["raw_jsd_sum"] / rc
+        d["raw_kl_layers"]  = d["raw_kl_sum"] / rc
+        # Mirror-SD top-k averages
+        d["topk_overlap_5"]  = d["topk_overlap_5_sum"] / rc
+        d["topk_overlap_10"] = d["topk_overlap_10_sum"] / rc
+        d["topk_mass_5"]     = d["topk_mass_5_sum"] / rc
+        d["topk_mass_10"]    = d["topk_mass_10_sum"] / rc
         # Draft baseline averages
         d["draft_top1"]  = d["draft_top1_sum"] / c
         d["draft_top5"]  = d["draft_top5_sum"] / c
@@ -348,10 +434,20 @@ def run(target_path, draft_path, n_samples, output_dir, cache_dir, suffix=""):
         "window_size": WINDOW_SIZE,
         "data": {
             lbl: {
+                # Correction (residual) distribution metrics
                 "jsd_layers": acc[lbl]["jsd_layers"].tolist(),
+                "kl_layers":  acc[lbl]["kl_layers"].tolist(),
                 "top1_match": acc[lbl]["top1_match"].tolist(),
                 "top5_cover": acc[lbl]["top5_cover"].tolist(),
                 "top5_recall": acc[lbl]["top5_recall"].tolist(),
+                # Raw distribution (p_E vs p_T) metrics
+                "raw_jsd_layers": acc[lbl]["raw_jsd_layers"].tolist(),
+                "raw_kl_layers":  acc[lbl]["raw_kl_layers"].tolist(),
+                # Mirror-SD top-k overlap
+                "topk_overlap_5":  acc[lbl]["topk_overlap_5"].tolist(),
+                "topk_overlap_10": acc[lbl]["topk_overlap_10"].tolist(),
+                "topk_mass_5":     acc[lbl]["topk_mass_5"].tolist(),
+                "topk_mass_10":    acc[lbl]["topk_mass_10"].tolist(),
                 "count":      acc[lbl]["count"],
                 "all_accept_count": acc[lbl]["all_accept_count"],
                 "mean_first_reject": (
@@ -390,7 +486,8 @@ def run(target_path, draft_path, n_samples, output_dir, cache_dir, suffix=""):
 
 def plot(acc, CP_LABELS, n_layers, target_name, draft_name, output_dir, suffix=""):
     layers = np.arange(n_layers + 1)
-    fig, axes = plt.subplots(4, 4, figsize=(22, 16))
+    n_rows = 9
+    fig, axes = plt.subplots(n_rows, len(CP_LABELS), figsize=(22, n_rows * 4))
     fig.suptitle(
         f"Correction Distribution Feasibility  (window={WINDOW_SIZE}, probabilistic SD)\n"
         f"Target: {target_name}  |  Draft: {draft_name}",
@@ -398,16 +495,25 @@ def plot(acc, CP_LABELS, n_layers, target_name, draft_name, output_dir, suffix="
     )
 
     rows = [
-        ("jsd_layers", "JSD(r_true, r̂_k) ↓", (0.0, 0.75)),
-        ("top1_match", "Top-1 Match Rate ↑",   (-0.05, 1.05)),
-        ("top5_cover", "Top-5 Coverage ↑",      (-0.05, 1.05)),
-        ("top5_recall", "Top-5 Recall ↑",       (-0.05, 1.05)),
+        # Correction (residual) distribution metrics
+        ("jsd_layers",  "JSD(r_true, r̂_k) ↓",    (0.0, 0.75)),
+        ("kl_layers",   "KL(r_true ∥ r̂_k) ↓",    None),
+        ("top1_match",  "Top-1 Match Rate ↑",      (-0.05, 1.05)),
+        ("top5_cover",  "Top-5 Coverage ↑",         (-0.05, 1.05)),
+        ("top5_recall", "Top-5 Recall ↑",           (-0.05, 1.05)),
+        # Raw distribution (p_E vs p_T) metrics
+        ("raw_jsd_layers", "JSD(p_T, p_E) ↓",      (0.0, 0.75)),
+        ("raw_kl_layers",  "KL(p_T ∥ p_E) ↓",      None),
+        # Mirror-SD top-k overlap
+        ("topk_overlap_5",  "Top-5 Overlap ↑",      (-0.05, 1.05)),
+        ("topk_mass_5",     "Top-5 Mass Coverage ↑", (-0.05, 1.05)),
     ]
-    colors = ["#e63946", "#457b9d", "#2a9d8f", "#f4a261"]
+    colors = ["#e63946", "#457b9d", "#2a9d8f", "#f4a261", "#6a4c93", "#1982c4"]
+    n_cp = len(CP_LABELS)
 
     for row, (key, ylabel, ylim) in enumerate(rows):
         for col, lbl in enumerate(CP_LABELS):
-            ax = axes[row][col]
+            ax = axes[row][col] if n_cp > 1 else axes[row]
             d  = acc[lbl]
             if d["count"] == 0:
                 ax.text(0.5, 0.5, "no data\n(skipped)", ha="center", va="center",
@@ -439,8 +545,9 @@ def plot(acc, CP_LABELS, n_layers, target_name, draft_name, output_dir, suffix="
                 ax.set_title(f"{lbl}  (n={d['count']}, rej@{mr:.1f})", fontsize=9)
 
             ax.set_ylabel(ylabel if col == 0 else "", fontsize=8)
-            ax.set_xlabel("Layer" if row == 3 else "", fontsize=8)
-            ax.set_ylim(*ylim)
+            ax.set_xlabel("Layer" if row == len(rows) - 1 else "", fontsize=8)
+            if ylim is not None:
+                ax.set_ylim(*ylim)
             ax.set_xlim(0, n_layers)
             ax.grid(True, alpha=0.3)
             ax.legend(fontsize=7, loc="upper right" if row == 0 else "lower right")
@@ -479,10 +586,11 @@ def main():
     print("\n" + "=" * 100)
     print(f"SUMMARY  (window={WINDOW_SIZE}, probabilistic SD rejection)")
     hdr = (f"{'CP':<8} | {'n':>5} | {'skip':>5} | {'mean_rej':>9} "
-           f"| {'JSD@-2':>8} | {'prx_t1@-2':>10} | {'prx_t5@-2':>10} "
-           f"| {'drf_t1':>7} | {'drf_t5':>7} | {'drf_t10':>7}")
+           f"| {'JSD@-2':>8} | {'KL@-2':>8} | {'prx_t1@-2':>10} | {'prx_t5@-2':>10} "
+           f"| {'drf_t1':>7} | {'drf_t5':>7}"
+           f"| {'rawJSD':>8} | {'rawKL':>8} | {'tk5olap':>8} | {'tk5mass':>8}")
     print(hdr)
-    print("=" * 100)
+    print("=" * 140)
     n_layers = acc[CP_LABELS[0]]["jsd_layers"].shape[0] - 1
     for lbl in CP_LABELS:
         d = acc[lbl]
@@ -490,18 +598,23 @@ def main():
             print(f"{lbl:<8} | {'skip':>5}")
             continue
         mr  = np.mean(d["reject_pos"]) if d["reject_pos"] else float("nan")
-        # Use second-to-last layer (last meaningful early-exit)
         jf  = d["jsd_layers"][-2]
+        kf  = d["kl_layers"][-2]
         t1f = d["top1_match"][-2]
         t5f = d["top5_cover"][-2]
         dt1 = d["draft_top1"]
         dt5 = d["draft_top5"]
-        dt10 = d["draft_top10"]
+        rjf = d["raw_jsd_layers"][-2]
+        rkf = d["raw_kl_layers"][-2]
+        to5 = d["topk_overlap_5"][-2]
+        tm5 = d["topk_mass_5"][-2]
         print(f"{lbl:<8} | {d['count']:>5} | {d['all_accept_count']:>5} "
-              f"| {mr:>9.2f} | {jf:>8.4f} | {t1f:>10.3f} | {t5f:>10.3f} "
-              f"| {dt1:>7.3f} | {dt5:>7.3f} | {dt10:>7.3f}")
-    print("\n  proxy = early-exit residual top-k  |  drf = draft p_D top-k (baseline)")
-    print("  @-2 = second-to-last layer (last meaningful early-exit)")
+              f"| {mr:>9.2f} | {jf:>8.4f} | {kf:>8.4f} | {t1f:>10.3f} | {t5f:>10.3f} "
+              f"| {dt1:>7.3f} | {dt5:>7.3f}"
+              f"| {rjf:>8.4f} | {rkf:>8.4f} | {to5:>8.3f} | {tm5:>8.3f}")
+    print("\n  proxy = early-exit residual top-k  |  drf = draft p_D top-k")
+    print("  rawJSD/rawKL = JSD/KL(p_T, p_E)  |  tk5olap/mass = Mirror-SD top-5 overlap/mass")
+    print("  @-2 = second-to-last layer")
 
 
 if __name__ == "__main__":
