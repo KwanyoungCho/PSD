@@ -7,7 +7,7 @@
 3. **Mid-forward proxy 전송**: target verify의 ~2/3 지점에서 proxy를 draft에 전송.
 4. **TreeLayout 추상화**: MQ_LEN 전역 의존 제거. layout별로 pre-computed 버퍼, CudaGraph, FlashInfer wrapper 관리.
 5. **Budget split**: draft-sourced branches 즉시 decode + proxy-sourced branches 도착 후 decode. KV scratch 재사용 — proxy pass가 draft pass의 KV positions를 덮어써도 안전 (draft 결과는 이미 spec_tokens/logits에 추출, proxy attention mask는 proxy 자신의 데이터만 참조).
-6. **Token dedup**: proxy-first union — proxy-sourced 우선, draft-sourced로 refill, 중복 1회만.
+6. **Token dedup**: proxy-sourced 우선, 부족분은 logits fallback에서 draft/proxy 모두 제외한 토큰으로 refill. Draft tree와 proxy tree 간 중복 branch 없음.
 7. **Llama only**: Qwen3, EAGLE 미지원.
 
 ---
@@ -1083,7 +1083,9 @@ if args.mesa:
 3. TreeLayout: full_layout으로 기존 경로 결과 동일 (backward compat)
 4. TreeLayout: draft_layout + proxy_layout MQ_LEN이 올바르게 합산
 5. Proxy 계산: accept_probs ∈ [0,1], residual top-k에 draft token 미포함
-6. Token dedup: proxy-first union 순서 보존, 교집합 토큰 미소실
+6. Token dedup 기본: proxy-sourced ∩ draft-sourced == ∅ (모든 position)
+7. Token dedup edge case: draft=[A], proxy=[A], proxy_fan_out=2 → proxy row에 A 없이 fallback만
+8. Position K dedup: draft_forked[:, K, :] ∩ proxy_result[:, K, :] == ∅
 7. Budget split: 2-pass decode 결과가 올바르게 합쳐져 cache populate
 8. KV scratch 재사용: 2번째 pass가 1번째 결과를 훼손하지 않음
 9. NCCL pack/unpack round-trip
