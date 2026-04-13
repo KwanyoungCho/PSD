@@ -26,11 +26,11 @@ MESA-SSD는 이 문제를 해결하기 위해:
                      ▼
               Target verification
                      │
-            ┌────────┼────────┐
-            ▼        ▼        ▼
-         Full hit  Partial  Cache miss
-         (cache)    hit     (fallback to
-                  (cache)   standard SD)
+               ┌─────┴─────┐
+               ▼           ▼
+            Full hit    Cache miss
+            (cache)    (fallback to
+                       standard SD)
 ```
 
 ---
@@ -49,22 +49,25 @@ Early-exit proxy를 받기 전에는 target으로부터 어떤 힌트도 없다.
 
 Target이 verification을 시작하면, early-exit layer에서 proxy 정보를 추출하여 draft device로 전송한다.
 
+Target은 verify 요청 시 draft로부터 $p_i^D(\cdot)$를 이미 받은 상태이므로, early-exit layer의 $p_i^E(\cdot)$와 합쳐 **residual proxy까지 직접 계산**할 수 있다.
+
 ### 전송 정보 (2단계)
 
 **1) 모든 position에서 전송하는 cheap scalar**
-- 현재 draft token $y_i$에 대한 proxy score
+- 현재 draft token $y_i$에 대한 accept probability proxy $\hat{\alpha}_i$
 - Entropy 또는 top-1/top-2 margin
-- Disagreement score
 
 → **"어디서 reject가 날 가능성이 큰가"**를 추정하는 데 사용한다.
 
-**2) 위험 position에만 전송하는 top-$k$**
+**2) 위험 position에만 전송하는 residual top-$k$**
 
-위 cheap scalar를 기준으로 reject risk가 큰 position 몇 개를 골라서:
-- Correction candidate top-$k_i$
-- 각 token의 log-prob
+위 cheap scalar를 기준으로 reject risk가 큰 position 몇 개를 골라서, target이 직접 residual proxy를 계산한다:
 
-→ 비싼 정보는 **risky position에만 sparse하게** 전송한다.
+$$\hat{r}_i(v) \propto \left[p_i^E(v) - \beta_i \, p_i^D(v)\right]_+$$
+
+그 결과에서 top-$k_i$ token ID + 확률값을 전송한다.
+
+→ Draft device는 받은 residual 분포를 **그대로 사용**하여 cache token을 sampling하고 budget을 배분한다. 별도의 residual 계산이 필요 없다.
 
 ---
 
@@ -94,12 +97,13 @@ $$\hat{h}_{L+1} = \prod_{j=1}^{L} \hat{\alpha}_j$$
 
 ### Step 3: Correction Token 분포 (Residual Proxy)
 
-각 reject position $i$에서 나올 correction token의 분포를 residual proxy로 추정한다.
+Target이 early-exit 시점에 계산하여 전송한 residual top-$k$를 그대로 사용한다.
 
 $$\hat{r}_i(v) \propto \left[p_i^E(v) - \beta_i \, p_i^D(v)\right]_+$$
 
 - $v = y_i$는 제외 (reject된 토큰은 correction 후보가 될 수 없음)
 - All-accept branch ($i = L+1$)에서는 bonus token이므로 $p_{L+1}^E$를 사용
+- 이 계산은 **target 쪽에서 수행**된다 (target은 $p_i^D$와 $p_i^E$를 모두 보유)
 
 ### Step 4: 최종 Outcome Posterior
 
@@ -143,11 +147,8 @@ $$\text{Score}(i, v, d) = \hat{P}(i, v) \cdot \frac{\Delta T(d)}{\text{Cost}(i, 
 ### Full Hit
 실제 outcome이 $(i^*, v^*)$이고, 해당 branch의 continuation까지 cache에 준비되어 있으면 **즉시 사용**한다.
 
-### Partial Hit
-실제 reject 위치 $i^*$는 cache에 있지만, correction token $v^*$가 다른 경우, 해당 position의 **다른 cache entry를 활용하거나** 그 시점부터 draft를 재시작한다.
-
 ### Cache Miss
-Reject 위치 자체가 cache에 없으면, **standard SD 방식으로 fallback**한다.
+실제 outcome $(i^*, v^*)$가 cache에 없으면 (reject 위치가 없거나, 위치는 맞지만 correction token이 없는 경우 모두 포함), **standard SD 방식으로 fallback**한다.
 
 ---
 
@@ -158,5 +159,5 @@ Reject 위치 자체가 cache에 없으면, **standard SD 방식으로 fallback*
 | **Acceptance 최적화** | Downweight sampling (acceptance 하락 위험) | Standard SD sampling (acceptance 유지) |
 | **Cache 최적화** | 같은 sampling policy로 동시 최적화 | Early-exit proxy로 별도 최적화 |
 | **Outcome 예측** | Fixed geometric prior | Online posterior (context-aware) |
-| **Cache miss 처리** | Binary (hit or miss) | Standard SD fallback |
+| **Cache miss 처리** | Binary (hit or miss) | Full hit 또는 standard SD fallback |
 | **핵심 정보원** | Draft model만 사용 | Draft + target early-exit proxy |
