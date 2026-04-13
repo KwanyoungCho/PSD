@@ -54,10 +54,11 @@ DATASET_DIR = _required_env(
     "SSD_DATASET_DIR",
     "Set it to your processed dataset directory (for example: /path/to/processed_datasets).",
 )
+DATASET_NUM_SAMPLES = int(os.environ.get("SSD_DATASET_NUM_SAMPLES", "10000"))
 DATASET_PATHS = {
-    "humaneval":     f"{DATASET_DIR}/humaneval/humaneval_data_10000.jsonl",
-    "alpaca":        f"{DATASET_DIR}/alpaca/alpaca_data_10000.jsonl",
-    "c4":            f"{DATASET_DIR}/c4/c4_data_10000.jsonl",
-    "gsm":           f"{DATASET_DIR}/gsm8k/gsm8k_data_10000.jsonl",
-    "ultrafeedback": f"{DATASET_DIR}/ultrafeedback/ultrafeedback_data_10000.jsonl",
+    "humaneval":     f"{DATASET_DIR}/humaneval/humaneval_data_{DATASET_NUM_SAMPLES}.jsonl",
+    "alpaca":        f"{DATASET_DIR}/alpaca/alpaca_data_{DATASET_NUM_SAMPLES}.jsonl",
+    "c4":            f"{DATASET_DIR}/c4/c4_data_{DATASET_NUM_SAMPLES}.jsonl",
+    "gsm":           f"{DATASET_DIR}/gsm8k/gsm8k_data_{DATASET_NUM_SAMPLES}.jsonl",
+    "ultrafeedback": f"{DATASET_DIR}/ultrafeedback/ultrafeedback_data_{DATASET_NUM_SAMPLES}.jsonl",
 }

@@ -12,9 +12,6 @@ import os, sys, time, json, signal, argparse, subprocess, multiprocessing as mp
 sys.path.insert(0, os.path.dirname(__file__))
 from bench_paths import HF_CACHE_DIR, resolve_snapshot
 
-TARGET = resolve_snapshot(f"{HF_CACHE_DIR}/models--meta-llama--Llama-3.1-70B-Instruct")
-DRAFT = resolve_snapshot(f"{HF_CACHE_DIR}/models--meta-llama--Llama-3.2-1B-Instruct")
-
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -25,6 +22,11 @@ def parse_args():
     p.add_argument("--temp", type=float, default=0)
     p.add_argument("--output_len", type=int, default=2048)
     p.add_argument("--ar", action="store_true")
+    # Model selection (mirrors bench.py)
+    p.add_argument("--llama", action="store_true", default=True, help="Use Llama model family (default)")
+    p.add_argument("--qwen", action="store_true", help="Use Qwen model family")
+    p.add_argument("--size", type=str, default="70", choices=["1", "3", "8", "70", "0.6", "1.7", "4", "14", "32"], help="Target model size in billions")
+    p.add_argument("--draft", type=str, default="1", help="Draft model size")
     # SSD
     p.add_argument("--gpus", type=int, default=4)
     p.add_argument("--spec", action="store_true")
@@ -60,16 +62,20 @@ def _decode_worker(conn, tokenizer):
 
 
 def ssd_chat(args):
-    import ssd.paths  # noqa
+    from bench_helpers import resolve_model
     from ssd import LLM, SamplingParams
     from transformers import AutoTokenizer
 
+    if args.qwen:
+        args.llama = False
+    _, target, draft = resolve_model(args)
+
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    tokenizer = AutoTokenizer.from_pretrained(TARGET)
-    llm = LLM(TARGET, enforce_eager=args.eager, num_gpus=args.gpus,
+    tokenizer = AutoTokenizer.from_pretrained(target)
+    llm = LLM(target, enforce_eager=args.eager, num_gpus=args.gpus,
               speculate=args.spec, speculate_k=args.k,
               draft_async=args.async_spec, async_fan_out=args.f,
-              draft=DRAFT, kvcache_block_size=256, max_num_seqs=args.b,
+              draft=draft, kvcache_block_size=256, max_num_seqs=args.b,
               max_model_len=8192, sampler_x=args.x,
               jit_speculate=(args.backup == "jit"))
 
@@ -128,8 +134,14 @@ def wait_for_server(port, timeout=900, interval=5):
 
 def server_chat(args):
     import requests
+    from bench_helpers import resolve_model
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(TARGET)
+
+    if args.qwen:
+        args.llama = False
+    _, target, draft = resolve_model(args)
+
+    tokenizer = AutoTokenizer.from_pretrained(target)
 
     backend = "sglang" if args.sglang else "vllm"
     port = args.port or (40010 if args.sglang else 40020)
@@ -140,23 +152,23 @@ def server_chat(args):
     else:
         if args.sglang:
             cmd = [sys.executable, "-m", "sglang.launch_server",
-                   "--model-path", TARGET, "--tp", str(args.tp),
+                   "--model-path", target, "--tp", str(args.tp),
                    "--mem-fraction-static", "0.70", "--max-running-requests", "1",
                    "--disable-radix-cache", "--log-level", "warning",
                    "--port", str(port)]
             if not args.ar:
                 cmd += ["--speculative-algorithm", "STANDALONE",
-                        "--speculative-draft-model-path", DRAFT,
+                        "--speculative-draft-model-path", draft,
                         "--speculative-num-steps", "4",
                         "--speculative-eagle-topk", "1",
                         "--speculative-num-draft-tokens", "5"]
         else:
             cmd = [sys.executable, "-m", "vllm.entrypoints.openai.api_server",
-                   "--model", TARGET, "--tensor-parallel-size", str(args.tp),
+                   "--model", target, "--tensor-parallel-size", str(args.tp),
                    "--gpu-memory-utilization", "0.90", "--max-num-seqs", "1",
                    "--disable-log-requests", "--disable-log-stats", "--port", str(port)]
             if not args.ar:
-                spec = {"model": DRAFT, "num_speculative_tokens": 5, "method": "draft_model"}
+                spec = {"model": draft, "num_speculative_tokens": 5, "method": "draft_model"}
                 cmd += ["--speculative-config", json.dumps(spec)]
 
         subprocess.run(["pkill", "-9", "-f",
@@ -184,7 +196,7 @@ def server_chat(args):
 
             history.append({"role": "user", "content": user_input})
             token_ids = tokenizer.apply_chat_template(history, add_generation_prompt=True, tokenize=True)
-            payload = {"model": TARGET, "prompt": token_ids,
+            payload = {"model": target, "prompt": token_ids,
                        "temperature": args.temp, "max_tokens": args.output_len,
                        "stream": True, "stream_options": {"include_usage": True}}
 
