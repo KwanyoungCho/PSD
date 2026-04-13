@@ -78,25 +78,13 @@ if self.mesa_enabled:
         L = self.hf_config.num_hidden_layers
         self.mesa_exit_layer = (2 * L) // 3  # 기본값: 2/3 지점
     assert 0 < self.mesa_exit_layer < self.hf_config.num_hidden_layers
+    # fan_out보다 proxy_top_k가 크거나 같아야 token 중복 없이 대체 가능
+    if self.fan_out_list is not None:
+        assert self.mesa_proxy_top_k >= max(self.fan_out_list), \
+            "mesa_proxy_top_k must be >= max(fan_out_list) to avoid token duplication"
 ```
 
-### 1.2 Target 측 NCCL 버퍼 사전할당
-
-**파일**: `ssd/engine/speculator_async.py` (SpeculatorAsync.__init__)
-
-기존 `__init__`에서 이미 `_cmd`, `_meta`, `_cache_keys` 등을 사전할당. MESA proxy 전송용 버퍼 추가:
-
-```python
-if config.mesa_enabled:
-    B_max = config.max_num_seqs
-    K = config.speculate_k
-    top_k = config.mesa_proxy_top_k
-    self._mesa_accept_probs = torch.zeros(B_max, K, dtype=torch.float32, device=device)
-    self._mesa_topk_ids = torch.zeros(B_max, K, top_k, dtype=torch.int64, device=device)
-    self._mesa_topk_probs = torch.zeros(B_max, K, top_k, dtype=torch.float32, device=device)
-```
-
-### 1.3 Draft 측 NCCL 버퍼 사전할당
+### 1.2 Draft 측 NCCL 버퍼 사전할당
 
 **파일**: `ssd/engine/draft_runner.py` (`_init_prealloc_buffers()`, 현재 line 112-122)
 
@@ -105,10 +93,13 @@ if self.config.mesa_enabled:
     B_max = self.config.max_num_seqs
     K = self.config.speculate_k
     top_k = self.config.mesa_proxy_top_k
-    self._mesa_accept_probs = torch.zeros(B_max, K, dtype=torch.float32, device=self.device)
-    self._mesa_topk_ids = torch.zeros(B_max, K, top_k, dtype=torch.int64, device=self.device)
-    self._mesa_topk_probs = torch.zeros(B_max, K, top_k, dtype=torch.float32, device=self.device)
+    # proxy 수신용 단일 packed 버퍼 (accept_probs + topk_ids + topk_probs)
+    self._mesa_proxy_buf = torch.zeros(
+        B_max * K + B_max * K * top_k + B_max * K * top_k,
+        dtype=torch.int64, device=self.device)
 ```
+
+> **NOTE**: target 측은 proxy를 계산 즉시 전송하므로 별도 사전할당 불필요. 계산 결과 텐서를 직접 pack하여 전송.
 
 ---
 
@@ -169,16 +160,23 @@ def forward(self, input_ids, positions, mesa_exit_callback=None):
 ```python
 if is_prefill or self.enforce_eager:
     # eager path
+elif is_tree_decode:
+    ...
+elif is_mq_kp1 and hidden_states is not None and "glue_decode" in self.graph_vars:
+    ...
 elif is_mq_kp1:
     return run_verify_cudagraph(...)  # CudaGraph verify
+else:
+    ...
 ```
 
-**변경**: MESA일 때 verify를 eager로 강제 + callback 전달
+**변경**: `elif is_mq_kp1:` 앞에 MESA 분기 삽입
 
 ```python
-    # 기존 eager 분기 다음에 추가:
     elif is_mq_kp1 and self.config.mesa_enabled and self._mesa_exit_callback is not None:
         # MESA verify: CudaGraph 대신 eager 경로 (early-exit hook 필요)
+        # NOTE: _mesa_exit_callback은 Verifier.verify()에서 설정/해제됨.
+        # 현재 단일 스레드 순차 실행이므로 thread-safety 이슈 없음.
         outputs = self.model(input_ids, positions,
                              mesa_exit_callback=self._mesa_exit_callback)
         logits = self.model.compute_logits(outputs, last_only)
@@ -187,11 +185,19 @@ elif is_mq_kp1:
         return run_verify_cudagraph(...)  # 기존 CudaGraph 경로 유지
 ```
 
-`_mesa_exit_callback`은 `Verifier.verify()`에서 verify 호출 직전에 설정, 호출 후 None으로 리셋.
+`ModelRunner.__init__`에 추가:
+```python
+self._mesa_exit_callback = None  # MESA: Verifier가 verify 호출 전후로 설정/해제
+```
 
 ### 2.3 Verifier.verify()에서 proxy 계산 및 NCCL 전송
 
 **파일**: `ssd/engine/verifier.py` (verify, line 54-153)
+
+> **NOTE**: Verifier에는 `self.config`이 없음. `self.target_model_runner.config`로 접근.
+> async_pg도 `self.target_model_runner.async_pg`로 접근 가능 (model_runner.py:259에서 설정됨).
+> draft_runner_rank도 `self.target_model_runner.draft_rank`로 접근 가능.
+> 따라서 **Verifier.__init__ 시그니처 변경 불필요, llm_engine.py 수정 불필요**.
 
 현재 흐름:
 ```
@@ -207,20 +213,24 @@ verify():
 def verify(self, seqs, speculate_result, eagle=False):
     B = len(seqs)
     K = self.lookahead
+    config = self.target_model_runner.config
 
     # MESA: early-exit callback 정의
     mesa_callback = None
-    if self.config.mesa_enabled and self.async_pg is not None:
+    if config.mesa_enabled:
+        async_pg = self.target_model_runner.async_pg
+        draft_rank = self.target_model_runner.draft_rank
         draft_tokens = speculate_result.speculations[:, 1:]  # [B, K]
-        logits_q = speculate_result.logits_q  # [B, K, V]
+        logits_q = speculate_result.logits_q  # [B, K, V] — target device에 이미 존재
 
         def _mesa_proxy_callback(exit_hidden):
             """Target의 early-exit layer에서 호출됨.
             exit_hidden: [B*(K+1), hidden_size]"""
             self._compute_and_send_proxy(
-                exit_hidden, draft_tokens, logits_q, B, K)
+                exit_hidden, draft_tokens, logits_q, B, K,
+                async_pg, draft_rank)
 
-        mesa_callback = (self.config.mesa_exit_layer, _mesa_proxy_callback)
+        mesa_callback = (config.mesa_exit_layer, _mesa_proxy_callback)
         self.target_model_runner._mesa_exit_callback = mesa_callback
 
     # 기존 target forward (MESA일 때 eager 경로로 진입)
@@ -238,19 +248,27 @@ def verify(self, seqs, speculate_result, eagle=False):
 **파일**: `ssd/engine/verifier.py`
 
 ```python
-def _compute_and_send_proxy(self, exit_hidden, draft_tokens, logits_q, B, K):
+def _compute_and_send_proxy(self, exit_hidden, draft_tokens, logits_q, B, K,
+                             async_pg, draft_rank):
     """Early-exit hidden states로부터 proxy를 계산하고 draft에 NCCL 전송.
 
     Args:
         exit_hidden: [B*(K+1), hidden_size] - early-exit layer의 출력
         draft_tokens: [B, K] - draft가 생성한 토큰들
         logits_q: [B, K, V] - draft model logits
+        async_pg: NCCL process group
+        draft_rank: draft GPU rank
     """
+    config = self.target_model_runner.config
     model = self.target_model_runner.model  # LlamaForCausalLM
-    top_k = self.config.mesa_proxy_top_k
+    top_k = config.mesa_proxy_top_k
 
     # 1) Norm + LM head -> early-exit logits
-    normed, _ = model.model.norm(exit_hidden, None)
+    #    RMSDNorm.forward(x, residual=None)은 norm_forward를 호출하여 단일 텐서 반환.
+    #    tuple이 아니므로 unpacking하지 않음.
+    normed = model.model.norm(exit_hidden, None)  # [B*(K+1), hidden]
+    # NOTE: TP > 1일 때 compute_logits 내부 ParallelLMHead에서 all-reduce 1회 추가 발생.
+    # B=1, K=7 기준 ~10-20us 수준이므로 Level 0에서는 허용.
     exit_logits_flat = model.compute_logits(normed, last_only=False)  # [B*(K+1), V]
     exit_logits = exit_logits_flat.view(B, K + 1, -1)  # [B, K+1, V]
 
@@ -274,10 +292,12 @@ def _compute_and_send_proxy(self, exit_hidden, draft_tokens, logits_q, B, K):
     topk_sum = topk_probs.sum(dim=-1, keepdim=True).clamp(min=1e-10)
     topk_probs = topk_probs / topk_sum  # [B, K, top_k]
 
-    # 5) NCCL 전송
-    dist.send(accept_probs.contiguous(), dst=self.draft_runner_rank, group=self.async_pg)
-    dist.send(topk_ids.contiguous(), dst=self.draft_runner_rank, group=self.async_pg)
-    dist.send(topk_probs.contiguous(), dst=self.draft_runner_rank, group=self.async_pg)
+    # 5) NCCL 전송 — 단일 packed 메시지로 전송 (3회 send 대신 1회로 ~5us 절약)
+    from ssd.utils.async_helpers.nccl_pack import send_int64
+    send_int64(async_pg, draft_rank,
+               accept_probs.view(-1).to(torch.float32).view(torch.int32).to(torch.int64),
+               topk_ids.reshape(-1),
+               topk_probs.view(-1).to(torch.float32).view(torch.int32).to(torch.int64))
 ```
 
 **성능 분석 (B=1, K=7, H100)**:
@@ -286,12 +306,13 @@ def _compute_and_send_proxy(self, exit_hidden, draft_tokens, logits_q, B, K):
 |------|------|----------|
 | RMSNorm | [8, 4096] | ~1 us |
 | LM head matmul | [8, 4096] @ [4096, 128256] | ~5 us |
+| TP all-reduce (tp>1) | [8, V/tp] | ~10-20 us |
 | Softmax x2 | [7, 128256] | ~3 us |
 | Residual + top-k | [7, 128256] | ~5 us |
-| NCCL send x3 | ~280 bytes total | ~5 us |
-| **총 오버헤드** | | **~20 us** |
+| NCCL send (packed x1) | ~280 bytes | ~3 us |
+| **총 오버헤드** | | **~20-40 us** |
 
-전체 verify forward pass ~10-50ms 대비 **<0.2%** 오버헤드.
+전체 verify forward pass ~10-50ms 대비 **<0.4%** 오버헤드.
 
 ---
 
@@ -341,16 +362,20 @@ _build_tree_batch():
 
 ```python
 def _recv_mesa_proxy(self, B, K):
-    """Target에서 보낸 MESA proxy를 수신."""
+    """Target에서 보낸 MESA proxy를 수신 (단일 packed 메시지)."""
+    from ssd.utils.async_helpers.nccl_pack import recv_int64
     top_k = self.config.mesa_proxy_top_k
 
-    accept_probs = self._mesa_accept_probs[:B, :K].contiguous()
-    topk_ids = self._mesa_topk_ids[:B, :K, :top_k].contiguous()
-    topk_probs = self._mesa_topk_probs[:B, :K, :top_k].contiguous()
+    # 전체 길이: accept_probs(B*K) + topk_ids(B*K*top_k) + topk_probs(B*K*top_k)
+    total_len = B * K + B * K * top_k + B * K * top_k
+    buf = recv_int64(self.async_pg, src=0, total_length=total_len, device=self.device)
 
-    dist.recv(accept_probs, src=0, group=self.async_pg)
-    dist.recv(topk_ids, src=0, group=self.async_pg)
-    dist.recv(topk_probs, src=0, group=self.async_pg)
+    off = 0
+    accept_probs = buf[off:off + B * K].to(torch.int32).view(torch.float32).view(B, K)
+    off += B * K
+    topk_ids = buf[off:off + B * K * top_k].view(B, K, top_k)
+    off += B * K * top_k
+    topk_probs = buf[off:off + B * K * top_k].to(torch.int32).view(torch.float32).view(B, K, top_k)
 
     return {
         "accept_probs": accept_probs,    # [B, K]
@@ -360,6 +385,7 @@ def _recv_mesa_proxy(self, B, K):
 ```
 
 **타이밍 분석**:
+- NCCL point-to-point은 내부적으로 비동기 (큐에 넣고 반환). 데이터 크기 ~280 bytes로 버퍼 오버플로 위험 없음.
 - 70B target, 1B draft: draft glue decode 빨리 끝남 -> draft가 proxy 대기 (~수 ms blocking). Target이 나머지 1/3 layers 실행하는 동안 draft는 tree decode 진행. 오버랩 충분.
 - 8B target, 1B draft: target이 더 빨라 proxy가 즉시 도착. 오버헤드 거의 없음.
 
@@ -385,7 +411,9 @@ def get_forked_recovery_tokens_from_logits(
     k_max = max(max(config.fan_out_list), max(config.fan_out_list_miss))
     _, topk_idx = torch.topk(logits_clone, k_max, dim=-1)  # [B, K+1, k_max]
 
-    # MESA: risky position에서 residual proxy top-k로 대체
+    # MESA: risky position에서 residual proxy top-k로 전체 대체
+    # config validation에서 mesa_proxy_top_k >= max(fan_out_list)을 보장하므로
+    # proxy가 모든 fan_out 슬롯을 커버. 중복 문제 없음.
     if mesa_proxy is not None:
         accept_probs = mesa_proxy["accept_probs"]      # [B, K]
         proxy_topk_ids = mesa_proxy["topk_ids"]          # [B, K, proxy_top_k]
@@ -394,7 +422,7 @@ def get_forked_recovery_tokens_from_logits(
 
         risky = accept_probs < threshold  # [B, K] bool
 
-        # Position 0..K-1에 대해 proxy token으로 대체
+        # Position 0..K-1: risky이면 proxy token으로 전체 대체
         replace_ids = topk_idx[:, :K, :].clone()  # [B, K, k_max]
         replace_ids[:, :, :proxy_top_k] = torch.where(
             risky.unsqueeze(-1).expand_as(proxy_topk_ids),
@@ -411,41 +439,19 @@ def get_forked_recovery_tokens_from_logits(
 - 기존 tree 구조(fan_out_list, MQ_LEN) 완전히 유지 -> position/slot_map 재계산 불필요
 - risky position만 선택적으로 토큰 교체 -> minimal diff
 - safe position과 all-accept bonus는 기존 draft top-k 그대로
+- `mesa_proxy_top_k >= max(fan_out_list)` config validation으로 중복 문제 방지
 
 ---
 
-## 4단계: Verifier에 async_pg 접근 경로 확보
+## ~~4단계: Verifier에 async_pg 접근 경로 확보~~ (불필요)
 
-- [ ] 완료
-
-### 4.1 Verifier 초기화에 NCCL pg 전달
-
-**파일**: `ssd/engine/llm_engine.py` (Verifier 생성 부분)
-
-```python
-# 기존
-self.verifier = Verifier(self.model_runner, config)
-
-# 변경
-self.verifier = Verifier(
-    self.model_runner, config,
-    async_pg=self.speculator.async_pg if config.mesa_enabled else None,
-    draft_runner_rank=config.num_gpus - 1 if config.mesa_enabled else None
-)
-```
-
-**파일**: `ssd/engine/verifier.py` (Verifier.__init__)
-
-```python
-def __init__(self, target_model_runner, config, async_pg=None, draft_runner_rank=None):
-    # ... 기존 초기화 ...
-    self.async_pg = async_pg
-    self.draft_runner_rank = draft_runner_rank
-```
+> **삭제됨**: Verifier는 `self.target_model_runner.config`, `self.target_model_runner.async_pg`,
+> `self.target_model_runner.draft_rank`로 모든 MESA 관련 정보에 접근 가능.
+> Verifier.__init__ 시그니처 변경 불필요, llm_engine.py 수정 불필요.
 
 ---
 
-## 5단계: 성능 최적화 경로 (3단계)
+## 4단계: 성능 최적화 경로 (3단계)
 
 - [ ] 완료
 
@@ -455,6 +461,7 @@ def __init__(self, target_model_runner, config, async_pg=None, draft_runner_rank
 - `model_runner.py:run_model()`에서 `mesa_enabled and is_mq_kp1`일 때만 eager
 - Draft의 tree decode는 기존 CudaGraph 그대로 유지
 - 예상: target verify ~10-20% 느려지지만 cache hit rate 향상이 상쇄 가능
+- TP > 1일 때 early-exit에서 LM head all-reduce 추가 1회 (~10-20us)
 
 ### Level 1: CUDA stream 오버랩 (중기)
 
@@ -467,7 +474,7 @@ def _mesa_proxy_callback(exit_hidden):
         ...
     # main stream은 바로 다음 layer 진행
 ```
-proxy ~20us가 main forward와 완전히 오버랩 -> 오버헤드 ~0.
+proxy ~20-40us가 main forward와 완전히 오버랩 -> 오버헤드 ~0.
 
 ### Level 2: Split CudaGraph (장기)
 
@@ -488,17 +495,17 @@ Level 0에서 효과 검증 후 진행.
 
 ---
 
-## 6단계: 테스트 및 벤치마크
+## 5단계: 테스트 및 벤치마크
 
 - [ ] 완료
 
-### 6.1 단위 테스트
+### 5.1 단위 테스트
 
 1. Proxy 계산 정확성: accept_probs 범위 [0,1], residual top-k에 draft token 미포함
 2. Fan-out 토큰 교체: risky position의 topk_idx가 proxy로 교체되는지
-3. NCCL round-trip: 2-GPU에서 proxy send/recv 정합성
+3. NCCL round-trip: 2-GPU에서 proxy send/recv packed 정합성
 
-### 6.2 End-to-end 통합 테스트
+### 5.2 End-to-end 통합 테스트
 
 ```bash
 cd bench
@@ -508,7 +515,7 @@ python -O chat.py --ssd --spec --async --k 7 --f 3 --gpus 5 \
 
 확인: 생성 correctness, cache_hits 향상, accepted_suffix_lens 변화
 
-### 6.3 벤치마크
+### 5.3 벤치마크
 
 ```bash
 cd bench
@@ -533,16 +540,16 @@ python -O bench.py --llama --size 70 --async --spec --k 7 --f 3 \
 
 | 파일 | 변경 내용 | 규모 |
 |------|----------|------|
-| `ssd/config.py` | mesa 파라미터 4개 추가 + validation | ~15줄 |
+| `ssd/config.py` | mesa 파라미터 4개 추가 + validation | ~20줄 |
 | `ssd/models/llama3.py` | forward()에 mesa_exit_callback 추가 | ~5줄 |
 | `ssd/models/qwen3.py` | 동일 패턴 적용 | ~5줄 |
-| `ssd/engine/model_runner.py` | run_model()에 mesa eager verify 분기 | ~10줄 |
-| `ssd/engine/verifier.py` | callback 설정 + _compute_and_send_proxy() | ~60줄 |
-| `ssd/engine/llm_engine.py` | Verifier에 async_pg 전달 | ~3줄 |
-| `ssd/engine/speculator_async.py` | NCCL 버퍼 사전할당 | ~8줄 |
-| `ssd/engine/draft_runner.py` | _recv_mesa_proxy() + build_tree 수정 | ~25줄 |
+| `ssd/engine/model_runner.py` | run_model()에 mesa eager verify 분기 + _mesa_exit_callback 초기화 | ~12줄 |
+| `ssd/engine/verifier.py` | callback 설정 + _compute_and_send_proxy() | ~55줄 |
+| `ssd/engine/draft_runner.py` | _recv_mesa_proxy() + build_tree 수정 + 버퍼 사전할당 | ~30줄 |
 | `ssd/utils/async_helpers/async_spec_helpers.py` | mesa_proxy 기반 topk 교체 | ~15줄 |
-| **총** | | **~150줄** |
+| **총** | | **~142줄** |
+
+> ~~`ssd/engine/llm_engine.py`~~, ~~`ssd/engine/speculator_async.py`~~ 수정 불필요.
 
 ---
 
@@ -551,15 +558,13 @@ python -O bench.py --llama --size 70 --async --spec --k 7 --f 3 \
 ```
 1단계: Config (config.py)
     |
-2단계: Target forward hook (llama3.py, qwen3.py, model_runner.py)
+2단계: Target forward hook + eager verify + proxy 계산/전송
+       (llama3.py, qwen3.py, model_runner.py, verifier.py)
     |
-3단계: Proxy 계산 + 전송 (verifier.py, llm_engine.py, speculator_async.py)
+3단계: Proxy 수신 + tree token 교체
+       (draft_runner.py, async_spec_helpers.py)
     |
-4단계: Proxy 수신 + tree token 교체 (draft_runner.py, async_spec_helpers.py)
+4단계: 성능 최적화 (Level 0 → Level 1 → Level 2)
     |
-5단계: 통합 테스트 (enforce_eager 모드)
-    |
-6단계: 벤치마크 + exit layer sweep
-    |
-7단계: 성능 최적화 (Level 1 -> Level 2)
+5단계: 통합 테스트 + 벤치마크 + exit layer sweep
 ```
