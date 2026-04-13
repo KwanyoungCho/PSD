@@ -150,9 +150,7 @@ def forward(
     return out
 ```
 
-### 2.3 Qwen3Model, Qwen3ForCausalLM에도 동일 적용
-
-**파일**: `ssd/models/qwen3.py` — 동일 패턴.
+> **NOTE**: Qwen3 미지원. Llama 계열만 구현.
 
 ---
 
@@ -193,8 +191,8 @@ def capture_mesa_verify_cudagraph(model_runner):
     exit_hidden = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
     exit_residual = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
 
-    # graph_post 출력
-    outputs = torch.zeros(max_bs * k_plus_1, H)
+    # graph_post 출력 (dtype 명시)
+    outputs = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
 
     # batch size 버킷 (기존과 동일 패턴)
     base = [1, 2, 4, 8]
@@ -336,21 +334,29 @@ def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
 
 #### setup_and_warmup_model_and_cudagraphs() (line 278-300)
 
-MESA verify CudaGraph 캡처 추가:
+기존 verify CudaGraph 캡처를 MESA일 때 skip하고, MESA split graph를 캡처:
 
 ```python
 if not self.enforce_eager:
-    # 기존 decode, verify, fi_tree_decode, glue_decode 캡처...
+    # 기존 decode 캡처 (항상)...
 
-    # MESA: split verify CudaGraph
-    if self.config.mesa_enabled and self.config.speculate and not self.is_draft:
-        mesa_gv, mesa_pool, mesa_pre, mesa_post, mesa_bs = \
-            capture_mesa_verify_cudagraph(self)
-        self.graph_vars["mesa_verify"] = mesa_gv
-        self.graph_pools["mesa_verify"] = mesa_pool
-        self.graphs["mesa_verify_pre"] = mesa_pre
-        self.graphs["mesa_verify_post"] = mesa_post
-        self.graph_bs_list["mesa_verify"] = mesa_bs
+    # verify CG: MESA이면 split graph, 아니면 기존 단일 graph
+    if self.config.speculate and not (self.is_draft and self.config.use_eagle):
+        if self.config.mesa_enabled:
+            # MESA: split verify CudaGraph (기존 verify graph 캡처 skip → VRAM 절약)
+            mesa_gv, mesa_pool, mesa_pre, mesa_post, mesa_bs = \
+                capture_mesa_verify_cudagraph(self)
+            self.graph_vars["mesa_verify"] = mesa_gv
+            self.graph_pools["mesa_verify"] = mesa_pool
+            self.graphs["mesa_verify_pre"] = mesa_pre
+            self.graphs["mesa_verify_post"] = mesa_post
+            self.graph_bs_list["mesa_verify"] = mesa_bs
+        else:
+            # 기존 단일 verify CudaGraph
+            verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = \
+                capture_verify_cudagraph(self)
+            self.graph_vars["verify"] = verify_graph_vars
+            # ...
 ```
 
 #### run_model() (line 595-630)
@@ -516,25 +522,37 @@ def _recv_mesa_proxy(self, B, K):
 ```python
 def get_forked_recovery_tokens_from_logits(
     config, logits, cache_hits, returned_tokens, tokenizer,
-    mesa_proxy=None
+    mesa_proxy=None  # NEW
 ):
-    # ... 기존 로직 (마스킹 + top-k) ...
+    B, _, V_actual = logits.shape
+    K = config.speculate_k
+    fan_out_list = config.fan_out_list
+    fan_out_list_miss = config.fan_out_list_miss
+
+    # 기존 로직: clone + returned tokens 마스킹
+    logits = logits.clone()
+    logits[:, :-1, :] = logits[:, :-1, :].scatter(
+        dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
+
+    k_max = max(max(fan_out_list), max(fan_out_list_miss))
+    _, topk_idx = torch.topk(logits, k_max, dim=-1)  # [B, K+1, k_max]
 
     # MESA: risky position에서 proxy token으로 대체
     if mesa_proxy is not None:
-        accept_probs = mesa_proxy["accept_probs"]
-        proxy_topk_ids = mesa_proxy["topk_ids"]
+        accept_probs = mesa_proxy["accept_probs"]      # [B, K]
+        proxy_topk_ids = mesa_proxy["topk_ids"]          # [B, K, proxy_top_k]
         proxy_top_k = proxy_topk_ids.shape[-1]
-        risky = accept_probs < config.mesa_risk_threshold
+        risky = accept_probs < config.mesa_risk_threshold  # [B, K]
 
-        replace_ids = topk_idx[:, :K, :].clone()
+        replace_ids = topk_idx[:, :K, :].clone()  # [B, K, k_max]
         replace_ids[:, :, :proxy_top_k] = torch.where(
             risky.unsqueeze(-1).expand_as(proxy_topk_ids),
             proxy_topk_ids,
             replace_ids[:, :, :proxy_top_k])
         topk_idx[:, :K, :] = replace_ids
+        # Position K (all-accept bonus)는 변경 없이 draft top-k 유지
 
-    # 이하 기존 fan_out 마스킹 동일...
+    # 이하 기존 fan_out 마스킹 로직 (hit_counts, miss_counts, mask, masked_select)...
 ```
 
 ---
@@ -569,13 +587,12 @@ python -O bench.py --llama --size 8 --async --spec --k 4 --f 2 \
 |------|----------|------|
 | `ssd/config.py` | mesa 파라미터 4개 + validation | ~20줄 |
 | `ssd/models/llama3.py` | LlamaModel.forward() split 지원 + LlamaForCausalLM.forward() 파라미터 전달 | ~25줄 |
-| `ssd/models/qwen3.py` | 동일 패턴 | ~25줄 |
 | `ssd/engine/helpers/cudagraph_helpers.py` | capture_mesa_verify + run_mesa_verify | ~120줄 |
 | `ssd/engine/model_runner.py` | mesa verify CudaGraph 캡처 + run_model 분기 + _mesa_proxy_fn | ~20줄 |
 | `ssd/engine/verifier.py` | proxy_fn 설정 + _compute_and_send_proxy() | ~50줄 |
 | `ssd/engine/draft_runner.py` | _recv_mesa_proxy() + _build_tree_batch 수정 | ~25줄 |
 | `ssd/utils/async_helpers/async_spec_helpers.py` | mesa_proxy 기반 topk 교체 | ~15줄 |
-| **총** | | **~300줄** |
+| **총** | | **~275줄** |
 
 ---
 
@@ -584,7 +601,7 @@ python -O bench.py --llama --size 8 --async --spec --k 4 --f 2 \
 ```
 1단계: Config (config.py)
     |
-2단계: Split forward 지원 (llama3.py, qwen3.py)
+2단계: Split forward 지원 (llama3.py)
     |
 3단계: Split CudaGraph capture + replay (cudagraph_helpers.py, model_runner.py)
     |
