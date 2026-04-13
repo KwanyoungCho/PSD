@@ -6,7 +6,7 @@
 2. **TP > 1 호환**: 모든 TP rank가 동일한 NCCL collective 패턴 실행.
 3. **Mid-forward proxy 전송**: target verify의 ~2/3 지점에서 proxy를 draft에 전송.
 4. **TreeLayout 추상화**: MQ_LEN 전역 의존 제거. layout별로 pre-computed 버퍼, CudaGraph, FlashInfer wrapper 관리.
-5. **Budget split**: draft-sourced branches 즉시 decode + proxy-sourced branches 도착 후 decode. KV scratch 재사용.
+5. **Budget split**: draft-sourced branches 즉시 decode + proxy-sourced branches 도착 후 decode. KV scratch 재사용 — proxy pass가 draft pass의 KV positions를 덮어써도 안전 (draft 결과는 이미 spec_tokens/logits에 추출, proxy attention mask는 proxy 자신의 데이터만 참조).
 6. **Token dedup**: proxy-first union — proxy-sourced 우선, draft-sourced로 refill, 중복 1회만.
 7. **Llama only**: Qwen3, EAGLE 미지원.
 
@@ -27,16 +27,16 @@ TARGET (rank 0, all TP ranks)            DRAFT (rank N)
    ┌ graph_pre.replay()                   4. _build_tree_batch_mesa()
    │  layers [0 .. exit_layer]               - glue decode → draft logits
    └ → exit_buffer                           - draft-sourced fork tokens 선택
-                                             - _decode_tree(draft_layout) ← 즉시!
-   [CudaGraph 밖, ALL TP ranks]:                    ↕ (병렬)
-   norm(exit_buffer) → lm_head           ┌── proxy 도착 (draft decode 도중)
-   → exit_logits (TP gather)             │
-   rank 0: proxy 계산 + NCCL SEND ─────→ │   draft decode 완료 후:
-                                         │   proxy-sourced fork tokens (dedup)
-   ┌ graph_post.replay()                 │   _decode_tree(proxy_layout) ← KV scratch 재사용
-   │  layers [exit_layer+1 .. L-1]       └──
-   │  + final norm                        5. _populate_tree_cache(draft + proxy 합침)
-   └ → outputs
+                                             - irecv() 걸어둠 (non-blocking)
+   [CudaGraph 밖, ALL TP ranks]:             - _decode_tree(draft_layout) ← 즉시!
+   norm(exit_buffer) → lm_head                      ↕ (target send + draft decode 병렬)
+   → exit_logits (TP gather)             ┌── send() 즉시 완료 (irecv 걸려있으므로)
+   rank 0: proxy SEND ─────────────────→ │
+                                         │   draft decode 완료 → irecv.wait()
+   ┌ graph_post.replay() ← 즉시 시작!    │   proxy-sourced fork tokens (dedup)
+   │  layers [exit_layer+1 .. L-1]       │   _decode_tree(proxy_layout) ← KV scratch 재사용
+   │  + final norm                       └──
+   └ → outputs                           5. _populate_tree_cache(draft + proxy 합침)
    lm_head(outputs) → final_logits
    verify 알고리즘 [기존과 동일]
 4. postprocess
@@ -285,58 +285,141 @@ def _build_tree_decode_args(self, partial_tree_decode_args, forked_rec_tokens,
 
 **파일**: `ssd/engine/model_runner.py`, `ssd/engine/helpers/cudagraph_helpers.py`
 
-`capture_fi_tree_decode_cudagraph`를 layout을 받도록 일반화:
+#### FlashInfer Wrapper — layout별 생성
+
+현재 attention.py의 tree decode 경로:
+```python
+# attention.py:117-124 (현재 코드)
+mq_len = self.F * (self.K+1)  # ← 전역 fan_out 고정!
+bs = q.shape[0] // mq_len
+prefill_wrapper = self.prefill_wrappers[wrapper_bs]
+```
+
+**문제**: `self.F`(=async_fan_out)로 mq_len을 계산하므로, draft_layout(MQ_LEN=5)이나 proxy_layout(MQ_LEN=10)으로 tree decode 시 shape mismatch 발생.
+
+**해결**: layout별 wrapper dict를 생성하고, tree decode 시 active layout에 맞는 wrapper를 사용.
+
+```python
+# model_runner.py _init_flashinfer_wrappers 내부:
+
+# 기존 full wrapper (self.prefill_wrappers)
+MQ_LEN = self.config.async_fan_out * (self.config.speculate_k + 1)
+# ... 기존 wrapper 생성 로직 ...
+self.prefill_wrappers_by_layout = {"full": self.prefill_wrappers}
+
+if self.config.mesa_enabled:
+    for layout_name, layout_mq_len in [
+        ("draft", self.config.mesa_draft_fan_out * (self.config.speculate_k + 1)),
+        ("proxy", self.config.mesa_proxy_fan_out * (self.config.speculate_k + 1)),
+    ]:
+        layout_cu_seqlens_q = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+        layout_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+        layout_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
+        layout_kv_last_page_len = torch.empty(max_bs, dtype=torch.int32, device=self.device)
+        layout_mask_buf = torch.empty(max_bs * layout_mq_len * self.config.max_model_len,
+                                       dtype=torch.uint8, device=self.device)
+        layout_mask_indptr_buf = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+
+        layout_wrappers = {}
+        for bs in graph_bs_list:
+            layout_wrappers[bs] = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                self.workspace_buffer, "NHD",
+                use_cuda_graph=True,
+                qo_indptr_buf=layout_cu_seqlens_q[:bs + 1],
+                paged_kv_indptr_buf=layout_kv_indptr[:bs + 1],
+                paged_kv_indices_buf=layout_kv_indices[:bs * max_num_blocks],
+                paged_kv_last_page_len_buf=layout_kv_last_page_len[:bs],
+                custom_mask_buf=layout_mask_buf[:bs * layout_mq_len * self.config.max_model_len],
+                mask_indptr_buf=layout_mask_indptr_buf[:bs + 1],
+            )
+        self.prefill_wrappers_by_layout[layout_name] = layout_wrappers
+```
+
+#### Attention layer — layout-aware wrapper selection
+
+**파일**: `ssd/layers/attention.py` (line 113-124)
+
+현재 attention은 `self.F * (self.K+1)`로 mq_len을 계산. 이를 context에서 읽도록 변경:
+
+```python
+elif tree_decode:
+    if self.only_prefill_wrapper is not None:
+        prefill_wrapper = self.only_prefill_wrapper
+    else:
+        # layout-aware: context에 active_mq_len이 있으면 사용
+        context = get_context()
+        mq_len = getattr(context, 'active_mq_len', self.F * (self.K + 1))
+        bs = q.shape[0] // mq_len
+        # layout-aware: context에 active_wrappers가 있으면 사용
+        wrappers = getattr(context, 'active_wrappers', self.prefill_wrappers)
+        wrapper_bs = next(b for b in sorted(wrappers.keys()) if b >= bs)
+        prefill_wrapper = wrappers[wrapper_bs]
+    o = prefill_wrapper.run(q, (self.k_cache, self.v_cache))
+```
+
+#### Context에 active layout 정보 세팅
+
+**파일**: `ssd/utils/context.py`
+
+`set_context`에 optional 필드 추가:
+```python
+def set_context(..., active_mq_len=None, active_wrappers=None):
+    ctx = ...
+    ctx.active_mq_len = active_mq_len
+    ctx.active_wrappers = active_wrappers
+    ...
+```
+
+#### _decode_tree_step에서 layout 기반 context 설정
+
+**파일**: `ssd/engine/draft_runner.py` (`_decode_tree_step`)
+
+```python
+def _decode_tree_step(self, depth, current_input_ids, ..., layout):
+    set_context(
+        is_prefill=False,
+        slot_mapping=step_slot_maps[depth],
+        context_lens=step_context_lens[depth].to(torch.int32),
+        block_tables=dbt,
+        # layout-aware wrapper selection
+        active_mq_len=layout.MQ_LEN,
+        active_wrappers=self.prefill_wrappers_by_layout.get(layout.name, self.prefill_wrappers),
+    )
+    ...
+```
+
+#### CudaGraph 캡처 — layout별
+
+`capture_fi_tree_decode_cudagraph`를 layout 파라미터로 일반화:
 
 ```python
 def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
     """layout 기반 FI tree decode CudaGraph 캡처."""
     if layout is None:
-        MQ_LEN = model_runner.config.MQ_LEN  # backward compat
+        MQ_LEN = model_runner.config.MQ_LEN
+        graph_key = "fi_tree_decode"
     else:
         MQ_LEN = layout.MQ_LEN
-    # 나머지: N = max_bs * MQ_LEN으로 버퍼/그래프 캡처
+        graph_key = layout.graph_key
+    # N = max_bs * MQ_LEN으로 버퍼/그래프 캡처
+    # context에 active_mq_len=MQ_LEN, active_wrappers=해당 layout wrappers 세팅
     ...
 ```
 
 DraftRunner 초기화에서 layout별 캡처:
 
 ```python
-# model_runner.py setup_and_warmup_model_and_cudagraphs 내부:
+# model_runner.py setup_and_warmup_model_and_cudagraphs:
 if self.config.speculate and self.is_draft and self.config.draft_async:
-    # 기존: full layout CudaGraph
-    fi_tree_decode_... = capture_fi_tree_decode_cudagraph(self)  # full_layout
+    fi_... = capture_fi_tree_decode_cudagraph(self)  # full_layout
     self.graph_vars["fi_tree_decode"] = ...
-    self.graph_bs_list["fi_tree_decode"] = ...
 
-    # MESA: draft_layout + proxy_layout CudaGraph 추가 캡처
     if self.config.mesa_enabled:
         draft_fi_... = capture_fi_tree_decode_cudagraph(self, layout=self.draft_layout)
-        self.graph_vars["fi_tree_decode_draft"] = ...
-        self.graph_bs_list["fi_tree_decode_draft"] = ...
+        self.graph_vars[self.draft_layout.graph_key] = ...
 
         proxy_fi_... = capture_fi_tree_decode_cudagraph(self, layout=self.proxy_layout)
-        self.graph_vars["fi_tree_decode_proxy"] = ...
-        self.graph_bs_list["fi_tree_decode_proxy"] = ...
-```
-
-FlashInfer wrapper도 layout별로:
-
-```python
-# model_runner.py _init_flashinfer_wrappers 내부:
-MQ_LEN = self.config.async_fan_out * (self.config.speculate_k + 1)
-custom_mask_buf = torch.empty(max_bs * MQ_LEN * self.config.max_model_len, ...)
-# ... wrapper 생성 ...
-
-if self.config.mesa_enabled:
-    # draft wrapper
-    draft_MQ_LEN = self.config.mesa_draft_fan_out * (self.config.speculate_k + 1)
-    draft_mask_buf = torch.empty(max_bs * draft_MQ_LEN * self.config.max_model_len, ...)
-    # ... draft wrapper 생성 ...
-
-    # proxy wrapper
-    proxy_MQ_LEN = self.config.mesa_proxy_fan_out * (self.config.speculate_k + 1)
-    proxy_mask_buf = torch.empty(max_bs * proxy_MQ_LEN * self.config.max_model_len, ...)
-    # ... proxy wrapper 생성 ...
+        self.graph_vars[self.proxy_layout.graph_key] = ...
 ```
 
 ### 2.7 run_fi_tree_decode_cudagraph() 일반화
@@ -347,14 +430,14 @@ if self.config.mesa_enabled:
 def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only,
                                   graph_vars, tree_decode_step, cache_hits,
                                   hidden_states=None, layout=None):
-    """layout이 None이면 기존 전역 변수 사용 (backward compat)."""
+    """layout 기반 tree decode CudaGraph 실행."""
     if layout is not None:
         graph_key = layout.graph_key
-        # layout별 graph/wrapper 사용
     else:
         graph_key = "fi_tree_decode"
-    # 나머지 로직 동일
-    ...
+
+    graph = model_runner.graphs[graph_key][wrapper_bs]
+    # ... 기존 로직 (input 복사, graph.replay, output 추출) ...
 ```
 
 ---
@@ -588,13 +671,19 @@ def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
     # graph_pre
     graph_pre.replay()
 
-    # Mid-forward: proxy (CudaGraph 밖, ALL TP ranks)
+    # Mid-forward: proxy (CudaGraph 밖, ALL TP ranks가 compute_logits 실행)
     flat = orig_bs * k_plus_1
     exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
     normed = model_runner.model.model.norm(exit_h, None)
+    # ALL TP ranks가 compute_logits를 호출하여 gather에 참여.
+    # rank 0: exit_logits = [B*(K+1), V] (full vocab logits)
+    # rank 1+: exit_logits = None (ParallelLMHead.forward가 gather 후 rank 0에만 반환)
     exit_logits = model_runner.model.compute_logits(normed, last_only=False)
 
-    if mesa_proxy_fn is not None:
+    # mesa_proxy_fn은 Verifier가 rank 0의 ModelRunner에만 설정.
+    # rank 1+는 _mesa_proxy_fn = None이므로 이 블록을 skip.
+    # → rank 1+에서 exit_logits=None이 callback에 전달되는 일 없음.
+    if mesa_proxy_fn is not None:  # rank 0 only
         mesa_proxy_fn(exit_logits, orig_bs)
 
     # graph_post
@@ -778,14 +867,18 @@ def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
             glue_decode_logits, cache_hits, gd_for_fork,
             self.config.mesa_draft_fan_out)  # [B, K+1, draft_fan_out]
 
+        # irecv를 decode 시작 전에 걸어둠 → target send가 block되지 않음
+        proxy_recv_work, proxy_buf = self._irecv_mesa_proxy(B, K)
+
         draft_tree_args = self._build_tree_decode_args(
             partial_tree_decode_args, draft_forked.view(-1),
             self.draft_layout, cache_hits, ...)
         draft_tokens, draft_logits, draft_acts = self._decode_tree(
             draft_tree_args, layout=self.draft_layout)
 
-        # Pass 중간: proxy 수신
-        mesa_proxy = self._recv_mesa_proxy(B, K)
+        # Pass 중간: irecv 완료 대기 + unpack
+        proxy_recv_work.wait()
+        mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
 
         # Pass 2: proxy-sourced (dedup with draft-sourced)
         proxy_forked = self._select_proxy_sourced_tokens(
@@ -799,10 +892,12 @@ def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
             proxy_tree_args, layout=self.proxy_layout)
 
-        # 결과 합침 → _populate_tree_cache로 전달
-        return self._merge_tree_results(
+        # 결과 합침: layout별 cache key 생성 + 단일 cache populate
+        self._merge_and_populate_cache(
             draft_tree_args, draft_tokens, draft_logits,
-            proxy_tree_args, proxy_tokens, proxy_logits, ...)
+            proxy_tree_args, proxy_tokens, proxy_logits,
+            self.draft_layout, self.proxy_layout,
+            draft_acts, proxy_acts)
 ```
 
 ### 6.2 _select_draft_sourced_tokens()
@@ -822,76 +917,133 @@ def _select_draft_sourced_tokens(self, logits, cache_hits, returned_tokens, draf
 ```python
 def _select_proxy_sourced_tokens(self, logits, cache_hits, returned_tokens,
                                    mesa_proxy, draft_forked, proxy_fan_out):
-    """Proxy correction tokens 선택. Proxy-first union dedup."""
+    """Proxy correction tokens 선택.
+    - Draft tree와 중복되지 않는 토큰만 선택 (동일 branch 방지)
+    - Proxy 우선, 부족분은 logits fallback에서 채움 (draft_forked 제외)
+    """
     B, K = mesa_proxy["accept_probs"].shape
     proxy_topk_ids = mesa_proxy["topk_ids"]  # [B, K, proxy_top_k]
+
+    # Fallback 후보: draft logits top-N에서 returned_tokens 제외
+    # draft_forked + proxy 모두에 없는 토큰을 refill용으로 사용
+    logits_for_fallback = logits.clone()
+    logits_for_fallback[:, :-1, :] = logits_for_fallback[:, :-1, :].scatter(
+        dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
+    total_need = self.config.async_fan_out  # draft_fan_out + proxy_fan_out
+    _, fallback_topk = torch.topk(logits_for_fallback, total_need, dim=-1)  # [B, K+1, total]
 
     result = torch.zeros(B, K + 1, proxy_fan_out, dtype=torch.int64, device=logits.device)
 
     # Position 0..K-1
     for b in range(B):
         for pos in range(K):
+            draft_set = set(draft_forked[b, pos].tolist())
             proxy_tokens = proxy_topk_ids[b, pos].tolist()
-            draft_tokens_at_pos = draft_forked[b, pos].tolist()
-            draft_set = set(draft_tokens_at_pos)
 
-            # proxy 중 draft에 이미 있는 것 제외
-            selected_proxy = [t for t in proxy_tokens if t not in draft_set]
-            # draft 중 선택된 proxy와 겹치는 것만 제외
-            selected_proxy_set = set(selected_proxy)
-            refill_draft = [t for t in draft_tokens_at_pos if t not in selected_proxy_set]
-            # row 전체 재구성
-            final_row = (selected_proxy + refill_draft)[:proxy_fan_out]
-            for j in range(len(final_row)):
-                result[b, pos, j] = final_row[j]
+            # proxy 중 draft에 없는 것 우선
+            selected = [t for t in proxy_tokens if t not in draft_set]
 
-    # Position K (all-accept): draft logits top-k
-    logits_clone = logits.clone()
-    _, all_accept_topk = torch.topk(logits_clone[:, K, :], proxy_fan_out, dim=-1)
+            # 부족하면 fallback (draft에도 선택된 proxy에도 없는 것)
+            if len(selected) < proxy_fan_out:
+                used = draft_set | set(selected)
+                fallback = [t for t in fallback_topk[b, pos].tolist() if t not in used]
+                selected.extend(fallback[:proxy_fan_out - len(selected)])
+
+            for j in range(min(len(selected), proxy_fan_out)):
+                result[b, pos, j] = selected[j]
+
+    # Position K (all-accept): draft_forked 제외 후 top-k
+    logits_k = logits_for_fallback[:, K, :].clone()
+    logits_k.scatter_(1, draft_forked[:, K, :], float('-inf'))  # draft 선택분 제외
+    _, all_accept_topk = torch.topk(logits_k, proxy_fan_out, dim=-1)
     result[:, K, :] = all_accept_topk
 
     return result
 ```
 
 > **NOTE**: loop는 개념 설명용. 실제 구현 시 vectorized.
+> **Dedup 보장**: proxy-sourced tokens ∩ draft-sourced tokens == ∅ (모든 position에서)
 
-### 6.4 _recv_mesa_proxy()
+### 6.4 _irecv_mesa_proxy() + _unpack_mesa_proxy()
+
+Non-blocking recv로 target send blocking 방지. irecv를 draft decode 시작 전에 걸어두고,
+decode 완료 후 wait()로 데이터 도착을 보장.
 
 ```python
-def _recv_mesa_proxy(self, B, K):
-    """Target proxy 수신 (단일 packed 메시지)."""
-    from ssd.utils.async_helpers.nccl_pack import recv_int64
+def _irecv_mesa_proxy(self, B, K):
+    """Non-blocking recv를 걸어둠. (work, buffer) 반환."""
     top_k = self.config.mesa_proxy_top_k
     total_len = B * K + B * K * top_k + B * K * top_k
-    buf = recv_int64(self.async_pg, src=0, total_length=total_len, device=self.device)
+    buf = torch.empty(total_len, dtype=torch.int64, device=self.device)
+    work = dist.irecv(buf, src=0, group=self.async_pg)
+    return work, buf
 
+def _unpack_mesa_proxy(self, buf, B, K):
+    """irecv 완료 후 buffer에서 proxy 데이터 추출."""
+    top_k = self.config.mesa_proxy_top_k
     off = 0
     accept_probs = buf[off:off + B*K].to(torch.int32).view(torch.float32).view(B, K)
     off += B * K
     topk_ids = buf[off:off + B*K*top_k].view(B, K, top_k)
     off += B * K * top_k
     topk_probs = buf[off:].to(torch.int32).view(torch.float32).view(B, K, top_k)
-
     return {"accept_probs": accept_probs, "topk_ids": topk_ids, "topk_probs": topk_probs}
 ```
 
-### 6.5 _merge_tree_results()
+**irecv가 isend와 다른 이유 (안전한 이유)**:
+- Buffer lifetime: `buf`는 `_irecv_mesa_proxy`에서 생성되어 caller가 참조 유지 → GC 안 됨
+- Race condition 없음: decode 중에 `buf`를 읽지 않고, `wait()` 후에만 `_unpack_mesa_proxy`에서 읽음
+- Stream ordering: NCCL recv는 자체 stream에서 동작, decode는 default stream → 독립적
+
+### 6.5 _populate_tree_cache() layout-aware로 일반화
+
+현재 `_populate_tree_cache`(draft_runner.py:814-830)는 `self._fan_idx_hit/miss`(full layout)로 key를 생성.
+Layout별로 올바른 `fan_idx`를 사용해야 함.
 
 ```python
-def _merge_tree_results(self, draft_args, draft_tokens, draft_logits,
-                          proxy_args, proxy_tokens, proxy_logits, ...):
-    """Draft + proxy tree decode 결과를 합쳐 단일 cache로 populate."""
-    # draft: [N1, K], proxy: [N2, K] → [N1+N2, K]
-    combined_tokens = torch.cat([draft_tokens, proxy_tokens], dim=0)
-    combined_logits = torch.cat([draft_logits, proxy_logits], dim=0)
-    combined_keys = torch.cat([draft_args["keys"], proxy_args["keys"]], dim=0)
+def _populate_tree_cache(self, payload, tokens, logits, cache_hits, layout, activations=None):
+    """layout 기반 cache key 생성 + populate."""
+    seq_ids_expanded = payload["seq_ids_expanded"].to(torch.int64)
+    rec_flat = payload["rec_flat"].to(torch.int64)
 
-    self.tree_cache_keys = combined_keys
-    self.tree_cache_tokens = combined_tokens
-    self.tree_cache_logits = combined_logits
-    if draft_logits_acts is not None:
+    # layout별 fan_idx 사용 (기존: self._fan_idx_hit → layout.fan_idx_hit)
+    k_flat = torch.cat([
+        layout.fan_idx_hit if hit else layout.fan_idx_miss
+        for hit in payload["cache_hits_list"]
+    ])
+
+    keys = torch.stack([seq_ids_expanded, k_flat, rec_flat], dim=1).contiguous()
+    return keys, tokens, logits, activations
+```
+
+### 6.6 _merge_and_populate_cache()
+
+```python
+def _merge_and_populate_cache(self, 
+                                draft_payload, draft_tokens, draft_logits,
+                                proxy_payload, proxy_tokens, proxy_logits,
+                                draft_layout, proxy_layout,
+                                draft_acts=None, proxy_acts=None):
+    """Draft + proxy tree decode 결과의 cache key를 layout별로 생성하고 합침."""
+
+    # 각 pass에서 layout별 fan_idx로 key 생성
+    draft_keys, _, _, _ = self._populate_tree_cache(
+        draft_payload, draft_tokens, draft_logits, 
+        draft_payload["cache_hits"], draft_layout, draft_acts)
+
+    proxy_keys, _, _, _ = self._populate_tree_cache(
+        proxy_payload, proxy_tokens, proxy_logits,
+        proxy_payload["cache_hits"], proxy_layout, proxy_acts)
+
+    # 합쳐서 단일 cache에 저장
+    self.tree_cache_keys = torch.cat([draft_keys, proxy_keys], dim=0)       # [N1+N2, 3]
+    self.tree_cache_tokens = torch.cat([draft_tokens, proxy_tokens], dim=0) # [N1+N2, K]
+    self.tree_cache_logits = torch.cat([draft_logits, proxy_logits], dim=0) # [N1+N2, K, V]
+    if draft_acts is not None:
         self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
 ```
+
+**Key semantics 보존**: draft pass의 key는 `draft_layout.fan_idx_hit/miss`로 `k_idx`를 만들고, proxy pass는 `proxy_layout.fan_idx_hit/miss`로 만듦. 둘 다 같은 depth 값(0..K)을 사용하되 fan_out 수가 다름. Cache lookup 시 `(seq_id, k_idx, rec_token)` 매칭은 depth 기반이므로, draft와 proxy가 같은 depth에 다른 rec_token으로 cache entry를 갖게 됨 → **정상 동작**.
 
 ---
 
@@ -979,12 +1131,14 @@ done
 | `ssd/config.py` | mesa params + budget split + validation + gating | ~30줄 |
 | `ssd/engine/helpers/tree_layout.py` | **신규**: TreeLayout dataclass + create_tree_layout() | ~50줄 |
 | `ssd/models/llama3.py` | LlamaModel/ForCausalLM split forward | ~25줄 |
-| `ssd/engine/helpers/cudagraph_helpers.py` | capture/run_mesa_verify + capture_fi_tree_decode layout 일반화 + run_fi_tree_decode layout 일반화 | ~150줄 |
-| `ssd/engine/model_runner.py` | mesa CudaGraph 캡처 분기 + run_model 분기 + FlashInfer wrapper layout별 | ~40줄 |
+| `ssd/engine/helpers/cudagraph_helpers.py` | capture/run_mesa_verify + capture/run_fi_tree_decode layout 일반화 | ~150줄 |
+| `ssd/engine/model_runner.py` | mesa CudaGraph 캡처 분기 + run_model 분기 + FlashInfer wrapper layout별 생성 | ~60줄 |
+| `ssd/layers/attention.py` | tree decode wrapper selection을 context.active_mq_len/active_wrappers 기반으로 변경 | ~10줄 |
+| `ssd/utils/context.py` | set_context에 active_mq_len, active_wrappers 필드 추가 | ~5줄 |
 | `ssd/engine/verifier.py` | proxy_fn + _compute_and_send_proxy() | ~55줄 |
-| `ssd/engine/draft_runner.py` | TreeLayout 적용 + budget split 2-pass + token selection + merge | ~120줄 |
+| `ssd/engine/draft_runner.py` | TreeLayout 적용 + budget split 2-pass + token selection + layout-aware cache populate | ~130줄 |
 | `bench/bench.py` | --mesa arguments | ~15줄 |
-| **총** | | **~485줄** |
+| **총** | | **~560줄** |
 
 ---
 

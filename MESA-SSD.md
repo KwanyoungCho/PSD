@@ -79,11 +79,11 @@ Early-exit proxy를 수신한 뒤, draft model은 이를 활용하여 cache toke
 
 Draft token $y_i$가 accept될 확률을 proxy 기반으로 근사한다.
 
-$$\hat{\alpha}_i = \text{Calibrate}\left(\min\left(1,\; \frac{p_i^E(y_i)}{p_i^D(y_i)}\right)\right)$$
+$$\hat{\alpha}_i = \min\left(1,\; \frac{p_i^E(y_i)}{p_i^D(y_i)}\right)$$
 
 - $p_i^D(\cdot)$: draft model 분포
 - $p_i^E(\cdot)$: early-exit proxy 분포
-- Calibration은 최근 몇 step의 실제 verify 결과로 online 보정한다.
+- v1에서는 calibration 없이 raw proxy ratio를 그대로 사용한다.
 
 ### Step 2: 첫 Reject 위치 분포
 
@@ -206,6 +206,6 @@ $$\text{Score}(i, v, d) = w(i, v) \cdot \frac{\Delta T(d)}{\text{Cost}(i, v, d)}
 |---|---|---|
 | **Acceptance 최적화** | Downweight sampling (acceptance 하락 위험) | Standard SD sampling (acceptance 유지) |
 | **Cache 최적화** | 같은 sampling policy로 동시 최적화 | Early-exit proxy로 별도 최적화 |
-| **Outcome 예측** | Fixed geometric prior | Online posterior (context-aware) |
+| **Outcome 예측** | Fixed geometric prior | Proxy posterior (context-aware) |
 | **Cache miss 처리** | Binary (hit or miss) | Full hit 또는 standard SD fallback |
 | **핵심 정보원** | Draft model만 사용 | Draft + target early-exit proxy |
