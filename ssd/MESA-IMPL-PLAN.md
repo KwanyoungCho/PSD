@@ -422,22 +422,62 @@ if self.config.speculate and self.is_draft and self.config.draft_async:
         self.graph_vars[self.proxy_layout.graph_key] = ...
 ```
 
-### 2.7 run_fi_tree_decode_cudagraph() 일반화
+### 2.7 run_fi_tree_decode_cudagraph() + capture_fi_tree_decode_cudagraph() 일반화
 
 **파일**: `ssd/engine/helpers/cudagraph_helpers.py`
 
+현재 `config.fan_out_list` / `config.MQ_LEN`을 직접 참조하는 곳 (모두 `layout.*`으로 변경):
+
+| 위치 (line) | 현재 참조 | 변경 |
+|-------------|----------|------|
+| 158 | `MQ_LEN = sum(config.fan_out_list)` | `MQ_LEN = layout.MQ_LEN` |
+| 160 | `orig_flat % MQ_LEN` | 동일 |
+| 225 | `... * MQ_LEN` (cu_seqlens_q) | 동일 |
+| 235, 251, 257 | `s * MQ_LEN` (step context_lens) | 동일 |
+| 279 | `np.arange(MQ_LEN)` (mask rows) | 동일 |
+| 285 | `(s+1) * MQ_LEN + (K+1)` (ttl_added) | 동일 |
+| 290, 293 | `MQ_LEN` (mask shape) | 동일 |
+| 299 | `blk * MQ_LEN` (mask diag) | 동일 |
+| 342 | `wrapper._custom_mask_buf` | layout별 wrapper의 mask_buf |
+| 784 | `MQ_LEN = sum(config.fan_out_list)` (capture) | `layout.MQ_LEN` |
+| 785-871 | `bs * MQ_LEN` (capture 전체) | 동일 |
+| 827 | `... * MQ_LEN` (cu_seqlens_q capture) | 동일 |
+| 839 | `bs * MQ_LEN * max_model_len` (mask) | 동일 |
+
+또한 **mask precompute** 내부 (`get_custom_mask` 호출, line 267-299):
+- `fan_out_list` → `layout.fan_out_list`
+- `fan_out_list_miss` → `layout.fan_out_list_miss`
+- mask shape `[MQ_LEN, cols]` → `[layout.MQ_LEN, cols]`
+
+**wrapper selection** (line 342, attention forward):
+- `wrapper._custom_mask_buf` → layout별 wrapper의 버퍼
+
+시그니처 변경:
+
 ```python
+# run 함수
 def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only,
                                   graph_vars, tree_decode_step, cache_hits,
                                   hidden_states=None, layout=None):
-    """layout 기반 tree decode CudaGraph 실행."""
-    if layout is not None:
-        graph_key = layout.graph_key
-    else:
+    if layout is None:
+        MQ_LEN = sum(model_runner.config.fan_out_list)  # backward compat
         graph_key = "fi_tree_decode"
+    else:
+        MQ_LEN = layout.MQ_LEN
+        graph_key = layout.graph_key
+    # 이하 모든 MQ_LEN 참조를 위 변수로 대체
+    ...
 
-    graph = model_runner.graphs[graph_key][wrapper_bs]
-    # ... 기존 로직 (input 복사, graph.replay, output 추출) ...
+# capture 함수
+def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
+    if layout is None:
+        MQ_LEN = sum(model_runner.config.fan_out_list)
+        graph_key = "fi_tree_decode"
+    else:
+        MQ_LEN = layout.MQ_LEN
+        graph_key = layout.graph_key
+    # 이하 모든 MQ_LEN, fan_out_list 참조를 layout 기반으로 대체
+    ...
 ```
 
 ---
@@ -842,27 +882,48 @@ def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
 
 - [ ] 완료
 
-### 6.1 _build_tree_batch() 재설계
+### 6.1 draft_loop() 계약 변경
 
-**파일**: `ssd/engine/draft_runner.py`
+**파일**: `ssd/engine/draft_runner.py` (`draft_loop`, line 859-907)
+
+현재 호출 계약:
+```python
+tree_decode_args = self._build_tree_batch(...)     # tree args 반환
+tokens, logits, acts = self._decode_tree(tree_decode_args)  # 외부에서 decode
+self._populate_tree_cache(tree_decode_args, tokens, logits, ...)  # 외부에서 populate
+```
+
+MESA에서는 2-pass decode + populate가 `_build_tree_batch` 내부에서 완료되므로 계약이 다름.
+`draft_loop`에서 분기:
 
 ```python
-def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
-    # ... 기존 glue decode (step 1-4) ...
+# draft_loop() cmd=0 내부:
+glue_decode_input_ids, partial_tree_decode_args = self._service_spec_request()
+self._reset_tree_cache_tensors()
 
-    if not self.config.mesa_enabled:
-        # ===== 기존 경로: full_layout으로 단일 decode =====
-        forked_rec_tokens = get_forked_recovery_tokens_from_logits(
-            self.config, glue_decode_logits, cache_hits,
-            gd_for_fork, tokenizer=self.tokenizer).view(-1)
-        tree_decode_args = self._build_tree_decode_args(
-            partial_tree_decode_args, forked_rec_tokens, self.full_layout, cache_hits, ...)
-        return tree_decode_args
+if self.config.mesa_enabled:
+    # MESA: 2-pass decode + populate 내부 완료
+    self._build_tree_batch_mesa(partial_tree_decode_args, glue_decode_input_ids)
+else:
+    # 기존: 외부에서 decode + populate
+    tree_decode_args = self._build_tree_batch(partial_tree_decode_args, glue_decode_input_ids)
+    tokens, logits, activations = self._decode_tree(tree_decode_args)
+    self._populate_tree_cache(tree_decode_args, tokens, logits,
+                               tree_decode_args["cache_hits"], activations)
+```
 
-    else:
-        # ===== MESA: Budget Split — 2-pass tree decode =====
+### 6.2 _build_tree_batch_mesa()
 
-        # Pass 1: draft-sourced (즉시 시작, proxy 대기 없음)
+**파일**: `ssd/engine/draft_runner.py` (MESA 전용, 기존 _build_tree_batch와 별도)
+
+```python
+def _build_tree_batch_mesa(self, partial_tree_decode_args, glue_decode_input_ids):
+    """MESA 2-pass tree decode. 내부에서 decode + populate까지 완료."""
+    # ... 기존 glue decode (step 1-4) — _build_tree_batch와 동일 ...
+
+    # ===== MESA: Budget Split — 2-pass tree decode =====
+
+    # Pass 1: draft-sourced (즉시 시작, proxy 대기 없음)
         draft_forked = self._select_draft_sourced_tokens(
             glue_decode_logits, cache_hits, gd_for_fork,
             self.config.mesa_draft_fan_out)  # [B, K+1, draft_fan_out]
@@ -963,6 +1024,10 @@ def _select_proxy_sourced_tokens(self, logits, cache_hits, returned_tokens,
 
 > **NOTE**: loop는 개념 설명용. 실제 구현 시 vectorized.
 > **Dedup 보장**: proxy-sourced tokens ∩ draft-sourced tokens == ∅ (모든 position에서)
+> **Underfill 정책**: proxy_top_k < proxy_fan_out이거나 dedup으로 토큰이 부족한 경우,
+> `fallback_topk` (draft logits top-N, N=async_fan_out)에서 draft/proxy 모두 미사용 토큰으로 충당.
+> V=128256 >> async_fan_out(~5)이므로 underfill이 발생하지 않음이 보장됨.
+> Config validation에서 `assert mesa_proxy_top_k >= 1` 추가 (최소 1개 proxy 후보).
 
 ### 6.4 _irecv_mesa_proxy() + _unpack_mesa_proxy()
 
@@ -1097,7 +1162,7 @@ if args.mesa:
 - cache miss + jit_speculate=False / True
 - temp > 0 (non-greedy sampling)
 - B > 1 (batch size)
-- proxy_top_k < proxy_fan_out (dedup 부족분)
+- proxy_top_k < proxy_fan_out (dedup 부족분 → fallback_topk에서 충당되는지 확인)
 
 ### 7.4 벤치마크
 
