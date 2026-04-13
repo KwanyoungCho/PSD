@@ -51,23 +51,23 @@ Target이 verification을 시작하면, early-exit layer에서 proxy 정보를 �
 
 Target은 verify 요청 시 draft로부터 $p_i^D(\cdot)$를 이미 받은 상태이므로, early-exit layer의 $p_i^E(\cdot)$와 합쳐 **residual proxy까지 직접 계산**할 수 있다.
 
-### 전송 정보 (2단계)
+### 전송 정보 (모든 position, 단일 packed 메시지)
 
-**1) 모든 position에서 전송하는 cheap scalar**
-- 현재 draft token $y_i$에 대한 accept probability proxy $\hat{\alpha}_i$
-- Entropy 또는 top-1/top-2 margin
+모든 position에 대해 다음 두 가지를 한번에 계산하여 전송한다:
 
-→ **"어디서 reject가 날 가능성이 큰가"**를 추정하는 데 사용한다.
+**1) Accept probability proxy $\hat{\alpha}_i$** (모든 position)
+- 현재 draft token $y_i$에 대한 accept probability proxy
+- 향후 $\hat{h}_i$ (첫 reject 위치 분포) 계산 및 budget allocation에 활용
 
-**2) 위험 position에만 전송하는 residual top-$k$**
+**2) Residual top-$k$ correction tokens** (모든 position)
 
-위 cheap scalar를 기준으로 reject risk가 큰 position 몇 개를 골라서, target이 직접 residual proxy를 계산한다:
+$$\hat{r}_i(v) \propto \left[p_i^E(v) - p_i^D(v)\right]_+$$
 
-$$\hat{r}_i(v) \propto \left[p_i^E(v) - \beta_i \, p_i^D(v)\right]_+$$
+- $v = y_i$는 제외 (reject된 토큰은 correction 후보가 될 수 없음)
+- 모든 position에서 top-$k$ token ID + 확률값을 전송
+- 전체 전송량은 B=1, K=7, top_k=3 기준 ~280 bytes로 negligible
 
-그 결과에서 top-$k_i$ token ID + 확률값을 전송한다.
-
-→ Draft device는 받은 residual 분포를 **그대로 사용**하여 cache token을 sampling하고 budget을 배분한다. 별도의 residual 계산이 필요 없다.
+→ Draft device는 받은 correction token(proxy-sourced)을 tree cache의 fork token 선택에 활용한다. Draft logits 기반 토큰(draft-sourced)과 중복되지 않도록 dedup 처리 후 배치한다.
 
 ---
 
@@ -99,11 +99,12 @@ $$\hat{h}_{L+1} = \prod_{j=1}^{L} \hat{\alpha}_j$$
 
 Target이 early-exit 시점에 계산하여 전송한 residual top-$k$를 그대로 사용한다.
 
-$$\hat{r}_i(v) \propto \left[p_i^E(v) - \beta_i \, p_i^D(v)\right]_+$$
+$$\hat{r}_i(v) \propto \left[p_i^E(v) - p_i^D(v)\right]_+$$
 
 - $v = y_i$는 제외 (reject된 토큰은 correction 후보가 될 수 없음)
-- All-accept branch ($i = L+1$)에서는 bonus token이므로 $p_{L+1}^E$를 사용
+- All-accept branch ($i = L+1$)에서는 draft가 정확히 예측하고 있으므로 draft의 자체 분포 $p_{L+1}^D$를 사용 (early-exit proxy 불필요)
 - 이 계산은 **target 쪽에서 수행**된다 (target은 $p_i^D$와 $p_i^E$를 모두 보유)
+- 실제 verifier의 recovery 분포 $[p_{target} - p_{draft}]_+$와 동일한 형태를 사용하여 proxy의 branch ranking이 실제 recovery와 일치하도록 함
 
 ### Step 4: 최종 Outcome Posterior
 
