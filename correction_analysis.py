@@ -110,7 +110,44 @@ def _gc_gpu():
 def load_gsm8k(n, seed=42, cache_dir=None):
     ds = load_dataset("openai/gsm8k", "main", split="test", cache_dir=cache_dir)
     rng = random.Random(seed)
-    return [(ds[i]["question"], ds[i]["answer"]) for i in rng.sample(range(len(ds)), n)]
+    indices = rng.sample(range(len(ds)), min(n, len(ds)))
+    return [f"Question: {ds[i]['question']}\nAnswer: " for i in indices]
+
+def load_alpaca(n, seed=42, cache_dir=None):
+    ds = load_dataset("tatsu-lab/alpaca", split="train", cache_dir=cache_dir)
+    rng = random.Random(seed)
+    indices = rng.sample(range(len(ds)), min(n, len(ds)))
+    prompts = []
+    for i in indices:
+        instr = ds[i]["instruction"]
+        inp   = ds[i]["input"]
+        if inp:
+            prompts.append(f"### Instruction:\n{instr}\n\n### Input:\n{inp}\n\n### Response:\n")
+        else:
+            prompts.append(f"### Instruction:\n{instr}\n\n### Response:\n")
+    return prompts
+
+def load_ultrafeedback(n, seed=42, cache_dir=None):
+    ds = load_dataset("openbmb/UltraFeedback", split="train", cache_dir=cache_dir)
+    rng = random.Random(seed)
+    indices = rng.sample(range(len(ds)), min(n, len(ds)))
+    return [f"### Instruction:\n{ds[i]['instruction']}\n\n### Response:\n" for i in indices]
+
+DATASET_LOADERS = {
+    "gsm8k": load_gsm8k,
+    "alpaca": load_alpaca,
+    "ultrafeedback": load_ultrafeedback,
+}
+
+def load_prompts(datasets, n_per_dataset, seed=42, cache_dir=None):
+    """Load prompts from multiple datasets, n_per_dataset each."""
+    all_prompts = []
+    for ds_name in datasets:
+        loader = DATASET_LOADERS[ds_name]
+        prompts = loader(n_per_dataset, seed=seed, cache_dir=cache_dir)
+        print(f"  {ds_name}: {len(prompts)} prompts loaded")
+        all_prompts.extend(prompts)
+    return all_prompts
 
 
 # ─── Generation ────────────────────────────────────────────────────────────
@@ -139,21 +176,47 @@ def generate_draft_window(model, embed_dev, context_ids, window_size):
 # ─── KV-cache based verification ──────────────────────────────────────────
 
 @torch.no_grad()
+def _extract_all_alpha_hat(out, t_norm, t_head, t_norm_dev, n_layers, y_i, pD_yi):
+    """Extract α̂_i = min(1, p_E(y_i)/p_D(y_i)) for ALL layers. Batched."""
+    # Pre-norm layers: batch
+    pre_h = torch.stack([hs[0, -1, :] for hs in out.hidden_states[:-1]])  # [n_layers, D]
+    pre_probs = batch_hidden_to_probs(pre_h, t_norm, t_head, t_norm_dev)   # [n_layers, V]
+    # Post-norm (final)
+    post_prob = hidden_to_probs_no_norm(out.hidden_states[-1][0, -1, :], t_head)  # [V]
+
+    alphas = []
+    for l in range(n_layers):
+        alphas.append(min(1.0, pre_probs[l][y_i].item() / pD_yi))
+    alphas.append(min(1.0, post_prob[y_i].item() / pD_yi))
+    return alphas  # length n_layers + 1
+
+
+def _compute_hazard(alphas_list, W):
+    """ĥ_i = (∏_{j<i} α_j)(1-α_i), ĥ_{W} = ∏ α_j (all-accept)."""
+    h = np.zeros(W + 1)
+    cum = 1.0
+    for i in range(W):
+        h[i] = cum * (1.0 - alphas_list[i])
+        cum *= alphas_list[i]
+    h[W] = cum
+    return h
+
+
+@torch.no_grad()
 def verify_window_kv(t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
                      context_ids, draft_ids, draft_probs, n_layers):
     """
     Target verifies draft window using KV cache to avoid OOM.
-    Prefills context without hidden states, then feeds draft tokens
-    one-by-one with hidden states.
+    Also collects α̂_i at all positions (for eval layers) to evaluate
+    reject position prediction (ĥ accuracy).
 
-    Tokens fed:     ctx[:-1] (prefill) | ctx[-1] | draft[0] | ... | draft[W-2]
-    Predicts:                          | draft[0]| draft[1] | ... | draft[W-1]
-    Hidden states:                     | yes     | yes      | ... | yes
-
-    Returns list of result dicts (at most 1 for standard SD with break).
+    Returns (results, hazard_info):
+      results: list of correction result dicts (at most 1)
+      hazard_info: {eval_layers, alpha_T, alpha_E, actual_reject_pos}
     """
     L = context_ids.shape[1]
     W = len(draft_ids)
+    nl1 = n_layers + 1
     ctx = context_ids.to(t_embed_dev)
 
     # Prefill context[:-1] without hidden states
@@ -166,7 +229,13 @@ def verify_window_kv(t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
     # Feed one-by-one: ctx[-1], draft[0], ..., draft[W-2]
     tokens_to_feed = [ctx[0, -1].item()] + [draft_ids[j].item() for j in range(W - 1)]
 
+    # Collect α at all positions, all layers
+    alpha_T_list = []                    # [W]
+    alpha_E_list = [[] for _ in range(nl1)]  # [n_layers+1][W]
+
     results = []
+    actual_reject_pos = W  # default: all accepted (no reject in window)
+
     for i, tid in enumerate(tokens_to_feed):
         inp = torch.tensor([[tid]], device=t_embed_dev)
         out = t_model(inp, past_key_values=past_kv, use_cache=True,
@@ -179,12 +248,25 @@ def verify_window_kv(t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
 
         p_D = draft_probs[i]
         y_i = draft_ids[i].item()
+        pD_yi = max(p_D[y_i].item(), 1e-10)
+
+        # ── α_T (true) ──
+        alpha_T = min(1.0, p_T[y_i].item() / pD_yi)
+        alpha_T_list.append(alpha_T)
+
+        # ── α̂ for all layers (batched) ──
+        alphas_hat = _extract_all_alpha_hat(
+            out, t_norm, t_head, t_norm_dev, n_layers, y_i, pD_yi)
+        for l in range(nl1):
+            alpha_E_list[l].append(alphas_hat[l])
 
         # ── Probabilistic SD rejection ──
-        ratio = p_T[y_i].item() / max(p_D[y_i].item(), 1e-10)
-        accept_prob = min(1.0, ratio)
+        accept_prob = alpha_T
         if random.random() < accept_prob:
-            continue  # accepted
+            continue  # accepted — α data already collected above
+
+        # ── First rejection at position i ──
+        actual_reject_pos = i
 
         # ── Rejected: compute correction ──
         r_true = residual_dist(p_T, p_D)
@@ -192,18 +274,38 @@ def verify_window_kv(t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
             break
 
         true_top1 = r_true.argmax().item()
-        true_top5 = set(r_true.topk(5).indices.tolist())
+        true_topk = r_true.topk(5).indices.tolist()
+        true_top3 = set(true_topk[:3])
+        true_top5 = set(true_topk)
 
         # ── Draft baseline (correction) ──
         p_D_masked = p_D.clone(); p_D_masked[y_i] = 0.0
-        d5  = set(p_D_masked.topk(5).indices.tolist())
-        d10 = set(p_D_masked.topk(10).indices.tolist())
+        # normalize p_D_masked as a correction approximation r̂_draft
+        r_hat_draft = residual_dist(p_D_masked, p_D)  # [p_D_masked - p_D]+ normalized
+        # (equivalent to normalize(p_D_masked) since p_D_masked = p_D with y_i zeroed)
+        if r_hat_draft is None:
+            r_hat_draft = p_D_masked / (p_D_masked.sum() + 1e-10)
+        d_topk = r_hat_draft.topk(10).indices.tolist()
+        # cover@k for k=1..10
+        db_cover = [float(true_top1 in set(d_topk[:k])) for k in range(1, 11)]
+        # mass@k for k=1,3,5
+        db_mass_1 = float(r_true[d_topk[:1]].sum())
+        db_mass_3 = float(r_true[d_topk[:3]].sum())
+        db_mass_5 = float(r_true[d_topk[:5]].sum())
+        d3  = set(d_topk[:3])
+        d5  = set(d_topk[:5])
+        d10 = set(d_topk)
+        # distribution distance: r̂_draft vs r_true
+        db_jsd = js_div(r_true, r_hat_draft)
+        db_tvd = tvd(r_true, r_hat_draft)
+        db_kl  = kl_div(r_true, r_hat_draft)
         draft_baseline = {
-            "top1_hit":     p_D_masked.argmax().item() == true_top1,
-            "top5_hit":     true_top1 in d5,
-            "top10_hit":    true_top1 in d10,
-            "top5_recall":  len(true_top5 & d5)  / len(true_top5),
-            "top10_recall": len(true_top5 & d10) / len(true_top5),
+            "cover_at_k": db_cover,  # [10] k=1..10
+            "top3_recall":  len(true_top3 & d3)  / max(len(true_top3), 1),
+            "top5_recall":  len(true_top5 & d5)  / max(len(true_top5), 1),
+            "top10_recall": len(true_top5 & d10) / max(len(true_top5), 1),
+            "mass_1": db_mass_1, "mass_3": db_mass_3, "mass_5": db_mass_5,
+            "jsd": db_jsd, "tvd": db_tvd, "kl": db_kl,
         }
 
         # ── Draft raw baseline (p_D vs p_T) ──
@@ -229,9 +331,13 @@ def verify_window_kv(t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
 
         # ── Per-layer metrics ──
         corr_jsd, corr_kl, corr_tvd = [], [], []
-        corr_top1, corr_top5, corr_top5_recall = [], [], []
+        corr_cover_at_k = []  # [nl1][10] k=1..10
+        corr_top3_recall, corr_top5_recall = [], []
+        corr_mass_1, corr_mass_3, corr_mass_5 = [], [], []
         raw_jsd, raw_kl, raw_tvd = [], [], []
         tk_olap_5, tk_olap_10, tk_mass_5, tk_mass_10 = [], [], [], []
+
+        true_top10 = set(r_true.topk(10).indices.tolist())
 
         for k in range(all_probs.shape[0]):
             p_E = all_probs[k]
@@ -254,23 +360,33 @@ def verify_window_kv(t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
                 corr_jsd.append(float("nan"))
                 corr_kl.append(float("nan"))
                 corr_tvd.append(float("nan"))
-                corr_top1.append(False)
-                corr_top5.append(False)
+                corr_cover_at_k.append([0.0] * 10)
+                corr_top3_recall.append(0.0)
                 corr_top5_recall.append(0.0)
+                corr_mass_1.append(0.0)
+                corr_mass_3.append(0.0)
+                corr_mass_5.append(0.0)
             else:
                 corr_jsd.append(js_div(r_true, r_hat))
                 corr_kl.append(kl_div(r_true, r_hat))
                 corr_tvd.append(tvd(r_true, r_hat))
-                rh5 = set(r_hat.topk(5).indices.tolist())
-                corr_top1.append(r_hat.argmax().item() == true_top1)
-                corr_top5.append(true_top1 in rh5)
-                corr_top5_recall.append(len(true_top5 & rh5) / len(true_top5))
+                rh_topk = r_hat.topk(10).indices.tolist()
+                # cover@k for k=1..10: is argmax(r_true) in top-k of r_hat?
+                ee_cover = [float(true_top1 in set(rh_topk[:kk])) for kk in range(1, 11)]
+                corr_cover_at_k.append(ee_cover)
+                rh3_set = set(rh_topk[:3]); rh5_set = set(rh_topk[:5]); rh10_set = set(rh_topk)
+                corr_top3_recall.append(len(true_top3 & rh3_set) / max(len(true_top3), 1))
+                corr_top5_recall.append(len(true_top5 & rh5_set) / max(len(true_top5), 1))
+                corr_mass_1.append(float(r_true[rh_topk[:1]].sum()))
+                corr_mass_3.append(float(r_true[rh_topk[:3]].sum()))
+                corr_mass_5.append(float(r_true[list(rh5_set)].sum()))
 
         results.append({
             "reject_pos": i, "accept_prob": accept_prob,
             "corr_jsd": corr_jsd, "corr_kl": corr_kl, "corr_tvd": corr_tvd,
-            "corr_top1": corr_top1, "corr_top5": corr_top5,
-            "corr_top5_recall": corr_top5_recall,
+            "corr_cover_at_k": corr_cover_at_k,  # [nl1][10]
+            "corr_top3_recall": corr_top3_recall, "corr_top5_recall": corr_top5_recall,
+            "corr_mass_1": corr_mass_1, "corr_mass_3": corr_mass_3, "corr_mass_5": corr_mass_5,
             "raw_jsd": raw_jsd, "raw_kl": raw_kl, "raw_tvd": raw_tvd,
             "tk_olap_5": tk_olap_5, "tk_olap_10": tk_olap_10,
             "tk_mass_5": tk_mass_5, "tk_mass_10": tk_mass_10,
@@ -278,37 +394,126 @@ def verify_window_kv(t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
         })
         break  # SD stops at first reject
 
-    return results
+    # ── Collect remaining α for full-window hazard (after early break) ──
+    for i2 in range(len(alpha_T_list), W):
+        tid2 = tokens_to_feed[i2]
+        inp2 = torch.tensor([[tid2]], device=t_embed_dev)
+        out2 = t_model(inp2, past_key_values=past_kv, use_cache=True,
+                       output_hidden_states=True)
+        past_kv = out2.past_key_values
+
+        p_T2 = F.softmax(out2.logits[0, -1, :].float(), dim=-1).cpu()
+        p_D2 = draft_probs[i2]
+        y_i2 = draft_ids[i2].item()
+        pD_yi2 = max(p_D2[y_i2].item(), 1e-10)
+
+        alpha_T_list.append(min(1.0, p_T2[y_i2].item() / pD_yi2))
+        alphas_hat2 = _extract_all_alpha_hat(
+            out2, t_norm, t_head, t_norm_dev, n_layers, y_i2, pD_yi2)
+        for l in range(nl1):
+            alpha_E_list[l].append(alphas_hat2[l])
+
+    # ── Draft confidence per position ──
+    draft_conf = [draft_probs[i][draft_ids[i].item()].item() for i in range(W)]
+
+    # ── Hazard prediction data ──
+    hazard_info = {
+        "n_layers": n_layers,
+        "alpha_T": alpha_T_list,
+        "alpha_E": alpha_E_list,  # [n_layers+1][W]
+        "actual_reject_pos": actual_reject_pos,  # W = all accepted
+        "draft_conf": draft_conf,  # [W] draft confidence at each position
+    }
+
+    return results, hazard_info
 
 
 # ─── Accumulator ───────────────────────────────────────────────────────────
 
 def make_acc(nl):
+    nl1 = nl + 1
     return {
         # Correction per layer
-        "corr_jsd_sum": np.zeros(nl+1), "corr_jsd_cnt": np.zeros(nl+1),
-        "corr_kl_sum":  np.zeros(nl+1), "corr_kl_cnt":  np.zeros(nl+1),
-        "corr_tvd_sum": np.zeros(nl+1), "corr_tvd_cnt": np.zeros(nl+1),
-        "corr_top1_sum":       np.zeros(nl+1),
-        "corr_top5_sum":       np.zeros(nl+1),
-        "corr_top5_recall_sum": np.zeros(nl+1),
+        "corr_jsd_sum": np.zeros(nl1), "corr_jsd_cnt": np.zeros(nl1),
+        "corr_kl_sum":  np.zeros(nl1), "corr_kl_cnt":  np.zeros(nl1),
+        "corr_tvd_sum": np.zeros(nl1), "corr_tvd_cnt": np.zeros(nl1),
+        "corr_cover_at_k_sum": np.zeros((nl1, 10)),  # [nl1][k=1..10]
+        "corr_top3_recall_sum": np.zeros(nl1),
+        "corr_top5_recall_sum": np.zeros(nl1),
+        "corr_mass_1_sum": np.zeros(nl1),
+        "corr_mass_3_sum": np.zeros(nl1),
+        "corr_mass_5_sum": np.zeros(nl1),
         # Raw distribution per layer
-        "raw_jsd_sum": np.zeros(nl+1), "raw_kl_sum": np.zeros(nl+1),
-        "raw_tvd_sum": np.zeros(nl+1), "raw_cnt":    np.zeros(nl+1),
+        "raw_jsd_sum": np.zeros(nl1), "raw_kl_sum": np.zeros(nl1),
+        "raw_tvd_sum": np.zeros(nl1), "raw_cnt":    np.zeros(nl1),
         # Top-k per layer
-        "tk_olap_5_sum": np.zeros(nl+1), "tk_olap_10_sum": np.zeros(nl+1),
-        "tk_mass_5_sum": np.zeros(nl+1), "tk_mass_10_sum": np.zeros(nl+1),
+        "tk_olap_5_sum": np.zeros(nl1), "tk_olap_10_sum": np.zeros(nl1),
+        "tk_mass_5_sum": np.zeros(nl1), "tk_mass_10_sum": np.zeros(nl1),
         # Scalar
         "count": 0, "all_accept_count": 0,
         "reject_pos": [], "accept_probs": [],
+        # Hazard prediction (all layers)
+        "hazard_n_windows": 0,
+        "hazard_h_tvd_sum":      np.zeros(nl1),
+        "hazard_top1_hit_sum":   np.zeros(nl1),
+        "hazard_top3_hit_sum":   np.zeros(nl1),
+        "hazard_anchor_cov_sum": np.zeros(nl1),
+        "hazard_recall_at_k_sum": np.zeros((nl1, WINDOW_SIZE + 1)),  # [nl1][k=1..W+1]
+        # Draft confidence hazard baseline
+        "draft_hazard_recall_at_k_sum": np.zeros(WINDOW_SIZE + 1),  # [k=1..W+1]
         # Draft baseline correction
-        "db_top1": 0.0, "db_top5": 0.0, "db_top10": 0.0,
-        "db_top5_recall": 0.0, "db_top10_recall": 0.0,
+        "db_cover_at_k_sum": np.zeros(10),  # [k=1..10]
+        "db_top3_recall": 0.0, "db_top5_recall": 0.0, "db_top10_recall": 0.0,
+        "db_mass_1": 0.0, "db_mass_3": 0.0, "db_mass_5": 0.0,
+        "db_jsd": 0.0, "db_tvd": 0.0, "db_kl": 0.0,
         # Draft raw baseline
         "dr_jsd": 0.0, "dr_kl": 0.0, "dr_tvd": 0.0,
         "dr_tk_olap_5": 0.0, "dr_tk_olap_10": 0.0,
         "dr_tk_mass_5": 0.0, "dr_tk_mass_10": 0.0,
     }
+
+
+def accumulate_hazard(d, hazard_info):
+    """Accumulate ĥ prediction metrics from one window (all layers)."""
+    W = len(hazard_info["alpha_T"])
+    nl1 = hazard_info["n_layers"] + 1
+    actual = hazard_info["actual_reject_pos"]  # W = all accepted
+
+    h_T = _compute_hazard(hazard_info["alpha_T"], W)
+    d["hazard_n_windows"] += 1
+
+    for l in range(nl1):
+        alpha_E_l = hazard_info["alpha_E"][l]
+        h_E = _compute_hazard(alpha_E_l, W)
+
+        # TVD between hazard distributions
+        d["hazard_h_tvd_sum"][l] += float(0.5 * np.abs(h_T - h_E).sum())
+
+        # Top-1 hit: does argmax(ĥ_E) == actual reject pos?
+        pred_pos = int(np.argmax(h_E))
+        d["hazard_top1_hit_sum"][l] += float(pred_pos == actual)
+
+        # Top-3 hit: is actual reject in top-3 of ĥ_E?
+        top3 = set(np.argsort(-h_E)[:3].tolist())
+        d["hazard_top3_hit_sum"][l] += float(actual in top3)
+
+        # Anchor coverage: h_T mass covered by top-3 of ĥ_E
+        d["hazard_anchor_cov_sum"][l] += float(sum(h_T[j] for j in top3))
+
+        # Recall@k for k=1..W+1
+        ranked = np.argsort(-h_E).tolist()
+        for k in range(1, len(h_E) + 1):
+            if actual in ranked[:k]:
+                d["hazard_recall_at_k_sum"][l, k - 1] += 1.0
+
+    # ── Draft confidence baseline: build hazard using α̂_D_i = p_D(y_i) ──
+    draft_conf = hazard_info["draft_conf"]  # [W]
+    h_D = _compute_hazard(draft_conf, W)  # same structure as early-exit hazard
+
+    ranked_D = np.argsort(-h_D).tolist()
+    for k in range(1, len(h_D) + 1):
+        if actual in ranked_D[:k]:
+            d["draft_hazard_recall_at_k_sum"][k - 1] += 1.0
 
 
 def accumulate(d, result, n_layers):
@@ -318,11 +523,17 @@ def accumulate(d, result, n_layers):
 
     # Draft baseline correction
     db = result["draft_baseline"]
-    d["db_top1"]  += float(db["top1_hit"])
-    d["db_top5"]  += float(db["top5_hit"])
-    d["db_top10"] += float(db["top10_hit"])
+    for ki in range(10):
+        d["db_cover_at_k_sum"][ki] += db["cover_at_k"][ki]
+    d["db_top3_recall"]  += db["top3_recall"]
     d["db_top5_recall"]  += db["top5_recall"]
     d["db_top10_recall"] += db["top10_recall"]
+    d["db_mass_1"] += db["mass_1"]
+    d["db_mass_3"] += db["mass_3"]
+    d["db_mass_5"] += db["mass_5"]
+    d["db_jsd"] += db["jsd"]
+    d["db_tvd"] += db["tvd"]
+    d["db_kl"]  += db["kl"]
 
     # Draft raw baseline
     dr = result["draft_raw"]
@@ -343,9 +554,13 @@ def accumulate(d, result, n_layers):
         tv = result["corr_tvd"][k]
         if tv == tv:
             d["corr_tvd_sum"][k] += tv; d["corr_tvd_cnt"][k] += 1
-        d["corr_top1_sum"][k]       += float(result["corr_top1"][k])
-        d["corr_top5_sum"][k]       += float(result["corr_top5"][k])
+        for ki in range(10):
+            d["corr_cover_at_k_sum"][k, ki] += result["corr_cover_at_k"][k][ki]
+        d["corr_top3_recall_sum"][k] += result["corr_top3_recall"][k]
         d["corr_top5_recall_sum"][k] += result["corr_top5_recall"][k]
+        d["corr_mass_1_sum"][k] += result["corr_mass_1"][k]
+        d["corr_mass_3_sum"][k] += result["corr_mass_3"][k]
+        d["corr_mass_5_sum"][k] += result["corr_mass_5"][k]
 
         d["raw_jsd_sum"][k] += result["raw_jsd"][k]
         d["raw_kl_sum"][k]  += result["raw_kl"][k]
@@ -366,13 +581,23 @@ def finalize_acc(acc, n_layers):
         def safe_avg(s, cnt):
             return np.where(cnt > 0, s / np.maximum(cnt, 1), float("nan")).tolist()
 
+        # corr_cover_at_k: [nl1][10] → list of lists
+        corr_cover = (d["corr_cover_at_k_sum"] / c).tolist()  # [nl1][10]
+
         out[lbl] = {
             "corr_jsd": safe_avg(d["corr_jsd_sum"], d["corr_jsd_cnt"]),
             "corr_kl":  safe_avg(d["corr_kl_sum"],  d["corr_kl_cnt"]),
             "corr_tvd": safe_avg(d["corr_tvd_sum"], d["corr_tvd_cnt"]),
-            "corr_top1":       (d["corr_top1_sum"] / c).tolist(),
-            "corr_top5":       (d["corr_top5_sum"] / c).tolist(),
+            "corr_cover_at_k": corr_cover,  # [nl1][10] k=1..10
+            # Convenience aliases for backward compat
+            "corr_top1": [row[0] for row in corr_cover],
+            "corr_top3": [row[2] for row in corr_cover],
+            "corr_top5": [row[4] for row in corr_cover],
+            "corr_top3_recall": (d["corr_top3_recall_sum"] / c).tolist(),
             "corr_top5_recall": (d["corr_top5_recall_sum"] / c).tolist(),
+            "corr_mass_1": (d["corr_mass_1_sum"] / c).tolist(),
+            "corr_mass_3": (d["corr_mass_3_sum"] / c).tolist(),
+            "corr_mass_5": (d["corr_mass_5_sum"] / c).tolist(),
 
             "raw_jsd": (d["raw_jsd_sum"] / rc).tolist(),
             "raw_kl":  (d["raw_kl_sum"]  / rc).tolist(),
@@ -393,10 +618,20 @@ def finalize_acc(acc, n_layers):
                 if d["reject_pos"] else {}
             ),
             "draft_baseline": {
-                "top1":  d["db_top1"] / c,  "top5":  d["db_top5"] / c,
-                "top10": d["db_top10"] / c,
+                "cover_at_k": (d["db_cover_at_k_sum"] / c).tolist(),  # [10] k=1..10
+                # Convenience aliases
+                "top1": float(d["db_cover_at_k_sum"][0] / c),
+                "top3": float(d["db_cover_at_k_sum"][2] / c),
+                "top5": float(d["db_cover_at_k_sum"][4] / c),
+                "top3_recall":  d["db_top3_recall"] / c,
                 "top5_recall":  d["db_top5_recall"] / c,
                 "top10_recall": d["db_top10_recall"] / c,
+                "mass_1": d["db_mass_1"] / c,
+                "mass_3": d["db_mass_3"] / c,
+                "mass_5": d["db_mass_5"] / c,
+                "jsd": d["db_jsd"] / c,
+                "tvd": d["db_tvd"] / c,
+                "kl":  d["db_kl"]  / c,
             },
             "draft_raw": {
                 "jsd": d["dr_jsd"] / c, "kl": d["dr_kl"] / c, "tvd": d["dr_tvd"] / c,
@@ -405,8 +640,26 @@ def finalize_acc(acc, n_layers):
                 "tk_mass_5":  d["dr_tk_mass_5"] / c,
                 "tk_mass_10": d["dr_tk_mass_10"] / c,
             },
+            # Hazard prediction (ĥ accuracy)
+            "hazard": _finalize_hazard(d),
         }
     return out
+
+
+def _finalize_hazard(d):
+    nw = max(d["hazard_n_windows"], 1)
+    return {
+        "n_windows": d["hazard_n_windows"],
+        "h_tvd":       (d["hazard_h_tvd_sum"] / nw).tolist(),
+        "top1_hit":    (d["hazard_top1_hit_sum"] / nw).tolist(),
+        "top3_hit":    (d["hazard_top3_hit_sum"] / nw).tolist(),
+        "anchor_cov3": (d["hazard_anchor_cov_sum"] / nw).tolist(),
+        "recall_at_k": (d["hazard_recall_at_k_sum"] / nw).tolist(),  # [nl1][W+1]
+        # Draft confidence baseline for reject position prediction
+        "draft_conf_baseline": {
+            "recall_at_k": (d["draft_hazard_recall_at_k_sum"] / nw).tolist(),  # [W+1]
+        },
+    }
 
 
 # ─── Main experiment ───────────────────────────────────────────────────────
@@ -428,17 +681,19 @@ def run(args):
         load_model(args.target, cache_dir=cache_dir)
 
     # ── Load dataset ──
-    print(f"\nLoading GSM8K ({args.n_samples} samples)...")
-    qa_pairs = load_gsm8k(args.n_samples, cache_dir=cache_dir)
+    datasets = args.datasets if args.datasets else ["gsm8k"]
+    n_per_ds = args.n_samples  # per dataset
+    print(f"\nLoading datasets ({datasets}, {n_per_ds} per dataset)...")
+    prompts = load_prompts(datasets, n_per_ds, cache_dir=cache_dir)
+    print(f"Total prompts: {len(prompts)}")
 
     # ── Phase 1: Target greedy generation ──
     print("\nPhase 1: Target greedy generation...")
-    target_cache = []  # list of (q_fmt, q_ids, target_toks)
-    for question, _ in tqdm(qa_pairs, desc="Target gen"):
-        q_fmt = f"Question: {question}\nAnswer: "
-        q_ids = t_tok(q_fmt, return_tensors="pt", add_special_tokens=True).input_ids
+    target_cache = []  # list of (prompt, q_ids, target_toks)
+    for prompt in tqdm(prompts, desc="Target gen"):
+        q_ids = t_tok(prompt, return_tensors="pt", add_special_tokens=True).input_ids
         target_toks = generate_target(t_model, t_embed_dev, q_ids, max_new=512)
-        target_cache.append((q_fmt, q_ids, target_toks))
+        target_cache.append((prompt, q_ids, target_toks))
 
     # ── Phase 2: For each draft model ──
     all_draft_data = []  # list of {name, path, n_layers, data: {cp: metrics}}
@@ -452,7 +707,7 @@ def run(args):
 
         acc = {lbl: make_acc(n_layers) for lbl in CP_LABELS}
 
-        for q_fmt, q_ids, target_toks in tqdm(target_cache, desc=f"[{d_name}]"):
+        for prompt, q_ids, target_toks in tqdm(target_cache, desc=f"[{d_name}]"):
             for cp, lbl in zip(CHECKPOINTS, CP_LABELS):
                 if cp > 0 and target_toks.shape[1] < cp:
                     continue
@@ -465,12 +720,15 @@ def run(args):
                 )
 
                 # Target verifies with KV cache
-                results = verify_window_kv(
+                results, hazard_info = verify_window_kv(
                     t_model, t_norm, t_head, t_norm_dev, t_embed_dev,
                     ctx, draft_ids, draft_probs, n_layers,
                 )
 
                 d = acc[lbl]
+                # Always accumulate hazard (even if all accepted)
+                accumulate_hazard(d, hazard_info)
+
                 if not results:
                     d["all_accept_count"] += 1
                     continue
@@ -502,7 +760,9 @@ def run(args):
         "target": args.target,
         "target_name": t_name,
         "n_layers": n_layers,
-        "n_samples": args.n_samples,
+        "n_samples_per_dataset": args.n_samples,
+        "datasets": datasets,
+        "n_samples_total": len(prompts),
         "window_size": WINDOW_SIZE,
         "checkpoints": CHECKPOINTS,
         "drafts": all_draft_data,
@@ -543,7 +803,8 @@ def plot_all(save, out_dir):
             ("corr_jsd",        "Corr JSD(r̂, r_true) ↓",       (0, 0.75),     True),
             ("corr_kl",         "Corr KL(r_true ∥ r̂) ↓",       None,          True),
             ("corr_tvd",        "Corr TVD ↓",                   (0, 1.0),      True),
-            ("corr_top1",       "Corr Top-1 Match ↑",           (-0.05, 1.05), True),
+            ("corr_top1",       "Corr Top-1 Cover ↑",           (-0.05, 1.05), True),
+            ("corr_top3",       "Corr Top-3 Cover ↑",           (-0.05, 1.05), True),
             ("corr_top5",       "Corr Top-5 Cover ↑",           (-0.05, 1.05), True),
             ("corr_top5_recall","Corr Top-5 Recall ↑",          (-0.05, 1.05), True),
             ("raw_jsd",         "Raw JSD(p_T, p_E) ↓",          (0, 0.75),     False),
@@ -586,7 +847,8 @@ def plot_all(save, out_dir):
 
                 # Draft baselines
                 corr_bl_map = {
-                    "corr_top1": "top1", "corr_top5": "top5",
+                    "corr_top1": "top1", "corr_top3": "top3",
+                    "corr_top5": "top5",
                     "corr_top5_recall": "top5_recall",
                 }
                 raw_bl_map = {
@@ -738,6 +1000,33 @@ def print_summary(save):
                   f"JSD={dr['jsd']:.4f} KL={dr['kl']:.4f} TVD={dr['tvd']:.4f} "
                   f"t5ol={dr['tk_olap_5']:.3f} t5ms={dr['tk_mass_5']:.3f}")
 
+    # Hazard prediction (ĥ accuracy) — sample layers
+    print(f"\nHazard prediction (ĥ = reject position prediction):")
+    print(f"  {'Draft':<22} {'CP':<6} {'Layer':>8} | {'h_TVD':>6} {'top1%':>6} {'top3%':>6} {'aCov3':>6}")
+    print("  " + "-" * 72)
+    sample_layers = sorted(set([
+        n_layers // 4, n_layers // 2, 3 * n_layers // 4,
+        n_layers - 1, n_layers,
+    ]))
+    for d in drafts:
+        for lbl in cp_labels:
+            fd = d["data"][lbl]
+            hz = fd.get("hazard")
+            if not hz or hz["n_windows"] == 0:
+                continue
+            for l in sample_layers:
+                label = f"L{l}" if l < n_layers else f"L{l}(fin)"
+                print(f"  {d['name']:<22} {lbl:<6} {label:>8} "
+                      f"| {hz['h_tvd'][l]:>6.3f} {hz['top1_hit'][l]:>6.1%} "
+                      f"{hz['top3_hit'][l]:>6.1%} {hz['anchor_cov3'][l]:>6.3f}")
+            # Draft confidence baseline
+            dcb = hz.get("draft_conf_baseline")
+            if dcb:
+                r = dcb["recall_at_k"]
+                print(f"  {'  (draft conf)':<22} {lbl:<6} {'---':>8} "
+                      f"| {'---':>6} {r[0]:>6.1%} "
+                      f"{r[2]:>6.1%} {'---':>6}")
+
 
 # ─── CLI ───────────────────────────────────────────────────────────────────
 
@@ -747,7 +1036,11 @@ def main():
     parser.add_argument("--target", required=True, help="Target model path")
     parser.add_argument("--draft", nargs="+", required=True,
                         help="Draft model path(s). Multiple for comparison.")
-    parser.add_argument("--n_samples",  type=int, default=200)
+    parser.add_argument("--n_samples",  type=int, default=200,
+                        help="Number of samples PER DATASET")
+    parser.add_argument("--datasets", nargs="+", default=["gsm8k"],
+                        choices=list(DATASET_LOADERS.keys()),
+                        help="Datasets to use. e.g. --datasets gsm8k alpaca ultrafeedback")
     parser.add_argument("--output_dir", default="/home/chokwans99/Parallel_SD/results")
     parser.add_argument("--cache_dir",  default="/data2/shared/huggingface_cache")
     parser.add_argument("--checkpoints", type=int, nargs="+", default=None,
