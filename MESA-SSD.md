@@ -121,9 +121,49 @@ $$\hat{P}(i, v) = \hat{h}_i \cdot \hat{r}_i(v)$$
 - **Root**: reject position $i$에서의 correction token $v$ (residual proxy 분포에서 sampling)
 - **Rollout**: root $(i, v)$에서 이어지는 $d_{i,v}$ 토큰의 continuation
 
-### Budget 배분: Outcome Posterior 기반
+### Budget 배분 Policy
 
-총 cache budget을 outcome posterior $\hat{P}(i, v)$를 활용하여 배분한다.
+세 가지 배분 정책을 고려한다.
+
+#### Policy S: SAGUARO Baseline (Fixed Geometric Prior)
+
+SAGUARO의 기존 방법을 그대로 사용한다. Early-exit proxy 없이 draft model의 정보만으로 budget을 배분한다.
+
+**1) Outcome 확률 추정**
+
+각 position에서의 reject 확률을 fixed geometric prior로 모델링한다. Draft model의 top-$k$ token 확률을 기반으로 각 outcome의 가중치를 결정한다.
+
+**2) Token 선택**
+
+각 outcome에 대해 draft model의 top-$k$에서 correction token 후보를 선택한다.
+
+**3) Depth 배분**
+
+Outcome 확률에 비례하여 각 branch에 depth를 배정한다.
+
+이 방식은 **early-exit proxy를 사용하지 않으므로** Phase 1에서도 동작 가능하며, baseline 비교 대상으로 사용한다.
+
+#### Policy A: Reject 위치 기반 ($\hat{h}_i$만 사용)
+
+첫 reject 위치 분포 $\hat{h}_i$만을 기준으로 budget을 배분한다.
+
+**1) Position 선택**
+
+$\hat{h}_i$가 큰 position $i$부터 우선적으로 선택한다. 누적 위험 질량이 목표치(예: 80~90%)에 도달하거나 budget이 찰 때까지 선택한다.
+
+**2) Token 선택**
+
+선택된 position $i$에서 residual top-$k$의 확률이 큰 correction token $v$부터 할당한다.
+
+**3) Depth 배분**
+
+선택된 $(i, v)$ branch에 continuation depth $d_{i,v}$를 배정한다.
+
+이 방식은 **"어디서 reject가 나는가"에 집중**하며, correction token 확률은 position 내부에서만 반영한다. 구현이 단순하고, reject 위치를 넓게 커버하는 데 유리하다.
+
+#### Policy B: Outcome Posterior 기반 ($\hat{P}(i, v)$ 사용)
+
+최종 outcome posterior $\hat{P}(i, v) = \hat{h}_i \cdot \hat{r}_i(v)$를 기준으로 budget을 배분한다.
 
 **1) Position × Token 선택**
 
@@ -133,8 +173,15 @@ $\hat{P}(i, v)$가 큰 $(i, v)$ 쌍부터 우선적으로 cache에 할당한다.
 
 선택된 $(i, v)$ branch에 continuation depth $d_{i,v}$를 배정한다.
 
-$$\text{Score}(i, v, d) = \hat{P}(i, v) \cdot \frac{\Delta T(d)}{\text{Cost}(i, v, d)}$$
+이 방식은 **reject 위치와 correction token을 joint하게 고려**하므로, 특정 position의 특정 token에 확률이 집중되어 있을 때 budget을 더 효율적으로 쓸 수 있다.
 
+#### 공통: Depth Score
+
+Policy A, B 모두 depth 배분 시 다음 score를 사용한다 (Policy S는 SAGUARO 자체 방식을 따른다):
+
+$$\text{Score}(i, v, d) = w(i, v) \cdot \frac{\Delta T(d)}{\text{Cost}(i, v, d)}$$
+
+- $w(i, v)$: Policy A에서는 $\hat{h}_i \cdot \text{rank\_weight}(v)$, Policy B에서는 $\hat{P}(i, v)$
 - $\Delta T(d)$: depth $d$까지 precompute 시 절약되는 draft latency
 - $\text{Cost}(i, v, d)$: branch rollout cost
 
