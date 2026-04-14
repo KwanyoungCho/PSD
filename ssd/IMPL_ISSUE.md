@@ -13,8 +13,9 @@
 - Draft idle time ~10ms 발생 (proxy 대기)
 - 하지만 proxy-sourced correction tokens의 cache hit 개선 효과 측정 가능
 
-### ISSUE-003: Draft/proxy layout별 CudaGraph 캡처 hang
-DraftRunner.__init__에서 layout CudaGraph 캡처 시 hang 발생. 원인: capture_fi_tree_decode_cudagraph 내부에서 FlashInfer wrapper 접근 시 full layout wrapper와 draft/proxy layout MQ_LEN 불일치. 해결: layout별 wrapper를 캡처 전에 active하게 바인딩해야 함. Budget split 최적화 시 해결.
+### ISSUE-003: Draft/proxy layout별 CudaGraph 캡처 hang — **해결됨**
+**원인**: (1) capture 함수에서 prefill_wrappers[bs] 대신 layout별 wrapper 사용 필요, (2) set_context에 active_mq_len/active_wrappers 미전달, (3) outputs/logits 텐서 dtype 미명시 (float32 vs bfloat16), (4) 모듈 전역 cache dict가 layout간 공유.
+**해결**: (1) capture에서 layout별 wrapper 선택, (2) context에 layout 정보 전달, (3) dtype 명시, (4) cache.clear() on MQ_LEN change.
 
 ### ISSUE-004: MESA proxy token swap이 throughput과 cache hit rate 모두 하락시킴
 v1 실험 결과:
