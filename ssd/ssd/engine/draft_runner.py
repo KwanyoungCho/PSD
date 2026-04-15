@@ -45,6 +45,16 @@ class DraftRunner(ModelRunner):
             self._reset_tree_cache_tensors()
             self._init_prealloc_buffers()
             self._draft_step_times = []
+            # MESA: capture draft/proxy layout CudaGraphs
+            if self.config.mesa_enabled and not self.enforce_eager:
+                from ssd.engine.helpers.cudagraph_helpers import capture_fi_tree_decode_cudagraph
+                for _layout in [self.draft_layout, self.proxy_layout]:
+                    _gv, _pool, _graphs, _bs = capture_fi_tree_decode_cudagraph(self, layout=_layout)
+                    self.graph_vars[_layout.graph_key] = _gv
+                    self.graph_pools[_layout.graph_key] = _pool
+                    self.graphs[_layout.graph_key] = _graphs
+                    self.graph_bs_list[_layout.graph_key] = _bs
+                print(f'[MESA] Captured draft/proxy FI tree decode CudaGraphs', flush=True)
             print(f'DraftRunner set up, starting draft_loop', flush=True)
             self.draft_loop()
 
@@ -111,15 +121,45 @@ class DraftRunner(ModelRunner):
 
     def _init_prealloc_buffers(self):
         # PERFORMANCE: pre-allocate constant tensors used every draft step to avoid repeated CUDA mallocs
-        K, MQ_LEN = self.config.speculate_k, self.config.MQ_LEN
+        from ssd.engine.helpers.tree_layout import create_tree_layout
+        K = self.config.speculate_k
         d = self.device
-        self._step_pos_offsets = torch.arange(K, device=d, dtype=torch.int64)[:, None] * MQ_LEN
-        self._step_rope_offsets = torch.arange(K, device=d, dtype=torch.int64)[:, None]
-        self._fan_idx_hit = torch.arange(K + 1, device=d, dtype=torch.int64).repeat_interleave(self.config.fan_out_t)
-        self._fan_idx_miss = torch.arange(K + 1, device=d, dtype=torch.int64).repeat_interleave(self.config.fan_out_t_miss)
-        self._arange_mq = torch.arange(MQ_LEN, device=d, dtype=torch.int64)
+
+        # Layout-independent tensors
         self._arange_kp1 = torch.arange(K + 1, device=d, dtype=torch.int64)
         self._arange_2kp1 = torch.arange(2 * K + 1, device=d, dtype=torch.int64)
+
+        # full_layout: 기존 SSD용 (non-MESA + MESA 비활성)
+        self.full_layout = create_tree_layout(
+            name="full",
+            fan_out_list=self.config.fan_out_list,
+            fan_out_list_miss=self.config.fan_out_list_miss,
+            K=K, device=d)
+
+        # Backward compat: 기존 전역 변수를 full_layout으로 위임
+        self._step_pos_offsets = self.full_layout.step_pos_offsets
+        self._step_rope_offsets = self.full_layout.step_rope_offsets
+        self._fan_idx_hit = self.full_layout.fan_idx_hit
+        self._fan_idx_miss = self.full_layout.fan_idx_miss
+        self._arange_mq = self.full_layout.arange_mq
+
+        # MESA: draft_layout + proxy_layout
+        if self.config.mesa_enabled:
+            draft_fo = self.config.mesa_draft_fan_out
+            proxy_fo = self.config.mesa_proxy_fan_out
+            self.draft_layout = create_tree_layout(
+                name="draft",
+                fan_out_list=[draft_fo] * (K + 1),
+                fan_out_list_miss=[draft_fo] * (K + 1),
+                K=K, device=d)
+            self.proxy_layout = create_tree_layout(
+                name="proxy",
+                fan_out_list=[proxy_fo] * (K + 1),
+                fan_out_list_miss=[proxy_fo] * (K + 1),
+                K=K, device=d)
+            print(f'[MESA] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
+                  f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
+                  f'proxy MQ_LEN={self.proxy_layout.MQ_LEN}', flush=True)
 
     def jit_speculate(self, 
                       request_keys: torch.Tensor, 
@@ -497,12 +537,13 @@ class DraftRunner(ModelRunner):
         N = rec_flat.shape[0]
         cache_hits = partial_tree_decode_args["cache_hits"]
 
+        _layout = self.full_layout  # _construct_tree_decode_args is only used in non-MESA path
         if __debug__:
-            assert N == B*self.config.MQ_LEN, f"ERROR in _construct_tree_decode_args: N should be B*self.config.MQ_LEN={B*self.config.MQ_LEN}, got {N}"
+            assert N == B*_layout.MQ_LEN, f"ERROR in _construct_tree_decode_args: N should be B*MQ_LEN={B*_layout.MQ_LEN}, got {N}"
 
-        b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, self.config.MQ_LEN).flatten()
-        fkp1_flat = self._arange_mq.repeat(B)
-        j_idx_flat = torch.cat([self._fan_idx_hit if hit else self._fan_idx_miss for hit in cache_hits])
+        b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, _layout.MQ_LEN).flatten()
+        fkp1_flat = _layout.arange_mq.repeat(B)
+        j_idx_flat = torch.cat([_layout.fan_idx_hit if hit else _layout.fan_idx_miss for hit in cache_hits])
         metadata = torch.tensor([B, K, F, N], dtype=torch.int64, device=self.device)
 
         seq_ids = partial_tree_decode_args["seq_ids"]
@@ -615,9 +656,11 @@ class DraftRunner(ModelRunner):
             )
 
         # Pre-compute tree decode args (overlap CPU with GPU)
-        _pre_b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, self.config.MQ_LEN).flatten()
-        _pre_fkp1_flat = self._arange_mq.repeat(B)
-        _pre_j_idx_flat = torch.cat([self._fan_idx_hit if int(h) else self._fan_idx_miss for h in cache_hits_list])
+        # Uses full_layout for non-MESA path. MESA path uses _build_tree_batch_mesa() instead.
+        _layout = self.full_layout
+        _pre_b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, _layout.MQ_LEN).flatten()
+        _pre_fkp1_flat = _layout.arange_mq.repeat(B)
+        _pre_j_idx_flat = torch.cat([_layout.fan_idx_hit if int(h) else _layout.fan_idx_miss for h in cache_hits_list])
         N_pre = _pre_b_flat.shape[0]
         _pre_metadata_ints = (B, K, self.config.async_fan_out, N_pre)
         _pre_seq_ids_expanded = partial_tree_decode_args["seq_ids"][_pre_b_flat]
@@ -708,18 +751,23 @@ class DraftRunner(ModelRunner):
             "cache_hits_list": cache_hits_list,
         }
         tree_decode_args["hidden_states"] = tree_hidden_states
+        # MESA: store glue_decode_logits and gd_for_fork for proxy token swap
+        if self.config.mesa_enabled:
+            tree_decode_args["_mesa_glue_logits"] = glue_decode_logits  # [B, K+1, V]
+            tree_decode_args["_mesa_gd_for_fork"] = gd_for_fork          # [B, K+1]
         return tree_decode_args
 
     @torch.inference_mode()
-    def _compute_step_positions_and_slot_maps(self, initial_positions, initial_rope_positions, dbt, B, K, F, N, MQ_LEN):
+    def _compute_step_positions_and_slot_maps(self, initial_positions, initial_rope_positions, dbt, B, K, F, N, MQ_LEN, layout=None):
         # PERFORMANCE: pre-allocated _step_pos_offsets/_step_rope_offsets avoid per-step torch.arange calls
-        step_positions = initial_positions[None, :] + self._step_pos_offsets
-        step_rope_positions = initial_rope_positions[None, :] + self._step_rope_offsets
-        step_context_lens = step_positions.view(K, B, MQ_LEN)[:, :, -1] + 1
+        _layout = layout or self.full_layout
+        step_positions = initial_positions[None, :] + _layout.step_pos_offsets
+        step_rope_positions = initial_rope_positions[None, :] + _layout.step_rope_offsets
+        step_context_lens = step_positions.view(K, B, _layout.MQ_LEN)[:, :, -1] + 1
 
         # Precompute slot_maps for all steps: [K, N]
         b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[
-            :, None].expand(B, self.config.MQ_LEN).flatten()
+            :, None].expand(B, _layout.MQ_LEN).flatten()
         batch_indices = torch.arange(N, device=self.device)
         dbt_expanded = dbt[b_flat]  # [N, M] - constant across steps
 
@@ -732,13 +780,27 @@ class DraftRunner(ModelRunner):
 
     def _decode_tree_step(self, depth, current_input_ids, step_rope_positions, step_slot_maps, step_context_lens, dbt, payload, spec_tokens, spec_logits, spec_activations):
         """Execute a single tree decode step."""
-        # Use precomputed values for this step
-        set_context(
-            is_prefill=False,
-            slot_mapping=step_slot_maps[depth],
-            context_lens=step_context_lens[depth].to(torch.int32),
-            block_tables=dbt,
-        )
+        if self.config.mesa_enabled:
+            _layout = payload.get("_active_layout")
+            _active_mq = _layout.MQ_LEN if _layout and _layout.name != "full" else None
+            _active_wrappers = None
+            if _active_mq is not None:
+                _active_wrappers = self.prefill_wrappers_by_layout.get(_layout.name)
+            set_context(
+                is_prefill=False,
+                slot_mapping=step_slot_maps[depth],
+                context_lens=step_context_lens[depth].to(torch.int32),
+                block_tables=dbt,
+                active_mq_len=_active_mq,
+                active_wrappers=_active_wrappers,
+            )
+        else:
+            set_context(
+                is_prefill=False,
+                slot_mapping=step_slot_maps[depth],
+                context_lens=step_context_lens[depth].to(torch.int32),
+                block_tables=dbt,
+            )
 
         hidden_states = payload.get("hidden_states")
         if self.config.use_eagle:
@@ -760,13 +822,15 @@ class DraftRunner(ModelRunner):
         
         return next_tokens
 
-    def _decode_tree(self, payload):
-        """Decodes the speculation tree, checking for interrupts at each step."""
+    def _decode_tree(self, payload, layout=None):
+        """Decodes the speculation tree. layout=None → full_layout (backward compat)."""
+        _layout = layout or self.full_layout
+        payload["_active_layout"] = _layout  # for _decode_tree_step context
 
         # setup
         B, K, F, N = payload["metadata_ints"]
 
-        V = self.hf_config.vocab_size  # Draft returns full target vocab size after d2t expansion
+        V = self.hf_config.vocab_size
         spec_tokens = torch.zeros(
             (N, K), dtype=torch.int64, device=self.device)
         spec_logits = torch.zeros(
@@ -776,16 +840,13 @@ class DraftRunner(ModelRunner):
             dtype=self.hf_config.torch_dtype, device=self.device
         ) if self.config.use_eagle else None
 
-        # Precompute all positions, context_lens, and slot_maps for all K steps
-        # PERFORMANCE: no .clone() needed — these are not modified in-place
-        initial_positions = payload["positions"]  # [N]
-        initial_rope_positions = payload["rope_positions"]  # [N]
-        current_input_ids = payload["input_ids"]  # [N], the forked tokens
-        dbt = payload["block_tables"]  # [B, M] - constant across steps
-        
-        # Use compiled function for batch-size independent computations
+        initial_positions = payload["positions"]
+        initial_rope_positions = payload["rope_positions"]
+        current_input_ids = payload["input_ids"]
+        dbt = payload["block_tables"]
+
         _, step_rope_positions, step_context_lens, step_slot_maps = self._compute_step_positions_and_slot_maps(
-            initial_positions, initial_rope_positions, dbt, B, K, F, N, self.config.MQ_LEN
+            initial_positions, initial_rope_positions, dbt, B, K, F, N, _layout.MQ_LEN, layout=_layout
         )
 
         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
@@ -811,15 +872,17 @@ class DraftRunner(ModelRunner):
 
         return spec_tokens, spec_logits, spec_activations
 
-    def _populate_tree_cache(self, payload, tokens, logits, cache_hits, activations=None):
+    def _populate_tree_cache(self, payload, tokens, logits, cache_hits, activations=None, layout=None):
         """Populates the tensor-backed tree_cache with the results of the decoding.
+        layout=None → full_layout (backward compat).
         """
+        _layout = layout or self.full_layout
         seq_ids_expanded = payload["seq_ids_expanded"].to(torch.int64)
         rec_flat = payload["rec_flat"].to(torch.int64)
 
-        k_flat = torch.cat([self._fan_idx_hit if hit else self._fan_idx_miss for hit in payload["cache_hits_list"]])
+        k_flat = torch.cat([_layout.fan_idx_hit if hit else _layout.fan_idx_miss for hit in payload["cache_hits_list"]])
 
-        assert k_flat.shape[0] == payload["block_tables"].shape[0] * self.config.MQ_LEN, f"ERROR in _populate_tree_cache: k_flat should be {payload['block_tables'].shape[0] * self.config.MQ_LEN}, got {k_flat.shape[0]}"
+        assert k_flat.shape[0] == payload["block_tables"].shape[0] * _layout.MQ_LEN, f"ERROR in _populate_tree_cache: k_flat should be {payload['block_tables'].shape[0] * _layout.MQ_LEN}, got {k_flat.shape[0]}"
         
         keys = torch.stack([seq_ids_expanded, k_flat, rec_flat], dim=1).contiguous()  # [N,3]
 
@@ -855,6 +918,188 @@ class DraftRunner(ModelRunner):
                         spec_text = [self.tokenizer.decode([t]) for t in spec_tokens]
                         print(f"    k={k_idx}, rec={rec_token.item()} ('{rec_text}') -> {spec_text}", flush=True)
             print(f"{'='*80}\n", flush=True)
+
+    # ============================================================
+    # MESA-SSD: 2-pass tree decode methods
+    # ============================================================
+
+    def _irecv_mesa_proxy(self, B, K):
+        """Post non-blocking recv for proxy. Returns (work, buffer)."""
+        import torch.distributed as dist
+        top_k = self.config.mesa_proxy_top_k
+        total_len = B * K + B * K * top_k + B * K * top_k
+        buf = torch.empty(total_len, dtype=torch.int64, device=self.device)
+        work = dist.irecv(buf, src=0, group=self.async_pg)
+        return work, buf
+
+    def _unpack_mesa_proxy(self, buf, B, K):
+        """Unpack proxy data from irecv buffer."""
+        top_k = self.config.mesa_proxy_top_k
+        off = 0
+        accept_probs = buf[off:off + B * K].to(torch.int32).view(torch.float32).view(B, K)
+        off += B * K
+        topk_ids = buf[off:off + B * K * top_k].view(B, K, top_k)
+        off += B * K * top_k
+        topk_probs = buf[off:].to(torch.int32).view(torch.float32).view(B, K, top_k)
+        return {"accept_probs": accept_probs, "topk_ids": topk_ids, "topk_probs": topk_probs}
+
+    def _select_draft_sourced_tokens(self, logits, returned_tokens, draft_fan_out):
+        """Select fork tokens from draft logits (top-k per position)."""
+        logits = logits.clone()
+        logits[:, :-1, :] = logits[:, :-1, :].scatter(
+            dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
+        _, topk_idx = torch.topk(logits, draft_fan_out, dim=-1)  # [B, K+1, draft_fan_out]
+        return topk_idx
+
+    def _select_proxy_sourced_tokens(self, logits, returned_tokens,
+                                       mesa_proxy, draft_forked, proxy_fan_out):
+        """Select proxy correction tokens with dedup against draft-sourced."""
+        B, K = mesa_proxy["accept_probs"].shape
+        proxy_topk_ids = mesa_proxy["topk_ids"]  # [B, K, proxy_top_k]
+
+        # Fallback candidates: wider top-k from draft logits
+        logits_for_fallback = logits.clone()
+        logits_for_fallback[:, :-1, :] = logits_for_fallback[:, :-1, :].scatter(
+            dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
+        total_need = self.config.async_fan_out
+        _, fallback_topk = torch.topk(logits_for_fallback, total_need, dim=-1)  # [B, K+1, total]
+
+        result = torch.zeros(B, K + 1, proxy_fan_out, dtype=torch.int64, device=logits.device)
+
+        # Position 0..K-1: proxy-sourced with dedup
+        for b in range(B):
+            for pos in range(K):
+                draft_set = set(draft_forked[b, pos].tolist())
+                proxy_tokens = proxy_topk_ids[b, pos].tolist()
+
+                # Proxy tokens not in draft
+                selected = [t for t in proxy_tokens if t not in draft_set]
+
+                # Fallback: tokens not in draft or selected proxy
+                if len(selected) < proxy_fan_out:
+                    used = draft_set | set(selected)
+                    fallback = [t for t in fallback_topk[b, pos].tolist() if t not in used]
+                    selected.extend(fallback[:proxy_fan_out - len(selected)])
+
+                for j in range(min(len(selected), proxy_fan_out)):
+                    result[b, pos, j] = selected[j]
+
+        # Position K (all-accept): draft logits top-k, excluding draft_forked
+        logits_k = logits_for_fallback[:, K, :].clone()
+        logits_k.scatter_(1, draft_forked[:, K, :], float('-inf'))
+        _, all_accept_topk = torch.topk(logits_k, proxy_fan_out, dim=-1)
+        result[:, K, :] = all_accept_topk
+
+        return result
+
+    def _build_tree_decode_args_for_layout(self, partial_tree_decode_args, forked_tokens,
+                                             layout, cache_hits_list, pos_offset=0):
+        """Build tree_decode_args using the given layout. Used for both draft and proxy passes."""
+        B = partial_tree_decode_args["num_tokens"].shape[0]
+        K = layout.K
+        MQ_LEN = layout.MQ_LEN
+
+        _b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, MQ_LEN).flatten()
+        _fkp1_flat = layout.arange_mq.repeat(B)
+        _j_idx_flat = torch.cat([layout.fan_idx_hit if int(h) else layout.fan_idx_miss for h in cache_hits_list])
+        N = _b_flat.shape[0]
+
+        _pos_offset = -1 if self.config.use_eagle else 0
+        _positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + (K + 1) + _fkp1_flat
+        _rope_positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + _j_idx_flat + 1
+        _temperatures = partial_tree_decode_args["temperatures"][_b_flat]
+
+        return {
+            "metadata_ints": (B, K, layout.fan_out_list[0], N),
+            "input_ids": forked_tokens.view(-1),
+            "positions": _positions,
+            "rope_positions": _rope_positions,
+            "block_tables": partial_tree_decode_args["dbt"],
+            "temps": _temperatures,
+            "rec_flat": forked_tokens.view(-1),
+            "seq_ids_expanded": partial_tree_decode_args["seq_ids"][_b_flat],
+            "cache_hits": partial_tree_decode_args["cache_hits"],
+            "cache_hits_list": cache_hits_list,
+            "hidden_states": None,  # non-EAGLE
+        }
+
+    def _build_tree_batch_mesa(self, partial_tree_decode_args, glue_decode_input_ids):
+        """MESA 2-pass tree decode:
+        Pass 1: draft-sourced tokens → decode with draft_layout (immediate, no proxy wait)
+        Pass 2: proxy-sourced tokens → decode with proxy_layout (after proxy arrives)
+        Both passes reuse same KV scratch positions (safe: results extracted to tensors).
+        """
+        B = partial_tree_decode_args["num_tokens"].shape[0]
+        K = self.config.speculate_k
+
+        # Post irecv FIRST — so target send doesn't block
+        proxy_recv_work, proxy_buf = self._irecv_mesa_proxy(B, K)
+
+        # Run glue decode via _build_tree_batch (reuse shared logic)
+        full_tree_args = self._build_tree_batch(partial_tree_decode_args, glue_decode_input_ids)
+        glue_logits = full_tree_args.get("_mesa_glue_logits")
+        gd_for_fork = full_tree_args.get("_mesa_gd_for_fork")
+        cache_hits = full_tree_args["cache_hits"]
+        cache_hits_list = full_tree_args["cache_hits_list"]
+
+        if glue_logits is None:
+            proxy_recv_work.wait()
+            tokens, logits, acts = self._decode_tree(full_tree_args)
+            self._populate_tree_cache(full_tree_args, tokens, logits, cache_hits, acts)
+            return
+
+        # === Pass 1: draft-sourced tokens (즉시 시작) ===
+        draft_forked = self._select_draft_sourced_tokens(
+            glue_logits, gd_for_fork, self.config.mesa_draft_fan_out)
+        draft_tree_args = self._build_tree_decode_args_for_layout(
+            partial_tree_decode_args, draft_forked, self.draft_layout, cache_hits_list)
+        draft_tokens, draft_logits, draft_acts = self._decode_tree(
+            draft_tree_args, layout=self.draft_layout)
+
+        # === Pass 중간: proxy 수신 ===
+        proxy_recv_work.wait()
+        mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
+
+        # === Pass 2: proxy-sourced tokens (dedup with draft) ===
+        proxy_forked = self._select_proxy_sourced_tokens(
+            glue_logits, gd_for_fork, mesa_proxy, draft_forked,
+            self.config.mesa_proxy_fan_out)
+        proxy_tree_args = self._build_tree_decode_args_for_layout(
+            partial_tree_decode_args, proxy_forked, self.proxy_layout, cache_hits_list)
+        proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
+            proxy_tree_args, layout=self.proxy_layout)
+
+        # === Merge + populate cache ===
+        self._merge_and_populate_cache(
+            draft_tree_args, draft_tokens, draft_logits,
+            proxy_tree_args, proxy_tokens, proxy_logits,
+            cache_hits_list, draft_acts, proxy_acts)
+
+    def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
+                                    proxy_args, proxy_tokens, proxy_logits,
+                                    cache_hits_list, draft_acts=None, proxy_acts=None):
+        """Merge draft + proxy tree decode results into single cache."""
+        # Build keys with layout-specific fan_idx
+        draft_k = torch.cat([self.draft_layout.fan_idx_hit if int(h) else self.draft_layout.fan_idx_miss
+                              for h in cache_hits_list])
+        draft_keys = torch.stack([
+            draft_args["seq_ids_expanded"].to(torch.int64),
+            draft_k, draft_args["rec_flat"].to(torch.int64)], dim=1)
+
+        proxy_k = torch.cat([self.proxy_layout.fan_idx_hit if int(h) else self.proxy_layout.fan_idx_miss
+                              for h in cache_hits_list])
+        proxy_keys = torch.stack([
+            proxy_args["seq_ids_expanded"].to(torch.int64),
+            proxy_k, proxy_args["rec_flat"].to(torch.int64)], dim=1)
+
+        self.tree_cache_keys = torch.cat([draft_keys, proxy_keys], dim=0)
+        self.tree_cache_tokens = torch.cat([draft_tokens, proxy_tokens], dim=0)
+        self.tree_cache_logits = torch.cat([draft_logits, proxy_logits], dim=0)
+        if draft_acts is not None and proxy_acts is not None:
+            self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
+        else:
+            self.tree_cache_activations = None
+
     # new one, with true asynchrony
     def draft_loop(self):
         """
@@ -889,21 +1134,24 @@ class DraftRunner(ModelRunner):
 
                 self._reset_tree_cache_tensors()
 
-                tree_decode_args = self._build_tree_batch(partial_tree_decode_args, glue_decode_input_ids)
+                if self.config.mesa_enabled:
+                    # MESA: 2-pass tree decode (draft-sourced → proxy-sourced)
+                    self._build_tree_batch_mesa(partial_tree_decode_args, glue_decode_input_ids)
+                else:
+                    # Standard SSD: single-pass tree decode
+                    tree_decode_args = self._build_tree_batch(partial_tree_decode_args, glue_decode_input_ids)
 
-                if _prof or PROFILE_DRAFT:
-                    torch.cuda.synchronize()
-                    _d2 = time.perf_counter()
+                    if _prof or PROFILE_DRAFT:
+                        torch.cuda.synchronize()
+                        _d2 = time.perf_counter()
 
-                # Decode the branch tree
-                tokens, logits, activations = self._decode_tree(tree_decode_args)
+                    tokens, logits, activations = self._decode_tree(tree_decode_args)
 
-                if _prof or PROFILE_DRAFT:
-                    torch.cuda.synchronize()
-                    _d3 = time.perf_counter()
+                    if _prof or PROFILE_DRAFT:
+                        torch.cuda.synchronize()
+                        _d3 = time.perf_counter()
 
-                # Populate the local cache so future spec-requests can hit
-                self._populate_tree_cache(tree_decode_args, tokens, logits, tree_decode_args["cache_hits"], activations)
+                    self._populate_tree_cache(tree_decode_args, tokens, logits, tree_decode_args["cache_hits"], activations)
                 self._draft_step_times.append(time.perf_counter() - _ds0)
 
                 if _prof or PROFILE_DRAFT:

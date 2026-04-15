@@ -39,9 +39,15 @@ class Config:
     d_model_target: int | None = None
     tokenizer_path: str | None = None
 
+    # MESA-SSD
+    mesa_enabled: bool = False
+    mesa_exit_layer: int | None = None      # None=auto: 2*L//3
+    mesa_proxy_top_k: int = 3              # proxy correction token count
+    mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
+
     # Debugging
-    verbose: bool = False 
-    debug_mode: bool = False 
+    verbose: bool = False
+    debug_mode: bool = False
     max_steps: int | None = None
 
     @property
@@ -91,4 +97,25 @@ class Config:
                     print(f'[Config] Overriding eagle draft max_position_embeddings: {draft_max_pos} -> {target_max_pos}', flush=True)
                     self.draft_hf_config.max_position_embeddings = target_max_pos
         
+        if self.mesa_enabled:
+            assert self.draft_async, "MESA-SSD requires draft_async=True"
+            assert self.speculate, "MESA-SSD requires speculate=True"
+            assert self.hf_config.model_type == "llama", "MESA-SSD only supports Llama models"
+            assert not self.use_eagle, "MESA-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
+            if self.mesa_exit_layer is None:
+                L = self.hf_config.num_hidden_layers
+                self.mesa_exit_layer = (2 * L) // 3
+            assert 0 < self.mesa_exit_layer < self.hf_config.num_hidden_layers, \
+                f"mesa_exit_layer must be in (0, {self.hf_config.num_hidden_layers}), got {self.mesa_exit_layer}"
+            if self.mesa_draft_fan_out is None:
+                self.mesa_draft_fan_out = max(1, self.async_fan_out // 2)
+            assert 0 < self.mesa_draft_fan_out < self.async_fan_out, \
+                f"mesa_draft_fan_out must be in (0, {self.async_fan_out}), got {self.mesa_draft_fan_out}"
+            self.mesa_proxy_fan_out = self.async_fan_out - self.mesa_draft_fan_out
+            assert self.mesa_proxy_top_k >= 1, "mesa_proxy_top_k must be >= 1"
+            print(f'[Config] MESA-SSD enabled: exit_layer={self.mesa_exit_layer}, '
+                  f'proxy_top_k={self.mesa_proxy_top_k}, '
+                  f'draft_fan_out={self.mesa_draft_fan_out}, proxy_fan_out={self.mesa_proxy_fan_out}',
+                  flush=True)
+
         assert self.max_num_batched_tokens >= self.max_model_len

@@ -55,6 +55,22 @@ class Verifier(VerifierBase):
         """Verify speculative tokens using the target model."""
         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
         batch_size = len(seqs)
+        config = self.target_model_runner.config
+
+        # MESA: set proxy function on target model runner (rank 0 only)
+        if config.mesa_enabled:
+            async_pg = self.target_model_runner.async_pg
+            draft_rank = self.target_model_runner.draft_rank
+            draft_tokens = speculate_result.speculations[:, 1:]  # [B, K]
+            logits_q = speculate_result.logits_q                 # [B, K, V]
+            cache_hits = speculate_result.cache_hits              # [B] or None
+
+            def _proxy_fn(exit_logits, orig_bs):
+                self._compute_and_send_proxy(
+                    exit_logits, draft_tokens, logits_q, orig_bs,
+                    self.lookahead, async_pg, draft_rank, cache_hits=cache_hits)
+
+            self.target_model_runner._mesa_proxy_fn = _proxy_fn
 
         if _prof:
             torch.cuda.synchronize()
@@ -63,6 +79,10 @@ class Verifier(VerifierBase):
         _pt = os.environ.get("SSD_PROFILE_TARGET", "0") == "1"
         _tv0 = perf_counter()
         result = self.target_model_runner.call("run", seqs, False, False, True)
+
+        # MESA: clear proxy function
+        if config.mesa_enabled:
+            self.target_model_runner._mesa_proxy_fn = None
 
         if _prof:
             torch.cuda.synchronize()
@@ -151,3 +171,55 @@ class Verifier(VerifierBase):
             recovery_tokens=recovery_tokens,
             eagle_acts=eagle_acts,
         )
+
+    def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
+                                 B, K, async_pg, draft_rank, cache_hits=None):
+        """Compute MESA proxy from early-exit logits and send to draft.
+
+        Args:
+            exit_logits: [B*(K+1), V] — norm+lm_head+TP gather done. None on non-rank-0.
+            draft_tokens: [B, K] — draft's speculated tokens
+            logits_q: [B, K, V] — draft model logits
+            cache_hits: [B] or None
+        """
+        import torch.distributed as dist
+        from ssd.utils.async_helpers.nccl_pack import send_int64
+        config = self.target_model_runner.config
+        top_k = config.mesa_proxy_top_k
+
+        if exit_logits.dim() == 2:
+            exit_logits = exit_logits.view(B, K + 1, -1)  # [B, K+1, V]
+
+        # p_E (early-exit proxy), p_D (draft)
+        p_E = torch.softmax(exit_logits[:, :K, :].float(), dim=-1)  # [B, K, V]
+        p_D = torch.softmax(logits_q.float(), dim=-1)                # [B, K, V]
+
+        # Accept probability proxy: â_i = min(1, p_E(y_i) / p_D(y_i))
+        gather_idx = draft_tokens.unsqueeze(-1)  # [B, K, 1]
+        p_E_y = p_E.gather(2, gather_idx).squeeze(-1)  # [B, K]
+        p_D_y = p_D.gather(2, gather_idx).squeeze(-1)  # [B, K]
+        accept_probs = (p_E_y / (p_D_y + 1e-10)).clamp(max=1.0)  # [B, K]
+
+        # Residual proxy: [p_E - p_D]_+
+        residual = (p_E - p_D).clamp(min=0)  # [B, K, V]
+        residual.scatter_(2, gather_idx, 0.0)  # exclude draft token y_i
+        topk_probs, topk_ids = residual.topk(top_k, dim=-1)  # [B, K, top_k]
+        topk_sum = topk_probs.sum(dim=-1, keepdim=True).clamp(min=1e-10)
+        topk_probs = topk_probs / topk_sum
+
+        # Cache miss handling: if jit_speculate=False, miss rows have random logits_q
+        if cache_hits is not None and not config.jit_speculate:
+            miss_mask = ~cache_hits.to(torch.bool)
+            if miss_mask.any():
+                accept_probs[miss_mask] = 0.0
+                miss_p_E = p_E[miss_mask].clone()
+                miss_p_E.scatter_(2, gather_idx[miss_mask], 0.0)
+                miss_topk_probs, miss_topk_ids = miss_p_E.topk(top_k, dim=-1)
+                topk_ids[miss_mask] = miss_topk_ids
+                topk_probs[miss_mask] = miss_topk_probs / miss_topk_probs.sum(-1, keepdim=True).clamp(min=1e-10)
+
+        # NCCL send (packed, blocking — 280 bytes ~3μs)
+        send_int64(async_pg, draft_rank,
+                   accept_probs.view(-1).to(torch.float32).view(torch.int32).to(torch.int64),
+                   topk_ids.reshape(-1),
+                   topk_probs.view(-1).to(torch.float32).view(torch.int32).to(torch.int64))

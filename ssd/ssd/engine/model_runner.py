@@ -30,6 +30,8 @@ from ssd.engine.helpers.cudagraph_helpers import (
     capture_verify_cudagraph,
     capture_fi_tree_decode_cudagraph,
     capture_glue_decode_cudagraph,
+    capture_mesa_verify_cudagraph,
+    run_mesa_verify_cudagraph,
     get_custom_mask,
 )
     
@@ -52,7 +54,11 @@ class ModelRunner:
         self.hf_config = config.hf_config if not is_draft else config.draft_hf_config
         self.block_size = config.kvcache_block_size
         self.enforce_eager = config.enforce_eager
-        self.tokenizer = AutoTokenizer.from_pretrained(config.tokenizer_path if config.tokenizer_path else config.model, use_fast=True)
+        _tok_path = config.tokenizer_path if config.tokenizer_path else config.model
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(_tok_path, use_fast=True)
+        except Exception:
+            self.tokenizer = AutoTokenizer.from_pretrained(_tok_path, use_fast=False)
         self.max_num_blocks = (config.max_model_len + self.block_size - 1) // self.block_size
 
         assert self.hf_config is not None, "ERROR in ModelRunner: hf_config is None" # this implies boundedness to the end 
@@ -83,7 +89,8 @@ class ModelRunner:
         self.verbose = config.verbose
         self.draft_async = config.draft_async
         self.event = event
-        self._exiting = False 
+        self._exiting = False
+        self._mesa_proxy_fn = None  # MESA: Verifier sets before verify, clears after
         
         torch.cuda.set_device(self.rank)
         self.device = torch.device(f'cuda:{self.rank}') 
@@ -205,6 +212,37 @@ class ModelRunner:
                 )
             print(f'wrapper backend is {self.prefill_wrappers[bs]._backend}', flush=True)
 
+            # MESA: create layout-specific wrappers for draft/proxy tree decode
+            self.prefill_wrappers_by_layout = {"full": self.prefill_wrappers}
+            if self.config.mesa_enabled:
+                for layout_name, layout_fan_out in [
+                    ("draft", self.config.mesa_draft_fan_out),
+                    ("proxy", self.config.mesa_proxy_fan_out),
+                ]:
+                    layout_mq_len = layout_fan_out * (self.config.speculate_k + 1)
+                    l_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                    l_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                    l_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
+                    l_kv_lpl = torch.empty(max_bs, dtype=torch.int32, device=self.device)
+                    l_mask = torch.empty(max_bs * layout_mq_len * self.config.max_model_len,
+                                          dtype=torch.uint8, device=self.device)
+                    l_mask_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+
+                    layout_wrappers = {}
+                    for bs_i in graph_bs_list:
+                        layout_wrappers[bs_i] = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                            self.workspace_buffer, "NHD",
+                            use_cuda_graph=True,
+                            qo_indptr_buf=l_cu[:bs_i + 1],
+                            paged_kv_indptr_buf=l_kv_indptr[:bs_i + 1],
+                            paged_kv_indices_buf=l_kv_indices[:bs_i * max_num_blocks],
+                            paged_kv_last_page_len_buf=l_kv_lpl[:bs_i],
+                            custom_mask_buf=l_mask[:bs_i * layout_mq_len * self.config.max_model_len],
+                            mask_indptr_buf=l_mask_indptr[:bs_i + 1],
+                        )
+                    self.prefill_wrappers_by_layout[layout_name] = layout_wrappers
+                print(f'[MESA] Created FlashInfer wrappers for draft/proxy layouts', flush=True)
+
 
     def setup_and_warmup_model_and_cudagraphs(self, config: Config, hf_config: AutoConfig, init_q=None, is_draft=False):
         # cudagraphs 
@@ -283,17 +321,30 @@ class ModelRunner:
             self.graphs["decode"] = decode_graphs
             self.graph_bs_list["decode"] = decode_graph_bs_list
             if self.config.speculate and not (self.is_draft and self.config.use_eagle):  # verify CG: target always, non-EAGLE draft for fan-out; EAGLE draft uses glue_decode CG instead
-                verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = capture_verify_cudagraph(self)
-                self.graph_vars["verify"] = verify_graph_vars
-                self.graph_pools["verify"] = verify_graph_pool
-                self.graphs["verify"] = verify_graphs
-                self.graph_bs_list["verify"] = verify_graph_bs_list
+                if self.config.mesa_enabled and not self.is_draft:
+                    # MESA target: split verify CudaGraph (skip full verify → VRAM saving)
+                    mesa_gv, mesa_pool, mesa_pre, mesa_post, mesa_bs = capture_mesa_verify_cudagraph(self)
+                    self.graph_vars["mesa_verify"] = mesa_gv
+                    self.graph_pools["mesa_verify"] = mesa_pool
+                    self.graphs["mesa_verify_pre"] = mesa_pre
+                    self.graphs["mesa_verify_post"] = mesa_post
+                    self.graph_bs_list["mesa_verify"] = mesa_bs
+                    print(f'[MESA] Captured split verify CudaGraph (exit_layer={self.config.mesa_exit_layer})', flush=True)
+                else:
+                    # Non-MESA or draft: full verify CudaGraph
+                    verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = capture_verify_cudagraph(self)
+                    self.graph_vars["verify"] = verify_graph_vars
+                    self.graph_pools["verify"] = verify_graph_pool
+                    self.graphs["verify"] = verify_graphs
+                    self.graph_bs_list["verify"] = verify_graph_bs_list
             if self.config.speculate and self.is_draft and self.config.draft_async:
                 fi_tree_decode_graph_vars, fi_tree_decode_graph_pool, fi_tree_decode_graphs, fi_tree_decode_graph_bs_list = capture_fi_tree_decode_cudagraph(self)  # fi tree decode cudagraph, draft only
                 self.graph_vars["fi_tree_decode"] = fi_tree_decode_graph_vars
                 self.graph_pools["fi_tree_decode"] = fi_tree_decode_graph_pool
                 self.graphs["fi_tree_decode"] = fi_tree_decode_graphs
                 self.graph_bs_list["fi_tree_decode"] = fi_tree_decode_graph_bs_list
+                # MESA draft/proxy layout CudaGraphs are captured after _init_prealloc_buffers()
+                # in DraftRunner.__init__, because draft_layout/proxy_layout are created there.
             if self.config.speculate and self.is_draft and self.config.draft_async and self.config.use_eagle:
                 glue_gv, glue_pool, glue_graphs, glue_bs_list = capture_glue_decode_cudagraph(self)
                 self.graph_vars["glue_decode"] = glue_gv
@@ -620,10 +671,31 @@ class ModelRunner:
                 return logits 
 
         elif is_tree_decode:
-            return run_fi_tree_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["fi_tree_decode"], tree_decode_step, cache_hits, hidden_states=hidden_states)
+            if self.config.mesa_enabled:
+                # MESA: layout-aware graph selection via context
+                _ctx = get_context()
+                _tree_graph_key = "fi_tree_decode"
+                _tree_layout = None
+                if _ctx.active_mq_len is not None:
+                    for _lname in ["draft", "proxy"]:
+                        _lkey = f"fi_tree_decode_{_lname}"
+                        if _lkey in self.graph_vars and getattr(self, f'{_lname}_layout').MQ_LEN == _ctx.active_mq_len:
+                            _tree_graph_key = _lkey
+                            _tree_layout = getattr(self, f'{_lname}_layout')
+                            break
+                return run_fi_tree_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars[_tree_graph_key], tree_decode_step, cache_hits, hidden_states=hidden_states, layout=_tree_layout)
+            else:
+                return run_fi_tree_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["fi_tree_decode"], tree_decode_step, cache_hits, hidden_states=hidden_states)
         elif is_mq_kp1 and hidden_states is not None and "glue_decode" in self.graph_vars:
             # EAGLE draft glue decode with 2K+1 per seq
             return run_glue_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["glue_decode"], hidden_states)
+        elif is_mq_kp1 and self.config.mesa_enabled and not self.is_draft \
+                and "mesa_verify" in self.graph_vars:
+            # MESA target verify: split CudaGraph (pre → proxy → post)
+            return run_mesa_verify_cudagraph(
+                self, input_ids, positions, last_only,
+                self.graph_vars["mesa_verify"],
+                mesa_proxy_fn=self._mesa_proxy_fn)
         elif is_mq_kp1: # verify or non-EAGLE glue decode, "verify" ~ mq decode of len K+1
             return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify"])
         else: # draft decoding in sync spec or JIT single-token decode

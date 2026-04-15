@@ -23,6 +23,10 @@ def parse_arguments():
     parser.add_argument("--qwen", action="store_true", help="Use Qwen models instead of Llama")
     parser.add_argument("--draft", type=str, default=None,
                         help="Draft model size (0.6 for Qwen-0.6B, 1 for Llama-1B) or path to draft model")
+    parser.add_argument("--model_path", type=str, default=None,
+                        help="Direct path to target model (overrides --size/--llama/--qwen)")
+    parser.add_argument("--draft_path", type=str, default=None,
+                        help="Direct path to draft model (overrides --draft)")
 
     # Execution configuration
     parser.add_argument("--eager", action="store_true", help="Use eager execution (disable CUDA graphs)")
@@ -70,6 +74,15 @@ def parse_arguments():
     parser.add_argument("--wandb", action="store_true", help="Log metrics to wandb")
     parser.add_argument("--group", type=str, default=None, help="Wandb group name")
     parser.add_argument("--name", type=str, default=None, help="Wandb run name")
+
+    # MESA-SSD configuration
+    parser.add_argument("--mesa", action="store_true", help="Enable MESA-SSD (early-exit proxy)")
+    parser.add_argument("--mesa_exit_layer", type=int, default=None,
+                        help="Early-exit layer index (default: 2*L//3)")
+    parser.add_argument("--mesa_proxy_top_k", type=int, default=3,
+                        help="Number of proxy correction tokens per position")
+    parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
+                        help="Draft-sourced branches per position (default: fan_out//2)")
 
     # Sweep mode: load engine once, run multiple configs
     parser.add_argument("--sweep", type=str, default=None,
@@ -176,6 +189,15 @@ def create_llm_kwargs(args, draft_path):
         max_steps=args.max_steps,
     )
 
+    # MESA-SSD
+    if getattr(args, 'mesa', False):
+        llm_kwargs["mesa_enabled"] = True
+        if args.mesa_exit_layer is not None:
+            llm_kwargs["mesa_exit_layer"] = args.mesa_exit_layer
+        llm_kwargs["mesa_proxy_top_k"] = args.mesa_proxy_top_k
+        if args.mesa_draft_fan_out is not None:
+            llm_kwargs["mesa_draft_fan_out"] = args.mesa_draft_fan_out
+
     if args.flh is not None:
         llm_kwargs["fan_out_list"] = args.flh
     if args.flm is not None:
@@ -266,6 +288,12 @@ def main():
         args.numseqs = 8
 
     model_name, model_path, draft_path = get_model_paths(args)
+    # Direct path overrides
+    if args.model_path:
+        model_path = args.model_path
+        model_name = os.path.basename(model_path)
+    if args.draft_path:
+        draft_path = args.draft_path
 
     string_prompts, prompt_token_ids, original_prompts = generate_benchmark_inputs(args, model_path)
     prompts = string_prompts if string_prompts is not None else prompt_token_ids

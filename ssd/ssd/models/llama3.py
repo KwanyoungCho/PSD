@@ -249,28 +249,40 @@ class LlamaModel(nn.Module):
         self,
         input_ids: torch.Tensor,
         positions: torch.Tensor,
+        start_layer: int = 0,
+        end_layer: int | None = None,
+        init_hidden_states: torch.Tensor | None = None,
+        init_residual: torch.Tensor | None = None,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
-        hidden_states = self.embed_tokens(input_ids)  # torch.Size([4096, 2560]) always through residual stream 
-        residual = None
-        
+        if init_hidden_states is not None:
+            hidden_states = init_hidden_states
+            residual = init_residual
+        else:
+            hidden_states = self.embed_tokens(input_ids)
+            residual = None
+
+        actual_end = end_layer if end_layer is not None else len(self.layers)
+
         # Collect activations if use_eagle
         collected_acts = [] if self.use_eagle else None
-        
-        for layer_idx, layer in enumerate(self.layers):
+
+        for layer_idx in range(start_layer, actual_end):
+            layer = self.layers[layer_idx]
             if collected_acts is not None and layer_idx in self.eagle_layers:
-                current_act = hidden_states if residual is None else hidden_states + residual 
+                current_act = hidden_states if residual is None else hidden_states + residual
                 collected_acts.append(current_act)
             hidden_states, residual = layer(positions, hidden_states, residual)
-            
-        
-        hidden_states, _ = self.norm(hidden_states, residual) 
-        
-        if collected_acts:
-            eagle_acts = torch.cat(collected_acts, dim=-1)
-            print(f'[LlamaModel] eagle_acts shape={eagle_acts.shape}', flush=True)
-            return hidden_states, eagle_acts
-        else:
+
+        if end_layer is None:
+            # Full forward: apply final norm
+            hidden_states, _ = self.norm(hidden_states, residual)
+            if collected_acts:
+                eagle_acts = torch.cat(collected_acts, dim=-1)
+                return hidden_states, eagle_acts
             return hidden_states
+        else:
+            # Split forward: return raw hidden_states + residual (no norm)
+            return hidden_states, residual
 
 
 class LlamaForCausalLM(nn.Module):
@@ -326,8 +338,15 @@ class LlamaForCausalLM(nn.Module):
         self,
         input_ids: torch.Tensor,
         positions: torch.Tensor,
+        start_layer: int = 0,
+        end_layer: int | None = None,
+        init_hidden_states: torch.Tensor | None = None,
+        init_residual: torch.Tensor | None = None,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
-        out = self.model(input_ids, positions)
+        out = self.model(input_ids, positions,
+                         start_layer=start_layer, end_layer=end_layer,
+                         init_hidden_states=init_hidden_states,
+                         init_residual=init_residual)
         return out
 
 

@@ -148,23 +148,36 @@ def flush_draft_profile():
     _draft_events.clear()
 
 @torch.inference_mode()
-def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, graph_vars, step, cache_hits, hidden_states=None):
+def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, graph_vars, step, cache_hits, hidden_states=None, layout=None):
     # bs != len(input_ids, positions) now in multi-query seting, also need step-dependent mask
     context = get_context()
     assert context.cu_seqlens_q is None, "ERROR in run_fi_tree_decode_cudagraph: cu_seqlens_q should be set to None so we don't take FA path"
 
     K, F = model_runner.config.speculate_k, model_runner.config.async_fan_out
-    # MQ_LEN = F * (K+1)
-    MQ_LEN = sum(model_runner.config.fan_out_list)
+    # Layout-aware MQ_LEN and fan_out_list resolution
+    if layout is not None:
+        MQ_LEN = layout.MQ_LEN
+        _graph_key = layout.graph_key
+        _fan_out_list = layout.fan_out_list
+        _fan_out_list_miss = layout.fan_out_list_miss
+    else:
+        MQ_LEN = sum(model_runner.config.fan_out_list)
+        _graph_key = "fi_tree_decode"
+        _fan_out_list = model_runner.config.fan_out_list
+        _fan_out_list_miss = model_runner.config.fan_out_list_miss
     orig_flat = input_ids.size(0)
     assert orig_flat % MQ_LEN == 0, f"ERROR in run_fi_tree_decode_cudagraph: flat_batch_size should be divisible by MQ_LEN, got {orig_flat} and {MQ_LEN}"
     orig_B = orig_flat // MQ_LEN
 
-    # Pick CUDA graph and wrapper bucket
+    # Pick CUDA graph and wrapper bucket (layout-aware key)
     wrapper_bs = next(
-        x for x in model_runner.graph_bs_list["fi_tree_decode"] if x >= orig_B)
-    graph = model_runner.graphs["fi_tree_decode"][wrapper_bs]
-    wrapper = model_runner.prefill_wrappers[wrapper_bs]
+        x for x in model_runner.graph_bs_list[_graph_key] if x >= orig_B)
+    graph = model_runner.graphs[_graph_key][wrapper_bs]
+    # Layout-aware wrapper: use layout-specific wrappers if available
+    _wrappers = model_runner.prefill_wrappers
+    if layout is not None and hasattr(model_runner, 'prefill_wrappers_by_layout'):
+        _wrappers = model_runner.prefill_wrappers_by_layout.get(layout.name, _wrappers)
+    wrapper = _wrappers[wrapper_bs]
 
     # Prepare padded inputs/context if needed
     if wrapper_bs > orig_B:
@@ -222,6 +235,10 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     # CPU tensors let plan() skip its internal .to("cpu") GPU->CPU syncs.
     # For B<=8, CPU slicing also avoids GPU boolean indexing.
     if step == 0:
+        # Layout change: clear cache if MQ_LEN changed (2-pass MESA reuses global cache)
+        if cache.get("_mq_len") != MQ_LEN:
+            cache.clear()
+            cache["_mq_len"] = MQ_LEN
         cache["cu_seqlens_q_cpu"] = torch.arange(B + 1, dtype=torch.int32) * MQ_LEN
         context_lens_list = context_lens.tolist()
         cache["block_tables"] = block_tables
@@ -267,9 +284,14 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         # Eliminates per-step get_custom_mask (GPU) + segment_packbits + GPU->CPU syncs.
         cache_hits_list = cache_hits[:B].tolist()
 
-        if "glue_hit_np" not in cache:
-            _fol = model_runner.config.fan_out_list
-            _fol_miss = model_runner.config.fan_out_list_miss
+        # Layout change detection: if fan_out changed, recompute glue masks
+        _needs_recompute = "glue_hit_np" not in cache
+        if not _needs_recompute and cache.get("_cached_fol") != _fan_out_list:
+            _needs_recompute = True
+        if _needs_recompute:
+            cache["_cached_fol"] = _fan_out_list
+            _fol = _fan_out_list
+            _fol_miss = _fan_out_list_miss
             _tril = np.tril(np.ones((K + 1, K + 1), dtype=np.uint8))
             cache["glue_hit_np"] = np.repeat(_tril, _fol, axis=0)
             cache["glue_miss_np"] = np.repeat(_tril, _fol_miss, axis=0)
@@ -775,13 +797,17 @@ def capture_glue_decode_cudagraph(model_runner):
 
 
 @torch.inference_mode()
-def capture_fi_tree_decode_cudagraph(model_runner):
+def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
     config = model_runner.config
     hf_config = config.hf_config
     max_bs = min(model_runner.config.max_num_seqs, 512)
     K, F = model_runner.config.speculate_k, model_runner.config.async_fan_out
-    # MQ_LEN = F * (K+1)
-    MQ_LEN = sum(model_runner.config.fan_out_list)
+    if layout is not None:
+        MQ_LEN = layout.MQ_LEN
+        _graph_key = layout.graph_key
+    else:
+        MQ_LEN = sum(model_runner.config.fan_out_list)
+        _graph_key = "fi_tree_decode"
     max_flat_batch_size = max_bs * MQ_LEN
 
     max_num_blocks = (config.max_model_len +
@@ -791,8 +817,8 @@ def capture_fi_tree_decode_cudagraph(model_runner):
     slot_mapping = torch.zeros(max_flat_batch_size, dtype=torch.int32, device=model_runner.device)
     context_lens = torch.full((max_bs,), config.max_model_len, dtype=torch.int32, device=model_runner.device) # make sure these are consistent with our dummy example
     block_tables = torch.zeros(max_bs, max_num_blocks, dtype=torch.int32, device=model_runner.device)
-    outputs = torch.empty(max_flat_batch_size, hf_config.hidden_size, device=model_runner.device)
-    logits = torch.empty(max_flat_batch_size, hf_config.vocab_size, device=model_runner.device)
+    outputs = torch.empty(max_flat_batch_size, hf_config.hidden_size, dtype=hf_config.torch_dtype, device=model_runner.device)
+    logits = torch.empty(max_flat_batch_size, hf_config.vocab_size, dtype=hf_config.torch_dtype, device=model_runner.device)
 
     # Create graph_bs_list to match what will be used in cudagraph_helpers.py
     graph_bs_list = [1]
@@ -814,9 +840,10 @@ def capture_fi_tree_decode_cudagraph(model_runner):
         fi_hidden_states = torch.zeros(max_flat_batch_size, hf_config.hidden_size,
                                        dtype=hf_config.torch_dtype, device=model_runner.device)
 
-    print(f'About to capture FI cudagraphs for bs={graph_bs_list}', flush=True)
+    print(f'About to capture FI cudagraphs for bs={graph_bs_list} key={_graph_key} MQ_LEN={MQ_LEN}', flush=True)
 
     for bs in reversed(graph_bs_list):
+        print(f'  [FI capture] bs={bs} key={_graph_key} starting...', flush=True)
         graph = torch.cuda.CUDAGraph()
 
         # Build a self-consistent fake plan for capture:
@@ -840,7 +867,12 @@ def capture_fi_tree_decode_cudagraph(model_runner):
                                  dtype=torch.bool, device=model_runner.device)
 
         # Set the fi_tensors buffers with our fake data
-        model_runner.prefill_wrappers[bs].plan(
+        # Layout-aware: use layout-specific wrapper if available
+        if layout is not None and hasattr(model_runner, 'prefill_wrappers_by_layout'):
+            _capture_wrapper = model_runner.prefill_wrappers_by_layout[layout.name][bs]
+        else:
+            _capture_wrapper = model_runner.prefill_wrappers[bs]
+        _capture_wrapper.plan(
             cu_seqlens_q,
             kv_indptr,
             kv_indices,
@@ -855,14 +887,23 @@ def capture_fi_tree_decode_cudagraph(model_runner):
         )
 
         # Set minimal context needed for run
+        # Layout-aware: pass active_mq_len and active_wrappers so attention uses correct wrapper
+        _active_wrappers = None
+        _active_mq_len = None
+        if layout is not None and hasattr(model_runner, 'prefill_wrappers_by_layout'):
+            _active_mq_len = layout.MQ_LEN
+            _active_wrappers = model_runner.prefill_wrappers_by_layout[layout.name]
         set_context(
             is_prefill=False,
             slot_mapping=slot_mapping[:bs * MQ_LEN],
             context_lens=context_lens[:bs],
-            block_tables=block_tables[:bs]
+            block_tables=block_tables[:bs],
+            active_mq_len=_active_mq_len,
+            active_wrappers=_active_wrappers,
         )
 
         # Warmup run
+        print(f'  [FI capture] bs={bs} key={_graph_key} warmup...', flush=True)
         if fi_hidden_states is not None:
             outputs[:bs * MQ_LEN] = model_runner.model(
                 input_ids[:bs * MQ_LEN], positions[:bs * MQ_LEN], fi_hidden_states[:bs * MQ_LEN])
@@ -870,6 +911,7 @@ def capture_fi_tree_decode_cudagraph(model_runner):
             outputs[:bs * MQ_LEN] = model_runner.model(
                 input_ids[:bs * MQ_LEN], positions[:bs * MQ_LEN])
         logits[:bs * MQ_LEN] = model_runner.model.compute_logits(outputs[:bs * MQ_LEN], False)
+        print(f'  [FI capture] bs={bs} key={_graph_key} warmup done, capturing...', flush=True)
 
         # Capture both model run and logits computation
         with torch.cuda.graph(graph, graph_pool):
@@ -900,3 +942,178 @@ def capture_fi_tree_decode_cudagraph(model_runner):
         graph_vars["hidden_states"] = fi_hidden_states
 
     return graph_vars, graph_pool, graphs, graph_bs_list
+
+
+# ============================================================
+# MESA-SSD: Split Verify CudaGraph (pre + post)
+# ============================================================
+
+@torch.inference_mode()
+def capture_mesa_verify_cudagraph(model_runner):
+    """MESA split verify CudaGraph.
+    graph_pre: layers [0, exit_layer] → exit_hidden, exit_residual
+    graph_post: layers [exit_layer+1, L-1] + norm → outputs
+    """
+    config = model_runner.config
+    hf_config = config.hf_config
+    max_bs = min(config.max_num_seqs, 512)
+    k_plus_1 = config.speculate_k + 1
+    exit_layer = config.mesa_exit_layer
+    H = hf_config.hidden_size
+
+    input_ids = torch.zeros(max_bs * k_plus_1, dtype=torch.int64)
+    positions = torch.zeros(max_bs * k_plus_1, dtype=torch.int64)
+    slot_mapping = torch.zeros(max_bs * k_plus_1, dtype=torch.int32)
+    context_lens = torch.zeros(max_bs, dtype=torch.int32)
+    block_tables = torch.zeros(max_bs, model_runner.max_num_blocks, dtype=torch.int32)
+    cu_seqlens_q = torch.zeros(max_bs + 1, dtype=torch.int32)
+    exit_hidden = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
+    exit_residual = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
+    outputs = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
+
+    base = [1, 2, 4, 8]
+    dynamic = list(range(16, max_bs + 1, 16))
+    all_b = sorted(set(base + dynamic + [max_bs]))
+    all_N = [b for b in all_b if b <= max_bs]
+
+    graphs_pre = {}
+    graphs_post = {}
+    graph_pool = None
+
+    for bs in reversed(all_N):
+        flat = bs * k_plus_1
+        seqlen_q = torch.full((bs,), k_plus_1, dtype=torch.int32)
+        cu = cu_seqlens_q[:bs + 1]
+        cu.zero_()
+        cu[1:].copy_(torch.cumsum(seqlen_q, 0))
+        context_lens[:bs] = seqlen_q
+
+        set_context(
+            is_prefill=False,
+            slot_mapping=slot_mapping[:flat],
+            context_lens=context_lens[:bs],
+            block_tables=block_tables[:bs],
+            cu_seqlens_q=cu,
+            max_seqlen_q=k_plus_1,
+        )
+
+        # --- graph_pre: layers [0, exit_layer] ---
+        hs, res = model_runner.model(
+            input_ids[:flat], positions[:flat], end_layer=exit_layer + 1)
+        exit_hidden[:flat].copy_(hs)
+        exit_residual[:flat].copy_(res)
+
+        graph_pre = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph_pre, graph_pool):
+            hs, res = model_runner.model(
+                input_ids[:flat], positions[:flat], end_layer=exit_layer + 1)
+            exit_hidden[:flat].copy_(hs)
+            exit_residual[:flat].copy_(res)
+        if graph_pool is None:
+            graph_pool = graph_pre.pool()
+        graphs_pre[bs] = graph_pre
+
+        # --- graph_post: layers [exit_layer+1, L-1] + norm ---
+        out = model_runner.model(
+            input_ids[:flat], positions[:flat],
+            start_layer=exit_layer + 1,
+            init_hidden_states=exit_hidden[:flat],
+            init_residual=exit_residual[:flat])
+        outputs[:flat] = out if not isinstance(out, tuple) else out[0]
+
+        graph_post = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph_post, graph_pool):
+            out = model_runner.model(
+                input_ids[:flat], positions[:flat],
+                start_layer=exit_layer + 1,
+                init_hidden_states=exit_hidden[:flat],
+                init_residual=exit_residual[:flat])
+            outputs[:flat] = out if not isinstance(out, tuple) else out[0]
+        graphs_post[bs] = graph_post
+
+        torch.cuda.synchronize()
+        reset_context()
+
+    graph_vars = dict(
+        input_ids=input_ids, positions=positions,
+        slot_mapping=slot_mapping, context_lens=context_lens,
+        block_tables=block_tables, cu_seqlens_q=cu_seqlens_q,
+        exit_hidden=exit_hidden, exit_residual=exit_residual,
+        outputs=outputs,
+    )
+    return graph_vars, graph_pool, graphs_pre, graphs_post, all_N
+
+
+@torch.inference_mode()
+def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
+                               graph_vars, mesa_proxy_fn=None):
+    """Split CudaGraph verify: pre → proxy → post → logits."""
+    context = get_context()
+    config = model_runner.config
+    k_plus_1 = config.speculate_k + 1
+    orig_bs = input_ids.size(0) // k_plus_1
+
+    wrapper_bs = next(
+        x for x in model_runner.graph_bs_list["mesa_verify"] if x >= orig_bs)
+    graph_pre = model_runner.graphs["mesa_verify_pre"][wrapper_bs]
+    graph_post = model_runner.graphs["mesa_verify_post"][wrapper_bs]
+
+    for k, v in graph_vars.items():
+        if k not in ("outputs", "exit_hidden", "exit_residual"):
+            v.zero_()
+
+    # Padding (same pattern as run_verify_cudagraph)
+    if wrapper_bs > orig_bs:
+        pad_bs = wrapper_bs - orig_bs
+        pad_flat = pad_bs * k_plus_1
+        dev = input_ids.device
+        input_ids = torch.cat([input_ids, torch.zeros(pad_flat, dtype=input_ids.dtype, device=dev)])
+        positions = torch.cat([positions, torch.zeros(pad_flat, dtype=positions.dtype, device=dev)])
+        slot_mapping = torch.cat([
+            context.slot_mapping,
+            torch.full((pad_flat,), -1, dtype=context.slot_mapping.dtype, device=dev)])
+        bt = context.block_tables
+        cl = context.context_lens
+        block_tables = torch.cat([bt, bt[orig_bs-1:orig_bs].expand(pad_bs, -1).contiguous()])
+        context_lens = torch.cat([cl, cl[orig_bs-1:orig_bs].expand(pad_bs).contiguous()])
+        bs = wrapper_bs
+    else:
+        slot_mapping = context.slot_mapping
+        block_tables = context.block_tables
+        context_lens = context.context_lens
+        bs = orig_bs
+
+    graph_vars["input_ids"][:bs * k_plus_1] = input_ids
+    graph_vars["positions"][:bs * k_plus_1] = positions
+    graph_vars["slot_mapping"][:bs * k_plus_1] = slot_mapping
+    graph_vars["context_lens"][:bs] = context_lens
+    seqlen_q = torch.full(
+        (bs,), k_plus_1, dtype=torch.int32, device=graph_vars["cu_seqlens_q"].device)
+    cu = graph_vars["cu_seqlens_q"][:bs + 1]
+    cu.zero_()
+    cu[1:].copy_(torch.cumsum(seqlen_q, 0))
+    if block_tables is not None:
+        graph_vars["block_tables"][:bs, :block_tables.size(1)] = block_tables
+
+    # ====== graph_pre.replay() ======
+    graph_pre.replay()
+
+    # ====== Mid-forward: proxy (CudaGraph 밖, ALL TP ranks) ======
+    flat = orig_bs * k_plus_1
+    exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
+    normed = model_runner.model.model.norm(exit_h, None)
+    # ALL TP ranks call compute_logits → gather participation.
+    # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
+    exit_logits = model_runner.model.compute_logits(normed, last_only=False)
+
+    # mesa_proxy_fn: set on rank 0's ModelRunner only. rank 1+ skips.
+    if mesa_proxy_fn is not None:
+        mesa_proxy_fn(exit_logits, orig_bs)
+
+    # ====== graph_post.replay() ======
+    graph_post.replay()
+
+    # ====== Final logits ======
+    outputs = graph_vars["outputs"][:flat]
+    logits = model_runner.model.compute_logits(outputs, last_only)
+    return logits

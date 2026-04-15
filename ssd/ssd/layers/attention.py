@@ -114,14 +114,16 @@ class Attention(nn.Module):
                 if self.only_prefill_wrapper is not None:
                     prefill_wrapper = self.only_prefill_wrapper
                 else:
-                    mq_len = self.F * (self.K+1)
+                    # Layout-aware: use context.active_mq_len/active_wrappers if set
+                    mq_len = context.active_mq_len if context.active_mq_len is not None else self.F * (self.K+1)
+                    wrappers = context.active_wrappers if context.active_wrappers is not None else self.prefill_wrappers
                     bs = q.shape[0] // mq_len
                     wrapper_bs = None
-                    for available_bs in sorted(self.prefill_wrappers.keys()):
+                    for available_bs in sorted(wrappers.keys()):
                         if available_bs >= bs:
                             wrapper_bs = available_bs
                             break
-                    prefill_wrapper = self.prefill_wrappers[wrapper_bs]
+                    prefill_wrapper = wrappers[wrapper_bs]
                 o = prefill_wrapper.run(q, (self.k_cache, self.v_cache))
             else: # single query decode
                 q = q.unsqueeze(1)
