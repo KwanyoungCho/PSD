@@ -17,15 +17,19 @@
 - MESA-SSD.md의 $\hat{h}_i$ 기반 budget allocation (Policy A/B)
 - `accept_probs`, `topk_probs`를 전송하지만 draft에서 미사용
 
+### v1 Scope 제약
+- **B=1 only**: 동적 fan_out은 batch 전체가 하나의 layout을 공유하므로, B>1에서 sequence별 다른 $\hat{h}_i$를 한 layout으로 처리 불가. Rev1은 B=1로 한정.
+- **jit_speculate=True 전제**: `jit_speculate=False`에서 miss row의 `accept_probs=0` 강제 → $\hat{h}_0=1$ 왜곡 발생. `jit_speculate=True`(기본값)에서는 miss row도 유효한 logits_q를 갖으므로 정상 동작.
+
 ---
 
-## 핵심 발견: CudaGraph와 동적 fan_out은 양립 가능
+## CudaGraph와 동적 fan_out의 양립
 
 ### CudaGraph가 고정하는 것 / 고정하지 않는 것
 
 ```
 CudaGraph가 캡처하는 것 (고정):
-  model(input_ids, positions) → outputs    ← GPU 연산 그래프, 텐서 shape
+  model(input_ids, positions) → outputs    ← GPU 연산 그래프, 텐서 shape (N 고정)
 
 CudaGraph 밖에서 매 step 실행 (동적 가능):
   wrapper.plan(cu_seqlens, kv_indptr, custom_mask, ...)  ← FlashInfer attention 설정
@@ -33,23 +37,42 @@ CudaGraph 밖에서 매 step 실행 (동적 가능):
   mask precompute (glue_hit_np 기반)                      ← attention mask 내용
 ```
 
-**결론**: CudaGraph는 `N = B × MQ_LEN` (총 node 수)만 고정. Mask와 plan은 CudaGraph **밖에서** 매 step 설정되므로, **MQ_LEN만 유지하면 fan_out 분포는 매 step 바꿀 수 있다.**
+**결론**: CudaGraph는 N = B × MQ_LEN (총 node 수)만 고정. **MQ_LEN(=sum(fan_out_list))만 유지하면 fan_out 분포는 매 step 바꿀 수 있다.**
 
 ```
 예: proxy_layout MQ_LEN = 10 (고정), K = 4
 
 Step N: h = [0.70, 0.03, 0.24, 0.02, 0.01]
-  → fan_out = [4, 0, 3, 0, 3]  (sum = 10 = MQ_LEN ✅)
+  → fan_out = [4, 0, 3, 0, 3]  (sum = 10 ✅)
   → mask/plan을 이 fan_out으로 계산 (CudaGraph 밖)
   → CudaGraph replay (N=10 고정)
 
 Step N+1: h = [0.10, 0.60, 0.05, 0.20, 0.05]
-  → fan_out = [0, 5, 0, 3, 2]  (sum = 10 = MQ_LEN ✅)
-  → 다른 mask/plan 계산 (CudaGraph 밖)
+  → fan_out = [0, 5, 0, 3, 2]  (sum = 10 ✅)
+  → 다른 mask/plan (CudaGraph 밖)
   → 같은 CudaGraph replay (N=10 고정)
 ```
 
-이를 위해 필요한 것: **매 step runtime에 TreeLayout을 새로 생성**하여 `fan_idx_hit/miss`, `glue_hit_np/miss_np`를 동적으로 만들면 됨.
+### 필수 코드 수정: Runtime layout 전달 경로
+
+**현재 문제**: `run_model()` (model_runner.py:682-684)이 `active_mq_len`으로 정적 `self.proxy_layout`을 선택. Runtime에서 만든 `step_proxy_layout`이 전달되지 않음.
+
+**수정**: Context에 layout 객체 자체를 전달:
+
+```python
+# _decode_tree_step에서:
+set_context(..., active_mq_len=layout.MQ_LEN,
+            active_wrappers=...,
+            active_layout=step_proxy_layout)  # ← layout 객체 직접 전달
+
+# run_model에서:
+_ctx = get_context()
+if _ctx.active_layout is not None:
+    _tree_layout = _ctx.active_layout  # ← 동적 layout 사용
+    _tree_graph_key = _ctx.active_layout.graph_key
+```
+
+이렇게 하면 CudaGraph는 기존 proxy graph 재사용, mask/plan은 동적 layout 기반.
 
 ---
 
@@ -108,160 +131,150 @@ for b in range(B):
 
 ---
 
-### 3. Policy A: $\hat{h}_i$ 기반 동적 Budget Allocation
+### 3. Runtime layout 전달 경로 수정
 
-MESA-SSD.md의 핵심. Phase 2에서 proxy_fan_out을 position별로 **동적으로 배분**.
+**현재 문제**: `run_model()`이 `active_mq_len`으로 정적 layout을 lookup. 동적 runtime layout이 mask/plan에 반영 안 됨.
+
+**수정**:
+
+context.py:
+```python
+@dataclass
+class Context:
+    ...
+    active_layout: object | None = None  # ← 추가: TreeLayout 객체 직접 전달
+```
+
+draft_runner.py (_decode_tree_step):
+```python
+set_context(..., active_layout=step_proxy_layout)  # layout 객체 직접 전달
+```
+
+model_runner.py (run_model):
+```python
+if self.config.mesa_enabled:
+    _ctx = get_context()
+    if _ctx.active_layout is not None:
+        _tree_layout = _ctx.active_layout
+        _tree_graph_key = _tree_layout.graph_key
+    else:
+        _tree_graph_key = "fi_tree_decode"
+        _tree_layout = None
+    return run_fi_tree_decode_cudagraph(..., layout=_tree_layout)
+```
+
+cudagraph_helpers.py (run_fi_tree_decode_cudagraph):
+```python
+# layout의 fan_out_list로 mask 계산 (정적 config.fan_out_list 대신)
+_fan_out_list = layout.fan_out_list if layout else model_runner.config.fan_out_list
+```
+
+**효과**: 동적 fan_out의 mask/plan이 실제로 CudaGraph replay에 반영됨.
+
+---
+
+### 4. Policy A: $\hat{h}_i$ 기반 동적 Budget Allocation
 
 #### 동작 원리
 
 1. Draft가 `accept_probs [B, K]`를 수신 (이미 구현됨)
-2. $\hat{h}_i$ 계산:
+2. $\hat{h}_i$ 계산 (B=1):
    ```python
-   cumprod = torch.cumprod(accept_probs, dim=1)        # [B, K]
-   h = torch.zeros(B, K + 1, device=accept_probs.device)
-   h[:, 0] = 1 - accept_probs[:, 0]
-   h[:, 1:K] = cumprod[:, :-1] * (1 - accept_probs[:, 1:])
-   h[:, K] = cumprod[:, -1]  # all-accept
+   cumprod = torch.cumprod(accept_probs, dim=1)        # [1, K]
+   h = torch.zeros(1, K + 1, device=accept_probs.device)
+   h[0, 0] = 1 - accept_probs[0, 0]
+   h[0, 1:K] = cumprod[0, :-1] * (1 - accept_probs[0, 1:])
+   h[0, K] = cumprod[0, -1]  # all-accept
    ```
 3. $\hat{h}_i$에 비례하여 position별 fan_out 배분:
    ```python
    total_budget = proxy_MQ_LEN  # 예: 10
-   # h에 비례하여 배분, sum = total_budget 보장
-   raw_alloc = (h * total_budget).floor().int()
-   remainder = total_budget - raw_alloc.sum()
+   h_squeezed = h[0, :K]  # [K] (all-accept 제외, K positions만)
+   # all-accept position은 항상 0 slots (Phase 2는 reject 시나리오만)
+   raw_alloc = (h_squeezed / h_squeezed.sum() * total_budget).floor().int()
+   remainder = total_budget - raw_alloc.sum().item()
    # 나머지를 h가 큰 position부터 1씩 추가
+   _, sorted_idx = h_squeezed.sort(descending=True)
+   for i in range(int(remainder)):
+       raw_alloc[sorted_idx[i]] += 1
+   # fan_out_list 구성: K positions + all-accept(0)
+   fan_out_list = raw_alloc.tolist() + [0]  # [K+1], sum = total_budget
    ```
-4. **Runtime TreeLayout 생성**: 매 step 동적 fan_out으로 TreeLayout 생성
+4. **Runtime TreeLayout 생성**:
    ```python
-   # 예: h = [0.70, 0.03, 0.24, 0.02, 0.01]
-   # → proxy_fan_out_list = [7, 0, 3, 0, 0] (sum = 10 = proxy_MQ_LEN)
    step_proxy_layout = create_tree_layout(
-       name="proxy", fan_out_list=[7, 0, 3, 0, 0], ..., K=K, device=d)
+       name="proxy", fan_out_list=fan_out_list, fan_out_list_miss=fan_out_list,
+       K=K, device=self.device)
    ```
-5. 이 layout으로 token 선택 + tree decode args 구축 + mask 계산
-6. **CudaGraph replay는 기존 proxy CudaGraph 그대로** (N=10 고정)
+5. 이 layout으로 token 선택 + tree decode args 구축
+6. CudaGraph replay는 기존 proxy graph 그대로 (N = proxy_MQ_LEN 고정)
 
-#### 예시
+#### Token 선택: proxy-prioritized + draft fallback refill
+
+각 position에 할당된 fan_out만큼 token을 채울 때:
+- **proxy correction tokens 우선 배치** (residual topk_ids에서, dedup with draft)
+- **proxy_top_k(=3)보다 fan_out이 크면**: 초과분은 **draft logits fallback**으로 채움
 
 ```
-accept_probs = [0.3, 0.9, 0.2, 0.95]
-h = [0.70, 0.03, 0.24, 0.02, 0.01]
-proxy_MQ_LEN = 10
+예: mesa_proxy_top_k = 3
 
-Budget 배분:
-  Pos 0 (h=0.70): 7 slots → proxy correction tokens 7개
-  Pos 1 (h=0.03): 0 slots → proxy 없음
-  Pos 2 (h=0.24): 3 slots → proxy correction tokens 3개
-  Pos 3 (h=0.02): 0 slots → proxy 없음
-  Pos 4 (h=0.01): 0 slots (all-accept)
+Pos 0 (fan_out=4):
+  proxy corrections: [world, today, now]  (3개)
+  draft fallback: [the]                   (1개 추가, proxy/draft 미중복)
+  → [world, today, now, the]
 
-결과: 10개 proxy-sourced tokens이 risky position에 집중됨
+Pos 2 (fan_out=3):
+  proxy corrections: [capital, city, town] (3개)
+  → [capital, city, town]  (fallback 불필요)
+
+Pos 1 (fan_out=0): 없음
 ```
 
-#### CudaGraph 호환성
+#### 출력 순서 계약
 
-- **CudaGraph**: proxy_layout의 N=B×10으로 캡처 → 항상 N=10으로 replay. **변경 불필요.**
-- **FlashInfer wrapper/plan**: CudaGraph 밖에서 매 step 실행. 동적 fan_out의 mask를 반영. **변경 필요: mask 계산에 step_proxy_layout 사용.**
-- **TreeLayout**: 매 step `create_tree_layout(fan_out_list=[7,0,3,0,0])`으로 새로 생성. `fan_idx_hit`, `glue_hit_np` 등이 동적으로 변경됨.
-
-#### 수정 필요한 코드
+`_build_tree_decode_args_for_layout()`이 `layout.fan_idx_hit`으로 position→node 매핑을 수행. Token selection의 출력은 **fan_idx 순서와 일치**해야 함:
 
 ```python
-# _build_tree_batch_mesa() Phase 2 부분:
-
-# 기존 (고정 proxy_layout):
-proxy_forked = self._select_proxy_sourced_tokens(
-    glue_logits, gd_for_fork, mesa_proxy, draft_forked,
-    self.config.mesa_proxy_fan_out)
-proxy_tree_args = self._build_tree_decode_args_for_layout(
-    partial_tree_decode_args, proxy_forked, self.proxy_layout, cache_hits_list)
-proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
-    proxy_tree_args, layout=self.proxy_layout)
-
-# Policy A (동적 proxy_layout):
-h = compute_h_i(mesa_proxy["accept_probs"])
-step_fan_out = allocate_budget(h, self.config.mesa_proxy_fan_out * (K+1))
-step_proxy_layout = create_tree_layout(
-    name="proxy", fan_out_list=step_fan_out, fan_out_list_miss=step_fan_out,
-    K=K, device=self.device)
-proxy_forked = self._select_proxy_sourced_tokens_policy_a(
-    glue_logits, gd_for_fork, mesa_proxy, draft_forked, step_fan_out)
-proxy_tree_args = self._build_tree_decode_args_for_layout(
-    partial_tree_decode_args, proxy_forked, step_proxy_layout, cache_hits_list)
-proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
-    proxy_tree_args, layout=step_proxy_layout)  # 기존 proxy CudaGraph 재사용!
+# fan_out_list = [4, 0, 3, 0, 3] → fan_idx = [0,0,0,0, 2,2,2, 4,4,4]
+# tokens:      [pos0_tok0, pos0_tok1, pos0_tok2, pos0_tok3, pos2_tok0, pos2_tok1, pos2_tok2, pos4_tok0, pos4_tok1, pos4_tok2]
+# 총 10개 = MQ_LEN
 ```
 
-#### `_select_proxy_sourced_tokens_policy_a` 핵심 로직
-
-```python
-def _select_proxy_sourced_tokens_policy_a(self, glue_logits, gd_for_fork,
-                                            mesa_proxy, draft_forked, fan_out_list):
-    """h_i 기반 동적 fan_out으로 proxy tokens 선택."""
-    # fan_out_list = [7, 0, 3, 0, 0]
-    # Position 0: proxy correction top-7 (dedup with draft)
-    # Position 1: 없음 (fan_out=0)
-    # Position 2: proxy correction top-3 (dedup with draft)
-    # Position 3: 없음
-    # Position 4: 없음 (all-accept)
-    
-    result = []
-    for pos in range(K+1):
-        fo = fan_out_list[pos]
-        if fo == 0:
-            continue  # 이 position에 slot 없음
-        if pos == K:
-            # all-accept: draft logits top-k
-            tokens = draft_logits_topk(glue_logits[:, K, :], fo)
-        else:
-            # proxy correction tokens (dedup with draft)
-            tokens = proxy_topk_dedup(mesa_proxy, draft_forked, pos, fo)
-        result.append(tokens)
-    # flatten → [B, MQ_LEN]
-```
+Fan_out=0인 position은 skip. Fan_out>0인 position은 fan_out 개수만큼 연속 배치.
 
 ---
 
-### 4. Policy B: $\hat{P}(i, v) = \hat{h}_i \cdot \hat{r}_i(v)$ 기반 Budget Allocation
+### 5. Policy B: $\hat{P}(i, v) = \hat{h}_i \cdot \hat{r}_i(v)$
 
 Policy A를 확장하여 **position뿐 아니라 어떤 correction token이 유력한지**까지 반영.
 
-#### 동작 원리
-
 1. $\hat{h}_i$ 계산 (Policy A와 동일)
 2. $\hat{r}_i(v)$ = `topk_probs [B, K, top_k]` (이미 전송됨)
-3. $\hat{P}(i, v) = \hat{h}_i \cdot \hat{r}_i(v)$:
+3. $\hat{P}(i, v) = \hat{h}_i \cdot \hat{r}_i(v)$
+4. $\hat{P}(i, v)$가 큰 (position, token) 쌍부터 budget 할당:
    ```python
-   # h: [B, K+1], topk_probs: [B, K, top_k]
-   P = h[:, :K].unsqueeze(-1) * topk_probs  # [B, K, top_k]
-   ```
-4. $\hat{P}(i, v)$가 큰 (position, token) 쌍부터 우선적으로 budget 할당:
-   ```python
-   # P를 flatten → sort → 상위 proxy_MQ_LEN개 선택
-   flat_P = P.view(B, -1)  # [B, K*top_k]
-   _, top_indices = flat_P.topk(proxy_MQ_LEN, dim=-1)  # [B, 10]
-   # top_indices → (position, token_rank) 쌍으로 분해
+   P = h[0, :K].unsqueeze(-1) * topk_probs[0]  # [K, top_k]
+   flat_P = P.view(-1)  # [K * top_k]
+   _, top_indices = flat_P.topk(min(proxy_MQ_LEN, K * top_k))
    positions = top_indices // top_k
    token_ranks = top_indices % top_k
+   # positions를 count → fan_out_list 구성
    ```
-5. 선택된 (position, token) 쌍으로 fan_out_list 구성 + token 배치
+5. 선택된 (position, token) 쌍으로 fan_out_list 구성 + **해당 token만 배치**
 
-#### Policy A vs B 차이
-
+**Policy A vs B 차이**:
 ```
-accept_probs = [0.3, 0.9, 0.2, 0.95]
 h = [0.70, 0.03, 0.24, 0.02, 0.01]
-topk_probs[pos=0] = [0.5, 0.3, 0.2]  (correction token별 확률)
+topk_probs[pos=0] = [0.5, 0.3, 0.2]
 topk_probs[pos=2] = [0.8, 0.1, 0.1]
 
-P[pos=0] = 0.70 × [0.5, 0.3, 0.2] = [0.35, 0.21, 0.14]
-P[pos=2] = 0.24 × [0.8, 0.1, 0.1] = [0.192, 0.024, 0.024]
+P[pos=0] = [0.35, 0.21, 0.14]
+P[pos=2] = [0.192, 0.024, 0.024]
 
-Policy A (h_i만): pos 0에 7, pos 2에 3 → pos 0의 3번째 token(P=0.14)도 포함
-Policy B (P(i,v)): 상위 10개 = pos0-tok0(0.35), pos0-tok1(0.21), pos2-tok0(0.192),
-                    pos0-tok2(0.14), ... → pos 2의 2,3번째 token(P=0.024) 제외
-
-→ Policy B는 pos 2의 불확실한 token 대신 다른 position의 확실한 token을 배치
+Policy A: pos 0에 7, pos 2에 3 → pos 0의 3번째 token(P=0.14)도 포함
+Policy B: 상위 10개 선택 → pos0-tok0(0.35), pos0-tok1(0.21), pos2-tok0(0.192),
+          pos0-tok2(0.14), ... → pos 2의 2,3번째 token(P=0.024)은 대신
+          다른 position의 더 유력한 token이 배치될 수 있음
 ```
 
 ---
@@ -272,50 +285,32 @@ Policy B (P(i,v)): 상위 10개 = pos0-tok0(0.35), pos0-tok1(0.21), pos2-tok0(0.
 Step 1: Glue decode 분리
         _glue_decode() 함수 추출
         _build_tree_batch, _build_tree_batch_mesa 모두 _glue_decode 사용
-        → ~2ms/step 절약 + 코드 구조 개선
         → backward compat 테스트
 
 Step 2: tolist() 최적화
         한 번에 CPU로 전환
-        → GPU sync 횟수 감소
 
-Step 3: Policy A 구현 (h_i 기반 동적 fan_out)
+Step 3: Runtime layout 전달 경로 수정
+        Context에 active_layout 추가
+        run_model → run_fi_tree_decode_cudagraph에서 동적 layout 사용
+        mask/plan이 동적 fan_out 반영 확인
+
+Step 4: Policy A 구현 (h_i 기반 동적 fan_out)
         - accept_probs → h_i 계산
         - h_i → position별 proxy fan_out 배분 (sum = proxy_MQ_LEN)
         - Runtime TreeLayout 생성
-        - _select_proxy_sourced_tokens_policy_a() 구현
-        - mask/plan에 동적 layout 반영
+        - Token 선택: proxy-prioritized + draft fallback refill
+        - fan_idx 순서 계약 준수
         → 벤치마크: vs 현재 고정 fan_out
 
-Step 4: Policy B 구현 (P(i,v) 기반)
+Step 5: Policy B 구현 (P(i,v) 기반)
         - h_i × topk_probs → P(i,v) 계산
         - (position, token) 단위 budget 배분
         → 벤치마크: vs Policy A
 
-Step 5: 최종 벤치마크
+Step 6: 최종 벤치마크
         Baseline SSD vs MESA (고정) vs MESA Policy A vs MESA Policy B
-        메트릭: throughput, accept rate, cache hit rate, tok/step
         모델: LayerSkip-Llama3-8B + Llama-3.2-1B, LayerSkip-Llama2-7B + TinyLlama
-```
-
----
-
-## Phase 1 / Phase 2 타이밍 (변경 없음)
-
-```
-Phase 1 (proxy 대기 없이 즉시):
-  Draft-sourced tokens 선택 + decode (draft_layout, N=5)
-  → 모든 position에 draft top-1 배치 (기존과 동일)
-  → CudaGraph: draft_layout graph 사용
-
-Phase 2 (proxy 도착 후):
-  h_i 계산 → 동적 fan_out 배분
-  Runtime TreeLayout 생성 (fan_out_list = [7, 0, 3, 0, 0])
-  Token 선택 + tree decode args 구축
-  → CudaGraph: 기존 proxy_layout graph 재사용 (N=10 고정)
-  → Mask/plan만 동적 layout 기반으로 변경
-
-합계: Phase 1 (5개) + Phase 2 (10개) = 15개 cache entries
 ```
 
 ---
@@ -324,19 +319,18 @@ Phase 2 (proxy 도착 후):
 
 | 항목 | 현재 (고정 fan_out) | Policy A ($\hat{h}_i$) | Policy B ($\hat{P}(i,v)$) |
 |------|---------------------|------------------------|---------------------------|
-| Throughput | 84 tok/s | ~84 tok/s | ~84 tok/s |
+| Throughput | 84 tok/s | 같거나 소폭 감소 | 같거나 소폭 감소 |
 | Cache hit | 0.87 | ↑ (risky position 집중) | ↑↑ (position+token joint) |
 | Accept rate | 0.83 | ↑ | ↑↑ |
 | Tok/Step | 4.31 | ↑ | ↑↑ |
 
-**Throughput**: 2-pass 구조 유지이므로 변하지 않음. 하지만 Tok/Step 개선으로 **같은 시간에 더 많은 토큰 생성** → 실질적 속도 향상.
+**Throughput**: 2-pass 구조 유지 + runtime layout 생성/h_i 계산 추가 → 동일하거나 소폭 감소 가능.
+**Token efficiency 개선** → 같은 시간에 더 많은 토큰 생성 → 실질적 속도 향상.
 
 ---
 
 ## 장기적 Throughput 개선 방향
 
-2-pass overhead(-43%)를 줄이는 방향:
-
-1. **Per-pass overhead 줄이기**: FlashInfer wrapper.plan() + mask precompute 최적화. Runtime TreeLayout 생성 비용 최소화.
-2. **Larger model에서의 상대적 비율**: 70B 모델에서는 model forward가 지배적이라 2-pass overhead 비율이 줄어듦. 8B에서의 -43%가 70B에서는 훨씬 작을 것.
-3. **Phase 1 budget 동적 조절**: Phase 1의 draft_fan_out도 이전 step의 proxy 정보로 최적화 가능 (future work).
+1. **Per-pass overhead 줄이기**: FlashInfer wrapper.plan() 최적화, persistent mask cache.
+2. **Larger model 비율**: 70B에서는 model forward가 지배적 → 2-pass overhead 비율 감소.
+3. **B>1 확장**: batch 공통 layout 근사 (h_i 평균) 또는 per-sequence layout 지원.
