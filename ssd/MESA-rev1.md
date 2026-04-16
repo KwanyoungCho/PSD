@@ -18,8 +18,8 @@
 - `accept_probs`, `topk_probs`를 전송하지만 draft에서 미사용
 
 ### v1 Scope 제약
-- **B=1 only**: 동적 fan_out은 batch 전체가 하나의 layout을 공유하므로, B>1에서 sequence별 다른 $\hat{h}_i$를 한 layout으로 처리 불가. Rev1은 B=1로 한정.
-- **jit_speculate=True 전제**: `jit_speculate=False`에서 miss row의 `accept_probs=0` 강제 → $\hat{h}_0=1$ 왜곡 발생. `jit_speculate=True`(기본값)에서는 miss row도 유효한 logits_q를 갖으므로 정상 동작.
+- **B=1 only**: 동적 fan_out은 batch 전체가 하나의 layout을 공유하므로, B>1에서 sequence별 다른 $\hat{h}_i$를 한 layout으로 처리 불가. Rev1의 Policy A/B 동적 allocation은 **단일 시퀀스(B=1) 전용**.
+- **jit_speculate=True 강제**: Config 기본값은 `jit_speculate=False`이지만, bench.py에서 `--backup jit` (기본)로 True가 됨. 직접 LLM 생성 시에는 False가 될 수 있음. `jit_speculate=False`에서 miss row의 `accept_probs=0` 강제 → $\hat{h}_0=1$ 왜곡 발생. **Rev1은 mesa_enabled 시 `assert jit_speculate` 추가로 강제.**
 
 ---
 
@@ -143,6 +143,11 @@ context.py:
 class Context:
     ...
     active_layout: object | None = None  # ← 추가: TreeLayout 객체 직접 전달
+
+# set_context()도 수정 필요:
+def set_context(..., active_mq_len=None, active_wrappers=None, active_layout=None):
+    global _CONTEXT
+    _CONTEXT = Context(..., active_mq_len, active_wrappers, active_layout)
 ```
 
 draft_runner.py (_decode_tree_step):
@@ -189,16 +194,27 @@ _fan_out_list = layout.fan_out_list if layout else model_runner.config.fan_out_l
 3. $\hat{h}_i$에 비례하여 position별 fan_out 배분:
    ```python
    total_budget = proxy_MQ_LEN  # 예: 10
-   h_squeezed = h[0, :K]  # [K] (all-accept 제외, K positions만)
-   # all-accept position은 항상 0 slots (Phase 2는 reject 시나리오만)
-   raw_alloc = (h_squeezed / h_squeezed.sum() * total_budget).floor().int()
-   remainder = total_budget - raw_alloc.sum().item()
-   # 나머지를 h가 큰 position부터 1씩 추가
-   _, sorted_idx = h_squeezed.sort(descending=True)
-   for i in range(int(remainder)):
-       raw_alloc[sorted_idx[i]] += 1
-   # fan_out_list 구성: K positions + all-accept(0)
-   fan_out_list = raw_alloc.tolist() + [0]  # [K+1], sum = total_budget
+   h_squeezed = h[0, :K+1]  # [K+1] (all-accept 포함)
+   
+   # Edge case: accept_probs ≈ 1 전부 → h[:K] ≈ 0, h[K] ≈ 1
+   # → reject mass가 거의 없음 → uniform fallback
+   if h_squeezed[:K].sum() < 1e-6:
+       # 전부 accept 예상 → uniform fan_out으로 복원
+       fan_out_list = [total_budget // (K+1)] * (K+1)
+       remainder = total_budget - sum(fan_out_list)
+       for i in range(remainder):
+           fan_out_list[i] += 1
+   else:
+       raw_alloc = (h_squeezed / h_squeezed.sum() * total_budget).floor().int()
+       remainder = total_budget - raw_alloc.sum().item()
+       _, sorted_idx = h_squeezed.sort(descending=True)
+       for i in range(int(remainder)):
+           raw_alloc[sorted_idx[i]] += 1
+       fan_out_list = raw_alloc.tolist()  # [K+1], sum = total_budget
+   
+   # all-accept position (fan_out_list[K]):
+   # MESA-SSD.md에 따라 draft 분포 p^D 기반 token 배치
+   # h[K]이 크면 (전부 accept 예상) all-accept에 budget 할당됨
    ```
 4. **Runtime TreeLayout 생성**:
    ```python
@@ -242,6 +258,8 @@ Pos 1 (fan_out=0): 없음
 
 Fan_out=0인 position은 skip. Fan_out>0인 position은 fan_out 개수만큼 연속 배치.
 
+**Helper 입력 계약**: `_build_tree_decode_args_for_layout()`은 `forked_tokens.view(-1)` = `[MQ_LEN]` flat 텐서를 기대 (line 1014, 1019). 이 flat 순서는 `layout.fan_idx_hit` = `[0,0,0,0, 2,2,2, 4,4,4]`의 position 순서와 정확히 일치해야 함. Token selection 함수의 출력은 이 계약을 준수하여 `[B, MQ_LEN]` flat으로 반환.
+
 ---
 
 ### 5. Policy B: $\hat{P}(i, v) = \hat{h}_i \cdot \hat{r}_i(v)$
@@ -262,7 +280,14 @@ Policy A를 확장하여 **position뿐 아니라 어떤 correction token이 유�
    ```
 5. 선택된 (position, token) 쌍으로 fan_out_list 구성 + **해당 token만 배치**
 
-**Policy A vs B 차이**:
+#### Dedup + Refill 규칙 (Policy A와 동일)
+
+Policy B도 Policy A와 같은 규칙 적용:
+- 선택된 proxy token이 Phase 1 draft root와 겹치면 **dedup** (제외)
+- `proxy_MQ_LEN > K * top_k`이면 proxy 후보가 부족 → **draft logits fallback refill**
+- Config에서 `mesa_proxy_top_k * K >= proxy_MQ_LEN`을 권장 (후보 부족 최소화)
+
+#### Policy A vs B 차이 (B=1 only)
 ```
 h = [0.70, 0.03, 0.24, 0.02, 0.01]
 topk_probs[pos=0] = [0.5, 0.3, 0.2]
@@ -279,7 +304,7 @@ Policy B: 상위 10개 선택 → pos0-tok0(0.35), pos0-tok1(0.21), pos2-tok0(0.
 
 ---
 
-## 구현 순서
+## 구현 순서 (B=1 only, jit_speculate=True 전제)
 
 ```
 Step 1: Glue decode 분리
@@ -295,9 +320,11 @@ Step 3: Runtime layout 전달 경로 수정
         run_model → run_fi_tree_decode_cudagraph에서 동적 layout 사용
         mask/plan이 동적 fan_out 반영 확인
 
-Step 4: Policy A 구현 (h_i 기반 동적 fan_out)
-        - accept_probs → h_i 계산
+Step 4: Policy A 구현 (h_i 기반 동적 fan_out, B=1 only)
+        - config assert: mesa_enabled → jit_speculate=True 강제
+        - accept_probs → h_i 계산 (sum(h[:K]) < eps fallback 포함)
         - h_i → position별 proxy fan_out 배분 (sum = proxy_MQ_LEN)
+        - all-accept position: h[K] > 0이면 draft 분포 기반 token 배치
         - Runtime TreeLayout 생성
         - Token 선택: proxy-prioritized + draft fallback refill
         - fan_idx 순서 계약 준수
@@ -315,7 +342,7 @@ Step 6: 최종 벤치마크
 
 ---
 
-## 예상 효과
+## 예상 효과 (B=1 only)
 
 | 항목 | 현재 (고정 fan_out) | Policy A ($\hat{h}_i$) | Policy B ($\hat{P}(i,v)$) |
 |------|---------------------|------------------------|---------------------------|
