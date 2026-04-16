@@ -1137,6 +1137,10 @@ class DraftRunner(ModelRunner):
                 if self.config.mesa_enabled:
                     # MESA: 2-pass tree decode (draft-sourced → proxy-sourced)
                     self._build_tree_batch_mesa(partial_tree_decode_args, glue_decode_input_ids)
+                    # Set profiling vars to avoid NameError in shared print below
+                    if _prof or PROFILE_DRAFT:
+                        torch.cuda.synchronize()
+                        _d2 = _d3 = time.perf_counter()
                 else:
                     # Standard SSD: single-pass tree decode
                     tree_decode_args = self._build_tree_batch(partial_tree_decode_args, glue_decode_input_ids)

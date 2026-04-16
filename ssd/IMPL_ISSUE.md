@@ -23,13 +23,17 @@ context.py에 `active_mq_len`/`active_wrappers` 추가. attention.py의 tree_dec
 
 ## 미해결 이슈
 
-### ISSUE-004: Throughput 하락 (-24~32%)
-**실측 원인 분석** (타이밍 계측 기반):
-- Draft step: baseline 33ms → MESA 54.5ms (+65%)
-- 구성: glue+select 5.5ms + draft_decode 18.8ms + proxy_wait 0.0ms + proxy_select 0.9ms + proxy_decode 19.1ms
-- 2× decode 합(38ms) > 1× full decode(28ms) → **CudaGraph replay당 고정 오버헤드 ~9ms**
-- Target step: 65ms (baseline과 동일, split CudaGraph 오버헤드 무시)
-- 이론적으로 max(65, 54.5) = 65ms → throughput 동일해야 하지만, step 간 sync/첫 step recompile/cache clear로 추가 지연
+### ISSUE-004: Throughput 하락 (-43%)
+**실측 결과** (비어있는 GPU 기준, 10 seqs × 256 tokens):
+- Baseline: 149 tok/s, MESA: 84 tok/s (-43%)
+
+**주 원인**: 2-pass tree decode의 구조적 비용:
+1. 2× CudaGraph replay (K steps × 2 passes): 각 replay마다 고정 overhead
+2. 2× FlashInfer wrapper.plan() (K steps × 2 passes): batch-dependent KV metadata 재구성
+3. 2× batch-dependent packed mask 재구성: context_lens, block_tables, cache_hits에 의존하여 매 pass 필수
+4. `_build_tree_batch()` full layout tree args 중복 생성 (~2ms)
+
+**이전 분석 정정**: mask cache clear가 주 원인이라고 했으나, layout-independent한 것은 `glue_hit_np`/`glue_miss_np` (~0.1ms)뿐. 나머지 precompute는 batch 의존이라 layout 분리로 절약 불가.
 
 ### ISSUE-005: Llama2-13B/70B triton 에러
 SSD KV cache copy 커널에서 `tl.arange(0, D)` — D가 non-power-of-2이면 에러. Llama2-13B (hidden=5120, heads=40)이 TP 분할 후 해당. MESA와 무관한 SSD 자체 이슈. Llama2-7B (hidden=4096, heads=32)로 대체.
@@ -72,3 +76,9 @@ SSD KV cache copy 커널에서 `tl.arange(0, D)` — D가 non-power-of-2이면 �
 ### 9. _select_proxy_sourced_tokens Python loop
 계획: vectorized 구현.
 실제: `for b in range(B): for pos in range(K):` Python loop. B=1에서는 무시 가능 (~0.9ms).
+
+### 10. Hot path overhead 수정
+`mesa_enabled=False`일 때 `_decode_tree_step`과 `run_model` tree decode 분기에서 불필요한 layout 체크 코드가 매 step 실행됨. `if self.config.mesa_enabled:` 가드를 추가하여 기존 경로 보호.
+
+### 11. 타이밍 코드 sync overhead
+`_build_tree_batch_mesa`의 `torch.cuda.synchronize()` 8개가 GPU 파이프라인을 깨뜨림. 제거 완료. 정확한 타이밍이 필요하면 CUDA event 기반으로 전환 필요.

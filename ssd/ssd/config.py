@@ -102,6 +102,7 @@ class Config:
             assert self.speculate, "MESA-SSD requires speculate=True"
             assert self.hf_config.model_type == "llama", "MESA-SSD only supports Llama models"
             assert not self.use_eagle, "MESA-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
+            assert not self.enforce_eager, "MESA-SSD requires CudaGraph mode (enforce_eager must be False)"
             if self.mesa_exit_layer is None:
                 L = self.hf_config.num_hidden_layers
                 self.mesa_exit_layer = (2 * L) // 3
