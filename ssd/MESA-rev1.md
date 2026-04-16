@@ -86,9 +86,18 @@ if _ctx.active_layout is not None:
 
 ```python
 def _glue_decode(self, partial_tree_decode_args, glue_decode_input_ids):
-    """Glue decode만 수행. glue_logits + 메타데이터 반환."""
+    """Glue decode만 수행 (no-EAGLE scope).
+    
+    Returns:
+        glue_logits [B, K+1, V]: 각 position의 draft logits (fork token 선택용)
+        gd_for_fork [B, K+1]: glue decode input tokens (returned token 마스킹용)
+        cache_hits [B]: 이번 step의 cache hit 여부 (tensor)
+        cache_hits_list [B]: cache_hits의 Python list 버전
+        dbt [B, max_blocks]: draft block table
+        pos_offset: EAGLE이면 -1, 아니면 0 (no-EAGLE scope에서는 항상 0)
+    """
     # 기존 _build_tree_batch의 line 571~700 (context 준비 + model forward + logits 추출)
-    return glue_logits, gd_for_fork, cache_hits, cache_hits_list, tree_hidden_states
+    return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, pos_offset
 
 def _build_tree_batch(self, ...):
     """기존 SSD: glue decode + full tree args 구축"""
@@ -280,11 +289,16 @@ Policy A를 확장하여 **position뿐 아니라 어떤 correction token이 유�
    ```
 5. 선택된 (position, token) 쌍으로 fan_out_list 구성 + **해당 token만 배치**
 
-#### Dedup + Refill 규칙 (Policy A와 동일)
+#### Dedup + Refill 규칙 (2단계)
 
-Policy B도 Policy A와 같은 규칙 적용:
-- 선택된 proxy token이 Phase 1 draft root와 겹치면 **dedup** (제외)
-- `proxy_MQ_LEN > K * top_k`이면 proxy 후보가 부족 → **draft logits fallback refill**
+Policy B는 allocation과 fill을 분리:
+
+**1단계 — Allocation (target count)**: $\hat{P}(i,v)$ 상위 → fan_out_list 결정 (position별 slot 수)
+
+**2단계 — Fill (actual tokens)**: 각 position의 할당된 slot을 실제 token으로 채울 때:
+- proxy correction tokens 우선 (dedup with Phase 1 draft root)
+- 같은 token이 여러 (i,v)에서 중복 선택 → 1회만 포함
+- dedup 후 실제 채워진 slot < 할당된 fan_out → **draft logits fallback refill**
 - Config에서 `mesa_proxy_top_k * K >= proxy_MQ_LEN`을 권장 (후보 부족 최소화)
 
 #### Policy A vs B 차이 (B=1 only)
@@ -316,12 +330,16 @@ Step 2: tolist() 최적화
         한 번에 CPU로 전환
 
 Step 3: Runtime layout 전달 경로 수정
-        Context에 active_layout 추가
+        Context에 active_layout 추가 (active_mq_len/active_wrappers는 유지, 대체 아닌 추가)
+        set_context() 시그니처에 active_layout 파라미터 추가
+        _decode_tree_step: 양쪽 pass(draft/proxy) 모두 해당 pass의 layout을 active_layout으로 설정
         run_model → run_fi_tree_decode_cudagraph에서 동적 layout 사용
         mask/plan이 동적 fan_out 반영 확인
+        _merge_and_populate_cache에 step_proxy_layout 전달: proxy_k를 runtime layout의 fan_idx로 생성
 
 Step 4: Policy A 구현 (h_i 기반 동적 fan_out, B=1 only)
-        - config assert: mesa_enabled → jit_speculate=True 강제
+        - config assert: mesa_enabled → jit_speculate=True 강제 (config.py __post_init__)
+          bench.py는 --backup jit 기본이라 OK, direct LLM(...) construction도 커버
         - accept_probs → h_i 계산 (sum(h[:K]) < eps fallback 포함)
         - h_i → position별 proxy fan_out 배분 (sum = proxy_MQ_LEN)
         - all-accept position: h[K] > 0이면 draft 분포 기반 token 배치
@@ -335,7 +353,15 @@ Step 5: Policy B 구현 (P(i,v) 기반)
         - (position, token) 단위 budget 배분
         → 벤치마크: vs Policy A
 
-Step 6: 최종 벤치마크
+Step 6: 테스트 체크리스트 (B=1)
+        - cache hit + Policy A: h_i 기반 fan_out 배분 정상 동작
+        - cache miss + jit_speculate=True: miss row의 accept_probs 유효, h_i 정상
+        - all-accept에 budget 몰리는 경우: h[:K] ≈ 0 → uniform fallback 정상
+        - fan_out=0 position 포함: skip 없이 token flatten + fan_idx 순서 일치
+        - Policy B에서 dedup 후 refill 발생: fallback으로 slot 채워지는지 확인
+        - runtime proxy layout의 fan_idx로 cache key 생성 (정적 layout 아닌)
+
+Step 7: 최종 벤치마크 (B=1)
         Baseline SSD vs MESA (고정) vs MESA Policy A vs MESA Policy B
         모델: LayerSkip-Llama3-8B + Llama-3.2-1B, LayerSkip-Llama2-7B + TinyLlama
 ```
