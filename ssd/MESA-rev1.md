@@ -53,6 +53,20 @@ Step N+1: h = [0.10, 0.60, 0.05, 0.20, 0.05]
   → 같은 CudaGraph replay (N=10 고정)
 ```
 
+### Target 측 $\hat{h}_i$ + Budget 배분 (draft에서 target으로 이동)
+
+**변경**: h_i 계산과 fan_out_list 배분을 **target의 mid-forward 구간**에서 수행. Draft는 결과만 수신.
+
+```
+기존: Target sends [accept_probs, topk_ids, topk_probs] → Draft computes h_i + budget
+변경: Target computes h_i + budget → sends [fan_out_list, topk_ids, topk_probs] → Draft 바로 사용
+```
+
+이점:
+- Draft critical path에서 ~0.5ms 제거 (h_i 계산 + budget 배분)
+- Target mid-forward 구간(graph_pre 후 ~ graph_post 전)에 ~0.01ms 추가 (무시 가능)
+- accept_probs 전송 불필요 → 전송 포맷 단순화
+
 ### 필수 코드 수정: Runtime layout 전달 경로
 
 **현재 문제**: `run_model()` (model_runner.py:682-684)이 `active_mq_len`으로 정적 `self.proxy_layout`을 선택. Runtime에서 만든 `step_proxy_layout`이 전달되지 않음.
