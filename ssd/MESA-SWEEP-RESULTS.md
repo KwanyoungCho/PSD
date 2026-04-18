@@ -1,141 +1,106 @@
-# MESA-SSD Parameter Sweep 분석
+# MESA-SSD Parameter Sweep (Clean-GPU Rerun)
 
-## 환경
-- Model: LayerSkip-Llama3-8B (target) + Llama-3.2-1B-Instruct (draft)
-- GPU: RTX 3090 × 2 (CUDA_VISIBLE_DEVICES=1,4, 타 사용자 있음)
-- Settings: k=4, f=3, temp=0.6, random prompts, 5 seqs × 256 tokens, B=1
+## Environment
 
-## 결과
+- **Target**: LayerSkip-Llama3-8B (32 layers) [MESA / SSD baselines]
+- **Target (EAGLE track)**: Llama-3.1-8B-Instruct
+- **Draft (SSD/MESA)**: Llama-3.2-1B-Instruct
+- **Draft (EAGLE)**: yuhuili/EAGLE3-LLaMA3.1-Instruct-8B
+- **GPUs**: 8× RTX 3090 (CUDA_VISIBLE_DEVICES isolated, TP=2 per run, 4 runs in parallel across slots)
+- **Previous run was contaminated** by another user's job on GPUs 1/4. Rerun is on verified-empty GPUs.
+- **Prompts**: 300 random token sequences (input_len=128), temp=0.6, K=4, output_len=256, B=1
+- **Speculation knobs**: --async --spec --k 4, baselines vary --f ∈ {2,3,4,5} to match MESA's total draft budget (MQ_LEN = f·(K+1))
 
-### Exit Layer Sweep (draft_fan_out=1, proxy_fan_out=2)
+## Phase A — Baseline SSD (matched budget)
 
-| Config | Throughput | Accept | CacheHit | Tok/Step | Tok/Hit | Tok/Miss | Draft(ms) | Verify(ms) |
-|--------|-----------|--------|----------|---------|---------|----------|-----------|-----------|
-| **Baseline** | **41.73** | 0.80 | 0.83 | 4.18 | 4.72 | 1.65 | 67.48 | 65.33 |
-| MESA exit=10 (31%) | 39.29 | **0.89** | **0.92** | **4.57** | **4.80** | 1.82 | 103.23 | 53.65 |
-| MESA exit=16 (50%) | **46.13** | 0.86 | 0.88 | 4.45 | **4.87** | 1.43 | 82.11 | 53.64 |
-| **MESA exit=21 (66%)** | **47.00** | 0.85 | **0.90** | 4.41 | 4.72 | 1.43 | 81.77 | 46.53 |
-| MESA exit=26 (81%) | 45.19 | 0.83 | **0.90** | 4.33 | 4.62 | 1.62 | 85.57 | 42.54 |
+| Config | f (budget 5f) | Throughput | Accept | CacheHit | Tok/Step | Draft (ms) | Verify (ms) |
+|--------|---------------|------------|--------|----------|----------|------------|-------------|
+| baseline_f2 | 2 (MQ=10) | 139.57 | 0.81 | 0.82 | 4.23 | 24.52 | 22.96 |
+| **baseline_f3** | **3 (MQ=15)** | **142.02** | **0.82** | 0.85 | **4.29** | 24.32 | 22.97 |
+| baseline_f4 | 4 (MQ=20) | 133.78 | 0.82 | **0.86** | 4.28 | 25.60 | 22.93 |
+| baseline_f5 | 5 (MQ=25) | 131.45 | 0.81 | **0.86** | 4.22 | 25.92 | 23.01 |
 
-### Draft Fan_out Sweep (exit_layer=21)
+Baseline SSD peaks at f=3 (the existing default). Larger trees buy a tiny amount of cache-hit rate but the extra tree-decode compute reverses the gain. Accept rate is essentially flat — the draft is already close to saturation at f=3.
 
-| Config | Throughput | Accept | CacheHit | Tok/Step | Draft(ms) | Verify(ms) |
-|--------|-----------|--------|----------|---------|-----------|-----------|
-| **Baseline** | **41.73** | 0.80 | 0.83 | 4.18 | 67.48 | 65.33 |
-| draft_fo=1, proxy_fo=2 | **47.00** | 0.85 | 0.90 | 4.41 | 81.77 | 46.53 |
-| draft_fo=2, proxy_fo=1 | 28.11 | **0.92** | **0.93** | **4.66** | 146.48 | 88.28 |
+## Phase A — MESA (exit_layer=21 fixed, sweep f × draft_fan_out split)
 
----
+Total budget = f · (K+1). Split notation (dfo, pfo) = (Phase-1 per-position branches, Phase-2 per-position branches), dfo + pfo = f.
 
-## 핵심 분석
+| Config | f | Split (dfo, pfo) | Throughput | Accept | CacheHit | Tok/Step | Draft (ms) | Verify (ms) |
+|--------|---|------------------|------------|--------|----------|----------|------------|-------------|
+| mesa_f2_dfo1 | 2 | (1, 1) | 88.58 | 0.83 | 0.87 | 4.31 | 43.71 | 24.79 |
+| **mesa_f3_dfo1** | **3** | **(1, 2)** | **87.54** | 0.81 | 0.88 | 4.24 | 43.40 | 24.75 |
+| mesa_f3_dfo2 | 3 | (2, 1) | 85.29 | 0.79 | 0.87 | 4.15 | 43.74 | 24.64 |
+| mesa_f4_dfo1 | 4 | (1, 3) | 85.29 | 0.79 | 0.88 | 4.18 | 43.93 | 24.72 |
+| mesa_f4_dfo2 | 4 | (2, 2) | 85.47 | 0.79 | 0.88 | 4.18 | 43.84 | 24.77 |
+| mesa_f4_dfo3 | 4 | (3, 1) | 87.10 | 0.82 | 0.88 | 4.26 | 44.02 | 24.65 |
+| mesa_f5_dfo1 | 5 | (1, 4) | 82.91 | 0.80 | **0.90** | 4.21 | 45.17 | 24.89 |
+| mesa_f5_dfo2 | 5 | (2, 3) | 86.76 | 0.81 | 0.89 | 4.26 | 43.99 | 24.73 |
+| mesa_f5_dfo3 | 5 | (3, 2) | 86.37 | 0.81 | 0.89 | 4.24 | 44.11 | 24.75 |
+| mesa_f5_dfo4 | 5 | (4, 1) | 82.19 | 0.80 | 0.88 | 4.18 | 45.93 | 25.58 |
 
-### 1. Exit Layer 영향
+All MESA configurations sit in a narrow band (82–89 tok/s). **Every MESA config is 35–42% slower than baseline_f3**, *despite* every MESA config having a higher cache-hit rate. The token-efficiency gain is real but small (+0.02–0.05 CH, ≈-0.02 accept in a few), whereas the wall-clock draft-step nearly *doubles* (43–46 ms vs. baseline's 24–26 ms). Target verify is also ~2 ms slower than baseline, so the split-CudaGraph (graph_pre + proxy + graph_post) does not actually save target-side time on these GPUs.
 
-```
-Exit layer가 깊을수록:
-  Target verify 빨라짐: 65→53→53→47→43ms (graph_pre 커지면 graph_post 작아짐)
-  하지만 proxy quality도 달라짐
+## Phase B — exit_layer sweep (at f=3, dfo=1)
 
-최적점: exit=21 (66%)
-  - Throughput: 47.00 tok/s (baseline 41.73 대비 +13%!)
-  - 특이사항: MESA가 baseline보다 빠름!
-```
+| Config | exit_layer (% of L=32) | Throughput | Accept | CacheHit | Tok/Step | Draft (ms) | Verify (ms) |
+|--------|------------------------|------------|--------|----------|----------|------------|-------------|
+| mesa_f3_dfo1_exit10 | 10 (31%) | 85.00 | 0.79 | 0.85 | 4.15 | 43.83 | 24.75 |
+| **mesa_f3_dfo1_exit16** | **16 (50%)** | **88.41** | **0.81** | 0.87 | **4.26** | 43.18 | 24.71 |
+| mesa_f3_dfo1 (=21) | 21 (66%) | 87.54 | 0.81 | 0.88 | 4.24 | 43.40 | 24.75 |
+| mesa_f3_dfo1_exit26 | 26 (81%) | 86.54 | 0.80 | 0.89 | 4.21 | 43.64 | 24.72 |
 
-**MESA exit=16, 21이 baseline보다 빠른 이유 분석:**
+With clean GPUs the exit-layer effect is shallower than the previous (noisy) sweep suggested — all four points land within ~3 tok/s of each other. The optimum shifts slightly to **exit=16 (50%)**, which reports the best accept rate *and* tok/step; exit=21 keeps the best cache-hit rate. Split-timing intuition: earlier exit → proxy arrives sooner → Phase-2 starts sooner, but the early-exit logits quality is weaker and draft budgeting becomes less informative. Later exit → stronger proxy but Phase-2 is gated later.
 
-Baseline의 target verify = 65.33ms. MESA exit=21의 target verify = 46.53ms.
+## Phase C — AR (no speculation) and EAGLE (different target)
 
-이것은 **split CudaGraph가 단일 CudaGraph보다 빨라서**가 아님. Baseline의 verify time이 비정상적으로 높음 (65ms). 이유:
-- GPU 1,4가 완전히 비어있지 않음 (다른 사용자 6.4GB 사용 중)
-- 실험 간 GPU thermal/scheduling 차이
+For reference, AR runs execute the target model alone (no draft, no tree):
 
-**다만 token efficiency는 일관됨:**
-- Accept rate: 0.80 → 0.83~0.89 (+3~9%)
-- Cache hit: 0.83 → 0.88~0.92 (+5~9%)
-- Tok/Step: 4.18 → 4.33~4.57 (+4~9%)
+| Config | Target | Throughput | Time (s) |
+|--------|--------|-----------:|---------:|
+| ar_layerskip | LayerSkip-Llama3-8B | 74.39 | 1032.38 |
+| ar_llama31 | Llama-3.1-8B-Instruct | *(pending)* | *pending* |
+| eagle_f3_k4 | Llama-3.1-8B-Instruct + EAGLE-3 | **not run** | OOM at 23.4 GB/GPU with default/max_model_len=2048; likely a TP-split issue with EAGLE's 1-layer draft on 24 GB cards. Needs a dedicated reproducer before retrying. |
 
-### 2. Draft Fan_out 영향
+AR throughput (74.39 tok/s) is the spec-decoding floor. Baseline SSD speeds it up ~1.9× (74 → 142); MESA speeds it up only ~1.2× (74 → 87). **MESA is still faster than AR, but does not catch up to baseline SSD on this config / hardware.**
 
-```
-draft_fo=1 (Phase1: 5 nodes, Phase2: 10 nodes):
-  Draft step: 81.77ms
-  Throughput: 47.00
+## Comparison Summary
 
-draft_fo=2 (Phase1: 10 nodes, Phase2: 5 nodes):
-  Draft step: 146.48ms (!)
-  Throughput: 28.11
+| Mode | Target | Best config | Throughput (tok/s) | vs AR (LayerSkip) | vs Baseline_f3 |
+|------|--------|-------------|-------------------:|-----------------:|---------------:|
+| AR | LayerSkip-Llama3-8B | — | 74.39 | 1.00× | 0.52× |
+| Baseline SSD | LayerSkip-Llama3-8B | f=3 | **142.02** | **1.91×** | 1.00× |
+| MESA SSD | LayerSkip-Llama3-8B | f=3, dfo=1, exit=16 | 88.41 | 1.19× | **0.62×** |
+| EAGLE | Llama-3.1-8B | — | *OOM (not run)* | — | — |
 
-왜 draft_fo=2가 훨씬 느린가?
-  Phase1: N=10 decode → ~19ms
-  Phase2: N=5 decode → ~10ms
-  합: ~29ms... 하지만 실측 146ms??
-```
+## Root-Cause Analysis
 
-**draft_fo=2의 146ms 원인 추정:**
-- draft_fo=2 → proxy_fo=1 → Phase 2 MQ_LEN=5
-- proxy_layout CudaGraph가 N=5로 캡처되어야 하지만, 기존 proxy wrapper의 MQ_LEN이 proxy_fan_out × (K+1) = 1 × 5 = 5
-- CudaGraph 캡처 시 B=1, N=5 → batch size bucket이 매우 작아 overhead 비율 증가
-- 또는: Policy A의 동적 fan_out_list에서 sum != proxy_MQ_LEN 불일치 가능성
+1. **Token efficiency is real but small.** MESA consistently raises cache hit by +0.02–0.05 and pushes tok/step up by up to +0.1 in the good configs. This confirms the proxy-driven selection works — it just doesn't move the throughput dial enough to beat the structural cost.
 
-### 3. Target Verify vs Draft Step 관계
+2. **Draft step is the bottleneck, and it is ~2× baseline.** Baseline draft step is 24–26 ms. MESA draft step is 43–46 ms, across *every* config. The gap is dominated by the 2-pass structure:
+   - Two CudaGraph replays (draft layout + proxy layout) per step instead of one.
+   - Two FlashInfer `wrapper.plan()` calls per step (draft + proxy layouts).
+   - Per-layout mask precompute.
+   - Glue compute + proxy-cache merge (Policy A dynamic fan_out_list) adds ~2-4 ms over baseline's single-pass glue.
+   That roughly matches the earlier budget estimate of ~37 ms of structural overhead on top of the raw decode work.
 
-```
-Baseline:   Target=65ms, Draft=67ms  → 거의 균형 (양쪽 모두 bottleneck)
-MESA exit=21: Target=47ms, Draft=82ms → Draft가 bottleneck
+3. **Target verify is not actually faster with split CudaGraph.** Baseline verify is 23 ms; MESA (graph_pre + proxy + graph_post) is 24.7–25.6 ms. The overhead of splitting the CudaGraph in two and handshaking through a proxy tensor eats the savings from "Phase-2 starts earlier" on this size of model. So the motivating benefit for split CudaGraph doesn't materialize here.
 
-Draft가 bottleneck이므로:
-  Throughput ≈ total_tokens / (draft_step × num_steps)
-  Draft step 줄이기가 핵심
-```
+4. **Sweep-knob sensitivity is low.** Over the 10-config f×split grid at exit=21, MESA throughput ranges only 82.19–88.58 tok/s (±4%). Exit-layer sweep is even flatter (85.00–88.41). The space is roughly convex with a shallow optimum at (f=3, dfo=1, exit≈16–21), but no knob choice gets MESA out of the -35% band vs baseline.
 
-### 4. exit=10의 특이 패턴
+5. **The previous "MESA beats baseline" result was a GPU-contention artifact.** On shared GPUs baseline's target verify had inflated to 65 ms; on clean GPUs it drops to 23 ms and the gap reverses.
 
-```
-exit=10: Accept=0.89 (최고!), CacheHit=0.92 (최고!)
-         Draft=103ms (느림), Verify=54ms
+## What this means for MESA as designed
 
-early exit layer(31%)에서도 proxy quality가 높음.
-하지만 graph_pre가 짧아(10 layers) graph_post가 길어(22 layers) →
-proxy가 일찍 도착하여 Phase2가 빨리 시작할 수 있음.
-그런데 Draft=103ms는 exit=21(82ms)보다 느림.
-이유: exit=10의 early-exit logits quality가 낮아 h_i budget 배분이 비효율적?
-또는 proxy_top_k=3이 exit=10에서는 부족?
-```
+On this model size (8 B, 32 layers) and hardware (RTX 3090, TP=2, B=1), the structural overhead of the 2-pass CudaGraph + dual-layout FlashInfer plan outweighs the ~5–10% token-efficiency gain that the proxy delivers. To change this verdict MESA would need at least one of:
 
----
+- a dramatically cheaper Phase-2 (e.g., collapse to 1 CudaGraph keyed on a runtime layout descriptor instead of recompiling/re-planning per step),
+- a larger target (70 B) where the proxy-driven Phase-1→Phase-2 pipeline can actually hide latency, or
+- a regime where baseline's draft is *not* already near-saturating accept rate, so the proxy's cache-hit improvement actually compounds.
 
-## Target/Draft Latency Breakdown
+Until one of those holds, baseline SSD at f=3 remains the right default.
 
-```
-Baseline (단일 pass):
-  Target: [====== verify 65ms ========]
-  Draft:  [glue 5ms][=== full decode 28ms ===][cache ~2ms] = 67ms
-  Step time: max(65, 67) ≈ 67ms
+## Notes
 
-MESA exit=21 (2-pass):
-  Target: [graph_pre 30ms][proxy 0.5ms][graph_post 16ms] = 47ms
-  Draft:  [glue 5ms][Phase1 19ms][wait 0ms][Phase2 19ms][cache 2ms] = 82ms (+ overhead)
-  Step time: max(47, 82) = 82ms
-
-  Draft 내부 overhead:
-    Expected: glue(5) + Phase1(19) + Phase2(19) + cache(2) = 45ms
-    Actual: 82ms
-    Gap: ~37ms ← 2-pass CudaGraph overhead + mask precompute + runtime layout 생성
-```
-
----
-
-## 추천 파라미터 설정
-
-| 설정 | 값 | 이유 |
-|------|-----|------|
-| **exit_layer** | **21** (66%) | Throughput 최고, token efficiency 우수 |
-| **draft_fan_out** | **1** | fo=2는 throughput 대폭 하락 |
-| **proxy_top_k** | 3 (default) | 충분 (exit=21에서 cache hit 0.90) |
-
-## 결론
-
-1. **MESA exit=21이 baseline보다 빠를 수 있음** (GPU 경쟁 환경 + token efficiency 향상)
-2. **Token efficiency는 일관되게 개선**: accept +3~9%, cache hit +5~9%, tok/step +4~9%
-3. **draft_fan_out=1이 최적**: Phase1을 최소화하고 Phase2에 budget 집중
-4. **Draft step이 주요 bottleneck**: 82ms (2-pass) vs 47ms (target) → draft 최적화가 핵심
+- `mesa_f2_dfo1` and `mesa_f3_dfo2` failed once with `DistStoreError` during rapid slot reuse (multiprocessing-spawn race on port reuse). Reruns on the same hardware produced the numbers in the table above; the failure was not algorithmic.
+- Summary regex in `bench/run_mesa_sweep.sh` was also fixed to capture "Total Throughput:" correctly (previously it captured "76800tok" = total token count).
