@@ -1,367 +1,516 @@
-# MESA Rev1 Problems
+# MESA Rev1 Problems — 수정 대상과 계획
+
+이 문서는 MESA Rev1에서 **실제로 수정할 항목만** 남긴 버전이다. 현재 B=1 + 단일 run 실험 환경에서 영향이 0에 가까운 항목 (`run_mesa_verify_cudagraph` padding cat, `fan_idx` helper, hot-path import, profiling flush wiring, phase build label 세분화)은 제외했다.
+
+수정 순서:
+1. #3 B=1 assert 추가 (correctness, 3 LoC)
+2. #4 proxy_top_k 확대 + draft fallback 제거 (design + correctness)
+3. #D `_decode_tree()` 진입 setup 버퍼 pre-allocate (매 step 8 MB 재할당 제거)
+4. #1 Proxy selection 벡터화 (fallback 제거된 상태에서 pure GPU)
+5. #8 Dead code 제거
+
+**제외(defer/제거)**:
+- #2 TreeLayout LRU cache — **제거**: Policy A의 `fan_out_list`가 step마다 바뀌어 hit rate 낮을 가능성 높음, 기대 이득도 작음(~0.2 ms)
+- #5 `topk_probs` — **defer**: Policy B 도입 시 활성화
+- #6 verify padding cat — **defer**: B=1 전제 하에 trigger 안 됨
+
+---
+
+## #1 Proxy selection: Python loop + GPU→CPU sync 제거 (Critical)
+
+### 위치
+- `ssd/engine/draft_runner.py:1009` (`_select_proxy_sourced_tokens`)
+- `ssd/engine/draft_runner.py:1054` (`_select_proxy_sourced_tokens_policy_a`, Rev1 실사용 경로)
+
+### 현재 코드 문제
+```python
+# 1026-1028: GPU→CPU sync 3회
+draft_cpu = draft_forked[:, :K, :].cpu().tolist()
+proxy_cpu = proxy_topk_ids.cpu().tolist()
+fallback_cpu = fallback_topk[:, :K, :].cpu().tolist()
+
+# 1031-1044: Python 이중 for loop + set dedup
+for b in range(B):
+    for pos in range(K):
+        draft_set = set(draft_cpu[b][pos])
+        selected = [t for t in proxy_tokens if t not in draft_set]
+        ...
+```
+
+### 영향
+- `phase2_build` 라벨 내부 ~0.8 ms가 이 경로
+- `.tolist()`가 implicit GPU sync → stream stall
+- 특히 Policy A는 `proxy_recv_work.wait()` 직후 → draft critical path 직결
+
+### 수정 계획
+
+**Step 1: `.tolist()` 제거, tensor 기반 membership**
+```python
+# 중복 판정을 GPU에서 수행
+# draft_set은 draft_forked의 특정 position slice, proxy_tokens는 proxy_topk_ids의 특정 slice
+# 두 tensor 간 겹침 mask: (proxy_tokens[:, :, :, None] == draft_set[:, :, None, :]).any(dim=-1)
+```
+
+**Step 2: 벡터화된 selection (배치 전체 + 모든 position 동시)**
+
+의사코드:
+```python
+# Inputs (all GPU tensors):
+#   draft_forked: [B, K+1, draft_fan_out]
+#   proxy_topk_ids: [B, K, proxy_top_k]  (pos K는 fallback만)
+#   fallback_topk: [B, K+1, total_need]
+#   fan_out_list: list[int] of length K+1
+
+# 1. Proxy → fallback 순서로 pool 만들기 (pos별)
+#    pool[b, pos] = concat([proxy_topk_ids[b, pos], fallback_topk[b, pos]])  # pos<K
+#                 = fallback_topk[b, K]                                       # pos==K
+
+# 2. 각 토큰이 draft_set에 있는지 mask (vectorized)
+#    pool_expanded: [B, K+1, P, 1]
+#    draft_forked: [B, K+1, 1, D]  ← expand
+#    overlap = (pool == draft) → [B, K+1, P, D]
+#    in_draft = overlap.any(dim=-1) → [B, K+1, P]
+
+# 3. pool 내부에서도 duplicate dedup (cumulative)
+#    pool[..., i]가 pool[..., :i]에 이미 있으면 mask
+#    → 이건 triu 비교로 벡터화 가능: (pool[..., i:i+1] == pool[..., :i]).any()
+
+# 4. 유효 토큰 mask = ~in_draft & ~in_pool_prefix
+#    valid_mask: [B, K+1, P]
+#    각 (b, pos)별로 앞에서 fo[pos]개 True 뽑아서 result에 쓰기
+#    cumsum으로 prefix count 계산 → rank < fo 인 것만 선택
+```
+
+**Step 3: edge case 처리**
+- pos == K (all-accept) 는 proxy 없음, fallback만
+- fan_out_list[pos] == 0 건너뛰기
+- `total_need` (fallback pool 크기) 는 #4 수정과 함께 확대
+
+### 작업량
+- 초기 구현 (step 1, 2): ~50-70 LoC
+- Non-Policy A (`_select_proxy_sourced_tokens`)도 동일 패턴 적용: +30 LoC
+- 예상 소요: 2-3 시간 (verification 포함)
+
+### 예상 이득
+- `phase2_build` 1.4 ms → **~0.4 ms** (GPU sync 제거 + Python loop 제거)
+- 전체 MESA step ~1 ms 단축 → **throughput +1.5%**
+
+---
+
+## #3 B=1 only 강제 (Correctness)
+
+### 위치
+- `ssd/config.py:100` (MESA 검증 블록)
+- `ssd/engine/verifier.py:227` (`accept_probs[0]`)
+- `ssd/engine/draft_runner.py:1171` (단일 fan_out_list 사용)
 
-이 문서는 **기존 SSD 공통 코드 전체**가 아니라, **MESA를 구현하면서 새로 생겼거나 MESA 경로에서만 의미 있게 드러나는 문제**만 정리한다.
+### 현재 코드 문제
+```python
+# verifier.py:227
+cumprod = torch.cumprod(accept_probs[0], dim=0)  # [K] (B=1 scope)
+# ↑ 0번째 seq만 사용. 주석엔 "B=1 scope"라 돼있지만 런타임 assert 없음
+
+# draft_runner.py: fan_out_list를 batch 전체에 적용
+# B>1일 때 seq 0의 h_i 분포를 seq 1, 2에 강제 적용 → 잘못된 token 선택
+```
+
+### 영향
+- 현재 실험 전부 B=1 → correctness 문제 발현 안 됨
+- 하지만 누군가 `--b 2` 이상으로 MESA 돌리면 silent correctness bug
+- 결과 metric은 나오지만 proxy가 잘못 작동 → accept rate 하락
+
+### 수정 계획
+
+`ssd/config.py` MESA 검증 블록에 추가 (기존 assert 옆):
+```python
+if self.mesa_enabled:
+    ...  # 기존 assertions
+    assert self.max_num_seqs == 1, \
+        "MESA Rev1 only supports B=1 (max_num_seqs=1); " \
+        "Policy A uses accept_probs[0] as a single h_i distribution for the whole batch"
+```
+
+### 작업량
+- **3 LoC**
+
+### 예상 이득
+- correctness 보장. 미래 B>1 MESA는 별도 설계 (Policy A 확장 or per-seq fan_out_list 전송)
+
+---
+
+## #4 Underfill: Target proxy_top_k 확대 + **draft fallback 제거** (Design + Correctness)
+
+### 왜 fallback이 문제인가
+
+현재 `_select_proxy_sourced_tokens_policy_a` (draft_runner.py:1054-1102)는 두 소스에서 토큰을 뽑음:
+1. **Proxy** — target의 residual `(p_E - p_D).clamp(min=0)`의 top-k. "target 분포에서 유의미하지만 draft는 놓친" 토큰.
+2. **Fallback** — draft logits 자체의 top-k. dedup 후 부족하면 여기서 채움.
+
+MESA의 철학은 **"target이 draft에게 유용한 correction을 알려준다"**. 그런데 fallback은:
+- Draft가 이미 argmax/top-k로 뽑아둔 것과 **같은 분포**에서 추가로 뽑는 것
+- 즉 "draft가 두 번째로 예측하는 것" — target 정보 0
+- 이런 토큰을 tree에 넣어봤자 target이 선호할 가능성은 proxy보다 현저히 낮음
+- 결과: 실효 tree 유효 branch 수가 줄어듦 → accept rate 저하
+
+**근본 원인**: target의 `mesa_proxy_top_k` (default 3) 가 너무 작아서 draft가 부족분을 fallback으로 채울 수밖에 없는 구조.
+
+### 올바른 설계
+
+**Target이 넉넉한 residual top-k를 보낸다 → draft는 fallback 필요 없다.**
+
+| 항목 | 현재 | 제안 |
+|------|:---:|:---:|
+| `mesa_proxy_top_k` default | 3 | **15** (또는 `max(async_fan_out) * (K+1) + 4`) |
+| Target residual.topk compute | top-3 | top-17 (~+50-100 µs GPU, 실질 무시) |
+| NCCL payload (K=6) | 216 bytes | ~720 bytes (무시 가능) |
+| Draft fallback path | proxy 부족 시 draft logits 사용 | **제거** |
+| Dedup worst case 후 unique proxy 수 | ≤ 3 - 1 = 2 | ≤ 15 - 1 = 14 (충분) |
+
+### 필요한 proxy_top_k 하한
+
+dedup 후 각 position에서 `fo` 개의 unique 토큰이 필요. Worst case overlap:
+- `draft_set` 크기 = `mesa_draft_fan_out` (보통 1)
+- 겹침 최대 = `min(draft_fan_out, proxy_top_k)`
+- 최악: draft의 모든 토큰이 proxy top-k 안에 있음 → unique proxy = `proxy_top_k - draft_fan_out`
+
+조건: `proxy_top_k - draft_fan_out ≥ max(fan_out_list)`  
+⇒ `proxy_top_k ≥ max(fan_out_list) + draft_fan_out`
+
+실험 세팅에서 max(fan_out_list)는 보통 `sum(fan_out_list) = pfo × (K+1) = 2×7 = 14` 가 상한 (모든 예산이 한 position에 몰릴 때). 안전 여유 +2 → `proxy_top_k = 16` 권장.
+
+간단히 **`proxy_top_k = pfo × (K+1) + draft_fan_out + 2`** 로 자동 계산 (config에서).
+
+### 수정 계획
+
+**1단계 — `mesa_proxy_top_k` 기본값 재산정 (config.py)**
+```python
+# ssd/config.py (MESA validation 블록)
+if self.mesa_enabled:
+    ...
+    # Rev1 default: proxy_top_k 이 dedup 후 worst case에서 부족하지 않도록 자동 설정
+    pfo = self.mesa_proxy_fan_out  # 이미 계산된 값
+    K_plus_1 = self.speculate_k + 1
+    max_possible_fo = pfo * K_plus_1  # fan_out_list 전체 예산이 한 position에 몰린 worst case
+    required_top_k = max_possible_fo + self.mesa_draft_fan_out + 2  # +2 safe margin
+    if self.mesa_proxy_top_k < required_top_k:
+        print(f'[Config] mesa_proxy_top_k raised from {self.mesa_proxy_top_k} '
+              f'to {required_top_k} (to eliminate draft fallback)')
+        self.mesa_proxy_top_k = required_top_k
+```
+
+K=6, pfo=2 → `max_possible_fo = 14`, `required_top_k = 14+1+2 = 17`. 현재 default 3보다 훨씬 큼.
+
+**2단계 — draft fallback 로직 제거 (draft_runner.py:1062-1093)**
+
+```python
+# 제거 대상:
+logits_fb = glue_logits.clone()
+logits_fb[:, :-1, :] = logits_fb[:, :-1, :].scatter(...)
+total_need = max(...)
+_, fallback_topk = torch.topk(logits_fb, total_need, dim=-1)
+fallback_cpu = fallback_topk.cpu().tolist()
+
+# for pos in range(K):
+#     ... proxy dedup ...
+#     if len(selected) < fo:
+#         used = draft_set | set(selected)
+#         fb = [t for t in fallback_cpu[b][pos] if t not in used]
+#         selected.extend(fb[:fo - len(selected)])
+```
 
-기준:
-- 포함: `mesa_enabled` 경로, `run_mesa_verify_cudagraph`, `draft_runner._build_tree_batch_mesa`, runtime proxy layout, MESA profiling, MESA payload/selection 정책
-- 제외: 기존 SSD에도 그대로 존재하던 공통 병목/버그 (`Sampler`, `ParallelLMHead`, 일반 `run_verify_cudagraph`, 공통 `__debug__` print 등)
+교체:
+```python
+# Proxy only: target의 residual top-k에서 draft 제외하고 뽑음
+# proxy_top_k가 충분히 크므로 dedup 후에도 fo개 확보 가능 (config에서 보장)
+for pos in range(K):
+    proxy_tokens = proxy_cpu[b][pos]
+    draft_set = set(draft_cpu[b][pos])
+    selected = [t for t in proxy_tokens if t not in draft_set][:fo]
 
+# pos == K (all-accept): 여기는 proxy 없음 → draft logits top-k 그대로 OK
+# (All-accept position은 정의상 target이 전부 수락 예상 → correction 불필요)
+# 기존 로직 유지 (draft-sourced fallback)
+```
+
+**3단계 — underfill assert (탐지, debug)**
+```python
+# 극히 드문 edge case (proxy_top_k 설정보다 fan_out_list가 커진 경우) 탐지
+if __debug__:
+    assert len(selected) >= fo, \
+        f"MESA underfill: pos={pos} fo={fo} got={len(selected)} " \
+        f"(proxy_top_k={proxy_top_k}, needed ≥ {fo + draft_fan_out})"
+```
+
+**4단계 — 테스트 / 검증**
+- `mesa_proxy_top_k` 자동 산정 결과 로그 확인
+- Underfill assert가 트리거되지 않는지 100 step 이상 run
+- accept rate 전후 비교 (fallback 제거 효과)
+
+### `all-accept position` (pos=K) 처리
+
+Pos=K는 "앞의 모든 position이 accept되면" 도달하는 가상 position. Proxy residual 없음 (target은 accept 성공 전제). 여기는 **draft logits top-k를 그대로 써도 무방** — 이건 fallback이 아니라 올바른 동작.
+
+따라서 fallback 제거는 `pos < K` 케이스에만. `pos == K`는 기존 로직 유지.
+
+### 작업량
+- Config 자동 산정: ~10 LoC
+- Fallback 로직 제거: **-15 LoC** (순 감소)
+- Assert 추가: 3 LoC
+- **합계 순 -2 LoC** (코드 더 짧아짐)
+
+### 예상 이득
+- **Correctness**: tree의 모든 Phase-2 branch가 target-informed — MESA 설계 취지 그대로 반영
+- **Accept rate 개선 예상**: 현재 fallback으로 채워지던 slot들이 실제로는 낭비 branch였음. 이들이 진짜 correction으로 교체되면 accept 상승
+- **NCCL payload**: 216 B → ~720 B (무시)
+- **Target compute**: residual topk k 증가 ~+50-100 µs GPU (실질 무시)
+- **Draft compute**: fallback topk 제거 → -30 µs
+- **코드 단순화**: fallback 분기 사라짐, #1 (Python loop 벡터화) 도 더 쉬워짐
+
+### #1과의 관계
+
+`#1` (proxy selection 벡터화) 구현 시 fallback 분기가 있으면 2 경로 (proxy/fallback 혼합) 벡터화가 복잡해짐. **Fallback 먼저 제거 → #1 벡터화 단순**.
+
+따라서 작업 순서: **#4 → #1**.
+
+---
+
+## #D `_decode_tree()` 진입 setup 비용: spec 버퍼 pre-allocation (High — 새 항목)
+
+### 위치
+- `ssd/engine/draft_runner.py:879-904` (`_decode_tree`)
+
+### 현재 문제
+
+매 `_decode_tree()` 호출(= Phase 1, 2 각 1회/step)마다:
+
+```python
+# Line 888-895
+spec_tokens = torch.zeros((N, K), dtype=torch.int64, device=self.device)
+spec_logits = torch.zeros((N, K, V), dtype=self.hf_config.torch_dtype, device=self.device)
+spec_activations = torch.zeros((N, K, hidden_size), ...) if use_eagle else None
+
+# Line 902-904
+_, step_rope_positions, step_context_lens, step_slot_maps = self._compute_step_positions_and_slot_maps(...)
+```
+
+할당 크기 (K=6, V=32000, fp16, CodeLlama-34B):
+- Phase 1 (MQ_LEN=7): `spec_logits = 7 × 6 × 32000 × 2 = 2.7 MB`
+- Phase 2 (MQ_LEN=14): `spec_logits = 14 × 6 × 32000 × 2 = 5.4 MB`
+- **매 step 8 MB new allocation + zero-fill**
+
+`_compute_step_positions_and_slot_maps`는 `torch.arange` + `%` + `//` + `gather` 연쇄 GPU ops.
+
+### 측정된 영향
+
+Timeline에서 관찰:
+| 구간 | 측정 gap |
+|------|:---:|
+| phase1_build end → phase1_prep start | **0.32 ms** |
+| phase2_build end → phase2_prep start | **0.49 ms** |
+| **매 step 총 gap** | **~0.8 ms** |
 
-## 요약
+이 0.8 ms 중 상당 부분이 `_decode_tree` 진입 직후 spec 버퍼 할당 + setup compute.
 
-현재 MESA Rev1 구현의 가장 중요한 문제는 아래 5개다.
+### 수정 계획
 
-1. `proxy token selection`이 draft critical path에서 Python loop + GPU→CPU sync를 사용한다.
-2. `Policy A`의 dynamic `fan_out_list`를 매 step마다 새 `TreeLayout`으로 만들면서 불필요한 GPU tensor 할당이 발생한다.
-3. Rev1이 사실상 `B=1 only`인데 코드에서 강제되지 않는다.
-4. `Policy A` underfill 시 일부 proxy slot이 `token id 0`으로 남을 수 있다.
-5. target이 계산/전송하는 proxy payload가 현재 Policy A 구현에 비해 무겁다.
+**1단계: DraftRunner에 pre-allocated 버퍼 (`_init_prealloc_buffers` 확장)**
 
-그 외에,
-- MESA profiling flush가 run 경계에 연결되지 않은 점
-- `phase1_build`/`phase2_build` 해석이 비대칭인 점
-- MESA용 dead code / hot-path import / padding allocation
-도 정리 대상이다.
+```python
+# draft_runner.py __init__ / _init_prealloc_buffers에 추가
+# 각 layout(MQ_LEN)별로 최대 크기로 한 번만 할당
+max_mq = max(self.full_layout.MQ_LEN, self.draft_layout.MQ_LEN, self.proxy_layout.MQ_LEN)
+max_N = self.config.max_num_seqs * max_mq  # B * MQ_LEN upper bound
 
-
-## Critical
-
-### 1. Proxy token selection: Python loop + GPU→CPU sync
-
-대상:
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1009)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1054)
-
-문제:
-- `_select_proxy_sourced_tokens()`와 `_select_proxy_sourced_tokens_policy_a()` 둘 다
-  - `.cpu().tolist()` 3회
-  - Python `for b in range(B)` / `for pos in range(K)`
-  - Python `set` 기반 dedup
-  를 사용한다.
-- 이 구간은 특히 phase2에서 `proxy_recv_work.wait()` 직후 실행되므로 draft critical path에 그대로 들어간다.
-
-현재 코드:
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1025)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1070)
-
-판단:
-- 이 피드백은 맞다.
-- `B=1`에선 당장 심각한 절대 시간은 아닐 수 있지만, Rev1 구조상 가장 먼저 줄여야 하는 draft-side CPU 병목이다.
-- 특히 Policy A는 dynamic `fan_out_list`까지 들어가 있어 phase2 직후 지연을 더 직접적으로 만든다.
-
-권장 수정:
-- 최소 수정:
-  - `draft_forked`, `proxy_topk_ids`, `fallback_topk`를 한 번에 하나의 CPU 텐서로 옮긴 뒤 split
-- 다음 단계:
-  - CPU loop는 유지하되 `.tolist()`는 없애고 tensor/numpy 기반 membership로 변경
-- 최종:
-  - GPU tensor mask/scatter 기반 dedup/refill로 완전 벡터화
-
-
-### 2. Dynamic `fan_out_list`마다 `create_tree_layout()` 재생성
-
-대상:
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1172)
-- [tree_layout.py](/home/chokwans99/PSD/ssd/ssd/engine/helpers/tree_layout.py:28)
-
-문제:
-- Policy A가 target에서 받은 `fan_out_list`로 매 step runtime layout을 생성한다.
-- `create_tree_layout()`는
-  - `fan_out_t`
-  - `fan_out_t_miss`
-  - `fan_idx_hit`
-  - `fan_idx_miss`
-  - `arange_mq`
-  - `step_pos_offsets`
-  - `step_rope_offsets`
-  를 새로 만든다.
-
-판단:
-- 이 피드백도 맞다.
-- 절대 비용은 phase2 replay보다 작겠지만, dynamic layout을 도입한 Rev1에서 생긴 **순수 MESA 오버헤드**다.
-- 특히 반복적으로 비슷한 `fan_out_list` 패턴이 나오는 실험이라면 캐시 이득이 분명하다.
-
-권장 수정:
-- `tuple(fan_out_list)` 키로 LRU cache 또는 dict cache
-- `step_rope_offsets`, `step_pos_offsets`는 `K`와 `MQ_LEN` 의존성이 있으므로 캐시 가능
-- 최소한 `TreeLayout` 생성 자체를 helper로 감싸서 재사용 가능하게 변경
-
-
-### 3. Rev1은 사실상 `B=1 only`인데 코드에서 강제되지 않음
-
-대상:
-- [verifier.py](/home/chokwans99/PSD/ssd/ssd/engine/verifier.py:227)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1171)
-- [config.py](/home/chokwans99/PSD/ssd/ssd/config.py:100)
-
-문제:
-- target은 `accept_probs[0]`만 사용해서 `h_i`와 `fan_out_list`를 계산한다.
-- draft는 그 단일 `fan_out_list`를 배치 전체 proxy pass에 그대로 사용한다.
-- 즉 `B>1`이면 첫 번째 시퀀스 기준 allocation이 모든 시퀀스에 강제로 적용된다.
-
-판단:
-- 이건 현재 Rev1 구현의 실제 correctness issue다.
-- 문서상으론 `B=1 scope`였지만, 코드에서 assert가 없다.
-
-권장 수정:
-- `mesa_enabled`면 `assert max_num_seqs == 1` 또는
-- 실제 MESA 경로 진입 시 `assert B == 1`
-
-
-### 4. Policy A underfill 시 `token id 0` slot 가능
-
-대상:
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1066)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1089)
-
-문제:
-- `result`를 0으로 초기화한 뒤 실제 채워진 길이만큼만 쓴다.
-- `selected`가 `fo`보다 짧으면 나머지 slot은 0으로 남는다.
-- 현재 fallback 폭은 `max(max(fan_out_list), async_fan_out)`까지만 뽑는다. [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1066)
-
-왜 생기나:
-- proxy 후보와 draft 후보가 크게 겹치거나
-- `all-accept` 위치에 budget이 몰리거나
-- 특정 position의 `fo`가 실제 unique fallback 후보 수보다 클 때
-
-판단:
-- 이건 실제 branch correctness에 직접 영향을 줄 수 있는 버그다.
-
-권장 수정:
-- 최소:
-  - `assert len(selected) == fo`
-- 실전:
-  - fallback 폭 확대
-  - 부족 시 추가 top-k 재탐색
-  - 또는 `fo`를 줄여서 runtime layout과 fill count를 일치시키는 보정 필요
-
-
-### 5. Target payload가 Policy A 구현에 비해 무겁다
-
-대상:
-- [verifier.py](/home/chokwans99/PSD/ssd/ssd/engine/verifier.py:197)
-- [verifier.py](/home/chokwans99/PSD/ssd/ssd/engine/verifier.py:209)
-- [verifier.py](/home/chokwans99/PSD/ssd/ssd/engine/verifier.py:251)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:990)
-
-문제:
-- target은 여전히
-  - full-vocab `softmax(p_E)`
-  - full-vocab `softmax(p_D)`
-  - `topk_probs`
-  를 계산하고 전송한다.
-- 그런데 현재 draft의 Policy A는 사실상 `fan_out_list + topk_ids`만 사용한다.
-- `topk_probs`는 unpack되지만 selection에는 쓰이지 않는다.
-
-판단:
-- MESA Rev1이 Policy A 중심이면 이건 불필요한 compute/comm overhead다.
-- target-side proxy compute는 이미 MESA 전체 성능의 주요 병목 후보다.
-
-권장 수정:
-- Rev1:
-  - `fan_out_list + topk_ids`만 전송
-- Policy B 도입 시:
-  - 그때 `topk_probs`를 다시 활성화
-
-
-## Medium
-
-### 6. MESA verify padding은 여전히 `torch.cat` 기반 임시 할당
-
-대상:
-- [cudagraph_helpers.py](/home/chokwans99/PSD/ssd/ssd/engine/helpers/cudagraph_helpers.py:1079)
-
-문제:
-- `run_mesa_verify_cudagraph()`는 padding 시
-  - `input_ids`
-  - `positions`
-  - `slot_mapping`
-  - `block_tables`
-  - `context_lens`
-  에 대해 `torch.cat()`으로 새 텐서를 만든다.
-
-판단:
-- 원본 피드백의 `run_verify_cudagraph` 일반론은 기존 SSD 공통 이슈라 여기서 제외한다.
-- 하지만 `run_mesa_verify_cudagraph`에 동일한 패턴을 복제한 부분은 **MESA 구현 이슈**로 포함할 가치가 있다.
-
-권장 수정:
-- cat 대신 `graph_vars` 버퍼에 직접 write
-- pad 영역은 zero/fill 방식으로 처리
-
-
-### 7. `cache_hits_list` 기반 `fan_idx` 생성이 MESA 경로에도 반복됨
-
-대상:
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1113)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1204)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1210)
-
-문제:
-- runtime layout을 쓰는 MESA 경로에서도 여전히
-  - Python list / comprehension
-  - `torch.cat([hit if ... else miss for ...])`
-  패턴이 반복된다.
-
-판단:
-- `B=1`에서는 영향이 작지만,
-- 이 로직이 MESA runtime layout 경로에 그대로 남아 있는 건 깔끔하지 않다.
-- 공통 helper로 빼면 유지보수성과 vectorization 여지가 좋아진다.
-
-권장 수정:
-- `build_fan_idx(cache_hits, layout)` 유틸 추가
-- `torch.where` 기반으로 vectorize
-
-
-### 8. MESA용 dead code: `get_forked_recovery_tokens_from_logits(..., mesa_proxy=...)`
-
-대상:
-- [async_spec_helpers.py](/home/chokwans99/PSD/ssd/ssd/utils/async_helpers/async_spec_helpers.py:57)
-
-문제:
-- 이 분기는 MESA가 `_build_tree_batch_mesa()`를 도입하기 전 흔적이다.
-- 현재 MESA 경로는 여기로 오지 않고, `_select_proxy_sourced_tokens_policy_a()`를 직접 사용한다. [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1178)
-
-판단:
-- 피드백이 맞다.
-- 현재 기준으로는 dead code다.
-
-권장 수정:
-- 제거하거나
-- 정말 future fallback 용도라면 deprecated 주석 추가
-
-
-### 9. MESA hot path 내부 import가 반복됨
-
-대상:
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:575)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1151)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1200)
-- [verifier.py](/home/chokwans99/PSD/ssd/ssd/engine/verifier.py:188)
-
-문제:
-- MESA 추가 코드가 함수 내부 import를 많이 사용한다.
-- Python import cache 때문에 큰 절대 비용은 아니지만, hot path 코드 품질은 떨어진다.
-
-판단:
-- 성능 issue라기보다는 유지보수 issue
-- MESA 추가분에서만 반복된 패턴이므로 문서에 남길 만하다.
-
-권장 수정:
-- 파일 상단 import로 정리
-
-
-### 10. MESA profiling은 helper만 있고 run-level flush wiring이 없음
-
-대상:
-- [cudagraph_helpers.py](/home/chokwans99/PSD/ssd/ssd/engine/helpers/cudagraph_helpers.py:1181)
-- [llm_engine.py](/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py:326)
-
-문제:
-- `mesa_flush()`는 추가됐지만 실제 `generate()`나 `bench` 경로에는 연결되지 않았다.
-- 현재 dump는 target은 `exit()`, draft는 child 종료 시점에서만 수행된다.
-
-판단:
-- 이건 MESA profiling 사용성 issue다.
-- 기능은 있지만 run 단위 breakdown 수집엔 아직 직접 못 쓴다.
-
-권장 수정:
-- `LLMEngine.generate()` 끝에서 target flush
-- draft runner에도 run boundary flush command 추가
-
-
-### 11. `phase1_build` / `phase2_build` label 의미가 비대칭
-
-대상:
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1154)
-- [draft_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py:1169)
-
-문제:
-- `phase1_build`는 사실상
-  - draft token selection
-  - args build
-  만 포함한다.
-- `phase2_build`는
-  - unpack
-  - dynamic layout 생성
-  - Policy A token selection
-  - args build
-  를 모두 포함한다.
-
-판단:
-- 측정 자체는 유효하지만, 두 항목을 단순 비교하면 오해가 생긴다.
-
-권장 수정:
-- `phase2_build`를
-  - `proxy_unpack`
-  - `proxy_layout_create`
-  - `select_proxy_tokens`
-  - `phase2_args_build`
-  로 쪼개기
-
-
-## 현재 피드백 중 제외한 항목
-
-아래는 이번 문서에서 **의도적으로 제외**한다. 이유는 “기존 SSD 공통 코드”이거나 “MESA와 직접 무관”하기 때문이다.
-
-1. `speculator_async._speculation_request`의 per-seq `torch.tensor(bt)`
-   - async draft 공통 이슈
-   - MESA 전용 문제는 아님
-
-2. `Sampler.forward`의 `temperatures == 0` division
-   - 공통 샘플러 이슈
-   - MESA 전용 아님
-
-3. `draft_async_prefill`의 EAGLE/non-EAGLE 동일 분기
-   - 기존 draft prefill 코드 정리 이슈
-   - MESA 본체와 직접 관련 없음
-
-4. 일반 `run_verify_cudagraph` padding cat
-   - SSD 공통 verify 경로
-   - 다만 `run_mesa_verify_cudagraph`에 동일 패턴이 복제된 부분만 본 문서에 포함
-
-5. `verify.py`, `step.py`의 `__debug__` print
-   - 공통 speculative 경로 이슈
-   - MESA를 켰을 때 더 거슬릴 수는 있지만, MESA가 만든 문제는 아님
-
-6. `ParallelLMHead.forward`의 `dist.gather + torch.cat`
-   - TP logits gather 공통 구현
-   - MESA 전용 아님
-
-7. `llm_engine.exit`의 `/dev/shm/sem.*` 전수 삭제
-   - 엔진 공통 종료 처리 문제
-   - MESA 전용 아님
-
-
-## 우선순위
-
-### 바로 고칠 것
-
-1. `B=1` assert 추가
-2. Policy A underfill 방지
-3. proxy selection CPU sync / Python loop 축소
-4. `topk_probs` 제거
-
-### 그 다음
-
-5. dynamic `TreeLayout` cache
-6. MESA verify padding cat 제거
-7. `fan_idx` helper vectorization
-8. dead code 제거
-
-### 분석/품질
-
-9. profiling flush wiring
-10. `phase2_build` 세분화
-
-
-## 한 줄 결론
-
-Rev1에서 실제로 중요한 MESA 문제는 **Policy A runtime path의 CPU-side 오버헤드와 correctness guard 부족**이다.
-
-특히:
-- `B=1` 미강제
-- underfill 가능성
-- proxy selection Python loop
-- step마다 새 layout 생성
-
-이 네 개는 MESA Rev1의 핵심 품질 문제로 봐야 한다.
+K = self.config.speculate_k
+V = self.hf_config.vocab_size
+H = self.hf_config.hidden_size
+
+self._spec_tokens_buf = torch.empty((max_N, K), dtype=torch.int64, device=self.device)
+self._spec_logits_buf = torch.empty((max_N, K, V), dtype=self.hf_config.torch_dtype, device=self.device)
+if self.config.use_eagle:
+    self._spec_activations_buf = torch.empty((max_N, K, H), dtype=self.hf_config.torch_dtype, device=self.device)
+```
+
+**2단계: `_decode_tree` 버퍼 재사용**
+```python
+def _decode_tree(self, payload, layout=None):
+    _layout = layout or self.full_layout
+    B, K, F, N = payload["metadata_ints"]
+    V = self.hf_config.vocab_size
+
+    # 기존: torch.zeros(...) 새로 할당
+    # 수정: 미리 할당된 버퍼 슬라이스, 필요 시 zero_ 또는 그냥 덮어쓰기
+    spec_tokens = self._spec_tokens_buf[:N, :K]
+    spec_logits = self._spec_logits_buf[:N, :K, :V]
+    # spec_tokens/logits는 매 iter에서 full-overwrite되므로 zero_ 불필요
+    # (단, scatter/indexing으로 일부만 쓰는 경우 zero_ 필요 — 확인 필요)
+    spec_activations = self._spec_activations_buf[:N, :K, :H] if self.config.use_eagle else None
+    
+    # 나머지는 동일
+    ...
+```
+
+**3단계: `_compute_step_positions_and_slot_maps`는 layout별로 캐시 가능한 부분 확인**
+- `step_pos_offsets`, `step_rope_offsets`는 이미 `layout.step_pos_offsets` / `layout.step_rope_offsets`로 pre-computed (tree_layout.py에)
+- `step_positions = initial_positions[None, :] + _layout.step_pos_offsets` — layout 고정이면 initial_positions만 바뀜
+- `step_slot_maps` 계산은 dbt에 의존 — 매 step 재계산 불가피
+- 하지만 일부 intermediate tensor (arange, batch_indices)는 cache 가능
+- 개선폭 작을 듯. 1,2단계 먼저.
+
+### 주의사항
+
+- `spec_logits`을 `torch.empty`로 쓰고 안 초기화해도 되는지 확인 필요 — `_decode_tree_step` 내부에서 `spec_logits[:, depth, :] = logits_flat` 로 per-depth 전체 덮어쓰기 이루어지는지 검증
+- EAGLE 경로는 spec_activations도 동일하게 처리
+- Graph pool 캡처 경로와 상호작용 체크 (CudaGraph가 이 버퍼를 캡처 범위에 포함하는지)
+
+### 작업량
+- pre-allocated 버퍼: ~15 LoC (init) + ~5 LoC (교체)
+- **총 ~20 LoC**
+
+### 예상 이득
+- 매 step **−0.5~0.8 ms** (phase1_build→phase1_prep 및 phase2_build→phase2_prep gap 제거)
+- 전체 MESA step **−1~2%**
+
+### 왜 이 항목이 실질 중요한가
+
+`_decode_tree` 진입 setup은 **Phase 2-only 구조적 비용**이 아니라 **Phase 1에도 동일하게 걸리는 고정 오버헤드**. 즉 MESA뿐 아니라 baseline에도 있는 비용이지만, MESA는 Phase 1/2를 **2번** 거치므로 오버헤드가 2배. #1 (Python loop 벡터화)과 함께 Phase 2 비-replay 영역의 주요 제거 대상.
+
+---
+
+## #5 `topk_probs` — **DEFER** (이번 Rev1에서 손대지 않음)
+
+### 위치
+- `ssd/engine/verifier.py:207-211, 222, 252-255`
+- `ssd/engine/draft_runner.py:998-999`
+
+### 현재 상태
+- Target: `residual.topk` → `topk_probs` 계산 + normalize + NCCL send
+- Draft: `_unpack_mesa_proxy`에서 dict에 들어가지만 Policy A selection에서 **미사용**
+
+### 결정: defer
+
+- Rev1만 보면 dead payload, 제거하면 compute/comm 소폭 절약
+- 하지만 **Policy B (joint `h_i × r_i(v)` 기반 selection)** 도입 예정
+- 지금 제거했다가 Policy B 시 다시 추가는 churn
+- 현재 overhead는 target compute ~0.2 ms, NCCL +72 B/step — Rev1에서 무시 가능
+
+### 조치
+이번 Rev1 수정 범위에 포함 안 함. 코드에 주석만 1줄 추가하여 Policy B 계획 표시 (선택 사항):
+
+```python
+# verifier.py:209 위 선택적 주석
+# NOTE: topk_probs currently unused by Policy A. Kept for Policy B (joint r_i(v) weighted selection).
+```
+
+주석도 안 달아도 무방 (이 문서가 해당 역할).
+
+---
+
+## #8 Dead code: `get_forked_recovery_tokens_from_logits(..., mesa_proxy=...)` 제거
+
+### 위치
+- `ssd/utils/async_helpers/async_spec_helpers.py:26` (함수 시그니처)
+- `ssd/utils/async_helpers/async_spec_helpers.py:57-90` (mesa_proxy 분기)
+
+### 현재 상태
+- `draft_runner.py:786`은 MESA off / async non-MESA 경로에서 `mesa_proxy=None`으로 호출
+- MESA 경로는 `_build_tree_batch_mesa` → `_select_proxy_sourced_tokens_policy_a` 직접 사용
+- 따라서 `async_spec_helpers.py:57-90`의 `if mesa_proxy is not None:` 블록은 **dead**
+
+### 수정 계획
+
+**Option A (보수적)**: mesa_proxy 분기 및 파라미터 제거
+```python
+# 기존
+def get_forked_recovery_tokens_from_logits(config, logits, cache_hits, returned_tokens, tokenizer, mesa_proxy=None):
+    ...
+    if mesa_proxy is not None:
+        # 30+ lines of dead code
+        ...
+
+# 수정
+def get_forked_recovery_tokens_from_logits(config, logits, cache_hits, returned_tokens, tokenizer):
+    ...  # mesa_proxy 분기 완전 삭제
+```
+
+**Option B (주석만)**: 
+```python
+def get_forked_recovery_tokens_from_logits(..., mesa_proxy=None):
+    ...
+    # DEPRECATED: MESA Rev1은 _select_proxy_sourced_tokens_policy_a를 직접 사용함
+    # 이 분기는 legacy fallback용. Rev2 정리 시 제거 예정.
+    if mesa_proxy is not None:
+        ...
+```
+
+**추천 Option A**. 진짜 dead이고 (`grep`으로 호출부 0건 확인), 주석만 남기면 또 잊어버림.
+
+### 작업량
+- `async_spec_helpers.py`: ~35 LoC 삭제 + signature 정리
+- `tests.py` 확인 (mesa_proxy kwarg 쓰는지) — 호출부 0
+
+---
+
+## 전체 요약
+
+| # | 항목 | 유형 | LoC | 예상 이득 |
+|:-:|------|------|:---:|:---:|
+| 3 | B=1 assert | correctness | 3 | correctness 보장 |
+| **4** | **proxy_top_k 확대 + fallback 제거** | design/correctness | **-2 (순)** | tree 전체가 target-informed → accept ↑ |
+| **D** | **`_decode_tree` spec 버퍼 pre-allocate** | perf | ~20 | step −0.5~0.8 ms |
+| 1 | Proxy selection 벡터화 | perf/critical path | ~40 (fallback 제거로 단순해짐) | step −0.8 ms |
+| 8 | Dead code 제거 | cleanup | -35 | maintainability |
+| 2 | ~~TreeLayout LRU cache~~ | **제거**: hit rate 낮을 것, 이득 작음 | — | — |
+| 5 | `topk_probs` | **defer** (Policy B 예정) | 0 | — |
+| 6 | verify padding cat | **defer** (B=1 조건부) | 0 | — |
+
+**총 작업량**: 약 63 LoC 추가 + 35 LoC 제거 = **순 +28 LoC**  
+**예상 MESA throughput 개선**: **+2-4%** (주로 #D, #1)  
+**Accept rate 개선 예상**: +수 %p (#4 — fallback 제거, 모든 Phase-2 branch가 target-informed)  
+**Correctness 보강**: B=1 불변, underfill 제거
+
+## 작업 순서
+
+1. **#3 B=1 assert** (3 LoC, 즉시 — 가장 간단)
+2. **#4 proxy_top_k 확대 + fallback 제거** (design change, #1 전에 해야 벡터화 단순)
+3. **#D `_decode_tree` spec 버퍼 pre-allocate** (매 step 8 MB 재할당 제거, 가장 큰 perf 이득)
+4. **#1 Proxy selection 벡터화** (fallback 제거된 상태에서 pure GPU 로 재작성)
+5. **#8 Dead code 제거** (최종 clean-up)
+
+## #6 `run_mesa_verify_cudagraph` padding 5× `torch.cat` — **DEFER** (조건부)
+
+### 위치
+- `cudagraph_helpers.py:1079-1092`
+
+### 상태
+```python
+if wrapper_bs > orig_bs:
+    input_ids = torch.cat([input_ids, torch.zeros(...)])
+    positions = torch.cat([...])
+    slot_mapping = torch.cat([...])
+    block_tables = torch.cat([...])
+    context_lens = torch.cat([...])
+```
+- **B=1 + `graph_bs_list[0]==1`이면 `wrapper_bs == orig_bs`** → 해당 path 실행 안 됨 (현재 모든 실험 조건)
+- B>1 세팅이나 bucket이 1부터 시작 안 하면 매 step 5× cat 발생
+- MESA 경로에만 복제된 오버헤드라 기존 SSD 공통 이슈와 별도
+
+### 결정: defer
+- 현재 실험 조건 (B=1)에선 dead path — 성능 영향 0
+- B>1 확장 시 반드시 수정 대상 → 그때 처리
+- Rev1 마무리엔 포함 안 함
+
+### Rev2/B>1 시 수정 방향
+- `graph_vars["input_ids"]` 등에 직접 pad 영역 write
+- `torch.cat`로 새 tensor 만들지 말 것
+
+---
+
+## 제외된 항목 (성능 영향 사실상 0, defer도 불필요)
+
+- **`fan_idx` helper vectorize** — B=1에서 comprehension iter 1회. 영향 없음
+- **Hot-path 내부 import** — Python import cache로 사실상 비용 0 (첫 호출 후 µs 이하)
+- **MESA profiling flush wiring** — 1 generate / process 구조에서 이미 동작
+- **`phase1_build` / `phase2_build` label 세분화** — 측정 품질 개선이지만 Rev1 마무리엔 불필요
+
+이 4개는 B>1 / multi-run / 정밀 분석이 필요해질 때 재검토. 현재는 maintainability 이슈로만 간주.
