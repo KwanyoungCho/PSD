@@ -1,0 +1,17 @@
+AR TP: 28.52
+
+[12:39:29] === baseline === --draft_path /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0 --async --spec --k 6 --flh 5 4 4 3 2 2 1
+  -> TP=66.44
+
+[12:53:02] === mesa_exit24 === --draft_path /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0 --async --spec --k 6 --f 3 --mesa --mesa_exit_layer 24 --mesa_draft_fan_out 1
+  -> TP=55.09
+
+[13:09:15] === mesa_exit32 === --draft_path /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0 --async --spec --k 6 --f 3 --mesa --mesa_exit_layer 32 --mesa_draft_fan_out 1
+  -> TP=56.94
+
+=== SUMMARY ===
+tag                TP         CH       TS       Accept   Draft_ms   Verify_ms 
+ar                 28.52      ?        ?        ?        ?          ?         
+baseline           66.44      0.66     3.75     0.46     40.98      45.39     
+mesa_exit24        55.09      0.80     3.88     0.48     64.63      46.43     
+mesa_exit32        56.94      0.84     3.91     0.48     62.73      46.28     
