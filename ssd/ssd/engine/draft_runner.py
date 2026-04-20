@@ -161,6 +161,35 @@ class DraftRunner(ModelRunner):
                   f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
                   f'proxy MQ_LEN={self.proxy_layout.MQ_LEN}', flush=True)
 
+        # #D Pre-allocate spec buffers for _decode_tree (per-step 8 MB alloc/zero-fill 제거).
+        # Rev1 invariant: sum(fan_out_list) 항상 고정 (proxy_fan_out × (K+1)).
+        # 따라서 runtime proxy layout의 MQ_LEN ≡ self.proxy_layout.MQ_LEN (static).
+        # B=1이므로 N = max_mq. EAGLE은 MESA와 함께 안 쓰임 (config assert).
+        #
+        # MESA는 Phase 1, 2 결과를 동시에 보관해야 merge 가능 → **슬롯 2개** 준비.
+        # Baseline은 슬롯 1개만 사용.
+        mq_list = [self.full_layout.MQ_LEN]
+        if self.config.mesa_enabled:
+            mq_list.extend([self.draft_layout.MQ_LEN, self.proxy_layout.MQ_LEN])
+        max_mq = max(mq_list)
+        max_N = self.config.max_num_seqs * max_mq
+        V = self.hf_config.vocab_size
+        H = self.hf_config.hidden_size
+        dt = self.hf_config.torch_dtype
+
+        n_slots = 2 if self.config.mesa_enabled else 1
+        self._spec_tokens_bufs = [
+            torch.empty((max_N, K), dtype=torch.int64, device=d) for _ in range(n_slots)
+        ]
+        self._spec_logits_bufs = [
+            torch.empty((max_N, K, V), dtype=dt, device=d) for _ in range(n_slots)
+        ]
+        self._spec_activations_bufs = (
+            [torch.empty((max_N, K, H), dtype=dt, device=d) for _ in range(n_slots)]
+            if self.config.use_eagle else [None] * n_slots
+        )
+        self._spec_buf_counter = 0  # round-robin index (Phase 1 = 0, Phase 2 = 1)
+
     def jit_speculate(self, 
                       request_keys: torch.Tensor, 
                       num_tokens: torch.Tensor, 
@@ -382,8 +411,11 @@ class DraftRunner(ModelRunner):
                     print(f"  Seq {seq_id}: keep_idx={keep_idx}, recovery_token={rec_token_target} ('{rec_token_text}'), n_ext={n_ext}", flush=True)
                 print(f"{'='*80}\n", flush=True)
 
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_h, mesa_close as _mc_h
+        _mev_hc = _mr_h("hit_cache_respond")
         out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations = self.hit_cache_and_respond(
             cache_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations)
+        _mc_h("hit_cache_respond", _mev_hc)
 
         if self.config.verbose:
             print(f"[CACHE RESPONSE]", flush=True)
@@ -398,8 +430,11 @@ class DraftRunner(ModelRunner):
             print(f"", flush=True)
 
         fused_response = torch.cat([cache_hits.reshape(-1), out_tokens.reshape(-1).to(torch.int64)])
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_s, mesa_close as _mc_s
+        _mev_ds = _mr_s("draft_send_response")
         dist.send(fused_response, dst=0, group=self.async_pg)
         dist.send(out_logits[:, :K, :].contiguous(), dst=0, group=self.async_pg)
+        _mc_s("draft_send_response", _mev_ds)
 
         partial_tree_decode_args = {
             "num_tokens": num_tokens,
@@ -568,6 +603,50 @@ class DraftRunner(ModelRunner):
 
         return tree_decode_args
 
+    def _glue_decode(self, partial_tree_decode_args, glue_decode_input_ids):
+        """Glue decode only (no tree args construction). Non-EAGLE scope.
+        Returns: (glue_logits [B,K+1,V], gd_for_fork [B,K+1], cache_hits, cache_hits_list, dbt, B)
+        """
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record, mesa_close
+        _mev_glue = mesa_record("glue")
+        K = self.config.speculate_k
+        dbt = partial_tree_decode_args["dbt"]
+        cache_hits = partial_tree_decode_args["cache_hits"]
+        cache_hits_list = cache_hits.tolist()
+
+        if self.config.use_eagle:
+            # EAGLE glue decode — full path (unchanged, passes through to _build_tree_batch)
+            raise NotImplementedError("_glue_decode does not support EAGLE; use _build_tree_batch directly")
+
+        B = glue_decode_input_ids.shape[0] // (K + 1)
+        assert B == partial_tree_decode_args["num_tokens"].shape[0]
+        glue_decode_ctxt = self.prepare_glue_decode_ctxt(
+            num_tokens=partial_tree_decode_args["num_tokens"],
+            input_ids=glue_decode_input_ids,
+            dbt=dbt, B=B,
+        )
+
+        set_context(
+            is_prefill=False,
+            cu_seqlens_q=glue_decode_ctxt["cu_seqlens_q"],
+            max_seqlen_q=glue_decode_ctxt["max_seqlen_q"],
+            slot_mapping=glue_decode_ctxt["slot_map"],
+            context_lens=glue_decode_ctxt["context_lens"],
+            block_tables=glue_decode_ctxt["block_tables"],
+        )
+
+        glue_decode_logits_flat = self.run_model(
+            glue_decode_ctxt["input_ids"], glue_decode_ctxt["positions"],
+            is_prefill=False, last_only=False)
+
+        reset_context()
+
+        glue_decode_logits = glue_decode_logits_flat.view(B, K + 1, -1)
+        gd_for_fork = glue_decode_input_ids.reshape(B, K + 1)
+
+        mesa_close("glue", _mev_glue)
+        return glue_decode_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B
+
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         if self.config.verbose:
             print(f'about to build tree batch')
@@ -669,6 +748,8 @@ class DraftRunner(ModelRunner):
         _pre_temperatures = partial_tree_decode_args["temperatures"][_pre_b_flat]
 
         # --- Run glue decode forward ---
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_g, mesa_close as _mc_g
+        _mev_gb = _mr_g("glue")
         set_context(
             is_prefill=False,
             cu_seqlens_q=glue_decode_ctxt["cu_seqlens_q"],
@@ -690,6 +771,7 @@ class DraftRunner(ModelRunner):
                 is_prefill=False, last_only=False)
 
         reset_context()
+        _mc_g("glue", _mev_gb)
 
         # --- Extract K+1 logits/prenorms at rec+spec positions ---
         if self.config.use_eagle:
@@ -793,6 +875,7 @@ class DraftRunner(ModelRunner):
                 block_tables=dbt,
                 active_mq_len=_active_mq,
                 active_wrappers=_active_wrappers,
+                active_layout=_layout,  # runtime layout for dynamic fan_out
             )
         else:
             set_context(
@@ -831,14 +914,21 @@ class DraftRunner(ModelRunner):
         B, K, F, N = payload["metadata_ints"]
 
         V = self.hf_config.vocab_size
-        spec_tokens = torch.zeros(
-            (N, K), dtype=torch.int64, device=self.device)
-        spec_logits = torch.zeros(
-            (N, K, V), dtype=self.hf_config.torch_dtype, device=self.device)
-        spec_activations = torch.zeros(
-            (N, K, self.hf_config.hidden_size),
-            dtype=self.hf_config.torch_dtype, device=self.device
-        ) if self.config.use_eagle else None
+        # #D: slice pre-allocated buffers (no per-step alloc / zero-fill).
+        # MESA는 Phase 1/2 결과를 merge까지 보관해야 하므로 슬롯 2개 round-robin.
+        # _decode_tree_step fully overwrites spec_tokens[:, depth] and spec_logits[:, depth, :]
+        # per iter over all K depths → garbage init OK.
+        n_slots = len(self._spec_tokens_bufs)
+        slot_id = self._spec_buf_counter % n_slots
+        self._spec_buf_counter += 1
+        assert N <= self._spec_tokens_bufs[slot_id].shape[0], \
+            f"spec buf too small: N={N} > {self._spec_tokens_bufs[slot_id].shape[0]}"
+        spec_tokens = self._spec_tokens_bufs[slot_id][:N, :K]
+        spec_logits = self._spec_logits_bufs[slot_id][:N, :K, :V]
+        spec_activations = (
+            self._spec_activations_bufs[slot_id][:N, :K, :]
+            if self.config.use_eagle else None
+        )
 
         initial_positions = payload["positions"]
         initial_rope_positions = payload["rope_positions"]
@@ -927,7 +1017,8 @@ class DraftRunner(ModelRunner):
         """Post non-blocking recv for proxy. Returns (work, buffer)."""
         import torch.distributed as dist
         top_k = self.config.mesa_proxy_top_k
-        total_len = B * K + B * K * top_k + B * K * top_k
+        # fan_out_list [K+1] + topk_ids [B*K*top_k] + topk_probs [B*K*top_k]
+        total_len = (K + 1) + B * K * top_k + B * K * top_k
         buf = torch.empty(total_len, dtype=torch.int64, device=self.device)
         work = dist.irecv(buf, src=0, group=self.async_pg)
         return work, buf
@@ -936,12 +1027,12 @@ class DraftRunner(ModelRunner):
         """Unpack proxy data from irecv buffer."""
         top_k = self.config.mesa_proxy_top_k
         off = 0
-        accept_probs = buf[off:off + B * K].to(torch.int32).view(torch.float32).view(B, K)
-        off += B * K
+        fan_out_list = buf[off:off + (K + 1)].tolist()  # [K+1] ints
+        off += K + 1
         topk_ids = buf[off:off + B * K * top_k].view(B, K, top_k)
         off += B * K * top_k
         topk_probs = buf[off:].to(torch.int32).view(torch.float32).view(B, K, top_k)
-        return {"accept_probs": accept_probs, "topk_ids": topk_ids, "topk_probs": topk_probs}
+        return {"fan_out_list": fan_out_list, "topk_ids": topk_ids, "topk_probs": topk_probs}
 
     def _select_draft_sourced_tokens(self, logits, returned_tokens, draft_fan_out):
         """Select fork tokens from draft logits (top-k per position)."""
@@ -954,7 +1045,8 @@ class DraftRunner(ModelRunner):
     def _select_proxy_sourced_tokens(self, logits, returned_tokens,
                                        mesa_proxy, draft_forked, proxy_fan_out):
         """Select proxy correction tokens with dedup against draft-sourced."""
-        B, K = mesa_proxy["accept_probs"].shape
+        B = logits.shape[0]
+        K = self.config.speculate_k
         proxy_topk_ids = mesa_proxy["topk_ids"]  # [B, K, proxy_top_k]
 
         # Fallback candidates: wider top-k from draft logits
@@ -966,19 +1058,22 @@ class DraftRunner(ModelRunner):
 
         result = torch.zeros(B, K + 1, proxy_fan_out, dtype=torch.int64, device=logits.device)
 
+        # Batch GPU→CPU transfer (avoid per-element sync)
+        draft_cpu = draft_forked[:, :K, :].cpu().tolist()
+        proxy_cpu = proxy_topk_ids.cpu().tolist()
+        fallback_cpu = fallback_topk[:, :K, :].cpu().tolist()
+
         # Position 0..K-1: proxy-sourced with dedup
         for b in range(B):
             for pos in range(K):
-                draft_set = set(draft_forked[b, pos].tolist())
-                proxy_tokens = proxy_topk_ids[b, pos].tolist()
+                draft_set = set(draft_cpu[b][pos])
+                proxy_tokens = proxy_cpu[b][pos]
 
-                # Proxy tokens not in draft
                 selected = [t for t in proxy_tokens if t not in draft_set]
 
-                # Fallback: tokens not in draft or selected proxy
                 if len(selected) < proxy_fan_out:
                     used = draft_set | set(selected)
-                    fallback = [t for t in fallback_topk[b, pos].tolist() if t not in used]
+                    fallback = [t for t in fallback_cpu[b][pos] if t not in used]
                     selected.extend(fallback[:proxy_fan_out - len(selected)])
 
                 for j in range(min(len(selected), proxy_fan_out)):
@@ -989,6 +1084,81 @@ class DraftRunner(ModelRunner):
         logits_k.scatter_(1, draft_forked[:, K, :], float('-inf'))
         _, all_accept_topk = torch.topk(logits_k, proxy_fan_out, dim=-1)
         result[:, K, :] = all_accept_topk
+
+        return result
+
+    def _select_proxy_sourced_tokens_policy_a(self, glue_logits, gd_for_fork,
+                                                mesa_proxy, draft_forked, fan_out_list):
+        """Policy A: h_i-based dynamic fan_out. Fully vectorized (no .tolist(), no Python loop).
+        Rev1 post-#4: pos<K uses proxy-only (no draft fallback). pos==K uses draft top-k only.
+        Assumes mesa_proxy_top_k >= max(fan_out_list) + draft_fan_out (guaranteed in config).
+        """
+        B = glue_logits.shape[0]
+        assert B == 1, "Policy A vectorized path assumes B=1"
+        K = self.config.speculate_k
+        MQ_LEN = sum(fan_out_list)
+        device = glue_logits.device
+        proxy_topk_ids = mesa_proxy["topk_ids"]                # [B, K, P]  P = proxy_top_k
+        P = proxy_topk_ids.shape[-1]
+        dfo = draft_forked.shape[-1]
+
+        # ----- pos < K: proxy-only dedup (no fallback) -----
+        # dedup within proxy itself (prefix duplicates → invalid)
+        # proxy_exp: [B, K, P, 1], proxy_prev: [B, K, 1, P]
+        proxy_exp = proxy_topk_ids.unsqueeze(-1)                # [B,K,P,1]
+        proxy_prev = proxy_topk_ids.unsqueeze(-2)               # [B,K,1,P]
+        # Mask[..., i, j]: proxy[i] == proxy[j]. Only count j<i as a duplicate.
+        eq_prev = (proxy_exp == proxy_prev)                     # [B,K,P,P]
+        lower_triu = torch.tril(torch.ones(P, P, device=device, dtype=torch.bool), diagonal=-1)
+        in_prev = (eq_prev & lower_triu.view(1, 1, P, P)).any(dim=-1)   # [B,K,P]
+
+        # draft overlap: proxy vs draft_forked[:, :K, :]
+        draft_for_pos = draft_forked[:, :K, :]                  # [B,K,dfo]
+        in_draft = (proxy_topk_ids.unsqueeze(-1) == draft_for_pos.unsqueeze(-2)).any(dim=-1)  # [B,K,P]
+
+        valid = (~in_prev) & (~in_draft)                        # [B,K,P]
+        # Rank within valid: cumsum → 1-indexed rank; rank ≤ fo[pos] → take
+        rank = valid.to(torch.int64).cumsum(dim=-1)             # [B,K,P], 0 for invalid
+        fan_out_tensor = torch.tensor(fan_out_list[:K], dtype=torch.int64, device=device)  # [K]
+        take_mask = valid & (rank <= fan_out_tensor.view(1, K, 1))                          # [B,K,P]
+
+        # ----- pos == K (all-accept): draft logits top-k, excluding draft_forked[K] -----
+        fo_K = fan_out_list[K]
+        if fo_K > 0:
+            logits_K = glue_logits[:, K, :].clone()             # [B,V]
+            # Mask out draft_forked tokens (they're already in draft tree at pos K).
+            logits_K.scatter_(1, draft_forked[:, K, :], float('-inf'))
+            _, all_accept_topk = torch.topk(logits_K, fo_K, dim=-1)  # [B, fo_K]
+        else:
+            all_accept_topk = torch.empty(B, 0, dtype=torch.int64, device=device)
+
+        # ----- Assemble result tensor [B, MQ_LEN] in fan_idx order -----
+        result = torch.zeros(B, MQ_LEN, dtype=torch.int64, device=device)
+
+        # Per-position offsets into result (prefix sum of fan_out_list)
+        offsets = [0]
+        for fo in fan_out_list:
+            offsets.append(offsets[-1] + fo)
+        # offsets[pos]: starting index of pos in result
+
+        # Fill pos < K: scatter taken proxy tokens compacted per position
+        # For B=1 we unroll per-pos; vectorized gather would be more complex and B=1 here anyway.
+        for pos in range(K):
+            fo = fan_out_list[pos]
+            if fo == 0:
+                continue
+            # take_mask[0, pos] is [P] bool; proxy_topk_ids[0, pos] is [P] int64
+            sel = torch.masked_select(proxy_topk_ids[0, pos], take_mask[0, pos])  # up to fo tokens
+            # safety: clip to fo (should be exactly fo post-config guarantee)
+            sel = sel[:fo]
+            if __debug__ and sel.numel() < fo:
+                assert False, f"MESA underfill: pos={pos} fo={fo} got={sel.numel()} " \
+                              f"(proxy_top_k={P}, dfo={dfo}; raise mesa_proxy_top_k)"
+            result[0, offsets[pos]:offsets[pos]+sel.numel()] = sel
+
+        # Fill pos == K
+        if fo_K > 0:
+            result[:, offsets[K]:offsets[K]+fo_K] = all_accept_topk
 
         return result
 
@@ -1035,50 +1205,62 @@ class DraftRunner(ModelRunner):
         # Post irecv FIRST — so target send doesn't block
         proxy_recv_work, proxy_buf = self._irecv_mesa_proxy(B, K)
 
-        # Run glue decode via _build_tree_batch (reuse shared logic)
-        full_tree_args = self._build_tree_batch(partial_tree_decode_args, glue_decode_input_ids)
-        glue_logits = full_tree_args.get("_mesa_glue_logits")
-        gd_for_fork = full_tree_args.get("_mesa_gd_for_fork")
-        cache_hits = full_tree_args["cache_hits"]
-        cache_hits_list = full_tree_args["cache_hits_list"]
+        # Glue decode only (no full tree args waste)
+        glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
+            self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
 
-        if glue_logits is None:
-            proxy_recv_work.wait()
-            tokens, logits, acts = self._decode_tree(full_tree_args)
-            self._populate_tree_cache(full_tree_args, tokens, logits, cache_hits, acts)
-            return
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
 
         # === Pass 1: draft-sourced tokens (즉시 시작) ===
+        _mev_p1b = _mr("phase1_build")
         draft_forked = self._select_draft_sourced_tokens(
             glue_logits, gd_for_fork, self.config.mesa_draft_fan_out)
         draft_tree_args = self._build_tree_decode_args_for_layout(
             partial_tree_decode_args, draft_forked, self.draft_layout, cache_hits_list)
+        _mc("phase1_build", _mev_p1b)
         draft_tokens, draft_logits, draft_acts = self._decode_tree(
             draft_tree_args, layout=self.draft_layout)
 
         # === Pass 중간: proxy 수신 ===
+        _mev_pw = _mr("proxy_wait")
         proxy_recv_work.wait()
+        _mc("proxy_wait", _mev_pw)
+
+        # === Pass 2: Policy A — dynamic fan_out from h_i ===
+        _mev_p2b = _mr("phase2_build")
         mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
+        fan_out_list = mesa_proxy["fan_out_list"]  # [K+1] from target
+        from ssd.engine.helpers.tree_layout import create_tree_layout
+        step_proxy_layout = create_tree_layout(
+            name="proxy", fan_out_list=fan_out_list, fan_out_list_miss=fan_out_list,
+            K=K, device=self.device)
 
-        # === Pass 2: proxy-sourced tokens (dedup with draft) ===
-        proxy_forked = self._select_proxy_sourced_tokens(
-            glue_logits, gd_for_fork, mesa_proxy, draft_forked,
-            self.config.mesa_proxy_fan_out)
+        # Token selection with dynamic per-position fan_out
+        proxy_forked = self._select_proxy_sourced_tokens_policy_a(
+            glue_logits, gd_for_fork, mesa_proxy, draft_forked, fan_out_list)
         proxy_tree_args = self._build_tree_decode_args_for_layout(
-            partial_tree_decode_args, proxy_forked, self.proxy_layout, cache_hits_list)
+            partial_tree_decode_args, proxy_forked, step_proxy_layout, cache_hits_list)
+        _mc("phase2_build", _mev_p2b)
         proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
-            proxy_tree_args, layout=self.proxy_layout)
+            proxy_tree_args, layout=step_proxy_layout)
 
-        # === Merge + populate cache ===
+        # === Merge + populate cache (use runtime layout for correct keys) ===
         self._merge_and_populate_cache(
             draft_tree_args, draft_tokens, draft_logits,
             proxy_tree_args, proxy_tokens, proxy_logits,
-            cache_hits_list, draft_acts, proxy_acts)
+            cache_hits_list, draft_acts, proxy_acts,
+            proxy_layout=step_proxy_layout)  # runtime layout!
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
                                     proxy_args, proxy_tokens, proxy_logits,
-                                    cache_hits_list, draft_acts=None, proxy_acts=None):
-        """Merge draft + proxy tree decode results into single cache."""
+                                    cache_hits_list, draft_acts=None, proxy_acts=None,
+                                    proxy_layout=None):
+        """Merge draft + proxy tree decode results into single cache.
+        proxy_layout: runtime layout for dynamic fan_out (Policy A). Falls back to self.proxy_layout.
+        """
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        _mev_mc = _mr("merge_cache")
+        _proxy_layout = proxy_layout or self.proxy_layout
         # Build keys with layout-specific fan_idx
         draft_k = torch.cat([self.draft_layout.fan_idx_hit if int(h) else self.draft_layout.fan_idx_miss
                               for h in cache_hits_list])
@@ -1086,7 +1268,7 @@ class DraftRunner(ModelRunner):
             draft_args["seq_ids_expanded"].to(torch.int64),
             draft_k, draft_args["rec_flat"].to(torch.int64)], dim=1)
 
-        proxy_k = torch.cat([self.proxy_layout.fan_idx_hit if int(h) else self.proxy_layout.fan_idx_miss
+        proxy_k = torch.cat([_proxy_layout.fan_idx_hit if int(h) else _proxy_layout.fan_idx_miss
                               for h in cache_hits_list])
         proxy_keys = torch.stack([
             proxy_args["seq_ids_expanded"].to(torch.int64),
@@ -1099,6 +1281,7 @@ class DraftRunner(ModelRunner):
             self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
         else:
             self.tree_cache_activations = None
+        _mc("merge_cache", _mev_mc)
 
     # new one, with true asynchrony
     def draft_loop(self):
@@ -1111,7 +1294,10 @@ class DraftRunner(ModelRunner):
 
         while True:
             # 1) Wait for the next command (may be PREFILL, SPEC_REQUEST, or EXIT)
+            from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_c, mesa_close as _mc_c
+            _mev_rc = _mr_c("draft_recv_cmd")
             cmd = self.recv_cmd()
+            _mc_c("draft_recv_cmd", _mev_rc)
 
             # PREFILL: run the draft prefill and then loop back
             if cmd == 1:
@@ -1173,6 +1359,11 @@ class DraftRunner(ModelRunner):
                 if self._draft_step_times:
                     avg_ms = sum(self._draft_step_times) * 1000 / len(self._draft_step_times)
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)
+                try:
+                    from ssd.engine.helpers.cudagraph_helpers import mesa_dump
+                    mesa_dump("draft")
+                except Exception:
+                    pass
                 self.exit()
                 break
 

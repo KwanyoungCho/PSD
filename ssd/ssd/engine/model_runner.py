@@ -102,8 +102,8 @@ class ModelRunner:
         if self.verbose: print(f'INSIDE MODEL RUNNER INIT, DRAFT={is_draft}', flush=True)
         self.tp_pg = None 
 
-        if should_use_dist: 
-            default_port = 1223 
+        if should_use_dist:
+            default_port = int(os.environ.get("SSD_DIST_PORT", "1223"))
             dist.init_process_group(
                 "nccl", f"tcp://localhost:{default_port}",
                 world_size=self.world_size,
@@ -672,17 +672,23 @@ class ModelRunner:
 
         elif is_tree_decode:
             if self.config.mesa_enabled:
-                # MESA: layout-aware graph selection via context
                 _ctx = get_context()
-                _tree_graph_key = "fi_tree_decode"
-                _tree_layout = None
-                if _ctx.active_mq_len is not None:
+                # Use runtime layout from context if available (Policy A dynamic fan_out)
+                if _ctx.active_layout is not None:
+                    _tree_layout = _ctx.active_layout
+                    _tree_graph_key = _tree_layout.graph_key
+                elif _ctx.active_mq_len is not None:
+                    _tree_graph_key = "fi_tree_decode"
+                    _tree_layout = None
                     for _lname in ["draft", "proxy"]:
                         _lkey = f"fi_tree_decode_{_lname}"
                         if _lkey in self.graph_vars and getattr(self, f'{_lname}_layout').MQ_LEN == _ctx.active_mq_len:
                             _tree_graph_key = _lkey
                             _tree_layout = getattr(self, f'{_lname}_layout')
                             break
+                else:
+                    _tree_graph_key = "fi_tree_decode"
+                    _tree_layout = None
                 return run_fi_tree_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars[_tree_graph_key], tree_decode_step, cache_hits, hidden_states=hidden_states, layout=_tree_layout)
             else:
                 return run_fi_tree_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["fi_tree_decode"], tree_decode_step, cache_hits, hidden_states=hidden_states)

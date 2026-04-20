@@ -81,4 +81,26 @@ SSD KV cache copy 커널에서 `tl.arange(0, D)` — D가 non-power-of-2이면 �
 `mesa_enabled=False`일 때 `_decode_tree_step`과 `run_model` tree decode 분기에서 불필요한 layout 체크 코드가 매 step 실행됨. `if self.config.mesa_enabled:` 가드를 추가하여 기존 경로 보호.
 
 ### 11. 타이밍 코드 sync overhead
-`_build_tree_batch_mesa`의 `torch.cuda.synchronize()` 8개가 GPU 파이프라인을 깨뜨림. 제거 완료. 정확한 타이밍이 필요하면 CUDA event 기반으로 전환 필요.
+`_build_tree_batch_mesa`의 `torch.cuda.synchronize()` 8개가 GPU 파이프라인을 깨뜨림. 제거 완료.
+
+---
+
+## Rev1 변경사항
+
+### Rev1-1: Glue decode 분리
+`_glue_decode()` 함수 추출. `_build_tree_batch_mesa`가 full tree args 구축 없이 glue decode만 호출.
+
+### Rev1-2: Target 측 h_i + fan_out_list 계산
+verifier의 `_compute_and_send_proxy`에서 accept_probs → h_i → fan_out_list 계산 후 전송. Draft에서 h_i 계산 불필요.
+전송 포맷: `[fan_out_list(K+1), topk_ids(B*K*top_k), topk_probs(B*K*top_k)]`
+
+### Rev1-3: Policy A 동적 fan_out
+- `_select_proxy_sourced_tokens_policy_a()`: fan_out_list 기반 position별 가변 token 수
+- Runtime TreeLayout 생성: `create_tree_layout(fan_out_list=...)`
+- Context.active_layout으로 동적 layout 전달
+- `_merge_and_populate_cache`에 proxy_layout 파라미터 추가
+
+### Rev1 실험 결과
+- Llama3-8B: Policy A가 v1(고정)보다 약간 하락 (accept 0.83→0.79)
+- Llama2-7B: Cache hit 0.61→0.80 (+31%), accept 0.58→0.61 (+5%)
+- Throughput: 두 모델 모두 -29~44% (2-pass 구조적 비용, v1과 동일)

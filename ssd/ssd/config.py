@@ -103,6 +103,11 @@ class Config:
             assert self.hf_config.model_type == "llama", "MESA-SSD only supports Llama models"
             assert not self.use_eagle, "MESA-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
             assert not self.enforce_eager, "MESA-SSD requires CudaGraph mode (enforce_eager must be False)"
+            assert self.jit_speculate, "MESA-SSD requires jit_speculate=True (miss rows need valid logits_q)"
+            # #3 B=1 only: Policy A uses accept_probs[0] as single h_i for whole batch.
+            assert self.max_num_seqs == 1, \
+                "MESA-SSD Rev1 only supports B=1 (max_num_seqs=1); " \
+                "Policy A uses accept_probs[0] as a single h_i distribution for the whole batch"
             if self.mesa_exit_layer is None:
                 L = self.hf_config.num_hidden_layers
                 self.mesa_exit_layer = (2 * L) // 3
@@ -113,6 +118,16 @@ class Config:
             assert 0 < self.mesa_draft_fan_out < self.async_fan_out, \
                 f"mesa_draft_fan_out must be in (0, {self.async_fan_out}), got {self.mesa_draft_fan_out}"
             self.mesa_proxy_fan_out = self.async_fan_out - self.mesa_draft_fan_out
+            # #4 Auto-raise proxy_top_k to eliminate draft fallback.
+            # Worst case: fan_out_list skewed → max position fo ≤ pfo*(K+1). Need proxy_top_k ≥ max_fo + dfo + margin.
+            K_plus_1 = self.speculate_k + 1
+            max_possible_fo = self.mesa_proxy_fan_out * K_plus_1
+            required_top_k = max_possible_fo + self.mesa_draft_fan_out + 2
+            if self.mesa_proxy_top_k < required_top_k:
+                print(f'[Config] mesa_proxy_top_k raised {self.mesa_proxy_top_k} → {required_top_k} '
+                      f'(to eliminate draft fallback; max_fo={max_possible_fo} + dfo={self.mesa_draft_fan_out} + margin=2)',
+                      flush=True)
+                self.mesa_proxy_top_k = required_top_k
             assert self.mesa_proxy_top_k >= 1, "mesa_proxy_top_k must be >= 1"
             print(f'[Config] MESA-SSD enabled: exit_layer={self.mesa_exit_layer}, '
                   f'proxy_top_k={self.mesa_proxy_top_k}, '

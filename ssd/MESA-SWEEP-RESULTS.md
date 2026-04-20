@@ -59,16 +59,17 @@ For reference, AR runs execute the target model alone (no draft, no tree):
 | Config | Target | Throughput | Time (s) |
 |--------|--------|-----------:|---------:|
 | ar_layerskip | LayerSkip-Llama3-8B | 74.39 | 1032.38 |
-| ar_llama31 | Llama-3.1-8B-Instruct | *(pending)* | *pending* |
-| eagle_f3_k4 | Llama-3.1-8B-Instruct + EAGLE-3 | **not run** | OOM at 23.4 GB/GPU with default/max_model_len=2048; likely a TP-split issue with EAGLE's 1-layer draft on 24 GB cards. Needs a dedicated reproducer before retrying. |
+| ar_llama31 | Llama-3.1-8B-Instruct | 74.01 | 1037.72 |
+| eagle_f3_k4 | Llama-3.1-8B-Instruct + EAGLE-3 | **not run** | OOM at 23.4 GB/GPU even after `--max_model_len 2048`. The failure is inside `torch.compile` lowering (`empty_strided_cuda((s77, 14336), torch.bfloat16)`), and the weight footprint on rank 0 (~22 GB) suggests the target is not TP-split when `--eagle --gpus 2` is used together. Requires a dedicated reproducer before retrying. |
 
-AR throughput (74.39 tok/s) is the spec-decoding floor. Baseline SSD speeds it up ~1.9× (74 → 142); MESA speeds it up only ~1.2× (74 → 87). **MESA is still faster than AR, but does not catch up to baseline SSD on this config / hardware.**
+AR on the two 8B targets is within noise (74.01 vs 74.39 tok/s). Baseline SSD on LayerSkip-Llama3-8B speeds AR up ~1.9× (74 → 142); MESA speeds it up only ~1.2× (74 → 87). **MESA is still faster than AR, but does not catch up to baseline SSD on this config / hardware.**
 
 ## Comparison Summary
 
 | Mode | Target | Best config | Throughput (tok/s) | vs AR (LayerSkip) | vs Baseline_f3 |
 |------|--------|-------------|-------------------:|-----------------:|---------------:|
 | AR | LayerSkip-Llama3-8B | — | 74.39 | 1.00× | 0.52× |
+| AR | Llama-3.1-8B-Instruct | — | 74.01 | 0.99× | 0.52× |
 | Baseline SSD | LayerSkip-Llama3-8B | f=3 | **142.02** | **1.91×** | 1.00× |
 | MESA SSD | LayerSkip-Llama3-8B | f=3, dfo=1, exit=16 | 88.41 | 1.19× | **0.62×** |
 | EAGLE | Llama-3.1-8B | — | *OOM (not run)* | — | — |

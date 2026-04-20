@@ -23,11 +23,10 @@ def make_glue_decode_input_ids(
     
     return out 
 
-def get_forked_recovery_tokens_from_logits(config: Config, logits: torch.Tensor, cache_hits: torch.Tensor, returned_tokens: torch.Tensor, tokenizer: AutoTokenizer, mesa_proxy=None):
+def get_forked_recovery_tokens_from_logits(config: Config, logits: torch.Tensor, cache_hits: torch.Tensor, returned_tokens: torch.Tensor, tokenizer: AutoTokenizer):
     """
     logits: Float[Tensor] of shape [B, K+1, V]
     fan_out_list: list[int] of length K+1 with per-position topk, or int to use for all positions
-    mesa_proxy: optional dict with accept_probs [B,K], topk_ids [B,K,top_k], topk_probs [B,K,top_k]
 
     Returns:
         idxs: [B, sum(fan_out_list)]
@@ -52,33 +51,6 @@ def get_forked_recovery_tokens_from_logits(config: Config, logits: torch.Tensor,
     # Compute top-k at max fanout
     k_max = max(max(fan_out_list), max(fan_out_list_miss))
     _, topk_idx = torch.topk(logits, k_max, dim=-1)  # [B, K+1, k_max]
-
-    # MESA: proxy-sourced token swap at positions 0..K-1
-    if mesa_proxy is not None:
-        proxy_topk_ids = mesa_proxy["topk_ids"]  # [B, K, proxy_top_k]
-
-        # Fallback candidates for refill
-        total_need = max(k_max, proxy_topk_ids.shape[-1] + k_max)
-        _, fallback_topk = torch.topk(logits, min(total_need, V_actual), dim=-1)
-
-        for b in range(B):
-            for pos in range(K):
-                draft_set = set(topk_idx[b, pos].tolist())
-                proxy_tokens = proxy_topk_ids[b, pos].tolist()
-
-                # Proxy tokens not in draft
-                selected = [t for t in proxy_tokens if t not in draft_set]
-
-                # Fallback: tokens not in draft or selected proxy
-                if len(selected) < k_max:
-                    used = draft_set | set(selected)
-                    fallback = [t for t in fallback_topk[b, pos].tolist() if t not in used]
-                    selected.extend(fallback[:k_max - len(selected)])
-
-                # Rewrite full row: proxy-sourced first, then draft refill
-                for j in range(min(len(selected), k_max)):
-                    topk_idx[b, pos, j] = selected[j]
-        # Position K (all-accept): keep draft top-k unchanged
 
     # Build per-b, per-(K+1) counts depending on cache_hits
     hit_counts = torch.as_tensor(

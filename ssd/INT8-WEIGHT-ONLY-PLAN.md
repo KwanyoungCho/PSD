@@ -1,690 +1,947 @@
-# Llama2-70B Weight-Only INT8 지원 계획
+# Llama2-70B INT8 지원 재설계 계획
 
 ## 1. 목표
 
-이 코드베이스에서 Llama2-70B 타겟 모델을 `weight-only INT8` 양자화로 실행할 수 있도록 지원한다.
+이 계획의 최종 목표는 다음 두 가지를 동시에 만족하는 것이다.
 
-주요 배포 목표는 다음과 같다.
+1. 이 코드베이스에서 `Llama2-70B` 타겟 모델을 `weight-only INT8`로 실행할 수 있어야 한다.
+2. 나중에 Hugging Face에 올라온 기존 양자화 모델도, 가능한 한 큰 구조 변경 없이 **import/convert 후 바로 사용할 수 있어야 한다.**
 
-- `draft_async=True`
-- 타겟은 `tp4`
-- draft는 `1` GPU
-- `num_gpus=5`로 실행
+즉 이번 계획의 핵심은 단순히 "우리 코드 안에서 INT8를 만든다"가 아니다.
 
-이 경로는 현재 async topology 계약을 바꾸지 않고 `70B target + async draft`를 가능하게 하는 가장 짧은 방법이다.
+핵심은 아래 두 층을 분리하는 것이다.
 
-중요한 함의는 다음과 같다.
+- **실행 포맷(runtime format)**: 우리 엔진이 직접 읽고 실행하는 내부 표준 포맷
+- **입력 포맷(import format)**: Hugging Face float 모델, Hugging Face 양자화 모델, 향후 외부 포맷
 
-- v1에서는 `8 GPUs -> target uses 7-way TP` 문제를 해결할 필요가 없다.
-- 전체 `5` GPU만 사용하면 된다. `4`장은 target TP, `1`장은 draft에 사용한다.
-- 남는 GPU는 사용하지 않아도 된다.
+이렇게 해야:
 
-## 2. V1 범위에서 제외하는 것
+- 엔진 내부는 단순해지고
+- 외부 호환성은 importer로 점진적으로 확장할 수 있다
 
-첫 구현에서는 아래 항목을 명시적으로 범위 밖으로 둔다.
+## 2. 왜 기존 계획을 갈아엎어야 하는가
 
-- v1에서 임의의 pre-quantized checkpoint format 지원 안 함
-- `bitsandbytes` 통합 안 함
-- OpenVINO 통합 안 함
-- eager-mode production 지원 안 함
-- v1에서 draft model 양자화 안 함
-- embedding, LM head, norm 양자화 안 함
-- async 모드에서 8 GPU를 모두 활용하려는 시도 안 함
-- 첫 단계에서 non-Llama target model 지원 안 함
+기존 계획은 크게 두 가지 전제를 갖고 있었다.
 
-## 3. 왜 이 접근이 맞는가
+1. 먼저 우리 엔진 안에서 weight-only INT8를 구현한다
+2. 필요하면 나중에 오프라인 아티팩트를 만든다
 
-이 repo는 일반적인 Hugging Face 모델 실행 스택이 아니다.
+하지만 네 실제 요구는 다르다.
 
-다음과 같은 커스텀 구조를 갖고 있다.
+- 운영 관점에서는 당연히 **사전 양자화된 아티팩트**가 필요하다
+- 그리고 더 중요한 건 **나중에 Hugging Face INT8 모델을 구해도 사용할 수 있어야 한다**
 
-- custom model classes
-- custom tensor-parallel linear layers
-- custom weight loading
-- custom CudaGraph capture 경로
-- custom speculative decoding 및 MESA 경로
+즉 계획의 중심은 더 이상
 
-즉 "기존 8-bit 라이브러리를 그대로 쓰면 된다"는 가정은 현실적이지 않다.
+- load-time quantization
 
-가장 신뢰할 수 있는 접근은 다음과 같다.
+이 아니라,
 
-1. 현재 실행 모델은 유지한다
-2. linear layer에 대해 repo-native weight-only INT8 경로를 추가한다
-3. target weight는 TP sharding 이후에 양자화한다
-4. draft는 우선 dense로 유지한다
+- **canonical runtime quantized format**
+- **offline quantization/import pipeline**
 
-이 방식이 현재 엔진 구조를 보존하면서 변경 범위를 최소화한다.
+이어야 한다.
 
-## 4. 핵심 설계 결정
+이 요구를 반영하지 않으면, 나중에 외부 양자화 모델을 얻어도 결국 또 포맷 문제로 다시 설계를 뜯어야 한다.
 
-### 4.1 양자화 방식
+## 3. 최종 방향
 
-타겟 linear layer에 대해 **weight-only INT8**를 사용한다.
+이제 계획의 메인 방향은 다음과 같다.
 
-- weights: `int8`
-- activations: 현재 모델 dtype에 맞춘 `bf16` 또는 `fp16`
-- scales: float로 저장되는 per-output-channel 또는 group-wise
+1. 우리 엔진이 직접 읽는 **canonical quantized runtime format**을 정의한다
+2. 오프라인 importer/quantizer를 만들어서 외부 모델을 이 포맷으로 변환한다
+3. 엔진은 이 canonical format만 읽는다
+4. v1에서는 `HF float -> canonical INT8`를 먼저 지원한다
+5. v2부터 `HF quantized -> canonical INT8` importer를 추가한다
 
-초기 권장 방식:
+즉 실행 엔진은 포맷을 하나만 알면 되고, 외부 호환성은 importer가 담당한다.
 
-- 시작은 **per-output-channel symmetric INT8**
-- 메모리/성능이 더 필요할 때만 group-wise로 확장
+이게 가장 확장 가능하고, 가장 깔끔하며, 가장 유지보수 가능한 구조다.
 
-이유:
+## 4. 핵심 설계 원칙
 
-- loader와 shard 로직이 가장 단순함
-- 수치 디버깅이 가장 쉬움
-- TP 통합이 가장 쉬움
+### 4.1 엔진은 외부 포맷을 직접 읽지 않는다
 
-### 4.2 backend 전략
+엔진은 아래 둘 중 하나만 읽는다.
 
-`bitsandbytes`를 메인 통합 대상으로 삼지 않는다.
+- 기존 float model path
+- 우리 canonical quantized runtime format path
 
-이유:
+엔진이 직접 아래 포맷을 다 지원하도록 만들지 않는다.
 
-- 이 repo의 hot path는 표준 `nn.Linear`를 사용하지 않는다
-- TP와 loader 동작이 커스텀이다
-- 엔진이 CudaGraph 동작에 강하게 의존한다
+- bitsandbytes runtime model
+- torchao quantized tensor format
+- compressed-tensors / llm-compressor format
+- GPTQ/AWQ 포맷
+- 기타 Hugging Face quantized checkpoint 포맷
 
-권장 전략은 다음과 같다.
+이걸 엔진에 직접 넣으면 loader, linear, TP, graph가 전부 외부 포맷에 오염된다.
 
-- repo-native quantized linear path를 만든다
-- `torchao`의 semantics와 kernel 방향을 참고한다
-- full integration 전에 graph-safety를 검증한다
+### 4.2 외부 포맷 호환성은 importer가 담당한다
 
-### 4.3 checkpoint 전략
+외부 모델을 가져와서 우리 포맷으로 변환하는 계층을 둔다.
 
-v1은 **기존 float checkpoint를 load-time quantization**하는 방식으로 간다.
+즉 구조는 다음과 같다.
 
-즉 다음 순서다.
+```text
+Hugging Face float model ─┐
+Hugging Face INT8 model ──┼─> importer / converter ─> canonical SSD INT8 format ─> runtime engine
+기타 외부 quant model ────┘
+```
 
-1. 기존 `.safetensors`에서 정상적인 Llama2 weight를 읽는다
-2. 현재와 동일하게 TP sharding을 적용한다
-3. 각 local shard를 INT8로 양자화한다
-4. 양자화 후 float shard는 버린다
+이 구조가 필요한 이유:
 
-v1에서 커스텀 INT8 serialized checkpoint format부터 시작하지 않는다.
+- 엔진은 간단해짐
+- 외부 포맷 추가 지원이 쉬워짐
+- 디버깅 경계가 명확해짐
 
-이유:
+### 4.3 v1은 target-only INT8
 
-- 구현 범위가 훨씬 작다
-- 현재 float 모델과 correctness 비교가 쉽다
-- backend가 검증되기 전에 checkpoint tooling에 시간을 쓰지 않아도 된다
+첫 구현에서는 target만 INT8로 간다.
 
-### 4.4 v1에서 지원할 모듈
-
-양자화 대상:
-
-- `QKVParallelLinear`
-- `MergedColumnParallelLinear`
-- `RowParallelLinear`
-- 일반 projection으로 쓰이는 `ReplicatedLinear`
-
-dense 유지:
-
-- embeddings
-- LM head
-- layernorm / RMSNorm
-- sampler 및 verification 유틸리티
+- target: INT8 weight-only
+- draft: dense
+- embeddings: dense
+- LM head: dense
+- norm: dense
 
 이유:
 
-- projection matrix가 메모리 비중이 가장 크다
-- embedding / LM head는 통합 난이도가 더 높다
-- 이 구성이 correctness 디버깅에 유리하다
+- projection matrix가 메모리 대부분을 차지한다
+- target 메모리 절감 효과를 먼저 확인해야 한다
+- 외부 포맷 importer 문제와 draft까지 동시에 풀면 범위가 너무 커진다
 
-### 4.5 Eager mode 정책
+### 4.4 운영 경로는 오프라인 아티팩트 중심
 
-production 지원은 계속 **graph-mode only**로 둔다.
+이번 재설계에서는 load-time quantization을 메인 경로로 두지 않는다.
 
-이건 현재 설계 방향과 일치한다.
+운영 메인 경로는:
 
-- MESA는 이미 `enforce_eager=False`를 요구한다
-- tree decode와 verify hot path는 graph-first다
+1. 외부 모델 준비
+2. 오프라인 importer/quantizer 실행
+3. canonical INT8 아티팩트 생성
+4. 엔진이 canonical INT8 아티팩트 로드
 
-개발 정책은 다음과 같다.
+load-time quantization은 필요하면 **디버그용 fallback** 정도로만 둔다.
 
-- bring-up 초기에 작은 isolated eager-only debug utility를 쓰는 것은 허용한다
-- 하지만 엔진 레벨 기능은 graph-mode-only로 간주한다
+### 4.5 graph-mode only
 
-## 5. 현재 코드에서 중요한 제약
+최종 기능은 여전히 `graph-mode only`다.
 
-### 5.1 Linear layer는 dense float weight를 가정한다
+이유:
 
-현재 linear layer는:
+- 현재 엔진의 성능 경로가 CudaGraph 중심
+- MESA도 이미 eager를 production 경로로 보지 않음
 
-- float `nn.Parameter` weight를 할당하고
-- shard를 직접 그 weight에 로드하며
-- `F.linear(x, self.weight, ...)`를 호출한다
+다만 개발 초기에는 아주 작은 isolated unit test 수준에서만 eager 검증을 허용한다.
 
-관련 파일:
+## 5. 목표 사용 시나리오
 
-- [ssd/ssd/layers/linear.py](/home/chokwans99/PSD/ssd/ssd/layers/linear.py:12)
+### 시나리오 A: HF float 모델에서 시작
 
-즉 양자화는 loader만 손봐서 끝나는 문제가 아니다.
+예:
 
-새로운 parameter contract와 새로운 forward path가 필요하다.
+- `meta-llama/Llama-2-70b-hf`
 
-### 5.2 Loader는 float tensor를 가정한다
+흐름:
 
-현재 loader는:
+1. float checkpoint를 입력으로 준다
+2. importer가 TP4 기준 local shard를 계산한다
+3. weight-only INT8로 양자화한다
+4. canonical INT8 포맷으로 저장한다
+5. 엔진이 그 포맷을 읽는다
 
-- `safetensors` 또는 `pytorch_model*.bin`을 읽고
-- tensor를 바로 parameter에 복사한다
+### 시나리오 B: 나중에 HF INT8 모델을 얻음
 
-관련 파일:
+예:
 
-- [ssd/ssd/utils/loader.py](/home/chokwans99/PSD/ssd/ssd/utils/loader.py:186)
+- torchao 기반 모델
+- quanto 기반 모델
+- 향후 HF 양자화 모델
 
-INT8 지원을 위해 loader는:
+흐름:
 
-- shard 이후 선택적으로 quantize하고
-- float parameter 대신 quantized buffer를 채울 수 있어야 한다
+1. importer가 해당 포맷을 감지한다
+2. 해당 포맷에서 quantized weight와 metadata를 읽는다
+3. 필요하면 우리 canonical format으로 재정렬 / 재패킹한다
+4. canonical INT8 포맷으로 저장한다
+5. 엔진이 그 포맷을 읽는다
 
-### 5.3 TP sharding이 weight loading에 이미 내장돼 있다
+즉 "HF 양자화 모델을 바로 사용"의 정확한 의미는:
 
-현재 row/column/QKV loader는 `narrow()` / `chunk()`를 사용해 rank-local shard를 만든다.
+- runtime이 외부 포맷을 직접 실행한다
 
-관련 파일:
+가 아니라,
 
-- [ssd/ssd/layers/linear.py](/home/chokwans99/PSD/ssd/ssd/layers/linear.py:90)
+- **별도 수작업 없이 importer가 canonical format으로 바꿔준 뒤 엔진이 바로 실행한다**
 
-이건 v1에 오히려 유리하다.
+이다.
 
-즉 full tensor를 먼저 양자화하는 대신, **local sharding 이후에 quantize**하면 된다.
+이 정도가 현실적으로 가장 맞는 해석이다.
 
-### 5.4 엔진 topology
+## 6. Canonical Runtime Format
 
-현재 `draft_async=True`에서는 엔진이 다음 구조를 사용한다.
+### 6.1 기본 구조
 
-- target TP는 `num_gpus - 1`
-- 마지막 GPU 하나는 draft rank
+권장 디렉토리 구조:
 
-관련 파일:
+```text
+Llama2-70B-INT8-WO-TP4/
+  manifest.json
+  rank_0/
+    model.safetensors
+  rank_1/
+    model.safetensors
+  rank_2/
+    model.safetensors
+  rank_3/
+    model.safetensors
+```
 
-- [ssd/ssd/engine/llm_engine.py](/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py:62)
+각 `rank_i/model.safetensors`에는 현재 rank가 필요로 하는 **로컬 shard의 quantized weight**만 저장한다.
 
-v1에서는 이 구조를 그대로 받아들인다.
+즉 runtime 시점에는 더 이상 full weight를 읽지 않는다.
 
-즉 다음처럼 실행한다.
+### 6.2 저장할 tensor
 
-- `num_gpus=5`
-- target TP size = `4`
-- draft rank = `4`
+기본적으로 각 quantized linear module마다:
 
-첫 milestone에서는 topology refactor가 필요 없다.
+- `module_name.qweight`
+- `module_name.scales`
+- optional `module_name.bias`
 
-## 6. 제안하는 아키텍처
+를 저장한다.
 
-### 6.1 새로운 quantization 패키지
+예:
 
-다음 패키지를 추가한다.
+```text
+model.layers.0.self_attn.qkv_proj.qweight
+model.layers.0.self_attn.qkv_proj.scales
+model.layers.0.self_attn.o_proj.qweight
+model.layers.0.self_attn.o_proj.scales
+model.layers.0.mlp.gate_up_proj.qweight
+model.layers.0.mlp.gate_up_proj.scales
+model.layers.0.mlp.down_proj.qweight
+model.layers.0.mlp.down_proj.scales
+```
 
-- `ssd/ssd/quantization/__init__.py`
-- `ssd/ssd/quantization/int8_weight_only.py`
-- 이후 필요 시: `ssd/ssd/quantization/kernels.py`
+### 6.3 Manifest
 
-책임은 다음과 같다.
+`manifest.json`에는 최소 아래 필드가 필요하다.
 
-- local dense weight shard를 INT8로 양자화
-- quantized buffer와 scale 보관
-- custom linear layer가 사용할 matmul/linear 인터페이스 제공
+```json
+{
+  "format": "ssd_int8_wo_v1",
+  "model_family": "llama",
+  "source_model": "meta-llama/Llama-2-70b-hf",
+  "tp_size": 4,
+  "scheme": "per_channel_symmetric",
+  "scale_dtype": "fp16",
+  "quant_method": "int8_wo",
+  "target_only": true,
+  "skip_embed": true,
+  "skip_lm_head": true,
+  "created_by": "ssd/scripts/import_quantized_model.py",
+  "source_format": "hf_float"
+}
+```
 
-### 6.2 Quantized linear state
+추가로 들어가면 좋은 필드:
 
-각 quantized linear module은 아래를 가져야 한다.
+- `hf_config_hash`
+- `weight_map_hash`
+- `transform_recipe`
+- `source_quant_backend`
+- `version`
 
-- `qweight`: `torch.int8`
-- `scales`: float tensor
-- optional `bias`: 원래 bias dtype
-- optional metadata: `group_size`, `axis`, `scheme`
+### 6.4 왜 rank별 저장이 필요한가
 
-양자화가 끝나면 dense `weight`는 메모리에 남아 있지 않아야 한다.
+이 repo는 TP shard를 runtime 전에 이미 알아야 한다.
 
-### 6.3 Linear forward 계약
+즉 canonical format은 "모델 전체의 quantized full tensor"보다,
 
-기존의 직접 `F.linear(...)` 호출을 backend dispatch로 바꾼다.
+- **실행할 TP 크기에 맞는 rank-local shard**
 
-- dense path
-- int8 weight-only path
+를 저장하는 편이 더 맞다.
 
-권장 추상화:
+이 방식의 장점:
 
-- `LinearBase.forward_impl(x)`
-- `DenseLinearMethod`
-- `Int8WeightOnlyLinearMethod`
+- runtime loader가 단순함
+- 메모리 낭비가 적음
+- startup time이 짧음
 
-핵심 목표는 quantization과 TP semantics를 분리하는 것이다.
+단점:
 
-TP semantics는 기존 module class 안에 그대로 유지하는 편이 맞다.
+- `tp4`용 아티팩트와 `tp8`용 아티팩트는 별개다
 
-### 6.4 Shard-then-quantize 규칙
+하지만 현재 요구는 `tp4 target + 1 draft`이므로 이 tradeoff를 받아들이는 것이 맞다.
 
-항상 다음 순서를 따른다.
+## 7. 지원할 입력 포맷과 importer 전략
 
-1. checkpoint에서 full tensor를 읽는다
-2. 현재 rank의 local shard를 지금과 동일하게 계산한다
-3. local shard를 quantize한다
-4. local float shard는 버린다
+### 7.1 v1에서 지원할 입력 포맷
 
-v1에서는 packed tensor를 먼저 양자화한 뒤 shard하는 방식은 쓰지 않는다.
+v1에서는 아래 하나만 필수 지원한다.
 
-그 방식은 TP 처리까지 불필요하게 복잡하게 만든다.
+- **Hugging Face float checkpoint**
+  - `.safetensors`
+  - 표준 Llama weight naming
 
-### 6.5 CudaGraph 정책
+즉 v1의 importer는 사실상:
 
-양자화 지원은 아래 조건을 만족할 때만 받아들인다.
+- `HF float -> canonical INT8`
 
-- isolated eager test에서 correctness가 맞아야 한다
-- hot path에서 graph capture / replay가 안정적이어야 한다
+변환기다.
 
-첫 번째 graph 검증 대상은 speculative tree decode가 아니라, 일반 target decode와 verify다.
+### 7.2 v2에서 지원할 입력 포맷
 
-## 7. Config 변경 사항
+v2부터 다음을 고려한다.
 
-[ssd/ssd/config.py](/home/chokwans99/PSD/ssd/ssd/config.py:7)에 다음 항목을 추가한다.
+- torchao 기반 HF quantized model
+- Hugging Face Quanto 계열 모델
+- 향후 표준화된 compressed-tensors 계열 모델
 
-- `quant_method: str | None = None`
-- `quant_target_only: bool = True`
-- `quant_group_size: int | None = None`
-- `quant_scale_dtype: str = "fp16"`
-- `quant_skip_lm_head: bool = True`
-- `quant_skip_embed: bool = True`
+이때 중요한 건 "바로 실행"이 아니라, 아래 구조를 유지하는 것이다.
 
-v1에서 허용하는 값은 다음처럼 단순화한다.
+- 외부 quantized model -> importer -> canonical runtime format
 
-- `None`
-- `"int8_wo"`
+### 7.3 지원 우선순위가 낮은 포맷
+
+다음은 우선순위를 낮춘다.
+
+- bitsandbytes runtime-dependent 모델
+- vLLM 전용 quantized artifact
+- GPTQ/AWQ 전용 packed 포맷
+
+이유:
+
+- 우리 엔진 계약과 차이가 크다
+- custom TP와 직접 연결하기 어렵다
+- import/convert 계층을 별도로 많이 만들어야 한다
+
+즉 "당장 HF INT8 모델을 나중에 쉽게 쓰고 싶다"는 요구는 중요하지만,
+
+- 가장 먼저 맞춰야 할 대상은 float HF
+- 그 다음 호환성이 높은 quantized HF
+
+순으로 가는 게 맞다.
+
+## 8. 외부 기존 repo를 어디까지 활용할 수 있는가
+
+### 8.1 `torchao`
+
+`torchao`는 가장 중요한 참고 대상이다.
+
+공식 문서 기준:
+
+- `Int8WeightOnlyConfig` 존재
+- `quantize_()`로 `nn.Linear` 기반 모델에 int8 weight-only 적용 가능
+
+출처:
+
+- https://docs.pytorch.org/ao/stable/api_reference/generated/torchao.quantization.Int8WeightOnlyConfig.html
+- https://docs.pytorch.org/ao/stable/workflows/inference.html
+
+하지만 이 repo에 그대로 적용되지는 않는다.
+
+이유:
+
+- 우리는 custom TP linear를 사용한다
+- loader도 custom이다
+- graph path도 custom이다
+
+따라서 `torchao`는 다음 용도로 쓴다.
+
+- quantization semantics 참고
+- 수치 기준 참고
+- 향후 backend 개선 시 reference 사용
+
+즉 **직접 runtime dependency라기보다, canonical format과 kernel 설계의 기준**으로 본다.
+
+### 8.2 `bitsandbytes`
+
+`bitsandbytes`는 HF에서 가장 쉬운 8bit 옵션이지만, 우리 메인 경로로는 적합하지 않다.
+
+공식 문서 기준:
+
+- `BitsAndBytesConfig(load_in_8bit=True)`로 `torch.nn.Linear` 기반 모델을 양자화 로드한다
+
+출처:
+
+- https://huggingface.co/docs/transformers/en/quantization/bitsandbytes
+
+문제:
+
+- runtime replacement 중심
+- custom TP linear와 잘 안 맞음
+- 순수한 "canonical weight-only INT8 storage format"으로 보기 어려움
+
+따라서 `bitsandbytes`는 importer 우선순위도 낮다.
+
+### 8.3 `llm-compressor` / `vLLM` 계열
+
+`llm-compressor`는 오프라인 양자화 workflow 참고용으로는 좋다.
+
+출처:
+
+- https://github.com/vllm-project/llm-compressor
+
+활용 가능 영역:
+
+- calibration workflow 참고
+- offline quantized artifact 설계 참고
+- quantization recipe 아이디어 참고
+
+하지만 직접 runtime 호환 대상으로 보지는 않는다.
+
+이유:
+
+- vLLM 친화 포맷 기준
+- 우리 loader 계약과 다름
+- 우리 TP/runtime graph 구조와 직접 맞지 않음
+
+### 8.4 최종 판단
+
+외부 repo 활용 원칙은 아래처럼 정리한다.
+
+- `torchao`: 핵심 reference
+- `bitsandbytes`: 비교 대상
+- `llm-compressor`: 오프라인 workflow 참고용
+
+즉 실제 구현 경로는:
+
+- **우리 canonical runtime format**
+- **우리 importer**
+- **우리 custom TP-aware linear runtime**
+
+이 세 축으로 간다.
+
+## 9. 런타임 아키텍처
+
+### 9.1 엔진이 알아야 하는 포맷
+
+엔진은 아래 두 경로만 인식한다.
+
+1. 기존 float 경로
+2. canonical INT8 경로
+
+즉 `Config.model`이 가리키는 path가:
+
+- 일반 HF float checkpoint인지
+- canonical INT8 artifact directory인지
+
+만 판단하면 된다.
+
+### 9.2 엔진이 외부 포맷을 모르게 해야 하는 이유
+
+엔진이 외부 포맷까지 직접 알게 되면 아래가 다 오염된다.
+
+- `loader.py`
+- `linear.py`
+- `model_runner.py`
+- graph capture 경로
+
+이건 유지보수상 최악이다.
+
+그래서 importer는 런타임 밖으로 분리하는 것이 맞다.
+
+## 10. Config 변경
+
+`ssd/ssd/config.py`에 아래 필드를 추가한다.
+
+```python
+# Quantization
+quant_method: str | None = None
+quant_target_only: bool = True
+quant_group_size: int | None = None
+quant_scale_dtype: str = "fp16"
+quant_skip_lm_head: bool = True
+quant_skip_embed: bool = True
+quant_source_format: str | None = None
+quant_runtime_format: str | None = None
+```
+
+권장 값:
+
+- `quant_method="int8_wo"`
+- `quant_runtime_format="ssd_int8_wo_v1"`
 
 검증 규칙:
 
-- `quant_method == "int8_wo"`는 target model family가 `llama`일 때만 지원
-- `quant_method == "int8_wo"`는 v1에서 target에만 적용
-- `draft_async=True`와 quantization은 함께 지원
-- `enforce_eager=True`는 quantized run의 production 경로로 지원하지 않음
+- `quant_method == "int8_wo"`면 target family는 `llama`
+- v1은 `quant_target_only=True`
+- production에서는 `enforce_eager=False`
 
-## 8. 구현 단계
+## 11. 실제 코드 구조
 
-### Phase 0: Feasibility 및 메모리 예산 확인
+### 11.1 새 패키지
 
-산출물:
-
-- Llama2-70B INT8 target을 TP4로 올렸을 때 메모리가 들어갈 수 있는지 계산한 짧은 노트 또는 스크립트
-
-확인 항목:
-
-- INT8 이후 target projection weight 메모리 추정
-- bf16로 남는 dense 모듈 메모리 추정
-- 원하는 context length 기준 KV cache 예산 추정
-
-종료 조건:
-
-- target INT8 TP4가 메모리상 충분히 plausible하다는 결론이 나와야 함
-
-### Phase 1: Quantization Primitive Bring-Up
-
-생성 파일:
-
-- `ssd/ssd/quantization/int8_weight_only.py`
-
-구현 내용:
-
-- `quantize_weight_per_channel_int8(weight) -> (qweight, scales)`
-- `dequantize_weight_per_channel_int8(qweight, scales) -> weight`
-- 최소 기능의 `int8_weight_only_linear(x, qweight, scales, bias=None)`
-
-중요:
-
-- 첫 버전은 correctness 중심 backend여도 괜찮다
-- 하지만 원래 float weight를 계속 들고 있는 방식이어서는 안 된다
-
-테스트:
-
-- random tensor에 대해 dense vs quantized linear 출력 비교
-- max error 및 relative error 측정
-
-종료 조건:
-
-- standalone linear layer 하나가 CUDA에서 수치적으로 정상 동작해야 함
-
-### Phase 2: Custom Linear Module과 통합
-
-수정 파일:
-
-- [ssd/ssd/layers/linear.py](/home/chokwans99/PSD/ssd/ssd/layers/linear.py:12)
-
-작업 내용:
-
-- `LinearBase`를 quantization-aware state를 갖도록 확장
-- quantized forward path 추가
-- 기존 TP 동작은 유지
-
-적용 대상:
-
-- `ReplicatedLinear`
-- `ColumnParallelLinear`
-- `MergedColumnParallelLinear`
-- `QKVParallelLinear`
-- `RowParallelLinear`
-
-요구사항:
-
-- quantization 비활성화 시 기존 constructor/동작이 그대로여야 함
-- TP shard 수학은 dense path와 동일해야 함
-
-종료 조건:
-
-- 작은 Llama 모델이 loader를 건드리지 않고도 quantized projection layer를 instantiate할 수 있어야 함
-
-### Phase 3: Loader 통합
-
-수정 파일:
-
-- [ssd/ssd/utils/loader.py](/home/chokwans99/PSD/ssd/ssd/utils/loader.py:206)
-
-작업 내용:
-
-- target model이 quantized loading을 원하는지 감지
-- linear module이 quantized인 경우:
-  - 현재와 동일하게 local shard 계산
-  - local shard를 즉시 양자화
-  - `qweight/scales`를 module에 기록
-- 그 외 모듈은 기존 dense loading 유지
-
-중요:
-
-- v1에서 checkpoint format은 바꾸지 않음
-- draft용 별도 loader pipeline은 만들지 않음
-
-종료 조건:
-
-- 표준 float safetensors로부터 target model을 로드하되, linear weight는 quantized state로 메모리에 올라가야 함
-
-### Phase 4: ModelRunner 및 Warmup 안전화
-
-수정 파일:
-
-- [ssd/ssd/engine/model_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py:247)
-
-작업 내용:
-
-- model construction 시 quant config를 target module에 전달
-- draft model은 dense 유지
-- warmup이 quantized target path로 정상 수행되도록 보장
-
-검증:
-
-- normal target decode
-- verify path
-- 처음에는 MESA 비활성 상태로 검증
-
-종료 조건:
-
-- quantized linear module을 가진 target model이 한 번의 decode step을 정상 수행해야 함
-
-### Phase 5: CudaGraph 검증
-
-목표:
-
-- quantized target decode와 verify가 graph capture-safe인지 확인
-
-검증 항목:
-
-- target `decode` capture
-- target `verify` capture
-- 필요하면 첫 검증에서는 MESA를 꺼도 됨
-
-capture 실패 시:
-
-- 실패 원인이 아래 중 어디인지 분리해야 함
-  - quantized linear forward path
-  - 임시 allocation
-  - unsupported op
-
-이 단계는 hard gate다.
-
-선택한 backend가 graph capture와 근본적으로 맞지 않으면, full integration으로 더 깊이 들어가기 전에 먼저 해결해야 한다.
-
-### Phase 6: Small-Model End-to-End 검증
-
-먼저 작은 Llama target으로 검증한다.
-
-권장 순서:
-
-- Llama2-7B 또는 유사한 작은 Llama checkpoint
-
-검증 항목:
-
-- decode correctness
-- speculative verify correctness
-- cache 동작이 구조적으로 깨지지 않는지
-- dense 대비 throughput이 너무 나빠지지 않는지
-
-측정 메트릭:
-
-- tokens/s
-- peak memory
-- decode latency
-- speculate 활성 시 acceptance 통계
-
-종료 조건:
-
-- target quantization이 적용된 작은 모델의 end-to-end run이 안정적으로 돌아야 함
-
-### Phase 7: Llama2-70B Target on TP4
-
-필요하면 target-only부터, 이후 async draft까지 확장한다.
-
-주요 배포 설정:
-
-- `num_gpus=5`
-- `draft_async=True`
-- target은 rank `0..3`
-- draft는 rank `4`
-
-검증 항목:
-
-- target load 성공
-- target warmup 성공
-- target graph capture 성공
-- target GPU당 peak memory가 허용 범위인지
-
-종료 조건:
-
-- Llama2-70B target이 TP4 + INT8 weight-only로 decode run을 끝낼 수 있어야 함
-
-### Phase 8: Async Draft + MESA 호환성 검증
-
-target quantization이 안정화된 뒤:
-
-- async speculate를 다시 검증
-- 이후 MESA 경로도 다시 검증
-
-이 단계를 마지막에 두는 이유:
-
-- target quantization은 target logits를 바꾼다
-- verify 결과도 바뀔 수 있다
-- MESA proxy도 같이 바뀐다
-
-검증 항목:
-
-- MESA 없이 async speculate
-- MESA verify
-- MESA draft/proxy tree path
-- cache hit 및 acceptance 통계
-
-종료 조건:
-
-- async나 MESA 경로에서 correctness 붕괴나 큰 불안정성이 없어야 함
-
-## 9. 파일 단위 작업 계획
-
-### 새로 추가할 파일
+추가:
 
 - `ssd/ssd/quantization/__init__.py`
 - `ssd/ssd/quantization/int8_weight_only.py`
+- `ssd/ssd/quantization/runtime_format.py`
+- `ssd/ssd/quantization/importers/__init__.py`
+- `ssd/ssd/quantization/importers/hf_float.py`
+- 나중에:
+  - `ssd/ssd/quantization/importers/hf_torchao.py`
+  - `ssd/ssd/quantization/importers/hf_quanto.py`
 
-### 수정할 기존 파일
+### 11.2 역할 분리
 
-- [ssd/ssd/config.py](/home/chokwans99/PSD/ssd/ssd/config.py:7)
-- [ssd/ssd/layers/linear.py](/home/chokwans99/PSD/ssd/ssd/layers/linear.py:12)
-- [ssd/ssd/utils/loader.py](/home/chokwans99/PSD/ssd/ssd/utils/loader.py:206)
-- [ssd/ssd/engine/model_runner.py](/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py:247)
+`int8_weight_only.py`
 
-나중에 필요할 수 있는 파일:
+- quant primitive
+- qweight/scales 생성
+- quantized linear helper
 
-- [ssd/ssd/layers/embed_head.py](/home/chokwans99/PSD/ssd/ssd/layers/embed_head.py:9)
-- [ssd/ssd/engine/helpers/cudagraph_helpers.py](/home/chokwans99/PSD/ssd/ssd/engine/helpers/cudagraph_helpers.py:799)
+`runtime_format.py`
 
-## 10. 권장 검증 매트릭스
+- manifest schema
+- canonical key naming
+- rank shard save/load helper
+
+`importers/hf_float.py`
+
+- HF float checkpoint -> canonical INT8 artifact 변환
+
+### 11.3 새 스크립트
+
+추가:
+
+- `ssd/scripts/import_quantized_model.py`
+
+이 스크립트가 실제 변환 진입점이다.
+
+예:
+
+```bash
+python ssd/scripts/import_quantized_model.py \
+  --source /path/to/Llama-2-70b-hf \
+  --source-format hf_float \
+  --output /path/to/Llama2-70B-INT8-WO-TP4 \
+  --tp-size 4 \
+  --quant-method int8_wo
+```
+
+나중에는:
+
+```bash
+python ssd/scripts/import_quantized_model.py \
+  --source /path/to/hf-int8-model \
+  --source-format hf_torchao \
+  --output /path/to/Llama2-70B-INT8-WO-TP4 \
+  --tp-size 4 \
+  --quant-method int8_wo
+```
+
+같은 형태를 지원한다.
+
+## 12. Quantization Primitive
+
+`ssd/ssd/quantization/int8_weight_only.py`에는 최소 아래를 둔다.
+
+```python
+from dataclasses import dataclass
+import torch
+import torch.nn.functional as F
+
+
+@dataclass
+class Int8WeightOnlyState:
+    qweight: torch.Tensor
+    scales: torch.Tensor
+    bias: torch.Tensor | None = None
+    scheme: str = "per_channel_symmetric"
+
+
+def quantize_weight_per_channel_int8(weight, scale_dtype=torch.float16):
+    max_abs = weight.abs().amax(dim=1, keepdim=True).clamp(min=1e-8)
+    scales = (max_abs / 127.0).squeeze(1).to(scale_dtype)
+    q = torch.round(weight / scales.unsqueeze(1)).clamp(-127, 127).to(torch.int8)
+    return q.contiguous(), scales.contiguous()
+
+
+def dequantize_weight_per_channel_int8(qweight, scales, out_dtype):
+    return qweight.to(out_dtype) * scales.to(out_dtype).unsqueeze(1)
+
+
+def int8_weight_only_linear(x, qweight, scales, bias=None):
+    # v1 correctness-first
+    w = dequantize_weight_per_channel_int8(qweight, scales, x.dtype)
+    return F.linear(x, w, bias)
+```
+
+중요:
+
+- v1은 correctness-first
+- 즉 실제 int8 kernel이 아니라 dequantize+F.linear로 시작해도 된다
+- canonical format과 loader/runtime 계약을 먼저 안정화하는 게 우선이다
+
+## 13. Runtime Format 코드 초안
+
+`ssd/ssd/quantization/runtime_format.py`
+
+```python
+from dataclasses import dataclass, asdict
+import json
+import os
+from safetensors.torch import save_file, load_file
+
+
+@dataclass
+class QuantManifest:
+    format: str
+    model_family: str
+    source_model: str
+    source_format: str
+    tp_size: int
+    quant_method: str
+    scheme: str
+    scale_dtype: str
+    target_only: bool
+    skip_embed: bool
+    skip_lm_head: bool
+
+
+def save_manifest(manifest: QuantManifest, out_dir: str):
+    with open(os.path.join(out_dir, "manifest.json"), "w") as f:
+        json.dump(asdict(manifest), f, indent=2)
+
+
+def load_manifest(model_dir: str) -> QuantManifest:
+    with open(os.path.join(model_dir, "manifest.json")) as f:
+        data = json.load(f)
+    return QuantManifest(**data)
+
+
+def save_rank_state(rank_dir: str, state_dict: dict):
+    os.makedirs(rank_dir, exist_ok=True)
+    save_file(state_dict, os.path.join(rank_dir, "model.safetensors"))
+
+
+def load_rank_state(rank_dir: str) -> dict:
+    return load_file(os.path.join(rank_dir, "model.safetensors"))
+```
+
+## 14. Importer 설계
+
+### 14.1 공통 인터페이스
+
+모든 importer는 아래 계약을 따른다.
+
+```python
+class BaseImporter:
+    def inspect(self, source_path: str) -> dict: ...
+    def export(
+        self,
+        source_path: str,
+        out_dir: str,
+        tp_size: int,
+        quant_method: str,
+    ) -> None: ...
+```
+
+### 14.2 HF float importer
+
+`ssd/ssd/quantization/importers/hf_float.py`
+
+역할:
+
+1. source가 HF float checkpoint인지 확인
+2. layer 이름을 우리 runtime canonical key로 정규화
+3. TP4 기준 local shard 계산
+4. shard별 INT8 양자화
+5. rank별 safetensors 저장
+6. manifest 저장
+
+중요:
+
+- 이 importer가 v1의 핵심 기능이다
+
+### 14.3 HF quantized importer
+
+v2부터 추가한다.
+
+예:
+
+- `hf_torchao.py`
+- `hf_quanto.py`
+
+역할:
+
+1. 해당 포맷의 quantized tensor를 읽는다
+2. 우리 canonical runtime format으로 매핑한다
+3. 필요하면 scale/packing을 다시 정규화한다
+
+중요:
+
+- v2도 엔진은 안 바뀌어야 한다
+- importer만 늘어나야 한다
+
+## 15. Linear 런타임 구현
+
+### 15.1 공통 상태
+
+`ssd/ssd/layers/linear.py`의 `LinearBase`에 아래를 추가한다.
+
+```python
+self.quant_method = None
+self.qweight = None
+self.scales = None
+self._weight_loaded = False
+```
+
+공통 헬퍼:
+
+```python
+def set_quantized_weight(self, qweight, scales):
+    self.qweight = qweight
+    self.scales = scales
+    self.quant_method = "int8_wo"
+    self._weight_loaded = True
+    if hasattr(self, "weight") and self.weight is not None:
+        self.register_parameter("weight", None)
+
+
+def has_quant_weight(self):
+    return self.quant_method == "int8_wo" and self.qweight is not None
+```
+
+### 15.2 forward 변경
+
+dense path:
+
+```python
+return F.linear(x, self.weight, self.bias)
+```
+
+quant path:
+
+```python
+if self.has_quant_weight():
+    return int8_weight_only_linear(x, self.qweight, self.scales, self.bias)
+return F.linear(x, self.weight, self.bias)
+```
+
+`RowParallelLinear`은 all-reduce는 그대로 유지한다.
+
+### 15.3 packed linear
+
+`QKVParallelLinear`, `MergedColumnParallelLinear`는 다음 두 방식 중 하나다.
+
+1. importer가 최종 packed local weight를 그대로 만들어 저장
+2. runtime load 후 packed float를 조립하고 그 뒤 quantize
+
+이번 재설계에서는 **1번이 더 맞다.**
+
+즉 importer가 이미 최종 local packed qweight를 만들어 저장한다.
+
+이렇게 하면 runtime loader가 훨씬 단순해진다.
+
+## 16. Loader 재설계
+
+### 16.1 기존 loader의 역할 축소
+
+`ssd/ssd/utils/loader.py`는 이제 두 모드만 처리한다.
+
+1. float model load
+2. canonical quantized artifact load
+
+즉 외부 포맷별 parsing은 loader가 하지 않는다.
+
+### 16.2 canonical quantized load
+
+흐름:
+
+1. `manifest.json` 확인
+2. 현재 rank에 해당하는 `rank_i/model.safetensors` 로드
+3. `module_name.qweight`, `module_name.scales`를 각 모듈에 주입
+
+이때는 기존 `weight_loader()` 대신 전용 quant loader를 추가하는 것이 낫다.
+
+예:
+
+```python
+def load_quantized_model(model, model_dir, rank):
+    manifest = load_manifest(model_dir)
+    state = load_rank_state(os.path.join(model_dir, f"rank_{rank}"))
+    for name, module in model.named_modules():
+        qk = f"{name}.qweight"
+        sk = f"{name}.scales"
+        if qk in state and sk in state:
+            module.set_quantized_weight(
+                state[qk].to("cuda"),
+                state[sk].to("cuda"),
+            )
+```
+
+즉 float loader와 quant loader는 명시적으로 분리하는 것이 맞다.
+
+## 17. ModelRunner 변경
+
+### 17.1 model path가 canonical quantized artifact인지 판별
+
+`Config.model`이 가리키는 path에 `manifest.json`이 있고 `format == "ssd_int8_wo_v1"`이면 quantized runtime artifact로 본다.
+
+### 17.2 target만 양자화
+
+`ModelRunner.setup_and_warmup_model_and_cudagraphs()`에서:
+
+- target이면 quantized runtime artifact 로드 허용
+- draft이면 dense model만 허용
+
+즉:
+
+```python
+effective_quant_method = None if self.is_draft else self.config.quant_method
+```
+
+같은 정책을 유지한다.
+
+## 18. 새 스크립트
+
+### 18.1 메인 importer 스크립트
+
+추가:
+
+- `ssd/scripts/import_quantized_model.py`
+
+CLI:
+
+```bash
+python ssd/scripts/import_quantized_model.py \
+  --source /path/to/model \
+  --source-format hf_float \
+  --output /path/to/output \
+  --tp-size 4 \
+  --quant-method int8_wo
+```
+
+나중에:
+
+```bash
+python ssd/scripts/import_quantized_model.py \
+  --source /path/to/hf-int8-model \
+  --source-format hf_torchao \
+  --output /path/to/output \
+  --tp-size 4 \
+  --quant-method int8_wo
+```
+
+도 가능해야 한다.
+
+## 19. 단계별 구현 순서
+
+### Phase 0: canonical format 확정
+
+먼저 확정해야 할 것:
+
+- manifest schema
+- rank shard directory layout
+- key naming 규칙
+- 어떤 모듈을 저장할지
+
+이게 먼저 고정돼야 importer와 runtime이 따로 개발돼도 맞물린다.
+
+### Phase 1: HF float importer 구현
+
+v1의 실제 1순위 구현이다.
+
+산출물:
+
+- `importers/hf_float.py`
+- `scripts/import_quantized_model.py`
+- canonical INT8 artifact 생성 가능
+
+### Phase 2: canonical runtime loader 구현
+
+산출물:
+
+- quantized artifact를 읽는 loader
+- `LinearBase.set_quantized_weight()`
+- quantized forward path
+
+### Phase 3: 작은 모델 end-to-end
+
+작은 Llama 모델로:
+
+- importer 실행
+- artifact 생성
+- runtime load
+- decode
+- verify
+
+를 검증한다.
+
+### Phase 4: CudaGraph 검증
+
+이 단계는 hard gate다.
+
+- target decode capture
+- target verify capture
+
+가 깨지지 않아야 한다.
+
+### Phase 5: 70B TP4
+
+목표 실행 구성:
+
+- `num_gpus=5`
+- target `tp4`
+- draft `1`
+
+### Phase 6: async + MESA 재검증
+
+마지막에:
+
+- async speculate
+- MESA
+
+를 다시 검증한다.
+
+## 20. 검증 매트릭스
 
 ### Unit-level
 
-- random weight에 대한 quantize/dequantize roundtrip
-- dense vs quantized linear output 비교
-- row/column/QKV 케이스의 TP shard load equivalence
+- quantize/dequantize roundtrip
+- dense vs quantized linear
+- runtime format save/load
+- manifest validation
 
-### Module-level
+### Importer-level
 
-- Llama attention block 하나
-- Llama MLP block 하나
-- decoder layer 하나
+- HF float -> canonical INT8
+- rank별 shard shape 검증
+- key naming 검증
 
-### Engine-level
+### Runtime-level
 
-- target decode only
-- target verify only
-- speculate without MESA
-- MESA off
-- MESA on
+- canonical INT8 artifact 로드
+- decode
+- verify
+- async speculate
+- MESA
 
-### Scale-up
+## 21. 최종 판단
 
-- small Llama
-- 가능하면 medium Llama
-- 마지막으로 Llama2-70B TP4
+이제 계획의 메인 축은 아래 세 가지다.
 
-## 11. 성능 기대치
+1. **canonical runtime quantized format**
+2. **offline importer / converter**
+3. **custom TP-aware quantized runtime**
 
-기대 효과:
+즉 "엔진이 직접 외부 양자화 포맷을 다 읽는 구조"로 가지 않는다.
 
-- projection weight 메모리가 대략 절반 수준으로 감소
-- target 메모리가 줄어들어 TP4 구성이 현실화될 가능성이 높음
+그 대신:
 
-예상 비용:
+- v1: `HF float -> canonical INT8`
+- v2: `HF quantized -> canonical INT8`
 
-- kernel path가 최적화되지 않으면 throughput 저하 가능
-- load-time quantization 때문에 startup time 증가
-- graph capture 호환성 때문에 backend 선택 제약이 생길 수 있음
+로 단계적으로 확장한다.
 
-중요한 기준:
+이 방향이
 
-- v1의 성공 기준은 **최고 throughput**이 아니라
-- **메모리 현실성 + 기능적 correctness**다
+- 네가 원하는 "나중에 HF INT8 모델을 얻어도 바로 쓸 수 있는 구조"
+- 현재 엔진의 custom TP / graph 구조
 
-## 12. 리스크 목록
-
-### Risk A: Graph capture 비호환
-
-영향:
-
-- isolated test에서는 되지만 CudaGraph capture에서 깨질 수 있음
-
-대응:
-
-- 깊은 엔진 통합 전에 graph safety를 먼저 검증
-
-### Risk B: Loader startup이 너무 느림
-
-영향:
-
-- 70B shard를 startup 시점에 quantize하면 로딩이 오래 걸릴 수 있음
-
-대응:
-
-- v1에서는 허용
-- backend가 검증된 이후 local quantized shard cache를 추가 검토
-
-### Risk C: 정확도 변화가 speculate/MESA에 영향
-
-영향:
-
-- acceptance ratio 변화
-- recovery distribution 변화
-- 간접적으로 cache hit behavior 변화
-
-대응:
-
-- target-only quantization을 별도 serving mode로 취급
-- dense baseline과 acceptance 및 throughput 비교
-
-### Risk D: LM head가 그대로 커서 메모리 절감이 부족함
-
-영향:
-
-- 기대보다 메모리 감소 폭이 작을 수 있음
-
-대응:
-
-- v1에서는 수용
-- target TP4가 여전히 안 들어갈 때만 다시 검토
-
-### Risk E: 8 GPU를 모두 쓰는 구조는 여전히 지원되지 않음
-
-영향:
-
-- 물리적으로 8 GPU가 있어도 v1 배포 구성은 5 GPU만 사용
-
-대응:
-
-- v1에서는 수용
-- "total GPU count와 target TP size를 분리하는 작업"은 별도 후속 프로젝트로 분리
-
-## 13. 중단 조건
-
-아래 중 하나라도 발생하면 설계를 멈추고 다시 봐야 한다.
-
-- quantized linear path가 graph-capture-safe하게 만들 수 없음
-- weight-only INT8 이후에도 target TP4가 메모리에 안 들어감
-- dense 대비 speculate/MESA 품질 저하가 지나치게 큼
-- kernel path가 너무 느려서 throughput이 실용적이지 않음
-
-이 경우 다음 fallback 옵션은:
-
-1. target dense decode/verify만 양자화하고 speculate는 끈다
-2. 다른 backend 전략으로 이동한다
-3. 양자화보다 엔진 topology 변경을 먼저 검토한다
-
-## 14. 실제 권장 구현 순서
-
-실제로는 다음 순서로 구현하는 것이 좋다.
-
-1. config flag 추가
-2. standalone INT8 weight-only primitive 구현
-3. quantized linear module 통합
-4. loader에 shard-then-quantize 추가
-5. 작은 Llama에서 target decode 검증
-6. CudaGraph capture 검증
-7. target verify 검증
-8. 70B target TP4 실행
-9. async speculate 재검증
-10. MESA 재검증
-
-## 15. 최종 권장안
-
-아래부터 시작하지 않는다.
-
-- `bitsandbytes` 통합
-- pre-quantized checkpoint 지원
-- draft quantization
-- eager-mode feature parity
-- full 8-GPU topology refactor
-
-아래부터 시작한다.
-
-- target-only repo-native weight-only INT8
-- TP sharding 이후 load-time quantization
-- graph-mode target execution
-- `num_gpus=5` 기반의 `tp4 target + 1 draft` 배포 목표
-
-이 경로가 현재 엔진 설계와 가장 잘 맞고, 구현 범위도 가장 작고, 성공 가능성도 가장 높다.
+를 동시에 만족시키는 가장 현실적인 방법이다.

@@ -64,7 +64,10 @@ def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_va
         torch.cuda.synchronize()
         _t0 = perf_counter()
 
+    _vr_label = "draft_glue_replay" if model_runner.is_draft else "verify_replay"
+    _ev_vr = mesa_record(_vr_label)
     graph.replay()
+    mesa_close(_vr_label, _ev_vr)
 
     if _pt:
         torch.cuda.synchronize()
@@ -150,6 +153,10 @@ def flush_draft_profile():
 @torch.inference_mode()
 def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, graph_vars, step, cache_hits, hidden_states=None, layout=None):
     # bs != len(input_ids, positions) now in multi-query seting, also need step-dependent mask
+    _prep_label = ("phase1_prep" if (layout is not None and layout.name == "draft")
+                   else "phase2_prep" if (layout is not None and layout.name == "proxy")
+                   else "tree_prep")
+    _mev_prep = mesa_record(_prep_label)
     context = get_context()
     assert context.cu_seqlens_q is None, "ERROR in run_fi_tree_decode_cudagraph: cu_seqlens_q should be set to None so we don't take FA path"
 
@@ -430,7 +437,13 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     if PROFILE_DRAFT:
         _ev_replay0 = torch.cuda.Event(enable_timing=True); _ev_replay0.record()
 
+    _mesa_label = ("phase1_replay" if (layout is not None and layout.name == "draft")
+                   else "phase2_replay" if (layout is not None and layout.name == "proxy")
+                   else "tree_replay")
+    mesa_close(_prep_label, _mev_prep)
+    _mev = mesa_record(_mesa_label)
     graph.replay()
+    mesa_close(_mesa_label, _mev)
 
     if PROFILE_DRAFT:
         _ev_replay1 = torch.cuda.Event(enable_timing=True); _ev_replay1.record()
@@ -1053,6 +1066,7 @@ def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
     k_plus_1 = config.speculate_k + 1
     orig_bs = input_ids.size(0) // k_plus_1
 
+    _ev_setup = mesa_record("verify_setup")
     wrapper_bs = next(
         x for x in model_runner.graph_bs_list["mesa_verify"] if x >= orig_bs)
     graph_pre = model_runner.graphs["mesa_verify_pre"][wrapper_bs]
@@ -1095,25 +1109,99 @@ def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
     if block_tables is not None:
         graph_vars["block_tables"][:bs, :block_tables.size(1)] = block_tables
 
-    # ====== graph_pre.replay() ======
-    graph_pre.replay()
+    mesa_close("verify_setup", _ev_setup)
 
-    # ====== Mid-forward: proxy (CudaGraph 밖, ALL TP ranks) ======
+    # ====== graph_pre.replay() ======
+    _ev = mesa_record("graph_pre")
+    graph_pre.replay()
+    mesa_close("graph_pre", _ev)
+
+    # ====== Mid-forward: exit logits (norm + lm_head on exit_hidden) ======
+    _ev_el = mesa_record("exit_logits")
     flat = orig_bs * k_plus_1
     exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
     normed = model_runner.model.model.norm(exit_h, None)
     # ALL TP ranks call compute_logits → gather participation.
     # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
     exit_logits = model_runner.model.compute_logits(normed, last_only=False)
+    mesa_close("exit_logits", _ev_el)
 
+    # ====== proxy compute + isend (rank 0 only does real work) ======
+    _ev = mesa_record("proxy_compute_send")
     # mesa_proxy_fn: set on rank 0's ModelRunner only. rank 1+ skips.
     if mesa_proxy_fn is not None:
         mesa_proxy_fn(exit_logits, orig_bs)
+    mesa_close("proxy_compute_send", _ev)
 
     # ====== graph_post.replay() ======
+    _ev = mesa_record("graph_post")
     graph_post.replay()
+    mesa_close("graph_post", _ev)
 
     # ====== Final logits ======
+    _ev_fl = mesa_record("final_logits")
     outputs = graph_vars["outputs"][:flat]
     logits = model_runner.model.compute_logits(outputs, last_only)
+    mesa_close("final_logits", _ev_fl)
     return logits
+
+
+# ---------- MESA per-phase profiling (zero-sync, additions only) ----------
+PROFILE_MESA = os.environ.get("SSD_PROFILE_MESA", "0") == "1"
+_mesa_events = []  # [(idx, label, start_ev, end_ev)]
+_mesa_idx = 0      # monotonic call index (per process)
+_mesa_t0_ev = None # process-local origin event for relative timestamps
+
+def mesa_record(label):
+    global _mesa_t0_ev
+    if not PROFILE_MESA:
+        return None
+    ev = torch.cuda.Event(enable_timing=True)
+    ev.record()
+    if _mesa_t0_ev is None:
+        _mesa_t0_ev = ev
+    return ev
+
+def mesa_close(label, start_ev):
+    global _mesa_idx
+    if start_ev is None:
+        return
+    end_ev = torch.cuda.Event(enable_timing=True)
+    end_ev.record()
+    _mesa_events.append((_mesa_idx, label, start_ev, end_ev))
+    _mesa_idx += 1
+
+def mesa_reset():
+    """Reset profiling state — mesa_dump/mesa_flush call this after writing."""
+    global _mesa_t0_ev, _mesa_idx
+    _mesa_events.clear()
+    _mesa_t0_ev = None
+    _mesa_idx = 0
+
+def mesa_flush(tag, run_id=None):
+    """Public API: write JSON and reset. Call between runs or at end of generate().
+    run_id: appended to filename to avoid overwrites; defaults to HMS timestamp."""
+    return mesa_dump(tag, run_id=run_id)
+
+def mesa_dump(tag, run_id=None):
+    if not _mesa_events:
+        mesa_reset()
+        return
+    import json, time as _time
+    torch.cuda.synchronize()
+    t0 = _mesa_t0_ev
+    rows = [{
+        "idx": s, "label": l,
+        "start_ms": t0.elapsed_time(a),
+        "end_ms": t0.elapsed_time(b),
+        "ms": a.elapsed_time(b),
+    } for s, l, a, b in _mesa_events]
+    outdir = os.environ.get("SSD_PROFILE_DIR", "/tmp")
+    os.makedirs(outdir, exist_ok=True)
+    if run_id is None:
+        run_id = _time.strftime("%H%M%S")
+    path = f"{outdir}/mesa_profile_{tag}_{run_id}.json"
+    with open(path, "w") as f:
+        json.dump(rows, f)
+    print(f"[mesa_profile] {len(rows)} events -> {path}", flush=True)
+    mesa_reset()

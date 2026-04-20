@@ -107,7 +107,10 @@ class SpecDecodeStep(InferenceStep):
             eagle_acts=eagle_sentinel,
         )
         #### STEP 1: SPECULATE ####
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        _mev_sw = _mr("target_spec_wait")
         speculate_result = self.speculator.speculate(seqs, in_verify_result)
+        _mc("target_spec_wait", _mev_sw)
 
         if _prof:
             torch.cuda.synchronize()
@@ -145,12 +148,14 @@ class SpecDecodeStep(InferenceStep):
             seq.num_cached_tokens = orig_nct
 
         #### STEP 3: POSTPROCESS ####
+        _mev_pp = _mr("target_postprocess")
         self.scheduler.postprocess_speculate(
             seqs,
             out_verify_result.new_suffixes,
             out_verify_result.recovery_tokens,
             eagle_acts=out_verify_result.eagle_acts if self.eagle else None,
         )
+        _mc("target_postprocess", _mev_pp)
 
         if _prof:
             torch.cuda.synchronize()

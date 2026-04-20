@@ -113,6 +113,8 @@ class Verifier(VerifierBase):
         temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
         temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
 
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        _mev_vs = _mr("verify_sample_accept")
         new_suffixes, recovery_tokens = verify(
             logits_p=logits_p,
             logits_q=speculate_result.logits_q,
@@ -124,6 +126,7 @@ class Verifier(VerifierBase):
             async_fan_out=self.async_fan_out,
             jit_speculate=self.jit_speculate,
         )
+        _mc("verify_sample_accept", _mev_vs)
 
         self.metrics["target_verify_times"].append(perf_counter() - _tv0)
 
@@ -218,8 +221,35 @@ class Verifier(VerifierBase):
                 topk_ids[miss_mask] = miss_topk_ids
                 topk_probs[miss_mask] = miss_topk_probs / miss_topk_probs.sum(-1, keepdim=True).clamp(min=1e-10)
 
-        # NCCL send (packed, blocking — 280 bytes ~3μs)
+        # Compute h_i (first reject position distribution) and fan_out_list on target side
+        # This removes ~0.5ms from draft critical path
+        proxy_fan_out_total = config.mesa_proxy_fan_out * (K + 1)  # total proxy budget
+        cumprod = torch.cumprod(accept_probs[0], dim=0)  # [K] (B=1 scope)
+        h = torch.zeros(K + 1, device=accept_probs.device)
+        h[0] = 1 - accept_probs[0, 0]
+        if K > 1:
+            h[1:K] = cumprod[:-1] * (1 - accept_probs[0, 1:])
+        h[K] = cumprod[-1]  # all-accept
+
+        # Budget allocation: h_i proportional, with edge case fallback
+        if h[:K].sum() < 1e-6:
+            # All accept expected → uniform fan_out
+            fan_out_list = [proxy_fan_out_total // (K + 1)] * (K + 1)
+            remainder = proxy_fan_out_total - sum(fan_out_list)
+            for i in range(remainder):
+                fan_out_list[i] += 1
+        else:
+            raw = (h / h.sum() * proxy_fan_out_total).floor().int()
+            remainder = proxy_fan_out_total - raw.sum().item()
+            _, sorted_idx = h.sort(descending=True)
+            for i in range(int(remainder)):
+                raw[sorted_idx[i]] += 1
+            fan_out_list = raw.tolist()
+
+        fan_out_tensor = torch.tensor(fan_out_list, dtype=torch.int64, device=accept_probs.device)
+
+        # NCCL send: fan_out_list [K+1] + topk_ids [B,K,top_k] + topk_probs [B,K,top_k]
         send_int64(async_pg, draft_rank,
-                   accept_probs.view(-1).to(torch.float32).view(torch.int32).to(torch.int64),
+                   fan_out_tensor,
                    topk_ids.reshape(-1),
                    topk_probs.view(-1).to(torch.float32).view(torch.int32).to(torch.int64))

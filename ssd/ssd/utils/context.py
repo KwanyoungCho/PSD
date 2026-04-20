@@ -16,15 +16,16 @@ class Context:
     # MESA: layout-aware attention wrapper selection
     active_mq_len: int | None = None
     active_wrappers: dict | None = None
+    active_layout: object | None = None
 
 _CONTEXT = Context()
 
 def get_context():
     return _CONTEXT
 
-def set_context(is_prefill, cu_seqlens_q=None, cu_seqlens_k=None, max_seqlen_q=0, max_seqlen_k=0, slot_mapping=None, context_lens=None, block_tables=None, is_jit=False, active_mq_len=None, active_wrappers=None):
+def set_context(is_prefill, cu_seqlens_q=None, cu_seqlens_k=None, max_seqlen_q=0, max_seqlen_k=0, slot_mapping=None, context_lens=None, block_tables=None, is_jit=False, active_mq_len=None, active_wrappers=None, active_layout=None):
     global _CONTEXT
-    _CONTEXT = Context(is_prefill, is_jit, cu_seqlens_q, cu_seqlens_k, max_seqlen_q, max_seqlen_k, slot_mapping, context_lens, block_tables, active_mq_len, active_wrappers)
+    _CONTEXT = Context(is_prefill, is_jit, cu_seqlens_q, cu_seqlens_k, max_seqlen_q, max_seqlen_k, slot_mapping, context_lens, block_tables, active_mq_len, active_wrappers, active_layout)
 
 def reset_context():
     global _CONTEXT

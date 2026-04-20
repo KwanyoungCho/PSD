@@ -128,6 +128,11 @@ class LLMEngine:
         if getattr(self, "_exiting", False):
             return
         self._exiting = True
+        try:
+            from ssd.engine.helpers.cudagraph_helpers import mesa_dump
+            mesa_dump("target_rank0")
+        except Exception:
+            pass
         # 1) If async, tell draft to quit before tearing down anything
         try:
             if self.config.speculate and self.config.draft_async:

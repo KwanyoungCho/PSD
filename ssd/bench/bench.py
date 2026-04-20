@@ -192,6 +192,7 @@ def create_llm_kwargs(args, draft_path):
     # MESA-SSD
     if getattr(args, 'mesa', False):
         llm_kwargs["mesa_enabled"] = True
+        llm_kwargs["jit_speculate"] = True  # MESA requires jit_speculate
         if args.mesa_exit_layer is not None:
             llm_kwargs["mesa_exit_layer"] = args.mesa_exit_layer
         llm_kwargs["mesa_proxy_top_k"] = args.mesa_proxy_top_k

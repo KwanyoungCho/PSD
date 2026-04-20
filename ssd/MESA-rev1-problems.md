@@ -42,58 +42,58 @@ for b in range(B):
 - `.tolist()`가 implicit GPU sync → stream stall
 - 특히 Policy A는 `proxy_recv_work.wait()` 직후 → draft critical path 직결
 
-### 수정 계획
+### 수정 계획 (#4 이후 전제 — pos<K는 proxy-only, pos==K만 draft all-accept path)
 
-**Step 1: `.tolist()` 제거, tensor 기반 membership**
-```python
-# 중복 판정을 GPU에서 수행
-# draft_set은 draft_forked의 특정 position slice, proxy_tokens는 proxy_topk_ids의 특정 slice
-# 두 tensor 간 겹침 mask: (proxy_tokens[:, :, :, None] == draft_set[:, :, None, :]).any(dim=-1)
-```
+**pos < K 경로: proxy-only 벡터화**
 
-**Step 2: 벡터화된 selection (배치 전체 + 모든 position 동시)**
+Inputs (모두 GPU tensor):
+- `draft_forked: [B, K+1, draft_fan_out]`
+- `proxy_topk_ids: [B, K, proxy_top_k]` — #4로 proxy_top_k가 충분히 큼 (`pfo*(K+1) + dfo + 2`)
 
 의사코드:
 ```python
-# Inputs (all GPU tensors):
-#   draft_forked: [B, K+1, draft_fan_out]
-#   proxy_topk_ids: [B, K, proxy_top_k]  (pos K는 fallback만)
-#   fallback_topk: [B, K+1, total_need]
-#   fan_out_list: list[int] of length K+1
+# 1. Proxy pool 자체의 내부 dedup (prefix duplicate mask)
+#    proxy_topk_ids[..., i]가 proxy_topk_ids[..., :i]에 이미 있으면 제외
+#    in_prev = (proxy[..., i:i+1] == proxy[..., :i]).any(dim=-1)  # triu 스타일
 
-# 1. Proxy → fallback 순서로 pool 만들기 (pos별)
-#    pool[b, pos] = concat([proxy_topk_ids[b, pos], fallback_topk[b, pos]])  # pos<K
-#                 = fallback_topk[b, K]                                       # pos==K
+# 2. draft_forked와의 겹침 mask
+#    in_draft = (proxy[..., None] == draft[:, :K, None, :]).any(dim=-1)  # [B, K, P]
 
-# 2. 각 토큰이 draft_set에 있는지 mask (vectorized)
-#    pool_expanded: [B, K+1, P, 1]
-#    draft_forked: [B, K+1, 1, D]  ← expand
-#    overlap = (pool == draft) → [B, K+1, P, D]
-#    in_draft = overlap.any(dim=-1) → [B, K+1, P]
+# 3. 유효 토큰 mask
+#    valid_mask = ~in_prev & ~in_draft  # [B, K, P]
 
-# 3. pool 내부에서도 duplicate dedup (cumulative)
-#    pool[..., i]가 pool[..., :i]에 이미 있으면 mask
-#    → 이건 triu 비교로 벡터화 가능: (pool[..., i:i+1] == pool[..., :i]).any()
-
-# 4. 유효 토큰 mask = ~in_draft & ~in_pool_prefix
-#    valid_mask: [B, K+1, P]
-#    각 (b, pos)별로 앞에서 fo[pos]개 True 뽑아서 result에 쓰기
-#    cumsum으로 prefix count 계산 → rank < fo 인 것만 선택
+# 4. fan_out_list[pos] 만큼 앞에서 pick
+#    rank = valid_mask.cumsum(dim=-1) - 1          # 각 valid 토큰의 누적 순위
+#    taken_mask = valid_mask & (rank < fan_out_tensor[pos, None])
+#    result[b, pos] = proxy[b, pos][taken_mask]    # scatter by offset
 ```
 
-**Step 3: edge case 처리**
-- pos == K (all-accept) 는 proxy 없음, fallback만
-- fan_out_list[pos] == 0 건너뛰기
-- `total_need` (fallback pool 크기) 는 #4 수정과 함께 확대
+**pos == K (all-accept) 경로: draft top-k만 사용 (이게 유일한 "fallback 유지 지점")**
+```python
+# draft_forked[b, K, :]가 이미 top-dfo, but 이걸로 proxy의 all-accept 위치 채움
+# 추가 top-k from draft logits at pos K, excluding draft_forked
+# #4의 설계대로 "all-accept 위치는 correction 불필요"라 proxy 없음
+logits_k = glue_logits[:, K, :].clone()
+logits_k.scatter_(1, draft_forked[:, K, :], float('-inf'))
+_, all_accept_topk = torch.topk(logits_k, fan_out_list[K], dim=-1)  # [B, fo_K]
+result[b, K_offset:] = all_accept_topk
+```
+
+**edge cases**:
+- `fan_out_list[pos] == 0` → 해당 position skip (cumsum mask로 자연스레 0개 pick)
+- `fan_out_list[K] == 0` → all-accept path 자체 skip
+- `underfill`: #4로 proxy_top_k 충분 커서 안 생김. assert만 debug build에 남김
 
 ### 작업량
-- 초기 구현 (step 1, 2): ~50-70 LoC
-- Non-Policy A (`_select_proxy_sourced_tokens`)도 동일 패턴 적용: +30 LoC
-- 예상 소요: 2-3 시간 (verification 포함)
+- 메인 구현: ~40 LoC (fallback 제거된 상태라 단순)
+- Non-Policy A (`_select_proxy_sourced_tokens`)는 #8 Dead code 제거로 자연 정리
+- 예상 소요: 2-3 시간
 
 ### 예상 이득
-- `phase2_build` 1.4 ms → **~0.4 ms** (GPU sync 제거 + Python loop 제거)
-- 전체 MESA step ~1 ms 단축 → **throughput +1.5%**
+- `.tolist()` 호출 제거 → GPU sync 0
+- Python for loop 제거 → Python 오버헤드 0
+- 실측 phase2_build 1.4 ms → **~0.4 ms** 예상
+- 전체 MESA step ~1 ms 단축 → throughput **+1.5%**
 
 ---
 
@@ -313,12 +313,24 @@ Timeline에서 관찰:
 
 ### 수정 계획
 
+**Rev1 불변식 (static prealloc이 dynamic fan_out_list에도 안전한 이유)**:
+
+Target의 `_compute_and_send_proxy` 가 `fan_out_list`를 `sum(fan_out_list) == mesa_proxy_fan_out × (K+1)` 로 항상 맞춰서 전송함 (`verifier.py:226, 242-247`에서 redistribute로 보장). 따라서:
+- `step_proxy_layout.MQ_LEN == self.proxy_layout.MQ_LEN` (static class attr) **항상**
+- fan_out_list의 **per-position 분포**는 바뀌지만 **총량은 고정**
+
+즉 Policy A runtime layout이 dynamic이어도 **proxy buffer 총 크기는 static MQ_LEN 예산으로 충분**. 나중에 "dynamic fanout인데 static buffer로 가능한가?" 재의심 방지를 위해 이 불변식을 코드 주석에도 넣어야 함.
+
 **1단계: DraftRunner에 pre-allocated 버퍼 (`_init_prealloc_buffers` 확장)**
 
 ```python
 # draft_runner.py __init__ / _init_prealloc_buffers에 추가
-# 각 layout(MQ_LEN)별로 최대 크기로 한 번만 할당
-max_mq = max(self.full_layout.MQ_LEN, self.draft_layout.MQ_LEN, self.proxy_layout.MQ_LEN)
+# Rev1 불변식: sum(fan_out_list) 항상 고정 (proxy_fan_out × (K+1))
+# → proxy_layout.MQ_LEN이 runtime max_N의 상한
+mq_list = [self.draft_layout.MQ_LEN, self.proxy_layout.MQ_LEN]
+if hasattr(self, 'full_layout'):
+    mq_list.append(self.full_layout.MQ_LEN)
+max_mq = max(mq_list)
 max_N = self.config.max_num_seqs * max_mq  # B * MQ_LEN upper bound
 
 K = self.config.speculate_k
