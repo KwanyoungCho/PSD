@@ -1042,51 +1042,6 @@ class DraftRunner(ModelRunner):
         _, topk_idx = torch.topk(logits, draft_fan_out, dim=-1)  # [B, K+1, draft_fan_out]
         return topk_idx
 
-    def _select_proxy_sourced_tokens(self, logits, returned_tokens,
-                                       mesa_proxy, draft_forked, proxy_fan_out):
-        """Select proxy correction tokens with dedup against draft-sourced."""
-        B = logits.shape[0]
-        K = self.config.speculate_k
-        proxy_topk_ids = mesa_proxy["topk_ids"]  # [B, K, proxy_top_k]
-
-        # Fallback candidates: wider top-k from draft logits
-        logits_for_fallback = logits.clone()
-        logits_for_fallback[:, :-1, :] = logits_for_fallback[:, :-1, :].scatter(
-            dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
-        total_need = self.config.async_fan_out
-        _, fallback_topk = torch.topk(logits_for_fallback, total_need, dim=-1)  # [B, K+1, total]
-
-        result = torch.zeros(B, K + 1, proxy_fan_out, dtype=torch.int64, device=logits.device)
-
-        # Batch GPU→CPU transfer (avoid per-element sync)
-        draft_cpu = draft_forked[:, :K, :].cpu().tolist()
-        proxy_cpu = proxy_topk_ids.cpu().tolist()
-        fallback_cpu = fallback_topk[:, :K, :].cpu().tolist()
-
-        # Position 0..K-1: proxy-sourced with dedup
-        for b in range(B):
-            for pos in range(K):
-                draft_set = set(draft_cpu[b][pos])
-                proxy_tokens = proxy_cpu[b][pos]
-
-                selected = [t for t in proxy_tokens if t not in draft_set]
-
-                if len(selected) < proxy_fan_out:
-                    used = draft_set | set(selected)
-                    fallback = [t for t in fallback_cpu[b][pos] if t not in used]
-                    selected.extend(fallback[:proxy_fan_out - len(selected)])
-
-                for j in range(min(len(selected), proxy_fan_out)):
-                    result[b, pos, j] = selected[j]
-
-        # Position K (all-accept): draft logits top-k, excluding draft_forked
-        logits_k = logits_for_fallback[:, K, :].clone()
-        logits_k.scatter_(1, draft_forked[:, K, :], float('-inf'))
-        _, all_accept_topk = torch.topk(logits_k, proxy_fan_out, dim=-1)
-        result[:, K, :] = all_accept_topk
-
-        return result
-
     def _select_proxy_sourced_tokens_policy_a(self, glue_logits, gd_for_fork,
                                                 mesa_proxy, draft_forked, fan_out_list):
         """Policy A: h_i-based dynamic fan_out. Fully vectorized (no .tolist(), no Python loop).
