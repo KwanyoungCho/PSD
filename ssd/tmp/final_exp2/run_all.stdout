@@ -1,0 +1,12 @@
+AR TP: 28.26
+
+[16:22:49] === baseline_k7_uniform === --draft_path /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0 --async --spec --k 7 --f 3
+  -> TP=67.99
+
+[16:36:03] === baseline_k7_geo === --draft_path /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0 --async --spec --k 7 --flh 5 4 4 3 3 2 2 1
+  -> TP=68.45
+
+[16:49:10] === mesa_k5_f4_dfo2_exit24 === --draft_path /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0 --async --spec --k 5 --f 4 --mesa --mesa_exit_layer 24 --mesa_draft_fan_out 2
+  -> TP=35.91
+
+[17:13:43] === mesa_k5_f4_dfo2_exit28 === --draft_path /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0 --async --spec --k 5 --f 4 --mesa --mesa_exit_layer 28 --mesa_draft_fan_out 2
