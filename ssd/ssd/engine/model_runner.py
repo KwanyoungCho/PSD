@@ -292,7 +292,22 @@ class ModelRunner:
         target_path = getattr(config, 'tokenizer_path', None)
         target_hidden_size = getattr(config, 'd_model_target', None)
         load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
-        
+
+        # INT8 weight-only quantization (target only, gated by config)
+        if getattr(config, 'target_quant_enabled', False) and not is_draft:
+            from ssd.utils.quantize import apply_int8_weight_only_to_target
+            import os as _os_qskip
+            _skip_csv = _os_qskip.environ.get("SSD_INT8_SKIP", "")
+            _skip_subs = tuple(s.strip() for s in _skip_csv.split(",") if s.strip())
+            print(f'[int8-quant] enabling target INT8 weight-only (rank={self.rank}, lm_head={getattr(config, "target_quant_lm_head", True)}, skip={_skip_subs})', flush=True)
+            apply_int8_weight_only_to_target(
+                self.model,
+                quantize_lm_head=getattr(config, 'target_quant_lm_head', True),
+                tie_word_embeddings=getattr(hf_config, 'tie_word_embeddings', False),
+                verbose=True,
+                skip_module_name_substrings=_skip_subs,
+            )
+
         if config.draft_async:  # move this here so we don't get a timeout waiting for draft rank while load_model happens?
             self.async_pg = dist.new_group(ranks=[0, self.draft_rank])
         if self.verbose:

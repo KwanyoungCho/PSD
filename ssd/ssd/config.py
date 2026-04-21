@@ -45,6 +45,12 @@ class Config:
     mesa_proxy_top_k: int = 3              # proxy correction token count
     mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
 
+    # INT8 weight-only quantization (target only)
+    target_quant_enabled: bool = False
+    target_quant_backend: str = "torchao_int8_wo"
+    target_quant_lm_head: bool = True
+    target_quant_mode: str = "load_time"    # Phase 2: load-time only; Phase 5 adds "persistent"
+
     # Debugging
     verbose: bool = False
     debug_mode: bool = False

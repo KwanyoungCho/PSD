@@ -84,6 +84,12 @@ def parse_arguments():
     parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
 
+    # INT8 weight-only quantization (target only)
+    parser.add_argument("--quant_int8", action="store_true",
+                        help="Enable target-only INT8 weight-only quantization (torchao)")
+    parser.add_argument("--no_quant_lm_head", action="store_true",
+                        help="When --quant_int8, skip lm_head quantization (useful for MESA ablation)")
+
     # Sweep mode: load engine once, run multiple configs
     parser.add_argument("--sweep", type=str, default=None,
                         help="JSON list of override dicts. Sweepable keys: temp, b. "
@@ -198,6 +204,12 @@ def create_llm_kwargs(args, draft_path):
         llm_kwargs["mesa_proxy_top_k"] = args.mesa_proxy_top_k
         if args.mesa_draft_fan_out is not None:
             llm_kwargs["mesa_draft_fan_out"] = args.mesa_draft_fan_out
+
+    # INT8 weight-only (target)
+    if getattr(args, 'quant_int8', False):
+        llm_kwargs["target_quant_enabled"] = True
+        if getattr(args, 'no_quant_lm_head', False):
+            llm_kwargs["target_quant_lm_head"] = False
 
     if args.flh is not None:
         llm_kwargs["fan_out_list"] = args.flh

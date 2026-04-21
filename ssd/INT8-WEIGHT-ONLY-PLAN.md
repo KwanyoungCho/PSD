@@ -180,12 +180,14 @@ if config.tie_word_embeddings:
 
 torchao는 minor version마다 API가 변할 수 있다. backend 하나로 고정하는 전략이므로 버전 고정이 더 중요하다.
 
-계획서에 명시해야 하는 조합:
+고정 조합 (브랜치 `feature/int8-weight-only` 기준):
 
-- `torch`: 테스트된 버전 (예: `2.5.x`)
-- `torchao`: 테스트된 버전 (예: `0.7.x`)
-- 이 조합으로 Phase 0 feasibility spike와 이후 Phase 전체를 수행한다
-- 구체 버전은 Phase 0 환경 확정 시점에 이 섹션에 고정 기재한다
+- `torch`: 2.8.0+cu128
+- `torchao`: **0.12.0** (0.17.0은 torch 2.8에서 cpp extension 호환 경고 발생 → 0.12로 downgrade)
+- `cuda`: 12.8
+- GPU: RTX 3090 (sm_86)
+
+이 조합으로 Phase 0 feasibility spike와 이후 Phase 전체를 수행한다.
 
 ### 4.2 SSD 모델 구조는 유지한다
 
@@ -211,18 +213,24 @@ torchao는 minor version마다 API가 변할 수 있다. backend 하나로 고�
 
 **기본 가정**: forward 코드는 가능한 변경하지 않는다. SSD의 모든 TP linear는 이미 `F.linear(x, self.weight, self.bias)` 형태로 동작한다 (`ssd/ssd/layers/linear.py:65, 98, 196` 및 `embed_head.py:88, 95, 111`). torchao `Int8WeightOnlyConfig`는 tensor subclass (`AffineQuantizedTensor`) 방식으로 동작하므로, `self.weight` 위치의 값이 quantized 상태이면 기존 `F.linear` 호출이 `__torch_dispatch__`를 통해 int8 matmul 커널로 라우팅될 것으로 기대한다.
 
-**단, 저장 계약은 미확정이다**. 현재 SSD의 모든 weight는 `nn.Parameter`로 등록되어 있고 (`linear.py:53, 82, 180`), `nn.Module` 규약상 `self.weight = non_Parameter_object`는 parameter slot 규칙과 충돌할 가능성이 있다. 따라서 어느 저장 형태로 갈지는 Phase 0 spike에서 검증 후 확정한다.
+**저장 계약: Phase 0 결과로 (A) 확정**. 다음과 같이 동작한다.
 
-가능한 저장 계약 후보:
+1. Quantize 시점에 `dummy = nn.Linear(in, out, bias=False).cuda().to(dtype)`를 만들고 float weight를 `dummy.weight`에 복사
+2. `quantize_(dummy, Int8WeightOnlyConfig())` 적용 — 이 시점에 `dummy.weight`는 `nn.Parameter`를 유지한 채 내부 `data`가 `AffineQuantizedTensor`로 교체된다
+3. SSD TP 모듈에 `self.weight = dummy.weight`로 재할당 — `nn.Parameter` 타입이므로 parameter slot 규칙과 충돌 없음
+4. SSD의 기존 `F.linear(x, self.weight, self.bias)` 호출이 `__torch_dispatch__`를 통해 INT8 커널로 자동 라우팅
 
-- (A) `self.weight`를 `nn.Parameter`로 유지하고 그 안의 data tensor만 quantized tensor subclass로 교체
-- (B) `self.weight`를 `nn.Parameter` 슬롯에서 제거하고 `register_buffer` 또는 plain attribute로 재등록
-- (C) 별도 attribute (`self.qweight`, `self.q_state`)로 두고 forward에서 분기 (기본 가정 일부 위배)
-- (D) 작은 wrapper Parameter를 두고 실제 quantized state는 wrapper 내부에
+검증 결과 (`sandbox/int8_spike/` 참조):
 
-Phase 0에서 (A)를 1차 후보로 확인하고, 실패하면 (B)/(C)/(D) 순서로 내려간다. 어느 경우든 `forward` 경로 수정 범위는 최소화를 목표로 한다. 단 `ParallelLMHead`처럼 `F.linear` 뒤에 gather 로직이 복잡한 경우 아주 작은 보정이 필요할 수 있다 (`embed_head.py:88-111`).
+- (A) assignment 경로 — toy, qkv_packed, gate_up_packed, o_proj_row, down_proj_row 전 크기에서 성공, dense 대비 cosine ≥ 0.9999
+- CUDA graph capture + replay 10회 — numerical diff 0.0
+- `@torch.inference_mode()` 하에서 정상 동작 — diff 0.0
+- `@torch.compile` 모듈 공존 — 정상
+- graph capture under `inference_mode` (SSD 실제 패턴) — diff 0.0
 
-현재 plan이 과거 버전에서 "QuantizedLocalLinear abstract"를 도입하려던 방향은 과설계로 보인다. tensor subclass 방식이 feasible하다면 abstract layer 없이도 충분하지만, 위 (A)~(D) 어느 저장 계약을 쓸지는 Phase 0 이전에 확정하지 않는다.
+Forward 코드 변경은 불필요. `ParallelLMHead`의 gather 경로 등도 `F.linear(x, self.weight)` 호출 자체는 그대로이므로 수정 없이 동작할 것으로 기대 (Phase 2 회귀 테스트로 확인).
+
+과거 초안의 (B) register_buffer, (C) 별도 attribute, (D) wrapper parameter 경로는 (A)로 해결되었으므로 사용하지 않는다.
 
 ### 4.4 처음부터 직접 커널을 작성하지 않는다
 
