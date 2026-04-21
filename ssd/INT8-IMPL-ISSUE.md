@@ -63,13 +63,13 @@
 ### [done] 통합 구현 완료
 
 - `ssd/config.py`: `target_quant_enabled`, `target_quant_lm_head`, `target_quant_backend`, `target_quant_mode` 플래그 추가 (모두 기본 off)
-- `ssd/utils/quantize.py`: `apply_int8_weight_only_to_target()` hook — Phase 0 계약 (A) 그대로 구현
+- `ssd/utils/quantize.py`: `apply_quantization_to_target()` hook (이전 이름 `apply_int8_weight_only_to_target`) — Phase 0 계약 (A) 그대로 구현
   - dummy `nn.Linear` 생성 → `quantize_(Int8WeightOnlyConfig())` → `mod.weight = dummy.weight`
   - `tie_word_embeddings` 방어 (untie)
   - `target_quant_lm_head` flag
   - `SSD_INT8_SKIP` 환경변수로 module name substring 기반 exclude 가능
 - `ssd/engine/model_runner.py`: `load_model(...)` 직후, `warmup_model()` 직전에 hook 삽입 (§3.5). `is_draft` 검사로 draft 완전 제외
-- `bench/bench.py`: `--quant_int8`, `--no_quant_lm_head` 플래그 추가
+- `bench/bench.py`: `--quant_int4` / `--quant_int8` 플래그. 이후 `--quant_force_bf16_runtime` 추가. `--no_quant_lm_head`는 **deprecated (no-op)** — config default가 `target_quant_lm_head=False`로 바뀌면서 더 이상 의미 없음. 반대로 `--quant_lm_head`로 opt-in
 
 ### [done] Dense flag-off 회귀 테스트 통과
 
@@ -86,41 +86,136 @@
 | Greedy spec (temp=0) + int8, 7B | TP=12.18 | 동작하지만 accept rate 낮아질 수 있음 |
 | Greedy spec (temp=0) + int8, 34B TP=4 | TP=8.53 | **accept=0.03** (dense 대비 급락) |
 
-### [blocker] Sampling spec (temp>0) — inf/nan overflow
+### [correction 2026-04-21] 34B 기존 성능 비교 정정
 
-- 모델: layerskip-llama2-7B **및 codellama-34B** 모두 재현
-- 증상: 처음 2 sequence는 정상 생성, 3번째 prefill에서 layer 1 hidden output에 8 inf 발생 → layer 2 input_norm에서 NaN으로 전파 → softmax → multinomial `probability tensor contains inf/nan` assert
-- 범위: `--eager` 모드에서도 동일 (CUDA graph 이슈 아님), `torch.compile` off도 동일 (compile 이슈 아님)
-- 원인 진단: Llama-family 모델의 **outlier activation channel** 문제. 특정 채널에서 활성화가 매우 크게 나와서 `x @ dequant_w` 결과가 bf16 overflow → inf
-  - `SSD_INT8_SKIP=down_proj` → inf 수 8→2로 감소 (down_proj가 주요 기여)
-  - `SSD_INT8_SKIP=down_proj,o_proj` → 여전히 1 inf 잔존 (qkv/gate_up도 기여)
-  - 즉 특정 layer만 제외로는 해결 불가. 전체 Llama 활성화가 int8 weight-only 단독으로는 취약
-- 실제 prompt 데이터에서만 발생 (warmup의 random 데이터로는 재현 안 됨) — 진짜 outlier 채널을 실제 프롬프트가 자극하는 것
+이전 최종 보고에서 "CodeLlama-34B dense는 안 돌았고 INT4가 첫 성공"으로 잘못 적음. 실제로는:
 
-### [blocker] Greedy spec에서 accept rate 급락 (34B)
+- **34B TP=4 + draft (5 GPU)**은 원래 pre-quant 상태에서도 정상 동작함 (`tmp/final_exp2/baseline_k7_geo` 기록)
+- 9 GPU 부족 시나리오는 **70B MESA+async**이지 34B가 아님
 
-- 34B + greedy + int8: accept rate 0.03 (dense baseline ~0.38)
-- int8 양자화로 logits이 충분히 교란되어 argmax가 draft와 자주 달라짐
-- 즉 크래시는 안 나지만 spec speedup 거의 증발
+pre-quant 34B 실제 baseline (`tmp/final_exp2/baseline_k7_geo`, 50 seqs × 256 tok = 51200 tok):
+- async spec dense: **TP=68.45, accept=0.44**
+- MESA dense: **TP=58.48, accept=0.52**
 
-### 결론 및 path forward (사용자 판단 필요)
+내 INT4 짧은 test (2 seqs × 48 tok = 384 tok): TP=23.52 — **warmup 비중 과장되어 낮게 측정됨**. 34B는 load/warmup에 10+s 걸리는데 384 tok은 6-7s면 끝남.
 
-**Phase 2 통합 자체는 성공**: 코드 변경, flag, hook 모두 정상 동작. Dense 경로 회귀 없음. AR 경로는 34B까지 확인.
+공정 비교 long run (50 seq × 256 out × 4 dataset = 51200 tok, 동일 조건):
 
-**하지만 spec/MESA 사용 시나리오는 plain `Int8WeightOnlyConfig`로 해결 안 됨**. 둘 다 동일한 근본 원인 = **Llama outlier activation**이 int8 weight-only에서 수치적으로 깨짐.
+| | TP (tok/s) | accept | cache_hit | wall time |
+|---|---|---|---|---|
+| pre-quant dense | 68.45 | 0.44 | - | 747.98 s |
+| **INT4 tile_packed** | **75.28** | **0.44** | 0.66 | 680.09 s |
 
-가능한 후속 방향 (사용자 결정 필요):
+**INT4가 dense 대비 +10% 빠르고 accept 완벽 동일 (0.44)**. 짧은 test의 23.52는 warmup 인공물.
 
-1. **SmoothQuant** — pre-quantization에서 activation outlier를 weight로 diag scale matrix로 옮김. torchao에 구현 있음 (`torchao.quantization.Int8SmoothQuantInt8WeightConfig` 등). 추가 보정 스텝 필요
-2. **Int8DynamicActivationInt8WeightConfig (A8W8)** — activation도 per-token으로 런타임 양자화. outlier tolerance 더 좋음. 계획 문서의 "weight-only" 원칙에서 벗어남
-3. **FP8 weight-only** — H100 이상 전용. 우리 3090 환경에선 쓸 수 없음
-4. **GPTQ/AWQ with outlier-aware calibration** — 계획 §3.3 "외부 quantized model importer 범용화 제외" 원칙에 걸림
-5. **AR 전용 운영** — spec 포기. 70B는 AR로만 돌림. 이번 계획 동기(MESA+spec)와 상충
-6. **Phase 3+ 진행 보류** — Phase 2에서 발견된 blocker 해결 없이는 뒤 Phase에서 동일 이슈 재현
+### [completed 2026-04-21] Phase 4: MESA target verify + lm_head ablation
 
-### 진단 sandbox 로그
+Phase 2.5 실측 데이터로 MESA 동작 + lm_head 영향 정량 확인 완료. 별도 Phase로 분리할 필요 없을 만큼 동일 setup에서 ablation 수행됨.
+
+**결론**:
+- MESA target verify가 INT4 target model 위에서 NaN/inf 없이 정상 동작
+- `target_quant_lm_head` flag는 MESA에서 accept rate에 민감
+- `lm_head=on` (quantize 포함): accept 0.41 → 0.33 (20% 손실)
+- `lm_head=off` (bf16 유지): accept 0.41 → 0.38 (7% 손실, 허용 범위)
+
+**MESA 실험 기본값 권장**: lm_head는 dense 유지. 현재 config default `target_quant_lm_head=False`가 이를 반영. (이전 `--no_quant_lm_head` 플래그는 deprecated no-op이며, 반대로 `--quant_lm_head`로 opt-in해야 양자화됨.) 메모리 이득은 lm_head 크기 만큼만 포기 (Llama-3-8B 기준 128256×4096×2=1GB 정도) — target weight 대부분(32 layer의 qkv/o/gate_up/down)은 여전히 int4 유지.
+
+### [resolved 2026-04-21] Phase 2.5: INT8 kernel 느림 → INT4 tile_packed로 전환
+
+torchao `Int8WeightOnlyConfig`는 SM 86에서 fused kernel이 없어 decode/verify에서 3x 느림 확인. `Int4WeightOnlyConfig(group_size=128)` (기본 `TensorCoreTiledLayout`, tinygemm 경로)가 **SM 86에서 실질 fast kernel**. 원래 `ssd` env (torch 2.8 + torchao 0.12) 그대로 사용 (업그레이드 불필요).
+
+**Microbench (Llama-3-8B shapes, SM 86)**:
+
+| shape | dense bf16 | int8 wo | **int4 tile_packed** |
+|---|---|---|---|
+| AR decode | 0.11ms | 0.36ms (3.3x↓) | **0.07ms (0.63x ↑)** |
+| verify gate_up | 0.11ms | 0.36ms (3.3x↓) | **0.07ms (0.62x ↑)** |
+| verify down_proj | 0.06ms | 0.19ms (3.2x↓) | 0.08ms (1.25x) |
+| prefill gate_up | 0.62ms | 0.88ms (1.4x↓) | 1.84ms (3.0x↓) |
+
+Prefill은 느리지만 one-shot/seq. Verify는 48×K+1 호출 → verify 가중치 큼.
+
+**End-to-end (async spec + sampling, TP=2+draft)**:
+
+| 모델 | backend | TP | accept |
+|---|---|---|---|
+| Llama-3-8B | dense | 15.84 | 0.32 |
+| Llama-3-8B | INT8 wo | 14.25 | 0.30 |
+| Llama-3-8B | **INT4 tile_packed** | **18.64** | **0.30** ✓ |
+| Llama-2-7B (fp16→bf16 upcast) | INT8 wo | 15.31 | 0.44 |
+| Llama-2-7B (upcast) | **INT4 tile_packed** | **41.85** | **0.35** ✓ |
+
+**MESA 추가 발견**: MESA에서 INT4 `target_quant_lm_head=True`이면 accept 0.41 → 0.33 급락. 기본값 False (lm_head dense 유지) 시 **0.38 회복** — lm_head는 dense가 안전 (MESA early-exit logit 정밀도 이슈). 이 관찰이 config default를 False로 바꾼 근거.
+
+| MESA config | TP | accept |
+|---|---|---|
+| dense | 24.12 | 0.41 |
+| INT8 wo | 12.15 | 0.40 |
+| INT4 (lm_head on) | 13.15 | 0.33 |
+| **INT4 (lm_head off)** | **13.47** | **0.38** |
+
+**구현 변경**:
+- `target_quant_backend: str = "int4_wo_tile"` (기본값) / `"int8_wo"` (비교용)
+- `--quant_int4` / `--quant_int8` CLI flag 분리
+- `_quantize_weight_to_int4_wo()`: `Int4WeightOnlyConfig(group_size=128)` 사용
+- MESA 사용 시 lm_head는 dense 유지 권장 (현재 config default `target_quant_lm_head=False`가 이미 이 동작. `--no_quant_lm_head` 플래그는 deprecated no-op)
+
+---
+
+### [root cause 재정정 2026-04-21] fp16 overflow 주장은 틀렸음 — torchao WO backend의 fp16 activation 미지원이 실체
+
+이전 결론(`"fp16 overflow → bf16 upcast"`)은 **증거에 맞지 않는 오진단**이었다. 재측정 결과:
+
+**반증 증거**:
+- Llama-2-7B + **dense fp16** async spec: layer 1 hidden `shape=(921, 4096) dtype=fp16 nan=0 inf=0 **finite_absmax=1597**` — fp16 max 65504의 1/40. overflow 아님. 정상 완주 (TP=56.40)
+- Llama-2-7B + **int4 WO + fp16 (no upcast)**: `ValueError: Expected Tensor argument zeros to have dtype torch.float16, but got torch.bfloat16` — torchao API level dtype assert
+- Llama-2-7B + **int8 WO + fp16 (no upcast)**: layer 1 hidden `nan=0 **inf=22** finite_absmax=440.75` — 22개 inf + 유한부는 오히려 dense보다 작음. 수치 불안정
+
+**실체 (정정)**:
+현재 선택한 torchao weight-only 경로 (`Int4WeightOnlyConfig`, `Int8WeightOnlyConfig`)는 공식 문서가 **bf16 activation workflow**로 명시하는 backend임 (https://docs.pytorch.org/ao/stable/workflows/inference.html). fp16 activation은:
+- Int4: scale/zero를 bf16으로 고정 생성 → fp16 activation과 matmul kernel 레벨 dtype assert fail
+- Int8: API는 통과하지만 수치적으로 불안정 (원인 세부는 fp16 accum 가설 등 있으나 **미확정**)
+
+→ torchao 전체가 fp16 미지원은 아니고, 다른 backend (예: `GemliteUIntXWeightOnlyConfig`는 fp16-only로 문서화됨, Marlin 등)는 fp16 native. 단 **우리가 선택한 backend는 fp16 runtime을 신뢰할 수 없음**.
+
+### 지원 매트릭스 (정정)
+
+| checkpoint dtype | 선택 backend | 현재 상태 |
+|---|---|---|
+| bf16 (Llama-3 family) | int4_wo_tile / int8_wo | **정상 지원** |
+| fp16 (Llama-2, CodeLlama) | int4_wo_tile / int8_wo | **미지원** — 기본 동작은 `ValueError`, 명시적 `target_quant_force_bf16_runtime=True` opt-in 시 bf16 runtime으로 우회 (이 경우 "fp16 runtime"이라는 계약은 깨진다) |
+| fp16 | GemliteUIntXWeightOnly / Marlin | **미통합** (별도 과제) |
+
+### 정책 변경 (2026-04-21)
+
+1. fp16 checkpoint + 현재 backend 조합은 **기본적으로 loud ValueError** (`model_runner.py`). 사용자가 명시적으로 `target_quant_force_bf16_runtime=True` 설정할 때만 bf16 runtime 우회 경로 허용
+2. bf16 runtime override는 "fp16 체크포인트를 bf16 런타임에서 돌린다"는 workaround임을 로그/문서에 명시 — "fp16 runtime 지원"과는 다르다
+3. Artifact schema v2: `effective_runtime_dtype` + `original_checkpoint_dtype` 저장/검증. fp16-checkpoint-but-bf16-runtime artifact와 bf16-native artifact를 구분
+
+### 이전 실측 수치 (backend = int4, runtime = bf16, 여전히 유효)
+
+| 모델 | 경로 | TP | accept |
+|---|---|---|---|
+| Llama-3-8B (bf16 native) | async spec int4 sampling | 18.64 | 0.30 |
+| Llama-3-8B (bf16 native) | MESA int4 (no lm_head) long | 58.96 | 0.52 |
+| Llama-2-7B (fp16 → bf16 override) | async spec int4 sampling | 41.85 | 0.35 |
+| CodeLlama-34B (fp16 → bf16 override) long | async spec int4 sampling | 75.28 | 0.44 |
+
+수치 자체는 여전히 valid. 다만 **"fp16 checkpoint가 fp16 runtime으로 도는 건 아님"**을 명확히 밝혀야 함. Llama-2/CodeLlama 수치는 모두 **bf16 runtime 우회** 조건이다.
+
+### [archived 2026-04-21] 초기 오진단 기록
+
+**오진단 경로 1**: "Llama outlier activation → bf16 overflow → AWQ 필요"
+- 틀림. 대부분 모델 dtype mismatch 방향을 잘못 파악
+
+**오진단 경로 2**: "fp16 모델이 원래 overflow 경계에 있음 → quant가 tip over"
+- 틀림. dense fp16 absmax=1597로 65504와 거리 멂. quant에서만 inf 나오는 이유는 torchao backend 자체의 fp16 activation 제약
+
+양쪽 다 **현재 torchao `Int4WeightOnlyConfig` / `Int8WeightOnlyConfig`의 bf16-activation 전제**라는 동일한 실체를 서로 다르게 오해한 결과.
+
+### 진단 sandbox 로그 (당시)
 
 - `tmp/int8_smoke/dbg_full/` — 층별 inf 탐지 결과
 - `tmp/int8_smoke/dbg_fine/` — layer 내부 sub-step NaN 전파 추적
 - `tmp/int8_smoke/34b_ar_int8/` — 34B AR 정상 동작 확인
-- `tmp/int8_smoke/34b_spec_int8*/` — 34B spec 실패 재현
+- `tmp/int8_smoke/34b_spec_int8*/` — 34B spec 실패 재현 (fp16 원본 + int8, upcast 전)

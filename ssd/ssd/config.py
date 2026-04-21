@@ -45,11 +45,33 @@ class Config:
     mesa_proxy_top_k: int = 3              # proxy correction token count
     mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
 
-    # INT8 weight-only quantization (target only)
+    # Weight-only quantization (target only)
     target_quant_enabled: bool = False
-    target_quant_backend: str = "torchao_int8_wo"
-    target_quant_lm_head: bool = True
-    target_quant_mode: str = "load_time"    # Phase 2: load-time only; Phase 5 adds "persistent"
+    # Backends — both torchao WO paths are documented as **bf16 activation**
+    # workflows (see torchao inference docs). Combining either with a fp16
+    # checkpoint is not supported by the selected backend:
+    #   - int4_wo_tile: API-level dtype assert fails ("Expected zeros fp16, got bf16")
+    #   - int8_wo     : no assert, but produces inf in MLP output (numerically unreliable)
+    # → fp16 checkpoint + these backends requires either a different backend
+    #   (e.g. GemliteUIntXWeightOnlyConfig is fp16-native) or opt-in bf16 upcast.
+    target_quant_backend: str = "int4_wo_tile"
+    # Default False: ParallelLMHead is a per-step hot path (gather + cat per call)
+    # and MESA also calls lm_head at exit layer for proxy logits. Quantizing it
+    # hurts throughput and accept rate (MESA accept -4~8%p observed). Turn on
+    # explicitly only when memory is critical or for benchmarking.
+    target_quant_lm_head: bool = False
+    target_quant_mode: str = "load_time"    # "load_time" | "persistent"
+    # Opt-in workaround for fp16 checkpoints: override runtime dtype to bf16
+    # so the torchao WO backend (which expects bf16 activation) can be used.
+    # Default False → fp16 checkpoint + quant raises ValueError, surfacing the
+    # unsupported combination rather than silently switching runtime dtype.
+    # Set True only if you accept that "fp16 checkpoint" becomes effectively a
+    # bf16 runtime (weights/activations/KV cache/graph buffers all bf16).
+    target_quant_force_bf16_runtime: bool = False
+    # Path prefix for persistent artifacts. Per-rank files at <prefix>.rank{r}.pt
+    # - mode=load_time: if set and artifact exists → load; else quantize+save (dump) then use
+    # - mode=persistent: must exist, load-only
+    target_quant_artifact_prefix: str | None = None
 
     # Debugging
     verbose: bool = False

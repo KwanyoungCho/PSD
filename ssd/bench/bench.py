@@ -84,11 +84,24 @@ def parse_arguments():
     parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
 
-    # INT8 weight-only quantization (target only)
+    # Weight-only quantization (target only)
+    parser.add_argument("--quant_int4", action="store_true",
+                        help="Enable target-only INT4 weight-only (default for --quant, tile_packed tinygemm fast path)")
     parser.add_argument("--quant_int8", action="store_true",
-                        help="Enable target-only INT8 weight-only quantization (torchao)")
+                        help="Enable target-only INT8 weight-only (slower on SM 86, higher accuracy)")
     parser.add_argument("--no_quant_lm_head", action="store_true",
-                        help="When --quant_int8, skip lm_head quantization (useful for MESA ablation)")
+                        help="[DEPRECATED, no-op] lm_head is dense by default now. Flag kept only to not break existing scripts.")
+    parser.add_argument("--quant_lm_head", action="store_true",
+                        help="Quantize lm_head (opt-in). Default keeps lm_head dense for throughput/accept.")
+    parser.add_argument("--quant_artifact", type=str, default=None,
+                        help="Path prefix for persistent quant artifacts. If file exists → load, else quantize+save")
+    parser.add_argument("--quant_artifact_load_only", action="store_true",
+                        help="With --quant_artifact, fail if artifact missing (mode=persistent)")
+    parser.add_argument("--quant_force_bf16_runtime", action="store_true",
+                        help="fp16 checkpoint + quant: explicitly opt-in to bf16 runtime override. "
+                             "Without this flag, fp16+quant raises ValueError (selected torchao "
+                             "WO backends assume bf16 activation). Setting this means the runtime "
+                             "is effectively bf16, not fp16 — acknowledged workaround.")
 
     # Sweep mode: load engine once, run multiple configs
     parser.add_argument("--sweep", type=str, default=None,
@@ -205,11 +218,26 @@ def create_llm_kwargs(args, draft_path):
         if args.mesa_draft_fan_out is not None:
             llm_kwargs["mesa_draft_fan_out"] = args.mesa_draft_fan_out
 
-    # INT8 weight-only (target)
-    if getattr(args, 'quant_int8', False):
+    # Weight-only quantization (target)
+    if getattr(args, 'quant_int4', False) or getattr(args, 'quant_int8', False):
         llm_kwargs["target_quant_enabled"] = True
+        if getattr(args, 'quant_int8', False) and not getattr(args, 'quant_int4', False):
+            llm_kwargs["target_quant_backend"] = "int8_wo"
+        else:
+            llm_kwargs["target_quant_backend"] = "int4_wo_tile"
+        # lm_head default: dense (config default is False). Opt-in via --quant_lm_head.
         if getattr(args, 'no_quant_lm_head', False):
-            llm_kwargs["target_quant_lm_head"] = False
+            print("[bench] WARNING: --no_quant_lm_head is deprecated/no-op. "
+                  "lm_head is dense by default. Remove this flag; use --quant_lm_head to opt-in.",
+                  flush=True)
+        if getattr(args, 'quant_lm_head', False):
+            llm_kwargs["target_quant_lm_head"] = True
+        if getattr(args, 'quant_artifact', None):
+            llm_kwargs["target_quant_artifact_prefix"] = args.quant_artifact
+            if getattr(args, 'quant_artifact_load_only', False):
+                llm_kwargs["target_quant_mode"] = "persistent"
+        if getattr(args, 'quant_force_bf16_runtime', False):
+            llm_kwargs["target_quant_force_bf16_runtime"] = True
 
     if args.flh is not None:
         llm_kwargs["fan_out_list"] = args.flh

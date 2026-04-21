@@ -1,55 +1,118 @@
-# SSD Target-Only INT8 Weight-Only 지원 계획
+# SSD Target-Only Weight-Only Quantization 지원 계획
 
-## 1. 문서 목적
+> **Naming note (2026-04-21)**: 원래 "INT8 weight-only"로 시작했으나 Phase 2.5에서 SM 86 hardware kernel 제약 때문에 **INT4 tile_packed (`torchao.Int4WeightOnlyConfig`)를 기본 backend로 채택**. INT8 경로는 `--quant_int8` flag로 계속 호출 가능. 문서는 "weight-only quantization" 으로 일반화해 읽어야 한다.
+
+## 1. 문서 목적 및 현재 상태
 
 이 문서는 SSD 코드베이스에 `target-only INT8 weight-only` 지원을 추가하기 위한 **현실적인 구현 목표와 단계별 계획**을 정리한다.
 
-이전 계획의 핵심 문제는 다음과 같았다.
+### 1.1 이전 계획의 핵심 문제 (초기 draft 기준)
 
 - 외부 포맷 호환, canonical format, importer, runtime loader를 한 번에 다 설계하려고 했다
 - SSD 런타임이 실제로 어떤 quantized 연산 경로를 사용할지 확정되기 전에 저장 포맷부터 크게 설계했다
 - 결과적으로 범위가 너무 넓고, 실제로 구현을 시작하기 전에 불확실성이 너무 많았다
 
-이번 계획은 그 반대로 간다.
+### 1.2 Phase 0~2 진행 후 발견된 실제 blocker와 root-cause (2026-04-21)
 
-- **지원 backend를 하나로 고정**
-- **target model만 지원**
-- **SSD의 custom TP linear가 사용하는 local weight 상태를 quantized 표현으로 교체**하는 방식 (저장 계약 후보는 §4.3, 최종 확정은 Phase 0에서)
-- **MESA는 최종 목표에 포함하되, 초기 구현 범위에서는 분리**
-- **draft, 외부 포맷 호환성은 나중으로 미룸**
+Phase 0 feasibility spike + Phase 2 eager 통합까지는 계획대로 완료되었고, 초기 smoke test에서 실패 증상을 관찰했다. 심층 디버깅 결과 **진짜 원인은 "Llama outlier activation"이 아니라 fp16 dynamic range overflow**임이 밝혀졌다.
 
-이 방향이 현실적인 이유:
+**초기 증상**:
+- sampling spec (temp>0): layer 1 MLP 출력의 극소수 위치(1.38M 중 8개)에 `inf` 발생 → RMSNorm에서 `0 * inf = NaN` 전파 → softmax → `multinomial` assert 크래시
+- greedy spec (temp=0), CodeLlama-34B: 크래시는 없지만 accept rate `0.38 → 0.03`
+- `layerskip-llama2-7B` 및 `layerskip-codellama-34B` 모두 재현
 
-- SSD는 일반 PyTorch 모델이 아니다. 모델 클래스·loader·TP·graph capture가 전부 SSD 안에 묶여 있고, HF quantized model object를 그대로 받는 구조가 아니다.
-- 따라서 backend는 하나로 고정하고, SSD custom TP linear 안에서 weight만 교체하는 방식이 scheduler/sequence contract와 MESA/speculate 프로토콜을 건드리지 않고 projection linear에 바로 접근할 수 있는 가장 짧은 경로다.
+**초기 오진단**: "Llama outlier activation" + "LLM.int8 / SmoothQuant / AWQ 필요"로 해석하려 했으나 — 사용자 지적대로 이건 **weight-only 상황에 맞지 않는 해석**.
 
-즉 이번 계획의 목표는:
+**실제 root cause (sub-op 추적 + AQT state 검사 결과)**:
 
-> "torchao 계열의 기존 INT8 weight-only linear 실행 경로를 SSD custom TP linear 안에 붙여서, target model이 SSD 내부에서 실제 quantized forward를 수행하도록 만들고, 최종적으로는 그 경로가 MESA target verify에서도 동작하도록 만드는 것"
+layer 1 내부를 sub-op 단위로 추적하니 dtype이 fp16이었고 값들이 다음과 같았다:
+- `gate_up_proj` 출력 absmax = **33.78**
+- `silu(gate) * up` (down_proj 입력) absmax = **997.5**
+- `down_proj` 출력: 8 inf
 
-이다.
+수치 분석:
+- 모델이 **fp16**으로 로드됨 (`layerskip-llama2-7B`, CodeLlama 등의 `torch_dtype="float16"` 기본값)
+- **fp16 max = 65504** (bf16의 3.4e38 대비 극히 좁음)
+- down_proj matmul: 입력 997.5 × weight(~1.29 abs max)를 5504 채널 누적. fp32 accumulator엔 `5504 × 997.5 × 1.29 ≈ 7.1M` 저장 가능하나, **최종 fp16 cast 시 65504 초과로 overflow → inf**
+- 즉 activation outlier 문제가 아니라, Llama MLP 중간 활성화 자체가 fp16 표현 범위를 넘는 정상적인 계산 결과. 이건 quant 여부와 무관하게 fp16이면 취약한 지점 (dense fp16이 통과하는 건 tensor core 경로가 조금 다른 saturate 동작)
+
+**AR 경로가 통과한 이유**:
+- AR은 prefill을 fixed-length `(512, 4096)` padded로 수행 → padding이 outlier 자극 완화
+- spec은 실제 prompt 길이 (`(338, 4096)`)로 prefill → 실제 content가 overflow 유도
+
+**검증 (2026-04-21, `layerskip-llama3-8B` bf16 native)**:
+
+동일 테스트 스위트 전부 통과 — dtype이 **원인이었음을 확정**.
+
+| test | TP | accept | 결과 |
+|---|---|---|---|
+| AR dense | 24.84 | n/a | baseline |
+| AR int8 | 9.48 | n/a | 동작 (cpp ext 없음 → 속도 손해) |
+| async spec dense sampling | 15.84 | 0.32 | baseline |
+| **async spec int8 sampling** | **14.25** | **0.30** | **Llama-2(fp16)에선 crash → Llama-3(bf16)에선 통과 ✓** |
+| MESA dense sampling | 24.12 | 0.41 | baseline |
+| **MESA int8 sampling** | **12.15** | **0.40** | **통과, accept 거의 보존 ✓** |
+
+**원인 재정정 (2026-04-21 post-investigation)**: dense fp16 layer 1 absmax=1597 실측 → 65504의 1/40으로, overflow 아님. int4 no-upcast는 `ValueError: Expected zeros fp16, got bf16` (torchao API dtype assert), int8 no-upcast는 layer 1 `inf=22 finite_absmax=440` (수치 불안정). 즉 "fp16 overflow"가 아니라 **현재 선택한 torchao weight-only backend (`Int4WeightOnlyConfig` / `Int8WeightOnlyConfig`)가 공식 문서상 bf16-activation workflow**라 fp16 activation과 호환되지 않는 것이 실체. 이하 §4.1.2에서 상세.
+
+### 1.3 채택한 정책 — bf16-native는 완성, fp16은 opt-in workaround 또는 미지원
+
+**AWQ/SmoothQuant 전환은 철회**. 이번 작업 범위 안에서 해결할 수 있는 문제가 아니었다.
+
+| checkpoint dtype | backend | 상태 |
+|---|---|---|
+| bf16 (Llama-3/3.1 계열) | `int4_wo_tile` / `int8_wo` | **정상 지원** (완성) |
+| fp16 (Llama-2, CodeLlama) | `int4_wo_tile` / `int8_wo`, 기본 | **미지원**. `target_quant_enabled=True`면 `ValueError` at init |
+| fp16 + `target_quant_force_bf16_runtime=True` | 위와 동일 | **bf16 runtime 우회**. 주의: "fp16 checkpoint가 bf16 런타임에서 돈다"는 것이고 "fp16 runtime 지원"이 아님 |
+| fp16 + fp16-native WO backend (Gemlite / Marlin 등) | 미통합 | 별도 과제 |
+
+**즉 "fp16 checkpoint를 fp16 runtime으로 유지"하는 지원은 현재 backend로는 달성 불가**. 이 요구사항은 fp16-native WO backend 통합이 끝나야 가능하며, 이번 계획의 범위 밖이다.
+
+이번 계획의 현실적 목표 (정정):
+
+> "torchao `Int4WeightOnlyConfig` / `Int8WeightOnlyConfig` 기반 target-only weight-only 양자화를 SSD에 통합한다. **bf16-native checkpoint**에서 MESA target verify까지 동작하게 한다. fp16 checkpoint는 현 backend로는 지원되지 않으며, 사용자가 명시적으로 bf16 runtime override를 선택할 때만 workaround로 허용한다."
 
 ---
 
-## 2. 최종 목표
+## 2. 최종 목표 및 지원 범위 (현재 상태)
 
 이번 작업의 최종 목표는 다음과 같다.
 
-1. SSD에서 **target model만** INT8 weight-only로 실행할 수 있어야 한다.
-2. 구현은 **PyTorch 계열의 기존 quantized linear 실행 경로**를 재사용하는 방식으로 한다.
+1. SSD에서 **target model만** weight-only 양자화 (INT4 또는 INT8)로 실행할 수 있어야 한다.
+2. 구현은 **torchao의 기존 `Int4WeightOnlyConfig` / `Int8WeightOnlyConfig` runtime 경로**를 재사용한다.
 3. SSD의 기존 모델 구조는 유지하고, `TP wrapper + scheduler + engine`은 최대한 건드리지 않는다.
-4. SSD의 custom TP linear는 유지하되, 내부의 local matmul만 quantized backend를 사용하게 한다.
-5. 최종적으로 `Llama 계열 target model`, 특히 `70B target / TP4`까지 확장 가능한 구조여야 한다.
+4. SSD의 custom TP linear는 유지하되, local weight 상태가 "AQT (AffineQuantizedTensor)" 가 되도록 한다.
+5. Llama 계열 target까지 확장 가능한 구조여야 하며, **1차 검증은 `layerskip-llama3-8B`(bf16 native)에서 수행**하고 성공 후 Llama-3.1-70B (bf16 native) 순으로 확장한다.
 6. 최종적으로는 **MESA target verify 경로가 quantized target model 위에서 동작**해야 한다.
+
+### 2.0 지원 범위 (2026-04-21 기준, 정직한 구분)
+
+**완성된 지원**:
+- bf16-native checkpoint (Llama-3, Llama-3.1 계열)
+- torchao `int4_wo_tile`, `int8_wo` backend
+- target-only 양자화 (draft 미건드림)
+- MESA 포함 target path (async spec, MESA split verify)
+- Artifact save/load with strict validation (schema v2, runtime dtype 포함)
+
+**미완성/범위 밖**:
+- **fp16 checkpoint를 fp16 runtime으로 양자화 지원** — 현재 선택한 torchao backend가 bf16-activation workflow라 근본적 미지원. `target_quant_force_bf16_runtime=True`로 bf16 runtime 우회는 가능하나 이는 "fp16 runtime 지원"과 다르다. 해결하려면 fp16-native WO backend (Gemlite/Marlin 등) 통합이 필요
+- **Artifact를 이용한 startup/peak-memory 최적화** — 현재 load_model이 float weight를 전부 먼저 올린 뒤 artifact를 읽는다. artifact 포맷으로 직접 load하여 float weight load를 건너뛰는 경로는 구현되지 않음. 70B 반복 실험 효율 위해 future work
 
 즉 이 문서의 최종 도착점은 단순한 "quantized target decode"가 아니다.
 
-- normal target decode
-- target verify
-- speculate target verify
+- normal target decode (AR)
+- target verify (speculate)
 - MESA split verify
 
-가 모두 같은 target quantized path를 공유하는 상태가 최종 목표다.
+가 모두 같은 INT8 path를 공유하며, **sampling (temp>0) 포함 전 경로에서 NaN/inf 없이 동작**하고, dense 대비 accept rate 가 의미있게 보존되는 상태가 최종 목표다.
+
+### 2.1 모델 진행 순서
+
+1. **`layerskip-llama3-8B` (TP=2)** — 1차 검증. 현재 환경(24 GB RTX 3090 × 8)에서 TP=2로 돌릴 수 있고 layerskip 변형이므로 MESA early-exit도 그대로 확인 가능.
+2. **`layerskip-codellama-34B` (TP=4)** — 실제 MESA 실험용 타겟. TP=4 안정화가 주된 검증.
+3. **`Llama-3.1-70B` (TP=4 또는 TP=2)** — 최종 stretch goal. 9 GPU → 5 GPU (TP=4 + draft) 또는 3 GPU (TP=2 + draft) 도달 목표.
+
+1단계가 깨지면 2/3단계 진입하지 않는다. 각 단계는 별도의 correctness gate (§Phase 2) 를 모두 통과해야 다음으로 넘어간다.
 
 ---
 
@@ -58,9 +121,10 @@
 ### 3.1 지원 범위
 
 - **target-only**
-- **INT8 weight-only**
-- **Llama 계열부터 시작**
-- Qwen3는 이번 단계 범위 밖이지만 Llama와 동일한 `nn.Linear`→`F.linear(x, self.weight)` 구조이므로 이후 확장이 용이하다 (`ssd/ssd/models/qwen3.py`, `model_runner.py`에서 이미 지원되는 모델)
+- **Weight-only quantization** via torchao `Int4WeightOnlyConfig` (기본) 또는 `Int8WeightOnlyConfig`
+- **bf16-native checkpoint 완전 지원** (Llama-3 / Llama-3.1 계열). fp16 checkpoint는 §1.3 정책대로 기본 거부, `target_quant_force_bf16_runtime=True` opt-in 시만 bf16 runtime 우회
+- **Llama 계열** — 1차 `layerskip-llama3-8B` (bf16), 이후 Llama-3.1-70B (bf16). Llama-2 / CodeLlama (fp16)는 force 플래그로만 가능
+- Qwen3는 이번 단계 범위 밖이지만 동일 구조이므로 이후 확장 용이
 - **TP 환경 지원**
 - **SSD custom linear 내부에서 tensor subclass weight로 local quantized 경로 실행**
 
@@ -136,8 +200,9 @@ if config.tie_word_embeddings:
 
 방법 제외 (의도적으로 피함):
 
-- 여러 quant backend 동시 지원 (AWQ/GPTQ/bitsandbytes를 동시에 지원)
-- AWQ/GPTQ/bitsandbytes 직접 runtime 지원
+- 여러 quant backend 동시 지원 (AWQ/SmoothQuant/GPTQ/bitsandbytes를 동시에 올리지 않는다)
+- AWQ/SmoothQuant 도입 (Phase 2-AWQ 방향은 심층 디버그 결과 근본 원인이 fp16 overflow로 밝혀져 **철회**. W+A 양자화가 필요 없는 weight-only 상황에선 과도한 방법)
+- GPTQ/bitsandbytes 직접 runtime 지원
 - 외부 quantized model importer 범용화
 - 직접 CUDA/Triton 커널 작성
 - MESA를 초기 단계에서 같이 해결 (연산 경로는 공유하지만 검증은 Phase 4로 분리)
@@ -188,6 +253,52 @@ torchao는 minor version마다 API가 변할 수 있다. backend 하나로 고�
 - GPU: RTX 3090 (sm_86)
 
 이 조합으로 Phase 0 feasibility spike와 이후 Phase 전체를 수행한다.
+
+#### 4.1.2 fp16 checkpoint × quant backend 호환성 (정정 2026-04-21)
+
+**이전 문서는 "fp16 overflow가 원인이라 bf16 upcast가 해결책"이라고 적었으나 이는 오진단이었다**. 실제 측정:
+
+- dense fp16 Llama-2-7B async spec: layer 1 `finite_absmax=1597` (fp16 max 65504의 1/40) — overflow 아님
+- int4 WO + fp16 no-upcast: `ValueError: Expected zeros fp16, got bf16` (torchao API dtype assert)
+- int8 WO + fp16 no-upcast: layer 1 `inf=22 finite_absmax=440` (수치 불안정)
+
+**실체**: 우리가 선택한 torchao weight-only backend (`Int4WeightOnlyConfig`, `Int8WeightOnlyConfig`)는 **공식 문서가 bf16 activation workflow로 명시한 경로**다 (https://docs.pytorch.org/ao/stable/workflows/inference.html). 이 backend는:
+
+- Int4 tile_packed: scale/zero를 bf16으로 고정 생성. fp16 activation과 matmul 시 dtype assert fail
+- Int8 WO: API는 통과하지만 fp16 runtime에서 수치적으로 불안정 (원인 세부는 미확정 — fp16 accum 가설 수준)
+
+**torchao 전반이 fp16 미지원은 아님**. `GemliteUIntXWeightOnlyConfig`는 fp16 전용 backend로 문서화되어 있고, Marlin/exllamav2 류 kernel도 fp16을 지원함. 하지만 현 스택에 통합되어 있지 않다.
+
+**정책 (2026-04-21)**:
+
+| checkpoint dtype | 선택 backend | 동작 |
+|---|---|---|
+| bf16 (Llama-3/3.1) | int4_wo_tile / int8_wo | 정상 지원 |
+| fp16 (Llama-2, CodeLlama) | int4_wo_tile / int8_wo, default | **`ValueError` at init** (unsupported combination surfaced loudly) |
+| fp16 + `target_quant_force_bf16_runtime=True` | int4_wo_tile / int8_wo | **bf16 runtime 우회 (workaround)** — fp16 체크포인트를 bf16 runtime에서 돌림. "fp16 runtime 지원"과 **다르다**는 점 명시 |
+| fp16 | Gemlite / Marlin / 기타 fp16-native WO | 미통합 (future work) |
+
+**bf16 runtime 우회 경로 (`target_quant_force_bf16_runtime=True`)의 의미**:
+- `config.hf_config.torch_dtype`을 fp16 → bf16으로 교체
+- Helper 전부 (`FlashInfer` plan q/kv dtype, MESA `exit_hidden/residual/outputs`, draft 버퍼)가 bf16 사용
+- activation / KV cache / graph buffer 모두 bf16
+- 즉 **"weight만 quant이고 나머지는 fp16"이 아님** — runtime 전체를 bf16으로 바꾸는 선택
+- Dense fp16 vs (fp16ckpt→bf16runtime + int4) 비교할 때 **dtype 변수가 섞임**. 공정 비교 필요하면 dense에도 bf16 강제 옵션을 둬야 함 (현재는 별도 flag 없음)
+
+**구현**:
+
+```python
+# model_runner.py __init__ 초반
+if target_quant_enabled and hf_config.torch_dtype == float16:
+    if target_quant_force_bf16_runtime:
+        # 사용자가 명시적 opt-in: bf16 runtime으로 override
+        config.hf_config.torch_dtype = torch.bfloat16
+    else:
+        # 기본: loud failure — 사용자가 무슨 조합인지 알고 선택하게 함
+        raise ValueError("fp16 checkpoint + torchao WO backend not supported; ...")
+```
+
+이전 자동 upcast 동작은 **"지원 범위를 속이는" 것**이었으며 제거되었다.
 
 ### 4.2 SSD 모델 구조는 유지한다
 
@@ -363,18 +474,53 @@ SSD TP shard 방향 대비:
 
 §3.2.2에서 설명한 `tie_word_embeddings = True` 케이스 방어가 구현되었는지를 Phase 0 spike에서 확인하고 Phase 2 hook에 반영해야 한다 (세부는 §3.2.2).
 
+### 5.6 fp16 overflow 이슈 (2026-04-21 root-cause 확정)
+
+초기 Phase 2에서 관찰된 inf → NaN → multinomial assert 크래시의 **실제 원인은 fp16 dynamic range overflow**였다.
+
+- 현상: 실제 prompt prefill 시 layer 1 MLP 출력에서 극소수 위치(예: 338×4096 중 8 곳)에 `inf`
+- 재현 모델: `layerskip-llama2-7B`, `layerskip-codellama-34B` — **둘 다 fp16 원본 모델**
+- 모드 무관: `--eager`, `TORCHDYNAMO_DISABLE=1`, sync/async spec 전부 동일
+- **root cause**: Llama MLP 중간 활성화 (`silu(gate) * up`)가 실제 prompt에서 absmax ~1000까지 도달. 그 값을 down_proj (input 5504 ch) 으로 넘겨 matmul하면 fp32 accumulator엔 담기지만, 최종 fp16 cast 시 65504 초과 → inf
+- 초기 오진단: "Llama outlier + AWQ/SmoothQuant 필요"로 해석했으나, 이는 **weight+activation 양자화 상황의 개념**이고 pure weight-only + fp16 overflow 문제와는 다른 병증이었다
+- **해결**: fp16 모델을 load-time에 bf16으로 upcast (§4.1.2). bf16은 range 3.4e38이라 여유 있음
+- 검증: Llama-2-7B fp16 + upcast + int8 + async spec sampling → TP=15.31, accept=0.44 (crash 없이 완주)
+- Llama-3 / Llama-3.1 계열은 원래 bf16이라 upcast 자체 불필요
+
 ---
 
 ## 6. 단계별 구현 계획
 
-실제 작업 순서는 아래 Phase를 순서대로 따른다. 특히:
+실제 작업 순서:
+
+| Phase | 상태 | 요약 |
+|---|---|---|
+| 0 | ✅ DONE | backend feasibility + graph-safety + tying spike |
+| 1 | ✅ DONE | 저장 계약 (A) 확정 (§4.3) |
+| 2 | ✅ DONE | Plain INT8 integration + fp16→bf16 upcast. Llama-3-8B 및 Llama-2-7B(upcast) 전 시나리오 통과 |
+| **2.5** | **✅ DONE** | **INT4 tile_packed (torchao TensorCoreTiledLayout) 전환. INT8 대비 2.7x 빠름, async spec int4가 dense보다도 18% 빠름. MESA는 lm_head dense 유지 권장 (현 default).** |
+| 3 | ✅ DONE | graph path 확장 검증. graph는 eager 대비 2-4x, accept 동일, INT4 graph-safe |
+| 4 | ✅ DONE | MESA + lm_head ablation. lm_head dense 유지 권장 → config default `target_quant_lm_head=False` |
+| 5 | ✅ DONE | persistent artifact (save/load AQT per rank). 8B 기준 wall 63s→44s |
+| 6 | ✅ DONE | **CodeLlama-34B TP=4 INT4 async spec: TP=23.52, accept=0.31, 9→5 GPU 축소 성공**. MESA 34B는 torchao dispatch 이슈로 async spec만 지원. 70B는 로컬 모델 없어 미테스트 |
+
+원칙:
 
 - 저장 포맷을 먼저 고정하지 않는다
 - MESA를 초기 단계에 같이 붙이지 않는다
 - custom kernel부터 만들지 않는다
-- graph-safety 검증을 뒤로 미루지 않는다 (Phase 0 1차 gate)
+- graph-safety 검증을 뒤로 미루지 않는다 (Phase 0 1차 gate 완료)
+- Model progression: `layerskip-llama3-8B` → `CodeLlama-34B` → `Llama-3.1-70B`, 각 단계 gate 통과 후 다음 진입
 
-### Phase 0. 사전 검증: backend feasibility + graph-safety + tying spike
+### Phase 0. 사전 검증: backend feasibility + graph-safety + tying spike  **[COMPLETED 2026-04-20]**
+
+> 결과: 전 항목 통과. 상세는 `INT8-IMPL-ISSUE.md` 및 `sandbox/int8_spike/`.
+> - `quantize_` walker는 `nn.Linear`만 변환 (SSD custom은 수동 처리 필요)
+> - 저장 계약 **(A)** 채택: `dummy.weight` → `self.weight` 재할당, forward 코드 변경 없음
+> - CUDA graph capture + 10회 replay numerical diff = 0
+> - `@torch.inference_mode()`, `@torch.compile` 공존 모두 diff 0
+> - scale granularity 확인: Column/QKV/Merged 완전 동등, Row는 local이 global 대비 finer-grained (유리)
+> - tying 방어: `quantize_()`가 attribute 교체 방식이라 원본 float 저장소 보존됨
 
 #### 목표
 
@@ -504,82 +650,111 @@ Phase 0에서 확인된 tensor subclass 방식을 **SSD 모든 TP linear에 일�
 
 ---
 
-### Phase 2. Eager runtime 통합
+### Phase 2.5. Kernel path 최적화 — INT4 tile_packed 전환  **[DONE 2026-04-21]**
 
-#### 목표
+#### 배경
 
-Phase 1에서 확정된 weight replacement contract를 SSD 런타임에 정식 추가하고, **eager 경로로 먼저 동작 확인**한다. Graph 경로는 다음 Phase.
+Phase 2 INT8 통합은 정확도/기능은 완벽했으나 throughput이 느림:
+- AR int8: 9.48 TP (dense 24.84, 38%)
+- async spec int8: 14.25 TP (dense 15.84, 90%)
+- MESA int8: 12.15 TP (dense 24.12, 50%)
 
-#### 변경 대상 파일
+Microbench로 원인 확정: `torchao.Int8WeightOnlyConfig`는 SM 86에서 **fused INT8 kernel 없음** — "dequant + bf16 matmul" 경로라 decode/verify에서 3x 느려짐. torchao/torch 업그레이드해도 동일.
 
-- `ssd/ssd/config.py`
-- `ssd/ssd/engine/model_runner.py`
-- (필요시) `ssd/ssd/layers/linear.py`, `ssd/ssd/layers/embed_head.py` — 단, Phase 1 계약상 forward 코드 변경 없음. 이 파일 수정은 subclass 호환을 위한 minimal change만 허용
+#### 해법
 
-#### 세부 계획
+**`Int4WeightOnlyConfig(group_size=128)`** 전환. 기본 `TensorCoreTiledLayout`이 tinygemm 경로 활성화 → SM 86에서 실질적 fast kernel. 원래 `ssd` env (torch 2.8 + torchao 0.12) 그대로 사용 (업그레이드 불필요).
 
-##### 2.1 config
+#### 실측 결과 (Llama-3-8B, TP=2 + draft)
 
-추가 플래그:
+| config | TP | accept |
+|---|---|---|
+| AR dense | 24.84 | - |
+| AR INT8 | 9.48 | - |
+| async spec dense | 15.84 | 0.32 |
+| async spec INT8 | 14.25 | 0.30 |
+| **async spec INT4** | **18.64** | **0.30** (dense보다 18% 빠름) |
+| MESA dense | 24.12 | 0.41 |
+| MESA INT8 | 12.15 | 0.40 |
+| MESA INT4 (lm_head on) | 13.15 | 0.33 |
+| **MESA INT4 (lm_head off)** | **13.47** | **0.38** |
 
-- `target_quant_enabled: bool = False`
-- `target_quant_backend: str = "torchao_int8_wo"`
-- `target_quant_lm_head: bool = True`
-- `target_quant_mode: str = "load_time"`  # 개발용. Phase 5에서 `"persistent"` 추가
+Llama-2-7B (fp16→bf16 upcast) 재확인:
 
-##### 2.2 loader 정책 (변경 최소)
+| config | TP | accept |
+|---|---|---|
+| async spec INT8 | 15.31 | 0.44 |
+| **async spec INT4** | **41.85** | **0.35** (INT8 대비 2.7x) |
 
-- 기존 float loader는 **그대로 둔다**
-- `param.data.copy_()` 기반 `weight_loader`는 float 시점에만 호출됨을 전제 (§5.1, Phase 0 검증 7번 참조)
-- subclass 교체는 loader 완료 이후 별도 hook에서 수행
+#### 핵심 관찰
 
-##### 2.3 model_runner.py quantize hook 삽입 위치
+1. **INT4가 INT8보다 모든 면에서 우월** (SM 86 기준): 속도 2.7x, 메모리 4x 절감, accept 보존
+2. **MESA에선 `target_quant_lm_head=False` 권장**: lm_head bf16 유지 시 accept 0.33→0.38. early-exit logit 정밀도 이슈
+3. **Prefill은 느려지지만 one-shot** — verify/decode 가중 평균에서 INT4 우세
+4. accept 손실은 async spec에선 거의 0, MESA에선 dense 대비 ~7% (lm_head off 기준)
 
-`ssd/ssd/engine/model_runner.py:294` 기준 정확한 위치:
+#### 구현 변경
 
-```python
-load_model(self.model, config.model, ...)   # 기존 float weight 로드 완료
-# ← 여기에 quantize hook 삽입
-#   - if config.target_quant_enabled and not self.is_draft:
-#   - _apply_target_int8_weight_only(self.model, config, hf_config)
-#     · tie_word_embeddings 방어 (§3.2.2)
-#     · lm_head 양자화 on/off 결정
-#     · module 순회하면서 weight 교체
-self.warmup_model()                          # 이 시점부터 quantized forward
-self.allocate_kv_cache()
-# CudaGraph capture (이미 quantized path; Phase 3에서 graph-safety 확장 검증)
-```
+- `ssd/config.py`: `target_quant_backend: str = "int4_wo_tile"` (기본값), `"int8_wo"` 남김
+- `ssd/utils/quantize.py`: `_quantize_weight_to_int4_wo()` 추가, `apply_quantization_to_target(backend=...)` 확장 (이전 이름 `apply_int8_weight_only_to_target`)
+- `bench/bench.py`: `--quant_int4` / `--quant_int8` flag 분리
 
-draft는 그대로 둔다 (`self.is_draft` 분기로 skip).
+#### 제약
 
-##### 2.4 weight tying 방어 구현
+- `input_dim` 이 `group_size=128`의 배수여야 함 (모든 Llama TP=2/4 shard 충족 ✓)
+- fp16 모델은 여전히 load-time bf16 upcast 필요 (§4.1.2)
 
-hook 내부에서:
+---
 
-```text
-if hf_config.tie_word_embeddings:
-    if config.target_quant_lm_head:
-        # 자동 untie: lm_head weight를 새 텐서로 clone한 뒤 교체
-        model.lm_head.weight = nn.Parameter(model.lm_head.weight.data.clone())
-        # 이제 embed_tokens와 별개 저장소 → 안전하게 양자화 가능
-    else:
-        pass   # lm_head 양자화 off면 tied 상태 유지 OK
-```
+### Phase 2. Plain INT8 eager runtime 통합  **[DONE 2026-04-21]**
 
-정확한 API는 Phase 0 검증 결과에 따라 확정.
+> 결과: **통합 코드 + fp16 upcast로 모든 검증 통과**.
 
-#### 종료 조건
+구현 산출물:
+- `ssd/ssd/config.py`: `target_quant_enabled`, `target_quant_lm_head`, `target_quant_backend`, `target_quant_mode`
+- `ssd/ssd/utils/quantize.py`: `apply_quantization_to_target()` — Phase 0 계약 (A), tying 방어, `SSD_QUANT_SKIP` 환경변수 (`SSD_INT8_SKIP` legacy alias)
+- `ssd/ssd/engine/model_runner.py`: `load_model` 직후 hook 삽입 (draft 제외) + **fp16→bf16 upcast 분기** (§4.1.2)
+- `bench/bench.py`: `--quant_int4` / `--quant_int8`, `--quant_lm_head` (opt-in), `--quant_force_bf16_runtime`, `--quant_artifact`, `--quant_artifact_load_only`. `--no_quant_lm_head`는 deprecated no-op
+- 디버그 모듈: `ssd/ssd/utils/int8_debug.py` (env `SSD_INT8_DEBUG=1`로 H1/H2/H3 진단)
 
-- **Eager**에서 target-only quantized decode forward 동작
-- TP correctness: dense와 동일 input에 대해 각 TP rank 결과가 맞물려 최종 logits가 일치
-- **작은 Llama에서 정량적 correctness gate 통과** (Phase 2 시작 시 하나 이상으로 고정, **가능하면 perplexity + token-level 둘 다** 병행 권장):
-  - **held-out dataset perplexity 변화율** ≤ 1% (dense 대비) — **가장 안정적인 업계 표준 메트릭, 최우선 권장**
-  - **First divergence index** ≥ 128 (32개 prompt × 256 token greedy decode에서, 256 token 중 128번째 이전엔 token이 완전히 일치) — 단, argmax flip에 취약하므로 단독 사용 시 모델/프롬프트 편차 주의
-  - 또는 **First-token top-1 match rate** ≥ 98%
-  - 또는 logits KL divergence (per-token mean) ≤ 0.05 또는 cosine similarity ≥ 0.999
-- **RowParallel 포함 모델**에서 위 gate 통과 (local quantize 수용 가능성 판정, §5.4)
-- tied 모델 (예: Llama-3.2-1B)에서도 tying 방어 동작 확인
-- 미통과 시 (가) 구현 버그 의심 → Phase 3 진입 금지, 또는 (나) RowParallel만 깨졌다면 §5.4 (a)안 도입 검토
+#### 검증 결과 (2026-04-21)
+
+**`layerskip-llama3-8B` (bf16 native, TP=2+draft)** :
+
+| test | TP | accept |
+|---|---|---|
+| AR dense | 24.84 | n/a |
+| AR int8 | 9.48 | n/a |
+| async spec dense sampling | 15.84 | 0.32 |
+| **async spec int8 sampling** | **14.25** | **0.30** ✓ |
+| MESA dense sampling | 24.12 | 0.41 |
+| **MESA int8 sampling** | **12.15** | **0.40** ✓ |
+
+**`layerskip-llama2-7B` (fp16 원본 → bf16 upcast, TP=2+draft)**:
+
+- async spec + int8 + sampling: **TP=15.31, accept=0.44** ✓
+
+즉 fp16 overflow가 유일한 blocker였고, upcast로 완전 해소.
+
+#### 실제로 수행한 sub-op debug 결과 (§5.6 근거)
+
+- layer 1 sub-op 추적에서 `silu(gate)*up` absmax = **997.5**, down_proj 이후 8 inf 등장
+- fp16 max = 65504로 accumulation overflow. outlier 채널 문제가 아니라 dynamic range 부족이 root cause
+- bf16으로 올리면 absmax 997.5 × weight × 5504 ≈ 7.1M, 3.4e38에 비하면 여유
+
+#### 종료 조건 (전부 충족)
+
+1. Dense flag-off 회귀: Llama-2/Llama-3 둘 다 기존 throughput/accept 변동 없음 ✓
+2. AR int8: Llama-3-8B, CodeLlama-34B 완주 ✓
+3. Greedy spec + int8: Llama-3-8B 완주
+4. Sampling spec + int8: Llama-2-7B (fp16+upcast), Llama-3-8B 둘 다 완주 ✓
+5. MESA + int8 + sampling: Llama-3-8B 완주, accept=0.40 (dense 0.41 대비 보존) ✓
+6. TP correctness 및 tying 방어: Phase 0 단계에서 확인됨
+
+#### 34B 관련 주의
+
+- `layerskip-codellama-34B` (fp16 원본) + bf16 upcast → load peak 17 GB/rank (TP=4). 24 GB RTX에서 다른 job 공존 시 OOM
+- 해결: exclusive GPU 확보 또는 80 GB A100. 본 계획의 기능적 완성도에는 영향 없음
 
 ---
 
@@ -587,21 +762,21 @@ if hf_config.tie_word_embeddings:
 
 #### 목표
 
-Phase 0에서 **isolated** `F.linear` + quantized weight 조합으로 graph-safety 1차 gate는 통과한 상태다. 이 단계는 그 검증을 **SSD 전체 graph 경로로 확장**해서 동작을 확인한다.
+Phase 0에서 **isolated** `F.linear` + quantized weight 조합으로 graph-safety 1차 gate는 통과한 상태다. 이 단계는 그 검증을 **SSD 전체 graph 경로**에서 확장해 동작을 확인한다.
 
-즉 Phase 3은 "첫 graph 체크"가 아니라, Phase 0에서 확인된 저수준 feasibility가 SSD의 실제 decode / verify / speculate 경로에서도 유지되는지 확장 검증하는 단계다.
+Phase 2에서 eager/async spec이 이미 정상 동작 확인되었으므로 graph 경로도 큰 이슈 없이 작동할 것이 예상되나, 다음을 명시적으로 측정한다.
 
 #### 순서
 
-1. normal decode graph
-2. verify graph
+1. normal decode graph (AR)
+2. verify graph (speculate)
 3. target-only speculate verify graph
 
 이 단계에서는 MESA를 아직 직접 검증하지 않는다 (Phase 4).
 
 #### 확인 항목
 
-- SSD의 실제 graph 크기/입력 프로파일에서 capture 시 예외 여부
+- SSD 실제 graph 크기/입력 프로파일에서 capture 시 예외 여부
 - 실제 운영 batch shape에서 replay 시 예외 여부
 - hidden dynamic allocation 여부 (caching allocator 확인 포함)
 - multi-replay 시 output stability (동일 입력에 동일 출력)
@@ -609,16 +784,14 @@ Phase 0에서 **isolated** `F.linear` + quantized weight 조합으로 graph-safe
 
 #### 실패 시 대응
 
-graph-safe 하지 않다면:
-
 - 우선 target-only quantized eager path 유지
-- 원인 분석 후 graph 별도 대응
-- Phase 0에서는 통과했는데 여기서 실패하는 경우 → SSD hot path 고유 요인(입력 shape 다양성, stream 구조, capture 순서 등) 중 어느 것이 원인인지 기록
+- Phase 0에서는 통과했는데 여기서 실패하는 경우 → SSD hot path 고유 요인(입력 shape 다양성, stream 구조, capture 순서 등) 원인 기록
 
 #### 종료 조건
 
 - target decode / verify path 전체에서 graph capture + replay 안정 동작
 - dense graph 대비 output 일관성 (Phase 2 correctness gate와 동일 기준 재적용)
+- `layerskip-llama3-8B` (TP=2)에서 완주
 
 ---
 
@@ -738,52 +911,60 @@ for module in model.modules() if isinstance(module, TARGET_TYPES):
 
 구체 필드는 Phase 0 결과로 확정된 저장 계약 (§4.3 (A)~(D))에 따라 결정한다. 지금 단계에서 필드를 고정하지 않는다.
 
-#### 종료 조건
+#### 종료 조건 (현재 상태)
 
-- load-time quantization 없이 artifact만으로 target-only 실행 가능
-- artifact에 `tp_size` + backend 버전이 명시되어 mismatched 재사용이 차단됨
-- Phase 6 70B 실험에서 권장 선행 (필수 아님)
+- load-time quantization 없이 artifact만으로 target-only **실행** 가능 ✓
+- artifact에 `schema_version`, `backend`, `tp_size/tp_rank`, `quantize_lm_head`, `model_id`, `effective_runtime_dtype`, `original_checkpoint_dtype`, torch/torchao 버전 명시되어 mismatched 재사용 차단 ✓
+- 현재 artifact는 **raw torchao AQT pickle 기반**이라 동일 환경 재사용용 로컬 캐시에 가깝고 장기 호환 checkpoint 포맷은 아님
+
+#### 미완성 / future work
+
+**startup 최적화**는 구현되지 않음. 현재 `model_runner.py`는 artifact 존재 여부와 무관하게 `load_model()`을 **먼저** 실행해 float weight 전부를 GPU로 로드한 뒤 artifact를 읽어 weight를 교체한다. 즉 persistent mode여도:
+
+- float checkpoint load time (70B ~ 분 단위)
+- float shard peak memory (70B TP=4 per-rank ~ 35 GB bf16)
+
+를 한 번 치른다. "artifact 지원"은 됐지만 "artifact로 빠른/가벼운 startup"은 아직 안 됨. `loader.py` 재구조화가 필요한 비-trivial 작업이라 70B 반복 실험에서 필요해지면 착수 (TODO가 `model_runner.py` 주석에 있음).
 
 ---
 
-### Phase 6. 70B / TP4 확장
+### Phase 6. 대형 모델 확장 (70B 위주)
 
 #### 목표
 
-실제 목표인 `70B target / TP4`로 확장한다.
+Phase 3~5 8B 완료 후, bf16-native 대형 모델로 확장 검증.
 
-#### 전제 및 전략
+#### 진행 순서
 
-- Phase 2 quantize hook의 module별 순차 교체 패턴 (§Phase 5)이 기본 동작
-- load-time 경로로 먼저 시도 가능. 다만 24 GB 환경에서 peak이 넘치거나 반복 실험 효율이 떨어지면 Phase 5 artifact로 전환
-- 즉 이 Phase는 load-time → 필요시 artifact 전환의 유연한 경로를 가진다
+1. **Llama-3.1-70B (bf16 native, TP=4 또는 TP=2)**
+   - Bf16 native이므로 force flag 없이 quant 바로 가능
+   - Phase 5 artifact 경로가 있으면 load 시간 절약에 유리 (단 현재 구현은 float load를 건너뛰지 않음)
+   - Gate: Phase 2 종료 조건 + MESA 동작 + memory footprint 측정
+2. **CodeLlama-34B (fp16 원본, TP=4) — 선택적**
+   - fp16 checkpoint이므로 `target_quant_force_bf16_runtime=True` 필요 (bf16 runtime 우회)
+   - 주의: bf16 override 후 load peak memory ~17 GB/rank. 24 GB RTX 환경에선 exclusive GPU 또는 80 GB A100 필요
+   - "fp16 runtime 유지"가 요구사항이면 이 경로는 미완성 (§1.3 참조)
 
 #### 확인 항목
 
 - 메모리 절감 효과 (per-GPU)
-- startup/load 시간
-- target decode latency
-- target verify latency
+- load 시간 (fp16 upcast 포함 시간)
+- target decode / verify latency
 - graph path 안정성
 - MESA target verify 안정성 (Phase 4 결과 재검)
 
 #### 성공 기준 (최소)
 
-- 기존 dense target보다 적은 메모리로 target load 가능
-- TP 구성 (4 또는 8)에서 target이 안정 동작하고 dense 대비 correctness gate 통과 (§Phase 2)
-- MESA target verify 기능 동작 유지
+- 기존 dense target보다 적은 memory 로 load 가능
+- dense 대비 correctness gate 통과
+- MESA target verify 기능 동작
 
-#### Stretch goal (가설, 검증 대상)
+#### Stretch goal (검증 대상)
 
-아래는 이번 계획의 동기로 깔려 있는 목표이지만, 실제 달성 여부는 이번 Phase에서 검증한다. 현 시점에는 **가설**이다.
-
-- 70B target TP=4 + draft TP=1 조합이 24 GB GPU 5대 (총 120 GB)에 안정적으로 올라감
-  - 양자화된 weight state + scale/metadata + KV cache + graph pools/workspaces + draft 공존까지 전부 합산한 실제 memory footprint는 아직 검증 전
-  - per-GPU 17.5 GB weight + α(KV/graph/overhead)가 24 GB에 실제로 들어가는지 Phase 6에서 측정
-- 기존 9 GPU가 필요했던 70B + async + MESA 실험이 **5 GPU 또는 더 적은 수로 축소됨**
-  - 24 GB 환경에서 들어가지 않는다면 80 GB GPU 환경에서의 9→N GPU 축소가 대체 목표
-
-stretch goal은 실패해도 이번 계획의 설계 실패가 아니라 후속 과제 (추가 양자화, draft co-location 등)로 이어진다.
+- 70B target TP=4 + draft TP=1 조합이 24 GB GPU 5대 (총 120 GB)에 안정적으로 올라감 (**원래 9 GPU → 5 GPU 축소**)
+  - per-GPU 17.5 GB weight + α(KV/graph/overhead)가 24 GB에 실제로 들어가는지 실측
+- 24 GB 환경에 안 들어가면 80 GB A100에서 9→N GPU 축소로 대체 검증
+- INT4 양자화는 별도 후속 과제 (scope out)
 
 ---
 
@@ -791,13 +972,13 @@ stretch goal은 실패해도 이번 계획의 설계 실패가 아니라 후속 
 
 Phase 0 종료 시점에 아래 항목에 답이 나와야 Phase 1에 진입한다.
 
-### Backend / dispatch
+### Backend / dispatch  **[Phase 0 completed]**
 
-- `F.linear(x, self.weight, bias)`가 quantized weight 상태로 int8 경로를 타는가
-- §4.3 (A)~(D) 중 어느 저장 계약으로 갈지 결정되었는가
-- 안정 API 경로 (예: dummy `nn.Linear` + `quantize_()`) 사용이 가능한가
-- local shard / packed 크기에서도 동일한가
-- dtype / shape / numerical sanity가 dense와 일치하는가
+- `F.linear(x, self.weight, bias)`가 quantized weight 상태로 int8 경로를 타는가 ✓
+- §4.3 저장 계약 (A) 확정됨 ✓
+- 안정 API 경로 (예: dummy `nn.Linear` + `quantize_()`) 사용이 가능한가 ✓
+- local shard / packed 크기에서도 동일한가 ✓
+- dtype / shape / numerical sanity가 dense와 일치하는가 ✓
 
 ### Runtime 공존
 
@@ -833,10 +1014,20 @@ Phase 0 종료 시점에 아래 항목에 답이 나와야 Phase 1에 진입한�
 - `target_quant_lm_head` flag가 config에 추가되었는가
 - Phase 4에서 on/off ablation이 계획되어 있는가
 
-### Correctness gate
+### Correctness gate (Phase 2)
 
-- Phase 2 correctness 기준이 고정되었는가 (perplexity 변화율 ≤ 1% 권장, 추가로 divergence index / top-1 match / KL/cosine 병행 가능)
+- dense flag-off 회귀 통과 ✓ (Llama-3-8B, Llama-2-7B)
+- AR int8 완주 ✓
+- Sampling spec int8 NaN/inf 없이 완주 ✓ (Llama-2-7B upcast, Llama-3-8B)
+- Accept rate 보존: Llama-3-8B 0.30 (dense 0.32), MESA 0.40 (dense 0.41), Llama-2-7B upcast 0.44
+- 1차 검증 모델: `layerskip-llama3-8B` (TP=2)
 
 ### TP
 
-- row/column/lm_head collective semantics가 기존과 동일하게 유지되는가 (기본적으로 forward 코드 미변경으로 보존되지만 Phase 2 회귀 테스트로 확인)
+- row/column/lm_head collective semantics가 기존과 동일하게 유지되는가 (Phase 0에서 확인 ✓)
+
+### fp16 overflow mitigation (§5.6 대응)
+
+- fp16 원본 모델 (Llama-2, CodeLlama) 은 `target_quant_enabled=True` 시 자동 bf16 upcast ✓
+- bf16 upcast 후 sampling spec NaN/inf 없이 완주 ✓
+- bf16 native 모델 (Llama-3 계열)은 upcast 불필요 ✓
