@@ -1028,6 +1028,6 @@ Phase 0 종료 시점에 아래 항목에 답이 나와야 Phase 1에 진입한�
 
 ### fp16 overflow mitigation (§5.6 대응)
 
-- fp16 원본 모델 (Llama-2, CodeLlama) 은 `target_quant_enabled=True` 시 자동 bf16 upcast ✓
-- bf16 upcast 후 sampling spec NaN/inf 없이 완주 ✓
-- bf16 native 모델 (Llama-3 계열)은 upcast 불필요 ✓
+- bf16 native 모델 (Llama-3 계열)은 어떤 override도 없이 정상 지원 ✓
+- fp16 원본 모델 (Llama-2, CodeLlama)은 **기본적으로 `ValueError`로 거부**. `target_quant_force_bf16_runtime=True` opt-in 시에만 bf16 runtime 우회 경로로 동작 (이 경우 "fp16 runtime"이 아님을 인정하는 workaround)
+- fp16 runtime 지원 자체는 현 backend로 불가. Gemlite/Marlin 등 fp16-native WO backend 통합이 future work
