@@ -1,0 +1,344 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 2 prompts from humaneval...
+Loading 2 prompts from alpaca...
+Loading 2 prompts from gsm...
+Loading 2 prompts from ultrafeedback...
+Total prompts loaded: 8
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.22s/it]Loading model files:  25%|██▌       | 1/4 [00:01<00:04,  1.36s/it]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.04s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.53it/s]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.19s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.31it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.37it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.26it/s]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+[int8-quant] enabling target INT8 weight-only (rank=1, lm_head=True, skip=())
+[int8-quant] lm_head (64128, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.0.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.0.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.0.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.0.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.1.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.1.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.1.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.1.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.2.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.2.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.2.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.2.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.3.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.3.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.3.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.3.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.4.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.4.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.4.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.4.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.5.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.5.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.5.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.5.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.6.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.6.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.6.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.6.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.7.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.7.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.7.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.7.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.8.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.8.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.8.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.8.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.9.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.9.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.9.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.9.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.10.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.10.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.10.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.10.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.11.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.11.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.11.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.11.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.12.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.12.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.12.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.12.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.13.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.13.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.13.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.13.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.14.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.14.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.14.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.14.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.15.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.15.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.15.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.15.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.16.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.16.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.16.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.16.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.17.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.17.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.17.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.17.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.18.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.18.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.18.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.18.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.19.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.19.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.19.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.19.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.20.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.20.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.20.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.20.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.21.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.21.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.21.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.21.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.22.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.22.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.22.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.22.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.23.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.23.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.23.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.23.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.24.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.24.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.24.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.24.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.25.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.25.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.25.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.25.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.26.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.26.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.26.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.26.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.27.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.27.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.27.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.18it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.09it/s]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+[int8-quant] enabling target INT8 weight-only (rank=0, lm_head=True, skip=())
+[int8-quant] model.layers.27.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.28.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.28.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.28.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.28.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.29.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.29.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.29.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.29.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.30.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.30.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.30.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.30.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.31.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.31.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.31.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.31.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] summary: tp_linear=128, lm_head=1, bf16_bytes=7.50 GB → int8_bytes≈3.75 GB (ratio 0.50)
+[int8-quant] lm_head (64128, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.0.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.0.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.0.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.0.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.1.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.1.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.1.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.1.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.2.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.2.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.2.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.2.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.3.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.3.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.3.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.3.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.4.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.4.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.4.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.4.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.5.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.5.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.5.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.5.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.6.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.6.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.6.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.6.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.7.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.7.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.7.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.7.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.8.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.8.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.8.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.8.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.9.self_attn.qkv_proj                (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.9.self_attn.o_proj                  (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.9.mlp.gate_up_proj                  (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.9.mlp.down_proj                     (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.10.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.10.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.10.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.10.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.11.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.11.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.11.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.11.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.12.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.12.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.12.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.12.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.13.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.13.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.13.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.13.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.14.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.14.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.14.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.14.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.15.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.15.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.15.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.15.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.16.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.16.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.16.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.16.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.17.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.17.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.17.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.17.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.18.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.18.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.18.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.18.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.19.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.19.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.19.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.19.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.20.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.20.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.20.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.20.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.21.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.21.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.21.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.21.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.22.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.22.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.22.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.22.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.23.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.23.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.23.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.23.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.24.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.24.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.24.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.24.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.25.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.25.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.25.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.25.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.26.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.26.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.26.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.26.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.27.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.27.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.27.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.27.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.28.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.28.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.28.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.28.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.29.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.29.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.29.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.29.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.30.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.30.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.30.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.30.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] model.layers.31.self_attn.qkv_proj               (3072, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.31.self_attn.o_proj                 (4096, 2048) bf16 → AQT-int8
+[int8-quant] model.layers.31.mlp.gate_up_proj                 (14336, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.31.mlp.down_proj                    (4096, 7168) bf16 → AQT-int8
+[int8-quant] summary: tp_linear=128, lm_head=1, bf16_bytes=7.50 GB → int8_bytes≈3.75 GB (ratio 0.50)
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 572, 256, 4, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 502, 256, 4, 128])
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.6 b=1
+============================================================
+Generating:   0%|          | 0/8 [00:00<?, ?it/s]Generating:  12%|█▎        | 1/8 [00:11<01:23, 11.97s/it]Generating:  25%|██▌       | 2/8 [00:16<00:45,  7.64s/it]Generating:  38%|███▊      | 3/8 [00:20<00:30,  6.17s/it]Generating:  50%|█████     | 4/8 [00:24<00:19,  4.92s/it]Generating:  62%|██████▎   | 5/8 [00:28<00:14,  4.68s/it]Generating:  75%|███████▌  | 6/8 [00:32<00:08,  4.37s/it]Generating:  88%|████████▊ | 7/8 [00:36<00:04,  4.45s/it]Generating: 100%|██████████| 8/8 [00:40<00:00,  4.26s/it]Generating: 100%|██████████| 8/8 [00:40<00:00,  5.06s/it]
+Final Prefill Throughput: 63tok/s
+Final Decode Throughput: 11tok/s
+Model: layerskip-llama3-8B, Mode: CUDA Graphs + JIT, Total: 384tok, Time: 40.50s, Total Throughput: 9.48tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
+Generation: '    for i in range(1, len(numbers)):\n        for j in range(i):\n            if abs(numbers[i] - numbers[j]) < threshold:\n                return True\n    return False\n<|end_of_text|><|begin_of_text|>The best way to see the results'
+----------------------------------------
+
+Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
+Generation: '    return [x for x in paren_string.split() if x]\n<|end_of_text|><|begin_of_text|>#    assert len(paren_string.split()) == len(separate_paren_groups(paren_string)), "Unexpected output"\n#    assert all([len(x.split()) =='
+----------------------------------------
+
+Prompt 3: 'Give three tips for staying healthy.'
+Generation: ' What are the most important things you can do to stay healthy?\nA good diet, plenty of exercise, and a good night’s sleep are the most important things you can do to stay healthy.\nWhat are the most important things you can do'
+----------------------------------------
+
+Prompt 4: 'What are the three primary colors?'
+Generation: ' You can mix these colors to create almost any hue. The primary colors are red, blue, and yellow. These colors are called primary because they can not be created by mixing two other colors.\nWhat are the three secondary colors? The secondary'
+----------------------------------------
+
+Prompt 5: "Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?"
+Generation: " Show your work.\nThe cost of a new car is $30,000. If the car's value is depreciated by $5,000 per year, what will be the value of the car after 6 years? Show your work"
+----------------------------------------
+
+Prompt 6: 'A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?'
+Generation: '  The answer is that a robe takes 1 bolt of blue and 1 bolt of white.  If you had 10 bolts of blue and 10 bolts of white, you could make 2 robes.  So, you need'
+----------------------------------------
+
+Prompt 7: 'Can you write a C++ program that prompts the user to enter the name of a country and checks if it borders the Mediterranean Sea? Here\'s some starter code to help you out:\n#include <iostream>\n#include <string>\nusing namespace std;\nint main() {\n    string country;\n    // prompt user for input\n    cout << "Enter the name of a country: ";\n    cin >> country;\n    // check if country borders the Mediterranean Sea\n    // [C++ code]\n    return 0;\n}'
+Generation: '<|end_of_text|><|begin_of_text|> <|end_of_text|><|begin_of_text|>island = "Mediterranean Sea";\n    if (country == "Greece" || country == "Italy" || country == "Spain" || country == "France" || country == "Portugal'
+----------------------------------------
+
+Prompt 8: 'Suppose you are a content creator and want to generate compelling titles and descriptions for your YouTube videos automatically. You have decided to use GPT to solve this problem.\nCan you provide an example of how you would use GPT to generate titles and descriptions for your YouTube videos automatically? Please include the necessary steps and any additional information that may be helpful.'
+Generation: ' Additionally, please provide any resources or tools that may be useful in this process.\nA: Yes, you can use GPT to generate titles and descriptions for your YouTube videos automatically. Here are the steps:\nStep 1: Gather data:'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)

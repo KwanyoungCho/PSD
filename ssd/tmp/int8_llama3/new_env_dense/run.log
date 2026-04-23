@@ -1,0 +1,40 @@
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD/ssd/bench/bench.py", line 2, in <module>
+    import ssd.paths  # noqa: F401 — sets TORCH_CUDA_ARCH_LIST before flashinfer import
+    ^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/__init__.py", line 1, in <module>
+    from ssd.llm import LLM
+  File "/home/chokwans99/PSD/ssd/ssd/llm.py", line 1, in <module>
+    from ssd.engine.llm_engine import LLMEngine
+  File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 9, in <module>
+    from ssd.engine.model_runner import ModelRunner
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 13, in <module>
+    from ssd.models.qwen3 import Qwen3ForCausalLM
+  File "/home/chokwans99/PSD/ssd/ssd/models/qwen3.py", line 7, in <module>
+    from ssd.layers.attention import Attention
+  File "/home/chokwans99/PSD/ssd/ssd/layers/attention.py", line 6, in <module>
+    from sgl_kernel.flash_attn import flash_attn_varlen_func, flash_attn_with_kvcache
+  File "/home/chokwans99/anaconda3/envs/ssd-int8/lib/python3.11/site-packages/sgl_kernel/__init__.py", line 5, in <module>
+    common_ops = _load_architecture_specific_ops()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd-int8/lib/python3.11/site-packages/sgl_kernel/load_utils.py", line 188, in _load_architecture_specific_ops
+    raise ImportError(error_msg)
+ImportError: 
+[sgl_kernel] CRITICAL: Could not load any common_ops library!
+
+Attempted locations:
+1. Architecture-specific pattern: /home/chokwans99/anaconda3/envs/ssd-int8/lib/python3.11/site-packages/sgl_kernel/sm100/common_ops.* - found files: ['/home/chokwans99/anaconda3/envs/ssd-int8/lib/python3.11/site-packages/sgl_kernel/sm100/common_ops.abi3.so']
+2. Fallback pattern: /home/chokwans99/anaconda3/envs/ssd-int8/lib/python3.11/site-packages/sgl_kernel/common_ops.* - found files: []
+3. Standard Python import: common_ops - failed
+
+GPU Info:
+- Compute capability: 86
+- Expected variant: SM86 (precise math for compatibility)
+
+Please ensure sgl_kernel is properly installed with:
+pip install --upgrade sgl_kernel
+
+Error details from previous import attempts:
+- ImportError: /home/chokwans99/anaconda3/envs/ssd-int8/lib/python3.11/site-packages/sgl_kernel/sm100/common_ops.abi3.so: undefined symbol: _ZN3c104cuda29c10_cuda_check_implementationEiPKcS2_ib
+- ModuleNotFoundError: No module named 'common_ops'
+

@@ -1,0 +1,140 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 2 prompts from humaneval...
+Loading 2 prompts from alpaca...
+Loading 2 prompts from gsm...
+Loading 2 prompts from ultrafeedback...
+Total prompts loaded: 8
+[Config] mesa_proxy_top_k raised 3 → 16 (to eliminate draft fallback; max_fo=12 + dfo=2 + margin=2)
+[Config] MESA-SSD enabled: exit_layer=20, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
+Draft runner created on rank 2 (async)!
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[Config] MESA-SSD enabled: exit_layer=20, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[MESA] Created FlashInfer wrappers for draft/proxy layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
+[load_model] loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.29it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.29it/s]
+Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.02s/it]Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.00it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.04it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.65it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.05it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.64it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.38it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.32it/s]
+Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.38it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.32it/s]
+[load_model] finished loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 16, 1420, 256, 8, 64])
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 421, 256, 4, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 350, 256, 4, 128])
+[MESA] Captured split verify CudaGraph (exit_layer=20)
+F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
+[MESA] Captured split verify CudaGraph (exit_layer=20)
+F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
+[Config] MESA-SSD enabled: exit_layer=20, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=24
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
+[MESA] TreeLayouts: full MQ_LEN=24, draft MQ_LEN=12, proxy MQ_LEN=12
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_draft MQ_LEN=12
+  [FI capture] bs=1 key=fi_tree_decode_draft starting...
+  [FI capture] bs=1 key=fi_tree_decode_draft warmup...
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.6 b=1
+============================================================
+Generating:   0%|          | 0/8 [00:00<?, ?it/s]  [FI capture] bs=1 key=fi_tree_decode_draft warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_proxy MQ_LEN=12
+  [FI capture] bs=1 key=fi_tree_decode_proxy starting...
+  [FI capture] bs=1 key=fi_tree_decode_proxy warmup...
+  [FI capture] bs=1 key=fi_tree_decode_proxy warmup done, capturing...
+[MESA] Captured draft/proxy FI tree decode CudaGraphs
+DraftRunner set up, starting draft_loop
+Generating:  12%|█▎        | 1/8 [00:03<00:21,  3.06s/it]Generating:  25%|██▌       | 2/8 [00:04<00:12,  2.05s/it]Generating:  38%|███▊      | 3/8 [00:06<00:11,  2.24s/it]Generating:  50%|█████     | 4/8 [00:08<00:07,  1.83s/it]Generating:  62%|██████▎   | 5/8 [00:10<00:05,  1.89s/it]Generating:  75%|███████▌  | 6/8 [00:12<00:04,  2.00s/it]Generating:  88%|████████▊ | 7/8 [00:14<00:01,  1.93s/it]Generating: 100%|██████████| 8/8 [00:15<00:00,  1.90s/it]Generating: 100%|██████████| 8/8 [00:15<00:00,  1.99s/it]
+Final Prefill Throughput: 266tok/s
+Final Decode Throughput: 28tok/s
+[metrics] Avg Tokens per step (incl recovery): 3.03
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.41
+[metrics] Avg target time per full step (ms): 119.61
+[metrics] Avg target verify time (ms): 44.21
+[metrics] Avg Cache Hits: 0.77
+[metrics] Avg Tokens per step on Cache Hit: 3.30
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.294
+  1: 0.176
+  2: 0.088
+  3: 0.078
+  4: 0.098
+  5: 0.265
+[metrics] Avg Tokens per step on Cache Miss: 2.10
+Model: layerskip-llama3-8B, Mode: CUDA Graphs + Speculative(k=5) + Async + JIT, Total: 384tok, Time: 15.92s, Total Throughput: 24.12tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
+Generation: '    for i in range(len(numbers) - 1):\n        for j in range(i + 1, len(numbers)):\n            if abs(numbers[i] - numbers[j]) < threshold:\n                return True\n    return False\n\n\ndef calculate'
+----------------------------------------
+
+Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
+Generation: "    # TODO: fill this in\n    pass\n\n\ndef test_separate_paren_groups():\n    assert separate_paren_groups('( ) (( )) (( )( ))') == ['()', '(())', '(()())']\n    assert separate_paren"
+----------------------------------------
+
+Prompt 3: 'Give three tips for staying healthy.'
+Generation: ' How can we keep our immune system strong? (Explain that the immune system protects the body from germs that cause disease and that it is important to keep it strong to avoid getting sick.)<|end_of_text|><|begin_of_text|>éněpålɛ'
+----------------------------------------
+
+Prompt 4: 'What are the three primary colors?'
+Generation: ' Red, yellow, and blue are the three primary colors. They can be mixed to produce a wide range of colors.\nWhat are the four primary colors? The four primary colors are red, yellow, blue, and black. These colors can'
+----------------------------------------
+
+Prompt 5: "Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?"
+Generation: '<|end_of_text|><|begin_of_text|>ingyuan.com\nThis is a problem that requires some thinking and planning out. We need to break the problem down into multiple steps. We will start with the number of eggs she has left over after breakfast and muffins.'
+----------------------------------------
+
+Prompt 6: 'A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?'
+Generation: '  How many bolts of white fiber?  How many bolts of blue fiber?\n\nComment: I don\'t understand why you\'re asking for "a particular solution" - I\'m not sure what you mean.  The answer is that it takes'
+----------------------------------------
+
+Prompt 7: 'Can you write a C++ program that prompts the user to enter the name of a country and checks if it borders the Mediterranean Sea? Here\'s some starter code to help you out:\n#include <iostream>\n#include <string>\nusing namespace std;\nint main() {\n    string country;\n    // prompt user for input\n    cout << "Enter the name of a country: ";\n    cin >> country;\n    // check if country borders the Mediterranean Sea\n    // [C++ code]\n    return 0;\n}'
+Generation: '<|end_of_text|><|begin_of_text|>Template:DEFAULT_SCRIPT_URL\nIn this example, the user will be prompted to enter the name of a country. The program will then check if the country borders the Mediterranean Sea. If the country does border the Mediterranean Sea, the'
+----------------------------------------
+
+Prompt 8: 'Suppose you are a content creator and want to generate compelling titles and descriptions for your YouTube videos automatically. You have decided to use GPT to solve this problem.\nCan you provide an example of how you would use GPT to generate titles and descriptions for your YouTube videos automatically? Please include the necessary steps and any additional information that may be helpful.'
+Generation: ' Thank you!\nGenerating titles and descriptions for YouTube videos automatically with GPT is a great way to save time and effort when creating content. Here are the steps to follow:\nStep 1: Gather information about the video. This includes the topic'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 100.33

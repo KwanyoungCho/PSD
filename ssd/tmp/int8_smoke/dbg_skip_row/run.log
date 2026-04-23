@@ -1,0 +1,869 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 2 prompts from humaneval...
+Loading 2 prompts from alpaca...
+Loading 2 prompts from gsm...
+Loading 2 prompts from ultrafeedback...
+Total prompts loaded: 8
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama2-7B
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama2-7B
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.37it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.38it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.16it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.15it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.10it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.13it/s]
+Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.10it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.13it/s]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama2-7B
+[int8-quant] enabling target INT8 weight-only (rank=1, lm_head=True, skip=('down_proj', 'o_proj'))
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama2-7B
+[int8-quant] enabling target INT8 weight-only (rank=0, lm_head=True, skip=('down_proj', 'o_proj'))
+[int8-quant] lm_head (16000, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.0.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.0.self_attn.o_proj
+[int8-quant] model.layers.0.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.0.mlp.down_proj
+[int8-quant] model.layers.1.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.1.self_attn.o_proj
+[int8-quant] model.layers.1.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.1.mlp.down_proj
+[int8-quant] lm_head (16000, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.2.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.2.self_attn.o_proj
+[int8-quant] model.layers.0.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.0.self_attn.o_proj
+[int8-quant] model.layers.2.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.2.mlp.down_proj
+[int8-quant] model.layers.0.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.0.mlp.down_proj
+[int8-quant] model.layers.3.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.3.self_attn.o_proj
+[int8-quant] model.layers.1.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.1.self_attn.o_proj
+[int8-quant] model.layers.3.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.3.mlp.down_proj
+[int8-quant] model.layers.1.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.1.mlp.down_proj
+[int8-quant] model.layers.4.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.4.self_attn.o_proj
+[int8-quant] model.layers.2.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.2.self_attn.o_proj
+[int8-quant] model.layers.4.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.4.mlp.down_proj
+[int8-quant] model.layers.2.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.2.mlp.down_proj
+[int8-quant] model.layers.5.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.5.self_attn.o_proj
+[int8-quant] model.layers.3.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.3.self_attn.o_proj
+[int8-quant] model.layers.5.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.3.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.5.mlp.down_proj
+[int8-quant] SKIP model.layers.3.mlp.down_proj
+[int8-quant] model.layers.4.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.4.self_attn.o_proj
+[int8-quant] model.layers.6.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.6.self_attn.o_proj
+[int8-quant] model.layers.4.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.4.mlp.down_proj
+[int8-quant] model.layers.6.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.6.mlp.down_proj
+[int8-quant] model.layers.5.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.5.self_attn.o_proj
+[int8-quant] model.layers.7.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.7.self_attn.o_proj
+[int8-quant] model.layers.5.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.5.mlp.down_proj
+[int8-quant] model.layers.7.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.7.mlp.down_proj
+[int8-quant] model.layers.6.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.6.self_attn.o_proj
+[int8-quant] model.layers.8.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.8.self_attn.o_proj
+[int8-quant] model.layers.6.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.6.mlp.down_proj
+[int8-quant] model.layers.7.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.7.self_attn.o_proj
+[int8-quant] model.layers.8.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.8.mlp.down_proj
+[int8-quant] model.layers.7.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.7.mlp.down_proj
+[int8-quant] model.layers.9.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.9.self_attn.o_proj
+[int8-quant] model.layers.8.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.8.self_attn.o_proj
+[int8-quant] model.layers.9.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.9.mlp.down_proj
+[int8-quant] model.layers.8.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.8.mlp.down_proj
+[int8-quant] model.layers.10.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.10.self_attn.o_proj
+[int8-quant] model.layers.9.self_attn.qkv_proj                (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.9.self_attn.o_proj
+[int8-quant] model.layers.10.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.10.mlp.down_proj
+[int8-quant] model.layers.9.mlp.gate_up_proj                  (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.9.mlp.down_proj
+[int8-quant] model.layers.10.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.10.self_attn.o_proj
+[int8-quant] model.layers.11.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.11.self_attn.o_proj
+[int8-quant] model.layers.10.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.10.mlp.down_proj
+[int8-quant] model.layers.11.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.11.mlp.down_proj
+[int8-quant] model.layers.11.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.11.self_attn.o_proj
+[int8-quant] model.layers.12.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.12.self_attn.o_proj
+[int8-quant] model.layers.11.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.11.mlp.down_proj
+[int8-quant] model.layers.12.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.12.mlp.down_proj
+[int8-quant] model.layers.12.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.12.self_attn.o_proj
+[int8-quant] model.layers.13.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.13.self_attn.o_proj
+[int8-quant] model.layers.12.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.12.mlp.down_proj
+[int8-quant] model.layers.13.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.13.self_attn.o_proj
+[int8-quant] model.layers.13.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.13.mlp.down_proj
+[int8-quant] model.layers.13.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.13.mlp.down_proj
+[int8-quant] model.layers.14.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.14.self_attn.o_proj
+[int8-quant] model.layers.14.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.14.self_attn.o_proj
+[int8-quant] model.layers.14.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.14.mlp.down_proj
+[int8-quant] model.layers.14.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.14.mlp.down_proj
+[int8-quant] model.layers.15.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.15.self_attn.o_proj
+[int8-quant] model.layers.15.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.15.self_attn.o_proj
+[int8-quant] model.layers.15.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.15.mlp.down_proj
+[int8-quant] model.layers.15.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.15.mlp.down_proj
+[int8-quant] model.layers.16.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.16.self_attn.o_proj
+[int8-quant] model.layers.16.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.16.self_attn.o_proj
+[int8-quant] model.layers.16.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.16.mlp.down_proj
+[int8-quant] model.layers.16.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.16.mlp.down_proj
+[int8-quant] model.layers.17.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.17.self_attn.o_proj
+[int8-quant] model.layers.17.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.17.self_attn.o_proj
+[int8-quant] model.layers.17.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.17.mlp.down_proj
+[int8-quant] model.layers.17.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.17.mlp.down_proj
+[int8-quant] model.layers.18.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.18.self_attn.o_proj
+[int8-quant] model.layers.18.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.18.self_attn.o_proj
+[int8-quant] model.layers.18.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.18.mlp.down_proj
+[int8-quant] model.layers.19.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.18.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.19.self_attn.o_proj
+[int8-quant] SKIP model.layers.18.mlp.down_proj
+[int8-quant] model.layers.19.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.19.mlp.down_proj
+[int8-quant] model.layers.19.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.19.self_attn.o_proj
+[int8-quant] model.layers.20.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.20.self_attn.o_proj
+[int8-quant] model.layers.19.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.19.mlp.down_proj
+[int8-quant] model.layers.20.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.20.mlp.down_proj
+[int8-quant] model.layers.20.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.20.self_attn.o_proj
+[int8-quant] model.layers.21.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.21.self_attn.o_proj
+[int8-quant] model.layers.20.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.20.mlp.down_proj
+[int8-quant] model.layers.21.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.21.mlp.down_proj
+[int8-quant] model.layers.21.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.21.self_attn.o_proj
+[int8-quant] model.layers.22.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.22.self_attn.o_proj
+[int8-quant] model.layers.22.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.22.mlp.down_proj
+[int8-quant] model.layers.21.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.21.mlp.down_proj
+[int8-quant] model.layers.23.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.23.self_attn.o_proj
+[int8-quant] model.layers.22.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.22.self_attn.o_proj
+[int8-quant] model.layers.23.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.23.mlp.down_proj
+[int8-quant] model.layers.22.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.22.mlp.down_proj
+[int8-quant] model.layers.24.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.24.self_attn.o_proj
+[int8-quant] model.layers.23.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.23.self_attn.o_proj
+[int8-quant] model.layers.24.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.24.mlp.down_proj
+[int8-quant] model.layers.23.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.23.mlp.down_proj
+[int8-quant] model.layers.25.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.25.self_attn.o_proj
+[int8-quant] model.layers.24.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.24.self_attn.o_proj
+[int8-quant] model.layers.25.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.25.mlp.down_proj
+[int8-quant] model.layers.26.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.26.self_attn.o_proj
+[int8-quant] model.layers.24.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.24.mlp.down_proj
+[int8-quant] model.layers.26.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.26.mlp.down_proj
+[int8-quant] model.layers.25.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.25.self_attn.o_proj
+[int8-quant] model.layers.27.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.27.self_attn.o_proj
+[int8-quant] model.layers.25.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.25.mlp.down_proj
+[int8-quant] model.layers.27.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.27.mlp.down_proj
+[int8-quant] model.layers.26.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.28.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.26.self_attn.o_proj
+[int8-quant] SKIP model.layers.28.self_attn.o_proj
+[int8-quant] model.layers.28.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.28.mlp.down_proj
+[int8-quant] model.layers.26.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.26.mlp.down_proj
+[int8-quant] model.layers.29.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.29.self_attn.o_proj
+[int8-quant] model.layers.27.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.27.self_attn.o_proj
+[int8-quant] model.layers.29.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.29.mlp.down_proj
+[int8-quant] model.layers.27.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.27.mlp.down_proj
+[int8-quant] model.layers.30.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.30.self_attn.o_proj
+[int8-quant] model.layers.28.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.28.self_attn.o_proj
+[int8-quant] model.layers.30.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.30.mlp.down_proj
+[int8-quant] model.layers.28.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] model.layers.31.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.28.mlp.down_proj
+[int8-quant] SKIP model.layers.31.self_attn.o_proj
+[int8-quant] model.layers.31.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.31.mlp.down_proj
+[int8-quant] summary: tp_linear=64, lm_head=1, bf16_bytes=4.63 GB → int8_bytes≈2.31 GB (ratio 0.50)
+[int8-quant] model.layers.29.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.29.self_attn.o_proj
+[int8-quant] model.layers.29.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.29.mlp.down_proj
+[int8-quant] model.layers.30.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.30.self_attn.o_proj
+[int8-quant] model.layers.30.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.30.mlp.down_proj
+[int8-quant] model.layers.31.self_attn.qkv_proj               (6144, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.31.self_attn.o_proj
+[int8-quant] model.layers.31.mlp.gate_up_proj                 (11008, 4096) bf16 → AQT-int8
+[int8-quant] SKIP model.layers.31.mlp.down_proj
+[int8-quant] summary: tp_linear=64, lm_head=1, bf16_bytes=4.63 GB → int8_bytes≈2.31 GB (ratio 0.50)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.00  residual: nan=0 inf=0 absmax=0.00  shape=(512, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.00  residual: nan=0 inf=0 absmax=0.00  shape=(512, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.01  residual: nan=0 inf=0 absmax=0.00  shape=(512, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.01  residual: nan=0 inf=0 absmax=0.00  shape=(512, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.14  shape=(512, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.14  shape=(512, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.53  residual: nan=0 inf=0 absmax=15.40  shape=(512, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.53  residual: nan=0 inf=0 absmax=15.40  shape=(512, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=2.18  residual: nan=0 inf=0 absmax=16.72  shape=(512, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=2.18  residual: nan=0 inf=0 absmax=16.72  shape=(512, 4096)
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 203, 256, 16, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 203, 256, 16, 128])
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.38it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.38it/s]
+[load_model] finished loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.00  residual: nan=0 inf=0 absmax=0.00  shape=(512, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.00  residual: nan=0 inf=0 absmax=0.00  shape=(512, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.01  residual: nan=0 inf=0 absmax=0.00  shape=(512, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.02  shape=(512, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.96  shape=(512, 2048)
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 533, 256, 4, 64])
+Draft runner created on rank 0 (no async)
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.6 b=1
+============================================================
+Generating:   0%|          | 0/8 [00:00<?, ?it/s][DEBUG layer 0] hidden: nan=0 inf=0 absmax=2.02  residual: nan=0 inf=0 absmax=0.86  shape=(586, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=2.02  residual: nan=0 inf=0 absmax=0.86  shape=(586, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=1483.00  residual: nan=0 inf=0 absmax=1.37  shape=(586, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=1483.00  residual: nan=0 inf=0 absmax=1.37  shape=(586, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=2.43  residual: nan=0 inf=0 absmax=1483.00  shape=(586, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=2.43  residual: nan=0 inf=0 absmax=1483.00  shape=(586, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.41  residual: nan=0 inf=0 absmax=1485.00  shape=(586, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.41  residual: nan=0 inf=0 absmax=1485.00  shape=(586, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=5.84  residual: nan=0 inf=0 absmax=1485.00  shape=(586, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=5.84  residual: nan=0 inf=0 absmax=1485.00  shape=(586, 4096)
+[spec_prefill] target prefill
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.38  residual: nan=0 inf=0 absmax=0.44  shape=(586, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.53  residual: nan=0 inf=0 absmax=0.54  shape=(586, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=163.00  residual: nan=0 inf=0 absmax=0.72  shape=(586, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.28  residual: nan=0 inf=0 absmax=163.00  shape=(586, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.29  residual: nan=0 inf=0 absmax=163.00  shape=(586, 2048)
+[PREFILL] seq0 prompt_len=133 recovery=0
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.24  residual: nan=0 inf=0 absmax=0.16  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.20  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.23  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.23  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.26  residual: nan=0 inf=0 absmax=0.16  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.45  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.45  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.24  residual: nan=0 inf=0 absmax=0.11  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.53  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.58  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.73  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.23  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.49  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.54  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.23  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=3.05  residual: nan=0 inf=0 absmax=0.66  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=3.05  residual: nan=0 inf=0 absmax=0.66  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=218.25  residual: nan=0 inf=0 absmax=3.23  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=218.25  residual: nan=0 inf=0 absmax=3.23  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=2.31  residual: nan=0 inf=0 absmax=218.88  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=2.31  residual: nan=0 inf=0 absmax=218.88  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.78  residual: nan=0 inf=0 absmax=221.38  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.78  residual: nan=0 inf=0 absmax=221.38  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=3.57  residual: nan=0 inf=0 absmax=221.38  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=3.57  residual: nan=0 inf=0 absmax=221.38  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=0 nan=0 max=23.41 min=-25.05
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.15  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.22  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.17  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.17  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.24  residual: nan=0 inf=0 absmax=0.15  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.18  residual: nan=0 inf=0 absmax=0.13  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.44  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.15  residual: nan=0 inf=0 absmax=0.19  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.28  residual: nan=0 inf=0 absmax=0.16  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.17  residual: nan=0 inf=0 absmax=0.59  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.24  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.24  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.22  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.18  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.15  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.19  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.18  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.22  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.25  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.17  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.19  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.46  residual: nan=0 inf=0 absmax=0.65  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.46  residual: nan=0 inf=0 absmax=0.65  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.44  residual: nan=0 inf=0 absmax=0.65  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.44  residual: nan=0 inf=0 absmax=0.65  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.33  residual: nan=0 inf=0 absmax=0.70  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.33  residual: nan=0 inf=0 absmax=0.70  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.60  residual: nan=0 inf=0 absmax=1.67  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.60  residual: nan=0 inf=0 absmax=1.67  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.68  residual: nan=0 inf=0 absmax=2.31  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.68  residual: nan=0 inf=0 absmax=2.31  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=0 nan=0 max=16.17 min=-13.75
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.23  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.15  residual: nan=0 inf=0 absmax=0.23  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.39  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.21  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.39  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.19  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.17  residual: nan=0 inf=0 absmax=0.30  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.26  residual: nan=0 inf=0 absmax=0.12  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.22  residual: nan=0 inf=0 absmax=0.54  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.21  residual: nan=0 inf=0 absmax=0.48  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.39  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.39  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.52  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.24  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.48  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.53  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.54  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.56  residual: nan=0 inf=0 absmax=0.70  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.56  residual: nan=0 inf=0 absmax=0.70  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.29  residual: nan=0 inf=0 absmax=0.82  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.29  residual: nan=0 inf=0 absmax=0.82  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.40  residual: nan=0 inf=0 absmax=1.32  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.40  residual: nan=0 inf=0 absmax=1.32  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.01  residual: nan=0 inf=0 absmax=2.20  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.01  residual: nan=0 inf=0 absmax=2.20  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.33  residual: nan=0 inf=0 absmax=2.63  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.33  residual: nan=0 inf=0 absmax=2.63  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=0 nan=0 max=23.70 min=-20.05
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.24  residual: nan=0 inf=0 absmax=0.11  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.55  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.58  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.71  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.21  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.39  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.25  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.15  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.44  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.50  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.55  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.21  residual: nan=0 inf=0 absmax=0.14  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.58  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.18  residual: nan=0 inf=0 absmax=0.54  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.64  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.19  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.25  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.52  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.15  residual: nan=0 inf=0 absmax=0.50  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.49  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.38  residual: nan=0 inf=0 absmax=0.64  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.38  residual: nan=0 inf=0 absmax=0.64  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.34  residual: nan=0 inf=0 absmax=0.69  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.34  residual: nan=0 inf=0 absmax=0.69  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.46  residual: nan=0 inf=0 absmax=1.14  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.46  residual: nan=0 inf=0 absmax=1.14  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.41  residual: nan=0 inf=0 absmax=2.48  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.41  residual: nan=0 inf=0 absmax=2.48  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.84  residual: nan=0 inf=0 absmax=3.82  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.84  residual: nan=0 inf=0 absmax=3.82  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=0 nan=0 max=26.53 min=-16.98
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.24  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.44  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.57  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.25  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.30  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.30  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.24  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.21  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.15  residual: nan=0 inf=0 absmax=0.44  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.21  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.20  residual: nan=0 inf=0 absmax=0.51  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.28  residual: nan=0 inf=0 absmax=0.13  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.55  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.52  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.69  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.44  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.23  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.56  residual: nan=0 inf=0 absmax=0.65  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.56  residual: nan=0 inf=0 absmax=0.65  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.35  residual: nan=0 inf=0 absmax=0.93  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.35  residual: nan=0 inf=0 absmax=0.93  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.51  residual: nan=0 inf=0 absmax=1.22  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.51  residual: nan=0 inf=0 absmax=1.22  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.27  residual: nan=0 inf=0 absmax=2.60  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.27  residual: nan=0 inf=0 absmax=2.60  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=2.06  residual: nan=0 inf=0 absmax=3.21  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=2.06  residual: nan=0 inf=0 absmax=3.21  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=0 nan=0 max=25.55 min=-16.38
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.20  residual: nan=0 inf=0 absmax=0.45  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.26  residual: nan=0 inf=0 absmax=0.14  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.53  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.50  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.69  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.44  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.21  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.45  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.24  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.30  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.20  residual: nan=0 inf=0 absmax=0.44  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.23  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.28  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.23  residual: nan=0 inf=0 absmax=0.14  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.39  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.19  residual: nan=0 inf=0 absmax=0.52  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.55  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.54  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.41  residual: nan=0 inf=0 absmax=0.62  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.41  residual: nan=0 inf=0 absmax=0.62  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.33  residual: nan=0 inf=0 absmax=0.80  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.33  residual: nan=0 inf=0 absmax=0.80  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.48  residual: nan=0 inf=0 absmax=1.17  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.48  residual: nan=0 inf=0 absmax=1.17  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.59  residual: nan=0 inf=0 absmax=2.51  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.59  residual: nan=0 inf=0 absmax=2.51  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.52  residual: nan=0 inf=0 absmax=3.26  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.52  residual: nan=0 inf=0 absmax=3.26  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=0 nan=0 max=28.84 min=-11.57
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.40  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.50  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.55  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.18  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.22  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.20  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.22  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.24  residual: nan=0 inf=0 absmax=0.14  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.39  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.19  residual: nan=0 inf=0 absmax=0.53  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.17  residual: nan=0 inf=0 absmax=0.55  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.54  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.31  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.30  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.24  residual: nan=0 inf=0 absmax=0.10  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.14  residual: nan=0 inf=0 absmax=0.56  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.15  residual: nan=0 inf=0 absmax=0.61  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.71  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.25  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.20  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.45  residual: nan=0 inf=0 absmax=0.60  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.45  residual: nan=0 inf=0 absmax=0.60  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.28  residual: nan=0 inf=0 absmax=0.77  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.28  residual: nan=0 inf=0 absmax=0.77  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.71  residual: nan=0 inf=0 absmax=1.24  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.71  residual: nan=0 inf=0 absmax=1.24  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.28  residual: nan=0 inf=0 absmax=2.02  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.28  residual: nan=0 inf=0 absmax=2.02  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.61  residual: nan=0 inf=0 absmax=2.87  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=1.61  residual: nan=0 inf=0 absmax=2.87  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=0 nan=0 max=28.39 min=-13.82
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.26  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.36  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.17  residual: nan=0 inf=0 absmax=0.53  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.51  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.24  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.17  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.27  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.09  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.19  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.38  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.24  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.03  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.18  residual: nan=0 inf=0 absmax=0.42  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.46  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.13  residual: nan=0 inf=0 absmax=0.50  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.08  residual: nan=0 inf=0 absmax=0.21  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.12  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.07  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.15  residual: nan=0 inf=0 absmax=0.49  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.22  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.34  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.35  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.23  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.04  residual: nan=0 inf=0 absmax=0.30  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.33  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.17  residual: nan=0 inf=0 absmax=0.32  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.10  residual: nan=0 inf=0 absmax=0.29  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.22  residual: nan=0 inf=0 absmax=0.13  shape=(1, 2048)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.05  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.11  residual: nan=0 inf=0 absmax=0.43  shape=(1, 2048)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=0.16  residual: nan=0 inf=0 absmax=0.41  shape=(1, 2048)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=0.06  residual: nan=0 inf=0 absmax=0.37  shape=(1, 2048)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.68  residual: nan=0 inf=0 absmax=0.64  shape=(8, 4096)
+[DEBUG layer 0] hidden: nan=0 inf=0 absmax=0.68  residual: nan=0 inf=0 absmax=0.64  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.39  residual: nan=0 inf=0 absmax=0.99  shape=(8, 4096)
+[DEBUG layer 1] hidden: nan=0 inf=0 absmax=0.39  residual: nan=0 inf=0 absmax=0.99  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.50  residual: nan=0 inf=0 absmax=1.28  shape=(8, 4096)
+[DEBUG layer 2] hidden: nan=0 inf=0 absmax=0.50  residual: nan=0 inf=0 absmax=1.28  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.36  residual: nan=0 inf=0 absmax=2.09  shape=(8, 4096)
+[DEBUG layer 3] hidden: nan=0 inf=0 absmax=1.36  residual: nan=0 inf=0 absmax=2.09  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=2.12  residual: nan=0 inf=0 absmax=2.37  shape=(8, 4096)
+[DEBUG layer 4] hidden: nan=0 inf=0 absmax=2.12  residual: nan=0 inf=0 absmax=2.37  shape=(8, 4096)
+[DEBUG verify] logits_p shape=(1, 8, 32000) inf=1 nan=0 max=inf min=-inf
+/pytorch/aten/src/ATen/native/cuda/TensorCompare.cu:112: _assert_async_cuda_kernel: block: [0,0,0], thread: [0,0,0] Assertion `probability tensor contains either `inf`, `nan` or element < 0` failed.
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 439, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 390, in main
+[rank0]:     outputs, total_time, metrics = run_benchmark(args, llm, prompts, cur_sampling_params)
+[rank0]:                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 269, in run_benchmark
+[rank0]:     outputs, metrics = llm.generate(prompts, sampling_params)
+[rank0]:                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 357, in generate
+[rank0]:     output = self.step(inference_step)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 201, in step
+[rank0]:     ttl_tokens = step.prefill(seqs) if is_prefill else step.decode(seqs)
+[rank0]:                                                        ^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/step.py", line 129, in decode
+[rank0]:     out_verify_result = self.verifier.verify(seqs, speculate_result, eagle=self.eagle)
+[rank0]:                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/verifier.py", line 118, in verify
+[rank0]:     new_suffixes, recovery_tokens = verify(
+[rank0]:                                     ^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/utils/verify.py", line 182, in verify
+[rank0]:     starts = speculations[:, 0].tolist()
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]: torch.AcceleratorError: CUDA error: device-side assert triggered
+[rank0]: CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+[rank0]: For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+[rank0]: Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+[LLMEngine] Exiting (hard=True)
+[rank0]:[E420 14:55:37.333032246 ProcessGroupNCCL.cpp:2068] [PG ID 1 PG GUID 1 Rank 0] Process group watchdog thread terminated with exception: CUDA error: device-side assert triggered
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+Exception raised from c10_cuda_check_implementation at /pytorch/c10/cuda/CUDAException.cpp:42 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x80 (0x7f9e5d37eeb0 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x111c7 (0x7f9efd46c1c7 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10_cuda.so)
+frame #2: c10d::ProcessGroupNCCL::WorkNCCL::finishedGPUExecutionInternal() const + 0x50 (0x7f9e00883640 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::isCompleted() + 0x68 (0x7f9e00892e28 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0x978 (0x7f9e00895f48 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0xd2 (0x7f9e00897ec2 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdf0e6 (0x7f9efddaf0e6 in /home/chokwans99/anaconda3/envs/ssd/bin/../lib/libstdc++.so.6)
+frame #7: <unknown function> + 0x94b43 (0x7f9f0225ab43 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #8: <unknown function> + 0x126a00 (0x7f9f022eca00 in /lib/x86_64-linux-gnu/libc.so.6)
+
+terminate called after throwing an instance of 'c10::DistBackendError'
+  what():  [PG ID 1 PG GUID 1 Rank 0] Process group watchdog thread terminated with exception: CUDA error: device-side assert triggered
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+Exception raised from c10_cuda_check_implementation at /pytorch/c10/cuda/CUDAException.cpp:42 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x80 (0x7f9e5d37eeb0 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x111c7 (0x7f9efd46c1c7 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10_cuda.so)
+frame #2: c10d::ProcessGroupNCCL::WorkNCCL::finishedGPUExecutionInternal() const + 0x50 (0x7f9e00883640 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #3: c10d::ProcessGroupNCCL::WorkNCCL::isCompleted() + 0x68 (0x7f9e00892e28 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #4: c10d::ProcessGroupNCCL::Watchdog::runLoop() + 0x978 (0x7f9e00895f48 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #5: c10d::ProcessGroupNCCL::Watchdog::run() + 0xd2 (0x7f9e00897ec2 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdf0e6 (0x7f9efddaf0e6 in /home/chokwans99/anaconda3/envs/ssd/bin/../lib/libstdc++.so.6)
+frame #7: <unknown function> + 0x94b43 (0x7f9f0225ab43 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #8: <unknown function> + 0x126a00 (0x7f9f022eca00 in /lib/x86_64-linux-gnu/libc.so.6)
+
+Exception raised from run at /pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:2074 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x80 (0x7f9e5d37eeb0 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0xe1c1a1 (0x7f9e0086f1a1 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #2: <unknown function> + 0x9468e6 (0x7f9e003998e6 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #3: <unknown function> + 0xdf0e6 (0x7f9efddaf0e6 in /home/chokwans99/anaconda3/envs/ssd/bin/../lib/libstdc++.so.6)
+frame #4: <unknown function> + 0x94b43 (0x7f9f0225ab43 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #5: <unknown function> + 0x126a00 (0x7f9f022eca00 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[rank1]:[W420 14:55:37.650845276 TCPStore.cpp:125] [c10d] recvValue failed on SocketImpl(fd=76, addr=[localhost]:49196, remote=[localhost]:12297): Failed to recv, got 0 bytes. Connection was likely closed. Did the remote server shutdown or crash?
+Exception raised from recvBytes at /pytorch/torch/csrc/distributed/c10d/Utils.hpp:682 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x80 (0x7ff47e4d9eb0 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x5d694d1 (0x7ff4625ae4d1 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #2: <unknown function> + 0x5d6a8cd (0x7ff4625af8cd in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #3: <unknown function> + 0x5d6b47a (0x7ff4625b047a in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #4: c10d::TCPStore::check(std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&) + 0x31e (0x7ff4625ab19e in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #5: c10d::ProcessGroupNCCL::HeartbeatMonitor::runLoop() + 0x398 (0x7ff421a90b18 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdf0e6 (0x7ff51edeb0e6 in /home/chokwans99/anaconda3/envs/ssd/bin/../lib/libstdc++.so.6)
+frame #7: <unknown function> + 0x94b43 (0x7ff523329b43 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #8: <unknown function> + 0x126a00 (0x7ff5233bba00 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[rank1]:[W420 14:55:37.654678849 ProcessGroupNCCL.cpp:1783] [PG ID 0 PG GUID 0(default_pg) Rank 1] Failed to check the "should dump" flag on TCPStore, (maybe TCPStore server has shut down too early), with error: Failed to recv, got 0 bytes. Connection was likely closed. Did the remote server shutdown or crash?
+[rank1]:[W420 14:55:38.654877986 TCPStore.cpp:106] [c10d] sendBytes failed on SocketImpl(fd=76, addr=[localhost]:49196, remote=[localhost]:12297): Broken pipe
+Exception raised from sendBytes at /pytorch/torch/csrc/distributed/c10d/Utils.hpp:653 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x80 (0x7ff47e4d9eb0 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x5d694d1 (0x7ff4625ae4d1 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #2: <unknown function> + 0x5d69d62 (0x7ff4625aed62 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #3: <unknown function> + 0x5d6b86e (0x7ff4625b086e in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #4: c10d::TCPStore::check(std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&) + 0x30e (0x7ff4625ab18e in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #5: c10d::ProcessGroupNCCL::HeartbeatMonitor::runLoop() + 0x398 (0x7ff421a90b18 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdf0e6 (0x7ff51edeb0e6 in /home/chokwans99/anaconda3/envs/ssd/bin/../lib/libstdc++.so.6)
+frame #7: <unknown function> + 0x94b43 (0x7ff523329b43 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #8: <unknown function> + 0x126a00 (0x7ff5233bba00 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[rank1]:[W420 14:55:38.665302946 ProcessGroupNCCL.cpp:1783] [PG ID 0 PG GUID 0(default_pg) Rank 1] Failed to check the "should dump" flag on TCPStore, (maybe TCPStore server has shut down too early), with error: Broken pipe
+[rank1]:[W420 14:55:39.665542507 TCPStore.cpp:106] [c10d] sendBytes failed on SocketImpl(fd=76, addr=[localhost]:49196, remote=[localhost]:12297): Broken pipe
+Exception raised from sendBytes at /pytorch/torch/csrc/distributed/c10d/Utils.hpp:653 (most recent call first):
+frame #0: c10::Error::Error(c10::SourceLocation, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) + 0x80 (0x7ff47e4d9eb0 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libc10.so)
+frame #1: <unknown function> + 0x5d694d1 (0x7ff4625ae4d1 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #2: <unknown function> + 0x5d69d62 (0x7ff4625aed62 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #3: <unknown function> + 0x5d6b86e (0x7ff4625b086e in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #4: c10d::TCPStore::check(std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&) + 0x30e (0x7ff4625ab18e in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cpu.so)
+frame #5: c10d::ProcessGroupNCCL::HeartbeatMonitor::runLoop() + 0x398 (0x7ff421a90b18 in /home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
+frame #6: <unknown function> + 0xdf0e6 (0x7ff51edeb0e6 in /home/chokwans99/anaconda3/envs/ssd/bin/../lib/libstdc++.so.6)
+frame #7: <unknown function> + 0x94b43 (0x7ff523329b43 in /lib/x86_64-linux-gnu/libc.so.6)
+frame #8: <unknown function> + 0x126a00 (0x7ff5233bba00 in /lib/x86_64-linux-gnu/libc.so.6)
+
+[rank1]:[W420 14:55:39.675617037 ProcessGroupNCCL.cpp:1783] [PG ID 0 PG GUID 0(default_pg) Rank 1] Failed to check the "should dump" flag on TCPStore, (maybe TCPStore server has shut down too early), with error: Broken pipe
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

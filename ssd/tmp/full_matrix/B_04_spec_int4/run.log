@@ -1,0 +1,401 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 10 prompts from humaneval...
+Loading 10 prompts from alpaca...
+Loading 10 prompts from gsm...
+Loading 10 prompts from ultrafeedback...
+Total prompts loaded: 40
+Draft runner created on rank 2 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[quant] target_quant_force_bf16_runtime=True → upcasting hf_config.torch_dtype fp16 -> bf16 (rank=0, is_draft=False). Runtime is now effectively bf16 (NOT a fp16 runtime). Activations, KV cache, graph buffers, draft — all bf16.
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[quant] target_quant_force_bf16_runtime=True → upcasting hf_config.torch_dtype fp16 -> bf16 (rank=1, is_draft=False). Runtime is now effectively bf16 (NOT a fp16 runtime). Activations, KV cache, graph buffers, draft — all bf16.
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama2-7B
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama2-7B
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.18it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.18it/s]
+Loading model files:  33%|███▎      | 1/3 [00:01<00:02,  1.04s/it]Loading model files:  33%|███▎      | 1/3 [00:01<00:02,  1.05s/it]Loading model files:  67%|██████▋   | 2/3 [00:02<00:01,  1.19s/it]Loading model files:  67%|██████▋   | 2/3 [00:02<00:01,  1.21s/it]Loading model files: 100%|██████████| 3/3 [00:03<00:00,  1.26s/it]Loading model files: 100%|██████████| 3/3 [00:03<00:00,  1.23s/it]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama2-7B
+[quant] quantizing target (rank=0, backend=int4_wo_tile, lm_head=False, skip=())
+[quant] backend=int4_wo_tile (torchao Int4WeightOnlyConfig, tinygemm fast path)
+Loading model files: 100%|██████████| 3/3 [00:03<00:00,  1.26s/it]Loading model files: 100%|██████████| 3/3 [00:03<00:00,  1.23s/it]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama2-7B
+[quant] quantizing target (rank=1, backend=int4_wo_tile, lm_head=False, skip=())
+[quant] backend=int4_wo_tile (torchao Int4WeightOnlyConfig, tinygemm fast path)
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py:103: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4421.)
+  return func(*args, **kwargs)
+[quant] model.layers.0.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py:103: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4421.)
+  return func(*args, **kwargs)
+[quant] model.layers.0.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.0.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.0.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.0.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.0.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.0.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.0.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.1.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.2.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.3.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.4.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.5.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.6.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.7.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.8.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.self_attn.qkv_proj                (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.self_attn.o_proj                  (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.mlp.gate_up_proj                  (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.9.mlp.down_proj                     (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.10.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.11.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.12.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.13.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.14.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.15.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.16.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.17.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.18.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.19.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.20.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.21.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.22.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.23.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.24.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.25.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.26.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.27.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.28.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.30.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.30.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.30.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.30.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.29.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.30.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.30.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] summary: backend=int4, tp_linear=128, lm_head=0, src=6.48 GB → nominal≈1.62 GB (ratio 0.25), actual≈1.76 GB (ratio 0.27, incl scale/zp)
+[quant] model.layers.30.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.30.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.self_attn.qkv_proj               (6144, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.self_attn.o_proj                 (4096, 2048) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.mlp.gate_up_proj                 (11008, 4096) torch.bfloat16 → AQT-int4
+[quant] model.layers.31.mlp.down_proj                    (4096, 5504) torch.bfloat16 → AQT-int4
+[quant] summary: backend=int4, tp_linear=128, lm_head=0, src=6.48 GB → nominal≈1.62 GB (ratio 0.25), actual≈1.76 GB (ratio 0.27, incl scale/zp)
+[load_model] finished loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 3051, 256, 4, 64])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 235, 256, 16, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 235, 256, 16, 128])
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=24
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=3, fan_out_list=[5, 4, 4, 3, 3, 2, 2, 1], fan_out_list_miss=[5, 4, 4, 3, 3, 2, 2, 1], MQ_LEN=24
+DraftRunner set up, starting draft_loop
+F=3, fan_out_list=[5, 4, 4, 3, 3, 2, 2, 1], fan_out_list_miss=[5, 4, 4, 3, 3, 2, 2, 1], MQ_LEN=24
+F=3, fan_out_list=[5, 4, 4, 3, 3, 2, 2, 1], fan_out_list_miss=[5, 4, 4, 3, 3, 2, 2, 1], MQ_LEN=24
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.6 b=1
+============================================================
+Generating:   0%|          | 0/40 [00:00<?, ?it/s]Generating:   2%|▎         | 1/40 [00:06<04:17,  6.60s/it]Generating:   5%|▌         | 2/40 [00:08<02:33,  4.03s/it]Generating:   8%|▊         | 3/40 [00:11<02:02,  3.31s/it]Generating:  10%|█         | 4/40 [00:13<01:42,  2.85s/it]Generating:  12%|█▎        | 5/40 [00:15<01:28,  2.54s/it]Generating:  15%|█▌        | 6/40 [00:17<01:17,  2.27s/it]Generating:  18%|█▊        | 7/40 [00:19<01:18,  2.37s/it]Generating:  20%|██        | 8/40 [00:22<01:22,  2.58s/it]Generating:  22%|██▎       | 9/40 [00:24<01:12,  2.35s/it]Generating:  25%|██▌       | 10/40 [00:26<01:08,  2.30s/it]Generating:  28%|██▊       | 11/40 [00:30<01:19,  2.73s/it]Generating:  30%|███       | 12/40 [00:34<01:24,  3.01s/it]Generating:  32%|███▎      | 13/40 [00:36<01:17,  2.89s/it]Generating:  35%|███▌      | 14/40 [00:38<01:09,  2.66s/it]Generating:  38%|███▊      | 15/40 [00:41<01:04,  2.56s/it]Generating:  40%|████      | 16/40 [00:44<01:06,  2.78s/it]Generating:  42%|████▎     | 17/40 [00:48<01:09,  3.03s/it]Generating:  45%|████▌     | 18/40 [00:50<01:02,  2.84s/it]Generating:  48%|████▊     | 19/40 [00:52<00:56,  2.67s/it]Generating:  50%|█████     | 20/40 [00:56<01:01,  3.07s/it]Generating:  52%|█████▎    | 21/40 [00:58<00:52,  2.78s/it]Generating:  55%|█████▌    | 22/40 [01:02<00:56,  3.12s/it]Generating:  57%|█████▊    | 23/40 [01:06<00:58,  3.42s/it]Generating:  60%|██████    | 24/40 [01:11<01:01,  3.83s/it]Generating:  62%|██████▎   | 25/40 [01:13<00:48,  3.26s/it]Generating:  65%|██████▌   | 26/40 [01:17<00:47,  3.39s/it]Generating:  68%|██████▊   | 27/40 [01:21<00:45,  3.49s/it]Generating:  70%|███████   | 28/40 [01:25<00:45,  3.80s/it]Generating:  72%|███████▎  | 29/40 [01:28<00:39,  3.61s/it]Generating:  75%|███████▌  | 30/40 [01:31<00:33,  3.36s/it]Generating:  78%|███████▊  | 31/40 [01:36<00:35,  3.94s/it]Generating:  80%|████████  | 32/40 [01:39<00:29,  3.65s/it]Generating:  82%|████████▎ | 33/40 [01:43<00:25,  3.61s/it]Generating:  85%|████████▌ | 34/40 [01:45<00:19,  3.22s/it]Generating:  88%|████████▊ | 35/40 [01:48<00:15,  3.18s/it]Generating:  90%|█████████ | 36/40 [01:51<00:11,  2.92s/it]Generating:  92%|█████████▎| 37/40 [01:54<00:09,  3.03s/it]Generating:  95%|█████████▌| 38/40 [01:56<00:05,  2.81s/it]Generating:  98%|█████████▊| 39/40 [01:59<00:02,  2.90s/it]Generating: 100%|██████████| 40/40 [02:03<00:00,  3.23s/it]Generating: 100%|██████████| 40/40 [02:03<00:00,  3.09s/it]
+Final Prefill Throughput: 787tok/s
+Final Decode Throughput: 86tok/s
+[metrics] Avg Tokens per step (incl recovery): 4.44
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.49
+[metrics] Avg target time per full step (ms): 53.12
+[metrics] Avg target verify time (ms): 12.86
+[metrics] Avg Cache Hits: 0.70
+[metrics] Avg Tokens per step on Cache Hit: 4.87
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.172
+  1: 0.150
+  2: 0.083
+  3: 0.070
+  4: 0.065
+  5: 0.051
+  6: 0.041
+  7: 0.368
+[metrics] Avg Tokens per step on Cache Miss: 3.48
+Model: layerskip-llama2-7B, Mode: CUDA Graphs + Speculative(k=7) + Async + JIT, Total: 10240tok, Time: 123.74s, Total Throughput: 82.76tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
+Generation: '   for number1, number2 in zip(numbers, numbers[1:]):\n        if abs(number1 - number2) < threshold:\n            return True\n    return False\n\n\ndef convert_to_coordinates(\n    x_min: float,\n    y_min: float,\n    x_max: float,\n    y_max: float,\n    width: int,\n    height: int,\n) -> List[float]:\n    """\n    Convert x and y values to their coordinates in given image dimensions.\n    >>> convert_to_coordinates(5, 5, 10, 5, 5, 10)\n    [1, 5, 9, 13, 17]\n    >>> convert_to_coordinates(5, 5, 10, 5, 10, 10)\n    [1, 5, 9, 13, 17, 18, 20, 22, 24]\n    """\n    x_coord = x_min + (x_max - x_min) *'
+----------------------------------------
+
+Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
+Generation: '   stack = []\n    current_group = \'\'\n    for character in paren_string:\n        if character == \'(\':\n            stack.append(current_group)\n            current_group = \'\'\n        elif character == \')\':\n            if len(stack) > 0:\n                result = stack.pop()\n                if len(result) > 0:\n                    yield result\n            else:\n                raise ValueError("Empty group")\n        elif character == \' \':\n            if len(current_group) > 0:\n                yield current_group\n                current_group = \'\'\n        elif character == \')\':\n            if len(current_group) > 0:\n                yield current_group\n                current_group = \'\'\n        else:\n            current_group += character\n    yield current_group\n\n\ndef test_separate_paren_groups():\n    assert separate_paren_groups(\'()()\') == [\'()\']\n    assert separate_paren_groups(\'( ) (( )) (( )( ))\') == [\n        \'()\',\n        \'(())\',\n        \'(()())\','
+----------------------------------------
+
+Prompt 3: '\n\ndef truncate_number(number: float) -> float:\n    """ Given a positive floating point number, it can be decomposed into\n    and integer part (largest integer smaller than given number) and decimals\n    (leftover part always smaller than 1).\n\n    Return the decimal part of the number.\n    >>> truncate_number(3.5)\n    0.5\n    """\n'
+Generation: '   if number < 1:\n        return 0\n    int_part, dec = divmod(number, 1)\n    if dec < 1:\n        dec = 0\n    return dec\n\n\ndef multiply_and_add(num_1: int, num_2: int) -> int:\n    """\n    Given two integers, return the result of multiplying them, then adding\n    the result to the smaller of the two.\n\n    >>> multiply_and_add(2, 10)\n    12\n    """\n    result = num_1 * num_2\n    if result < num_1:\n        result += num_1\n    return result\n\n\ndef divide_by_pow(num: int, power: int) -> float:\n    """\n    Given an integer and a power, return the result of dividing the integer\n    by the power.\n\n    >>> divide_by_pow(2, 3)\n    0.66666666666666667\n    """\n    if power < 0:\n        raise ValueError(\'Power'
+----------------------------------------
+
+Prompt 4: 'from typing import List\n\n\ndef below_zero(operations: List[int]) -> bool:\n    """ You\'re given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fallls below zero, and\n    at that point function should return True. Otherwise it should return False.\n    >>> below_zero([1, 2, 3])\n    False\n    >>> below_zero([1, 2, -4, 5])\n    True\n    """\n'
+Generation: '   if sum(operations) >= 0:\n        return False\n    return True\n\n\ndef multiply_by_n(operations: List[int], n: int) -> int:\n    """ You\'re given a list of deposit and withdrawal operations on a bank account. Your task is to\n    multiply all deposit operations by n and return the sum (if possible). Otherwise return 0.\n    >>> multiply_by_n([1, 2, 3, 4, 5], 2)\n    10\n    >>> multiply_by_n([1, 2, 3, 4, 5], -1)\n    0\n    """\n    return sum(operations) * n\n\n\ndef multiply_by_n_and_return(operations: List[int], n: int) -> int:\n    """ You\'re given a list of deposit and withdrawal operations on a bank account. Your task is to\n    multiply all deposit operations by n and return the sum (if possible). Otherwise return 0.\n    >>> multiply_by_n_and_return([1, 2, '
+----------------------------------------
+
+Prompt 5: 'from typing import List\n\n\ndef mean_absolute_deviation(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate Mean Absolute Deviation\n    around the mean of this dataset.\n    Mean Absolute Deviation is the average absolute difference between each\n    element and a centerpoint (mean in this case):\n    MAD = average | x - x_mean |\n    >>> mean_absolute_deviation([1.0, 2.0, 3.0, 4.0])\n    1.0\n    """\n'
+Generation: '   mean = sum(numbers) / len(numbers)\n    squared_differences = sum([(number - mean) ** 2 for number in numbers])\n    return math.sqrt(squared_differences / len(numbers))\n\n\ndef mean_absolute_deviation_with_confidence_interval(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate Mean Absolute Deviation\n    around the mean of this dataset, and compute a 95% confidence interval\n    for the Mean Absolute Deviation.\n    Mean Absolute Deviation is the average absolute difference between each\n    element and a centerpoint (mean in this case):\n    MAD = average | x - x_mean |\n    >>> mean_absolute_deviation_with_confidence_interval([1.0, 2.0, 3.0, 4.0])\n    1.0\n    """\n    mean = sum(numbers) / len(numbers)\n    squared_differences = sum([(number - mean) ** 2 for number in numbers])\n    mean_absolute_deviation ='
+----------------------------------------
+
+Prompt 6: 'from typing import List\n\n\ndef intersperse(numbers: List[int], delimeter: int) -> List[int]:\n    """ Insert a number \'delimeter\' between every two consecutive elements of input list `numbers\'\n    >>> intersperse([], 4)\n    []\n    >>> intersperse([1, 2, 3], 4)\n    [1, 4, 2, 4, 3]\n    """\n'
+Generation: '   return [numbers[i:i + 2] + [delimeter] + numbers[i + 2:] for i in range(len(numbers) - 1)]\n\n\ndef intersperse_tuple(numbers: List[int], delimeter: int) -> List[int]:\n    """ Insert a number \'delimeter\' between every two consecutive elements of input list `numbers\'\n    >>> intersperse_tuple([], 4)\n    []\n    >>> intersperse_tuple([1, 2, 3], 4)\n    [1, 4, 2, 4, 3]\n    """\n    return [numbers[i:i + 2] + [delimeter] + numbers[i + 2:] for i in range(len(numbers) - 1)]\n\n\ndef intersperse_tuple_with_index(numbers: List[int], delimeter: int) -> List[int]:\n    """ Insert a number \'delimeter\' between every two consecutive elements of input list `numbers\'\n    >>> intersperse_tuple_with_index([], 4)\n    []'
+----------------------------------------
+
+Prompt 7: 'from typing import List\n\n\ndef parse_nested_parens(paren_string: str) -> List[int]:\n    """ Input to this function is a string represented multiple groups for nested parentheses separated by spaces.\n    For each of the group, output the deepest level of nesting of parentheses.\n    E.g. (()()) has maximum two levels of nesting while ((())) has three.\n\n    >>> parse_nested_parens(\'(()()) ((())) () ((())()())\')\n    [2, 3, 1, 3]\n    """\n'
+Generation: '   depths = []\n    for group in paren_string.split(\' \'):\n        if group.count(\'(\') == 0:\n            depths.append(0)\n        else:\n            depths.append(len(group.split(\'(\')))\n    return depths\n\n\ndef main():\n    input_paren_string = "(()()) ((())) () ((())()())"\n    nesting_depths = parse_nested_parens(input_paren_string)\n    print(nesting_depths)\n\n\nif __name__ == \'__main__\':\n    main()\n</s><s> #include "config.h"\n#include "wine/port.h"\n#include "wine/debug.h"\n#include "mswsock.h"\n#include "windef.h"\n#include "winbase.h"\n#include "winreg.h"\n#include "wine/user.h"\n#include "dsound.h"\n#include "dsound_priv.h"\n#include "ws2_32.h"\n\nWINE'
+----------------------------------------
+
+Prompt 8: 'from typing import List\n\n\ndef filter_by_substring(strings: List[str], substring: str) -> List[str]:\n    """ Filter an input list of strings only for ones that contain given substring\n    >>> filter_by_substring([], \'a\')\n    []\n    >>> filter_by_substring([\'abc\', \'bacd\', \'cde\', \'array\'], \'a\')\n    [\'abc\', \'bacd\', \'array\']\n    """\n'
+Generation: '   return [element for element in strings if substring in element]\n\n\n# Tests\ndef test_filter_by_substring():\n    """ Test filter_by_substring """\n    assert filter_by_substring([], \'a\') == []\n    assert filter_by_substring([\'abc\', \'bacd\', \'cde\', \'array\'], \'a\') == [\'abc\', \'bacd\', \'array\']\n</s><s> import React from \'react\';\nimport { shallow, mount } from \'enzyme\';\nimport { toJson, toJsonReact } from \'enzyme-to-json\';\nimport { expect } from \'chai\';\nimport { createMemoryHistory } from \'history\';\nimport { MuiThemeProvider } from \'material-ui/styles\';\nimport { createMemoryHistory } from \'history\';\nimport { GLOBAL_TOKEN } from \'../../../helpers/constants\';\nimport { isEqual } from \'lodash\';\nimport { Tabs } from \'../../../src/js/views/tabs\';\nimport { MuiPickersUtilsProvider, MuiPickersUtilsProviderProps } from \'material'
+----------------------------------------
+
+Prompt 9: 'from typing import List, Tuple\n\n\ndef sum_product(numbers: List[int]) -> Tuple[int, int]:\n    """ For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.\n    Empty sum should be equal to 0 and empty product should be equal to 1.\n    >>> sum_product([])\n    (0, 1)\n    >>> sum_product([1, 2, 3, 4])\n    (10, 24)\n    """\n'
+Generation: '   if not numbers:\n        return 0, 1\n    else:\n        return numbers[0] + sum_product(numbers[1:]), numbers[0] * product(numbers[1:])\n\n\ndef product(numbers: List[int]) -> int:\n    """ For a given list of integers, return a product of all the integers in a list.\n    Empty product should be equal to 1.\n    >>> product([])\n    1\n    >>> product([1, 2, 3, 4])\n    24\n    """\n    if not numbers:\n        return 1\n    else:\n        return numbers[0] * product(numbers[1:])\n\n\ndef product_of_numbers(numbers: List[int]) -> int:\n    """ For a given list of integers, return a product of all the integers in a list.\n    Empty product should be equal to 1.\n    >>> product_of_numbers([])\n    1\n    >>> product_of_numbers([1, 2, 3, 4])\n    24\n    """\n    if not numbers:\n       '
+----------------------------------------
+
+Prompt 10: 'from typing import List, Tuple\n\n\ndef rolling_max(numbers: List[int]) -> List[int]:\n    """ From a given list of integers, generate a list of rolling maximum element found until given moment\n    in the sequence.\n    >>> rolling_max([1, 2, 3, 2, 3, 4, 2])\n    [1, 2, 3, 3, 3, 4, 4]\n    """\n'
+Generation: '   results = []\n    start = 0\n    last = 0\n    while last < len(numbers):\n        for i, val in enumerate(numbers):\n            if i == last:\n                if numbers[i] > numbers[last]:\n                    results.append(numbers[i])\n            else:\n                if numbers[i] > numbers[last]:\n                    results.append(numbers[i])\n                    last = i\n                    continue\n                else:\n                    last = i\n                    results.append(numbers[last])\n                    break\n        last = i\n        if last == len(numbers):\n            break\n    return results\n\n\ndef rolling_min(numbers: List[int]) -> List[int]:\n    """ From a given list of integers, generate a list of rolling minimum element found until given moment\n    in the sequence.\n    >>> rolling_min([1, 2, 3, 2, 3, 4, 2])\n    [2, 2, 2, 2, 2, 2, 2]\n    """\n    results = []\n    start'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 46.83

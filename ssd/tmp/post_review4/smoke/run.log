@@ -1,0 +1,124 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 2 prompts from humaneval...
+Loading 2 prompts from alpaca...
+Loading 2 prompts from gsm...
+Loading 2 prompts from ultrafeedback...
+Total prompts loaded: 8
+Draft runner created on rank 2 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.12it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.12it/s]
+Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.08s/it]Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.06s/it]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.07s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.49it/s]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.02s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.55it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.30it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.23it/s]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+[quant] quantizing target (rank=1, backend=int4_wo_tile, lm_head=False, skip=())
+[quant] backend=int4_wo_tile (torchao Int4WeightOnlyConfig, tinygemm fast path)
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py:103: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4421.)
+  return func(*args, **kwargs)
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 151, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 368, in setup_and_warmup_model_and_cudagraphs
+    apply_quantization_to_target(
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/quantize.py", line 249, in apply_quantization_to_target
+    bytes_after_actual += _measure_aqt_bytes(new_w)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/quantize.py", line 189, in _measure_aqt_bytes
+    key = (storage.data_ptr(), storage.size())
+           ^^^^^^^^^^^^^^^^^^
+RuntimeError: Attempted to access the data pointer on an invalid python storage.
+Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.35it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.27it/s]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+[quant] quantizing target (rank=0, backend=int4_wo_tile, lm_head=False, skip=())
+[quant] backend=int4_wo_tile (torchao Int4WeightOnlyConfig, tinygemm fast path)
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py:103: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4421.)
+  return func(*args, **kwargs)
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 457, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 361, in main
+[rank0]:     llm = LLM(model_path, **llm_kwargs)
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 92, in __init__
+[rank0]:     self.model_runner = ModelRunner(
+[rank0]:                         ^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 151, in __init__
+[rank0]:     model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 368, in setup_and_warmup_model_and_cudagraphs
+[rank0]:     apply_quantization_to_target(
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/utils/quantize.py", line 249, in apply_quantization_to_target
+[rank0]:     bytes_after_actual += _measure_aqt_bytes(new_w)
+[rank0]:                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/utils/quantize.py", line 189, in _measure_aqt_bytes
+[rank0]:     key = (storage.data_ptr(), storage.size())
+[rank0]:            ^^^^^^^^^^^^^^^^^^
+[rank0]: RuntimeError: Attempted to access the data pointer on an invalid python storage.
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/draft_runner.py", line 38, in __init__
+    super().__init__(self.draft_cfg, rank=rank, event=None, is_draft=True, num_tp_gpus=1, init_q=init_q)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 151, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 390, in setup_and_warmup_model_and_cudagraphs
+    self.async_pg = dist.new_group(ranks=[0, self.draft_rank])
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/c10d_logger.py", line 95, in wrapper
+    func_return = func(*args, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 5254, in new_group
+    return _new_group_with_tag(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 5344, in _new_group_with_tag
+    pg, pg_store = _new_process_group_helper(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 2125, in _new_process_group_helper
+    eager_backend.eager_connect_single_device(device_id)
+torch.distributed.DistBackendError: NCCL error in: /pytorch/torch/csrc/distributed/c10d/NCCLUtils.cpp:217, remote process exited or there was a network error, NCCL version 2.27.3
+ncclRemoteError: A call failed possibly due to a network error or a remote process exiting prematurely.
+Last error:
+socketProgress: Connection closed by remote peer eslab18<50472>
+[load_model] finished loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
+[rank0]:[W421 14:02:41.750983197 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())

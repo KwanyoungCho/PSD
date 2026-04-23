@@ -1,0 +1,163 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 3 prompts from humaneval...
+Loading 3 prompts from alpaca...
+Loading 3 prompts from gsm...
+Loading 3 prompts from ultrafeedback...
+Total prompts loaded: 12
+Draft runner created on rank 2 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[quant] SSD_QUANT_NO_UPCAST=1 → keeping fp16 (investigation mode)
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[quant] SSD_QUANT_NO_UPCAST=1 → keeping fp16 (investigation mode)
+`torch_dtype` is deprecated! Use `dtype` instead!
+[quant] SSD_QUANT_NO_UPCAST=1 → keeping fp16 (investigation mode)
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama2-7B
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama2-7B
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.14it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.14it/s]
+Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.21it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.22it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.11it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.12it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.09it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.11it/s]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama2-7B
+[quant] quantizing target (rank=1, backend=int4_wo_tile, lm_head=False, skip=())
+Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.10it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.11it/s]
+[quant] backend=int4_wo_tile (torchao Int4WeightOnlyConfig, tinygemm fast path)
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama2-7B
+[quant] quantizing target (rank=0, backend=int4_wo_tile, lm_head=False, skip=())
+[quant] backend=int4_wo_tile (torchao Int4WeightOnlyConfig, tinygemm fast path)
+Process SpawnProcess-1:
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 457, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 361, in main
+[rank0]:     llm = LLM(model_path, **llm_kwargs)
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 92, in __init__
+[rank0]:     self.model_runner = ModelRunner(
+[rank0]:                         ^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 157, in __init__
+[rank0]:     model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 374, in setup_and_warmup_model_and_cudagraphs
+[rank0]:     apply_quantization_to_target(
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/utils/quantize.py", line 247, in apply_quantization_to_target
+[rank0]:     new_w = _q_fn(w, target_dtype=_q_dtype)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/utils/quantize.py", line 92, in _quantize_weight_to_int4_wo
+[rank0]:     quantize_(dummy, Int4WeightOnlyConfig(group_size=group_size))
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 629, in quantize_
+[rank0]:     _replace_with_custom_fn_if_matches_filter(
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 305, in _replace_with_custom_fn_if_matches_filter
+[rank0]:     model = replacement_fn(model, *extra_args)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 1207, in _int4_weight_only_transform
+[rank0]:     new_weight = _int4_weight_only_quantize_tensor(module.weight, config)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 1179, in _int4_weight_only_quantize_tensor
+[rank0]:     new_weight = to_affine_quantized_intx(
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/dtypes/affine_quantized_tensor.py", line 367, in from_hp_to_intx
+[rank0]:     tensor_impl = tensor_impl_ctr(data, scale, zero_point, _layout)
+[rank0]:                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/dtypes/uintx/tensor_core_tiled_layout.py", line 312, in from_plain
+[rank0]:     scale_and_zero = pack_tinygemm_scales_and_zeros(scale, zero_point, scale.dtype)
+[rank0]:                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/utils.py", line 403, in pack_tinygemm_scales_and_zeros
+[rank0]:     guard_dtype_size(zeros, "zeros", dtype=dtype)
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/utils.py", line 138, in guard_dtype_size
+[rank0]:     raise ValueError(
+[rank0]: ValueError: Expected Tensor argument zeros to have dtype torch.float16, but got torch.bfloat16 instead.
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 157, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 374, in setup_and_warmup_model_and_cudagraphs
+    apply_quantization_to_target(
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/quantize.py", line 247, in apply_quantization_to_target
+    new_w = _q_fn(w, target_dtype=_q_dtype)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/quantize.py", line 92, in _quantize_weight_to_int4_wo
+    quantize_(dummy, Int4WeightOnlyConfig(group_size=group_size))
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 629, in quantize_
+    _replace_with_custom_fn_if_matches_filter(
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 305, in _replace_with_custom_fn_if_matches_filter
+    model = replacement_fn(model, *extra_args)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 1207, in _int4_weight_only_transform
+    new_weight = _int4_weight_only_quantize_tensor(module.weight, config)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/quant_api.py", line 1179, in _int4_weight_only_quantize_tensor
+    new_weight = to_affine_quantized_intx(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/dtypes/affine_quantized_tensor.py", line 367, in from_hp_to_intx
+    tensor_impl = tensor_impl_ctr(data, scale, zero_point, _layout)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/dtypes/uintx/tensor_core_tiled_layout.py", line 312, in from_plain
+    scale_and_zero = pack_tinygemm_scales_and_zeros(scale, zero_point, scale.dtype)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/utils.py", line 403, in pack_tinygemm_scales_and_zeros
+    guard_dtype_size(zeros, "zeros", dtype=dtype)
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torchao/quantization/utils.py", line 138, in guard_dtype_size
+    raise ValueError(
+ValueError: Expected Tensor argument zeros to have dtype torch.float16, but got torch.bfloat16 instead.
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/draft_runner.py", line 38, in __init__
+    super().__init__(self.draft_cfg, rank=rank, event=None, is_draft=True, num_tp_gpus=1, init_q=init_q)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 157, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 396, in setup_and_warmup_model_and_cudagraphs
+    self.async_pg = dist.new_group(ranks=[0, self.draft_rank])
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/c10d_logger.py", line 95, in wrapper
+    func_return = func(*args, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 5254, in new_group
+    return _new_group_with_tag(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 5344, in _new_group_with_tag
+    pg, pg_store = _new_process_group_helper(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py", line 2125, in _new_process_group_helper
+    eager_backend.eager_connect_single_device(device_id)
+torch.distributed.DistBackendError: NCCL error in: /pytorch/torch/csrc/distributed/c10d/NCCLUtils.cpp:217, remote process exited or there was a network error, NCCL version 2.27.3
+ncclRemoteError: A call failed possibly due to a network error or a remote process exiting prematurely.
+Last error:
+socketProgress: Connection closed by remote peer eslab18<39312>
+[load_model] finished loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+[rank0]:[W421 14:17:06.379971203 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())

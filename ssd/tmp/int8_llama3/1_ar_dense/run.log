@@ -1,0 +1,82 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 2 prompts from humaneval...
+Loading 2 prompts from alpaca...
+Loading 2 prompts from gsm...
+Loading 2 prompts from ultrafeedback...
+Total prompts loaded: 8
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=6
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:  25%|██▌       | 1/4 [00:02<00:06,  2.18s/it]Loading model files:  25%|██▌       | 1/4 [00:02<00:07,  2.47s/it]Loading model files:  50%|█████     | 2/4 [00:04<00:04,  2.22s/it]Loading model files:  50%|█████     | 2/4 [00:04<00:04,  2.19s/it]Loading model files:  75%|███████▌  | 3/4 [00:04<00:01,  1.39s/it]Loading model files:  75%|███████▌  | 3/4 [00:04<00:01,  1.38s/it]Loading model files: 100%|██████████| 4/4 [00:06<00:00,  1.62s/it]Loading model files: 100%|██████████| 4/4 [00:06<00:00,  1.72s/it]
+Loading model files: 100%|██████████| 4/4 [00:06<00:00,  1.61s/it]Loading model files: 100%|██████████| 4/4 [00:06<00:00,  1.69s/it]
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 421, 256, 4, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 350, 256, 4, 128])
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.6 b=1
+============================================================
+Generating:   0%|          | 0/8 [00:00<?, ?it/s]Generating:  12%|█▎        | 1/8 [00:02<00:19,  2.76s/it]Generating:  25%|██▌       | 2/8 [00:04<00:13,  2.24s/it]Generating:  38%|███▊      | 3/8 [00:06<00:10,  2.04s/it]Generating:  50%|█████     | 4/8 [00:08<00:07,  1.89s/it]Generating:  62%|██████▎   | 5/8 [00:09<00:05,  1.81s/it]Generating:  75%|███████▌  | 6/8 [00:11<00:03,  1.84s/it]Generating:  88%|████████▊ | 7/8 [00:13<00:01,  1.86s/it]Generating: 100%|██████████| 8/8 [00:15<00:00,  1.87s/it]Generating: 100%|██████████| 8/8 [00:15<00:00,  1.93s/it]
+Final Prefill Throughput: 574tok/s
+Final Decode Throughput: 25tok/s
+Model: layerskip-llama3-8B, Mode: CUDA Graphs + JIT, Total: 384tok, Time: 15.46s, Total Throughput: 24.84tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
+Generation: '    for i in range(len(numbers)):\n        for j in range(i + 1, len(numbers)):\n            if abs(numbers[i] - numbers[j]) < threshold:\n                return True\n    return False\n<|end_of_text|><|begin_of_text|>This code is part'
+----------------------------------------
+
+Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
+Generation: "    # TODO: your code here\n    return []  # Replace this with your code\n\n\ndef test_separate_paren_groups():\n    assert separate_paren_groups('( ) (( )) (( )( ))') == ['()', '(())', '"
+----------------------------------------
+
+Prompt 3: 'Give three tips for staying healthy.'
+Generation: ' How to stay healthy? 1. Eat healthy foods 2. Exercise regularly 3. Get enough sleep\nHow to stay healthy? 1. Eat healthy foods 2. Exercise regularly 3. Get enough sleep\nWhat are'
+----------------------------------------
+
+Prompt 4: 'What are the three primary colors?'
+Generation: ' Red, yellow, and blue are the primary colors, which are mixed together to create other colors.\nWhat is the color red called? The color red is also known as scarlet, crimson, and vermilion.\nWhat is the color orange'
+----------------------------------------
+
+Prompt 5: "Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?"
+Generation: '<|end_of_text|><|begin_of_text|> 16 2 3 4 2 16 2 3 4 2 16 2 3 4 2 16 2 3 4 2 16 2 3'
+----------------------------------------
+
+Prompt 6: 'A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?'
+Generation: " 4.5 bolts.  How many bolts of white fiber does it take? 2.25 bolts.  If you know how to do that division by hand, go ahead and do it.  If you don't, you"
+----------------------------------------
+
+Prompt 7: 'Can you write a C++ program that prompts the user to enter the name of a country and checks if it borders the Mediterranean Sea? Here\'s some starter code to help you out:\n#include <iostream>\n#include <string>\nusing namespace std;\nint main() {\n    string country;\n    // prompt user for input\n    cout << "Enter the name of a country: ";\n    cin >> country;\n    // check if country borders the Mediterranean Sea\n    // [C++ code]\n    return 0;\n}'
+Generation: '<|end_of_text|><|begin_of_text|>\n\\end{code}\n\nAnother exercise is to write a program that prompts the user to enter the name of a country and checks if it has a coastline on the Mediterranean Sea. The following code can help you get started:\n\n\\'
+----------------------------------------
+
+Prompt 8: 'Suppose you are a content creator and want to generate compelling titles and descriptions for your YouTube videos automatically. You have decided to use GPT to solve this problem.\nCan you provide an example of how you would use GPT to generate titles and descriptions for your YouTube videos automatically? Please include the necessary steps and any additional information that may be helpful.'
+Generation: ' Thank you for your time and consideration.\nGenerating compelling titles and descriptions for YouTube videos automatically using GPT can be done in several steps.\nFirst, you will need to provide GPT with a set of inputs, such as keywords or phrases related'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)

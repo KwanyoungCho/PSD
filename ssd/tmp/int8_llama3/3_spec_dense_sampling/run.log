@@ -1,0 +1,108 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+Loading 2 prompts from humaneval...
+Loading 2 prompts from alpaca...
+Loading 2 prompts from gsm...
+Loading 2 prompts from ultrafeedback...
+Total prompts loaded: 8
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 125, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 294, in setup_and_warmup_model_and_cudagraphs
+    load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/loader.py", line 216, in load_model
+    load_safetensors_model(model, path, packed_modules_mapping)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/loader.py", line 198, in load_safetensors_model
+    weight_loader(param, f.get_tensor(weight_name), shard_id)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/layers/linear.py", line 122, in weight_loader
+    param_data.copy_(loaded_weight)
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: The size of tensor a (4778) must match the size of tensor b (4779) at non-singleton dimension 0
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 125, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/engine/model_runner.py", line 294, in setup_and_warmup_model_and_cudagraphs
+    load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/loader.py", line 216, in load_model
+    load_safetensors_model(model, path, packed_modules_mapping)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/utils/loader.py", line 198, in load_safetensors_model
+    weight_loader(param, f.get_tensor(weight_name), shard_id)
+  File "/home/chokwans99/PSD/ssd/bench/../ssd/layers/linear.py", line 162, in weight_loader
+    param_data.copy_(loaded_weight)
+  File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: The size of tensor a (256) must match the size of tensor b (340) at non-singleton dimension 0
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
+[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 439, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 343, in main
+[rank0]:     llm = LLM(model_path, **llm_kwargs)
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 92, in __init__
+[rank0]:     self.model_runner = ModelRunner(
+[rank0]:                         ^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 125, in __init__
+[rank0]:     model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 294, in setup_and_warmup_model_and_cudagraphs
+[rank0]:     load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/utils/loader.py", line 216, in load_model
+[rank0]:     load_safetensors_model(model, path, packed_modules_mapping)
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/utils/loader.py", line 198, in load_safetensors_model
+[rank0]:     weight_loader(param, f.get_tensor(weight_name), shard_id)
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/layers/linear.py", line 122, in weight_loader
+[rank0]:     param_data.copy_(loaded_weight)
+[rank0]:   File "/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]: RuntimeError: The size of tensor a (4778) must match the size of tensor b (4779) at non-singleton dimension 0
+[rank0]:[W421 07:38:36.324012394 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
