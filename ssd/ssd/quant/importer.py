@@ -304,18 +304,32 @@ def import_autoawq_to_ssd_artifact(
     num_layers = cfg.num_hidden_layers
     print(f"[importer] AutoAWQ importer  model={model_path}  layers={num_layers}  tp={tp_size}")
 
-    # `quantize_config.json` is mandatory for the AutoAWQ path — we validate
-    # its key fields rather than silently assuming defaults.
+    # AWQ quant parameters are stored in one of two places depending on the
+    # source tool:
+    #   - llm-awq / our awq_calibrate.py: `quantize_config.json`
+    #       {"q_group_size": ..., "w_bit": ..., "zero_point": ...}
+    #   - AutoAWQ (casper-hansen): embeds `config.json["quantization_config"]`
+    #       {"group_size": ..., "bits": ..., "zero_point": ..., "quant_method": "awq"}
+    # Both are accepted. Key names are normalized here.
+    qc = None
     qc_path = os.path.join(model_path, "quantize_config.json")
-    if not os.path.isfile(qc_path):
+    if os.path.isfile(qc_path):
+        with open(qc_path) as f:
+            qc = json.load(f)
+    else:
+        cfg_path = os.path.join(model_path, "config.json")
+        if os.path.isfile(cfg_path):
+            with open(cfg_path) as f:
+                cfg_all = json.load(f)
+            qc = cfg_all.get("quantization_config")
+    if qc is None:
         raise RuntimeError(
-            f"AutoAWQ importer: expected `quantize_config.json` at {qc_path} "
-            f"(this is the only reliable source for group_size / zero_point / "
-            f"w_bit). If your external toolchain didn't produce one, write a "
+            f"AutoAWQ importer: no quantize_config.json and no "
+            f"quantization_config in config.json at {model_path}. "
+            f"Expected one of these as the source of group_size / zero_point / "
+            f"w_bit. If your external toolchain didn't produce one, write a "
             f'{{"q_group_size": 128, "zero_point": true, "w_bit": 4}} by hand.'
         )
-    with open(qc_path) as f:
-        qc = json.load(f)
     ext_group_size = int(qc.get("q_group_size", qc.get("group_size", -1)))
     ext_zero_point = qc.get("zero_point", qc.get("use_zero_point", None))
     ext_w_bit = int(qc.get("w_bit", qc.get("bits", -1)))
