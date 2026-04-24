@@ -1,148 +1,0 @@
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-Loading 10 prompts from humaneval...
-Loading 10 prompts from alpaca...
-Loading 10 prompts from gsm...
-Loading 10 prompts from ultrafeedback...
-Total prompts loaded: 40
-[Config] mesa_proxy_top_k raised 3 → 16 (to eliminate draft fallback; max_fo=12 + dfo=2 + margin=2)
-[Config] MESA-SSD enabled: exit_layer=16, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
-Draft runner created on rank 2 (async)!
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-[Config] MESA-SSD enabled: exit_layer=16, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
-`torch_dtype` is deprecated! Use `dtype` instead!
-[model_runner about to wrapper.init()] graph_bs_list=[1]
-wrapper backend is auto
-[MESA] Created FlashInfer wrappers for draft/proxy layouts
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-[LlamaModel] use_eagle=False, eagle_layers=None
-`torch_dtype` is deprecated! Use `dtype` instead!
-`torch_dtype` is deprecated! Use `dtype` instead!
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-[LlamaModel] use_eagle=False, eagle_layers=None
-[LlamaModel] use_eagle=False, eagle_layers=None
-Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
-[load_model] loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
-Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
-Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
-Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.11it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.11it/s]
-Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.06s/it]Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.06s/it]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.00s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.57it/s]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.00s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.57it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.34it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.27it/s]
-Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.36it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.28it/s]
-[load_model] finished loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
-inside allocate_kv_cache -- 
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 16, 2050, 256, 8, 64])
-[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
-inside allocate_kv_cache -- 
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 697, 256, 4, 128])
-[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
-inside allocate_kv_cache -- 
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 696, 256, 4, 128])
-[MESA] Captured split verify CudaGraph (exit_layer=16)
-F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
-[MESA] Captured split verify CudaGraph (exit_layer=16)
-F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
-[Config] MESA-SSD enabled: exit_layer=16, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
-About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=24
-  [FI capture] bs=1 key=fi_tree_decode starting...
-  [FI capture] bs=1 key=fi_tree_decode warmup...
-  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
-F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
-[MESA] TreeLayouts: full MQ_LEN=24, draft MQ_LEN=12, proxy MQ_LEN=12
-About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_draft MQ_LEN=12
-  [FI capture] bs=1 key=fi_tree_decode_draft starting...
-  [FI capture] bs=1 key=fi_tree_decode_draft warmup...
-[LLMEngine] finished llm_engine init
-
-============================================================
-SWEEP [1/1] temp=0.6 b=1
-============================================================
-Generating:   0%|          | 0/40 [00:00<?, ?it/s]  [FI capture] bs=1 key=fi_tree_decode_draft warmup done, capturing...
-About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_proxy MQ_LEN=12
-  [FI capture] bs=1 key=fi_tree_decode_proxy starting...
-  [FI capture] bs=1 key=fi_tree_decode_proxy warmup...
-  [FI capture] bs=1 key=fi_tree_decode_proxy warmup done, capturing...
-[MESA] Captured draft/proxy FI tree decode CudaGraphs
-DraftRunner set up, starting draft_loop
-Generating:   2%|▎         | 1/40 [00:05<03:23,  5.21s/it]Generating:   5%|▌         | 2/40 [00:11<03:32,  5.59s/it]Generating:   8%|▊         | 3/40 [00:14<02:56,  4.78s/it]Generating:  10%|█         | 4/40 [00:18<02:40,  4.47s/it]Generating:  12%|█▎        | 5/40 [00:21<02:18,  3.96s/it]Generating:  15%|█▌        | 6/40 [00:26<02:22,  4.20s/it]Generating:  18%|█▊        | 7/40 [00:29<02:06,  3.84s/it]Generating:  20%|██        | 8/40 [00:32<01:55,  3.62s/it]Generating:  22%|██▎       | 9/40 [00:37<01:58,  3.84s/it]Generating:  25%|██▌       | 10/40 [00:40<01:52,  3.76s/it]Generating:  28%|██▊       | 11/40 [00:45<02:00,  4.16s/it]Generating:  30%|███       | 12/40 [00:49<01:49,  3.93s/it]Generating:  32%|███▎      | 13/40 [00:52<01:40,  3.74s/it]Generating:  35%|███▌      | 14/40 [00:57<01:47,  4.12s/it]Generating:  38%|███▊      | 15/40 [01:00<01:32,  3.70s/it]Generating:  40%|████      | 16/40 [01:04<01:29,  3.73s/it]Generating:  42%|████▎     | 17/40 [01:08<01:29,  3.91s/it]Generating:  45%|████▌     | 18/40 [01:12<01:28,  4.03s/it]Generating:  48%|████▊     | 19/40 [01:17<01:28,  4.21s/it]Generating:  50%|█████     | 20/40 [01:20<01:15,  3.77s/it]Generating:  52%|█████▎    | 21/40 [01:24<01:13,  3.85s/it]Generating:  55%|█████▌    | 22/40 [01:27<01:08,  3.80s/it]Generating:  57%|█████▊    | 23/40 [01:31<01:04,  3.78s/it]Generating:  60%|██████    | 24/40 [01:36<01:05,  4.11s/it]Generating:  62%|██████▎   | 25/40 [01:39<00:56,  3.76s/it]Generating:  65%|██████▌   | 26/40 [01:43<00:54,  3.88s/it]Generating:  68%|██████▊   | 27/40 [01:47<00:52,  4.02s/it]Generating:  70%|███████   | 28/40 [01:52<00:49,  4.15s/it]Generating:  72%|███████▎  | 29/40 [01:56<00:47,  4.29s/it]Generating:  75%|███████▌  | 30/40 [02:01<00:43,  4.32s/it]Generating:  78%|███████▊  | 31/40 [02:05<00:37,  4.15s/it]Generating:  80%|████████  | 32/40 [02:10<00:35,  4.43s/it]Generating:  82%|████████▎ | 33/40 [02:14<00:30,  4.35s/it]Generating:  85%|████████▌ | 34/40 [02:20<00:29,  4.98s/it]Generating:  88%|████████▊ | 35/40 [02:24<00:23,  4.68s/it]Generating:  90%|█████████ | 36/40 [02:28<00:17,  4.27s/it]Generating:  92%|█████████▎| 37/40 [02:31<00:11,  3.99s/it]Generating:  95%|█████████▌| 38/40 [02:36<00:08,  4.22s/it]Generating:  98%|█████████▊| 39/40 [02:41<00:04,  4.50s/it]Generating: 100%|██████████| 40/40 [02:46<00:00,  4.64s/it]Generating: 100%|██████████| 40/40 [02:46<00:00,  4.16s/it]
-Final Prefill Throughput: 1442tok/s
-Final Decode Throughput: 62tok/s
-[metrics] Avg Tokens per step (incl recovery): 3.71
-[metrics] Avg Fraction of Speculated Tokens Accepted: 0.54
-[metrics] Avg target time per full step (ms): 59.69
-[metrics] Avg target verify time (ms): 18.90
-[metrics] Avg Cache Hits: 0.83
-[metrics] Avg Tokens per step on Cache Hit: 3.89
-[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
-  0: 0.207
-  1: 0.139
-  2: 0.101
-  3: 0.075
-  4: 0.062
-  5: 0.416
-[metrics] Avg Tokens per step on Cache Miss: 2.81
-Model: layerskip-llama3-8B, Mode: CUDA Graphs + Speculative(k=5) + Async + JIT, Total: 10240tok, Time: 166.27s, Total Throughput: 61.59tok/s
-
-================================================================================
-GENERATIONS:
-================================================================================
-
-Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
-Generation: '    for i in range(1, len(numbers)):\n        if abs(numbers[i] - numbers[i-1]) <= threshold:\n            return True\n    return False\n\n\ndef is_sorted(numbers: List[float]) -> bool:\n    """ Check if a list of numbers is sorted.\n    >>> is_sorted([2, 3, 5, 7, 11])\n    True\n    >>> is_sorted([2, 3, 5, 7, 11, 4])\n    False\n    """\n    for i in range(1, len(numbers)):\n        if numbers[i] < numbers[i-1]:\n            return False\n    return True\n\n\ndef check_sorted_and_no_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if given list of numbers is sorted and no two numbers are closer to each other\n    than given threshold.\n    >>> check_sorted_and_no_close_elements([1, 2, 3, 5, 7, 11, 13], 0.1)\n    True\n    >>> check_sorted_and_no_close_elements([1, 2, 3, 5, 7, 11, 13, 12], 0.1)\n    False\n'
-----------------------------------------
-
-Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
-Generation: '    # TODO (3) Implement this function\n    pass\n\n\ndef main():\n    """Main function. Test your functions by running this program"""\n    # TODO (3) Implement this function\n    pass\n\n\nif __name__ == "__main__":\n    main()\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>The above code is generated by https://github.com/simoneboscarino/CodeReviewHelper\n<|end_of_text|><|begin_of_text|>improve this code. See README.md for details.\n<|end_of_text|><|begin_of_text|>School of Computer Science\n<|end_of_text|><|begin_of_text|>SCHOOL OF COMPUTER SCIENCE\n\nThis file is a part of the assignments for the course. Please do not modify it. \n\n"""\n<|end_of_text|><|begin_of_text|>edp\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>-1\n\nfrom __future__ import print_function\nfrom __future__ import division\n\nimport os\nimport random\nimport string\n\nimport numpy as np\nimport pandas as pd\n\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.metrics import *\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.neighbors import KNeighborsClassifier\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.pipeline import make_pipeline\n\nfrom sklearn.decomposition import PCA\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn import svm\nfrom sklearn import tree\nfrom sklearn.model_selection import train_test_split\n\n'
-----------------------------------------
-
-Prompt 3: '\n\ndef truncate_number(number: float) -> float:\n    """ Given a positive floating point number, it can be decomposed into\n    and integer part (largest integer smaller than given number) and decimals\n    (leftover part always smaller than 1).\n\n    Return the decimal part of the number.\n    >>> truncate_number(3.5)\n    0.5\n    """\n'
-Generation: '    return number - int(number)\n\n\ndef get_delaunay_triangulation(points: Sequence[Point]) -> List[List[int]]:\n    """ Given a list of points, return a list of list of indexes of all\n    triangles in the Delaunay triangulation of the points.\n    """\n    def sign(x: float) -> int:\n        """ Given a floating point number, return -1, 0 or 1\n        according to whether the number is negative, 0 or positive.\n        """\n        return 1 if x > 0 else 0 if x == 0 else -1\n\n    def cross(p1: Point, p2: Point, p3: Point) -> int:\n        """ Given three points p1, p2 and p3, return the sign of the\n        cross product of the vectors from p2 to p1 and from p3 to p1.\n        Negative or zero means that p2 and p3 are on the same side of p1.\n        Positive means that they are on opposite sides.\n        """\n        return sign((p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x'
-----------------------------------------
-
-Prompt 4: 'from typing import List\n\n\ndef below_zero(operations: List[int]) -> bool:\n    """ You\'re given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fallls below zero, and\n    at that point function should return True. Otherwise it should return False.\n    >>> below_zero([1, 2, 3])\n    False\n    >>> below_zero([1, 2, -4, 5])\n    True\n    """\n'
-Generation: '    balance = 0\n    for operation in operations:\n        balance += operation\n        if balance < 0:\n            return True\n    return False\n<|end_of_text|><|begin_of_text|>1\n<|end_of_text|><|begin_of_text|>The solution above is written in idiomatic Python and passes all tests.\n<|end_of_text|><|begin_of_text|>The solution below is written in more compact Python and passes all tests.\ndef below_zero(operations: List[int]) -> bool:\n    """ You\'re given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fallls below zero, and\n    at that point function should return True. Otherwise it should return False.\n    >>> below_zero([1, 2, 3])\n    False\n    >>> below_zero([1, 2, -4, 5])\n    True\n    """\n    balance = 0\n    for operation in operations:\n        balance += operation\n        if balance < 0:\n            return True\n    return False\n<|end_of_text|><|begin_of_text|>The solution above is written in idiomatic Python and passes all tests.\nThe solution below is written in more compact Python and passes all tests.\ndef below_zero(operations: List[int]) -> bool:\n    """ You\'re given a'
-----------------------------------------
-
-Prompt 5: 'from typing import List\n\n\ndef mean_absolute_deviation(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate Mean Absolute Deviation\n    around the mean of this dataset.\n    Mean Absolute Deviation is the average absolute difference between each\n    element and a centerpoint (mean in this case):\n    MAD = average | x - x_mean |\n    >>> mean_absolute_deviation([1.0, 2.0, 3.0, 4.0])\n    1.0\n    """\n'
-Generation: '    mean = mean(numbers)\n    return sum(abs(x - mean) for x in numbers) / len(numbers)\n\n\ndef median(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate the median.\n    Median is the middle value in a sorted list of numbers.\n    If there are an even number of elements, the median is the average of\n    the two middle values.\n    >>> median([1.0, 2.0, 3.0, 4.0])\n    2.5\n    """\n    # Sort the given list of numbers\n    numbers.sort()\n    # Get the middle element, if there are an even number of elements,\n    # average the two middle elements\n    return (numbers[len(numbers) // 2] + numbers[len(numbers) // 2 - 1]) / 2.0\n\n\ndef mode(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate the mode.\n    Mode is the most common value in a list of numbers.\n    >>> mode([1.0, 2.0, 3.0, 4.0])\n    2.0\n    """\n    # Sort the given list of numbers'
-----------------------------------------
-
-Prompt 6: 'from typing import List\n\n\ndef intersperse(numbers: List[int], delimeter: int) -> List[int]:\n    """ Insert a number \'delimeter\' between every two consecutive elements of input list `numbers\'\n    >>> intersperse([], 4)\n    []\n    >>> intersperse([1, 2, 3], 4)\n    [1, 4, 2, 4, 3]\n    """\n'
-Generation: '    # We can use list comprehension\n    return [numbers[i] for i in range(len(numbers)) if i % 2 == 0] + [delimeter] * (len(numbers) - 1)\n\n\nif __name__ == "__main__":\n    import doctest\n\n    doctest.testmod()\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>It is important to note that this technique can be extended to any input type, such as strings, tuples, or even custom classes.\n\nLet\'s try it out by extending the above function to work on strings:\n\ndef intersperse(words: List[str], delimeter: str) -> List[str]:\n    return [words[i] for i in range(len(words)) if i % 2 == 0] + [delimeter] * (len(words) - 1)\n\nprint(intersperse(["a", "b", "c"], " "))\n# [\'a\',\'\', \'b\',\'\', \'c\']\n\n\nThis approach can also be generalized to work with any input type that implements the __iter__() method, such as tuples:\n\ndef intersperse(iterable: Iterable, delimeter) -> List:\n    return [next(iterable) for i in range(len(iterable)) if i % 2 == 0] + ['
-----------------------------------------
-
-Prompt 7: 'from typing import List\n\n\ndef parse_nested_parens(paren_string: str) -> List[int]:\n    """ Input to this function is a string represented multiple groups for nested parentheses separated by spaces.\n    For each of the group, output the deepest level of nesting of parentheses.\n    E.g. (()()) has maximum two levels of nesting while ((())) has three.\n\n    >>> parse_nested_parens(\'(()()) ((())) () ((())()())\')\n    [2, 3, 1, 3]\n    """\n'
-Generation: '    levels = []\n    bracket_stack = []\n    for i, c in enumerate(paren_string):\n        if c == \'(\':\n            bracket_stack.append(i)\n        elif c == \')\':\n            levels.append(len(bracket_stack))\n            bracket_stack.pop()\n    return levels\n\n\ndef test_nested_parens():\n    assert parse_nested_parens(\'(()()) ((())) () ((())()())\') == [2, 3, 1, 3]\n\n\n# Parsing functions\n\ndef parse_parentheses(paren_string: str) -> List[int]:\n    """Input to this function is a string represented multiple groups for nested parentheses separated by spaces.\n    For each of the group, output the deepest level of nesting of parentheses.\n    E.g. (()()) has maximum two levels of nesting while ((())) has three.\n\n    >>> parse_parentheses(\'(())\')\n    [1]\n    """\n    return parse_nested_parens(paren_string)\n\n\ndef test_parse_parentheses():\n    assert parse_parentheses(\'(())\') == [1]\n\n\ndef parse_brackets(bracket_string: str) -> List[int]:\n    """Input to this function is a string represented multiple groups for nested brackets separated by spaces.\n    For each of the group, output the deepest level of nesting of brackets'
-----------------------------------------
-
-Prompt 8: 'from typing import List\n\n\ndef filter_by_substring(strings: List[str], substring: str) -> List[str]:\n    """ Filter an input list of strings only for ones that contain given substring\n    >>> filter_by_substring([], \'a\')\n    []\n    >>> filter_by_substring([\'abc\', \'bacd\', \'cde\', \'array\'], \'a\')\n    [\'abc\', \'bacd\', \'array\']\n    """\n'
-Generation: '    return [s for s in strings if substring in s]\n<|end_of_text|><|begin_of_text|>alldomready\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>alldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nalldomready\nal'
-----------------------------------------
-
-Prompt 9: 'from typing import List, Tuple\n\n\ndef sum_product(numbers: List[int]) -> Tuple[int, int]:\n    """ For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.\n    Empty sum should be equal to 0 and empty product should be equal to 1.\n    >>> sum_product([])\n    (0, 1)\n    >>> sum_product([1, 2, 3, 4])\n    (10, 24)\n    """\n'
-Generation: '    if not numbers:\n        return 0, 1\n    else:\n        total_sum = sum(numbers)\n        return total_sum, total_sum * reduce(multiply, numbers)\n\n\ndef is_palindrome(string: str) -> bool:\n    """ Check if given string is palindrome.\n    >>> is_palindrome("lollipop")\n    True\n    >>> is_palindrome("banana")\n    False\n    """\n    string = string.lower()\n    return string == string[::-1]\n\n\ndef palindrome_permutations(string: str) -> List[str]:\n    """ Given a string, generate all the permutations that are palindrome.\n    >>> palindrome_permutations("racecar")\n    [\'racecar\', \'carerac\', \'carrace\', \'acrearc\', \'acerarc\', \'acerra\', \'acerrca\']\n    >>> palindrome_permutations("abracadabra")\n    []\n    """\n    if len(string) < 2:\n        return [string]\n    else:\n        first_char = string[0]\n        rest_string = string[1:]\n        return list(itertools.chain.from_iterable(\n            (p + first_char + r for p in palindrome_permutations(rest_string) for r in palindrome_permutations(rest_string))\n        ))\n\n\ndef is_palindrome_perm'
-----------------------------------------
-
-Prompt 10: 'from typing import List, Tuple\n\n\ndef rolling_max(numbers: List[int]) -> List[int]:\n    """ From a given list of integers, generate a list of rolling maximum element found until given moment\n    in the sequence.\n    >>> rolling_max([1, 2, 3, 2, 3, 4, 2])\n    [1, 2, 3, 3, 3, 4, 4]\n    """\n'
-Generation: '    output = [numbers[0]]\n    for i in range(1, len(numbers)):\n        output.append(max(numbers[i], output[-1]))\n    return output\n\n\ndef get_increasing_subsequence(numbers: List[int]) -> Tuple[List[int], List[int]]:\n    """ Given a list of numbers, find the longest increasing subsequence in it and return it\n    and the corresponding subsequence indices.\n    >>> get_increasing_subsequence([1, 2, 3, 2, 3, 4, 2])\n    ([1, 2, 3, 4], [0, 1, 2, 4])\n    """\n    # Initialize the first increasing subsequence to be the first element\n    increasing_subsequence = [numbers[0]]\n    # Find the index of the last element in this subsequence\n    last_element_index = 0\n    # Initialize the best increasing subsequence found so far\n    best_increasing_subsequence = [numbers[0]]\n    # Find the index of the last element in this subsequence\n    best_last_element_index = 0\n\n    for i in range(1, len(numbers)):\n        # If the current element is larger than the last element in the current increasing'
-----------------------------------------
-Engine exited!
-[LLMEngine] Exiting (hard=True)
-[metrics] Avg draft step time (ms): 54.90

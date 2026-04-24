@@ -1,148 +1,0 @@
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-Loading 10 prompts from humaneval...
-Loading 10 prompts from alpaca...
-Loading 10 prompts from gsm...
-Loading 10 prompts from ultrafeedback...
-Total prompts loaded: 40
-[Config] mesa_proxy_top_k raised 3 → 16 (to eliminate draft fallback; max_fo=12 + dfo=2 + margin=2)
-[Config] MESA-SSD enabled: exit_layer=21, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
-Draft runner created on rank 2 (async)!
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-[Config] MESA-SSD enabled: exit_layer=21, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
-`torch_dtype` is deprecated! Use `dtype` instead!
-[model_runner about to wrapper.init()] graph_bs_list=[1]
-wrapper backend is auto
-[MESA] Created FlashInfer wrappers for draft/proxy layouts
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-[LlamaModel] use_eagle=False, eagle_layers=None
-`torch_dtype` is deprecated! Use `dtype` instead!
-`torch_dtype` is deprecated! Use `dtype` instead!
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-[LlamaModel] use_eagle=False, eagle_layers=None
-Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-[LlamaModel] use_eagle=False, eagle_layers=None
-Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
-[load_model] loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
-Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
-Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
-[load_model] loading model from /data2/chokwans99/models/layerskip-llama3-8B
-Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.07it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.07it/s]
-Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.19s/it]Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.23s/it]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.11s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.44it/s]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.11s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.43it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.27it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.18it/s]
-Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.28it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.19it/s]
-[load_model] finished loading model from /data2/chokwans99/models/Llama-3.2-1B-Instruct
-inside allocate_kv_cache -- 
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 16, 2050, 256, 8, 64])
-[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
-inside allocate_kv_cache -- 
-[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama3-8B
-inside allocate_kv_cache -- 
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 697, 256, 4, 128])
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 696, 256, 4, 128])
-About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=24
-  [FI capture] bs=1 key=fi_tree_decode starting...
-  [FI capture] bs=1 key=fi_tree_decode warmup...
-  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
-[MESA] Captured split verify CudaGraph (exit_layer=21)
-F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
-[MESA] Captured split verify CudaGraph (exit_layer=21)
-F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
-[Config] MESA-SSD enabled: exit_layer=21, proxy_top_k=16, draft_fan_out=2, proxy_fan_out=2
-F=4, fan_out_list=[4, 4, 4, 4, 4, 4], fan_out_list_miss=[4, 4, 4, 4, 4, 4], MQ_LEN=24
-[MESA] TreeLayouts: full MQ_LEN=24, draft MQ_LEN=12, proxy MQ_LEN=12
-About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_draft MQ_LEN=12
-  [FI capture] bs=1 key=fi_tree_decode_draft starting...
-  [FI capture] bs=1 key=fi_tree_decode_draft warmup...
-  [FI capture] bs=1 key=fi_tree_decode_draft warmup done, capturing...
-[LLMEngine] finished llm_engine init
-
-============================================================
-SWEEP [1/1] temp=0.6 b=1
-============================================================
-Generating:   0%|          | 0/40 [00:00<?, ?it/s]About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_proxy MQ_LEN=12
-  [FI capture] bs=1 key=fi_tree_decode_proxy starting...
-  [FI capture] bs=1 key=fi_tree_decode_proxy warmup...
-  [FI capture] bs=1 key=fi_tree_decode_proxy warmup done, capturing...
-[MESA] Captured draft/proxy FI tree decode CudaGraphs
-DraftRunner set up, starting draft_loop
-Generating:   2%|▎         | 1/40 [00:04<03:12,  4.93s/it]Generating:   5%|▌         | 2/40 [00:10<03:20,  5.26s/it]Generating:   8%|▊         | 3/40 [00:14<02:49,  4.59s/it]Generating:  10%|█         | 4/40 [00:22<03:31,  5.87s/it]Generating:  12%|█▎        | 5/40 [00:24<02:48,  4.82s/it]Generating:  15%|█▌        | 6/40 [00:29<02:38,  4.66s/it]Generating:  18%|█▊        | 7/40 [00:34<02:40,  4.87s/it]Generating:  20%|██        | 8/40 [00:37<02:16,  4.27s/it]Generating:  22%|██▎       | 9/40 [00:40<01:56,  3.76s/it]Generating:  25%|██▌       | 10/40 [00:43<01:47,  3.58s/it]Generating:  28%|██▊       | 11/40 [00:48<02:00,  4.15s/it]Generating:  30%|███       | 12/40 [00:52<01:54,  4.09s/it]Generating:  32%|███▎      | 13/40 [00:55<01:41,  3.76s/it]Generating:  35%|███▌      | 14/40 [00:59<01:37,  3.74s/it]Generating:  38%|███▊      | 15/40 [01:02<01:29,  3.56s/it]Generating:  40%|████      | 16/40 [01:06<01:29,  3.75s/it]Generating:  42%|████▎     | 17/40 [01:10<01:24,  3.68s/it]Generating:  45%|████▌     | 18/40 [01:13<01:19,  3.60s/it]Generating:  48%|████▊     | 19/40 [01:17<01:17,  3.70s/it]Generating:  50%|█████     | 20/40 [01:22<01:22,  4.12s/it]Generating:  52%|█████▎    | 21/40 [01:25<01:10,  3.73s/it]Generating:  55%|█████▌    | 22/40 [01:30<01:11,  3.96s/it]Generating:  57%|█████▊    | 23/40 [01:34<01:09,  4.09s/it]Generating:  60%|██████    | 24/40 [01:39<01:07,  4.21s/it]Generating:  62%|██████▎   | 25/40 [01:43<01:05,  4.40s/it]Generating:  65%|██████▌   | 26/40 [01:46<00:54,  3.91s/it]Generating:  68%|██████▊   | 27/40 [01:52<00:59,  4.60s/it]Generating:  70%|███████   | 28/40 [01:57<00:54,  4.58s/it]Generating:  72%|███████▎  | 29/40 [02:02<00:52,  4.79s/it]Generating:  75%|███████▌  | 30/40 [02:06<00:43,  4.36s/it]Generating:  78%|███████▊  | 31/40 [02:09<00:36,  4.01s/it]Generating:  80%|████████  | 32/40 [02:13<00:32,  4.10s/it]Generating:  82%|████████▎ | 33/40 [02:17<00:28,  4.06s/it]Generating:  85%|████████▌ | 34/40 [02:24<00:28,  4.80s/it]Generating:  88%|████████▊ | 35/40 [02:27<00:22,  4.49s/it]Generating:  90%|█████████ | 36/40 [02:32<00:18,  4.66s/it]Generating:  92%|█████████▎| 37/40 [02:36<00:13,  4.37s/it]Generating:  95%|█████████▌| 38/40 [02:41<00:08,  4.48s/it]Generating:  98%|█████████▊| 39/40 [02:46<00:04,  4.57s/it]Generating: 100%|██████████| 40/40 [02:49<00:00,  4.35s/it]Generating: 100%|██████████| 40/40 [02:49<00:00,  4.25s/it]
-Final Prefill Throughput: 1686tok/s
-Final Decode Throughput: 61tok/s
-[metrics] Avg Tokens per step (incl recovery): 3.58
-[metrics] Avg Fraction of Speculated Tokens Accepted: 0.52
-[metrics] Avg target time per full step (ms): 58.82
-[metrics] Avg target verify time (ms): 18.72
-[metrics] Avg Cache Hits: 0.86
-[metrics] Avg Tokens per step on Cache Hit: 3.74
-[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
-  0: 0.225
-  1: 0.154
-  2: 0.107
-  3: 0.071
-  4: 0.054
-  5: 0.388
-[metrics] Avg Tokens per step on Cache Miss: 2.56
-Model: layerskip-llama3-8B, Mode: CUDA Graphs + Speculative(k=5) + Async + JIT, Total: 10240tok, Time: 169.90s, Total Throughput: 60.27tok/s
-
-================================================================================
-GENERATIONS:
-================================================================================
-
-Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
-Generation: '    for i in range(1, len(numbers)):\n        if abs(numbers[i] - numbers[i-1]) <= threshold:\n            return True\n    return False\n\n\ndef is_palindrome(number: int) -> bool:\n    """ Check if given number is palindrome.\n    >>> is_palindrome(12321)\n    True\n    >>> is_palindrome(1232)\n    False\n    """\n    num_str = str(number)\n    return num_str == num_str[::-1]\n\n\ndef count_ones(number: int) -> int:\n    """ Count number of ones in binary representation of given number.\n    >>> count_ones(4)\n    1\n    >>> count_ones(5)\n    2\n    """\n    return bin(number).count(\'1\')\n\n\ndef is_power_of_two(number: int) -> bool:\n    """ Check if given number is power of 2.\n    >>> is_power_of_two(4)\n    True\n    >>> is_power_of_two(5)\n    False\n    """\n    return number and number & (number - 1) == 0\n\n\ndef is_prime(number: int) -> bool:\n    """ Check if given number is prime.\n    >>> is_prime(2)\n    True\n    >>> is_prime('
-----------------------------------------
-
-Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
-Generation: '    # TODO (3) Finish the implementation of this function\n    return [s for s in paren_string.split() if s!= \'\']\n\n\ndef main():\n    """ Run this function to test your implementation of the separate_paren_groups function\n    Do not change this function\n    """\n    print(separate_paren_groups(\'( ) (( )) (( )( ))\'))\n    print(separate_paren_groups("(a(((b))))"))\n\n\nif __name__ == "__main__":\n    main()\n<|end_of_text|><|begin_of_text|>s = \'(()((()(())(())))()\'\n    print(s)\n    print(separate_paren_groups(s))\n<|end_of_text|><|begin_of_text|>i = (3, 4, 5, 6)\nprint(i)\n<|end_of_text|><|begin_of_text|>b = (3, 4, 5, 6)\nprint(b)\n<|end_of_text|><|begin_of_text|>The goal of this exercise is to separate groups of nested parentheses from a string. Your input string will be valid and balanced, with each open parenthesis having a matching close parenthesis.\n\nThe input string may contain spaces, but not nested groups. Your output should be a list of the separate groups as strings.\n\nIn the example above, the input string is "(()((()(())(())))()". There are three separate groups: "()", "(())", and "(()'
-----------------------------------------
-
-Prompt 3: '\n\ndef truncate_number(number: float) -> float:\n    """ Given a positive floating point number, it can be decomposed into\n    and integer part (largest integer smaller than given number) and decimals\n    (leftover part always smaller than 1).\n\n    Return the decimal part of the number.\n    >>> truncate_number(3.5)\n    0.5\n    """\n'
-Generation: '    return number - int(number)\n<|end_of_text|><|begin_of_text|>lockfile = os.path.join(root_path, ".lockfile")\n    if not os.path.exists(lockfile):\n        return\n    with open(lockfile, "r", encoding="utf-8") as f:\n        lock = f.read().strip()\n    if lock == lock_id:\n        return\n    os.remove(lockfile)\n    return\ndef lock_path(root_path: str, lock_id: str, lock_file: str) -> str:\n    """ Generate the lock path from root path, lock_id and lock_file.\n    """\n    return os.path.join(root_path, ".lockfile")\ndef lock(lock_path: str, lock_id: str) -> None:\n    """ Lock the file. On success, return. On failure, raise an exception.\n    """\n    with open(lock_path, "w", encoding="utf-8") as f:\n        f.write(lock_id)\ndef unlock(lock_path: str) -> None:\n    """ Unlock the file. On success, return. On failure, raise an exception.\n    """\n    os.remove(lock_path)\ndef lockfile(root_path: str, lock_id: str) -> bool:\n    """ Lock the file. On success, return True. On failure,'
-----------------------------------------
-
-Prompt 4: 'from typing import List\n\n\ndef below_zero(operations: List[int]) -> bool:\n    """ You\'re given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fallls below zero, and\n    at that point function should return True. Otherwise it should return False.\n    >>> below_zero([1, 2, 3])\n    False\n    >>> below_zero([1, 2, -4, 5])\n    True\n    """\n'
-Generation: "    balance = 0\n    for operation in operations:\n        balance += operation\n        if balance < 0:\n            return True\n    return False\n\n\nif __name__ == '__main__':\n    import doctest\n\n    doctest.testmod()\n<|end_of_text|><|begin_of_text|>1\n<|end_of_text|><|begin_of_text|>The solution should pass all tests.<|end_of_text|><|begin_of_text|>A\n# If your solution does not work, consider checking it with the provided doctest - it will show the first input value for which your solution does not return the correct output.<|end_of_text|><|begin_of_text|># If you are not sure how to improve your solution, ask us for help (e.g. in the discussion section of the lesson).\n# If you have any questions, ask us in the discussion. You can also ask your question on our Slack channel - here is a direct link to it.\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|># The best programmers know that their code is never final and that they can always improve it.\n\n<|end_of_text|><|begin_of_text|>The best programmers know that their code is never final and that they can always improve it.\n\n# If you have time and want to check yourself - try to code it in a more pythonic way.\n# Напишите код в более питоничном стиле, если вам это интересно и у вас есть время"
-----------------------------------------
-
-Prompt 5: 'from typing import List\n\n\ndef mean_absolute_deviation(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate Mean Absolute Deviation\n    around the mean of this dataset.\n    Mean Absolute Deviation is the average absolute difference between each\n    element and a centerpoint (mean in this case):\n    MAD = average | x - x_mean |\n    >>> mean_absolute_deviation([1.0, 2.0, 3.0, 4.0])\n    1.0\n    """\n'
-Generation: '    mean = average(numbers)\n    return sum(map(lambda x: abs(x - mean), numbers)) / len(numbers)\n\n\ndef average(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate the average.\n    >>> average([1.0, 2.0, 3.0, 4.0])\n    2.5\n    """\n    return sum(numbers) / len(numbers)\n\n\ndef standard_deviation(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate the standard deviation.\n    >>> standard_deviation([1.0, 2.0, 3.0, 4.0])\n    1.4142135623730951\n    """\n    average = average(numbers)\n    sum_of_squares = sum(map(lambda x: (x - average) ** 2, numbers))\n    return math.sqrt(sum_of_squares / len(numbers))\n\n\ndef variance(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate the variance.\n    >>> variance([1.0, 2.0, 3.0, 4.0])\n    1.6666666666666667\n    """\n    average ='
-----------------------------------------
-
-Prompt 6: 'from typing import List\n\n\ndef intersperse(numbers: List[int], delimeter: int) -> List[int]:\n    """ Insert a number \'delimeter\' between every two consecutive elements of input list `numbers\'\n    >>> intersperse([], 4)\n    []\n    >>> intersperse([1, 2, 3], 4)\n    [1, 4, 2, 4, 3]\n    """\n'
-Generation: '    i = 0\n    while i < len(numbers):\n        if i == 0:\n            yield numbers[i]\n            i += 1\n        else:\n            yield numbers[i - 1]\n            yield delimeter\n            i += 1\n    if i < len(numbers):\n        yield numbers[i]\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>\n    return list(intersperse(numbers, delimeter))\n<|end_of_text|><|begin_of_text|>\n    return []\n\n\ndef _print_intersperse(numbers: List[int], delimeter: int) -> None:\n    """ Print a list of integers separated by a delimeter """\n    for number in intersperse(numbers, delimeter):\n        print(number, end="{} ".format(delimeter))\n    print()\n\n\ndef main() -> None:\n    assert intersperse([1, 2, 3], 4) == [1, 4, 2, 4, 3]\n    assert intersperse([1, 2, 3], 4) == [1, 4, 2, 4, 3]\n    assert intersperse([1, 2, 3], 4) == [1, 4, 2, 4, 3]\n    assert intersperse(['
-----------------------------------------
-
-Prompt 7: 'from typing import List\n\n\ndef parse_nested_parens(paren_string: str) -> List[int]:\n    """ Input to this function is a string represented multiple groups for nested parentheses separated by spaces.\n    For each of the group, output the deepest level of nesting of parentheses.\n    E.g. (()()) has maximum two levels of nesting while ((())) has three.\n\n    >>> parse_nested_parens(\'(()()) ((())) () ((())()())\')\n    [2, 3, 1, 3]\n    """\n'
-Generation: '    # TODO: write a function that takes a string and returns a list of integers, where each integer is the\n    # depth of nested parens in that group, with the groups separated by spaces\n    return [0]\n\n\ndef nested_parens_count(paren_string: str) -> int:\n    """ Input to this function is a string represented multiple groups for nested parentheses separated by spaces.\n    For each of the group, output the total number of parentheses.\n    E.g. (()()) has total four parentheses while ((())) has total six.\n\n    >>> nested_parens_count(\'(()()) ((())) () ((())()())\')\n    20\n    """\n    # TODO: write a function that takes a string and returns the total number of parentheses.\n    return 0\n\n\ndef main():\n    # TODO: write the main function that reads from stdin, calls the above functions, and prints the result\n    pass\n\n\nif __name__ == \'__main__\':\n    main()\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>\n<|end_of_text|><|begin_of_text|>C:\\Users\\student\\AppData\\Local\\Temp\\ipykernel_15457\\1808735181.py:1: in <module>\n    main()\n    \\.\\main.py:15: in main\n        main()\n'
-----------------------------------------
-
-Prompt 8: 'from typing import List\n\n\ndef filter_by_substring(strings: List[str], substring: str) -> List[str]:\n    """ Filter an input list of strings only for ones that contain given substring\n    >>> filter_by_substring([], \'a\')\n    []\n    >>> filter_by_substring([\'abc\', \'bacd\', \'cde\', \'array\'], \'a\')\n    [\'abc\', \'bacd\', \'array\']\n    """\n'
-Generation: '    return [s for s in strings if substring in s]\n\n\ndef get_all_strings_with_substring(strings: List[str], substring: str) -> List[str]:\n    """ Get all strings from input list of strings that contain given substring\n    >>> get_all_strings_with_substring([], \'a\')\n    []\n    >>> get_all_strings_with_substring([\'abc\', \'bacd\', \'cde\', \'array\'], \'a\')\n    [\'abc\', \'bacd\', \'array\']\n    """\n    return [s for s in strings if substring in s]\n\n\ndef split_to_substrings(strings: List[str], substring: str) -> List[List[str]]:\n    """ Split input list of strings into sublists that contain given substring\n    >>> split_to_substrings([], \'a\')\n    []\n    >>> split_to_substrings([\'abc\', \'bacd\', \'cde\', \'array\'], \'a\')\n    [[\'abc\'], [\'bacd\', \'array\']]\n    >>> split_to_substrings([\'abc\', \'bacd\', \'cde\', \'array\'], \'b\')\n    [[\'abc\', \'bacd\'], [\'array\']]\n    """\n    return [s for s in strings if substring in s]\n\n\ndef get_substring_count(strings: List[str], substring: str)'
-----------------------------------------
-
-Prompt 9: 'from typing import List, Tuple\n\n\ndef sum_product(numbers: List[int]) -> Tuple[int, int]:\n    """ For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.\n    Empty sum should be equal to 0 and empty product should be equal to 1.\n    >>> sum_product([])\n    (0, 1)\n    >>> sum_product([1, 2, 3, 4])\n    (10, 24)\n    """\n'
-Generation: '    if not numbers:\n        return 0, 1\n    else:\n        return sum(numbers), product(numbers)\n\n\ndef sum_product(numbers: List[int]) -> Tuple[int, int]:\n    """ For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.\n    Empty sum should be equal to 0 and empty product should be equal to 1.\n    >>> sum_product([])\n    (0, 1)\n    >>> sum_product([1, 2, 3, 4])\n    (10, 24)\n    """\n    if not numbers:\n        return 0, 1\n    else:\n        return sum(numbers), product(numbers)\n\n\ndef sum_product(numbers: List[int]) -> Tuple[int, int]:\n    """ For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.\n    Empty sum should be equal to 0 and empty product should be equal to 1.\n    >>> sum_product([])\n    (0, 1)\n    >>> sum_product([1, 2, 3, 4])\n    (10, 24)\n    """\n    if not numbers:\n        return 0, 1\n   '
-----------------------------------------
-
-Prompt 10: 'from typing import List, Tuple\n\n\ndef rolling_max(numbers: List[int]) -> List[int]:\n    """ From a given list of integers, generate a list of rolling maximum element found until given moment\n    in the sequence.\n    >>> rolling_max([1, 2, 3, 2, 3, 4, 2])\n    [1, 2, 3, 3, 3, 4, 4]\n    """\n'
-Generation: '    if not numbers:\n        return []\n    if len(numbers) == 1:\n        return [numbers[0]]\n    result = [numbers[0]]\n    for i in range(1, len(numbers)):\n        if numbers[i] > result[-1]:\n            result.append(numbers[i])\n        else:\n            result[-1] = numbers[i]\n    return result\n\n\ndef find_max_subsequence(numbers: List[int]) -> Tuple[List[int], int]:\n    """ Given a list of integers, return a list of numbers and the length of the subsequence\n    that maximizes the sum of the elements.\n    >>> find_max_subsequence([1, 2, 3, 2, 3, 4, 2])\n    ([1, 2, 3], 3)\n    """\n    if not numbers:\n        return [], 0\n    if len(numbers) == 1:\n        return [numbers[0]], 1\n    result = []\n    max_sum, i = 0, 0\n    for j in range(len(numbers)):\n        sum = numbers[j]\n        for k in range(i, j):\n            sum += numbers[k]\n        if sum > max_sum:\n            max_sum, result = sum, ['
-----------------------------------------
-Engine exited!
-[LLMEngine] Exiting (hard=True)
-[metrics] Avg draft step time (ms): 54.14

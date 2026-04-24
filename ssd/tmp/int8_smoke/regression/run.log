@@ -1,109 +1,0 @@
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-Loading 2 prompts from humaneval...
-Loading 2 prompts from alpaca...
-Loading 2 prompts from gsm...
-Loading 2 prompts from ultrafeedback...
-Total prompts loaded: 8
-Draft runner created on rank 1 (async)!
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
-  warnings.warn(
-`torch_dtype` is deprecated! Use `dtype` instead!
-[model_runner about to wrapper.init()] graph_bs_list=[1]
-wrapper backend is auto
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-[LlamaModel] use_eagle=False, eagle_layers=None
-`torch_dtype` is deprecated! Use `dtype` instead!
-[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
-Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
-[LlamaForCausalLM] use_eagle=False, eagle_layers=None
-[LlamaModel] use_eagle=False, eagle_layers=None
-Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=7
-[load_model] loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
-Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=7
-[load_model] loading model from /data2/chokwans99/models/layerskip-llama2-7B
-Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]
-Loading model files:  33%|███▎      | 1/3 [00:01<00:02,  1.17s/it]Loading model files:  67%|██████▋   | 2/3 [00:02<00:01,  1.41s/it]Loading model files: 100%|██████████| 3/3 [00:04<00:00,  1.50s/it]Loading model files: 100%|██████████| 3/3 [00:04<00:00,  1.46s/it]
-[load_model] finished loading model from /data2/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
-inside allocate_kv_cache -- 
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 3054, 256, 4, 64])
-[load_model] finished loading model from /data2/chokwans99/models/layerskip-llama2-7B
-inside allocate_kv_cache -- 
-allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 56, 256, 32, 128])
-F=3, fan_out_list=[5, 4, 4, 3, 3, 2, 2, 1], fan_out_list_miss=[5, 4, 4, 3, 3, 2, 2, 1], MQ_LEN=24
-About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=24
-  [FI capture] bs=1 key=fi_tree_decode starting...
-  [FI capture] bs=1 key=fi_tree_decode warmup...
-  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
-F=3, fan_out_list=[5, 4, 4, 3, 3, 2, 2, 1], fan_out_list_miss=[5, 4, 4, 3, 3, 2, 2, 1], MQ_LEN=24
-DraftRunner set up, starting draft_loop
-[LLMEngine] finished llm_engine init
-
-============================================================
-SWEEP [1/1] temp=0.6 b=1
-============================================================
-Generating:   0%|          | 0/8 [00:00<?, ?it/s]Generating:  12%|█▎        | 1/8 [00:01<00:08,  1.25s/it]Generating:  25%|██▌       | 2/8 [00:01<00:04,  1.25it/s]Generating:  38%|███▊      | 3/8 [00:02<00:03,  1.54it/s]Generating:  50%|█████     | 4/8 [00:02<00:02,  1.48it/s]Generating:  62%|██████▎   | 5/8 [00:03<00:02,  1.44it/s]Generating:  75%|███████▌  | 6/8 [00:04<00:01,  1.29it/s]Generating:  88%|████████▊ | 7/8 [00:05<00:00,  1.02it/s]Generating: 100%|██████████| 8/8 [00:06<00:00,  1.20it/s]Generating: 100%|██████████| 8/8 [00:06<00:00,  1.23it/s]
-Final Prefill Throughput: 753tok/s
-Final Decode Throughput: 70tok/s
-[metrics] Avg Tokens per step (incl recovery): 3.66
-[metrics] Avg Fraction of Speculated Tokens Accepted: 0.38
-[metrics] Avg target time per full step (ms): 58.51
-[metrics] Avg target verify time (ms): 20.81
-[metrics] Avg Cache Hits: 0.59
-[metrics] Avg Tokens per step on Cache Hit: 4.23
-[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
-  0: 0.292
-  1: 0.138
-  2: 0.077
-  3: 0.077
-  4: 0.031
-  5: 0.015
-  6: 0.077
-  7: 0.292
-[metrics] Avg Tokens per step on Cache Miss: 2.84
-Model: layerskip-llama2-7B, Mode: CUDA Graphs + Speculative(k=7) + Async + JIT, Total: 384tok, Time: 6.50s, Total Throughput: 59.09tok/s
-
-================================================================================
-GENERATIONS:
-================================================================================
-
-Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
-Generation: '   for i in range(len(numbers) - 1):\n        if numbers[i] <= numbers[i + 1] + threshold:\n            return True\n    return False\n\n\ndef convert_to_'
-----------------------------------------
-
-Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
-Generation: "   if not paren_string:\n        return []\n    if paren_string[0] == '(':\n        return [paren_string]\n    if paren_string[-1] == ')':"
-----------------------------------------
-
-Prompt 3: 'Give three tips for staying healthy.'
-Generation: '\nIf you’re looking for some tips to stay healthy, I’ve got you covered.\nFirst, exercise. Exercise is one of the best things you can do for your health. You don’t have to'
-----------------------------------------
-
-Prompt 4: 'What are the three primary colors?'
-Generation: '\nWhy are they primary?\nWhat is a secondary color?\nWhat are the secondary colors?\nWhat is a tertiary color?\nWhat are the tertiary colors?\nWhat are the complementary colors?'
-----------------------------------------
-
-Prompt 5: "Janet’s ducks lay 16 eggs per day. She eats three for breakfast every morning and bakes muffins for her friends every day with four. She sells the remainder at the farmers' market daily for $2 per fresh duck egg. How much in dollars does she make every day at the farmers' market?"
-Generation: '\nA. $1.50 B. $2.00 C. $3.00 D. $3.50\n30. I’m not sure how to use the slope-intercept form to'
-----------------------------------------
-
-Prompt 6: 'A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?'
-Generation: '\n\nComment: See [this question](http://math.stackexchange.com/questions/841363/how-to-solve-this-word-problem-with-integers) for help on the'
-----------------------------------------
-
-Prompt 7: 'Can you write a C++ program that prompts the user to enter the name of a country and checks if it borders the Mediterranean Sea? Here\'s some starter code to help you out:\n#include <iostream>\n#include <string>\nusing namespace std;\nint main() {\n    string country;\n    // prompt user for input\n    cout << "Enter the name of a country: ";\n    cin >> country;\n    // check if country borders the Mediterranean Sea\n    // [C++ code]\n    return 0;\n}'
-Generation: "\n\\end{code}\n\nComment: The question is tagged C++.\n\nComment: @Mgetz: Yes, but there's still some useful C code in the answer.\n\nComment: @M"
-----------------------------------------
-
-Prompt 8: 'Suppose you are a content creator and want to generate compelling titles and descriptions for your YouTube videos automatically. You have decided to use GPT to solve this problem.\nCan you provide an example of how you would use GPT to generate titles and descriptions for your YouTube videos automatically? Please include the necessary steps and any additional information that may be helpful.'
-Generation: '\nGPT is a type of artificial intelligence (AI) that uses natural language processing (NLP) to generate text. It can be used to generate titles and descriptions for your YouTube videos automatically.\nTo use GPT to generate'
-----------------------------------------
-Engine exited!
-[LLMEngine] Exiting (hard=True)
-[metrics] Avg draft step time (ms): 47.48
