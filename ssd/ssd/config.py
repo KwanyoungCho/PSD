@@ -54,7 +54,15 @@ class Config:
     #   - int8_wo     : no assert, but produces inf in MLP output (numerically unreliable)
     # → fp16 checkpoint + these backends requires either a different backend
     #   (e.g. GemliteUIntXWeightOnlyConfig is fp16-native) or opt-in bf16 upcast.
+    # "int4_wo_tile" | "int8_wo" | "awq_marlin"
+    #   - int4_wo_tile / int8_wo : legacy torchao weight-only paths
+    #   - awq_marlin            : new AWQ-style W4A16 via sgl-kernel Marlin
+    #                             (plan v2 primary direction — see INT8-WEIGHT-ONLY-PLAN-v2.md)
     target_quant_backend: str = "int4_wo_tile"
+    # AWQ-specific options. Only used when target_quant_backend == "awq_marlin".
+    target_quant_awq_artifact: str | None = None    # SSD-native artifact prefix
+    target_quant_external_awq_path: str | None = None   # external AutoAWQ hf dir
+    target_quant_group_size: int = 128
     # Default False: ParallelLMHead is a per-step hot path (gather + cat per call)
     # and MESA also calls lm_head at exit layer for proxy logits. Quantizing it
     # hurts throughput and accept rate (MESA accept -4~8%p observed). Turn on

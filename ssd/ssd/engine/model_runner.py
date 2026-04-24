@@ -61,8 +61,12 @@ class ModelRunner:
         #   (b) fp16 checkpoint + quant (no override) → raise ValueError (this block)
         #   (c) fp16 checkpoint + quant + force flag → override runtime to bf16
         #       (effectively a bf16 runtime, not a fp16 runtime — acknowledged workaround)
+        # Marlin W4A16 (awq_marlin backend) handles fp16 activation natively,
+        # so the bf16-forced-override workaround below does not apply to it.
+        _q_backend = getattr(config, 'target_quant_backend', 'int4_wo_tile')
         if getattr(config, 'target_quant_enabled', False) \
-                and config.hf_config.torch_dtype == torch.float16:
+                and config.hf_config.torch_dtype == torch.float16 \
+                and _q_backend not in ("awq_marlin",):
             if getattr(config, 'target_quant_force_bf16_runtime', False):
                 print(
                     f'[quant] target_quant_force_bf16_runtime=True → upcasting '
@@ -329,8 +333,22 @@ class ModelRunner:
         if model_class == Eagle3DraftForCausalLM:
             kwargs['d_model_target'] = config.d_model_target
             kwargs['debug_mode'] = config.debug_mode
-            
-        self.model = model_class(**kwargs)
+
+        # AWQ: derive a single structured QuantConfig at the runner boundary
+        # (plan §13.3 migration path). The legacy flat target_quant_* fields
+        # stay on `config` as a compat shim, but downstream AWQ code reads
+        # from `self.quant_config` only. Draft is always dense.
+        from ssd.quant.config import quant_config_from_legacy_flags
+        self.quant_config = None if is_draft else quant_config_from_legacy_flags(config)
+        _awq_target = self.quant_config is not None and self.quant_config.enabled
+
+        if _awq_target:
+            from ssd.quant.init_context import quant_init_context
+            with quant_init_context():
+                self.model = model_class(**kwargs)
+        else:
+            self.model = model_class(**kwargs)
+        self._awq_target = _awq_target
 
         model_type = "DRAFT " if self.is_draft else "TARGET "
         if self.verbose:
@@ -341,8 +359,48 @@ class ModelRunner:
         target_hidden_size = getattr(config, 'd_model_target', None)
         load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
 
+        # --- AWQ W4A16 path (plan v2 — see INT8-WEIGHT-ONLY-PLAN-v2.md) ---
+        if self._awq_target:
+            qc = self.quant_config
+            _tp_size_awq = self.num_tp_gpus if hasattr(self, 'num_tp_gpus') else 1
+            _tp_rank_awq = dist.get_rank(group=self.tp_pg) if self.tp_pg is not None else 0
+            if qc.quant_source == "ssd_artifact":
+                if not qc.artifact_path:
+                    raise ValueError(
+                        "QuantConfig.quant_source=ssd_artifact requires "
+                        "artifact_path (CLI --quant_awq_artifact)."
+                    )
+                from ssd.quant.loader import apply_ssd_awq_artifact
+                apply_ssd_awq_artifact(
+                    self.model,
+                    prefix=qc.artifact_path,
+                    tp_rank=_tp_rank_awq,
+                    tp_size=_tp_size_awq,
+                    expected_runtime_dtype=qc.expected_runtime_dtype,
+                    expected_model_id=os.path.abspath(config.model),
+                    expected_group_size=qc.group_size if getattr(
+                        config, 'target_quant_group_size', None) is not None
+                        and config.target_quant_group_size != 128 else None,
+                )
+            elif qc.quant_source == "external_awq":
+                if not qc.external_quant_path:
+                    raise ValueError(
+                        "QuantConfig.quant_source=external_awq requires "
+                        "external_quant_path (CLI --quant_awq_external)."
+                    )
+                from ssd.quant.adapter import load_external_autoawq_into_model
+                load_external_autoawq_into_model(
+                    self.model,
+                    hf_path=qc.external_quant_path,
+                    tp_rank=_tp_rank_awq,
+                    tp_size=_tp_size_awq,
+                )
+            else:
+                raise ValueError(f"Unknown QuantConfig.quant_source={qc.quant_source!r}")
+
         # Weight-only quantization (target only, gated by config)
-        if getattr(config, 'target_quant_enabled', False) and not is_draft:
+        if getattr(config, 'target_quant_enabled', False) and not is_draft \
+                and not self._awq_target:
             from ssd.utils.quantize import (
                 apply_quantization_to_target,
                 save_quantized_target_artifact,

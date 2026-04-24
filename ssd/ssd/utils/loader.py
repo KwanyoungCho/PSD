@@ -183,22 +183,52 @@ def load_eagle_model(model: nn.Module, path: str, packed_modules_mapping: dict, 
         weight_loader(param, loaded_weight)
 
 
+# AutoAWQ / GPTQ replace per-layer dense `.weight` with a quantized trio of
+# `.qweight` / `.qzeros` / `.scales`. When `config.model` points at such a
+# checkpoint, the dense path below must silently skip those keys — the AWQ
+# loader handles them via the SSD-native artifact. Dense keys (embeddings,
+# `lm_head`, norms, layer-scale) still load normally.
+_QUANT_WEIGHT_SUFFIXES = (".qweight", ".qzeros", ".scales", ".g_idx", ".bias")
+_QUANT_WEIGHT_KEY_SUFFIXES = (".qweight", ".qzeros", ".scales", ".g_idx")
+
+
 def load_safetensors_model(model: nn.Module, path: str, packed_modules_mapping: dict):
-    """Load model weights from safetensors files"""
+    """Load model weights from safetensors files.
+
+    Quant-mode notes:
+      - TP linear modules constructed inside
+        `ssd.quant.init_context.quant_init_context()` hold their `weight` on
+        the meta device. We silently skip those here; the AWQ loader attaches
+        `AwqQuantState` afterwards.
+      - If the safetensors itself is an AutoAWQ/GPTQ-style checkpoint
+        (has `.qweight`/`.qzeros`/`.scales`), those keys are also skipped —
+        the AWQ loader owns them. Non-TP-linear dense weights (embeddings,
+        lm_head, norms) still load through this path.
+    """
     safetensor_files = glob(os.path.join(path, "*.safetensors"))
     for file in tqdm(safetensor_files, desc="Loading model files"):
         with safe_open(file, "pt", "cpu") as f:
             for weight_name in f.keys():
+                # AWQ-specific keys are loaded by the AWQ artifact loader,
+                # not by the dense path. Skip them so we don't try to
+                # get_parameter a name that doesn't exist on the SSD model.
+                if weight_name.endswith(_QUANT_WEIGHT_KEY_SUFFIXES):
+                    continue
                 for k in packed_modules_mapping:
                     if k in weight_name:
                         v, shard_id = packed_modules_mapping[k]
                         param_name = weight_name.replace(k, v)
                         param = model.get_parameter(param_name)
+                        if param.device.type == "meta":
+                            # Quant-mode placeholder — handled by AWQ loader later.
+                            break
                         weight_loader = getattr(param, "weight_loader")
                         weight_loader(param, f.get_tensor(weight_name), shard_id)
                         break
                 else:
                     param = model.get_parameter(weight_name)
+                    if param.device.type == "meta":
+                        continue
                     weight_loader = getattr(param, "weight_loader", default_weight_loader)
                     weight_loader(param, f.get_tensor(weight_name))
 

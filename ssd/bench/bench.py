@@ -102,6 +102,15 @@ def parse_arguments():
                              "Without this flag, fp16+quant raises ValueError (selected torchao "
                              "WO backends assume bf16 activation). Setting this means the runtime "
                              "is effectively bf16, not fp16 — acknowledged workaround.")
+    parser.add_argument("--quant_awq", action="store_true",
+                        help="Enable AWQ-style W4A16 via sgl-kernel Marlin (plan v2). "
+                             "Requires --quant_awq_artifact or --quant_awq_external.")
+    parser.add_argument("--quant_awq_artifact", type=str, default=None,
+                        help="SSD-native AWQ artifact prefix (expects `<prefix>.rank{r}.awq.pt`).")
+    parser.add_argument("--quant_awq_external", type=str, default=None,
+                        help="External AutoAWQ HF checkpoint directory (reads qweight/qzeros/scales).")
+    parser.add_argument("--quant_group_size", type=int, default=128,
+                        help="AWQ group size (default 128; must evenly divide every RowParallel in-shard).")
 
     # Sweep mode: load engine once, run multiple configs
     parser.add_argument("--sweep", type=str, default=None,
@@ -238,6 +247,21 @@ def create_llm_kwargs(args, draft_path):
                 llm_kwargs["target_quant_mode"] = "persistent"
         if getattr(args, 'quant_force_bf16_runtime', False):
             llm_kwargs["target_quant_force_bf16_runtime"] = True
+
+    # AWQ W4A16 (Marlin) — plan v2 primary direction
+    if getattr(args, 'quant_awq', False):
+        llm_kwargs["target_quant_enabled"] = True
+        llm_kwargs["target_quant_backend"] = "awq_marlin"
+        if getattr(args, 'quant_awq_artifact', None):
+            llm_kwargs["target_quant_awq_artifact"] = args.quant_awq_artifact
+        if getattr(args, 'quant_awq_external', None):
+            llm_kwargs["target_quant_external_awq_path"] = args.quant_awq_external
+        if getattr(args, 'quant_group_size', 128) != 128:
+            llm_kwargs["target_quant_group_size"] = args.quant_group_size
+        if getattr(args, 'quant_lm_head', False):
+            llm_kwargs["target_quant_lm_head"] = True
+            print("[bench] WARNING: --quant_awq currently keeps lm_head dense; "
+                  "--quant_lm_head is ignored for the AWQ path.", flush=True)
 
     if args.flh is not None:
         llm_kwargs["fan_out_list"] = args.flh
