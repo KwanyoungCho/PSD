@@ -41,16 +41,65 @@ class ModelRunner:
     def __init__(self, config: Config, rank: int, event: Event | list[Event], is_draft: bool = False, num_tp_gpus: int = -1, init_q = None):
         if config.verbose: print(f'ModelRunner init got args: rank={rank}, is_draft={is_draft}, num_tp_gpus={num_tp_gpus}', flush=True)
         self.config = config
-        
+
         assert is_draft in [True, False], "ERROR in ModelRunner: is_draft must be True or False"
         self.is_draft = is_draft
-        if self.is_draft: 
+
+        # --- Quantization + dtype compatibility gate ---
+        #
+        # torchao's currently-selected weight-only paths (Int4WeightOnlyConfig /
+        # Int8WeightOnlyConfig) are documented as bf16-activation workflows.
+        # fp16 checkpoint + these backends is NOT supported:
+        #   - Int4WeightOnlyConfig(group_size=128): API-level assert fails
+        #     ("Expected Tensor argument zeros to have dtype torch.float16, but got torch.bfloat16")
+        #   - Int8WeightOnlyConfig: runs but produces inf in layer output (numerically unreliable)
+        # Dense fp16 runtime itself is fine — this is specifically a torchao
+        # WO backend × fp16 activation incompatibility.
+        #
+        # Policy:
+        #   (a) bf16-native checkpoint + quant      → works as-is
+        #   (b) fp16 checkpoint + quant (no override) → raise ValueError (this block)
+        #   (c) fp16 checkpoint + quant + force flag → override runtime to bf16
+        #       (effectively a bf16 runtime, not a fp16 runtime — acknowledged workaround)
+        # Marlin W4A16 (awq_marlin backend) handles fp16 activation natively,
+        # so the bf16-forced-override workaround below does not apply to it.
+        _q_backend = getattr(config, 'target_quant_backend', 'int4_wo_tile')
+        if getattr(config, 'target_quant_enabled', False) \
+                and config.hf_config.torch_dtype == torch.float16 \
+                and _q_backend not in ("awq_marlin",):
+            if getattr(config, 'target_quant_force_bf16_runtime', False):
+                print(
+                    f'[quant] target_quant_force_bf16_runtime=True → upcasting '
+                    f'hf_config.torch_dtype fp16 -> bf16 (rank={rank}, is_draft={is_draft}). '
+                    f'Runtime is now effectively bf16 (NOT a fp16 runtime). '
+                    f'Activations, KV cache, graph buffers, draft — all bf16.',
+                    flush=True,
+                )
+                config.hf_config.torch_dtype = torch.bfloat16
+            else:
+                raise ValueError(
+                    f"fp16 checkpoint + target_quant_backend="
+                    f"{getattr(config, 'target_quant_backend', '?')!r} is not supported. "
+                    f"Selected torchao weight-only backends assume bf16 activation; "
+                    f"fp16 activation path fails either at an API dtype assert (int4) "
+                    f"or produces inf values in the forward (int8).\n"
+                    f"Options:\n"
+                    f"  (1) use a bf16 checkpoint (Llama-3 family etc)\n"
+                    f"  (2) set target_quant_force_bf16_runtime=True to explicitly "
+                    f"opt-in to a bf16 runtime workaround (drops the 'fp16 runtime' "
+                    f"guarantee; all hot-path tensors become bf16)\n"
+                    f"  (3) switch to a fp16-native WO backend (e.g. GemliteUIntXWeightOnlyConfig, "
+                    f"Marlin, etc) — NOT currently integrated."
+                )
+
+        if self.is_draft:
             if config.draft_hf_config.torch_dtype != config.hf_config.torch_dtype:
-                if self.verbose:
+                # Use config.verbose directly — self.verbose is assigned later in __init__.
+                if config.verbose:
                     print(f"Warning: Draft dtype {config.draft_hf_config.torch_dtype} differs from target {config.hf_config.torch_dtype}. Casting draft to {config.hf_config.torch_dtype}.")
                 config.draft_hf_config.torch_dtype = config.hf_config.torch_dtype
             assert (config.draft_hf_config.vocab_size == config.hf_config.vocab_size) or config.use_eagle, "ERROR in ModelRunner: draft_hf_config.vocab_size != hf_config.vocab_size"
-        
+
         self.hf_config = config.hf_config if not is_draft else config.draft_hf_config
         self.block_size = config.kvcache_block_size
         self.enforce_eager = config.enforce_eager
@@ -114,6 +163,9 @@ class ModelRunner:
             self.tp_pg = dist.new_group(ranks=list(range(self.num_tp_gpus))) # everyone should see the new_group init even if not in group 
 
         default_dtype = torch.get_default_dtype()
+        # hf_config.torch_dtype was already updated near __init__ if quantization
+        # is enabled and original model is fp16, so this sets the correct dtype
+        # for both the model weights and any helpers reading hf_config.torch_dtype.
         torch.set_default_dtype(self.hf_config.torch_dtype)
         torch.set_default_device("cuda")
         
@@ -281,8 +333,36 @@ class ModelRunner:
         if model_class == Eagle3DraftForCausalLM:
             kwargs['d_model_target'] = config.d_model_target
             kwargs['debug_mode'] = config.debug_mode
-            
-        self.model = model_class(**kwargs)
+
+        # AWQ: derive role-specific structured QuantConfigs at the runner
+        # boundary (plan §13.3 migration path). Target and draft configs are
+        # independent; either can be enabled alone. Downstream AWQ code
+        # reads only `self.quant_config` (the active one for this runner).
+        from ssd.quant.config import quant_config_from_legacy_flags
+        role = "draft" if is_draft else "target"
+        self.quant_config = quant_config_from_legacy_flags(config, role)
+        _awq_active = self.quant_config is not None and self.quant_config.enabled
+
+        # Eagle draft AWQ is not supported in this first pass — fail loudly
+        # rather than silently quantize the wrong module set.
+        if _awq_active and is_draft and getattr(config, "use_eagle", False):
+            raise ValueError(
+                "draft_quant_enabled=True with use_eagle=True is NOT supported "
+                "in this version (non-EAGLE drafts only). Disable draft AWQ "
+                "or use a non-EAGLE draft model."
+            )
+
+        if _awq_active:
+            from ssd.quant.init_context import quant_init_context
+            with quant_init_context():
+                self.model = model_class(**kwargs)
+        else:
+            self.model = model_class(**kwargs)
+        # Keep both flags for readability downstream. _awq_target retained for
+        # backward-compat reads outside the runner (nothing else sets this).
+        self._awq_active = _awq_active
+        self._awq_target = _awq_active and not is_draft
+        self._awq_draft = _awq_active and is_draft
 
         model_type = "DRAFT " if self.is_draft else "TARGET "
         if self.verbose:
@@ -292,7 +372,156 @@ class ModelRunner:
         target_path = getattr(config, 'tokenizer_path', None)
         target_hidden_size = getattr(config, 'd_model_target', None)
         load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
-        
+
+        # --- AWQ W4A16 path (plan v2 — see INT8-WEIGHT-ONLY-PLAN-v2.md) ---
+        # Runs identically for target and draft; the QuantConfig instance
+        # carries the role so the loader validates the artifact is the
+        # correct kind.
+        if self._awq_active:
+            qc = self.quant_config
+            _tp_size_awq = self.num_tp_gpus if hasattr(self, 'num_tp_gpus') else 1
+            _tp_rank_awq = dist.get_rank(group=self.tp_pg) if self.tp_pg is not None else 0
+            # Draft is always tp_size=1 in this version; cross-check.
+            if qc.role == "draft":
+                assert _tp_size_awq == 1, \
+                    f"draft AWQ requires tp_size=1 in v1, got {_tp_size_awq}"
+            # Opt-in group-size sanity check (only if user set it non-default).
+            _user_group_size = None
+            if qc.role == "target":
+                _gs = getattr(config, 'target_quant_group_size', None)
+                if _gs is not None and _gs != 128:
+                    _user_group_size = qc.group_size
+            else:
+                _gs = getattr(config, 'draft_quant_group_size', None)
+                if _gs is not None and _gs != 128:
+                    _user_group_size = qc.group_size
+
+            if qc.quant_source == "ssd_artifact":
+                if not qc.artifact_path:
+                    raise ValueError(
+                        f"QuantConfig[{qc.role}].quant_source=ssd_artifact requires "
+                        f"artifact_path (CLI --quant_awq{'_draft' if qc.role=='draft' else ''}_artifact)."
+                    )
+                from ssd.quant.loader import apply_ssd_awq_artifact
+                apply_ssd_awq_artifact(
+                    self.model,
+                    prefix=qc.artifact_path,
+                    tp_rank=_tp_rank_awq,
+                    tp_size=_tp_size_awq,
+                    expected_runtime_dtype=qc.expected_runtime_dtype,
+                    expected_model_id=os.path.abspath(config.model),
+                    expected_group_size=_user_group_size,
+                    expected_role=qc.role,
+                )
+            elif qc.quant_source == "external_awq":
+                if not qc.external_quant_path:
+                    raise ValueError(
+                        f"QuantConfig[{qc.role}].quant_source=external_awq requires "
+                        f"external_quant_path."
+                    )
+                from ssd.quant.adapter import load_external_autoawq_into_model
+                load_external_autoawq_into_model(
+                    self.model,
+                    hf_path=qc.external_quant_path,
+                    tp_rank=_tp_rank_awq,
+                    tp_size=_tp_size_awq,
+                    expected_role=qc.role,
+                )
+            else:
+                raise ValueError(f"Unknown QuantConfig.quant_source={qc.quant_source!r}")
+
+        # === LEGACY torchao weight-only path (DEPRECATED, internal fallback) ===
+        # The supported public path is AWQ Marlin above. This branch is kept
+        # only as an internal fallback for bf16-native targets that hit a
+        # corner case in AWQ. CLI flags that drive this path were removed
+        # from bench.py — to use it now you must set
+        # `target_quant_backend in ("int4_wo_tile", "int8_wo")` directly on
+        # the `Config` dataclass. Expect removal in a follow-up cleanup.
+        if getattr(config, 'target_quant_enabled', False) and not is_draft \
+                and not self._awq_target:
+            print(
+                "[quant][LEGACY] torchao weight-only path triggered "
+                "(target_quant_backend=%r). This path is deprecated; "
+                "the supported route is `--quant_awq` + AWQ artifact." %
+                getattr(config, 'target_quant_backend', '?'),
+                flush=True,
+            )
+            from ssd.utils.quantize import (
+                apply_quantization_to_target,
+                save_quantized_target_artifact,
+                load_quantized_target_artifact,
+            )
+            import os as _os_qskip
+            # Accept both SSD_QUANT_SKIP (preferred, backend-agnostic) and SSD_INT8_SKIP (legacy alias).
+            _skip_csv = _os_qskip.environ.get("SSD_QUANT_SKIP", _os_qskip.environ.get("SSD_INT8_SKIP", ""))
+            _skip_subs = tuple(s.strip() for s in _skip_csv.split(",") if s.strip())
+            _backend = getattr(config, 'target_quant_backend', 'int4_wo_tile')
+            _mode = getattr(config, 'target_quant_mode', 'load_time')
+            _prefix = getattr(config, 'target_quant_artifact_prefix', None)
+            # Fallback matches config.py default (False). If runtime passes a legacy Config
+            # object without this attr we should still keep lm_head dense by default.
+            _lm_head = getattr(config, 'target_quant_lm_head', False)
+            _tp_size = self.num_tp_gpus if hasattr(self, 'num_tp_gpus') else 1
+            _tp_rank = dist.get_rank(group=self.tp_pg) if self.tp_pg is not None else 0
+
+            _loaded_from_artifact = False
+            # TODO (perf, Phase 5 follow-up): currently load_model() runs before
+            # the artifact check, so the full float target weights (e.g. 70B ~70GB
+            # bf16 per rank) are paged into GPU only to be discarded on artifact
+            # load. For the persistent-artifact path we could skip load_model
+            # entirely and only load embed/norm + replace the TP-linear weights
+            # from the artifact. Non-trivial because loader.py orchestrates full
+            # safetensors streaming; leaving as TODO until 70B experiments need it.
+            if _prefix is not None:
+                import os as _os_ar
+                _art_path = f"{_prefix}.rank{_tp_rank}.pt"
+                if _os_ar.path.exists(_art_path):
+                    print(f'[quant] loading artifact rank={_tp_rank}: {_art_path}', flush=True)
+                    load_quantized_target_artifact(
+                        self.model, _prefix,
+                        tp_rank=_tp_rank, tp_size=_tp_size,
+                        expected_backend=_backend,
+                        expected_quantize_lm_head=_lm_head,
+                        expected_model_id=getattr(config, 'model', None),
+                        expected_runtime_dtype=self.hf_config.torch_dtype,
+                    )
+                    _loaded_from_artifact = True
+                elif _mode == 'persistent':
+                    raise FileNotFoundError(f"mode=persistent but artifact missing: {_art_path}")
+
+            if not _loaded_from_artifact:
+                print(f'[quant] quantizing target (rank={_tp_rank}, backend={_backend}, lm_head={_lm_head}, skip={_skip_subs})', flush=True)
+                apply_quantization_to_target(
+                    self.model,
+                    quantize_lm_head=_lm_head,
+                    tie_word_embeddings=getattr(hf_config, 'tie_word_embeddings', False),
+                    verbose=True,
+                    skip_module_name_substrings=_skip_subs,
+                    backend=_backend,
+                )
+                if _prefix is not None and _mode == 'load_time':
+                    # Original checkpoint dtype (pre-upcast): read from hf_config's
+                    # original file, not the possibly-mutated runtime value.
+                    # hf_config.json path → torch_dtype field → fp16 or bf16 string.
+                    from transformers import AutoConfig as _AC
+                    try:
+                        _orig_ckpt_dtype = _AC.from_pretrained(config.model).torch_dtype
+                    except Exception:
+                        _orig_ckpt_dtype = self.hf_config.torch_dtype
+                    save_quantized_target_artifact(
+                        self.model, _prefix,
+                        backend=_backend, tp_rank=_tp_rank, tp_size=_tp_size,
+                        quantize_lm_head=_lm_head,
+                        effective_runtime_dtype=self.hf_config.torch_dtype,
+                        original_checkpoint_dtype=_orig_ckpt_dtype,
+                        model_id=getattr(config, 'model', None),
+                    )
+
+            # Optional layer-1 forward hooks for root-cause diagnosis
+            from ssd.utils.int8_debug import debug_enabled, install_layer1_hooks
+            if debug_enabled():
+                install_layer1_hooks(self.model, rank=self.rank, target_layer_idx=1, call_limit=4)
+
         if config.draft_async:  # move this here so we don't get a timeout waiting for draft rank while load_model happens?
             self.async_pg = dist.new_group(ranks=[0, self.draft_rank])
         if self.verbose:

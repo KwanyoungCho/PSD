@@ -45,6 +45,50 @@ class Config:
     mesa_proxy_top_k: int = 3              # proxy correction token count
     mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
 
+    # AWQ W4A16 quantization (target + draft, role-aware).
+    # Public path is `awq_marlin`; legacy torchao backends remain as an
+    # internal fallback only. See `INT8-WEIGHT-ONLY-PLAN-v2.md`.
+    target_quant_enabled: bool = False
+    # Backends — both torchao WO paths are documented as **bf16 activation**
+    # workflows (see torchao inference docs). Combining either with a fp16
+    # checkpoint is not supported by the selected backend:
+    #   - int4_wo_tile: API-level dtype assert fails ("Expected zeros fp16, got bf16")
+    #   - int8_wo     : no assert, but produces inf in MLP output (numerically unreliable)
+    # → fp16 checkpoint + these backends requires either a different backend
+    #   (e.g. GemliteUIntXWeightOnlyConfig is fp16-native) or opt-in bf16 upcast.
+    # "awq_marlin" (default, supported public path) | "int4_wo_tile" | "int8_wo"
+    # int4_wo_tile / int8_wo are LEGACY torchao paths kept as internal
+    # fallback only. Setting them is allowed but no longer driven by any CLI;
+    # the runner logs `[quant][LEGACY]` if they ever activate. See
+    # `INT8-WEIGHT-ONLY-PLAN-v2.md` and `INT8-v2-IMPL-ISSUE.md`.
+    target_quant_backend: str = "awq_marlin"
+    # AWQ-specific options. Only used when target_quant_backend == "awq_marlin".
+    target_quant_awq_artifact: str | None = None    # SSD-native artifact prefix
+    target_quant_external_awq_path: str | None = None   # external AutoAWQ hf dir
+    target_quant_group_size: int = 128
+
+    # Draft-side AWQ (role-aware AWQ — independent from target).
+    # Llama-family non-EAGLE only, tp_size=1 draft.
+    draft_quant_enabled: bool = False
+    draft_quant_backend: str = "awq_marlin"              # only awq_marlin supported for draft
+    draft_quant_awq_artifact: str | None = None          # SSD-native artifact prefix
+    draft_quant_external_awq_path: str | None = None     # external AutoAWQ hf dir
+    draft_quant_group_size: int = 128
+    # NOTE: draft lm_head / embeddings quantization is NOT implemented.
+    # The fields used to exist as opt-ins but were removed because they
+    # had no effect — the runner kept lm_head / embeddings dense regardless.
+    # Default False: ParallelLMHead is a per-step hot path (gather + cat per call)
+    # and MESA also calls lm_head at exit layer for proxy logits. Quantizing it
+    # hurts throughput and accept rate (MESA accept -4~8%p observed). Turn on
+    # explicitly only when memory is critical or for benchmarking.
+    target_quant_lm_head: bool = False
+    # [LEGACY torchao fields, kept only because the deprecated runner branch
+    # still references them. Do not introduce new uses; will be deleted in
+    # the next cleanup PR.]
+    target_quant_mode: str = "load_time"
+    target_quant_force_bf16_runtime: bool = False
+    target_quant_artifact_prefix: str | None = None
+
     # Debugging
     verbose: bool = False
     debug_mode: bool = False

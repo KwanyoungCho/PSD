@@ -84,6 +84,32 @@ def parse_arguments():
     parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
 
+    # Weight-only quantization (target only) — AWQ Marlin is the supported path.
+    # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
+    # unsupported internal fallback; their CLI was removed in this revision.
+    # See `INT8-WEIGHT-ONLY-PLAN-v2.md` and `INT8-v2-IMPL-ISSUE.md`.
+    parser.add_argument("--quant_lm_head", action="store_true",
+                        help="[ignored for AWQ — kept dense by default for throughput/accept]")
+    parser.add_argument("--quant_awq", action="store_true",
+                        help="Enable AWQ-style W4A16 on TARGET via sgl-kernel Marlin (plan v2). "
+                             "Requires --quant_awq_artifact or --quant_awq_external.")
+    parser.add_argument("--quant_awq_artifact", type=str, default=None,
+                        help="TARGET SSD-native AWQ artifact prefix (expects `<prefix>.rank{r}.awq.pt`).")
+    parser.add_argument("--quant_awq_external", type=str, default=None,
+                        help="TARGET external AutoAWQ HF checkpoint directory (reads qweight/qzeros/scales).")
+    parser.add_argument("--quant_group_size", type=int, default=128,
+                        help="AWQ group size (default 128; must evenly divide every RowParallel in-shard).")
+    # Draft-side AWQ — independent of target
+    parser.add_argument("--quant_awq_draft", action="store_true",
+                        help="Enable AWQ W4A16 on DRAFT model (plan v2 extension). "
+                             "Requires --quant_awq_draft_artifact. Llama-family, tp=1 only.")
+    parser.add_argument("--quant_awq_draft_artifact", type=str, default=None,
+                        help="DRAFT SSD-native AWQ artifact prefix.")
+    parser.add_argument("--quant_awq_draft_external", type=str, default=None,
+                        help="DRAFT external AutoAWQ HF checkpoint directory.")
+    parser.add_argument("--quant_awq_draft_group_size", type=int, default=128,
+                        help="DRAFT AWQ group size.")
+
     # Sweep mode: load engine once, run multiple configs
     parser.add_argument("--sweep", type=str, default=None,
                         help="JSON list of override dicts. Sweepable keys: temp, b. "
@@ -198,6 +224,44 @@ def create_llm_kwargs(args, draft_path):
         llm_kwargs["mesa_proxy_top_k"] = args.mesa_proxy_top_k
         if args.mesa_draft_fan_out is not None:
             llm_kwargs["mesa_draft_fan_out"] = args.mesa_draft_fan_out
+
+    # AWQ W4A16 (Marlin) — plan v2 primary direction (TARGET)
+    if getattr(args, 'quant_awq', False):
+        if not (getattr(args, 'quant_awq_artifact', None) or
+                getattr(args, 'quant_awq_external', None)):
+            raise SystemExit(
+                "[bench] --quant_awq requires either --quant_awq_artifact "
+                "<SSD-native prefix> or --quant_awq_external <AutoAWQ HF dir>."
+            )
+        llm_kwargs["target_quant_enabled"] = True
+        llm_kwargs["target_quant_backend"] = "awq_marlin"
+        if getattr(args, 'quant_awq_artifact', None):
+            llm_kwargs["target_quant_awq_artifact"] = args.quant_awq_artifact
+        if getattr(args, 'quant_awq_external', None):
+            llm_kwargs["target_quant_external_awq_path"] = args.quant_awq_external
+        if getattr(args, 'quant_group_size', 128) != 128:
+            llm_kwargs["target_quant_group_size"] = args.quant_group_size
+        if getattr(args, 'quant_lm_head', False):
+            print("[bench] --quant_lm_head is ignored for the AWQ path "
+                  "(lm_head stays dense).", flush=True)
+
+    # AWQ on DRAFT — independent from target (can be enabled alone or together)
+    if getattr(args, 'quant_awq_draft', False):
+        if not (getattr(args, 'quant_awq_draft_artifact', None) or
+                getattr(args, 'quant_awq_draft_external', None)):
+            raise SystemExit(
+                "[bench] --quant_awq_draft requires either "
+                "--quant_awq_draft_artifact <SSD-native prefix> or "
+                "--quant_awq_draft_external <AutoAWQ HF dir>."
+            )
+        llm_kwargs["draft_quant_enabled"] = True
+        llm_kwargs["draft_quant_backend"] = "awq_marlin"
+        if getattr(args, 'quant_awq_draft_artifact', None):
+            llm_kwargs["draft_quant_awq_artifact"] = args.quant_awq_draft_artifact
+        if getattr(args, 'quant_awq_draft_external', None):
+            llm_kwargs["draft_quant_external_awq_path"] = args.quant_awq_draft_external
+        if getattr(args, 'quant_awq_draft_group_size', 128) != 128:
+            llm_kwargs["draft_quant_group_size"] = args.quant_awq_draft_group_size
 
     if args.flh is not None:
         llm_kwargs["fan_out_list"] = args.flh
