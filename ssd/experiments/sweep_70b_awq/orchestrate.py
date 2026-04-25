@@ -155,8 +155,11 @@ def best(runs: list[dict], key: str = "throughput") -> dict | None:
 
 def stage_0_smoke(state: dict, port_iter) -> None:
     log("=" * 60); log("STAGE 0: SMOKE")
+    # AR baseline skipped — already have AR=32.87 tok/s from
+    # experiments/quant_awq/70b/ar/ (TP=4, no draft GPU). The sweep stack
+    # forces --gpus 5 (target TP=4 + draft 1) which is incompatible with
+    # the TP=4 AWQ artifact when used as AR.
     cfgs = [
-        {"mode": "ar", "ns": 16, "ol": 64},
         {"mode": "async", "k": 5, "f": 3, "ns": 16, "ol": 64},
         {"mode": "mesa", "k": 5, "f": 4, "dfo": 2, "exit": EXIT_MID, "policy": "a", "ns": 16, "ol": 64},
     ]
@@ -295,7 +298,7 @@ def stage_5_confirm(state: dict, port_iter) -> None:
     NS, OL = 200, 256
     a = best(filter_runs(state, mode="async"))
     m = best(filter_runs(state, mode="mesa"))
-    cfgs = [{"mode": "ar", "ns": NS, "ol": OL}]
+    cfgs = []  # AR is referenced from prior run (32.87 tok/s), not re-measured.
     if a:
         cfgs.append({**a["params"], "ns": NS, "ol": OL})
     if m:
@@ -306,16 +309,16 @@ def stage_5_confirm(state: dict, port_iter) -> None:
 
 def write_summary(state: dict) -> None:
     out = ROOT / "SUMMARY.md"
-    rs = list(state["runs"].values())
-    rs = [r for r in rs if r.get("completed")]
-    rs.sort(key=lambda r: -(r.get("throughput") or 0))
+    items = [(rid, r) for rid, r in state["runs"].items() if r.get("completed")]
+    items.sort(key=lambda kv: -(kv[1].get("throughput") or 0))
 
     lines = ["# 70B AWQ Sweep Summary\n",
-             f"Total completed runs: {len(rs)}",
-             f"Stack: layerskip-llama2-70B (AWQ TP=4) + TinyLlama-1.1B (AWQ TP=1)\n"]
+             f"Total completed runs: {len(items)}",
+             f"Stack: layerskip-llama2-70B (AWQ TP=4) + TinyLlama-1.1B (AWQ TP=1)\n",
+             "Reference: AR baseline (from experiments/quant_awq/70b/ar) = 32.87 tok/s\n"]
     lines.append("| run | mode | k | f | dfo | exit | policy | TP | accept | CH | draft_ms | verify_ms | tok/step |")
     lines.append("|---|---|---|---|---|---|---|---:|---:|---:|---:|---:|---:|")
-    for r in rs:
+    for rid, r in items:
         p = r["params"]
         def g(k, fmt=""):
             v = r.get(k)
@@ -323,7 +326,7 @@ def write_summary(state: dict) -> None:
             return f"{v:{fmt}}" if fmt else str(v)
         lines.append("| {id} | {mode} | {k} | {f} | {dfo} | {exit} | {policy} | "
                      "{tp} | {ac} | {ch} | {dms} | {vms} | {ts} |".format(
-            id=r["id"].split("/")[-1],
+            id=rid.split("/")[-1],
             mode=p.get("mode"), k=p.get("k", "—"), f=p.get("f", "—"),
             dfo=p.get("dfo", "—"), exit=p.get("exit", "—"),
             policy=p.get("policy", "—"),

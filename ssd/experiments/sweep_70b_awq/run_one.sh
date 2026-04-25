@@ -13,7 +13,14 @@ export SSD_HF_CACHE=/data2/chokwans99/models
 export SSD_CUDA_ARCH=8.6
 export TORCH_CUDA_ARCH_LIST=8.6
 export SSD_DATASET_DIR=/data2/chokwans99/datasets
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4
+# Caller may override SWEEP_GPUS (comma-separated 5-GPU list); else auto-pick free GPUs.
+if [ -z "${SWEEP_GPUS:-}" ]; then
+    SWEEP_GPUS=$(nvidia-smi --query-gpu=index,memory.used --format=csv,noheader \
+        | awk -F', ' '{gsub(" MiB","",$2); if ($2+0 < 500) print $1}' \
+        | head -5 | paste -sd ,)
+fi
+export CUDA_VISIBLE_DEVICES="$SWEEP_GPUS"
+echo "[run_one] using CUDA_VISIBLE_DEVICES=$SWEEP_GPUS"
 export SSD_PROFILE_MESA=1
 
 PY=/home/chokwans99/anaconda3/envs/ssd/bin/python

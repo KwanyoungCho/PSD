@@ -10,13 +10,13 @@ from pathlib import Path
 
 PATTERNS = {
     "throughput": r"Total Throughput:\s*([\d.]+)",
-    "tok_per_step": r"Avg Tokens per step\s*[:=]\s*([\d.]+)",
+    "tok_per_step": r"Avg Tokens per step \(incl recovery\):\s*([\d.]+)",
     "tok_per_step_hit": r"Avg Tokens per step on Cache Hit:\s*([\d.]+)",
     "tok_per_step_miss": r"Avg Tokens per step on Cache Miss:\s*([\d.]+)",
     "accept": r"Avg Fraction of Speculated Tokens Accepted:\s*([\d.]+)",
     "cache_hit": r"Avg Cache Hits:\s*([\d.]+)",
-    "draft_ms": r"Avg draft step\s*\(ms\):\s*([\d.]+)",
-    "verify_ms": r"Avg target verify\s*\(ms\):\s*([\d.]+)",
+    "draft_ms": r"Avg draft step time \(ms\):\s*([\d.]+)",
+    "verify_ms": r"Avg target verify time \(ms\):\s*([\d.]+)",
 }
 
 
