@@ -334,21 +334,35 @@ class ModelRunner:
             kwargs['d_model_target'] = config.d_model_target
             kwargs['debug_mode'] = config.debug_mode
 
-        # AWQ: derive a single structured QuantConfig at the runner boundary
-        # (plan §13.3 migration path). The legacy flat target_quant_* fields
-        # stay on `config` as a compat shim, but downstream AWQ code reads
-        # from `self.quant_config` only. Draft is always dense.
+        # AWQ: derive role-specific structured QuantConfigs at the runner
+        # boundary (plan §13.3 migration path). Target and draft configs are
+        # independent; either can be enabled alone. Downstream AWQ code
+        # reads only `self.quant_config` (the active one for this runner).
         from ssd.quant.config import quant_config_from_legacy_flags
-        self.quant_config = None if is_draft else quant_config_from_legacy_flags(config)
-        _awq_target = self.quant_config is not None and self.quant_config.enabled
+        role = "draft" if is_draft else "target"
+        self.quant_config = quant_config_from_legacy_flags(config, role)
+        _awq_active = self.quant_config is not None and self.quant_config.enabled
 
-        if _awq_target:
+        # Eagle draft AWQ is not supported in this first pass — fail loudly
+        # rather than silently quantize the wrong module set.
+        if _awq_active and is_draft and getattr(config, "use_eagle", False):
+            raise ValueError(
+                "draft_quant_enabled=True with use_eagle=True is NOT supported "
+                "in this version (non-EAGLE drafts only). Disable draft AWQ "
+                "or use a non-EAGLE draft model."
+            )
+
+        if _awq_active:
             from ssd.quant.init_context import quant_init_context
             with quant_init_context():
                 self.model = model_class(**kwargs)
         else:
             self.model = model_class(**kwargs)
-        self._awq_target = _awq_target
+        # Keep both flags for readability downstream. _awq_target retained for
+        # backward-compat reads outside the runner (nothing else sets this).
+        self._awq_active = _awq_active
+        self._awq_target = _awq_active and not is_draft
+        self._awq_draft = _awq_active and is_draft
 
         model_type = "DRAFT " if self.is_draft else "TARGET "
         if self.verbose:
@@ -360,15 +374,33 @@ class ModelRunner:
         load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
 
         # --- AWQ W4A16 path (plan v2 — see INT8-WEIGHT-ONLY-PLAN-v2.md) ---
-        if self._awq_target:
+        # Runs identically for target and draft; the QuantConfig instance
+        # carries the role so the loader validates the artifact is the
+        # correct kind.
+        if self._awq_active:
             qc = self.quant_config
             _tp_size_awq = self.num_tp_gpus if hasattr(self, 'num_tp_gpus') else 1
             _tp_rank_awq = dist.get_rank(group=self.tp_pg) if self.tp_pg is not None else 0
+            # Draft is always tp_size=1 in this version; cross-check.
+            if qc.role == "draft":
+                assert _tp_size_awq == 1, \
+                    f"draft AWQ requires tp_size=1 in v1, got {_tp_size_awq}"
+            # Opt-in group-size sanity check (only if user set it non-default).
+            _user_group_size = None
+            if qc.role == "target":
+                _gs = getattr(config, 'target_quant_group_size', None)
+                if _gs is not None and _gs != 128:
+                    _user_group_size = qc.group_size
+            else:
+                _gs = getattr(config, 'draft_quant_group_size', None)
+                if _gs is not None and _gs != 128:
+                    _user_group_size = qc.group_size
+
             if qc.quant_source == "ssd_artifact":
                 if not qc.artifact_path:
                     raise ValueError(
-                        "QuantConfig.quant_source=ssd_artifact requires "
-                        "artifact_path (CLI --quant_awq_artifact)."
+                        f"QuantConfig[{qc.role}].quant_source=ssd_artifact requires "
+                        f"artifact_path (CLI --quant_awq{'_draft' if qc.role=='draft' else ''}_artifact)."
                     )
                 from ssd.quant.loader import apply_ssd_awq_artifact
                 apply_ssd_awq_artifact(
@@ -378,15 +410,14 @@ class ModelRunner:
                     tp_size=_tp_size_awq,
                     expected_runtime_dtype=qc.expected_runtime_dtype,
                     expected_model_id=os.path.abspath(config.model),
-                    expected_group_size=qc.group_size if getattr(
-                        config, 'target_quant_group_size', None) is not None
-                        and config.target_quant_group_size != 128 else None,
+                    expected_group_size=_user_group_size,
+                    expected_role=qc.role,
                 )
             elif qc.quant_source == "external_awq":
                 if not qc.external_quant_path:
                     raise ValueError(
-                        "QuantConfig.quant_source=external_awq requires "
-                        "external_quant_path (CLI --quant_awq_external)."
+                        f"QuantConfig[{qc.role}].quant_source=external_awq requires "
+                        f"external_quant_path."
                     )
                 from ssd.quant.adapter import load_external_autoawq_into_model
                 load_external_autoawq_into_model(
@@ -394,13 +425,27 @@ class ModelRunner:
                     hf_path=qc.external_quant_path,
                     tp_rank=_tp_rank_awq,
                     tp_size=_tp_size_awq,
+                    expected_role=qc.role,
                 )
             else:
                 raise ValueError(f"Unknown QuantConfig.quant_source={qc.quant_source!r}")
 
-        # Weight-only quantization (target only, gated by config)
+        # === LEGACY torchao weight-only path (DEPRECATED, internal fallback) ===
+        # The supported public path is AWQ Marlin above. This branch is kept
+        # only as an internal fallback for bf16-native targets that hit a
+        # corner case in AWQ. CLI flags that drive this path were removed
+        # from bench.py — to use it now you must set
+        # `target_quant_backend in ("int4_wo_tile", "int8_wo")` directly on
+        # the `Config` dataclass. Expect removal in a follow-up cleanup.
         if getattr(config, 'target_quant_enabled', False) and not is_draft \
                 and not self._awq_target:
+            print(
+                "[quant][LEGACY] torchao weight-only path triggered "
+                "(target_quant_backend=%r). This path is deprecated; "
+                "the supported route is `--quant_awq` + AWQ artifact." %
+                getattr(config, 'target_quant_backend', '?'),
+                flush=True,
+            )
             from ssd.utils.quantize import (
                 apply_quantization_to_target,
                 save_quantized_target_artifact,

@@ -37,6 +37,9 @@ def main():
                    help="batch size during calibration forward. None = AutoAWQ default.")
     p.add_argument("--max-chunk-memory", type=int, default=1024 * 1024 * 1024,
                    help="activation-statistics chunk budget in bytes (default 1GB)")
+    p.add_argument("--max-gpu-memory", type=str, default=None,
+                   help="Per-GPU memory cap for accelerate device_map "
+                        '(e.g. "20GiB"). Leaves headroom for activations.')
     args = p.parse_args()
 
     import torch
@@ -44,14 +47,33 @@ def main():
     from transformers import AutoTokenizer
 
     dtype = {"float16": torch.float16, "bfloat16": torch.bfloat16}[args.dtype]
-    print(f"[autoawq] loading {args.model} (dtype={args.dtype})")
-    model = AutoAWQForCausalLM.from_pretrained(
-        args.model,
+    # Explicit per-GPU memory cap leaves headroom for activation peaks during
+    # calibration forward (down_proj input at bs×seq×intermediate). Without
+    # this accelerate auto-balance fills every GPU to 95%+ and OOMs on the
+    # first big matmul.
+    load_kwargs = dict(
         torch_dtype=dtype,
         device_map="auto",
         low_cpu_mem_usage=True,
         safetensors=True,
     )
+    if args.max_gpu_memory:
+        import torch as _t
+        n_gpu = _t.cuda.device_count()
+        # accelerate wants string keys for CPU and int keys for GPU indices.
+        mm = {}
+        for i in range(n_gpu):
+            mm[i] = args.max_gpu_memory
+        # CPU as overflow device — any weights that don't fit across GPUs
+        # will be placed on CPU. Much slower for calibration forward but
+        # the only way to fit 70B on 8×24GB RTX 3090 with AutoAWQ's
+        # grid-search memory profile.
+        mm["cpu"] = "200GiB"
+        load_kwargs["max_memory"] = mm
+        load_kwargs["offload_folder"] = "/tmp/autoawq_offload"
+        import os as _os; _os.makedirs("/tmp/autoawq_offload", exist_ok=True)
+    print(f"[autoawq] loading {args.model} (dtype={args.dtype}  max_memory={args.max_gpu_memory or 'auto'})")
+    model = AutoAWQForCausalLM.from_pretrained(args.model, **load_kwargs)
     tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=True, trust_remote_code=True)
 
     quant_config = {

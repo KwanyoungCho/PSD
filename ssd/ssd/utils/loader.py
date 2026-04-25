@@ -188,7 +188,6 @@ def load_eagle_model(model: nn.Module, path: str, packed_modules_mapping: dict, 
 # checkpoint, the dense path below must silently skip those keys — the AWQ
 # loader handles them via the SSD-native artifact. Dense keys (embeddings,
 # `lm_head`, norms, layer-scale) still load normally.
-_QUANT_WEIGHT_SUFFIXES = (".qweight", ".qzeros", ".scales", ".g_idx", ".bias")
 _QUANT_WEIGHT_KEY_SUFFIXES = (".qweight", ".qzeros", ".scales", ".g_idx")
 
 

@@ -225,6 +225,7 @@ def import_dense_to_ssd_artifact(
     quantize_lm_head: bool = False,
     quantize_embeddings: bool = False,
     base_model_path: str | None = None,
+    model_role: str = "target",
 ) -> list[str]:
     """Dense HF checkpoint → SSD-native AWQ artifact (RTN W4A16).
 
@@ -263,8 +264,9 @@ def import_dense_to_ssd_artifact(
             quantize_lm_head=quantize_lm_head,
             quantize_embeddings=quantize_embeddings,
             quant_source="rtn",
+            model_role=model_role,
         )
-        print(f"[importer] wrote rank={r}: {p}  ({len(per_rank[r])} modules)")
+        print(f"[importer] wrote rank={r}: {p}  ({len(per_rank[r])} modules, role={model_role})")
         written.append(p)
     return written
 
@@ -279,6 +281,7 @@ def import_autoawq_to_ssd_artifact(
     quantize_lm_head: bool = False,
     quantize_embeddings: bool = False,
     base_model_path: str | None = None,
+    model_role: str = "target",
 ) -> list[str]:
     """AutoAWQ HF checkpoint → SSD-native AWQ artifact (same packing, no re-quant).
 
@@ -381,7 +384,8 @@ def import_autoawq_to_ssd_artifact(
             quantize_lm_head=quantize_lm_head,
             quantize_embeddings=quantize_embeddings,
             quant_source="awq_calibrated",
+            model_role=model_role,
         )
-        print(f"[importer] wrote rank={r}: {p}")
+        print(f"[importer] wrote rank={r}: {p}  (role={model_role})")
         written.append(p)
     return written

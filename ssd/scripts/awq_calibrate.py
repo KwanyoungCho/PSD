@@ -1,15 +1,20 @@
-"""CLI for the offline AWQ calibration pipeline.
+"""[EXPERIMENTAL] CLI for the simplified self-contained AWQ calibrator.
 
-Uses the self-contained calibrator in ssd.quant.awq_calibrate — no autoawq
-dependency. Produces an AutoAWQ-format HF checkpoint that can be ingested by
-scripts/awq_import.py --mode autoawq.
+This is a fixed-α (no grid-search), no-clip-search variant of AWQ written
+without an external dependency. It exists primarily as a fallback for
+models where AutoAWQ trips a corner case (e.g. layerskip-llama2-70B in
+our experiments).
+
+**For production use prefer `scripts/awq_calibrate_autoawq.py`** — that
+path uses the reference AutoAWQ implementation (grid-search α, clip
+search, smoothing) and produces higher-quality scales.
 
 Usage:
     python scripts/awq_calibrate.py \\
-        --model /data2/chokwans99/models/Llama-3.1-8B-Instruct \\
-        --out   /data2/chokwans99/awq_calibrated/llama3_8b \\
+        --model /path/to/Llama-3.1-8B-Instruct \\
+        --out   /path/to/awq_calibrated/llama3_8b \\
         --n-samples 128 --seq-len 512 --alpha 0.5 \\
-        --device-map auto --dtype float16
+        --device-map auto --dtype float16 --max-gpu-memory 18GiB
 """
 import argparse
 import os
@@ -37,6 +42,9 @@ def main():
     p.add_argument("--dtype", default="float16", choices=["float16", "bfloat16"])
     p.add_argument("--device-map", default="auto",
                    help="HF device_map. 'auto' auto-shards a large model across visible GPUs.")
+    p.add_argument("--max-gpu-memory", default=None,
+                   help='Per-GPU cap for accelerate (e.g. "18GiB"). Leaves '
+                        'activation headroom.')
     args = p.parse_args()
 
     dtype = {"float16": torch.float16, "bfloat16": torch.bfloat16}[args.dtype]
@@ -52,6 +60,7 @@ def main():
         batch_size=args.batch_size,
         dtype=dtype,
         device_map=args.device_map,
+        max_gpu_memory=args.max_gpu_memory,
     )
 
 

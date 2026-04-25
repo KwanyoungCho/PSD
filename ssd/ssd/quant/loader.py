@@ -24,11 +24,14 @@ def apply_ssd_awq_artifact(
     expected_runtime_dtype: str | None = None,
     expected_model_id: str | None = None,
     expected_group_size: int | None = None,
+    expected_role: str | None = None,
     verbose: bool = True,
 ) -> dict:
     """Mutate `model` in place by attaching AWQ quant states from the artifact.
 
     Validation done here (in addition to io.load_awq_artifact's own checks):
+      - `expected_role`, if given, must match artifact `model_role` (v1
+        artifacts are treated as "target").
       - `expected_group_size`, if given, must match the artifact's
         `group_size` (CLI `--quant_group_size` flows through here).
       - After attaching, every TP linear left on `meta` is reported as a
@@ -39,6 +42,7 @@ def apply_ssd_awq_artifact(
         tp_rank=tp_rank, tp_size=tp_size,
         expected_runtime_dtype=expected_runtime_dtype,
         expected_model_id=expected_model_id,
+        expected_role=expected_role,
     )
     if expected_group_size is not None and artifact["group_size"] != expected_group_size:
         raise ValueError(
@@ -118,8 +122,9 @@ def apply_ssd_awq_artifact(
             for m in mods.values()
             if getattr(m, "quant_state", None) is not None
         )
+        role = artifact.get("model_role", "target")
         print(
-            f"[awq-loader] rank={r}/{tp_size}: attached {n_attached} modules, "
+            f"[awq-loader] role={role} rank={r}/{tp_size}: attached {n_attached} modules, "
             f"quant storage ≈ {total_bytes / 1e9:.2f} GB  "
             f"(source={artifact.get('quant_source')}, schema=v{artifact['schema_version']})",
             flush=True,

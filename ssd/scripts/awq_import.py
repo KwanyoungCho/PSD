@@ -47,6 +47,10 @@ def main():
                         "Runtime requires `config.model` to match this path. "
                         "Defaults to --model; override only if the runtime "
                         "config.model points somewhere different (rare).")
+    p.add_argument("--role", choices=["target", "draft"], default="target",
+                   help="Stamp the artifact with this role. The runtime loader "
+                        "refuses to load a target artifact into a draft model "
+                        "(and vice-versa).")
     args = p.parse_args()
 
     from ssd.quant.importer import import_dense_to_ssd_artifact, import_autoawq_to_ssd_artifact
@@ -59,6 +63,7 @@ def main():
             group_size=args.group_size,
             expected_runtime_dtype=args.dtype,
             base_model_path=args.base_model,
+            model_role=args.role,
         )
     else:
         written = import_autoawq_to_ssd_artifact(
@@ -68,6 +73,7 @@ def main():
             group_size=args.group_size,
             expected_runtime_dtype=args.dtype,
             base_model_path=args.base_model,
+            model_role=args.role,
         )
     print(f"[awq_import] wrote {len(written)} rank files → {args.out}.rank*.awq.pt")
 

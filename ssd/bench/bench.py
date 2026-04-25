@@ -84,33 +84,31 @@ def parse_arguments():
     parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
 
-    # Weight-only quantization (target only)
-    parser.add_argument("--quant_int4", action="store_true",
-                        help="Enable target-only INT4 weight-only (default for --quant, tile_packed tinygemm fast path)")
-    parser.add_argument("--quant_int8", action="store_true",
-                        help="Enable target-only INT8 weight-only (slower on SM 86, higher accuracy)")
-    parser.add_argument("--no_quant_lm_head", action="store_true",
-                        help="[DEPRECATED, no-op] lm_head is dense by default now. Flag kept only to not break existing scripts.")
+    # Weight-only quantization (target only) — AWQ Marlin is the supported path.
+    # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
+    # unsupported internal fallback; their CLI was removed in this revision.
+    # See `INT8-WEIGHT-ONLY-PLAN-v2.md` and `INT8-v2-IMPL-ISSUE.md`.
     parser.add_argument("--quant_lm_head", action="store_true",
-                        help="Quantize lm_head (opt-in). Default keeps lm_head dense for throughput/accept.")
-    parser.add_argument("--quant_artifact", type=str, default=None,
-                        help="Path prefix for persistent quant artifacts. If file exists → load, else quantize+save")
-    parser.add_argument("--quant_artifact_load_only", action="store_true",
-                        help="With --quant_artifact, fail if artifact missing (mode=persistent)")
-    parser.add_argument("--quant_force_bf16_runtime", action="store_true",
-                        help="fp16 checkpoint + quant: explicitly opt-in to bf16 runtime override. "
-                             "Without this flag, fp16+quant raises ValueError (selected torchao "
-                             "WO backends assume bf16 activation). Setting this means the runtime "
-                             "is effectively bf16, not fp16 — acknowledged workaround.")
+                        help="[ignored for AWQ — kept dense by default for throughput/accept]")
     parser.add_argument("--quant_awq", action="store_true",
-                        help="Enable AWQ-style W4A16 via sgl-kernel Marlin (plan v2). "
+                        help="Enable AWQ-style W4A16 on TARGET via sgl-kernel Marlin (plan v2). "
                              "Requires --quant_awq_artifact or --quant_awq_external.")
     parser.add_argument("--quant_awq_artifact", type=str, default=None,
-                        help="SSD-native AWQ artifact prefix (expects `<prefix>.rank{r}.awq.pt`).")
+                        help="TARGET SSD-native AWQ artifact prefix (expects `<prefix>.rank{r}.awq.pt`).")
     parser.add_argument("--quant_awq_external", type=str, default=None,
-                        help="External AutoAWQ HF checkpoint directory (reads qweight/qzeros/scales).")
+                        help="TARGET external AutoAWQ HF checkpoint directory (reads qweight/qzeros/scales).")
     parser.add_argument("--quant_group_size", type=int, default=128,
                         help="AWQ group size (default 128; must evenly divide every RowParallel in-shard).")
+    # Draft-side AWQ — independent of target
+    parser.add_argument("--quant_awq_draft", action="store_true",
+                        help="Enable AWQ W4A16 on DRAFT model (plan v2 extension). "
+                             "Requires --quant_awq_draft_artifact. Llama-family, tp=1 only.")
+    parser.add_argument("--quant_awq_draft_artifact", type=str, default=None,
+                        help="DRAFT SSD-native AWQ artifact prefix.")
+    parser.add_argument("--quant_awq_draft_external", type=str, default=None,
+                        help="DRAFT external AutoAWQ HF checkpoint directory.")
+    parser.add_argument("--quant_awq_draft_group_size", type=int, default=128,
+                        help="DRAFT AWQ group size.")
 
     # Sweep mode: load engine once, run multiple configs
     parser.add_argument("--sweep", type=str, default=None,
@@ -227,29 +225,14 @@ def create_llm_kwargs(args, draft_path):
         if args.mesa_draft_fan_out is not None:
             llm_kwargs["mesa_draft_fan_out"] = args.mesa_draft_fan_out
 
-    # Weight-only quantization (target)
-    if getattr(args, 'quant_int4', False) or getattr(args, 'quant_int8', False):
-        llm_kwargs["target_quant_enabled"] = True
-        if getattr(args, 'quant_int8', False) and not getattr(args, 'quant_int4', False):
-            llm_kwargs["target_quant_backend"] = "int8_wo"
-        else:
-            llm_kwargs["target_quant_backend"] = "int4_wo_tile"
-        # lm_head default: dense (config default is False). Opt-in via --quant_lm_head.
-        if getattr(args, 'no_quant_lm_head', False):
-            print("[bench] WARNING: --no_quant_lm_head is deprecated/no-op. "
-                  "lm_head is dense by default. Remove this flag; use --quant_lm_head to opt-in.",
-                  flush=True)
-        if getattr(args, 'quant_lm_head', False):
-            llm_kwargs["target_quant_lm_head"] = True
-        if getattr(args, 'quant_artifact', None):
-            llm_kwargs["target_quant_artifact_prefix"] = args.quant_artifact
-            if getattr(args, 'quant_artifact_load_only', False):
-                llm_kwargs["target_quant_mode"] = "persistent"
-        if getattr(args, 'quant_force_bf16_runtime', False):
-            llm_kwargs["target_quant_force_bf16_runtime"] = True
-
-    # AWQ W4A16 (Marlin) — plan v2 primary direction
+    # AWQ W4A16 (Marlin) — plan v2 primary direction (TARGET)
     if getattr(args, 'quant_awq', False):
+        if not (getattr(args, 'quant_awq_artifact', None) or
+                getattr(args, 'quant_awq_external', None)):
+            raise SystemExit(
+                "[bench] --quant_awq requires either --quant_awq_artifact "
+                "<SSD-native prefix> or --quant_awq_external <AutoAWQ HF dir>."
+            )
         llm_kwargs["target_quant_enabled"] = True
         llm_kwargs["target_quant_backend"] = "awq_marlin"
         if getattr(args, 'quant_awq_artifact', None):
@@ -259,9 +242,26 @@ def create_llm_kwargs(args, draft_path):
         if getattr(args, 'quant_group_size', 128) != 128:
             llm_kwargs["target_quant_group_size"] = args.quant_group_size
         if getattr(args, 'quant_lm_head', False):
-            llm_kwargs["target_quant_lm_head"] = True
-            print("[bench] WARNING: --quant_awq currently keeps lm_head dense; "
-                  "--quant_lm_head is ignored for the AWQ path.", flush=True)
+            print("[bench] --quant_lm_head is ignored for the AWQ path "
+                  "(lm_head stays dense).", flush=True)
+
+    # AWQ on DRAFT — independent from target (can be enabled alone or together)
+    if getattr(args, 'quant_awq_draft', False):
+        if not (getattr(args, 'quant_awq_draft_artifact', None) or
+                getattr(args, 'quant_awq_draft_external', None)):
+            raise SystemExit(
+                "[bench] --quant_awq_draft requires either "
+                "--quant_awq_draft_artifact <SSD-native prefix> or "
+                "--quant_awq_draft_external <AutoAWQ HF dir>."
+            )
+        llm_kwargs["draft_quant_enabled"] = True
+        llm_kwargs["draft_quant_backend"] = "awq_marlin"
+        if getattr(args, 'quant_awq_draft_artifact', None):
+            llm_kwargs["draft_quant_awq_artifact"] = args.quant_awq_draft_artifact
+        if getattr(args, 'quant_awq_draft_external', None):
+            llm_kwargs["draft_quant_external_awq_path"] = args.quant_awq_draft_external
+        if getattr(args, 'quant_awq_draft_group_size', 128) != 128:
+            llm_kwargs["draft_quant_group_size"] = args.quant_awq_draft_group_size
 
     if args.flh is not None:
         llm_kwargs["fan_out_list"] = args.flh

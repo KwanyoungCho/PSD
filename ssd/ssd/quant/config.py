@@ -1,69 +1,92 @@
-"""Structured QuantConfig — plan §13."""
+"""Structured QuantConfig — plan §13, role-aware (target / draft).
+
+One dataclass, role-aware. A single `Config` may yield up to two
+`QuantConfig` instances — one for target (`role="target"`) and one for
+draft (`role="draft"`). They are independent: either can be enabled or
+disabled without constraining the other.
+"""
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 
 
 @dataclass
 class QuantConfig:
+    """Role-aware (target/draft) AWQ runtime config consumed by ModelRunner."""
+
+    role: str                              # "target" | "draft"
     enabled: bool = False
-    method: str = "none"              # "none" | "awq_int4"
-    target: bool = True
-    draft: bool = False
-    quantize_lm_head: bool = False
-    quantize_embeddings: bool = False
-    artifact_path: str | None = None
-    artifact_mode: str = "load_only"  # "load_only" | "import_then_load"
-    runtime_backend: str = "awq_marlin"   # only supported backend in this plan
-    quant_source: str = "ssd_artifact"    # "ssd_artifact" | "external_awq"
+    artifact_path: str | None = None       # SSD-native artifact prefix
+    quant_source: str = "ssd_artifact"     # "ssd_artifact" | "external_awq"
     external_quant_path: str | None = None
     group_size: int = 128
-    use_zero_point: bool = True
-    # dtype of activations at runtime — Marlin accepts fp16 or bf16.
     expected_runtime_dtype: str = "float16"
 
 
-def quant_config_from_legacy_flags(cfg) -> QuantConfig | None:
-    """Build a QuantConfig from the legacy flat fields on ssd.config.Config.
-
-    Plan §13.3 says keep the flat fields as a compat shim and derive the
-    structured config at the LLM/runner boundary. This helper does the
-    derivation; the AWQ runtime branch then reads the structured object,
-    not the flat fields.
-
-    Returns None when the AWQ-Marlin path is not active. The legacy
-    torchao int4/int8 path does not use QuantConfig — it keeps reading
-    the flat fields directly from `Config`.
-    """
-    if not getattr(cfg, "target_quant_enabled", False):
-        return None
-    backend = getattr(cfg, "target_quant_backend", "int4_wo_tile")
-    if backend != "awq_marlin":
-        # Legacy torchao path — QuantConfig unused, keep returning None so
-        # callers don't accidentally run the AWQ branch with stale data.
-        return None
-
-    awq_artifact_path = getattr(cfg, "target_quant_awq_artifact", None)
-    external_path = getattr(cfg, "target_quant_external_awq_path", None)
-    source = "external_awq" if external_path else "ssd_artifact"
-
+def _dtype_str(cfg, is_draft: bool) -> str:
     import torch
-    rt_dtype = cfg.hf_config.torch_dtype if cfg.hf_config is not None else torch.float16
-    rt_dtype_str = str(rt_dtype).replace("torch.", "")
+    hf = cfg.draft_hf_config if is_draft else cfg.hf_config
+    if hf is None:
+        return "float16"
+    dt = hf.torch_dtype
+    return str(dt).replace("torch.", "")
 
+
+def quant_config_from_legacy_flags(cfg, role: str) -> QuantConfig | None:
+    """Derive a role-specific `QuantConfig` from flat `{role}_quant_*` flags.
+
+    Returns None when AWQ is disabled for that role, or when the role is
+    `"target"` and a legacy torchao backend is selected (the runner's
+    deprecated `[LEGACY]` branch consumes the flat fields directly in that
+    case — this function does not produce a QuantConfig for it).
+    """
+    assert role in ("target", "draft"), f"role must be target|draft, got {role!r}"
+
+    if role == "target":
+        enabled = getattr(cfg, "target_quant_enabled", False)
+        backend = getattr(cfg, "target_quant_backend", "awq_marlin")
+        artifact = getattr(cfg, "target_quant_awq_artifact", None)
+        external = getattr(cfg, "target_quant_external_awq_path", None)
+        group_size = getattr(cfg, "target_quant_group_size", 128)
+    else:  # draft
+        enabled = getattr(cfg, "draft_quant_enabled", False)
+        backend = getattr(cfg, "draft_quant_backend", "awq_marlin")
+        artifact = getattr(cfg, "draft_quant_awq_artifact", None)
+        external = getattr(cfg, "draft_quant_external_awq_path", None)
+        group_size = getattr(cfg, "draft_quant_group_size", 128)
+
+    # Auto-route: if the user passed an AWQ artifact/external path but left
+    # `backend` at a stale legacy value (or omitted it), resolve to AWQ.
+    if (artifact or external) and backend != "awq_marlin":
+        print(
+            f"[quant][{role}] auto-routing backend {backend!r} → 'awq_marlin' "
+            f"because an AWQ artifact/external path was provided.",
+            file=sys.stderr, flush=True,
+        )
+        backend = "awq_marlin"
+
+    if not enabled:
+        return None
+    if backend != "awq_marlin":
+        # Legacy torchao backend selected on the target. The deprecated
+        # branch in `model_runner.py` reads the flat fields directly and
+        # logs a `[LEGACY]` warning; we don't return a QuantConfig so the
+        # AWQ runtime path stays inert.
+        if role == "draft":
+            raise ValueError(
+                f"draft_quant_backend={backend!r} is not supported; "
+                f"only 'awq_marlin' is supported for the draft."
+            )
+        return None
+
+    is_draft = role == "draft"
     return QuantConfig(
+        role=role,
         enabled=True,
-        method="awq_int4",
-        target=True,
-        draft=False,
-        quantize_lm_head=getattr(cfg, "target_quant_lm_head", False),
-        quantize_embeddings=False,
-        artifact_path=awq_artifact_path,
-        artifact_mode="load_only",
-        runtime_backend="awq_marlin",
-        quant_source=source,
-        external_quant_path=external_path,
-        group_size=getattr(cfg, "target_quant_group_size", 128),
-        use_zero_point=True,
-        expected_runtime_dtype=rt_dtype_str,
+        artifact_path=artifact,
+        quant_source="external_awq" if external else "ssd_artifact",
+        external_quant_path=external,
+        group_size=group_size,
+        expected_runtime_dtype=_dtype_str(cfg, is_draft),
     )

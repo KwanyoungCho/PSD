@@ -215,17 +215,27 @@ def run_awq_calibration(
     batch_size: int = 1,
     dtype: torch.dtype | None = None,
     device_map: str = "auto",
+    max_gpu_memory: str | None = None,
 ) -> None:
     """Full calibration + quantization + AutoAWQ-format export."""
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    print(f"[awq-calib] loading {model_path} (device_map={device_map})")
+    print(f"[awq-calib] loading {model_path} (device_map={device_map} "
+          f"max_gpu_mem={max_gpu_memory})")
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
     _load_kwargs = {}
     if dtype is not None:
         _load_kwargs["torch_dtype"] = dtype
     if device_map and device_map.lower() not in ("none", "single"):
         _load_kwargs["device_map"] = device_map
+    if max_gpu_memory:
+        n_gpu = torch.cuda.device_count()
+        mm = {i: max_gpu_memory for i in range(n_gpu)}
+        mm["cpu"] = "200GiB"
+        _load_kwargs["max_memory"] = mm
+        import os as _os
+        _load_kwargs["offload_folder"] = "/tmp/awq_calib_offload"
+        _os.makedirs("/tmp/awq_calib_offload", exist_ok=True)
     model = AutoModelForCausalLM.from_pretrained(model_path, **_load_kwargs)
     if "device_map" not in _load_kwargs:
         # Single-GPU fast path (no accelerate dependency). Fits models up to

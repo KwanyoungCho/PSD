@@ -1,4 +1,25 @@
-"""Weight-only quantization hook for SSD target model.
+"""[LEGACY / DEPRECATED — INTERNAL FALLBACK ONLY]
+
+This file is the **legacy torchao weight-only path**. It is no longer the
+supported quantization route in SSD; the public path is AWQ Marlin
+(`ssd/quant/`, plan `INT8-WEIGHT-ONLY-PLAN-v2.md`).
+
+**Do not extend or document this path as a user-facing feature.** It is
+retained only as an internal fallback for:
+  - bf16-native models that hit a corner case in the AWQ pipeline
+  - quick load-time torchao spike experiments
+
+The corresponding CLI flags (`--quant_int4`, `--quant_int8`,
+`--quant_artifact`, `--quant_force_bf16_runtime`, etc.) were removed
+from `bench/bench.py`. To trigger this path you must construct a
+`Config` directly and set `target_quant_backend` to a non-`awq_marlin`
+value. Expect this file to be deleted in a follow-up cleanup.
+
+----
+
+Original docstring follows.
+
+Weight-only quantization hook for SSD target model.
 
 Backends (chosen via `backend` arg):
   - "int4_wo_tile" (DEFAULT): torchao `Int4WeightOnlyConfig(group_size=128)`

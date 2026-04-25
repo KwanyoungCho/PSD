@@ -1,15 +1,21 @@
 """SSD-native AWQ artifact format — plan §7.3 / §7.4.
 
+Schema v2 adds `model_role` so the loader can reject a target artifact
+being loaded into a draft model and vice-versa. v1 artifacts are still
+accepted (treated as role="target" for backward compatibility with the
+first-cut target-only pipeline).
+
 Each per-rank file contains packed AWQ tensors (AutoAWQ layout, not yet
-Marlin-repacked — we repack on load because the repack is a cheap CUDA op
-and the Marlin layout is version-tied).
+Marlin-repacked — we repack on load because the repack is a cheap CUDA
+op and the Marlin layout is version-tied).
 
 File layout (torch.save, pickle):
 
     {
-        "schema_version": SSD_AWQ_ARTIFACT_VERSION,
+        "schema_version": SSD_AWQ_ARTIFACT_VERSION,   # 2
         "quant_scheme": "awq_int4",
         "backend": "awq_marlin",
+        "model_role": "target" | "draft",             # NEW in v2
         "model_id": str,
         "tp_size": int,
         "tp_rank": int,
@@ -19,29 +25,19 @@ File layout (torch.save, pickle):
         "quantize_lm_head": bool,
         "quantize_embeddings": bool,
         "quant_source": "rtn" | "awq_calibrated" | "external",
-        "ssd_module_names": list[str],       # `named_modules` path in SSD model
-        "modules": {
-            module_name: {
-                "qweight":   int32  [K_local, N_local // 8],      AutoAWQ layout
-                "qzeros":    int32  [K_local // G, N_local // 8], AutoAWQ layout
-                "scales":    dtype  [K_local // G, N_local],
-                "in_features":  int,
-                "out_features": int,
-                "group_size":   int,
-                "bias":  dtype [N_local] or None,
-            }, ...
-        },
+        "ssd_module_names": list[str],
+        "modules": { module_name: {...}, ... },
     }
 """
 from __future__ import annotations
 
 import os
-from dataclasses import asdict
 from typing import Any, Dict, Mapping
 
 import torch
 
-SSD_AWQ_ARTIFACT_VERSION = 1
+SSD_AWQ_ARTIFACT_VERSION = 2
+_SUPPORTED_ARTIFACT_VERSIONS = (1, 2)
 
 
 def _artifact_path(prefix: str, tp_rank: int) -> str:
@@ -61,12 +57,16 @@ def save_awq_artifact(
     quantize_lm_head: bool,
     quantize_embeddings: bool,
     quant_source: str,
+    model_role: str = "target",
 ) -> str:
     """Serialize a single rank's quantized state."""
+    assert model_role in ("target", "draft"), \
+        f"model_role must be target|draft, got {model_role!r}"
     artifact = {
         "schema_version": SSD_AWQ_ARTIFACT_VERSION,
         "quant_scheme": "awq_int4",
         "backend": "awq_marlin",
+        "model_role": model_role,
         "model_id": model_id,
         "tp_size": tp_size,
         "tp_rank": tp_rank,
@@ -92,21 +92,28 @@ def load_awq_artifact(
     tp_size: int,
     expected_runtime_dtype: str | None = None,
     expected_model_id: str | None = None,
+    expected_role: str | None = None,
 ) -> Dict[str, Any]:
     """Load and validate a single rank's artifact.
 
-    Validation matches plan §7.4: exact match required on tp_size / tp_rank,
-    model_id (if provided), backend, and expected runtime dtype (if provided).
+    Validation (plan §7.4 + role extension):
+      - schema_version : must be one of the supported versions
+      - backend        : "awq_marlin"
+      - tp_size/rank   : exact
+      - model_role     : if given, must match. v1 artifacts are treated as
+                         "target" for backward compat.
+      - model_id       : if given, must match (or artifact may have None)
+      - runtime dtype  : if given, must match
     """
     path = _artifact_path(prefix, tp_rank)
     if not os.path.isfile(path):
         raise FileNotFoundError(f"AWQ artifact not found: {path}")
     art = torch.load(path, map_location="cpu", weights_only=False)
 
-    if art.get("schema_version") != SSD_AWQ_ARTIFACT_VERSION:
+    if art.get("schema_version") not in _SUPPORTED_ARTIFACT_VERSIONS:
         raise ValueError(
-            f"SSD AWQ artifact schema_version={art.get('schema_version')} != "
-            f"runtime {SSD_AWQ_ARTIFACT_VERSION} ({path})"
+            f"SSD AWQ artifact schema_version={art.get('schema_version')} not in "
+            f"supported set {_SUPPORTED_ARTIFACT_VERSIONS} ({path})"
         )
     if art["backend"] != "awq_marlin":
         raise ValueError(f"artifact backend {art['backend']!r} != awq_marlin ({path})")
@@ -118,6 +125,19 @@ def load_awq_artifact(
         raise ValueError(
             f"artifact tp_rank={art['tp_rank']} != runtime tp_rank={tp_rank} ({path})"
         )
+
+    # Role check. v1 artifacts had no role → treat as target for backward compat.
+    art_role = art.get("model_role", "target")
+    if expected_role is not None and art_role != expected_role:
+        raise ValueError(
+            f"SSD AWQ loader: artifact model_role={art_role!r} but runtime "
+            f"requested role={expected_role!r} ({path}). This prevents loading "
+            f"a target artifact into a draft model or vice-versa. Import with "
+            f"--role {expected_role!r} or pick the correct artifact."
+        )
+    # Normalize so callers see a role field even on v1 artifacts.
+    art["model_role"] = art_role
+
     if expected_model_id is not None and art.get("model_id") not in (None, expected_model_id):
         raise ValueError(
             f"artifact model_id={art.get('model_id')!r} != runtime {expected_model_id!r} ({path})"
