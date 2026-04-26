@@ -1160,10 +1160,17 @@ class DraftRunner(ModelRunner):
 
     def _build_tree_decode_args_for_layout(self, partial_tree_decode_args, forked_tokens,
                                              layout, cache_hits_list, pos_offset=0):
-        """Build tree_decode_args using the given layout. Used for both draft and proxy passes."""
+        """Build tree_decode_args using the given layout. Used for both draft and proxy passes.
+
+        Note (Phase 2 of MESA hybrid plan): glue position offset uses
+        ``layout.position_count``, not ``K + 1``. For non-MESA / current MESA
+        layouts these are equal (legacy invariant); for the hybrid Phase 1
+        layout they diverge (forward depth K1 vs position count valid_k+1).
+        """
         B = partial_tree_decode_args["num_tokens"].shape[0]
         K = layout.K
         MQ_LEN = layout.MQ_LEN
+        glue_offset = layout.position_count
 
         _b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, MQ_LEN).flatten()
         _fkp1_flat = layout.arange_mq.repeat(B)
@@ -1171,7 +1178,7 @@ class DraftRunner(ModelRunner):
         N = _b_flat.shape[0]
 
         _pos_offset = -1 if self.config.use_eagle else 0
-        _positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + (K + 1) + _fkp1_flat
+        _positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + glue_offset + _fkp1_flat
         _rope_positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + _j_idx_flat + 1
         _temperatures = partial_tree_decode_args["temperatures"][_b_flat]
 
