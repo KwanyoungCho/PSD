@@ -154,6 +154,12 @@ class Verifier(VerifierBase):
         if speculate_result.cache_hits is not None:
             _ch_cpu = speculate_result.cache_hits.cpu()
             self.metrics["cache_hits"].append(_ch_cpu.float().mean().item())
+            # MESA-only: split cache hits by which phase populated them.
+            # Non-MESA paths send all-zero phase_source and the rates stay 0.
+            if speculate_result.phase_source is not None:
+                _ps_cpu = speculate_result.phase_source.cpu()
+                self.metrics["phase1_hits"].append((_ps_cpu == 1).float().mean().item())
+                self.metrics["phase2_hits"].append((_ps_cpu == 2).float().mean().item())
             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
                 if _ch_cpu[i] == 1:
                     self.metrics["accepted_suffix_lens_on_hit"].append(suffix_len)
@@ -231,14 +237,49 @@ class Verifier(VerifierBase):
             h[1:K] = cumprod[:-1] * (1 - accept_probs[0, 1:])
         h[K] = cumprod[-1]  # all-accept
 
-        # Budget allocation: h_i proportional, with edge case fallback
+        # Budget allocation
         if h[:K].sum() < 1e-6:
-            # All accept expected → uniform fan_out
+            # All accept expected → uniform fan_out (both policies)
             fan_out_list = [proxy_fan_out_total // (K + 1)] * (K + 1)
             remainder = proxy_fan_out_total - sum(fan_out_list)
             for i in range(remainder):
                 fan_out_list[i] += 1
+        elif config.mesa_policy == "b":
+            # Policy B: joint (i, v) ranking by P̂(i, v) = ĥ_i × r̂_i(v)
+            # All-accept (pos=K) has no correction tokens → allocate proportionally to h[K],
+            # remaining budget over (pos<K, v) by P̂ topk. Reorder topk_ids/topk_probs so
+            # Policy-B-chosen tokens come first per position — draft's existing "first
+            # valid fo[pos]" selection then naturally consumes them.
+            fo_K = int(round(h[K].item() / h.sum().item() * proxy_fan_out_total))
+            fo_K = max(0, min(fo_K, proxy_fan_out_total))
+            remaining = proxy_fan_out_total - fo_K
+            # K * top_k >> remaining (K=6, top_k≥17, remaining ≤ pfo*K) so topk has enough.
+            topN = min(remaining, K * top_k)
+            P_iv = h[:K].view(K, 1) * topk_probs[0]                 # [K, top_k]
+            _, top_idx = P_iv.reshape(-1).topk(topN)                # [topN]
+            positions = (top_idx // top_k).cpu().tolist()
+            ranks = (top_idx % top_k).cpu().tolist()
+
+            fan_out_list = [0] * (K + 1)
+            fan_out_list[K] = fo_K
+            new_topk_ids = topk_ids.clone()
+            new_topk_probs = topk_probs.clone()
+            for pos in range(K):
+                chosen = [r for p, r in zip(positions, ranks) if p == pos]
+                fan_out_list[pos] = len(chosen)
+                rest = [r for r in range(top_k) if r not in chosen]
+                new_order = torch.tensor(chosen + rest, device=topk_ids.device, dtype=torch.long)
+                new_topk_ids[0, pos] = topk_ids[0, pos, new_order]
+                new_topk_probs[0, pos] = topk_probs[0, pos, new_order]
+            topk_ids, topk_probs = new_topk_ids, new_topk_probs
+            # Padding underflow guard: if topN < remaining (impossible in normal config but
+            # keep invariant), top up the largest fan_out_list[i<K] entries.
+            shortage = remaining - topN
+            for _ in range(shortage):
+                pos = int(torch.tensor(fan_out_list[:K]).argmax().item())
+                fan_out_list[pos] += 1
         else:
+            # Policy A: h_i proportional per-position
             raw = (h / h.sum() * proxy_fan_out_total).floor().int()
             remainder = proxy_fan_out_total - raw.sum().item()
             _, sorted_idx = h.sort(descending=True)

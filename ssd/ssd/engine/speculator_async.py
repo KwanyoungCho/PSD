@@ -55,7 +55,9 @@ class SpeculatorAsync(SpeculatorBase):
         self._num_tokens_buf = torch.empty(B, dtype=torch.int64, device=d)
         self._temps_buf = torch.empty(B, dtype=torch.float32, device=d)
         self._block_tables_buf = torch.full((B, self.max_blocks), -1, dtype=torch.int32, device=d)
-        self._fused_response = torch.empty(B + B * self.K, dtype=torch.int64, device=d)
+        # Wire layout: [cache_hits (B), phase_source (B), out_tokens (B*K)].
+        # phase_source: 0=miss, 1=phase 1 (draft) hit, 2=phase 2 (proxy) hit. All zeros for non-MESA.
+        self._fused_response = torch.empty(2 * B + B * self.K, dtype=torch.int64, device=d)
         self._logits_q = torch.empty(B, self.K, self.vocab_size, dtype=self.draft_dtype, device=d)
         self._extend_counts = torch.zeros(B, dtype=torch.int64, device=d)
 
@@ -106,7 +108,7 @@ class SpeculatorAsync(SpeculatorBase):
             print(f"{sep}\n", flush=True)
 
         eagle = verify_result.eagle_acts is not None
-        speculations_tokens, logits_q, cache_hits = self._speculation_request(seqs, eagle)
+        speculations_tokens, logits_q, cache_hits, phase_source = self._speculation_request(seqs, eagle)
 
         # Build speculations using pre-allocated buffers (avoids torch.tensor(device=cuda) sync)
         B = len(seqs)
@@ -125,7 +127,7 @@ class SpeculatorAsync(SpeculatorBase):
             seq.last_token = seq.token_ids[-1]
             seq.num_draft_cached_tokens += len(speculations_tokens[i]) + 1
 
-        return SpeculateResult(speculations, logits_q, cache_hits)
+        return SpeculateResult(speculations, logits_q, cache_hits, phase_source)
 
     def _speculation_request(self, seqs: list[Sequence], eagle: bool):
         B = len(seqs)
@@ -181,7 +183,8 @@ class SpeculatorAsync(SpeculatorBase):
         # Recv into pre-allocated buffers
         dist.recv(self._fused_response, src=self.draft_runner_rank, group=self.async_pg)
         cache_hits = self._fused_response[:B]
-        speculations = self._fused_response[B:].view(B, self.K)
+        phase_source = self._fused_response[B:2 * B]
+        speculations = self._fused_response[2 * B:].view(B, self.K)
         dist.recv(self._logits_q, src=self.draft_runner_rank, group=self.async_pg)
 
-        return speculations, self._logits_q, cache_hits
+        return speculations, self._logits_q, cache_hits, phase_source

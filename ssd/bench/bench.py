@@ -83,6 +83,8 @@ def parse_arguments():
                         help="Number of proxy correction tokens per position")
     parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
+    parser.add_argument("--mesa_policy", choices=("a", "b"), default="a",
+                        help="Phase-2 budget allocation: 'a' = h_i proportional (default), 'b' = h_i × r̂_i(v) joint")
 
     # Weight-only quantization (target only) — AWQ Marlin is the supported path.
     # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
@@ -224,6 +226,7 @@ def create_llm_kwargs(args, draft_path):
         llm_kwargs["mesa_proxy_top_k"] = args.mesa_proxy_top_k
         if args.mesa_draft_fan_out is not None:
             llm_kwargs["mesa_draft_fan_out"] = args.mesa_draft_fan_out
+        llm_kwargs["mesa_policy"] = args.mesa_policy
 
     # AWQ W4A16 (Marlin) — plan v2 primary direction (TARGET)
     if getattr(args, 'quant_awq', False):

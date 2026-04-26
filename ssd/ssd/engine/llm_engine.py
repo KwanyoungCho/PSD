@@ -24,6 +24,8 @@ import torch.multiprocessing as mp
 
 METRICS = {
     "cache_hits": [],
+    "phase1_hits": [],   # MESA-only: fraction of B with phase 1 (draft-sourced) cache hit
+    "phase2_hits": [],   # MESA-only: fraction of B with phase 2 (proxy-sourced) cache hit
     "accepted_suffix_lens_with_recovery": [],
     "accepted_suffix_lens_on_hit": [],  # Only for cache hits in async mode
     "accepted_suffix_lens_on_miss": [],  # Only for cache misses in async mode
@@ -246,6 +248,13 @@ class LLMEngine:
             if self.config.draft_async:
                 print(
                     f"[metrics] Avg Cache Hits: {sum(METRICS['cache_hits']) / len(METRICS['cache_hits']):.2f}", flush=True)
+                # MESA-only: phase 1 (draft-sourced) vs phase 2 (proxy-sourced) hit split.
+                # Non-MESA paths leave these zero.
+                if self.config.mesa_enabled and METRICS['phase1_hits']:
+                    p1 = sum(METRICS['phase1_hits']) / len(METRICS['phase1_hits'])
+                    p2 = sum(METRICS['phase2_hits']) / len(METRICS['phase2_hits'])
+                    print(f"[metrics] Avg Phase 1 (draft) Hit Rate: {p1:.3f}", flush=True)
+                    print(f"[metrics] Avg Phase 2 (proxy) Hit Rate: {p2:.3f}", flush=True)
                 # Log separate metrics for cache hits
                 if METRICS['accepted_suffix_lens_on_hit']:
                     avg_suffix_len_on_hit = sum(

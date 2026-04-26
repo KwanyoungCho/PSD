@@ -44,6 +44,7 @@ class Config:
     mesa_exit_layer: int | None = None      # None=auto: 2*L//3
     mesa_proxy_top_k: int = 3              # proxy correction token count
     mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
+    mesa_policy: str = "a"                  # Phase-2 budget policy: "a" = h_i proportional, "b" = h_i × r̂_i(v) joint
 
     # AWQ W4A16 quantization (target + draft, role-aware).
     # Public path is `awq_marlin`; legacy torchao backends remain as an
@@ -173,6 +174,8 @@ class Config:
                       flush=True)
                 self.mesa_proxy_top_k = required_top_k
             assert self.mesa_proxy_top_k >= 1, "mesa_proxy_top_k must be >= 1"
+            assert self.mesa_policy in ("a", "b"), \
+                f"mesa_policy must be 'a' or 'b', got {self.mesa_policy!r}"
             print(f'[Config] MESA-SSD enabled: exit_layer={self.mesa_exit_layer}, '
                   f'proxy_top_k={self.mesa_proxy_top_k}, '
                   f'draft_fan_out={self.mesa_draft_fan_out}, proxy_fan_out={self.mesa_proxy_fan_out}',

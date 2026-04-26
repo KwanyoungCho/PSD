@@ -118,6 +118,9 @@ class DraftRunner(ModelRunner):
         self.tree_cache_tokens = None
         self.tree_cache_logits = None
         self.tree_cache_activations = None
+        # MESA: keys[:_last_n_draft_keys] = phase 1 (draft-sourced),
+        # keys[_last_n_draft_keys:] = phase 2 (proxy-sourced). 0 = non-MESA / not yet populated.
+        self._last_n_draft_keys = 0
 
     def _init_prealloc_buffers(self):
         # PERFORMANCE: pre-allocate constant tensors used every draft step to avoid repeated CUDA mallocs
@@ -281,12 +284,23 @@ class DraftRunner(ModelRunner):
                 rec_text = self.tokenizer.decode([rec_token])
                 print(f"  Req {i}: token={rec_token} ('{rec_text}')", flush=True)
         
+        # MESA-only: per-seq phase classification (0=miss, 1=phase 1 draft, 2=phase 2 proxy).
+        # All zeros for non-MESA — verifier silently accumulates 0s and reports 0 phase rates.
+        phase_source = torch.zeros(B, dtype=torch.int64, device=self.device)
         if self.tree_cache_keys.numel() > 0:
             # Vectorized membership against tensor cache
             eq = (request_keys.unsqueeze(1) == self.tree_cache_keys.unsqueeze(0))  # [B,T,3]
             match = torch.all(eq, dim=2)  # [B,T]
             cache_hits = match.any(dim=1)  # [B]
             ttl_hit += int(cache_hits.sum().item())
+
+            if self.config.mesa_enabled and self._last_n_draft_keys > 0:
+                _hit_idx = match.float().argmax(dim=1).to(torch.int64)
+                _is_phase1 = cache_hits & (_hit_idx < self._last_n_draft_keys)
+                phase_source = torch.where(_is_phase1, torch.full_like(phase_source, 1),
+                                            torch.where(cache_hits.bool(),
+                                                        torch.full_like(phase_source, 2),
+                                                        phase_source))
             
             if self.config.verbose:
                 print(f"[hit_cache_and_respond] Cache hits: {cache_hits.sum().item()}/{B}", flush=True)
@@ -351,8 +365,8 @@ class DraftRunner(ModelRunner):
                 out_activations = jit_acts
             
         rec_toks = request_keys[:, 2]
-        
-        return out_tokens, out_logits, make_glue_decode_input_ids(out_tokens, rec_toks), cache_hits, out_activations
+
+        return out_tokens, out_logits, make_glue_decode_input_ids(out_tokens, rec_toks), cache_hits, out_activations, phase_source
 
     def _service_spec_request(self):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
@@ -413,7 +427,7 @@ class DraftRunner(ModelRunner):
 
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_h, mesa_close as _mc_h
         _mev_hc = _mr_h("hit_cache_respond")
-        out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations = self.hit_cache_and_respond(
+        out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations, phase_source = self.hit_cache_and_respond(
             cache_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations)
         _mc_h("hit_cache_respond", _mev_hc)
 
@@ -429,7 +443,10 @@ class DraftRunner(ModelRunner):
                     print(f"    Detokenized: {tokens_text}", flush=True)
             print(f"", flush=True)
 
-        fused_response = torch.cat([cache_hits.reshape(-1), out_tokens.reshape(-1).to(torch.int64)])
+        # Wire layout matches speculator_async._fused_response: [cache_hits, phase_source, out_tokens].
+        fused_response = torch.cat([cache_hits.reshape(-1).to(torch.int64),
+                                    phase_source.reshape(-1),
+                                    out_tokens.reshape(-1).to(torch.int64)])
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_s, mesa_close as _mc_s
         _mev_ds = _mr_s("draft_send_response")
         dist.send(fused_response, dst=0, group=self.async_pg)
@@ -1230,6 +1247,9 @@ class DraftRunner(ModelRunner):
             proxy_k, proxy_args["rec_flat"].to(torch.int64)], dim=1)
 
         self.tree_cache_keys = torch.cat([draft_keys, proxy_keys], dim=0)
+        # Boundary for phase 1 (draft-sourced) vs phase 2 (proxy-sourced) classification
+        # in the next hit_cache_and_respond lookup.
+        self._last_n_draft_keys = draft_keys.shape[0]
         self.tree_cache_tokens = torch.cat([draft_tokens, proxy_tokens], dim=0)
         self.tree_cache_logits = torch.cat([draft_logits, proxy_logits], dim=0)
         if draft_acts is not None and proxy_acts is not None:
