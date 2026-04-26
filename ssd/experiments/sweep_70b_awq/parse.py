@@ -15,6 +15,8 @@ PATTERNS = {
     "tok_per_step_miss": r"Avg Tokens per step on Cache Miss:\s*([\d.]+)",
     "accept": r"Avg Fraction of Speculated Tokens Accepted:\s*([\d.]+)",
     "cache_hit": r"Avg Cache Hits:\s*([\d.]+)",
+    "phase1_hit": r"Avg Phase 1 \(draft\) Hit Rate:\s*([\d.]+)",
+    "phase2_hit": r"Avg Phase 2 \(proxy\) Hit Rate:\s*([\d.]+)",
     "draft_ms": r"Avg draft step time \(ms\):\s*([\d.]+)",
     "verify_ms": r"Avg target verify time \(ms\):\s*([\d.]+)",
 }

@@ -154,6 +154,12 @@ class Verifier(VerifierBase):
         if speculate_result.cache_hits is not None:
             _ch_cpu = speculate_result.cache_hits.cpu()
             self.metrics["cache_hits"].append(_ch_cpu.float().mean().item())
+            # MESA-only: split cache hits by which phase populated them.
+            # Non-MESA paths send all-zero phase_source and the rates stay 0.
+            if speculate_result.phase_source is not None:
+                _ps_cpu = speculate_result.phase_source.cpu()
+                self.metrics["phase1_hits"].append((_ps_cpu == 1).float().mean().item())
+                self.metrics["phase2_hits"].append((_ps_cpu == 2).float().mean().item())
             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
                 if _ch_cpu[i] == 1:
                     self.metrics["accepted_suffix_lens_on_hit"].append(suffix_len)

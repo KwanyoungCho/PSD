@@ -9,6 +9,9 @@ class SpeculateResult:
     speculations: torch.Tensor
     logits_q: torch.Tensor
     cache_hits: torch.Tensor | None = None
+    # MESA-only: 0=miss, 1=phase 1 (draft-sourced) hit, 2=phase 2 (proxy-sourced) hit.
+    # All zeros for non-MESA paths.
+    phase_source: torch.Tensor | None = None
 
 
 @dataclass
