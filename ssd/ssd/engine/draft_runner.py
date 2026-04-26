@@ -265,6 +265,10 @@ class DraftRunner(ModelRunner):
         out_logits = torch.empty((B, K, V), dtype=self.hf_config.torch_dtype, device=self.device).uniform_()
         out_tokens = out_logits.argmax(dim=-1)
         cache_hits = torch.zeros(B, dtype=torch.int64, device=self.device)
+        # Per-row valid_k: defaults to K (= K_long for MESA / speculate_k for non-MESA).
+        # Phase 4 will override per-row to K_short for proxy-sourced hits.
+        # Phase 5 will set miss/JIT path to K_short as well.
+        valid_k = torch.full((B,), K, dtype=torch.int64, device=self.device)
 
         assert request_keys.shape == (B, 3), f"ERROR in hit_cache_and_respond: request_keys should be (B, 3), got {request_keys.shape}"
         
@@ -366,7 +370,7 @@ class DraftRunner(ModelRunner):
             
         rec_toks = request_keys[:, 2]
 
-        return out_tokens, out_logits, make_glue_decode_input_ids(out_tokens, rec_toks), cache_hits, out_activations, phase_source
+        return out_tokens, out_logits, make_glue_decode_input_ids(out_tokens, rec_toks), cache_hits, out_activations, phase_source, valid_k
 
     def _service_spec_request(self):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
@@ -427,7 +431,7 @@ class DraftRunner(ModelRunner):
 
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_h, mesa_close as _mc_h
         _mev_hc = _mr_h("hit_cache_respond")
-        out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations, phase_source = self.hit_cache_and_respond(
+        out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations, phase_source, valid_k = self.hit_cache_and_respond(
             cache_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations)
         _mc_h("hit_cache_respond", _mev_hc)
 
@@ -443,9 +447,10 @@ class DraftRunner(ModelRunner):
                     print(f"    Detokenized: {tokens_text}", flush=True)
             print(f"", flush=True)
 
-        # Wire layout matches speculator_async._fused_response: [cache_hits, phase_source, out_tokens].
+        # Wire layout matches speculator_async._fused_response: [cache_hits, phase_source, valid_k, out_tokens].
         fused_response = torch.cat([cache_hits.reshape(-1).to(torch.int64),
                                     phase_source.reshape(-1),
+                                    valid_k.reshape(-1).to(torch.int64),
                                     out_tokens.reshape(-1).to(torch.int64)])
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_s, mesa_close as _mc_s
         _mev_ds = _mr_s("draft_send_response")

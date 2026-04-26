@@ -12,6 +12,11 @@ class SpeculateResult:
     # MESA-only: 0=miss, 1=phase 1 (draft-sourced) hit, 2=phase 2 (proxy-sourced) hit.
     # All zeros for non-MESA paths.
     phase_source: torch.Tensor | None = None
+    # MESA Phase 2 hybrid: per-row valid_k (suffix length) of the row served on this step.
+    #   - draft-sourced (or full-K) hit / miss: K_long
+    #   - proxy-sourced hit: K_short = K2
+    # Phase 0 plumbing — engine still sets all rows to K_long until Phase 4.
+    valid_k: torch.Tensor | None = None
 
 
 @dataclass

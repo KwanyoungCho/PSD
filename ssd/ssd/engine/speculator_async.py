@@ -55,9 +55,11 @@ class SpeculatorAsync(SpeculatorBase):
         self._num_tokens_buf = torch.empty(B, dtype=torch.int64, device=d)
         self._temps_buf = torch.empty(B, dtype=torch.float32, device=d)
         self._block_tables_buf = torch.full((B, self.max_blocks), -1, dtype=torch.int32, device=d)
-        # Wire layout: [cache_hits (B), phase_source (B), out_tokens (B*K)].
+        # Wire layout: [cache_hits (B), phase_source (B), valid_k (B), out_tokens (B*K)].
         # phase_source: 0=miss, 1=phase 1 (draft) hit, 2=phase 2 (proxy) hit. All zeros for non-MESA.
-        self._fused_response = torch.empty(2 * B + B * self.K, dtype=torch.int64, device=d)
+        # valid_k: per-row suffix length (K_long for draft-sourced/miss, K_short for proxy-sourced
+        #   in MESA hybrid; uniform K for non-MESA / pre-Phase-4 MESA).
+        self._fused_response = torch.empty(3 * B + B * self.K, dtype=torch.int64, device=d)
         self._logits_q = torch.empty(B, self.K, self.vocab_size, dtype=self.draft_dtype, device=d)
         self._extend_counts = torch.zeros(B, dtype=torch.int64, device=d)
 
@@ -108,7 +110,7 @@ class SpeculatorAsync(SpeculatorBase):
             print(f"{sep}\n", flush=True)
 
         eagle = verify_result.eagle_acts is not None
-        speculations_tokens, logits_q, cache_hits, phase_source = self._speculation_request(seqs, eagle)
+        speculations_tokens, logits_q, cache_hits, phase_source, valid_k = self._speculation_request(seqs, eagle)
 
         # Build speculations using pre-allocated buffers (avoids torch.tensor(device=cuda) sync)
         B = len(seqs)
@@ -127,7 +129,7 @@ class SpeculatorAsync(SpeculatorBase):
             seq.last_token = seq.token_ids[-1]
             seq.num_draft_cached_tokens += len(speculations_tokens[i]) + 1
 
-        return SpeculateResult(speculations, logits_q, cache_hits, phase_source)
+        return SpeculateResult(speculations, logits_q, cache_hits, phase_source, valid_k)
 
     def _speculation_request(self, seqs: list[Sequence], eagle: bool):
         B = len(seqs)
@@ -184,7 +186,8 @@ class SpeculatorAsync(SpeculatorBase):
         dist.recv(self._fused_response, src=self.draft_runner_rank, group=self.async_pg)
         cache_hits = self._fused_response[:B]
         phase_source = self._fused_response[B:2 * B]
-        speculations = self._fused_response[2 * B:].view(B, self.K)
+        valid_k = self._fused_response[2 * B:3 * B]
+        speculations = self._fused_response[3 * B:].view(B, self.K)
         dist.recv(self._logits_q, src=self.draft_runner_rank, group=self.async_pg)
 
-        return speculations, self._logits_q, cache_hits, phase_source
+        return speculations, self._logits_q, cache_hits, phase_source, valid_k

@@ -45,6 +45,12 @@ class Config:
     mesa_proxy_top_k: int = 3              # proxy correction token count
     mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
     mesa_policy: str = "a"                  # Phase-2 budget policy: "a" = h_i proportional, "b" = h_i × r̂_i(v) joint
+    # Phase 2 hybrid (per MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md).
+    # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
+    # Constraint: K1 + K2 == speculate_k. K2 also = K_short (proxy-sourced row depth).
+    # None means "use legacy two-pass MESA path" (no hybrid).
+    mesa_phase1_k: int | None = None
+    mesa_phase2_k: int | None = None
 
     # AWQ W4A16 quantization (target + draft, role-aware).
     # Public path is `awq_marlin`; legacy torchao backends remain as an
@@ -176,9 +182,25 @@ class Config:
             assert self.mesa_proxy_top_k >= 1, "mesa_proxy_top_k must be >= 1"
             assert self.mesa_policy in ("a", "b"), \
                 f"mesa_policy must be 'a' or 'b', got {self.mesa_policy!r}"
+            # Phase 2 hybrid (K1, K2) validation. Both None → legacy two-pass path.
+            # Both set → hybrid path with K1 + K2 == speculate_k invariant.
+            if (self.mesa_phase1_k is None) != (self.mesa_phase2_k is None):
+                raise ValueError(
+                    "mesa_phase1_k and mesa_phase2_k must both be set or both None; "
+                    f"got K1={self.mesa_phase1_k}, K2={self.mesa_phase2_k}"
+                )
+            if self.mesa_phase1_k is not None:
+                assert self.mesa_phase1_k > 0, f"mesa_phase1_k must be > 0, got {self.mesa_phase1_k}"
+                assert self.mesa_phase2_k > 0, f"mesa_phase2_k must be > 0, got {self.mesa_phase2_k}"
+                assert self.mesa_phase1_k + self.mesa_phase2_k == self.speculate_k, (
+                    f"mesa_phase1_k + mesa_phase2_k must equal speculate_k; "
+                    f"got K1={self.mesa_phase1_k} + K2={self.mesa_phase2_k} != "
+                    f"speculate_k={self.speculate_k}"
+                )
             print(f'[Config] MESA-SSD enabled: exit_layer={self.mesa_exit_layer}, '
                   f'proxy_top_k={self.mesa_proxy_top_k}, '
-                  f'draft_fan_out={self.mesa_draft_fan_out}, proxy_fan_out={self.mesa_proxy_fan_out}',
+                  f'draft_fan_out={self.mesa_draft_fan_out}, proxy_fan_out={self.mesa_proxy_fan_out}, '
+                  f'K1={self.mesa_phase1_k}, K2={self.mesa_phase2_k}',
                   flush=True)
 
         assert self.max_num_batched_tokens >= self.max_model_len
