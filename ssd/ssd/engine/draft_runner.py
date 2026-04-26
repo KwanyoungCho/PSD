@@ -150,7 +150,11 @@ class DraftRunner(ModelRunner):
         self._fan_idx_miss = self.full_layout.fan_idx_miss
         self._arange_mq = self.full_layout.arange_mq
 
-        # MESA: draft_layout + proxy_layout
+        # MESA: draft_layout + proxy_layout (legacy two-pass).
+        # Phase 2 hybrid (`MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` Phase 3b):
+        # additionally creates `phase1_layout_long` / `phase1_layout_short` if
+        # `mesa_phase1_k` / `mesa_phase2_k` are set in config. These have
+        # forward_depth = K1 (config) and position_count = K_long+1 / K_short+1.
         if self.config.mesa_enabled:
             draft_fo = self.config.mesa_draft_fan_out
             proxy_fo = self.config.mesa_proxy_fan_out
@@ -164,6 +168,31 @@ class DraftRunner(ModelRunner):
                 fan_out_list=[proxy_fo] * (K + 1),
                 fan_out_list_miss=[proxy_fo] * (K + 1),
                 K=K, device=d)
+            # Hybrid Phase 1 layouts (only created when K1/K2 are configured).
+            # forward_depth = K1, position_count varies per bucket.
+            self.phase1_layout_long = None
+            self.phase1_layout_short = None
+            if self.config.mesa_phase1_k is not None:
+                K1 = self.config.mesa_phase1_k
+                K2 = self.config.mesa_phase2_k
+                K_long = K1 + K2  # = speculate_k
+                K_short = K2
+                self.phase1_layout_long = create_tree_layout(
+                    name="phase1_long",
+                    fan_out_list=[draft_fo] * (K_long + 1),
+                    fan_out_list_miss=[draft_fo] * (K_long + 1),
+                    K=K1, device=d, position_count=K_long + 1,
+                )
+                self.phase1_layout_short = create_tree_layout(
+                    name="phase1_short",
+                    fan_out_list=[draft_fo] * (K_short + 1),
+                    fan_out_list_miss=[draft_fo] * (K_short + 1),
+                    K=K1, device=d, position_count=K_short + 1,
+                )
+                print(f'[MESA hybrid] phase1 layouts: '
+                      f'long MQ_LEN={self.phase1_layout_long.MQ_LEN} (K1={K1}, pos={K_long + 1}), '
+                      f'short MQ_LEN={self.phase1_layout_short.MQ_LEN} (K1={K1}, pos={K_short + 1})',
+                      flush=True)
             print(f'[MESA] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
                   f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
                   f'proxy MQ_LEN={self.proxy_layout.MQ_LEN}', flush=True)
