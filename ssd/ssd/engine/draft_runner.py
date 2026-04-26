@@ -121,6 +121,10 @@ class DraftRunner(ModelRunner):
         # MESA: keys[:_last_n_draft_keys] = phase 1 (draft-sourced),
         # keys[_last_n_draft_keys:] = phase 2 (proxy-sourced). 0 = non-MESA / not yet populated.
         self._last_n_draft_keys = 0
+        # Per-row valid_k. Phase 1 (Phase 2 hybrid plan) Phase 4 will populate this with
+        # K_long for draft-sourced rows and K_short for proxy-sourced rows. For now,
+        # empty / None (current code treats all rows as K).
+        self.tree_cache_valid_k = None
 
     def _init_prealloc_buffers(self):
         # PERFORMANCE: pre-allocate constant tensors used every draft step to avoid repeated CUDA mallocs
@@ -305,6 +309,14 @@ class DraftRunner(ModelRunner):
                                             torch.where(cache_hits.bool(),
                                                         torch.full_like(phase_source, 2),
                                                         phase_source))
+                # Pull per-row valid_k from cache when populated. Phase 1 plumbing:
+                # tree_cache_valid_k is uniform = K (= speculate_k) until Phase 4
+                # adds heterogeneous K_long / K_short. So this lookup is a no-op
+                # in the current shape but the hook lands now to keep the wire
+                # change small in Phase 4.
+                if self.tree_cache_valid_k is not None:
+                    _hit_valid_k = self.tree_cache_valid_k[_hit_idx]
+                    valid_k = torch.where(cache_hits.bool(), _hit_valid_k, valid_k)
             
             if self.config.verbose:
                 print(f"[hit_cache_and_respond] Cache hits: {cache_hits.sum().item()}/{B}", flush=True)
@@ -1003,6 +1015,13 @@ class DraftRunner(ModelRunner):
         self.tree_cache_tokens = tokens
         self.tree_cache_logits = logits
         self.tree_cache_activations = activations
+        # Phase 1 plumbing: every row in the non-MESA / legacy populate path is
+        # treated as full-K (= K_long for MESA, speculate_k otherwise). Phase 4
+        # of hybrid will distinguish K_long vs K_short per row.
+        self.tree_cache_valid_k = torch.full(
+            (keys.shape[0],), self.config.speculate_k,
+            dtype=torch.int64, device=self.device,
+        )
         
         # Print cache population details
         if self.config.verbose:
@@ -1261,6 +1280,13 @@ class DraftRunner(ModelRunner):
             self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
         else:
             self.tree_cache_activations = None
+        # Per-row valid_k. Phase 1 plumbing: legacy two-pass MESA path stores
+        # all rows at speculate_k (= K). When hybrid Phase 2 lands (Phase 4),
+        # draft-sourced rows = K_long, proxy-sourced rows = K_short = K2.
+        self.tree_cache_valid_k = torch.full(
+            (self.tree_cache_keys.shape[0],), self.config.speculate_k,
+            dtype=torch.int64, device=self.device,
+        )
         _mc("merge_cache", _mev_mc)
 
     # new one, with true asynchrony
