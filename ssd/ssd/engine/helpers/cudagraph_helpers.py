@@ -161,17 +161,23 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     assert context.cu_seqlens_q is None, "ERROR in run_fi_tree_decode_cudagraph: cu_seqlens_q should be set to None so we don't take FA path"
 
     K, F = model_runner.config.speculate_k, model_runner.config.async_fan_out
-    # Layout-aware MQ_LEN and fan_out_list resolution
+    # Layout-aware MQ_LEN and fan_out_list resolution.
+    # Step 9A: K_for_mask = position_count - 1 (= glue width). For
+    # phase1_long this is K_long; for phase1_short this is K_short. The
+    # outer K (config.speculate_k) is used for the mask cache loop count,
+    # but the per-step glue/diag dimensions follow the layout.
     if layout is not None:
         MQ_LEN = layout.MQ_LEN
         _graph_key = layout.graph_key
         _fan_out_list = layout.fan_out_list
         _fan_out_list_miss = layout.fan_out_list_miss
+        K_for_mask = layout.position_count - 1
     else:
         MQ_LEN = sum(model_runner.config.fan_out_list)
         _graph_key = "fi_tree_decode"
         _fan_out_list = model_runner.config.fan_out_list
         _fan_out_list_miss = model_runner.config.fan_out_list_miss
+        K_for_mask = K
     orig_flat = input_ids.size(0)
     assert orig_flat % MQ_LEN == 0, f"ERROR in run_fi_tree_decode_cudagraph: flat_batch_size should be divisible by MQ_LEN, got {orig_flat} and {MQ_LEN}"
     orig_B = orig_flat // MQ_LEN
@@ -299,7 +305,9 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
             cache["_cached_fol"] = _fan_out_list
             _fol = _fan_out_list
             _fol_miss = _fan_out_list_miss
-            _tril = np.tril(np.ones((K + 1, K + 1), dtype=np.uint8))
+            # Step 9A: glue tril dim follows the layout's position_count
+            # (= K_for_mask+1). For phase1_short bucket K_for_mask=K_short<K_long.
+            _tril = np.tril(np.ones((K_for_mask + 1, K_for_mask + 1), dtype=np.uint8))
             cache["glue_hit_np"] = np.repeat(_tril, _fol, axis=0)
             cache["glue_miss_np"] = np.repeat(_tril, _fol_miss, axis=0)
 
@@ -331,11 +339,16 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         # for an oracle that confirms split CG cont diverges by ~28-31%
         # tokens vs plan-correct semantics.
         #
-        # NOT FIXED HERE because split is the runtime default until hybrid
-        # parity lands. This is tracked separately from the hybrid path.
+        # NOT FIXED HERE because split is retained as a fallback/reference
+        # path while hybrid-default lands. This is tracked separately from
+        # the hybrid path.
         # ─────────────────────────────────────────────────────────────────
         for s in range(K):
-            ttl_added_s = (s + 1) * MQ_LEN + (K + 1)
+            # Step 9A: ttl_added_s uses K_for_mask (= layout glue width)
+            # not the outer K (config.speculate_k). For phase1_short the
+            # glue width is K_short+1; for phase1_long / non-MESA it's
+            # K_long+1.
+            ttl_added_s = (s + 1) * MQ_LEN + (K_for_mask + 1)
             packed_segs = []
             seg_packed_sizes = []
 
@@ -346,8 +359,8 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
                 mask_b = np.zeros((MQ_LEN, cols_b), dtype=np.uint8)
                 mask_b[:, :prefix_len_b] = 1
                 glue = _glue_hit if int(cache_hits_list[b]) == 1 else _glue_miss
-                mask_b[:, prefix_len_b:prefix_len_b + K + 1] = glue
-                diag_start = prefix_len_b + K + 1
+                mask_b[:, prefix_len_b:prefix_len_b + K_for_mask + 1] = glue
+                diag_start = prefix_len_b + K_for_mask + 1
                 for blk in range(s + 1):
                     mask_b[_rows_np, diag_start + blk * MQ_LEN + _rows_np] = 1
 

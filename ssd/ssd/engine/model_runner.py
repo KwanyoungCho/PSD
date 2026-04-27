@@ -270,14 +270,27 @@ class ModelRunner:
             # an isolated wrapper plan.
             self.prefill_wrappers_by_layout = {"full": self.prefill_wrappers}
             if self.config.mesa_enabled:
+                # MQ_LEN per layout = fan_out × position_count.
+                # phase1_long: pos=K_long+1; phase1_short: pos=K_short+1=K2+1.
+                K_long_cfg = self.config.speculate_k
+                K_short_cfg = (
+                    self.config.mesa_phase2_k if self.config.mesa_phase1_k is not None
+                    else K_long_cfg
+                )
                 _layout_specs = [
-                    ("draft", self.config.mesa_draft_fan_out),
-                    ("proxy", self.config.mesa_proxy_fan_out),
+                    ("draft", self.config.mesa_draft_fan_out, K_long_cfg + 1),
+                    ("proxy", self.config.mesa_proxy_fan_out, K_long_cfg + 1),
                 ]
                 if self.config.mesa_phase1_k is not None:
-                    _layout_specs.append(("phase1_long", self.config.mesa_draft_fan_out))
-                for layout_name, layout_fan_out in _layout_specs:
-                    layout_mq_len = layout_fan_out * (self.config.speculate_k + 1)
+                    _layout_specs.append(
+                        ("phase1_long", self.config.mesa_draft_fan_out, K_long_cfg + 1)
+                    )
+                    # Step 9A: phase1_short bucket for short-hit dispatch.
+                    _layout_specs.append(
+                        ("phase1_short", self.config.mesa_draft_fan_out, K_short_cfg + 1)
+                    )
+                for layout_name, layout_fan_out, layout_pos_count in _layout_specs:
+                    layout_mq_len = layout_fan_out * layout_pos_count
                     l_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
@@ -330,9 +343,10 @@ class ModelRunner:
                 print(f'[MESA debug] proxy_eager_debug wrapper created '
                       f'(use_cuda_graph=False, MQ={_pe_total})', flush=True)
 
-                # Step 6: phase2_hybrid_long wrapper — single instance,
-                # max_total_rows = (K_long+1) * (dfo + pfo). Eager-only for
-                # initial parity validation (use_cuda_graph=False).
+                # Step 6 / Step 8: phase2_hybrid_long wrapper — single
+                # instance, max_total_rows = (K_long+1) * (dfo + pfo).
+                # This is the current eager hybrid runtime wrapper
+                # (use_cuda_graph=False). Step 9B adds CG-captured variants.
                 if self.config.mesa_phase1_k is not None:
                     h_total = (self.config.speculate_k + 1) * (
                         self.config.mesa_draft_fan_out + self.config.mesa_proxy_fan_out
@@ -1145,4 +1159,3 @@ class ModelRunner:
                 return logits, conditioning
             return logits
     
-
