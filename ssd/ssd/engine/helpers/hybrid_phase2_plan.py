@@ -55,6 +55,11 @@ class HybridPhase2Plan:
     phase_split_offset: int = 0    # = cont_row_count
     name: str = ""                 # "phase2_hybrid_long" or "_short"
     graph_key: str = ""            # CUDAGraph dispatch key
+    step_cache_hit: bool = True    # actual seq cache_hit at this step (B=1);
+                                    # used by parity dumps to pick the right
+                                    # fan_idx_hit vs fan_idx_miss vector.
+                                    # NOT a region tag — distinct from
+                                    # per_row_region_id which is 0=cont/1=proxy.
 
     # ─────────────────────────────────────────────────────────────────────
     # Allocated-once buffers (max-sized; long bucket worst case)
@@ -168,7 +173,8 @@ class HybridPhase2Plan:
     # Per-step fill — set scalars from incoming valid_k. Tensor contents
     # are written by ``_build_phase2_hybrid_plan`` in draft_runner.
     # ─────────────────────────────────────────────────────────────────────
-    def begin_step(self, valid_k: int, fan_out_list: list[int] | None = None) -> None:
+    def begin_step(self, valid_k: int, fan_out_list: list[int] | None = None,
+                     skip_cont: bool = False, skip_proxy: bool = False) -> None:
         """Compute per-step row counts and dispatch keys.
 
         Args:
@@ -187,8 +193,10 @@ class HybridPhase2Plan:
             through)
         """
         self.valid_k = valid_k
-        self.cont_row_count = (valid_k + 1) * self.mesa_draft_fan_out
-        if fan_out_list is None:
+        self.cont_row_count = 0 if skip_cont else (valid_k + 1) * self.mesa_draft_fan_out
+        if skip_proxy:
+            self.proxy_row_count = 0
+        elif fan_out_list is None:
             self.proxy_row_count = (valid_k + 1) * self.mesa_proxy_fan_out
         else:
             assert len(fan_out_list) == valid_k + 1, (

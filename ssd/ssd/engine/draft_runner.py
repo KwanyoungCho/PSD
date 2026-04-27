@@ -1379,19 +1379,30 @@ class DraftRunner(ModelRunner):
         draft_tokens, draft_logits, draft_acts = self._decode_tree(
             draft_tree_args, layout=_phase1_layout)
 
-        # === Pass 1.5: Phase 2 continuation — reference correctness path ===
-        # Plan invariant: draft-sourced row final suffix length = K_long.
-        # Phase 1 produced K1 tokens; continuation extends each branch K2 more
-        # depths so the cached draft row has K_long = K1 + K2 tokens.
-        #
-        # This is the reference *split* path (continuation pass run separately
-        # from proxy). It is correct but slower than the planned single
-        # batched hybrid forward (cont + proxy in one batch). Plan §"Why the
-        # loop is hybrid" — sequential split pays graph launch / wrapper plan
-        # / mask precompute twice. Once HybridPhase2Plan + custom mask land,
-        # the batched path replaces this and the equivalence test compares
-        # against this split reference.
-        if self.config.mesa_phase1_k is not None and self.phase1_layout_long is not None:
+        # === Step 8: hybrid-default mode resolution ===
+        # Default = hybrid (when configured). Split fallback only via explicit
+        # env gate (SSD_FORCE_SPLIT_PHASE2=1) for debug/regression. Parity
+        # harness (SSD_HYBRID_PARITY=1) runs BOTH paths to compare.
+        import os as _os_step8
+        _hybrid_available = (
+            self.config.mesa_phase1_k is not None
+            and getattr(self, "hybrid_phase2_plan", None) is not None
+        )
+        _force_split = _os_step8.environ.get("SSD_FORCE_SPLIT_PHASE2", "0") == "1"
+        _hybrid_default = _hybrid_available and not _force_split
+        _parity_check = (
+            _hybrid_available
+            and _os_step8.environ.get("SSD_HYBRID_PARITY", "0") == "1"
+        )
+        # Run split continuation if: (a) hybrid not available (legacy path),
+        # (b) force-split requested, or (c) parity check (need split outputs
+        # to diff against hybrid). Hybrid-default skips it.
+        _run_split_cont_decode = (not _hybrid_default) or _parity_check
+
+        if _run_split_cont_decode and (
+            self.config.mesa_phase1_k is not None
+            and self.phase1_layout_long is not None
+        ):
             import dataclasses as _dc
             K1_cfg = self.config.mesa_phase1_k
             K2_cfg = self.config.mesa_phase2_k
@@ -1440,8 +1451,13 @@ class DraftRunner(ModelRunner):
             # bucket Step 9 will gate by valid_k).
             _vk_step = self.config.speculate_k  # placeholder until Step 9
             _fol_meaningful = fan_out_list[:_vk_step + 1]
+            # Phase D debug gates: skip cont or proxy in plan + mask build
+            import os as _os_local
+            _skip_cont = _os_local.environ.get("SSD_HYBRID_SKIP_CONT", "0") == "1"
+            _skip_proxy = _os_local.environ.get("SSD_HYBRID_SKIP_PROXY", "0") == "1"
             self.hybrid_phase2_plan.begin_step(
                 valid_k=_vk_step, fan_out_list=_fol_meaningful,
+                skip_cont=_skip_cont, skip_proxy=_skip_proxy,
             )
 
         from ssd.engine.helpers.tree_layout import create_tree_layout
@@ -1459,41 +1475,39 @@ class DraftRunner(ModelRunner):
         proxy_tree_args = self._build_tree_decode_args_for_layout(
             partial_tree_decode_args, proxy_forked, step_proxy_layout, cache_hits_list)
         _mc("phase2_build", _mev_p2b)
-        proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
-            proxy_tree_args, layout=step_proxy_layout)
+        # Split proxy decode runs in: split-default (no hybrid) OR parity check.
+        # In hybrid-default, hybrid forward produces proxy outputs directly
+        # (writes B_proxy region; never overwrites Phase 1 KV → no re-run needed).
+        _run_split_proxy_decode = (not _hybrid_default) or _parity_check
+        if _run_split_proxy_decode:
+            proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
+                proxy_tree_args, layout=step_proxy_layout)
+        else:
+            # Native hybrid-default: proxy outputs come from hybrid forward below
+            proxy_tokens = None
+            proxy_logits = None
+            proxy_acts = None
 
-        # Step 3: build HybridPhase2Plan per-row × per-depth tensors. BUILD-
-        # ONLY when SSD_USE_HYBRID_PHASE2=0 (default); the split reference
-        # path consumes nothing from this plan. When env var = 1, Step 6's
-        # _decode_phase2_hybrid replaces the split continuation+proxy outputs.
+        # Step 8: hybrid plan build. Required for hybrid forward (default
+        # path) AND for parity oracle. Skipped only when in pure split-fallback
+        # mode without parity (legacy).
         import os as _os
-        _use_hybrid = (
-            self.config.mesa_phase1_k is not None
-            and getattr(self, "hybrid_phase2_plan", None) is not None
-            and _os.environ.get("SSD_USE_HYBRID_PHASE2", "0") == "1"
-        )
-        _build_plan_only = (
-            self.config.mesa_phase1_k is not None
-            and getattr(self, "hybrid_phase2_plan", None) is not None
-            and not _use_hybrid
-        )
-        if _use_hybrid or _build_plan_only:
+        _use_hybrid = _hybrid_default  # Step 8: default path = hybrid
+        if _hybrid_default or _parity_check:
             self._build_phase2_hybrid_plan(
                 draft_tree_args=draft_tree_args,
                 proxy_tree_args=proxy_tree_args,
                 step_proxy_layout=step_proxy_layout,
                 fan_out_list=fan_out_list,
             )
-
-        _parity_check = (
-            _use_hybrid and _os.environ.get("SSD_HYBRID_PARITY", "0") == "1"
-        )
         # Phase A: split eager mirror gate. When SSD_MIRROR_PROXY=1 (independent
         # of full hybrid parity), run mirror on split's proxy outputs to verify
         # bool-eager planning vs CG packed planning produce same proxy results.
+        # Step 8: requires split path to have run (proxy_tokens not None).
         _mirror_check = (
             self.config.mesa_phase1_k is not None
             and _os.environ.get("SSD_MIRROR_PROXY", "0") == "1"
+            and proxy_tokens is not None
         )
         if _mirror_check:
             mirror_tokens, mirror_logits, mirror_meta = self._split_eager_mirror_proxy(
@@ -1512,9 +1526,11 @@ class DraftRunner(ModelRunner):
         # packed paths run on a wrapper that has NEVER been used by CG capture
         # (proxy_eager_debug, use_cuda_graph=False). Tests if wrapper-state
         # pollution from CG-shared "proxy" wrapper was contaminating Phase B-2.
+        # Step 8: requires split path to have run.
         _fresh_check = (
             self.config.mesa_phase1_k is not None
             and _os.environ.get("SSD_FRESH_EAGER_PROXY", "0") == "1"
+            and proxy_tokens is not None
         )
         if _fresh_check:
             # Bool path on fresh wrapper
@@ -1552,9 +1568,11 @@ class DraftRunner(ModelRunner):
                 "fresh_bool", "fresh_packed"), flush=True)
 
         # Phase B-2: low-level packed mirror gate. SSD_LOWLEVEL_MIRROR_PROXY=1
+        # Step 8: requires split path to have run.
         _lowlevel_mirror = (
             self.config.mesa_phase1_k is not None
             and _os.environ.get("SSD_LOWLEVEL_MIRROR_PROXY", "0") == "1"
+            and proxy_tokens is not None
         )
         if _lowlevel_mirror:
             ll_tokens, ll_logits, ll_meta = self._split_low_level_mirror_proxy(
@@ -1591,17 +1609,79 @@ class DraftRunner(ModelRunner):
                 _split_proxy_tokens = proxy_tokens.clone()
                 _split_proxy_logits = proxy_logits.clone()
 
-            # IMPORTANT: split path's proxy already overwrote Phase 1 KV
-            # (split proxy writes to [num_tokens+K_long, num_tokens+K_long+
-            # K2*MQ_proxy) which OVERLAPS Phase 1 KV [num_tokens+K_long,
-            # num_tokens+K_long+K1*MQ_p1)). To give hybrid CLEAN Phase 1 KV
-            # for its cont row attention, re-run Phase 1 (deterministic; same
-            # inputs → same KV writes → restores Phase 1 KV slots).
-            #
-            # This is a parity-harness convenience. In the eventual hybrid-
-            # default path, the order will be Phase 1 → hybrid (no overwrite),
-            # so this re-run will be removed.
-            self._decode_tree(draft_tree_args, layout=_phase1_layout)
+            _cont_oracle = (
+                _parity_check
+                and _os.environ.get("SSD_HYBRID_CONT_ORACLE", "0") == "1"
+            )
+            _proxy_oracle = (
+                _parity_check
+                and _os.environ.get("SSD_HYBRID_PROXY_ORACLE", "0") == "1"
+            )
+
+            # Phase 1 KV state: in native hybrid-default mode, split proxy
+            # decode was SKIPPED → Phase 1 KV is still clean from Pass 1's
+            # decode. No re-run needed. Under parity_check, split proxy ran
+            # and overwrote P1 KV; re-run Phase 1 to restore for hybrid.
+            if _parity_check:
+                self._decode_tree(draft_tree_args, layout=_phase1_layout)
+
+            # Phase D-4: correct_split_cont oracle. Runs AFTER Phase 1 re-run
+            # so it sees clean Phase 1 KV (same as hybrid). Oracle uses
+            # split's physical layout (cont slot positions) but plan-correct
+            # mask, providing a third reference point for 3-way diff.
+            # Cont oracle writes A_tail only — does NOT touch Phase 1 KV.
+            _oracle_cont_tokens = None
+            _oracle_cont_logits = None
+            if _cont_oracle:
+                _oracle_cont_tokens, _oracle_cont_logits = (
+                    self._decode_correct_split_cont(
+                        draft_tree_args=draft_tree_args,
+                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                    )
+                )
+
+            # Phase D-5: fresh_proxy_oracle. Eager bool-mask path on a
+            # use_cuda_graph=False wrapper (proxy_eager_debug) that NEVER
+            # touched CG capture — fresh state, no buffer pollution.
+            # Proxy oracle writes overlap Phase 1 KV slots (split's natural
+            # layout), so a Phase 1 re-run is required AFTER the oracle to
+            # restore P1 KV before hybrid runs.
+            _oracle_proxy_tokens = None
+            _oracle_proxy_logits = None
+            _oracle_proxy_meta = None
+            # Phase D-6: self-consistency. SSD_HYBRID_SELF_CONSISTENCY=1
+            # runs each path twice with same args (P1 restored between runs)
+            # and diffs run-1 vs run-2. Determinism check: oracle should be
+            # 0/72 with itself; hybrid should be 0/72 with itself.
+            _self_consistency = (
+                _parity_check
+                and _os.environ.get("SSD_HYBRID_SELF_CONSISTENCY", "0") == "1"
+            )
+            _oracle_proxy_tokens_2 = None
+            _oracle_proxy_logits_2 = None
+            if _proxy_oracle:
+                _oracle_proxy_tokens, _oracle_proxy_logits, _oracle_proxy_meta = (
+                    self._split_eager_mirror_proxy(
+                        proxy_tree_args=proxy_tree_args,
+                        step_proxy_layout=step_proxy_layout,
+                        wrapper_key="proxy_eager_debug",
+                    )
+                )
+                # Restore Phase 1 KV after proxy oracle's overwrite.
+                self._decode_tree(draft_tree_args, layout=_phase1_layout)
+
+                if _self_consistency:
+                    # Run oracle a SECOND time with same args, same restored
+                    # initial state. Should produce IDENTICAL output (deterministic).
+                    _oracle_proxy_tokens_2, _oracle_proxy_logits_2, _ = (
+                        self._split_eager_mirror_proxy(
+                            proxy_tree_args=proxy_tree_args,
+                            step_proxy_layout=step_proxy_layout,
+                            wrapper_key="proxy_eager_debug",
+                        )
+                    )
+                    # Restore P1 again before hybrid runs.
+                    self._decode_tree(draft_tree_args, layout=_phase1_layout)
 
             # Replace split continuation tail + proxy outputs with hybrid
             # forward results. draft_tokens currently holds Phase 1 (K1) +
@@ -1616,28 +1696,90 @@ class DraftRunner(ModelRunner):
                 )
             )
 
-            if _parity_check:
-                self._hybrid_parity_diff(
-                    split_cont_tokens=_split_cont_tokens,
-                    split_cont_logits=_split_cont_logits,
-                    split_proxy_tokens=_split_proxy_tokens,
-                    split_proxy_logits=_split_proxy_logits,
-                    hybrid_cont_tokens=cont_tokens_h,
-                    hybrid_cont_logits=cont_logits_h,
-                    hybrid_proxy_tokens=proxy_tokens_h,
-                    hybrid_proxy_logits=proxy_logits_h,
+            # Phase D-6 hybrid self-consistency: run hybrid AGAIN with same
+            # inputs. Hybrid writes A_tail + B_proxy (disjoint from P1 KV),
+            # so no P1 restore is needed between runs. Output should be
+            # bit-identical if hybrid is deterministic.
+            _proxy_tokens_h_2 = None
+            _proxy_logits_h_2 = None
+            _cont_tokens_h_2 = None
+            _cont_logits_h_2 = None
+            if _self_consistency:
+                _cont_tokens_h_2, _cont_logits_h_2, _proxy_tokens_h_2, _proxy_logits_h_2 = (
+                    self._decode_phase2_hybrid(
+                        draft_tree_args=draft_tree_args,
+                        proxy_tree_args=proxy_tree_args,
+                        step_proxy_layout=step_proxy_layout,
+                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                    )
                 )
 
-            # Replace draft_tokens K1.. tail with hybrid cont_tokens
-            draft_tokens = torch.cat(
-                [draft_tokens[:, :self.config.mesa_phase1_k], cont_tokens_h], dim=1
-            )
-            draft_logits = torch.cat(
-                [draft_logits[:, :self.config.mesa_phase1_k], cont_logits_h], dim=1
-            )
-            # Replace proxy outputs entirely
-            proxy_tokens = proxy_tokens_h
-            proxy_logits = proxy_logits_h
+            if _parity_check:
+                # Skip-mode short-circuits (Phase D debug).
+                _skip_cont_diff = _os.environ.get("SSD_HYBRID_SKIP_CONT", "0") == "1"
+                _skip_proxy_diff = _os.environ.get("SSD_HYBRID_SKIP_PROXY", "0") == "1"
+                if _skip_cont_diff and not _skip_proxy_diff:
+                    print(f"[HYBRID PARITY skip_cont] proxy-only mode", flush=True)
+                    eq = (_split_proxy_tokens == proxy_tokens_h)
+                    n_total = eq.numel()
+                    n_mis = int((~eq).sum().item())
+                    d = (_split_proxy_logits - proxy_logits_h).abs()
+                    print(f"[HYBRID PARITY skip_cont] split_proxy vs hybrid_proxy: "
+                          f"tokens {n_mis}/{n_total} mismatch "
+                          f"({100*n_mis/max(n_total,1):.1f}%); "
+                          f"logits max_abs={float(d.max().item()):.6f} "
+                          f"mean_abs={float(d.mean().item()):.6f}", flush=True)
+                elif _skip_proxy_diff and not _skip_cont_diff:
+                    print(f"[HYBRID PARITY skip_proxy] cont-only mode", flush=True)
+                    eq = (_split_cont_tokens == cont_tokens_h)
+                    n_total = eq.numel()
+                    n_mis = int((~eq).sum().item())
+                    d = (_split_cont_logits - cont_logits_h).abs()
+                    print(f"[HYBRID PARITY skip_proxy] split_cont vs hybrid_cont: "
+                          f"tokens {n_mis}/{n_total} mismatch "
+                          f"({100*n_mis/max(n_total,1):.1f}%); "
+                          f"logits max_abs={float(d.max().item()):.6f} "
+                          f"mean_abs={float(d.mean().item()):.6f}", flush=True)
+                else:
+                    # Phase D-5: oracle-aware parity output. Two primary lines
+                    # (hybrid vs class-specific oracle); split-vs-* are diags.
+                    self._oracle_parity_report(
+                        split_cont_tokens=_split_cont_tokens,
+                        split_cont_logits=_split_cont_logits,
+                        split_proxy_tokens=_split_proxy_tokens,
+                        split_proxy_logits=_split_proxy_logits,
+                        hybrid_cont_tokens=cont_tokens_h,
+                        hybrid_cont_logits=cont_logits_h,
+                        hybrid_proxy_tokens=proxy_tokens_h,
+                        hybrid_proxy_logits=proxy_logits_h,
+                        oracle_cont_tokens=_oracle_cont_tokens,
+                        oracle_cont_logits=_oracle_cont_logits,
+                        oracle_proxy_tokens=_oracle_proxy_tokens,
+                        oracle_proxy_logits=_oracle_proxy_logits,
+                        oracle_proxy_meta=_oracle_proxy_meta,
+                        step_proxy_layout=step_proxy_layout,
+                        oracle_proxy_tokens_2=_oracle_proxy_tokens_2,
+                        oracle_proxy_logits_2=_oracle_proxy_logits_2,
+                        hybrid_proxy_tokens_2=_proxy_tokens_h_2,
+                        hybrid_proxy_logits_2=_proxy_logits_h_2,
+                        hybrid_cont_tokens_2=_cont_tokens_h_2,
+                        hybrid_cont_logits_2=_cont_logits_h_2,
+                    )
+
+            # In Phase D skip modes, keep split outputs for the skipped class
+            # so cache emit doesn't break.
+            _skip_cont_replace = _os.environ.get("SSD_HYBRID_SKIP_CONT", "0") == "1"
+            _skip_proxy_replace = _os.environ.get("SSD_HYBRID_SKIP_PROXY", "0") == "1"
+            if not _skip_cont_replace:
+                draft_tokens = torch.cat(
+                    [draft_tokens[:, :self.config.mesa_phase1_k], cont_tokens_h], dim=1
+                )
+                draft_logits = torch.cat(
+                    [draft_logits[:, :self.config.mesa_phase1_k], cont_logits_h], dim=1
+                )
+            if not _skip_proxy_replace:
+                proxy_tokens = proxy_tokens_h
+                proxy_logits = proxy_logits_h
 
         # === Merge + populate cache (use runtime layout for correct keys) ===
         self._merge_and_populate_cache(
@@ -1685,7 +1827,12 @@ class DraftRunner(ModelRunner):
         total = plan.total_row_count
 
         MQ_p1 = self.phase1_layout_long.MQ_LEN  # = (K_long+1) × dfo
-        MQ_proxy = proxy_count  # dynamic = sum(fan_out_list) per Policy A/B
+        # When skip_proxy debug gate is on, proxy_count=0 → use placeholder
+        # MQ_proxy=1 to avoid div-by-zero. Mask logic gates on in_bp_region
+        # which requires kv_pos >= b_proxy_base AND < b_proxy_base + K2*MQ_proxy;
+        # with MQ_proxy=1, K2*MQ_proxy=K2 = small range, but in_bp_region
+        # filter still works for proxy-row visibility (which is empty anyway).
+        MQ_proxy = max(proxy_count, 1)  # dynamic = sum(fan_out_list) per Policy A/B
 
         # 1) per_row_region_id (0=cont, 1=proxy)
         plan.per_row_region_id[:cont_count] = 0
@@ -1733,6 +1880,10 @@ class DraftRunner(ModelRunner):
         # RoPE: num_tokens + j_idx_p1[i] + K1 (= the next position after the
         # K1 Phase 1 ancestors of branch i with fork position j_idx_p1[i]).
         cache_hits = draft_tree_args["cache_hits"]
+        # Stash the actual seq cache_hit flag on the plan so parity dumps
+        # pick the correct fan_idx_hit/miss vector. Distinct from
+        # per_row_region_id which is a region tag (0=cont, 1=proxy).
+        plan.step_cache_hit = bool(int(cache_hits[0]))
         j_idx_p1_full = (
             self.phase1_layout_long.fan_idx_hit if int(cache_hits[0])
             else self.phase1_layout_long.fan_idx_miss
@@ -2299,6 +2450,325 @@ class DraftRunner(ModelRunner):
                   f"bool eager planning is faithful. "
                   f"Hybrid mismatch is in metadata/mask, not planning path.", flush=True)
 
+    def _oracle_parity_report(self, *,
+                                split_cont_tokens, split_cont_logits,
+                                split_proxy_tokens, split_proxy_logits,
+                                hybrid_cont_tokens, hybrid_cont_logits,
+                                hybrid_proxy_tokens, hybrid_proxy_logits,
+                                oracle_cont_tokens, oracle_cont_logits,
+                                oracle_proxy_tokens, oracle_proxy_logits,
+                                oracle_proxy_meta, step_proxy_layout,
+                                oracle_proxy_tokens_2=None, oracle_proxy_logits_2=None,
+                                hybrid_proxy_tokens_2=None, hybrid_proxy_logits_2=None,
+                                hybrid_cont_tokens_2=None, hybrid_cont_logits_2=None):
+        """Phase D-5: oracle-aware parity output.
+
+        Two primary lines (gated by SSD_HYBRID_*_ORACLE):
+          [CONT ORACLE]  hybrid_cont  vs correct_split_cont
+          [PROXY ORACLE] hybrid_proxy vs fresh_proxy_oracle
+
+        Diagnostics (split direct comparisons):
+          [diag] split_CG_cont   vs correct_split_cont
+          [diag] split_CG_proxy  vs fresh_proxy_oracle
+          [diag] hybrid_proxy    vs split_CG_proxy
+          [diag] hybrid_cont     vs split_CG_cont
+
+        First-mismatch detail dump for [PROXY ORACLE] when nonzero.
+        """
+        def _fmt(a_tok, a_log, b_tok, b_log):
+            eq = (a_tok == b_tok)
+            n = eq.numel()
+            nm = int((~eq).sum().item())
+            d = (a_log - b_log).abs()
+            return (nm, n,
+                    f"tokens {nm}/{n} ({100*nm/max(n,1):.1f}%); "
+                    f"logits max_abs={float(d.max().item()):.6f} "
+                    f"mean_abs={float(d.mean().item()):.6f}")
+
+        # Primary: cont oracle
+        cont_oracle_mismatch = 0
+        if oracle_cont_tokens is not None:
+            nm_c, _, line = _fmt(
+                hybrid_cont_tokens, hybrid_cont_logits,
+                oracle_cont_tokens, oracle_cont_logits,
+            )
+            cont_oracle_mismatch = nm_c
+            print(f"[CONT ORACLE]  hybrid_cont  vs correct_split_cont: {line}",
+                  flush=True)
+
+        # Primary: proxy oracle
+        proxy_oracle_mismatch = 0
+        if oracle_proxy_tokens is not None:
+            nm, _, line = _fmt(
+                hybrid_proxy_tokens, hybrid_proxy_logits,
+                oracle_proxy_tokens, oracle_proxy_logits,
+            )
+            proxy_oracle_mismatch = nm
+            print(f"[PROXY ORACLE] hybrid_proxy vs fresh_proxy_oracle: {line}",
+                  flush=True)
+
+        # Diagnostics
+        if oracle_cont_tokens is not None:
+            _, _, line = _fmt(
+                split_cont_tokens, split_cont_logits,
+                oracle_cont_tokens, oracle_cont_logits,
+            )
+            print(f"[diag] split_CG_cont   vs correct_split_cont: {line}",
+                  flush=True)
+        if oracle_proxy_tokens is not None:
+            _, _, line = _fmt(
+                split_proxy_tokens, split_proxy_logits,
+                oracle_proxy_tokens, oracle_proxy_logits,
+            )
+            print(f"[diag] split_CG_proxy  vs fresh_proxy_oracle: {line}",
+                  flush=True)
+            _, _, line = _fmt(
+                hybrid_proxy_tokens, hybrid_proxy_logits,
+                split_proxy_tokens, split_proxy_logits,
+            )
+            print(f"[diag] hybrid_proxy    vs split_CG_proxy:    {line}",
+                  flush=True)
+        _, _, line = _fmt(
+            hybrid_cont_tokens, hybrid_cont_logits,
+            split_cont_tokens, split_cont_logits,
+        )
+        print(f"[diag] hybrid_cont     vs split_CG_cont:     {line}",
+              flush=True)
+
+        # Phase D-6: self-consistency lines
+        if oracle_proxy_tokens_2 is not None and oracle_proxy_tokens is not None:
+            _, _, line = _fmt(
+                oracle_proxy_tokens, oracle_proxy_logits,
+                oracle_proxy_tokens_2, oracle_proxy_logits_2,
+            )
+            print(f"[SELF] fresh_proxy_oracle vs fresh_proxy_oracle: {line}",
+                  flush=True)
+        if hybrid_proxy_tokens_2 is not None:
+            _, _, line = _fmt(
+                hybrid_proxy_tokens, hybrid_proxy_logits,
+                hybrid_proxy_tokens_2, hybrid_proxy_logits_2,
+            )
+            print(f"[SELF] hybrid_proxy        vs hybrid_proxy:        {line}",
+                  flush=True)
+        if hybrid_cont_tokens_2 is not None:
+            _, _, line = _fmt(
+                hybrid_cont_tokens, hybrid_cont_logits,
+                hybrid_cont_tokens_2, hybrid_cont_logits_2,
+            )
+            print(f"[SELF] hybrid_cont         vs hybrid_cont:         {line}",
+                  flush=True)
+
+        # Proxy oracle first-mismatch detail
+        if proxy_oracle_mismatch > 0 and oracle_proxy_tokens is not None:
+            self._dump_proxy_oracle_first_mismatch(
+                hybrid_proxy_tokens=hybrid_proxy_tokens,
+                hybrid_proxy_logits=hybrid_proxy_logits,
+                oracle_proxy_tokens=oracle_proxy_tokens,
+                oracle_proxy_logits=oracle_proxy_logits,
+                oracle_proxy_meta=oracle_proxy_meta,
+                step_proxy_layout=step_proxy_layout,
+            )
+        # Phase D-7: cont oracle first-mismatch top-1/top-2 margin (same
+        # drift-consistency check as proxy).
+        if cont_oracle_mismatch > 0 and oracle_cont_tokens is not None:
+            self._dump_cont_oracle_first_mismatch(
+                hybrid_cont_tokens=hybrid_cont_tokens,
+                hybrid_cont_logits=hybrid_cont_logits,
+                oracle_cont_tokens=oracle_cont_tokens,
+                oracle_cont_logits=oracle_cont_logits,
+            )
+
+    def _dump_cont_oracle_first_mismatch(self, *,
+                                            hybrid_cont_tokens, hybrid_cont_logits,
+                                            oracle_cont_tokens, oracle_cont_logits):
+        """Phase D-7: top-1/top-2 margin dump for first cont mismatch.
+        Same drift-consistency check as proxy."""
+        eq = (hybrid_cont_tokens == oracle_cont_tokens)
+        nz = (~eq).nonzero(as_tuple=False)
+        if nz.numel() == 0:
+            return
+        row = int(nz[0, 0].item())
+        depth = int(nz[0, 1].item())
+        h_tok = int(hybrid_cont_tokens[row, depth].item())
+        o_tok = int(oracle_cont_tokens[row, depth].item())
+        log_d = float(
+            (hybrid_cont_logits[row, depth] - oracle_cont_logits[row, depth])
+            .abs().max().item()
+        )
+        h_top2 = torch.topk(hybrid_cont_logits[row, depth], 2)
+        o_top2 = torch.topk(oracle_cont_logits[row, depth], 2)
+        h_t1, h_t2 = int(h_top2.indices[0].item()), int(h_top2.indices[1].item())
+        h_l1, h_l2 = float(h_top2.values[0].item()), float(h_top2.values[1].item())
+        o_t1, o_t2 = int(o_top2.indices[0].item()), int(o_top2.indices[1].item())
+        o_l1, o_l2 = float(o_top2.values[0].item()), float(o_top2.values[1].item())
+        h_margin = h_l1 - h_l2
+        o_margin = o_l1 - o_l2
+        # Phase D-7: drift-consistency check. Each vocab position's logit
+        # can drift by up to log_d (max abs vocab diff). The MARGIN between
+        # any two positions can shift by up to 2*log_d (one side up, the
+        # other side down). So if o_margin <= 2*log_d, drift can flip.
+        # Tied oracle (o_margin=0) is always flippable by any drift > 0.
+        h_at_o_t1 = float(hybrid_cont_logits[row, depth, o_t1].item())
+        h_at_o_t2 = float(hybrid_cont_logits[row, depth, o_t2].item())
+        margin_bound = 2.0 * log_d
+        drift_explains = o_margin <= margin_bound + 1e-6
+        print(f"[CONT ORACLE first mismatch] row={row} depth={depth} "
+              f"hybrid_tok={h_tok} oracle_tok={o_tok} "
+              f"logit_max_diff={log_d:.6f}", flush=True)
+        print(f"  top1/top2 margin:", flush=True)
+        print(f"    oracle: top1={o_t1} (logit={o_l1:.4f}) top2={o_t2} "
+              f"(logit={o_l2:.4f}) margin={o_margin:.4f}", flush=True)
+        print(f"    hybrid: top1={h_t1} (logit={h_l1:.4f}) top2={h_t2} "
+              f"(logit={h_l2:.4f}) margin={h_margin:.4f}", flush=True)
+        print(f"    cross: hybrid_at_o_top1={h_at_o_t1:.4f} "
+              f"hybrid_at_o_top2={h_at_o_t2:.4f}", flush=True)
+        print(f"    structural drift consistent: o_margin({o_margin:.4f}) "
+              f"<= 2*log_d({margin_bound:.4f}) → {drift_explains}",
+              flush=True)
+
+    def _dump_proxy_oracle_first_mismatch(self, *,
+                                            hybrid_proxy_tokens, hybrid_proxy_logits,
+                                            oracle_proxy_tokens, oracle_proxy_logits,
+                                            oracle_proxy_meta, step_proxy_layout):
+        """Phase D-5: side-by-side metadata dump for first
+        hybrid_proxy != fresh_proxy_oracle mismatch."""
+        plan = self.hybrid_phase2_plan
+        eq = (hybrid_proxy_tokens == oracle_proxy_tokens)
+        nz = (~eq).nonzero(as_tuple=False)
+        if nz.numel() == 0:
+            return
+        row = int(nz[0, 0].item())
+        depth = int(nz[0, 1].item())
+        h_tok = int(hybrid_proxy_tokens[row, depth].item())
+        o_tok = int(oracle_proxy_tokens[row, depth].item())
+        log_d = float(
+            (hybrid_proxy_logits[row, depth] - oracle_proxy_logits[row, depth])
+            .abs().max().item()
+        )
+        print(f"[PROXY ORACLE first mismatch] row={row} depth={depth} "
+              f"hybrid_tok={h_tok} oracle_tok={o_tok} "
+              f"logit_max_diff={log_d:.6f}", flush=True)
+
+        # Phase D-6: top-1 / top-2 margin dump. If oracle's margin <= the
+        # observed hybrid-vs-oracle logit drift, the argmax flip is consistent
+        # with structural FP drift on a near-tie row.
+        h_top2 = torch.topk(hybrid_proxy_logits[row, depth], 2)
+        o_top2 = torch.topk(oracle_proxy_logits[row, depth], 2)
+        h_t1, h_t2 = int(h_top2.indices[0].item()), int(h_top2.indices[1].item())
+        h_l1, h_l2 = float(h_top2.values[0].item()), float(h_top2.values[1].item())
+        o_t1, o_t2 = int(o_top2.indices[0].item()), int(o_top2.indices[1].item())
+        o_l1, o_l2 = float(o_top2.values[0].item()), float(o_top2.values[1].item())
+        h_margin = h_l1 - h_l2
+        o_margin = o_l1 - o_l2
+        # Logit at oracle's top1 position in hybrid (and vice versa) — shows
+        # how close hybrid was to oracle's argmax choice.
+        h_at_o_t1 = float(hybrid_proxy_logits[row, depth, o_t1].item())
+        o_at_h_t1 = float(oracle_proxy_logits[row, depth, h_t1].item())
+        print(f"  top1/top2 margin:", flush=True)
+        print(f"    oracle: top1={o_t1} (logit={o_l1:.4f}) top2={o_t2} "
+              f"(logit={o_l2:.4f}) margin={o_margin:.4f}", flush=True)
+        print(f"    hybrid: top1={h_t1} (logit={h_l1:.4f}) top2={h_t2} "
+              f"(logit={h_l2:.4f}) margin={h_margin:.4f}", flush=True)
+        print(f"    cross: hybrid_logit_at_oracle_top1({o_t1})={h_at_o_t1:.4f} "
+              f"oracle_logit_at_hybrid_top1({h_t1})={o_at_h_t1:.4f}", flush=True)
+        # Phase D-7: drift-consistency check using 2*log_d bound (margin
+        # between any two positions can shift by up to 2*log_d under bounded
+        # per-position drift). Captures both direct flips and tied tie-break
+        # flips.
+        h_at_o_t2 = float(hybrid_proxy_logits[row, depth, o_t2].item())
+        margin_bound = 2.0 * log_d
+        drift_explains = o_margin <= margin_bound + 1e-6
+        print(f"    cross: hybrid_at_o_top1={h_at_o_t1:.4f} "
+              f"hybrid_at_o_top2={h_at_o_t2:.4f}", flush=True)
+        print(f"    structural drift consistent: o_margin({o_margin:.4f}) "
+              f"<= 2*log_d({margin_bound:.4f}) → {drift_explains}",
+              flush=True)
+
+        # Hybrid metadata
+        cont_count = plan.cont_row_count
+        global_row_h = cont_count + row
+        h_rope = int(plan.proxy_initial_rope_positions[row].item()) + depth
+        h_slot = int(plan.per_row_slot_maps_by_depth[global_row_h, depth].item())
+        h_ctx = int(plan.per_row_context_lens_by_depth[global_row_h, depth].item())
+        h_kv_indptr_full = plan.per_row_kv_indptr_by_depth[
+            :plan.total_row_count + 1, depth,
+        ]
+        h_kv_indices_full = plan.per_row_kv_indices_by_depth[depth]
+        h_lo = int(h_kv_indptr_full[global_row_h].item())
+        h_hi = int(h_kv_indptr_full[global_row_h + 1].item())
+        h_pages = h_kv_indices_full[h_lo:h_hi].tolist()
+        h_lpl_block = (h_ctx - 1) % self.block_size + 1
+
+        # Oracle metadata. Oracle uses per-seq KV plan (B=1), so ctx_len /
+        # kv_indptr / kv_indices / kv_last_page_len are seq-level (not per-row).
+        # Row-level fields (rope, slot) are per row within MQ_proxy.
+        o_rope = int(oracle_proxy_meta["step_rope_positions"][depth, row].item())
+        o_slot = int(oracle_proxy_meta["step_slot_maps"][depth, row].item())
+        o_ctx = int(oracle_proxy_meta["step_context_lens"][depth, 0].item())
+        o_indptr = oracle_proxy_meta["kv_indptr_per_d"][depth]
+        o_indices = oracle_proxy_meta["kv_indices_per_d"][depth]
+        o_lpl = oracle_proxy_meta["kv_lpl_per_d"][depth]
+        # B=1: row 0's pages = indices[0:indptr[1]] (shared across all MQ_proxy
+        # rows of the seq). 'pages' here is per seq, not per row.
+        o_pages = o_indices[int(o_indptr[0].item()):int(o_indptr[1].item())].tolist()
+
+        print(f"  hybrid: rope={h_rope} slot={h_slot} ctx={h_ctx} "
+              f"kv_pages={h_pages} kv_lpl(block_calc)={h_lpl_block}",
+              flush=True)
+        print(f"  oracle: rope={o_rope} slot={o_slot} ctx={o_ctx} "
+              f"kv_pages={o_pages} kv_lpl={o_lpl.tolist()}",
+              flush=True)
+
+        # Hybrid bool mask visible set for this proxy row
+        K1 = self.config.mesa_phase1_k
+        K2 = self.config.mesa_phase2_k
+        K_long = K1 + K2
+        MQ_p1 = self.phase1_layout_long.MQ_LEN
+        # num_tokens via cont_initial_rope[0] - K1 (j_idx_p1[0]=0 for hit case)
+        if cont_count > 0:
+            num_tokens = int(plan.cont_initial_rope_positions[0].item()) - K1
+        else:
+            num_tokens = h_rope - depth  # fallback (j_idx_proxy[0]=0)
+        j_idx_p1_full = (
+            self.phase1_layout_long.fan_idx_hit if plan.step_cache_hit
+            else self.phase1_layout_long.fan_idx_miss
+        )
+        j_idx_proxy_vec = (
+            plan.proxy_initial_rope_positions[:plan.proxy_row_count] - num_tokens
+        )
+        bool_mask_h = self._compute_hybrid_bool_mask_for_depth(
+            d=depth, K1=K1, K2=K2, K_long=K_long,
+            MQ_p1=MQ_p1, L=h_ctx,
+            cont_count=cont_count, proxy_count=plan.proxy_row_count,
+            num_tokens=num_tokens,
+            j_idx_p1=j_idx_p1_full[:cont_count],
+            j_idx_proxy=j_idx_proxy_vec,
+        )
+        n_total = cont_count + plan.proxy_row_count
+        h_visible = bool_mask_h.view(n_total, h_ctx)[global_row_h]
+        h_vis_count = int(h_visible.sum().item())
+        h_vis_pos = h_visible.nonzero(as_tuple=False).flatten().tolist()
+
+        # Oracle bool mask visible set (from mirror_meta — get_custom_mask_cached)
+        o_bool = oracle_proxy_meta["bool_mask_per_d"][depth]
+        n_proxy = plan.proxy_row_count
+        o_L = o_bool.numel() // n_proxy
+        o_visible = o_bool.view(n_proxy, o_L)[row]
+        o_vis_count = int(o_visible.sum().item())
+        o_vis_pos = o_visible.nonzero(as_tuple=False).flatten().tolist()
+
+        print(f"  hybrid mask: visible={h_vis_count} L={h_ctx} "
+              f"first10={h_vis_pos[:10]} last5={h_vis_pos[-5:]}",
+              flush=True)
+        print(f"  oracle mask: visible={o_vis_count} L={o_L} "
+              f"first10={o_vis_pos[:10]} last5={o_vis_pos[-5:]}",
+              flush=True)
+        # Note: hybrid and oracle visible positions are at DIFFERENT physical
+        # slots (hybrid uses B_proxy region, oracle uses split's overlap with
+        # P1 region). The semantic equivalence is: both should attend to
+        # persistent + glue prefix(j_idx_proxy[r]) + own proxy ancestors at
+        # depths [0, d+1). Matched K/V values via deterministic forward.
+
     def _hybrid_parity_diff(self, *, split_cont_tokens, split_cont_logits,
                               split_proxy_tokens, split_proxy_logits,
                               hybrid_cont_tokens, hybrid_cont_logits,
@@ -2338,16 +2808,17 @@ class DraftRunner(ModelRunner):
               f"mean_abs_diff={cont_mean_diff:.6f}; proxy max_abs_diff={proxy_max_diff:.6f} "
               f"mean_abs_diff={proxy_mean_diff:.6f}", flush=True)
 
-        # First mismatch dump
+        # First mismatch dump. j_idx_p1 selection MUST follow actual seq cache
+        # hit, NOT per_row_region_id (which is 0/1 for cont/proxy region tag).
         if cont_mismatch > 0:
             first_idx = (~cont_tok_eq).nonzero(as_tuple=False)[0]  # [2] = (row, depth)
             row = int(first_idx[0].item())
             depth = int(first_idx[1].item())
             split_tok = int(split_cont_tokens[row, depth].item())
             hybrid_tok = int(hybrid_cont_tokens[row, depth].item())
+            _hit = bool(plan.step_cache_hit)
             j_idx_p1 = (
-                self.phase1_layout_long.fan_idx_hit
-                if int(plan.per_row_region_id[row].item()) == 0
+                self.phase1_layout_long.fan_idx_hit if _hit
                 else self.phase1_layout_long.fan_idx_miss
             )
             j_idx_val = int(j_idx_p1[row].item())
@@ -2356,6 +2827,76 @@ class DraftRunner(ModelRunner):
             print(f"[HYBRID PARITY] first cont mismatch row={row} depth={depth} "
                   f"split_tok={split_tok} hybrid_tok={hybrid_tok} j_idx_p1={j_idx_val} "
                   f"slot_map={slot_map} ctx_len={ctx_len}", flush=True)
+
+            # Phase D-3 mask diff dump: show what hybrid sees vs what split's
+            # CG mask formula sees for this row at this depth. Probes hypothesis
+            # that split's continuation mask formula (run_fi_tree_decode_cudagraph
+            # at cont step 0 with K=K_long) exposes cross-branch Phase 1 KV
+            # because prefix_len_b = num_tokens + K1*MQ_p1 - 1 instead of num_tokens-1.
+            try:
+                K1 = self.config.mesa_phase1_k
+                K2 = self.config.mesa_phase2_k
+                K_long = K1 + K2
+                MQ_p1 = self.phase1_layout_long.MQ_LEN
+                # Recover num_tokens from hybrid metadata
+                cont_rope0 = int(plan.cont_initial_rope_positions[0].item())
+                num_tokens = cont_rope0 - K1  # cont_rope[0] = nt + j_idx[0] + K1, j_idx[0]=0
+                # Hybrid bool mask for this row at this depth — use Step 3's
+                # ctx_len_d as L (Phase D-3a consistency fix).
+                cont_count = plan.cont_row_count
+                proxy_count = plan.proxy_row_count
+                L_d = int(plan.per_row_context_lens_by_depth[0, depth].item())
+                bool_mask = self._compute_hybrid_bool_mask_for_depth(
+                    d=depth, K1=K1, K2=K2, K_long=K_long,
+                    MQ_p1=MQ_p1, L=L_d,
+                    cont_count=cont_count, proxy_count=proxy_count,
+                    num_tokens=num_tokens,
+                    j_idx_p1=j_idx_p1[:cont_count],
+                    j_idx_proxy=plan.proxy_initial_rope_positions[:proxy_count] - num_tokens,
+                )
+                total_rows = cont_count + proxy_count
+                L = bool_mask.numel() // total_rows
+                hybrid_row = bool_mask.view(total_rows, L)[row]
+                hyb_visible = hybrid_row.nonzero(as_tuple=False).flatten().tolist()
+                # Split's mask formula at cont step `depth` (K=K_long internal):
+                # prefix_len_b = num_tokens + K1*MQ_p1 - 1
+                # glue_lower_tri at [prefix, prefix+K_long+1) using j_idx
+                # diag blks for blk in [0, depth+1) at diag_start + blk*MQ_p1 + row
+                split_prefix = num_tokens + K1 * MQ_p1 - 1
+                split_diag_start = split_prefix + K_long + 1
+                # Build split's predicted visible KV for this row
+                split_visible = list(range(split_prefix))  # all prefix visible
+                # glue lower-tri: cols [prefix, prefix+j_idx_val] visible
+                for c in range(split_prefix, split_prefix + j_idx_val + 1):
+                    split_visible.append(c)
+                # diagonals: own row at depths 0..depth (current step inclusive)
+                for blk in range(depth + 1):
+                    split_visible.append(split_diag_start + blk * MQ_p1 + row)
+                # Set diff
+                hyb_set = set(hyb_visible)
+                split_set = set(split_visible)
+                only_split = sorted(split_set - hyb_set)
+                only_hybrid = sorted(hyb_set - split_set)
+                print(f"[HYBRID PARITY MASK] row={row} depth={depth} "
+                      f"num_tokens={num_tokens} hyb_count={len(hyb_visible)} "
+                      f"split_count_predicted={len(split_visible)} "
+                      f"only_split_count={len(only_split)} "
+                      f"only_hybrid_count={len(only_hybrid)}", flush=True)
+                # Decode only_split into physical regions for clarity
+                phase1_kv_base = num_tokens + K_long
+                a_tail_base = phase1_kv_base + K1 * MQ_p1
+                osp_persistent = sum(1 for c in only_split if c < num_tokens)
+                osp_glue = sum(1 for c in only_split if num_tokens - 1 <= c < num_tokens + K_long)
+                osp_p1 = sum(1 for c in only_split if phase1_kv_base <= c < a_tail_base)
+                osp_other = len(only_split) - osp_persistent - osp_glue - osp_p1
+                print(f"  only_split breakdown: persistent={osp_persistent} "
+                      f"glue={osp_glue} phase1_kv={osp_p1} other={osp_other}", flush=True)
+                print(f"  only_split sample (first 10): {only_split[:10]} "
+                      f"... (last 5): {only_split[-5:] if len(only_split) > 10 else []}",
+                      flush=True)
+                print(f"  only_hybrid sample (first 10): {only_hybrid[:10]}", flush=True)
+            except Exception as e:
+                print(f"[HYBRID PARITY MASK] dump failed: {e}", flush=True)
 
         if proxy_mismatch > 0:
             # Dump ALL proxy mismatches (small count usually)
@@ -2412,23 +2953,26 @@ class DraftRunner(ModelRunner):
             split_scratch_pos = num_tokens_dbg + K_long_dbg + depth * MQ_proxy_dbg + row
             split_ctx_len_eq = num_tokens_dbg + K_long_dbg + (depth + 1) * MQ_proxy_dbg
 
-            # Visible KV count from hybrid bool mask (compute fresh)
-            cache_hits_dbg = (
-                int(plan.per_row_region_id[global_row].item()) == 0
-            )  # informational only — actual computed below
-            # Bool mask for current depth (matches what wrapper used)
+            # Bool mask for current depth (matches what wrapper used).
+            # Phase D-3a: pass L = ctx_len_d directly. Use actual cache_hits
+            # (from plan-stored value) to pick fan_idx_hit vs miss.
+            L_d = int(plan.per_row_context_lens_by_depth[0, depth].item())
+            _hit = bool(plan.step_cache_hit)  # default hit
+            j_idx_p1_dbg = (
+                self.phase1_layout_long.fan_idx_hit if _hit
+                else self.phase1_layout_long.fan_idx_miss
+            )[:cont_count]
             bool_mask_d = self._compute_hybrid_bool_mask_for_depth(
                 d=depth, K1=self.config.mesa_phase1_k,
                 K2=self.config.mesa_phase2_k, K_long=K_long_dbg,
                 MQ_p1=self.phase1_layout_long.MQ_LEN,
-                MQ_proxy=MQ_proxy_dbg,
+                L=L_d,
                 cont_count=cont_count, proxy_count=plan.proxy_row_count,
                 num_tokens=num_tokens_dbg,
-                j_idx_p1=self.phase1_layout_long.fan_idx_hit[:cont_count],
+                j_idx_p1=j_idx_p1_dbg,
                 j_idx_proxy=plan.proxy_initial_rope_positions[:plan.proxy_row_count] - num_tokens_dbg,
             )
             n_total = cont_count + plan.proxy_row_count
-            L_d = bool_mask_d.numel() // n_total
             row_mask = bool_mask_d.view(n_total, L_d)[global_row]
             n_visible = int(row_mask.sum().item())
             visible_pos = row_mask.nonzero(as_tuple=False).flatten().tolist()
@@ -2447,14 +2991,19 @@ class DraftRunner(ModelRunner):
             print(f"  visible_kv: count={n_visible} positions={visible_summary}", flush=True)
 
     def _compute_hybrid_bool_mask_for_depth(self, *, d, K1, K2, K_long,
-                                              MQ_p1, MQ_proxy,
+                                              MQ_p1, L,
                                               cont_count, proxy_count,
                                               num_tokens, j_idx_p1, j_idx_proxy):
         """Compute per-row bool visibility mask for hybrid attention at depth d.
 
-        Same j_idx-aware visibility rules as Step 4 but returns BOOL tensor
-        of shape [total_rows * L] flattened (FlashInfer custom_mask format).
-        L = physical context_lens (uniform per row at fixed depth).
+        L is the per-row KV length (= runtime ctx_len_d). Caller must pass
+        the SAME value used by Step 3's per_row_context_lens_by_depth, so
+        wrapper.plan(custom_mask=...) and wrapper.run() see consistent shapes.
+
+        When proxy_count == 0, proxy-region modulo/division is skipped
+        entirely; the trailing (d+1) cols beyond a_tail (placeholder cols
+        from Step 3's MQ_proxy=max(proxy_count,1)=1) remain 0 and no row
+        attends to them.
         """
         device = self.device
         total = cont_count + proxy_count
@@ -2469,55 +3018,215 @@ class DraftRunner(ModelRunner):
         a_tail_base = phase1_kv_base + K1 * MQ_p1
         b_proxy_base = a_tail_base + K2 * MQ_p1
 
-        L = num_tokens + K_long + K_long * MQ_p1 + (d + 1) * MQ_proxy
         kv_pos = torch.arange(L, device=device, dtype=torch.int64)
         kv_pos_2d = kv_pos.view(1, L)
 
         cont_idx_t = torch.arange(cont_count, device=device, dtype=torch.int64)
-        proxy_idx_t = torch.arange(proxy_count, device=device, dtype=torch.int64)
 
         persistent_vis = kv_pos_2d < num_tokens
 
-        # cont rows
-        cont_glue_vis = (
-            (kv_pos_2d >= glue_base) &
-            (kv_pos_2d <= (glue_base + j_idx_p1.view(cont_count, 1)))
-        )
-        p1_off = kv_pos_2d - phase1_kv_base
-        in_p1 = (kv_pos_2d >= phase1_kv_base) & (kv_pos_2d < a_tail_base)
-        cont_p1_vis = in_p1 & ((p1_off % MQ_p1) == cont_idx_t.view(cont_count, 1))
+        # cont rows — independent of proxy_count
+        if cont_count > 0:
+            cont_glue_vis = (
+                (kv_pos_2d >= glue_base) &
+                (kv_pos_2d <= (glue_base + j_idx_p1.view(cont_count, 1)))
+            )
+            p1_off = kv_pos_2d - phase1_kv_base
+            in_p1 = (kv_pos_2d >= phase1_kv_base) & (kv_pos_2d < a_tail_base)
+            cont_p1_vis = in_p1 & ((p1_off % MQ_p1) == cont_idx_t.view(cont_count, 1))
 
-        at_off = kv_pos_2d - a_tail_base
-        in_at = (kv_pos_2d >= a_tail_base) & (kv_pos_2d < b_proxy_base)
-        cont_at_vis = (
-            in_at
-            & ((at_off % MQ_p1) == cont_idx_t.view(cont_count, 1))
-            & ((at_off // MQ_p1) <= d)
-        )
+            at_off = kv_pos_2d - a_tail_base
+            in_at = (kv_pos_2d >= a_tail_base) & (kv_pos_2d < b_proxy_base)
+            cont_at_vis = (
+                in_at
+                & ((at_off % MQ_p1) == cont_idx_t.view(cont_count, 1))
+                & ((at_off // MQ_p1) <= d)
+            )
 
-        cont_mask = (
-            persistent_vis.expand(cont_count, L)
-            | cont_glue_vis | cont_p1_vis | cont_at_vis
-        )
+            cont_mask = (
+                persistent_vis.expand(cont_count, L)
+                | cont_glue_vis | cont_p1_vis | cont_at_vis
+            )
+        else:
+            cont_mask = torch.zeros((0, L), dtype=torch.bool, device=device)
 
-        # proxy rows
-        proxy_glue_vis = (
-            (kv_pos_2d >= glue_base) &
-            (kv_pos_2d <= (glue_base + j_idx_proxy.view(proxy_count, 1)))
-        )
-        bp_off = kv_pos_2d - b_proxy_base
-        in_bp = (kv_pos_2d >= b_proxy_base) & (kv_pos_2d < (b_proxy_base + K2 * MQ_proxy))
-        proxy_b_vis = (
-            in_bp
-            & ((bp_off % MQ_proxy) == proxy_idx_t.view(proxy_count, 1))
-            & ((bp_off // MQ_proxy) <= d)
-        )
+        # proxy rows — only when proxy_count > 0. When 0, skip modulo/division
+        # over a B_proxy region whose width is meaningless (Step 3's placeholder
+        # MQ_proxy=1 doesn't reflect real proxy fan_out).
+        if proxy_count > 0:
+            proxy_idx_t = torch.arange(proxy_count, device=device, dtype=torch.int64)
+            MQ_proxy = proxy_count  # Step 3 uses sum(fan_out_list) = proxy_count when proxy_count>0
+            proxy_glue_vis = (
+                (kv_pos_2d >= glue_base) &
+                (kv_pos_2d <= (glue_base + j_idx_proxy.view(proxy_count, 1)))
+            )
+            bp_off = kv_pos_2d - b_proxy_base
+            in_bp = (kv_pos_2d >= b_proxy_base) & (kv_pos_2d < (b_proxy_base + K2 * MQ_proxy))
+            proxy_b_vis = (
+                in_bp
+                & ((bp_off % MQ_proxy) == proxy_idx_t.view(proxy_count, 1))
+                & ((bp_off // MQ_proxy) <= d)
+            )
 
-        proxy_mask = persistent_vis.expand(proxy_count, L) | proxy_glue_vis | proxy_b_vis
+            proxy_mask = persistent_vis.expand(proxy_count, L) | proxy_glue_vis | proxy_b_vis
+        else:
+            proxy_mask = torch.zeros((0, L), dtype=torch.bool, device=device)
 
         # Concat + flatten (FlashInfer custom_mask is 1D bool/uint8)
         full_mask = torch.cat([cont_mask, proxy_mask], dim=0)  # [total, L]
         return full_mask.reshape(-1).to(torch.bool)  # [total * L]
+
+    @torch.inference_mode()
+    def _decode_correct_split_cont(self, *, draft_tree_args, draft_tokens_phase1):
+        """Phase D-4: continuation oracle.
+
+        Reuses split's physical layout (cont_layout slot positions = same
+        as hybrid's A_tail region: num_tokens + K_long + (K1+d)*MQ_p1 + r),
+        but applies the plan-correct continuation bool mask:
+          - persistent (kv_pos < num_tokens)
+          - j_idx-aware glue prefix [num_tokens-1, num_tokens-1+j_idx[r]+1)
+          - own Phase 1 KV (slots phase1_kv_base + d_p1*MQ_p1 + r)
+          - own continuation prefix (slots a_tail_base + d_at*MQ_p1 + r,
+            d_at in [0, d+1))
+
+        Used as parity oracle in 3-way diff vs split_CG_cont and hybrid_cont.
+        Never enters runtime path. Long-bucket only.
+
+        Returns: (cont_tokens [cont_count, K2], cont_logits [cont_count, K2, V])
+        """
+        K1 = self.config.mesa_phase1_k
+        K2 = self.config.mesa_phase2_k
+        K_long = K1 + K2
+        MQ_p1 = self.phase1_layout_long.MQ_LEN
+        cont_count = MQ_p1  # Phase 1's MQ_LEN = (K_long+1) * dfo
+        device = self.device
+        V = self.hf_config.vocab_size
+        dt = self.hf_config.torch_dtype
+
+        # Recover num_tokens and j_idx_p1 from draft_tree_args (same source
+        # as _build_phase2_hybrid_plan).
+        p1_pos0 = int(draft_tree_args["positions"][0].item())
+        num_tokens = p1_pos0 - K_long
+        cache_hits = draft_tree_args["cache_hits"]
+        j_idx_p1 = (
+            self.phase1_layout_long.fan_idx_hit if int(cache_hits[0])
+            else self.phase1_layout_long.fan_idx_miss
+        )[:cont_count]
+
+        # Slot positions: split's cont_layout writes at
+        #   step_positions[d, r] = num_tokens + K_long + (K1+d)*MQ_p1 + r
+        # which is identical to hybrid's a_tail_base + d*MQ_p1 + r.
+        cont_idx = torch.arange(cont_count, device=device, dtype=torch.int64)
+        phase1_kv_base = num_tokens + K_long
+        a_tail_base = phase1_kv_base + K1 * MQ_p1
+        cont_initial_pos = a_tail_base + cont_idx  # depth 0 slot
+
+        # Logical rope: num_tokens + j_idx_p1[r] + K1 (same as hybrid).
+        cont_initial_rope = num_tokens + j_idx_p1 + K1
+
+        # Wrapper: dedicated eager-only correct_split_cont
+        wrapper_dict = self.prefill_wrappers_by_layout["correct_split_cont"]
+        wrapper_total = next(iter(wrapper_dict.keys()))
+        assert cont_count <= wrapper_total, (
+            f"correct_split_cont total={cont_count} > wrapper max={wrapper_total}"
+        )
+        wrapper = wrapper_dict[wrapper_total]
+
+        # Block table from seq (B=1)
+        seq_dbt = draft_tree_args["block_tables"]
+        seq_bt = seq_dbt[0]
+        n_pages_seq = seq_bt.shape[0]
+
+        # Output buffers
+        cont_tokens = torch.empty((cont_count, K2), dtype=torch.int64, device=device)
+        cont_logits = torch.empty((cont_count, K2, V), dtype=dt, device=device)
+
+        cur_cont_ids = draft_tokens_phase1[:cont_count, K1 - 1].contiguous()
+        cu_seqlens_q_full = torch.arange(cont_count + 1, device=device, dtype=torch.int32)
+
+        for d in range(K2):
+            # Per-depth slot map: scratch_pos = a_tail_base + d*MQ_p1 + r
+            scratch_pos = cont_initial_pos + d * MQ_p1
+            block_id = (scratch_pos // self.block_size).to(torch.int64)
+            offset = (scratch_pos % self.block_size).to(torch.int32)
+            slot_map_d = (
+                seq_bt[block_id].to(torch.int32) * self.block_size + offset
+            ).contiguous()
+
+            # ctx_len at depth d: split's natural extent =
+            #   num_tokens + K_long + (K1+d+1)*MQ_p1
+            ctx_len_val = num_tokens + K_long + (K1 + d + 1) * MQ_p1
+            ctx_len_d = torch.full(
+                (cont_count,), ctx_len_val, dtype=torch.int32, device=device,
+            )
+
+            # kv_indptr / kv_indices: per-row, all rows reference seq's pages
+            pages_needed = (ctx_len_val + self.block_size - 1) // self.block_size
+            pages_needed = int(min(pages_needed, n_pages_seq))
+            kv_indptr_d = torch.arange(
+                cont_count + 1, device=device, dtype=torch.int32,
+            ) * pages_needed
+            kv_indices_d = seq_bt[:pages_needed].to(torch.int32).repeat(cont_count)
+
+            kv_last_page_len = ((ctx_len_d - 1) % self.block_size + 1).to(torch.int32)
+
+            # Per-row block_tables (collapse-identical fill)
+            block_tables_d = seq_bt[:n_pages_seq].view(1, -1).expand(
+                cont_count, n_pages_seq,
+            ).contiguous().to(torch.int32)
+
+            # Plan-correct continuation bool mask (cont-only; reuse hybrid
+            # helper with proxy_count=0 — semantics identical).
+            bool_mask_d = self._compute_hybrid_bool_mask_for_depth(
+                d=d, K1=K1, K2=K2, K_long=K_long,
+                MQ_p1=MQ_p1, L=ctx_len_val,
+                cont_count=cont_count, proxy_count=0,
+                num_tokens=num_tokens,
+                j_idx_p1=j_idx_p1,
+                j_idx_proxy=torch.empty(0, dtype=torch.int64, device=device),
+            )
+
+            wrapper.plan(
+                cu_seqlens_q_full,
+                kv_indptr_d,
+                kv_indices_d,
+                kv_last_page_len,
+                self.hf_config.num_attention_heads,
+                self.hf_config.num_key_value_heads,
+                self.hf_config.head_dim,
+                self.block_size,
+                custom_mask=bool_mask_d,
+                q_data_type=dt,
+                kv_data_type=dt,
+            )
+
+            cur_cont_rope = cont_initial_rope + d
+            set_context(
+                is_prefill=False,
+                cu_seqlens_q=None,
+                cu_seqlens_k=None,
+                max_seqlen_q=0,
+                max_seqlen_k=0,
+                slot_mapping=slot_map_d,
+                context_lens=ctx_len_d,
+                block_tables=block_tables_d,
+                active_mq_len=1,
+                active_wrappers=wrapper_dict,
+                active_layout=None,
+            )
+
+            outputs = self.model(cur_cont_ids, cur_cont_rope.contiguous())
+            logits_flat = self.model.compute_logits(outputs, last_only=False)
+            reset_context()
+
+            logits_flat = logits_flat.view(-1, V)
+            next_tokens = logits_flat.argmax(dim=-1)
+
+            cont_logits[:, d, :] = logits_flat
+            cont_tokens[:, d] = next_tokens
+            cur_cont_ids = next_tokens
+
+        return cont_tokens, cont_logits
 
     @torch.inference_mode()
     def _decode_phase2_hybrid(self, *, draft_tree_args, proxy_tree_args,
@@ -2604,18 +3313,18 @@ class DraftRunner(ModelRunner):
             # Per-row block_tables — collapse-identical fill from Step 3
             # (current 1-page case). Plan field shape preserved per-row.
             block_tables_d = plan.per_row_block_tables[:total]
+            L_d = int(ctx_len_d[0].item())  # uniform per row at fixed depth
 
             # Custom mask — FlashInfer's custom_mask= arg expects BOOL tensor
             # of shape [total_qo_len * total_kv_len] (1 element per (q, kv)
-            # pair), not bit-packed. Step 4's per_depth_packed_masks is
-            # documented per Plan §388 but currently unused at runtime
-            # (incorrect format). Compute bool mask inline using the same
-            # j_idx-aware visibility rules as Step 4.
+            # pair), not bit-packed. Pass L = ctx_len_d directly so
+            # wrapper.plan(custom_mask) and wrapper.run() see consistent
+            # buffer shapes (Phase D-3a).
             bool_mask_d = self._compute_hybrid_bool_mask_for_depth(
                 d=d,
                 K1=K1, K2=K2, K_long=K_long,
-                MQ_p1=plan.K_long * 0 + self.phase1_layout_long.MQ_LEN,  # static
-                MQ_proxy=plan.proxy_row_count,
+                MQ_p1=self.phase1_layout_long.MQ_LEN,
+                L=L_d,
                 cont_count=cont_count,
                 proxy_count=proxy_count,
                 num_tokens=int(draft_tree_args["positions"][0].item()) - K_long,

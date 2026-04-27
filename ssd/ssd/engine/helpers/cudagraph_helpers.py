@@ -310,6 +310,30 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         cache["cpu_packed_masks"] = []
         cache["cpu_packed_indptrs"] = []
 
+        # ─────────────────────────────────────────────────────────────────
+        # KNOWN BUG (separate track from hybrid landing).
+        #
+        # This generic mask formula assumes the layout
+        #     [persistent | glue (K_long+1) | diag blocks of MQ_LEN]
+        # which holds only for single-pass tree decode where K = layout.K
+        # and there is no prior spec scratch already written.
+        #
+        # Under MESA-SSD's K1-split (mesa_phase1_k < speculate_k), the
+        # **continuation pass** runs separately AFTER Phase 1 has already
+        # written K1*MQ_LEN slots of Phase 1 KV. The formula treats those
+        # K1*MQ_LEN slots as fully-visible "persistent prefix" and shifts
+        # the (K_long+1)-wide glue lower-tri region forward by K1*MQ_LEN —
+        # which physically lands inside the LAST K_long+1 slots of Phase 1's
+        # last depth (not the actual glue at all). Effect: cont rows attend
+        # to ALL Phase 1 KV across branches and ALL glue without j_idx
+        # filtering. See `_compute_hybrid_bool_mask_for_depth` for the
+        # plan-correct continuation mask and `_decode_correct_split_cont`
+        # for an oracle that confirms split CG cont diverges by ~28-31%
+        # tokens vs plan-correct semantics.
+        #
+        # NOT FIXED HERE because split is the runtime default until hybrid
+        # parity lands. This is tracked separately from the hybrid path.
+        # ─────────────────────────────────────────────────────────────────
         for s in range(K):
             ttl_added_s = (s + 1) * MQ_LEN + (K + 1)
             packed_segs = []

@@ -360,6 +360,33 @@ class ModelRunner:
                     print(f'[MESA hybrid] phase2_hybrid_long wrapper created '
                           f'(max_total_rows={h_total}, eager mode)', flush=True)
 
+                    # Phase D-4: correct_split_cont oracle wrapper. Cont-only,
+                    # uses split's physical layout (cont_layout slot positions
+                    # = same as hybrid's a_tail region). NEVER touched by CG
+                    # capture or main runtime — used only in parity harness.
+                    # max_total_rows = (K_long+1) * dfo (cont rows only).
+                    cs_total = (self.config.speculate_k + 1) * self.config.mesa_draft_fan_out
+                    cs_cu = torch.empty(cs_total + 1, dtype=torch.int32, device=self.device)
+                    cs_kv_indptr = torch.empty(cs_total + 1, dtype=torch.int32, device=self.device)
+                    cs_kv_indices = torch.empty(cs_total * max_num_blocks, dtype=torch.int32, device=self.device)
+                    cs_kv_lpl = torch.empty(cs_total, dtype=torch.int32, device=self.device)
+                    cs_mask_size = cs_total * self.config.max_model_len
+                    cs_mask = torch.empty(cs_mask_size, dtype=torch.uint8, device=self.device)
+                    cs_mask_indptr = torch.empty(cs_total + 1, dtype=torch.int32, device=self.device)
+                    cs_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                        self.workspace_buffer, "NHD",
+                        use_cuda_graph=False,
+                        qo_indptr_buf=cs_cu,
+                        paged_kv_indptr_buf=cs_kv_indptr,
+                        paged_kv_indices_buf=cs_kv_indices,
+                        paged_kv_last_page_len_buf=cs_kv_lpl,
+                        custom_mask_buf=cs_mask,
+                        mask_indptr_buf=cs_mask_indptr,
+                    )
+                    self.prefill_wrappers_by_layout["correct_split_cont"] = {cs_total: cs_wrapper}
+                    print(f'[MESA hybrid] correct_split_cont wrapper created '
+                          f'(max_cont_rows={cs_total}, eager mode)', flush=True)
+
 
     def setup_and_warmup_model_and_cudagraphs(self, config: Config, hf_config: AutoConfig, init_q=None, is_draft=False):
         # cudagraphs 
