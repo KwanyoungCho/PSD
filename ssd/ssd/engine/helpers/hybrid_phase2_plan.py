@@ -168,11 +168,34 @@ class HybridPhase2Plan:
     # Per-step fill — set scalars from incoming valid_k. Tensor contents
     # are written by ``_build_phase2_hybrid_plan`` in draft_runner.
     # ─────────────────────────────────────────────────────────────────────
-    def begin_step(self, valid_k: int) -> None:
-        """Compute per-step row counts and dispatch keys from incoming valid_k."""
+    def begin_step(self, valid_k: int, fan_out_list: list[int] | None = None) -> None:
+        """Compute per-step row counts and dispatch keys.
+
+        Args:
+            valid_k: incoming hit's row depth (K_long or K_short).
+            fan_out_list: per-position proxy fan-outs (length = valid_k + 1)
+                from this step's Policy A/B allocation. If None, falls back
+                to a uniform `mesa_proxy_fan_out` per position (legacy default
+                — preserved for non-Policy paths).
+
+        Invariants (per reviewer guidance):
+          - cont_row_count = (valid_k + 1) × mesa_draft_fan_out  (Phase 1
+            seeds — always uniform fan-out per position)
+          - proxy_row_count = sum(fan_out_list)  (dynamic Policy A/B
+            semantics; equals proxy_fan_out_total = pfo × (valid_k + 1) in
+            steady state but kept dynamic so per-position skew flows
+            through)
+        """
         self.valid_k = valid_k
         self.cont_row_count = (valid_k + 1) * self.mesa_draft_fan_out
-        self.proxy_row_count = (valid_k + 1) * self.mesa_proxy_fan_out
+        if fan_out_list is None:
+            self.proxy_row_count = (valid_k + 1) * self.mesa_proxy_fan_out
+        else:
+            assert len(fan_out_list) == valid_k + 1, (
+                f"fan_out_list length {len(fan_out_list)} != valid_k+1 "
+                f"= {valid_k + 1}"
+            )
+            self.proxy_row_count = int(sum(fan_out_list))
         self.total_row_count = self.cont_row_count + self.proxy_row_count
         self.phase_split_offset = self.cont_row_count
 

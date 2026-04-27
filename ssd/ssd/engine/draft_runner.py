@@ -223,6 +223,32 @@ class DraftRunner(ModelRunner):
                       f'long MQ_LEN={self.proxy_layout_short_long.MQ_LEN} (K2={K2}, pos={K_long + 1}), '
                       f'short MQ_LEN={self.proxy_layout_short_short.MQ_LEN} (K2={K2}, pos={K_short + 1})',
                       flush=True)
+                # Step 2: HybridPhase2Plan single-instance allocation (max-size).
+                # Per Plan §"Single instance with max-size buffers". Tensors
+                # filled per step in _build_phase2_hybrid_plan (Step 3, not yet
+                # implemented). Allocated here so init-time GPU memory accounting
+                # is stable.
+                from ssd.engine.helpers.hybrid_phase2_plan import HybridPhase2Plan
+                # max_pages_per_row: persistent + glue + own Phase 1 KV + own A_tail
+                # ≤ max_blocks (engine-level) + spec scratch headroom. Use config's
+                # max_blocks as upper bound for now; refined in Step 5 (5-region
+                # scratch).
+                _max_pages = self.config.max_blocks
+                # max_packed_mask_size: per-depth packed mask byte count. Upper
+                # bound = max_total_rows × max_seqlen / 8. Refined in Step 4.
+                _max_total = (K_long + 1) * (draft_fo + proxy_fo)
+                _max_mask_size = _max_total * self.config.max_model_len  # uint8 entries
+                self.hybrid_phase2_plan = HybridPhase2Plan.create(
+                    K1=K1, K2=K2,
+                    mesa_draft_fan_out=draft_fo,
+                    mesa_proxy_fan_out=proxy_fo,
+                    max_pages_per_row=_max_pages,
+                    max_packed_mask_size=_max_mask_size,
+                    device=d,
+                )
+                print(f'[MESA hybrid] HybridPhase2Plan allocated: K_long={K_long}, '
+                      f'K_short={K2}, max_total_rows={_max_total}, '
+                      f'max_pages={_max_pages}', flush=True)
             print(f'[MESA] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
                   f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
                   f'proxy MQ_LEN={self.proxy_layout.MQ_LEN}', flush=True)
@@ -1331,6 +1357,30 @@ class DraftRunner(ModelRunner):
         _mev_p2b = _mr("phase2_build")
         mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
         fan_out_list = mesa_proxy["fan_out_list"]  # [K+1] from target
+
+        # Step 2 (HybridPhase2Plan wire-in): begin_step on the per-runner plan
+        # instance. Only scalar fields populated here; per-row × per-depth
+        # tensors filled in Step 3 (_build_phase2_hybrid_plan). The hybrid
+        # forward itself (Step 6) is gated and not yet executed — the split
+        # reference path below is still the default.
+        if self.config.mesa_phase1_k is not None and getattr(self, "hybrid_phase2_plan", None) is not None:
+            # Slice fan_out_list to the meaningful valid_k+1 prefix per the
+            # max-size wire contract. For now valid_k of the *previous* hit
+            # is what determines the next step's MQ_LEN — but the proxy
+            # payload is built using the same logic on the target side, so
+            # fan_out_list already covers (valid_k+1) positions; remainder
+            # zero-padded to K_long+1.
+            # B=1 (Config invariant) so we read the cache_hits_list[0]
+            # behavior: the row that was matched determined valid_k.
+            # In Phase 4 we plumbed _step_lookahead through; here we use
+            # config.speculate_k as upper bound (long bucket only — short
+            # bucket Step 9 will gate by valid_k).
+            _vk_step = self.config.speculate_k  # placeholder until Step 9
+            _fol_meaningful = fan_out_list[:_vk_step + 1]
+            self.hybrid_phase2_plan.begin_step(
+                valid_k=_vk_step, fan_out_list=_fol_meaningful,
+            )
+
         from ssd.engine.helpers.tree_layout import create_tree_layout
         # v1 hybrid path: forward depth = K2 (= K_short). Legacy: K_long.
         # position_count stays K+1 (= K_long+1) for now since hit-bucket
