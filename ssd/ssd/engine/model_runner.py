@@ -301,6 +301,36 @@ class ModelRunner:
                     self.prefill_wrappers_by_layout[layout_name] = layout_wrappers
                 print(f'[MESA] Created FlashInfer wrappers for draft/proxy layouts', flush=True)
 
+                # Step 6: phase2_hybrid_long wrapper — single instance,
+                # max_total_rows = (K_long+1) * (dfo + pfo). Eager-only for
+                # initial parity validation (use_cuda_graph=False).
+                if self.config.mesa_phase1_k is not None:
+                    h_total = (self.config.speculate_k + 1) * (
+                        self.config.mesa_draft_fan_out + self.config.mesa_proxy_fan_out
+                    )
+                    h_cu = torch.empty(h_total + 1, dtype=torch.int32, device=self.device)
+                    h_kv_indptr = torch.empty(h_total + 1, dtype=torch.int32, device=self.device)
+                    h_kv_indices = torch.empty(h_total * max_num_blocks, dtype=torch.int32, device=self.device)
+                    h_kv_lpl = torch.empty(h_total, dtype=torch.int32, device=self.device)
+                    h_mask_size = h_total * self.config.max_model_len
+                    h_mask = torch.empty(h_mask_size, dtype=torch.uint8, device=self.device)
+                    h_mask_indptr = torch.empty(h_total + 1, dtype=torch.int32, device=self.device)
+                    h_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                        self.workspace_buffer, "NHD",
+                        use_cuda_graph=False,
+                        qo_indptr_buf=h_cu,
+                        paged_kv_indptr_buf=h_kv_indptr,
+                        paged_kv_indices_buf=h_kv_indices,
+                        paged_kv_last_page_len_buf=h_kv_lpl,
+                        custom_mask_buf=h_mask,
+                        mask_indptr_buf=h_mask_indptr,
+                    )
+                    # keyed by max_total_rows (acts as 'bs' lookup) — runtime
+                    # dispatcher will pick the wrapper for current total
+                    self.prefill_wrappers_by_layout["phase2_hybrid_long"] = {h_total: h_wrapper}
+                    print(f'[MESA hybrid] phase2_hybrid_long wrapper created '
+                          f'(max_total_rows={h_total}, eager mode)', flush=True)
+
 
     def setup_and_warmup_model_and_cudagraphs(self, config: Config, hf_config: AutoConfig, init_q=None, is_draft=False):
         # cudagraphs 

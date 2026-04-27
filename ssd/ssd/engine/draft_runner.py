@@ -1463,15 +1463,51 @@ class DraftRunner(ModelRunner):
             proxy_tree_args, layout=step_proxy_layout)
 
         # Step 3: build HybridPhase2Plan per-row × per-depth tensors. BUILD-
-        # ONLY, gated by hybrid config; the split reference path consumes
-        # nothing from this plan. Step 6's _decode_phase2_hybrid will read it.
-        if self.config.mesa_phase1_k is not None and getattr(self, "hybrid_phase2_plan", None) is not None:
+        # ONLY when SSD_USE_HYBRID_PHASE2=0 (default); the split reference
+        # path consumes nothing from this plan. When env var = 1, Step 6's
+        # _decode_phase2_hybrid replaces the split continuation+proxy outputs.
+        import os as _os
+        _use_hybrid = (
+            self.config.mesa_phase1_k is not None
+            and getattr(self, "hybrid_phase2_plan", None) is not None
+            and _os.environ.get("SSD_USE_HYBRID_PHASE2", "0") == "1"
+        )
+        _build_plan_only = (
+            self.config.mesa_phase1_k is not None
+            and getattr(self, "hybrid_phase2_plan", None) is not None
+            and not _use_hybrid
+        )
+        if _use_hybrid or _build_plan_only:
             self._build_phase2_hybrid_plan(
                 draft_tree_args=draft_tree_args,
                 proxy_tree_args=proxy_tree_args,
                 step_proxy_layout=step_proxy_layout,
                 fan_out_list=fan_out_list,
             )
+
+        if _use_hybrid:
+            # Replace split continuation tail + proxy outputs with hybrid
+            # forward results. draft_tokens currently holds Phase 1 (K1) +
+            # continuation (K2 from split path) — slice to Phase 1 only and
+            # let hybrid produce the K2 tail.
+            cont_tokens_h, cont_logits_h, proxy_tokens_h, proxy_logits_h = (
+                self._decode_phase2_hybrid(
+                    draft_tree_args=draft_tree_args,
+                    proxy_tree_args=proxy_tree_args,
+                    step_proxy_layout=step_proxy_layout,
+                    draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                )
+            )
+            # Replace draft_tokens K1.. tail with hybrid cont_tokens
+            draft_tokens = torch.cat(
+                [draft_tokens[:, :self.config.mesa_phase1_k], cont_tokens_h], dim=1
+            )
+            draft_logits = torch.cat(
+                [draft_logits[:, :self.config.mesa_phase1_k], cont_logits_h], dim=1
+            )
+            # Replace proxy outputs entirely
+            proxy_tokens = proxy_tokens_h
+            proxy_logits = proxy_logits_h
 
         # === Merge + populate cache (use runtime layout for correct keys) ===
         self._merge_and_populate_cache(
@@ -1792,6 +1828,152 @@ class DraftRunner(ModelRunner):
                 * bytes_per_row
             )
             plan.per_depth_mask_indptr[d, :total + 1] = indptr_d
+
+    @torch.inference_mode()
+    def _decode_phase2_hybrid(self, *, draft_tree_args, proxy_tree_args,
+                                step_proxy_layout, draft_tokens_phase1):
+        """Step 6 — eager hybrid forward. Combines continuation rows + proxy
+        rows in a single flat batch and runs K2 forwards with per-row attention
+        plumbing from HybridPhase2Plan.
+
+        Build-only/gated: entered when ``SSD_USE_HYBRID_PHASE2=1`` env var is
+        set. Default path remains the split reference.
+
+        Long-bucket only at this stage (Step 9 will add short).
+
+        Returns: (cont_tokens [cont_count, K2], cont_logits [cont_count, K2, V],
+                  proxy_tokens [proxy_count, K2], proxy_logits [proxy_count, K2, V])
+                 — same shape as split reference's continuation+proxy outputs
+                 so cache emit can stay unchanged.
+
+        Args:
+            draft_tokens_phase1: Phase 1 forward outputs [cont_count, K1].
+                Last column (depth K1-1) is the input to continuation depth 0.
+        """
+        plan = self.hybrid_phase2_plan
+        K1 = self.config.mesa_phase1_k
+        K2 = self.config.mesa_phase2_k
+        K_long = K1 + K2
+
+        # Long-bucket only assertion (Step 9 lifts this)
+        assert plan.valid_k == K_long, (
+            f"hybrid eager path is long-bucket only at Step 6; got valid_k={plan.valid_k}"
+        )
+
+        cont_count = plan.cont_row_count
+        proxy_count = plan.proxy_row_count
+        total = plan.total_row_count
+        device = self.device
+        V = self.hf_config.vocab_size
+        dt = self.hf_config.torch_dtype
+
+        # Per-row wrapper — phase2_hybrid_long, single instance keyed by
+        # max_total_rows. Look up by exact max key (currently 1 instance).
+        wrapper_dict = self.prefill_wrappers_by_layout["phase2_hybrid_long"]
+        wrapper_total = next(iter(wrapper_dict.keys()))
+        assert total <= wrapper_total, (
+            f"hybrid runtime total={total} > wrapper allocated max={wrapper_total}"
+        )
+        wrapper = wrapper_dict[wrapper_total]
+
+        # Output buffers (eager — no buf reuse for first land; refine later)
+        cont_tokens = torch.empty((cont_count, K2), dtype=torch.int64, device=device)
+        cont_logits = torch.empty((cont_count, K2, V), dtype=dt, device=device)
+        proxy_tokens = torch.empty((proxy_count, K2), dtype=torch.int64, device=device)
+        proxy_logits = torch.empty((proxy_count, K2, V), dtype=dt, device=device)
+
+        # Initial input ids per Step 6 design:
+        # - continuation depth 0 input = Phase 1's K1-th token (= last Phase 1 output)
+        # - proxy depth 0 input = proxy_forked tokens (= proxy_tree_args.input_ids)
+        cur_cont_ids = draft_tokens_phase1[:cont_count, K1 - 1].contiguous()
+        cur_proxy_ids = proxy_tree_args["input_ids"][:proxy_count].contiguous()
+
+        cu_seqlens_q_full = torch.arange(total + 1, device=device, dtype=torch.int32)
+
+        for d in range(K2):
+            # Flat batch: [cont rows | proxy rows]
+            flat_input_ids = torch.cat([cur_cont_ids, cur_proxy_ids], dim=0)  # [total]
+
+            # LOGICAL rope positions (per Step 6 invariant 4: model.run gets
+            # logical rope, NOT physical hybrid coords)
+            cont_rope = plan.cont_initial_rope_positions[:cont_count] + d
+            proxy_rope = plan.proxy_initial_rope_positions[:proxy_count] + d
+            flat_rope = torch.cat([cont_rope, proxy_rope], dim=0).contiguous()  # [total]
+
+            # Per-row attention metadata (PHYSICAL — from HybridPhase2Plan)
+            slot_map_d = plan.per_row_slot_maps_by_depth[:total, d].contiguous()
+            ctx_len_d = plan.per_row_context_lens_by_depth[:total, d].contiguous().to(torch.int32)
+            kv_indptr_d = plan.per_row_kv_indptr_by_depth[:total + 1, d].contiguous()
+            n_idx = int(kv_indptr_d[total].item())
+            kv_indices_d = plan.per_row_kv_indices_by_depth[d, :n_idx].contiguous()
+
+            # kv_last_page_len: per-row, last page valid token count
+            # = ((ctx_len - 1) % block_size) + 1
+            kv_last_page_len = ((ctx_len_d - 1) % self.block_size + 1).to(torch.int32)
+
+            # Per-row block_tables — collapse-identical fill from Step 3
+            # (current 1-page case). Plan field shape preserved per-row.
+            block_tables_d = plan.per_row_block_tables[:total]
+
+            # Custom mask — packed bytes for depth d
+            mask_indptr_d = plan.per_depth_mask_indptr[d, :total + 1].contiguous()
+            n_mask_bytes = int(mask_indptr_d[total].item())
+            packed_mask_d = plan.per_depth_packed_masks[d, :n_mask_bytes].contiguous()
+
+            # Plan the wrapper for depth d
+            wrapper.plan(
+                cu_seqlens_q_full[:total + 1],
+                kv_indptr_d,
+                kv_indices_d,
+                kv_last_page_len,
+                self.hf_config.num_attention_heads,
+                self.hf_config.num_key_value_heads,
+                self.hf_config.head_dim,
+                self.block_size,
+                custom_mask=packed_mask_d,
+                q_data_type=dt,
+                kv_data_type=dt,
+            )
+
+            # set_context with hybrid metadata. active_wrappers signals
+            # attention.py to pick the phase2_hybrid_long wrapper for tree-
+            # decode-style attention. active_mq_len=1 (1 query per row).
+            set_context(
+                is_prefill=False,
+                cu_seqlens_q=cu_seqlens_q_full[:total + 1],
+                cu_seqlens_k=None,
+                max_seqlen_q=1,
+                max_seqlen_k=0,
+                slot_mapping=slot_map_d,
+                context_lens=ctx_len_d,
+                block_tables=block_tables_d,
+                active_mq_len=1,
+                active_wrappers=wrapper_dict,
+                active_layout=None,
+            )
+
+            # Eager forward — bypass run_model's CG dispatch by calling
+            # self.model directly. tree_decode_step is NOT used here since
+            # we're not going through the captured tree CG.
+            outputs = self.model(flat_input_ids, flat_rope)
+            logits_flat = self.model.compute_logits(outputs, last_only=False)
+            reset_context()
+
+            logits_flat = logits_flat.view(-1, V)  # [total, V]
+
+            # Sample greedy (current MESA test config) — temps unused
+            next_tokens = logits_flat.argmax(dim=-1)  # [total]
+
+            # Split cont/proxy
+            cont_logits[:, d, :] = logits_flat[:cont_count]
+            cont_tokens[:, d] = next_tokens[:cont_count]
+            proxy_logits[:, d, :] = logits_flat[cont_count:total]
+            proxy_tokens[:, d] = next_tokens[cont_count:total]
+
+            cur_cont_ids = next_tokens[:cont_count]
+            cur_proxy_ids = next_tokens[cont_count:total]
+
+        return cont_tokens, cont_logits, proxy_tokens, proxy_logits
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
                                     proxy_args, proxy_tokens, proxy_logits,
