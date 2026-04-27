@@ -235,23 +235,28 @@ main 에 머지된 변경: 계획 문서 + 이슈 트래커 (`25e7bf4`). 작업 
 
 ---
 
-## 6. v1 측정 결과 (실측, 이번 세션 최종)
+## 6. 실측 결과 (이번 세션 최종)
 
-`feat/mesa-phase2-hybrid` 위에서 v1 구현 + verify_short root cause
-fix + correctness fix 까지 land. layerskip-llama3-8B + Llama-3.2-1B
-(K=8, K1=K2=4, dfo=2, pfo=2, exit_layer=21, 4 prompts × 32 tok,
-B=1, 3 GPU async, greedy temp=0).
+`feat/mesa-phase2-hybrid` 위에서 plan 의 v1 (a) + Phase 3 K1 split
+까지 land. layerskip-llama3-8B + Llama-3.2-1B (K=8, K1=K2=4, dfo=2,
+pfo=2, exit_layer=21, 4 prompts × 32 tok, B=1, 3 GPU async, greedy
+temp=0).
 
-| 항목 | Baseline (no hybrid) | **v1 (final)** |
-|---|---|---|
-| TPS | 30.11 tok/s | **43.51 tok/s (+44.5%)** |
-| Avg target time | 267 ms | **122 ms (-54%)** |
-| Avg draft time | 159 ms | **87 ms (-45%)** |
-| Decode throughput | 50 tok/s | **67 tok/s (+34%)** |
-| Avg accept rate | 0.80 | 0.63 |
-| Phase 1 hit | 0.60 | 0.52 |
-| Phase 2 hit | 0.00 | 0.09 |
-| Generated text | (4 prompts) | **byte-for-byte 일치** |
+| 항목 | Baseline | v1 (a only) | **Phase 3 K1 split (final)** |
+|---|---|---|---|
+| TPS | 30.11 tok/s | 43.51 tok/s | **44.94 tok/s** |
+| vs baseline | — | +44.5% | **+49.3%** |
+| Avg target time | 267 ms | 122 ms | **84 ms (-69%)** |
+| Avg draft time | 159 ms | 87 ms | **59 ms (-63%)** |
+| Decode throughput | 50 tok/s | 67 tok/s | **68 tok/s** |
+| Cache hit | 0.60 | 0.61 | **0.73** |
+| Phase 1 hit | 0.60 | 0.52 | **0.67** |
+| Phase 2 hit | 0.00 | 0.09 | 0.06 |
+| Accept rate | 0.80 | 0.63 | 0.41 |
+| Generation | — | byte-for-byte 일치 | **byte-for-byte 일치** |
+
+Plan §744 의 conservative estimate **"+35-55% TP"** 안에 정확히 들어옴
+(+49.3% = upper-mid range).
 
 ### 측정 의미
 
