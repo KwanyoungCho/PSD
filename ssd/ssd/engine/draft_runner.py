@@ -1462,12 +1462,179 @@ class DraftRunner(ModelRunner):
         proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
             proxy_tree_args, layout=step_proxy_layout)
 
+        # Step 3: build HybridPhase2Plan per-row × per-depth tensors. BUILD-
+        # ONLY, gated by hybrid config; the split reference path consumes
+        # nothing from this plan. Step 6's _decode_phase2_hybrid will read it.
+        if self.config.mesa_phase1_k is not None and getattr(self, "hybrid_phase2_plan", None) is not None:
+            self._build_phase2_hybrid_plan(
+                draft_tree_args=draft_tree_args,
+                proxy_tree_args=proxy_tree_args,
+                step_proxy_layout=step_proxy_layout,
+                fan_out_list=fan_out_list,
+            )
+
         # === Merge + populate cache (use runtime layout for correct keys) ===
         self._merge_and_populate_cache(
             draft_tree_args, draft_tokens, draft_logits,
             proxy_tree_args, proxy_tokens, proxy_logits,
             cache_hits_list, draft_acts, proxy_acts,
             proxy_layout=step_proxy_layout)  # runtime layout!
+
+    def _build_phase2_hybrid_plan(self, *, draft_tree_args, proxy_tree_args,
+                                    step_proxy_layout, fan_out_list):
+        """Step 3 — fill HybridPhase2Plan per-row × per-depth tensors in-place.
+
+        Build-only. Called gated on ``mesa_phase1_k != None`` after the split
+        reference path completes. Step 6's ``_decode_phase2_hybrid`` consumes
+        these tensors; the split path reads nothing from the plan.
+
+        Per reviewer guidance:
+        - per_row_context_lens_by_depth = physical KV length in the shared
+          5-region layout (uniform across all rows at fixed depth). Per-row
+          semantic visibility differences are handled by the custom mask
+          (Step 4).
+        - per_row_block_tables keeps per-row contract structurally. With
+          current (block_size=256) the 5-region scratch fits in 1-2 pages so
+          the fill is identical across rows; that's a current-config collapse,
+          not a semantic simplification.
+        - depth-major slot placement: cont row i at depth d writes scratch
+          position cont_initial[i] + d * MQ_p1; proxy row j at depth d writes
+          proxy_initial[j] + d * MQ_proxy. step_pos_offsets is NOT shared
+          (different stride per region), so slot_maps_by_depth is computed
+          row-wise directly.
+        - proxy initial positions / rope positions come from the current
+          proxy path's glue-based semantics (matches step_proxy_layout's
+          fan_idx). Cont initial rope position = num_tokens + j_idx_p1[i] +
+          K1 (extending past Phase 1's K1 ancestors).
+        """
+        plan = self.hybrid_phase2_plan
+        K1 = self.config.mesa_phase1_k
+        K2 = self.config.mesa_phase2_k
+        K_long = K1 + K2
+        block_size = self.block_size
+        device = self.device
+
+        cont_count = plan.cont_row_count
+        proxy_count = plan.proxy_row_count
+        total = plan.total_row_count
+
+        MQ_p1 = self.phase1_layout_long.MQ_LEN  # = (K_long+1) × dfo
+        MQ_proxy = proxy_count  # dynamic = sum(fan_out_list) per Policy A/B
+
+        # 1) per_row_region_id (0=cont, 1=proxy)
+        plan.per_row_region_id[:cont_count] = 0
+        plan.per_row_region_id[cont_count:total] = 1
+
+        # 2) per_row_valid_source_kind (cache-emit valid_k per row)
+        plan.per_row_valid_source_kind[:cont_count] = K_long
+        plan.per_row_valid_source_kind[cont_count:total] = K2  # = K_short
+
+        # 3) per_row_block_tables — per-row contract preserved. Current config
+        # collapses to identical fill (5-region fits in seq's first scratch
+        # pages). Per-row hybrid path will use this with mask + context_lens
+        # to express semantic differences.
+        seq_dbt = draft_tree_args["block_tables"]  # [B, num_blocks_seq]
+        seq_bt = seq_dbt[0]  # B=1
+        n_pages_seq = seq_bt.shape[0]
+        n_pages_filled = min(n_pages_seq, plan.max_pages_per_row)
+        # Broadcast seq's block table to every plan row
+        plan.per_row_block_tables[:total, :n_pages_filled] = (
+            seq_bt[:n_pages_filled].view(1, -1).expand(total, n_pages_filled).to(torch.int32)
+        )
+        if n_pages_filled < plan.max_pages_per_row:
+            plan.per_row_block_tables[:total, n_pages_filled:] = -1
+
+        # 4) Reconstruct num_tokens (B=1 invariant) from draft positions.
+        # draft_tree_args["positions"][0] = num_tokens - 1 + (K_long+1) + 0
+        # ⇒ num_tokens = draft_tree_args["positions"][0] - K_long
+        # Use phase1_layout_long.position_count = K_long+1 for the offset.
+        p1_pos0 = int(draft_tree_args["positions"][0].item())
+        num_tokens = p1_pos0 - K_long  # logical seq position of last accepted token + 1 (= num_tokens)
+
+        # 5) cont_initial_positions / rope_positions
+        # Cont row i (= Phase 1 leaf branch i) at depth 0 of continuation
+        # writes scratch position num_tokens + K_long + K1*MQ_p1 + i (start of
+        # A_tail region, depth-major slot 0).
+        # NOTE: this position is logical (seq index) for slot mapping. It is
+        # NOT shifted into the proxy region; that's a Step 6 concern.
+        cont_idx = torch.arange(cont_count, device=device, dtype=torch.int64)
+        plan.cont_initial_positions[:cont_count] = (
+            num_tokens + K_long + K1 * MQ_p1 + cont_idx
+        )
+        # Cont row's rope position at continuation depth 0 = phase 1 last rope + 1
+        # = num_tokens + j_idx_p1[i] + K1 (j_idx_p1 = phase 1 layout's fan_idx).
+        cache_hits = draft_tree_args["cache_hits"]
+        j_idx_p1_full = (
+            self.phase1_layout_long.fan_idx_hit if int(cache_hits[0])
+            else self.phase1_layout_long.fan_idx_miss
+        )
+        plan.cont_initial_rope_positions[:cont_count] = (
+            num_tokens + j_idx_p1_full[:cont_count] + K1
+        )
+
+        # 6) proxy_initial_positions / rope_positions — from current proxy
+        # path's glue-based semantics. fan_idx for proxy comes from
+        # step_proxy_layout (dynamic Policy A/B fan_out_list).
+        # Scratch position for proxy row j at depth 0 = num_tokens + K_long +
+        # K_long*MQ_p1 + j (start of B_proxy region, depth-major slot 0).
+        proxy_idx = torch.arange(proxy_count, device=device, dtype=torch.int64)
+        plan.proxy_initial_positions[:proxy_count] = (
+            num_tokens + K_long + K_long * MQ_p1 + proxy_idx
+        )
+        # Proxy rope = num_tokens + j_idx_proxy[j] (j_idx_proxy from step layout)
+        proxy_j_idx = (
+            step_proxy_layout.fan_idx_hit if int(cache_hits[0])
+            else step_proxy_layout.fan_idx_miss
+        )
+        plan.proxy_initial_rope_positions[:proxy_count] = (
+            num_tokens + proxy_j_idx[:proxy_count]
+        )
+
+        # 7) per_row_slot_maps_by_depth — row-wise direct compute.
+        # Cont row i at depth d: scratch_pos = cont_initial[i] + d * MQ_p1
+        # Proxy row j at depth d: scratch_pos = proxy_initial[j] + d * MQ_proxy
+        for d in range(K2):
+            cont_scratch_pos = plan.cont_initial_positions[:cont_count] + d * MQ_p1
+            cont_block_id = (cont_scratch_pos // block_size).to(torch.int64)
+            cont_offset = (cont_scratch_pos % block_size).to(torch.int32)
+            plan.per_row_slot_maps_by_depth[:cont_count, d] = (
+                seq_bt[cont_block_id].to(torch.int32) * block_size + cont_offset
+            )
+
+            proxy_scratch_pos = plan.proxy_initial_positions[:proxy_count] + d * MQ_proxy
+            proxy_block_id = (proxy_scratch_pos // block_size).to(torch.int64)
+            proxy_offset = (proxy_scratch_pos % block_size).to(torch.int32)
+            plan.per_row_slot_maps_by_depth[cont_count:total, d] = (
+                seq_bt[proxy_block_id].to(torch.int32) * block_size + proxy_offset
+            )
+
+        # 8) per_row_context_lens_by_depth — physical KV length in shared
+        # layout (uniform per-row; semantic visibility via mask).
+        # At hybrid depth d (about to compute query, depths 0..d already
+        # written when query attends — flash_attn writes K/V then attends):
+        #   physical_end = num_tokens + (K_long+1) + K_long*MQ_p1 + (d+1)*MQ_proxy
+        # (B_proxy region grows last; its end after depth d's write is the
+        # highest occupied slot.)
+        for d in range(K2):
+            ctx_len_d = num_tokens + (K_long + 1) + K_long * MQ_p1 + (d + 1) * MQ_proxy
+            plan.per_row_context_lens_by_depth[:total, d] = ctx_len_d
+
+        # 9) per_row_kv_indptr / kv_indices — shared page list across rows
+        # (current 1-page collapse). Per-row contract preserved.
+        max_physical = num_tokens + (K_long + 1) + K_long * MQ_p1 + K2 * MQ_proxy
+        pages_needed = (max_physical + block_size - 1) // block_size
+        pages_needed = int(min(pages_needed, n_pages_filled))
+        indptr_d = torch.arange(total + 1, device=device, dtype=torch.int32) * pages_needed
+        indices_d = seq_bt[:pages_needed].to(torch.int32).repeat(total)
+        for d in range(K2):
+            plan.per_row_kv_indptr_by_depth[:total + 1, d] = indptr_d
+            n_idx = total * pages_needed
+            plan.per_row_kv_indices_by_depth[d, :n_idx] = indices_d
+
+        # step_pos_offsets / step_rope_offsets remain as set by create() —
+        # depth d → arange(K2)[d]. These are not used directly for slot
+        # mapping (different stride for cont vs proxy); per_row_slot_maps_by_depth
+        # is the source of truth for write slots in Step 6.
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
                                     proxy_args, proxy_tokens, proxy_logits,
