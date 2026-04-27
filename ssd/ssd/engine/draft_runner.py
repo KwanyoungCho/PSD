@@ -1290,6 +1290,38 @@ class DraftRunner(ModelRunner):
         draft_tokens, draft_logits, draft_acts = self._decode_tree(
             draft_tree_args, layout=_phase1_layout)
 
+        # === Pass 1.5: Phase 2 continuation — reference correctness path ===
+        # Plan invariant: draft-sourced row final suffix length = K_long.
+        # Phase 1 produced K1 tokens; continuation extends each branch K2 more
+        # depths so the cached draft row has K_long = K1 + K2 tokens.
+        #
+        # This is the reference *split* path (continuation pass run separately
+        # from proxy). It is correct but slower than the planned single
+        # batched hybrid forward (cont + proxy in one batch). Plan §"Why the
+        # loop is hybrid" — sequential split pays graph launch / wrapper plan
+        # / mask precompute twice. Once HybridPhase2Plan + custom mask land,
+        # the batched path replaces this and the equivalence test compares
+        # against this split reference.
+        if self.config.mesa_phase1_k is not None and self.phase1_layout_long is not None:
+            import dataclasses as _dc
+            K1_cfg = self.config.mesa_phase1_k
+            K2_cfg = self.config.mesa_phase2_k
+            MQ_p1 = _phase1_layout.MQ_LEN
+            cont_layout = _dc.replace(
+                _phase1_layout,
+                K=K2_cfg,
+                step_pos_offsets=torch.arange(K1_cfg, K1_cfg + K2_cfg, device=self.device, dtype=torch.int64)[:, None] * MQ_p1,
+                step_rope_offsets=torch.arange(K1_cfg, K1_cfg + K2_cfg, device=self.device, dtype=torch.int64)[:, None],
+            )
+            cont_input_ids = draft_tokens[:, K1_cfg - 1].contiguous()
+            cont_tree_args = dict(draft_tree_args)
+            cont_tree_args["input_ids"] = cont_input_ids
+            cont_tokens, cont_logits, cont_acts = self._decode_tree(cont_tree_args, layout=cont_layout)
+            draft_tokens = torch.cat([draft_tokens, cont_tokens], dim=1)
+            draft_logits = torch.cat([draft_logits, cont_logits], dim=1)
+            if draft_acts is not None and cont_acts is not None:
+                draft_acts = torch.cat([draft_acts, cont_acts], dim=1)
+
         # === Pass 중간: proxy 수신 ===
         _mev_pw = _mr("proxy_wait")
         proxy_recv_work.wait()
