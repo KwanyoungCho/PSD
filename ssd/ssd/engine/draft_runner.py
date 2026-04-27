@@ -1551,18 +1551,21 @@ class DraftRunner(ModelRunner):
         p1_pos0 = int(draft_tree_args["positions"][0].item())
         num_tokens = p1_pos0 - K_long  # logical seq position of last accepted token + 1 (= num_tokens)
 
-        # 5) cont_initial_positions / rope_positions
-        # Cont row i (= Phase 1 leaf branch i) at depth 0 of continuation
-        # writes scratch position num_tokens + K_long + K1*MQ_p1 + i (start of
-        # A_tail region, depth-major slot 0).
-        # NOTE: this position is logical (seq index) for slot mapping. It is
-        # NOT shifted into the proxy region; that's a Step 6 concern.
+        # 5) cont_initial_positions / cont_initial_rope_positions
+        # cont_initial_positions[i] is a HYBRID PHYSICAL DECODE COORDINATE in
+        # the seq's expanding token space. It already encodes the A_tail
+        # region's base offset (num_tokens + K_long + K1*MQ_p1) plus the
+        # depth-major slot index i. It is NOT a logical branch position —
+        # rope_positions carries the logical branch position separately.
+        # Step 6's hybrid forward consumes this as the slot-mapping input
+        # for cont row i at continuation depth 0; depth d adds d * MQ_p1.
         cont_idx = torch.arange(cont_count, device=device, dtype=torch.int64)
         plan.cont_initial_positions[:cont_count] = (
             num_tokens + K_long + K1 * MQ_p1 + cont_idx
         )
-        # Cont row's rope position at continuation depth 0 = phase 1 last rope + 1
-        # = num_tokens + j_idx_p1[i] + K1 (j_idx_p1 = phase 1 layout's fan_idx).
+        # cont_initial_rope_positions[i] is the LOGICAL branch position for
+        # RoPE: num_tokens + j_idx_p1[i] + K1 (= the next position after the
+        # K1 Phase 1 ancestors of branch i with fork position j_idx_p1[i]).
         cache_hits = draft_tree_args["cache_hits"]
         j_idx_p1_full = (
             self.phase1_layout_long.fan_idx_hit if int(cache_hits[0])
@@ -1572,16 +1575,19 @@ class DraftRunner(ModelRunner):
             num_tokens + j_idx_p1_full[:cont_count] + K1
         )
 
-        # 6) proxy_initial_positions / rope_positions — from current proxy
-        # path's glue-based semantics. fan_idx for proxy comes from
-        # step_proxy_layout (dynamic Policy A/B fan_out_list).
-        # Scratch position for proxy row j at depth 0 = num_tokens + K_long +
-        # K_long*MQ_p1 + j (start of B_proxy region, depth-major slot 0).
+        # 6) proxy_initial_positions / proxy_initial_rope_positions
+        # proxy_initial_positions[j] is a HYBRID PHYSICAL DECODE COORDINATE.
+        # It already encodes the B_proxy region's base offset (num_tokens +
+        # K_long + K_long*MQ_p1) plus the depth-major slot index j. NOT a
+        # logical branch position — rope_positions carries that separately.
+        # Step 6 adds d * MQ_proxy at depth d for slot-mapping.
         proxy_idx = torch.arange(proxy_count, device=device, dtype=torch.int64)
         plan.proxy_initial_positions[:proxy_count] = (
             num_tokens + K_long + K_long * MQ_p1 + proxy_idx
         )
-        # Proxy rope = num_tokens + j_idx_proxy[j] (j_idx_proxy from step layout)
+        # proxy_initial_rope_positions[j] is the LOGICAL branch position for
+        # RoPE: num_tokens + j_idx_proxy[j] (j_idx_proxy from step_proxy_layout's
+        # dynamic fan_idx — Policy A/B preserved).
         proxy_j_idx = (
             step_proxy_layout.fan_idx_hit if int(cache_hits[0])
             else step_proxy_layout.fan_idx_miss
@@ -1635,6 +1641,157 @@ class DraftRunner(ModelRunner):
         # depth d → arange(K2)[d]. These are not used directly for slot
         # mapping (different stride for cont vs proxy); per_row_slot_maps_by_depth
         # is the source of truth for write slots in Step 6.
+
+        # Step 4: build per-depth packed mask consuming the metadata above.
+        self._build_hybrid_packed_mask_inplace(
+            num_tokens=num_tokens,
+            K1=K1, K2=K2, K_long=K_long,
+            MQ_p1=MQ_p1, MQ_proxy=MQ_proxy,
+            cont_count=cont_count, proxy_count=proxy_count, total=total,
+            j_idx_p1=j_idx_p1_full[:cont_count],
+            j_idx_proxy=proxy_j_idx[:proxy_count],
+        )
+
+    def _build_hybrid_packed_mask_inplace(self, *, num_tokens, K1, K2, K_long,
+                                            MQ_p1, MQ_proxy, cont_count,
+                                            proxy_count, total,
+                                            j_idx_p1, j_idx_proxy):
+        """Step 4 — fill HybridPhase2Plan.per_depth_packed_masks +
+        per_depth_mask_indptr in-place, with per-row j_idx-aware visibility.
+
+        Build-only. Not yet consumed by any runtime path. Step 6's hybrid
+        forward will pass these to FlashInfer's prefill wrapper.
+
+        Per-row visibility (per reviewer):
+        - continuation row i at depth d:
+            * persistent (kv_pos < num_tokens) visible
+            * glue prefix [num_tokens, num_tokens + j_idx_p1[i] + 1) visible
+              (lower-triangular: glue position p visible iff p ≤ j_idx_p1[i])
+            * own Phase 1 KV K1 ancestors visible (depth-major slots
+              phase1_kv_base + d_p1*MQ_p1 + i for d_p1 in [0,K1))
+            * own A_tail prefix visible (slots a_tail_base + (K1+d_at)*MQ_p1
+              + i for d_at in [0, d+1) — including current depth's write,
+              causal self)
+            * everything else hidden (other rows' Phase 1 KV / A_tail / all
+              B_proxy / other glue tail / other rows' glue tail)
+        - proxy row j at depth d:
+            * persistent visible
+            * glue prefix [num_tokens, num_tokens + j_idx_proxy[j] + 1) visible
+            * own B_proxy prefix visible (slots b_proxy_base + d_b*MQ_proxy
+              + j for d_b in [0, d+1))
+            * everything else hidden (all Phase 1 KV, all A_tail, other
+              proxy rows' B_proxy, other rows' glue tail)
+
+        FlashInfer packed_mask convention: bits LSB-first within each byte;
+        per-query mask length is padded to multiple of 8 bits, then packed.
+        per_depth_mask_indptr[d, i] = byte offset of row i's mask within
+        per_depth_packed_masks[d].
+        """
+        plan = self.hybrid_phase2_plan
+        device = self.device
+
+        glue_base = num_tokens
+        phase1_kv_base = num_tokens + (K_long + 1)
+        a_tail_base = phase1_kv_base + K1 * MQ_p1
+        b_proxy_base = a_tail_base + K2 * MQ_p1  # = phase1_kv_base + K_long*MQ_p1
+
+        cont_idx_t = torch.arange(cont_count, device=device, dtype=torch.int64)
+        proxy_idx_t = torch.arange(proxy_count, device=device, dtype=torch.int64)
+        bit_weights = (1 << torch.arange(8, dtype=torch.uint8, device=device))  # [8]
+
+        for d in range(K2):
+            # Physical KV upper bound at depth d (after current depth's write
+            # — flash_attn writes K/V then attends; matches Step 3
+            # context_lens formula).
+            L = num_tokens + (K_long + 1) + K_long * MQ_p1 + (d + 1) * MQ_proxy
+
+            kv_pos = torch.arange(L, device=device, dtype=torch.int64)  # [L]
+            kv_pos_2d = kv_pos.view(1, L)
+
+            # persistent visible: kv_pos < num_tokens
+            persistent_vis = kv_pos_2d < num_tokens  # [1, L]
+
+            # ---- continuation rows ----
+            # glue prefix lower-triangular: kv_pos in [glue_base, glue_base + j_idx + 1)
+            cont_glue_vis = (
+                (kv_pos_2d >= glue_base) &
+                (kv_pos_2d <= (glue_base + j_idx_p1.view(cont_count, 1)))
+            )  # [cont_count, L]
+
+            # own Phase 1 KV: kv_pos in Phase 1 region AND
+            # (kv_pos - phase1_kv_base) % MQ_p1 == cont_idx
+            p1_off = kv_pos_2d - phase1_kv_base  # may be negative
+            in_p1_region = (kv_pos_2d >= phase1_kv_base) & (kv_pos_2d < a_tail_base)
+            own_p1_branch = (p1_off % MQ_p1) == cont_idx_t.view(cont_count, 1)
+            cont_p1_vis = in_p1_region & own_p1_branch  # [cont_count, L]
+
+            # own A_tail prefix [0..d] (current depth INCLUSIVE for causal):
+            # kv_pos in A_tail region AND
+            # (kv_pos - a_tail_base) % MQ_p1 == cont_idx AND
+            # depth within A_tail = (kv_pos - a_tail_base) // MQ_p1 in [0, d+1)
+            at_off = kv_pos_2d - a_tail_base
+            in_at_region = (kv_pos_2d >= a_tail_base) & (kv_pos_2d < b_proxy_base)
+            own_at_branch = (at_off % MQ_p1) == cont_idx_t.view(cont_count, 1)
+            at_depth = at_off // MQ_p1  # broadcast — same across rows for given kv_pos
+            at_depth_ok = at_depth <= d
+            cont_at_vis = in_at_region & own_at_branch & at_depth_ok  # [cont_count, L]
+
+            cont_mask = (
+                persistent_vis.expand(cont_count, L)
+                | cont_glue_vis
+                | cont_p1_vis
+                | cont_at_vis
+            )  # [cont_count, L]
+
+            # ---- proxy rows ----
+            proxy_glue_vis = (
+                (kv_pos_2d >= glue_base) &
+                (kv_pos_2d <= (glue_base + j_idx_proxy.view(proxy_count, 1)))
+            )  # [proxy_count, L]
+
+            # own B_proxy prefix [0..d]:
+            # kv_pos in B_proxy region AND
+            # (kv_pos - b_proxy_base) % MQ_proxy == proxy_idx AND
+            # depth within B_proxy = (kv_pos - b_proxy_base) // MQ_proxy in [0, d+1)
+            bp_off = kv_pos_2d - b_proxy_base
+            in_bp_region = (kv_pos_2d >= b_proxy_base) & (kv_pos_2d < (b_proxy_base + K2 * MQ_proxy))
+            own_bp_branch = (bp_off % MQ_proxy) == proxy_idx_t.view(proxy_count, 1)
+            bp_depth = bp_off // MQ_proxy
+            bp_depth_ok = bp_depth <= d
+            proxy_b_vis = in_bp_region & own_bp_branch & bp_depth_ok  # [proxy_count, L]
+
+            proxy_mask = (
+                persistent_vis.expand(proxy_count, L)
+                | proxy_glue_vis
+                | proxy_b_vis
+            )  # [proxy_count, L]
+
+            # ---- pack ----
+            full_mask = torch.cat([cont_mask, proxy_mask], dim=0)  # [total, L]
+            L_padded = ((L + 7) // 8) * 8
+            if L < L_padded:
+                pad = torch.zeros(total, L_padded - L, dtype=torch.bool, device=device)
+                full_mask = torch.cat([full_mask, pad], dim=1)
+            # Reshape [total, L_padded/8, 8], multiply by bit weights, sum →
+            # [total, L_padded/8] uint8
+            packed = full_mask.to(torch.uint8).view(total, L_padded // 8, 8)
+            packed_bytes = (packed * bit_weights.view(1, 1, 8)).sum(dim=2).to(torch.uint8)
+
+            # Flatten and write to plan tensor (depth-major)
+            flat = packed_bytes.reshape(-1)
+            n_bytes = int(flat.numel())
+            assert n_bytes <= plan.per_depth_packed_masks.shape[1], (
+                f"packed mask depth {d} needs {n_bytes} bytes but plan has "
+                f"{plan.per_depth_packed_masks.shape[1]} per-depth slots"
+            )
+            plan.per_depth_packed_masks[d, :n_bytes] = flat
+
+            bytes_per_row = L_padded // 8
+            indptr_d = (
+                torch.arange(total + 1, device=device, dtype=torch.int32)
+                * bytes_per_row
+            )
+            plan.per_depth_mask_indptr[d, :total + 1] = indptr_d
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
                                     proxy_args, proxy_tokens, proxy_logits,
