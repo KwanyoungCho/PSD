@@ -368,6 +368,20 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
 
     packed_mask = cache["cpu_packed_masks"][step]
     packed_indptr = cache["cpu_packed_indptrs"][step]
+
+    # Phase C-2: optional perturbation of packed_mask buffer at runtime to
+    # test if captured CG kernel actually reads it. Gated by env var:
+    #   SSD_CG_MASK_PERTURB=ones      → all 0xFF (= every bit visible)
+    #   SSD_CG_MASK_PERTURB=zeros     → all 0x00 (= no bit visible)
+    # If output is INSENSITIVE to perturbation, captured kernel doesn't read
+    # this buffer (or reads from a different place); strong evidence that the
+    # captured CG has attention metadata baked in at capture time.
+    _perturb = os.environ.get("SSD_CG_MASK_PERTURB", "")
+    if _perturb == "ones":
+        packed_mask = torch.full_like(packed_mask, 0xFF)
+    elif _perturb == "zeros":
+        packed_mask = torch.zeros_like(packed_mask)
+
     wrapper._custom_mask_buf[:len(packed_mask)].copy_(packed_mask, non_blocking=True)
     wrapper._mask_indptr_buf.copy_(packed_indptr, non_blocking=True)
 
