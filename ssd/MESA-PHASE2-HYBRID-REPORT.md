@@ -235,13 +235,66 @@ main 에 머지된 변경: 계획 문서 + 이슈 트래커 (`25e7bf4`). 작업 
 
 ---
 
-## 6. 한 줄 요약
+## 6. v1 측정 결과 (이번 세션, 실측)
 
-최종 목표 = plan 의 full hybrid. 단계적으로:
+`feat/mesa-phase2-hybrid` 브랜치 위에서 실제로 v1 구현 + smoke test
+완료. layerskip-llama3-8B + Llama-3.2-1B (K=8, K1=K2=4, dfo=2, pfo=2,
+exit_layer=21, 4 prompts × 32 tok, B=1, 3 GPU async).
 
-- **v1 (현 세션 진행 중)**: proxy K2 + verify 분기. 이득 (a) 캡처.
-- **P1 split + hybrid (그 다음)**: Phase 1 K1-deep + continuation +
-  single batched forward. 이득 (b) 추가.
+| 항목 | Baseline (no hybrid) | v1 (default) | v1 + verify_short (현 buggy) |
+|---|---|---|---|
+| TPS | 29.95 tok/s | **35.21 tok/s (+17.6%)** | hangs on multi-prompt |
+| Avg target time | 267 ms | 151 ms (-43%) | — |
+| Avg draft time | 159 ms | 120 ms (-25%) | — |
+| Avg accept rate | 0.80 | 0.63 | — |
+| Phase 1 hit | 0.60 | 0.52 | — |
+| Phase 2 hit | 0.00 | 0.09 | — |
 
-각 단계가 measurable 한 perf 차이를 줘서, 어디까지 가는 게 의미 있는지
-data 로 결정 가능.
+### 측정에서 확인된 것
+
+- **이득 (a) 작동**: Phase 2 proxy 가 K2=4 forwards 만 실행 → draft time
+  -25%. 그 결과로 target idle 도 줄어 target time -43%.
+- **TPS 순증 +17.6%**: 작은 모델 + 짧은 generation 이지만 명확한 win.
+- **Trade-off**: accept rate 0.80 → 0.63. Phase 2 cached row 가 K2=4
+  토큰 + K_long-K2=4 zero padding 을 가지는데, 현 v1 은 verify 가 항상
+  K_long+1 길이로 돌므로 padding 위치에서 1차 reject 발생 → Phase 2 hit
+  의 max accept = K2 = 4 (Phase 1 hit 의 K_long=8 vs).
+- **Phase 2 hit rate 9%** (single-prompt 0% 대비 향상): multi-prompt 가
+  cache 다양성 만들어 가끔씩 Phase 2 row 가 매칭됨.
+
+### 미해결: verify_short bucket replay
+
+`SSD_USE_VERIFY_SHORT=1` flag 를 켜면 verify 분기가 작동. single-prompt
+는 문제없이 동작하지만 multi-prompt 의 seq 2 first decode 에서 hang 발생
+(target run 내부 verify_short replay 진입 후 미반응).
+
+근본 원인은 미확정 — FlashInfer wrapper / KV slot mapping 의 shape
+coupling 가 의심됨. 한 GPU debug session 으로 fix 가능할 것으로 보이나
+이번 세션에선 시간상 deferred. 현재는 default 가 verify_long-only 라
+**multi-prompt 안정 동작 + 17.6% TPS win** 이 깨끗하게 떨어짐.
+
+### 이득 (b) 의 추가 잠재력
+
+v1 = 이득 (a) 만. verify_short 가 fix 되면:
+- Target verify 가 proxy hit 시 K_short+1 = 5 positions 만 forward → target time
+  추가 단축
+- 더 중요한 건: padding 위치 reject 가 사라지므로 **accept rate 가
+  baseline 0.80 수준으로 회복** → 추가 TPS win
+
+추정: full v1 (verify_short 정상 작동) 는 +25~30% TPS, full hybrid (P1
+split + 통합 batch) 는 +30~40% TPS 기대. 측정 필요.
+
+## 7. 다음 단계
+
+1. **verify_short bucket replay debug** (~1 GPU debug session)
+   - SSD_USE_VERIFY_SHORT=1 로 단일 prompt 만 돌려서 정상 동작 확인 후
+   - Multi-prompt seq 2 first decode 에서 어떤 NCCL / replay step 이
+     hang 하는지 instrument
+   - Likely fix: prepare_decode 의 short-shape 빌드 / FlashInfer wrapper
+     bind 잔여 이슈
+2. **Sweep on layerskip-llama3-8B + 70B AWQ stack** — v1 default 로
+   3 exit-layer × pfo {2,3,4,6} × K2 {2,3,4,6} grid (= 48 configs).
+   기존 `experiments/sweep_70b_awq/orchestrate.py` 변형. ~3-4 시간 GPU.
+3. **P1 split + hybrid forward** (full plan): v1 stable 후 incremental.
+   Phase 1 K1 split → continuation pass → single batched forward.
+   이득 (b) 추가 캡처.
