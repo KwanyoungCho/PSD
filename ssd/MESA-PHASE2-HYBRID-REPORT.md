@@ -237,26 +237,33 @@ main 에 머지된 변경: 계획 문서 + 이슈 트래커 (`25e7bf4`). 작업 
 
 ## 6. 실측 결과 (이번 세션 최종)
 
-`feat/mesa-phase2-hybrid` 위에서 plan 의 v1 (a) + Phase 3 K1 split
-까지 land. layerskip-llama3-8B + Llama-3.2-1B (K=8, K1=K2=4, dfo=2,
-pfo=2, exit_layer=21, 4 prompts × 32 tok, B=1, 3 GPU async, greedy
-temp=0).
+Reviewer 지적 반영 후 plan-correct 상태:
 
-| 항목 | Baseline | v1 (a only) | **Phase 3 K1 split (final)** |
-|---|---|---|---|
-| TPS | 30.11 tok/s | 43.51 tok/s | **44.94 tok/s** |
-| vs baseline | — | +44.5% | **+49.3%** |
-| Avg target time | 267 ms | 122 ms | **84 ms (-69%)** |
-| Avg draft time | 159 ms | 87 ms | **59 ms (-63%)** |
-| Decode throughput | 50 tok/s | 67 tok/s | **68 tok/s** |
-| Cache hit | 0.60 | 0.61 | **0.73** |
-| Phase 1 hit | 0.60 | 0.52 | **0.67** |
-| Phase 2 hit | 0.00 | 0.09 | 0.06 |
-| Accept rate | 0.80 | 0.63 | 0.41 |
-| Generation | — | byte-for-byte 일치 | **byte-for-byte 일치** |
+| 항목 | Baseline | v1 (a only) | K1 split only* | **Phase 3 split reference (final)** |
+|---|---|---|---|---|
+| TPS | 30.11 tok/s | 43.51 tok/s | 44.94 tok/s | 39.73 tok/s |
+| vs baseline | — | +44.5% | +49.3% | +32% |
+| Plan invariant | — | ✅ | ❌ draft=K1 | **✅ draft=K_long** |
+| K1 != K2 일반화 | — | ✅ | ❌ | **✅** |
+| Generation | — | match | match | **match** |
 
-Plan §744 의 conservative estimate **"+35-55% TP"** 안에 정확히 들어옴
-(+49.3% = upper-mid range).
+`*` K1 split only (continuation 제거) 는 plan invariant 위반 (draft row
+는 K_long 이어야 함). +49.3% 는 K1=K2=4 특수 케이스에서만 동작 — K1!=K2
+이면 verify dispatch 의 `assert valid_k in (K_long, K_short)` 가 실패.
+
+### 현재 final state = Phase 3 split reference
+
+- **Plan-correct semantics**: draft row 는 Phase 1 (K1 forwards) + 
+  continuation pass (K2 forwards) → 최종 K_long 길이 suffix
+- **General K1 != K2 지원**
+- **하지만 sequential split** 이라 plan 의 "single batched hybrid
+  forward" 보다 느림. Plan §"Why the loop is hybrid" 가 명시한 대로
+  sequential 은 graph launch / wrapper plan / mask 작업 두 번 지불
+- **이 path 가 reference baseline** — 다음 세션의 batched hybrid 가
+  이것과 token-by-token 일치하는지 검증 (hybrid-vs-split equivalence)
+
+v1 (a only) 의 +44.5% 는 plan §744 estimate 범위 안. 현 split reference
+의 +32% 는 더 낮지만 plan-correct.
 
 ### 측정 의미
 
@@ -312,52 +319,61 @@ v1 = 이득 (a) 만. verify_short 가 fix 되면:
 추정: full v1 (verify_short 정상 작동) 는 +25~30% TPS, full hybrid (P1
 split + 통합 batch) 는 +30~40% TPS 기대. 측정 필요.
 
-## 7. 잔여 작업 — Phase 3 ingredient (b)
+## 7. 잔여 작업 — batched hybrid forward + sweep
 
-이번 세션 land 된 것 = ingredient (a) (proxy K2 forwards + verify_short
-dispatch). Plan 의 hybrid forward 의 진짜 핵심인 **single batched
-forward (continuation + proxy 한 batch)** 가 남음.
+Reviewer 지적: K1 split-only 는 final path 아니고 실험 결과. 현 split
+reference 도 plan 의 batched hybrid 가 아닌 sequential 구현. 진짜
+plan 완료 = batched hybrid forward.
 
-### Plan §Performance Estimate 의 분해
+### 다음 세션 순서 (reviewer 지정)
 
-Plan 의 +35–55% expected TP 는 다음 두 ingredient 의 합:
+1. ✅ **Reference correctness path** (continuation 재추가) — 이번 세션 완료
+2. **`_build_phase2_hybrid_plan`**: `HybridPhase2Plan` 의 per-row × per-depth
+   buffer 채우기 (block_tables, slot_maps, kv_indptr/indices, context_lens).
+   Plan §388–415 spec.
+3. **`build_hybrid_packed_mask(plan)`**: continuation row 의 prefix
+   (persistent + glue + own Phase 1 KV + own A_tail) 와 proxy row 의 prefix
+   (persistent + glue + own B_proxy) 를 per-depth packed mask 로. Plan §388.
+4. **5-region scratch slot allocation**: `compute_megaspec_lookahead` 와
+   block_manager 예약 재계산. Phase 1 KV / A_tail / B_proxy 가 disjoint
+   slot pool. Plan §224–262.
+5. **`_decode_phase2_hybrid`**: depth loop 가 HybridPhase2Plan 의
+   precomputed 텐서를 읽어 매 depth 의 set_context + model.run 호출. CG
+   capture: phase2_hybrid_long, phase2_hybrid_short.
+6. **Hybrid vs split equivalence test**: hybrid path 결과를 split
+   reference 와 token-by-token 비교. Plan §835–845 (Testing Plan > Draft
+   correctness).
+7. **Cleanup**: hybrid 가 default, split path 는 debug-only.
 
-| Ingredient | Source | 현재 land 됨 | TPS 기여 |
-|---|---|---|---|
-| **(a)** | Phase 2 proxy K_long → K_short forwards | ✅ +44.5% 측정 |
-| **(b)** | Phase 1 K1 split + continuation, single hybrid batched forward | ❌ 미구현 | +5–10% 추가 기대 (plan §744) |
+예상 LOC: ~600–800. 예상 GPU iterative debug cycles: 20–30. 1–2 focused
+session.
 
-(a) 만으로 plan 의 conservative 범위 mid-point 도달. (b) 가 추가되면
-upper-end (+50–55%) 가능.
+### Sweep — Phase 3 batched 완료 후만
 
-### Phase 3 ingredient (b) 구현 시 작업 항목
+Reviewer 명시: **현 상태에서 sweep 금지**. 이유:
+- K1 != K2 일반화는 split reference path 만 지원 (verify dispatch 가
+  K_long/K_short 둘만 가정)
+- short-base draft compute 부분 구현 (Phase 1 short bucket dispatch
+  미완)
+- HybridPhase2Plan runtime 미연결 → 진짜 plan optimum 미반영
 
-| Plan 항목 | 작업 | 위험도 |
-|---|---|---|
-| Phase 1 forward depth K1 (not K_long) | `_build_tree_batch_mesa` 가 `phase1_layout_long` (K=K1, position_count=K_long+1) 사용 | 낮음 (layout 이미 생성됨) |
-| Phase 2 continuation pass | Phase 1 leaf 의 K1-th 토큰을 input 으로 K2 더 forward; phase 1 KV 를 own slice 로 attend | 중 (KV scratch 분할) |
-| **Single hybrid batched forward** | continuation rows + proxy rows 를 한 batch 로 합쳐 K2 forwards | **높음 (silent-correctness 트랩)** |
-| 5-region scratch | persistent / glue / Phase 1 KV / A_tail / B_proxy 분리 slot pool | 중 |
-| **`build_hybrid_packed_mask`** | continuation row 와 proxy row 의 다른 prefix shape 처리하는 per-row mask | **매우 높음 (FlashInfer + per-row attention)** |
-| `phase2_hybrid_long/short` CG capture | 새 batch shape, 새 mask buf | 중 |
+batched hybrid 완료 후 sweep:
+- 3 exit-layer × dfo {2,3,4,6} × K1 {2,3,4,6} × pfo {2,3,4,6} × K2
+  {2,3,4,6} 의 작은 grid (먼저 (dfo, K1) ≈ best, 다음 (pfo, K2) ≈ best
+  로 분리)
+- 70B AWQ + TinyLlama AWQ stack ~3-4 시간 GPU
+- 최종 best (dfo, K1, pfo, K2) 결정 → plan upper-end (+50-55%) 확인
 
-Plan §Risk #1, #2, #3 가 모두 이 단계에 집중. 특히 per-row mask 의
-correctness 는 **GPU iterative debug 5-10 사이클 필요한 클래스**.
+### 미구현 = plan 의 ~30%
 
-예상 LOC: ~600–800. 예상 cycles: 20–30 GPU debug. 1–2 focused session.
-
-### Sweep — v1 위에서 즉시 가능
-
-v1 ingredient (a) 만으로도 sweep 가능 (이미 동작 + 측정됨):
-
-- 3 exit-layer × pfo {2,3,4,6} × K2 {2,3,4,6} = **48 configs**
-- 70B AWQ + TinyLlama AWQ stack 에서 ~3–4 시간 GPU
-- 기존 `experiments/sweep_70b_awq/orchestrate.py` 변형 (config dict 에
-  `mesa_phase1_k`, `mesa_phase2_k` 추가)
-- best (pfo, K2) 고정
-
-Phase 3 ingredient (b) 완료 후 추가 sweep:
-
-- 위 best (pfo, K2) 고정 + dfo {2,3,4,6} × K1 {2,3,4,6} = 16 configs × 3
-  exit-layer = 48 configs, ~3–4 시간 GPU
-- 최종 (dfo, K1, pfo, K2) 결정
+| 항목 | 상태 |
+|---|---|
+| HybridPhase2Plan runtime fill | ❌ |
+| `build_hybrid_packed_mask` | ❌ |
+| 5-region scratch | ❌ |
+| `_decode_phase2_hybrid` | ❌ |
+| phase2_hybrid_long/short CG | ❌ |
+| Hybrid-vs-split equivalence test | ❌ |
+| glue_long / glue_short bucket dispatch | ❌ (plan §317 의 8-bucket 중 missing) |
+| phase1 short-bucket runtime dispatch | ❌ |
+| JIT speculate K_short | ❌ |
