@@ -1508,6 +1508,49 @@ class DraftRunner(ModelRunner):
                 mirror_meta=mirror_meta,
             )
 
+        # Phase C-1: fresh eager-only proxy wrapper experiment. Both bool and
+        # packed paths run on a wrapper that has NEVER been used by CG capture
+        # (proxy_eager_debug, use_cuda_graph=False). Tests if wrapper-state
+        # pollution from CG-shared "proxy" wrapper was contaminating Phase B-2.
+        _fresh_check = (
+            self.config.mesa_phase1_k is not None
+            and _os.environ.get("SSD_FRESH_EAGER_PROXY", "0") == "1"
+        )
+        if _fresh_check:
+            # Bool path on fresh wrapper
+            fresh_bool_tokens, fresh_bool_logits, _ = self._split_eager_mirror_proxy(
+                proxy_tree_args=proxy_tree_args,
+                step_proxy_layout=step_proxy_layout,
+                wrapper_key="proxy_eager_debug",
+            )
+            # Packed path on fresh wrapper
+            fresh_pkg_tokens, fresh_pkg_logits, _ = self._split_low_level_mirror_proxy(
+                proxy_tree_args=proxy_tree_args,
+                step_proxy_layout=step_proxy_layout,
+                wrapper_key="proxy_eager_debug",
+            )
+
+            def _diff_summary(a_tok, a_logits, b_tok, b_logits, label_a, label_b):
+                eq = (a_tok == b_tok)
+                n_total = eq.numel()
+                n_mis = int((~eq).sum().item())
+                d = (a_logits - b_logits).abs()
+                return (f"{label_a} vs {label_b}: "
+                        f"tokens {n_mis}/{n_total} mismatch "
+                        f"({100*n_mis/max(n_total,1):.1f}%); "
+                        f"logits max_abs={float(d.max().item()):.6f} "
+                        f"mean_abs={float(d.mean().item()):.6f}")
+
+            print(f"[FRESH C-1] " + _diff_summary(
+                proxy_tokens, proxy_logits, fresh_bool_tokens, fresh_bool_logits,
+                "split_CG", "fresh_bool"), flush=True)
+            print(f"[FRESH C-1] " + _diff_summary(
+                proxy_tokens, proxy_logits, fresh_pkg_tokens, fresh_pkg_logits,
+                "split_CG", "fresh_packed"), flush=True)
+            print(f"[FRESH C-1] " + _diff_summary(
+                fresh_bool_tokens, fresh_bool_logits, fresh_pkg_tokens, fresh_pkg_logits,
+                "fresh_bool", "fresh_packed"), flush=True)
+
         # Phase B-2: low-level packed mirror gate. SSD_LOWLEVEL_MIRROR_PROXY=1
         _lowlevel_mirror = (
             self.config.mesa_phase1_k is not None
@@ -1919,7 +1962,8 @@ class DraftRunner(ModelRunner):
             plan.per_depth_mask_indptr[d, :total + 1] = indptr_d
 
     @torch.inference_mode()
-    def _split_eager_mirror_proxy(self, *, proxy_tree_args, step_proxy_layout):
+    def _split_eager_mirror_proxy(self, *, proxy_tree_args, step_proxy_layout,
+                                    wrapper_key="proxy"):
         """Phase A mirror: rerun split's proxy decode in eager bool-mask mode.
 
         Same proxy semantics as split CG path (same proxy_tree_args, same
@@ -1947,7 +1991,7 @@ class DraftRunner(ModelRunner):
         B, K_layout, F_layout, N = proxy_tree_args["metadata_ints"]
         assert K_layout == K2, f"layout K {K_layout} != K2 {K2}"
 
-        wrapper_dict = self.prefill_wrappers_by_layout["proxy"]
+        wrapper_dict = self.prefill_wrappers_by_layout[wrapper_key]
         wrapper_bs = next(x for x in wrapper_dict if x >= B)
         wrapper = wrapper_dict[wrapper_bs]
 
@@ -2044,16 +2088,19 @@ class DraftRunner(ModelRunner):
 
         return spec_tokens, spec_logits, mirror_meta
 
-    def _split_low_level_mirror_proxy(self, *, proxy_tree_args, step_proxy_layout):
+    def _split_low_level_mirror_proxy(self, *, proxy_tree_args, step_proxy_layout,
+                                        wrapper_key="proxy"):
         # Explicit no_grad + inference_mode wrapper (decorator path was failing
         # with autograd backward inside model forward via Inductor).
         with torch.inference_mode(), torch.no_grad():
             return self._split_low_level_mirror_proxy_impl(
                 proxy_tree_args=proxy_tree_args,
                 step_proxy_layout=step_proxy_layout,
+                wrapper_key=wrapper_key,
             )
 
-    def _split_low_level_mirror_proxy_impl(self, *, proxy_tree_args, step_proxy_layout):
+    def _split_low_level_mirror_proxy_impl(self, *, proxy_tree_args, step_proxy_layout,
+                                              wrapper_key="proxy"):
         """Phase B-2 low-level mirror: rerun split's proxy decode using the
         EXACT same low-level packed planning path as split CG, but in eager
         mode (no CG capture/replay).
@@ -2075,7 +2122,7 @@ class DraftRunner(ModelRunner):
         B, K_layout, F_layout, N = proxy_tree_args["metadata_ints"]
         assert K_layout == K2
 
-        wrapper_dict = self.prefill_wrappers_by_layout["proxy"]
+        wrapper_dict = self.prefill_wrappers_by_layout[wrapper_key]
         wrapper_bs = next(x for x in wrapper_dict if x >= B)
         wrapper = wrapper_dict[wrapper_bs]
 

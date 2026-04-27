@@ -301,6 +301,35 @@ class ModelRunner:
                     self.prefill_wrappers_by_layout[layout_name] = layout_wrappers
                 print(f'[MESA] Created FlashInfer wrappers for draft/proxy layouts', flush=True)
 
+                # Phase C-1 debug: fresh eager-only proxy wrapper. NEVER used
+                # by CG capture or main runtime. Mirror experiments use this
+                # to isolate wrapper-state pollution from CG-shared wrappers.
+                # use_cuda_graph=False, separate buffers, same dims as proxy.
+                _pe_proxy_fo = self.config.mesa_proxy_fan_out
+                _pe_total = _pe_proxy_fo * (self.config.speculate_k + 1)
+                pe_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                pe_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                pe_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
+                pe_kv_lpl = torch.empty(max_bs, dtype=torch.int32, device=self.device)
+                pe_mask = torch.empty(
+                    max_bs * _pe_total * self.config.max_model_len,
+                    dtype=torch.uint8, device=self.device,
+                )
+                pe_mask_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                pe_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                    self.workspace_buffer, "NHD",
+                    use_cuda_graph=False,
+                    qo_indptr_buf=pe_cu,
+                    paged_kv_indptr_buf=pe_kv_indptr,
+                    paged_kv_indices_buf=pe_kv_indices,
+                    paged_kv_last_page_len_buf=pe_kv_lpl,
+                    custom_mask_buf=pe_mask,
+                    mask_indptr_buf=pe_mask_indptr,
+                )
+                self.prefill_wrappers_by_layout["proxy_eager_debug"] = {max_bs: pe_wrapper}
+                print(f'[MESA debug] proxy_eager_debug wrapper created '
+                      f'(use_cuda_graph=False, MQ={_pe_total})', flush=True)
+
                 # Step 6: phase2_hybrid_long wrapper — single instance,
                 # max_total_rows = (K_long+1) * (dfo + pfo). Eager-only for
                 # initial parity validation (use_cuda_graph=False).
