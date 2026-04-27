@@ -1340,20 +1340,11 @@ class DraftRunner(ModelRunner):
         _mev_mc = _mr("merge_cache")
         _proxy_layout = proxy_layout or self.proxy_layout
         K_long = self.config.speculate_k
-        # Phase 3 (K1 split, no continuation yet): draft rows have suffix
-        # length K1 (= mesa_phase1_k) since Phase 1 ran K1 forwards. proxy
-        # rows still K_short = K2. When continuation pass lands, draft will
-        # be K1 + K2 = K_long again.
-        if self.config.mesa_phase1_k is not None:
-            K1 = self.config.mesa_phase1_k
-            K_short = self.config.mesa_phase2_k
-            draft_row_vk = K1
-            proxy_row_vk = K_short
-        else:
-            K1 = K_long
-            K_short = K_long
-            draft_row_vk = K_long
-            proxy_row_vk = K_long
+        # Phase 3: draft row valid_k = draft_tokens.shape[1] (K1 without
+        # continuation, K_long with continuation). proxy row valid_k =
+        # proxy_tokens.shape[1] (K_short = K2).
+        draft_row_vk = int(draft_tokens.shape[1])
+        proxy_row_vk = int(proxy_tokens.shape[1])
 
         # Build keys with layout-specific fan_idx
         draft_k = torch.cat([self.draft_layout.fan_idx_hit if int(h) else self.draft_layout.fan_idx_miss
@@ -1385,8 +1376,8 @@ class DraftRunner(ModelRunner):
                 acts = torch.cat([acts, act_pad], dim=1)
             return toks, logs, acts
 
-        draft_tokens, draft_logits, draft_acts = _pad_to_klong(draft_tokens, draft_logits, draft_acts, K1)
-        proxy_tokens, proxy_logits, proxy_acts = _pad_to_klong(proxy_tokens, proxy_logits, proxy_acts, K_short)
+        draft_tokens, draft_logits, draft_acts = _pad_to_klong(draft_tokens, draft_logits, draft_acts, draft_row_vk)
+        proxy_tokens, proxy_logits, proxy_acts = _pad_to_klong(proxy_tokens, proxy_logits, proxy_acts, proxy_row_vk)
 
         self.tree_cache_keys = torch.cat([draft_keys, proxy_keys], dim=0)
         # Boundary for phase 1 (draft-sourced) vs phase 2 (proxy-sourced) classification
