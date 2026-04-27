@@ -1485,7 +1485,32 @@ class DraftRunner(ModelRunner):
                 fan_out_list=fan_out_list,
             )
 
+        _parity_check = (
+            _use_hybrid and _os.environ.get("SSD_HYBRID_PARITY", "0") == "1"
+        )
         if _use_hybrid:
+            # Step 7 parity harness: capture split's continuation tail +
+            # proxy outputs BEFORE overwriting, so we can diff them against
+            # hybrid outputs.
+            if _parity_check:
+                K1_cfg_diff = self.config.mesa_phase1_k
+                _split_cont_tokens = draft_tokens[:, K1_cfg_diff:].clone()  # [cont, K2]
+                _split_cont_logits = draft_logits[:, K1_cfg_diff:].clone()
+                _split_proxy_tokens = proxy_tokens.clone()
+                _split_proxy_logits = proxy_logits.clone()
+
+            # IMPORTANT: split path's proxy already overwrote Phase 1 KV
+            # (split proxy writes to [num_tokens+K_long, num_tokens+K_long+
+            # K2*MQ_proxy) which OVERLAPS Phase 1 KV [num_tokens+K_long,
+            # num_tokens+K_long+K1*MQ_p1)). To give hybrid CLEAN Phase 1 KV
+            # for its cont row attention, re-run Phase 1 (deterministic; same
+            # inputs → same KV writes → restores Phase 1 KV slots).
+            #
+            # This is a parity-harness convenience. In the eventual hybrid-
+            # default path, the order will be Phase 1 → hybrid (no overwrite),
+            # so this re-run will be removed.
+            self._decode_tree(draft_tree_args, layout=_phase1_layout)
+
             # Replace split continuation tail + proxy outputs with hybrid
             # forward results. draft_tokens currently holds Phase 1 (K1) +
             # continuation (K2 from split path) — slice to Phase 1 only and
@@ -1498,6 +1523,19 @@ class DraftRunner(ModelRunner):
                     draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
                 )
             )
+
+            if _parity_check:
+                self._hybrid_parity_diff(
+                    split_cont_tokens=_split_cont_tokens,
+                    split_cont_logits=_split_cont_logits,
+                    split_proxy_tokens=_split_proxy_tokens,
+                    split_proxy_logits=_split_proxy_logits,
+                    hybrid_cont_tokens=cont_tokens_h,
+                    hybrid_cont_logits=cont_logits_h,
+                    hybrid_proxy_tokens=proxy_tokens_h,
+                    hybrid_proxy_logits=proxy_logits_h,
+                )
+
             # Replace draft_tokens K1.. tail with hybrid cont_tokens
             draft_tokens = torch.cat(
                 [draft_tokens[:, :self.config.mesa_phase1_k], cont_tokens_h], dim=1
@@ -1658,12 +1696,12 @@ class DraftRunner(ModelRunner):
         # (B_proxy region grows last; its end after depth d's write is the
         # highest occupied slot.)
         for d in range(K2):
-            ctx_len_d = num_tokens + (K_long + 1) + K_long * MQ_p1 + (d + 1) * MQ_proxy
+            ctx_len_d = num_tokens + K_long + K_long * MQ_p1 + (d + 1) * MQ_proxy
             plan.per_row_context_lens_by_depth[:total, d] = ctx_len_d
 
         # 9) per_row_kv_indptr / kv_indices — shared page list across rows
         # (current 1-page collapse). Per-row contract preserved.
-        max_physical = num_tokens + (K_long + 1) + K_long * MQ_p1 + K2 * MQ_proxy
+        max_physical = num_tokens + K_long + K_long * MQ_p1 + K2 * MQ_proxy
         pages_needed = (max_physical + block_size - 1) // block_size
         pages_needed = int(min(pages_needed, n_pages_filled))
         indptr_d = torch.arange(total + 1, device=device, dtype=torch.int32) * pages_needed
@@ -1726,10 +1764,13 @@ class DraftRunner(ModelRunner):
         plan = self.hybrid_phase2_plan
         device = self.device
 
+        # Off-by-one note: glue writes K_long+1 tokens at positions
+        # [num_tokens-1, num_tokens+K_long); position num_tokens-1 is shared
+        # with persistent's last slot (recovery overwrite). Net glue slots = K_long.
         glue_base = num_tokens
-        phase1_kv_base = num_tokens + (K_long + 1)
+        phase1_kv_base = num_tokens + K_long
         a_tail_base = phase1_kv_base + K1 * MQ_p1
-        b_proxy_base = a_tail_base + K2 * MQ_p1  # = phase1_kv_base + K_long*MQ_p1
+        b_proxy_base = a_tail_base + K2 * MQ_p1
 
         cont_idx_t = torch.arange(cont_count, device=device, dtype=torch.int64)
         proxy_idx_t = torch.arange(proxy_count, device=device, dtype=torch.int64)
@@ -1738,8 +1779,8 @@ class DraftRunner(ModelRunner):
         for d in range(K2):
             # Physical KV upper bound at depth d (after current depth's write
             # — flash_attn writes K/V then attends; matches Step 3
-            # context_lens formula).
-            L = num_tokens + (K_long + 1) + K_long * MQ_p1 + (d + 1) * MQ_proxy
+            # context_lens formula). Glue net slots = K_long (recovery overwrite).
+            L = num_tokens + K_long + K_long * MQ_p1 + (d + 1) * MQ_proxy
 
             kv_pos = torch.arange(L, device=device, dtype=torch.int64)  # [L]
             kv_pos_2d = kv_pos.view(1, L)
@@ -1829,6 +1870,151 @@ class DraftRunner(ModelRunner):
             )
             plan.per_depth_mask_indptr[d, :total + 1] = indptr_d
 
+    def _hybrid_parity_diff(self, *, split_cont_tokens, split_cont_logits,
+                              split_proxy_tokens, split_proxy_logits,
+                              hybrid_cont_tokens, hybrid_cont_logits,
+                              hybrid_proxy_tokens, hybrid_proxy_logits):
+        """Step 7 parity harness: diff hybrid vs split outputs.
+
+        Logs:
+        - cont/proxy token mismatch counts
+        - cont/proxy logits max/mean abs diff
+        - first mismatch row/depth + j_idx + slot_map + context_len dump
+
+        Triggered by SSD_USE_HYBRID_PHASE2=1 + SSD_HYBRID_PARITY=1. temp=0
+        only — hybrid uses argmax, not sampler.
+        """
+        plan = self.hybrid_phase2_plan
+
+        # Token mismatch counts
+        cont_tok_eq = (split_cont_tokens == hybrid_cont_tokens)  # [cont, K2]
+        proxy_tok_eq = (split_proxy_tokens == hybrid_proxy_tokens)
+        n_cont = cont_tok_eq.numel()
+        n_proxy = proxy_tok_eq.numel()
+        cont_mismatch = int((~cont_tok_eq).sum().item())
+        proxy_mismatch = int((~proxy_tok_eq).sum().item())
+
+        # Logits diff
+        cont_diff = (split_cont_logits - hybrid_cont_logits).abs()
+        proxy_diff = (split_proxy_logits - hybrid_proxy_logits).abs()
+        cont_max_diff = float(cont_diff.max().item())
+        cont_mean_diff = float(cont_diff.mean().item())
+        proxy_max_diff = float(proxy_diff.max().item())
+        proxy_mean_diff = float(proxy_diff.mean().item())
+
+        print(f"[HYBRID PARITY] tokens: cont {cont_mismatch}/{n_cont} mismatch "
+              f"({100*cont_mismatch/max(n_cont,1):.1f}%); proxy {proxy_mismatch}/{n_proxy} "
+              f"mismatch ({100*proxy_mismatch/max(n_proxy,1):.1f}%)", flush=True)
+        print(f"[HYBRID PARITY] logits: cont max_abs_diff={cont_max_diff:.6f} "
+              f"mean_abs_diff={cont_mean_diff:.6f}; proxy max_abs_diff={proxy_max_diff:.6f} "
+              f"mean_abs_diff={proxy_mean_diff:.6f}", flush=True)
+
+        # First mismatch dump
+        if cont_mismatch > 0:
+            first_idx = (~cont_tok_eq).nonzero(as_tuple=False)[0]  # [2] = (row, depth)
+            row = int(first_idx[0].item())
+            depth = int(first_idx[1].item())
+            split_tok = int(split_cont_tokens[row, depth].item())
+            hybrid_tok = int(hybrid_cont_tokens[row, depth].item())
+            j_idx_p1 = (
+                self.phase1_layout_long.fan_idx_hit
+                if int(plan.per_row_region_id[row].item()) == 0
+                else self.phase1_layout_long.fan_idx_miss
+            )
+            j_idx_val = int(j_idx_p1[row].item())
+            slot_map = int(plan.per_row_slot_maps_by_depth[row, depth].item())
+            ctx_len = int(plan.per_row_context_lens_by_depth[row, depth].item())
+            print(f"[HYBRID PARITY] first cont mismatch row={row} depth={depth} "
+                  f"split_tok={split_tok} hybrid_tok={hybrid_tok} j_idx_p1={j_idx_val} "
+                  f"slot_map={slot_map} ctx_len={ctx_len}", flush=True)
+
+        if proxy_mismatch > 0:
+            first_idx = (~proxy_tok_eq).nonzero(as_tuple=False)[0]
+            row = int(first_idx[0].item())
+            depth = int(first_idx[1].item())
+            cont_count = plan.cont_row_count
+            global_row = cont_count + row
+            split_tok = int(split_proxy_tokens[row, depth].item())
+            hybrid_tok = int(hybrid_proxy_tokens[row, depth].item())
+            slot_map = int(plan.per_row_slot_maps_by_depth[global_row, depth].item())
+            ctx_len = int(plan.per_row_context_lens_by_depth[global_row, depth].item())
+            print(f"[HYBRID PARITY] first proxy mismatch row={row} depth={depth} "
+                  f"split_tok={split_tok} hybrid_tok={hybrid_tok} slot_map={slot_map} "
+                  f"ctx_len={ctx_len}", flush=True)
+
+    def _compute_hybrid_bool_mask_for_depth(self, *, d, K1, K2, K_long,
+                                              MQ_p1, MQ_proxy,
+                                              cont_count, proxy_count,
+                                              num_tokens, j_idx_p1, j_idx_proxy):
+        """Compute per-row bool visibility mask for hybrid attention at depth d.
+
+        Same j_idx-aware visibility rules as Step 4 but returns BOOL tensor
+        of shape [total_rows * L] flattened (FlashInfer custom_mask format).
+        L = physical context_lens (uniform per row at fixed depth).
+        """
+        device = self.device
+        total = cont_count + proxy_count
+
+        # Glue starts at position num_tokens - 1 (recovery overwrites last
+        # accepted token's slot). K_long+1 tokens occupy [num_tokens-1,
+        # num_tokens+K_long). Phase 1 first slot at num_tokens + K_long
+        # (matches `_build_tree_decode_args_for_layout`'s initial_positions =
+        # num_tokens - 1 + (K_long+1) + 0 = num_tokens + K_long).
+        glue_base = num_tokens - 1
+        phase1_kv_base = num_tokens + K_long
+        a_tail_base = phase1_kv_base + K1 * MQ_p1
+        b_proxy_base = a_tail_base + K2 * MQ_p1
+
+        L = num_tokens + K_long + K_long * MQ_p1 + (d + 1) * MQ_proxy
+        kv_pos = torch.arange(L, device=device, dtype=torch.int64)
+        kv_pos_2d = kv_pos.view(1, L)
+
+        cont_idx_t = torch.arange(cont_count, device=device, dtype=torch.int64)
+        proxy_idx_t = torch.arange(proxy_count, device=device, dtype=torch.int64)
+
+        persistent_vis = kv_pos_2d < num_tokens
+
+        # cont rows
+        cont_glue_vis = (
+            (kv_pos_2d >= glue_base) &
+            (kv_pos_2d <= (glue_base + j_idx_p1.view(cont_count, 1)))
+        )
+        p1_off = kv_pos_2d - phase1_kv_base
+        in_p1 = (kv_pos_2d >= phase1_kv_base) & (kv_pos_2d < a_tail_base)
+        cont_p1_vis = in_p1 & ((p1_off % MQ_p1) == cont_idx_t.view(cont_count, 1))
+
+        at_off = kv_pos_2d - a_tail_base
+        in_at = (kv_pos_2d >= a_tail_base) & (kv_pos_2d < b_proxy_base)
+        cont_at_vis = (
+            in_at
+            & ((at_off % MQ_p1) == cont_idx_t.view(cont_count, 1))
+            & ((at_off // MQ_p1) <= d)
+        )
+
+        cont_mask = (
+            persistent_vis.expand(cont_count, L)
+            | cont_glue_vis | cont_p1_vis | cont_at_vis
+        )
+
+        # proxy rows
+        proxy_glue_vis = (
+            (kv_pos_2d >= glue_base) &
+            (kv_pos_2d <= (glue_base + j_idx_proxy.view(proxy_count, 1)))
+        )
+        bp_off = kv_pos_2d - b_proxy_base
+        in_bp = (kv_pos_2d >= b_proxy_base) & (kv_pos_2d < (b_proxy_base + K2 * MQ_proxy))
+        proxy_b_vis = (
+            in_bp
+            & ((bp_off % MQ_proxy) == proxy_idx_t.view(proxy_count, 1))
+            & ((bp_off // MQ_proxy) <= d)
+        )
+
+        proxy_mask = persistent_vis.expand(proxy_count, L) | proxy_glue_vis | proxy_b_vis
+
+        # Concat + flatten (FlashInfer custom_mask is 1D bool/uint8)
+        full_mask = torch.cat([cont_mask, proxy_mask], dim=0)  # [total, L]
+        return full_mask.reshape(-1).to(torch.bool)  # [total * L]
+
     @torch.inference_mode()
     def _decode_phase2_hybrid(self, *, draft_tree_args, proxy_tree_args,
                                 step_proxy_layout, draft_tokens_phase1):
@@ -1915,10 +2101,29 @@ class DraftRunner(ModelRunner):
             # (current 1-page case). Plan field shape preserved per-row.
             block_tables_d = plan.per_row_block_tables[:total]
 
-            # Custom mask — packed bytes for depth d
-            mask_indptr_d = plan.per_depth_mask_indptr[d, :total + 1].contiguous()
-            n_mask_bytes = int(mask_indptr_d[total].item())
-            packed_mask_d = plan.per_depth_packed_masks[d, :n_mask_bytes].contiguous()
+            # Custom mask — FlashInfer's custom_mask= arg expects BOOL tensor
+            # of shape [total_qo_len * total_kv_len] (1 element per (q, kv)
+            # pair), not bit-packed. Step 4's per_depth_packed_masks is
+            # documented per Plan §388 but currently unused at runtime
+            # (incorrect format). Compute bool mask inline using the same
+            # j_idx-aware visibility rules as Step 4.
+            bool_mask_d = self._compute_hybrid_bool_mask_for_depth(
+                d=d,
+                K1=K1, K2=K2, K_long=K_long,
+                MQ_p1=plan.K_long * 0 + self.phase1_layout_long.MQ_LEN,  # static
+                MQ_proxy=plan.proxy_row_count,
+                cont_count=cont_count,
+                proxy_count=proxy_count,
+                num_tokens=int(draft_tree_args["positions"][0].item()) - K_long,
+                j_idx_p1=(
+                    self.phase1_layout_long.fan_idx_hit if int(draft_tree_args["cache_hits"][0])
+                    else self.phase1_layout_long.fan_idx_miss
+                )[:cont_count],
+                j_idx_proxy=(
+                    step_proxy_layout.fan_idx_hit if int(draft_tree_args["cache_hits"][0])
+                    else step_proxy_layout.fan_idx_miss
+                )[:proxy_count],
+            )
 
             # Plan the wrapper for depth d
             wrapper.plan(
@@ -1930,7 +2135,7 @@ class DraftRunner(ModelRunner):
                 self.hf_config.num_key_value_heads,
                 self.hf_config.head_dim,
                 self.block_size,
-                custom_mask=packed_mask_d,
+                custom_mask=bool_mask_d,
                 q_data_type=dt,
                 kv_data_type=dt,
             )
