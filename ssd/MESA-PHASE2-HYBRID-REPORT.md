@@ -307,52 +307,52 @@ v1 = 이득 (a) 만. verify_short 가 fix 되면:
 추정: full v1 (verify_short 정상 작동) 는 +25~30% TPS, full hybrid (P1
 split + 통합 batch) 는 +30~40% TPS 기대. 측정 필요.
 
-## 7. 다음 단계 (plan 끝까지)
+## 7. 잔여 작업 — Phase 3 ingredient (b)
 
-### Step 1: verify_short bucket 정상화 (Phase 4 + Phase 5 partial)
+이번 세션 land 된 것 = ingredient (a) (proxy K2 forwards + verify_short
+dispatch). Plan 의 hybrid forward 의 진짜 핵심인 **single batched
+forward (continuation + proxy 한 batch)** 가 남음.
 
-Plan 의 Phase 4/5 가 상호의존적이므로 같이 land:
+### Plan §Performance Estimate 의 분해
 
-| Plan 항목 | 현 상태 | 다음 세션 작업 |
+Plan 의 +35–55% expected TP 는 다음 두 ingredient 의 합:
+
+| Ingredient | Source | 현재 land 됨 | TPS 기여 |
+|---|---|---|---|
+| **(a)** | Phase 2 proxy K_long → K_short forwards | ✅ +44.5% 측정 |
+| **(b)** | Phase 1 K1 split + continuation, single hybrid batched forward | ❌ 미구현 | +5–10% 추가 기대 (plan §744) |
+
+(a) 만으로 plan 의 conservative 범위 mid-point 도달. (b) 가 추가되면
+upper-end (+50–55%) 가능.
+
+### Phase 3 ingredient (b) 구현 시 작업 항목
+
+| Plan 항목 | 작업 | 위험도 |
 |---|---|---|
-| verify_long/short CG | ✅ capture, 🟡 dispatch off | 별도 graph_pool 로 분리 |
-| glue_long/short CG | ❌ | glue capture 추가, valid_k 별 dispatch |
-| phase1_long/short CG | ❌ (layout 만 있음) | phase1 capture 추가 |
-| `_glue_decode` shape | K_long+1 hardcode | valid_k+1 동적 |
-| Phase 1 layout dispatch | `draft_layout` hardcode | `phase1_layout_long/short` |
-| Speculator slice to vk+1 | ✅ (gated) | gating 제거 |
-| `_compute_and_send_proxy` | ✅ vk-aware + wire pad | 그대로 |
+| Phase 1 forward depth K1 (not K_long) | `_build_tree_batch_mesa` 가 `phase1_layout_long` (K=K1, position_count=K_long+1) 사용 | 낮음 (layout 이미 생성됨) |
+| Phase 2 continuation pass | Phase 1 leaf 의 K1-th 토큰을 input 으로 K2 더 forward; phase 1 KV 를 own slice 로 attend | 중 (KV scratch 분할) |
+| **Single hybrid batched forward** | continuation rows + proxy rows 를 한 batch 로 합쳐 K2 forwards | **높음 (silent-correctness 트랩)** |
+| 5-region scratch | persistent / glue / Phase 1 KV / A_tail / B_proxy 분리 slot pool | 중 |
+| **`build_hybrid_packed_mask`** | continuation row 와 proxy row 의 다른 prefix shape 처리하는 per-row mask | **매우 높음 (FlashInfer + per-row attention)** |
+| `phase2_hybrid_long/short` CG capture | 새 batch shape, 새 mask buf | 중 |
 
-예상 LOC: ~150–200. 예상 GPU debug cycles: ~5–10 회. 한 세션.
+Plan §Risk #1, #2, #3 가 모두 이 단계에 집중. 특히 per-row mask 의
+correctness 는 **GPU iterative debug 5-10 사이클 필요한 클래스**.
 
-이게 완료되면 v1 의 이득 (a) 가 *완전히* 캡처되어 accept rate 0.80
-회복 + Phase 2 hit 의 target verify 단축 → 추가 +5–10% TPS 기대.
+예상 LOC: ~600–800. 예상 cycles: 20–30 GPU debug. 1–2 focused session.
 
-### Step 2: Phase 3 — Hybrid forward (이득 (b))
+### Sweep — v1 위에서 즉시 가능
 
-| Plan 항목 | 작업 |
-|---|---|
-| Phase 1 forward depth K1 | `_build_tree_batch_mesa` 가 phase1_layout_long.K=K1 사용 |
-| Phase 2 continuation pass | Phase 1 leaf 의 K1-th 토큰을 input 으로 K2 더 forward |
-| Single hybrid forward (cont + proxy) | `HybridPhase2Plan.fill()` + per-row block tables + custom mask |
-| 5-region scratch | persistent / glue / Phase 1 KV / A_tail / B_proxy 분리 slot pool |
-| `build_hybrid_packed_mask` | continuation row 와 proxy row 의 다른 prefix shape 처리 |
-| phase2_hybrid_long/short CG | 새 capture |
+v1 ingredient (a) 만으로도 sweep 가능 (이미 동작 + 측정됨):
 
-이게 plan 의 **핵심 알고리즘 변경**. silent-correctness 트랩이 6+ 개라
-GPU 가 있는 multi-session 작업. 예상 LOC: ~600–800. cycles: 20–30 회.
+- 3 exit-layer × pfo {2,3,4,6} × K2 {2,3,4,6} = **48 configs**
+- 70B AWQ + TinyLlama AWQ stack 에서 ~3–4 시간 GPU
+- 기존 `experiments/sweep_70b_awq/orchestrate.py` 변형 (config dict 에
+  `mesa_phase1_k`, `mesa_phase2_k` 추가)
+- best (pfo, K2) 고정
 
-이득 (b) capture 하면 baseline 대비 +30–40% TPS 가능 (plan §Performance
-Estimate 의 target).
+Phase 3 ingredient (b) 완료 후 추가 sweep:
 
-### Step 3: Sweep
-
-v1 (Step 1 완료) 기준:
-- 3 exit-layer × pfo {2,3,4,6} × K2 {2,3,4,6} = 48 configs
-- 기존 `experiments/sweep_70b_awq/orchestrate.py` 변형
-- ~3–4 시간 GPU on 70B AWQ + TinyLlama AWQ
-
-Step 2 완료 후 본격 sweep:
-- 3 exit-layer × dfo {2,3,4,6} × K1 {2,3,4,6} × pfo {2,3,4,6} × K2 {2,3,4,6}
-- 너무 많음. 권장: Step 1 sweep 의 best (pfo, K2) 고정 후 dfo, K1 만 4×4 grid
-- 총 3 × 16 = 48 configs ~3–4시간
+- 위 best (pfo, K2) 고정 + dfo {2,3,4,6} × K1 {2,3,4,6} = 16 configs × 3
+  exit-layer = 48 configs, ~3–4 시간 GPU
+- 최종 (dfo, K1, pfo, K2) 결정
