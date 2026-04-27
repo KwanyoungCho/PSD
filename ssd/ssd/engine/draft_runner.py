@@ -363,12 +363,17 @@ class DraftRunner(ModelRunner):
                                             torch.where(cache_hits.bool(),
                                                         torch.full_like(phase_source, 2),
                                                         phase_source))
-                # Pull per-row valid_k from cache when populated. Phase 1 plumbing:
-                # tree_cache_valid_k is uniform = K (= speculate_k) until Phase 4
-                # adds heterogeneous K_long / K_short. So this lookup is a no-op
-                # in the current shape but the hook lands now to keep the wire
-                # change small in Phase 4.
-                if self.tree_cache_valid_k is not None:
+                # Pull per-row valid_k from cache when populated. v1 hybrid:
+                # heterogeneous K_long / K_short per row; the matched row's
+                # valid_k is plumbed back to the speculator. The current
+                # default disables this override (always claim K_long) so the
+                # speculator does not slice tokens / logits — matches the
+                # default verify_long dispatch in model_runner. Set
+                # SSD_USE_VERIFY_SHORT=1 to opt into the (buggy) short
+                # dispatch path for diagnostic work.
+                import os as _os
+                if self.tree_cache_valid_k is not None and \
+                        _os.environ.get("SSD_USE_VERIFY_SHORT", "0") == "1":
                     _hit_valid_k = self.tree_cache_valid_k[_hit_idx]
                     valid_k = torch.where(cache_hits.bool(), _hit_valid_k, valid_k)
             

@@ -71,6 +71,14 @@ class Verifier(VerifierBase):
                 _step_lookahead = int(_vk_unique.item())
             else:
                 _step_lookahead = self.lookahead
+            # v1 (current state): force long path until verify_short bucket
+            # replay bug is fixed. SSD_USE_VERIFY_SHORT=1 opts into the buggy
+            # short bucket dispatch for diagnostic work. With the default
+            # (force long), draft still saves K_long-K2 forwards on proxy
+            # (ingredient (a) of the plan's savings). Target verifies always
+            # at K_long+1.
+            if os.environ.get("SSD_USE_VERIFY_SHORT", "0") != "1":
+                _step_lookahead = self.lookahead
             self.target_model_runner._mesa_step_lookahead = _step_lookahead
 
             # Slice draft_tokens / logits_q to step_lookahead since target ran

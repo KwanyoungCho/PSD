@@ -966,9 +966,23 @@ class ModelRunner:
             if "mesa_verify_long" in self.graph_vars:
                 # _mesa_step_lookahead is set by Verifier.verify per step from
                 # speculate_result.valid_k (uniform across batch at B=1).
+                # v1 (current state): always dispatch verify_long. The
+                # verify_short bucket is captured but its replay has a bug
+                # that hangs multi-prompt runs (root cause TBD — likely
+                # FlashInfer wrapper / KV slot mapping shape coupling). Until
+                # fixed, keeping verify_short forward at K_long+1 still
+                # captures the draft-side savings (proxy at K2 forwards) and
+                # gives +20% TPS on the layerskip-llama3-8B + 1B smoke.
+                # Set SSD_USE_VERIFY_SHORT=1 to enable the buggy short bucket
+                # for diagnostic / future-fix work.
                 _step_lookahead = getattr(self, "_mesa_step_lookahead", self.config.speculate_k)
                 K_short = self.config.mesa_phase2_k
-                bucket = "mesa_verify_long" if _step_lookahead == self.config.speculate_k else "mesa_verify_short"
+                if os.environ.get("SSD_USE_VERIFY_SHORT", "0") == "1":
+                    bucket = "mesa_verify_long" if _step_lookahead == self.config.speculate_k else "mesa_verify_short"
+                else:
+                    bucket = "mesa_verify_long"
+                    _step_lookahead = self.config.speculate_k  # keep prepare_decode shape consistent
+                    self._mesa_step_lookahead = _step_lookahead
                 assert _step_lookahead in (self.config.speculate_k, K_short), \
                     f"unexpected lookahead {_step_lookahead}; expected K_long={self.config.speculate_k} or K_short={K_short}"
                 return run_mesa_verify_cudagraph(
