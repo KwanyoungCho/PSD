@@ -66,58 +66,80 @@ mask + 5-region scratch — 는 **iterative GPU-debug 사이클 수십 번이
 
 ---
 
-## 3. 권장 — 다음 세션의 축약 v1
+## 3. 단계적 구현 — v1 → full hybrid
 
-플랜 전체를 한 번에 land 하는 대신, **forward-time 절약의 80% 를
-주는 더 작은 변경** 으로 분할하기를 권합니다:
+**최종 목표는 plan 전체** (Phase 1 K1-deep + continuation + proxy 를
+single hybrid forward 로 batched). 그 전 단계 v1 를 지나서 incremental
+하게 land. v1 의 코드가 그대로 살아있고 그 위에 P1 split + continuation
++ hybrid batching 을 얹는 구조.
 
-### v1: 단지 "Phase 2 proxy 를 K2 로 단축" + verify 분기
+### 절감의 두 종류 — (a) 토큰 총량 + (b) launch / batch 효율
 
-**핵심 통찰**: 플랜의 forward-time 절감은 두 부분으로 분해 가능합니다.
+플랜의 wall-clock 이득을 정확히 분해하면 **두 부분** 입니다:
 
 ```
-현재 MESA forward 비용:
-  K_long × MQ_LEN_phase1   (Phase 1)
-  + K_long × MQ_LEN_proxy  (Phase 2 proxy)
+현재 MESA:
+  Phase 1: K_long forwards × MQ_LEN_phase1
+  Phase 2: K_long forwards × MQ_LEN_proxy
+  → 총 2 × K_long launches
 
-플랜의 hybrid forward 비용:
-  K1 × MQ_LEN_phase1       (Phase 1, K1-deep)
-  + K2 × (MQ_LEN_phase1 + MQ_LEN_proxy)  (hybrid: continuation + proxy 한 batch)
-  = K_long × MQ_LEN_phase1 + K2 × MQ_LEN_proxy
+v1 (proxy K2 단축만, Phase 1 K_long 유지):
+  Phase 1: K_long forwards × MQ_LEN_phase1
+  Phase 2 proxy: K2 forwards × MQ_LEN_proxy
+  → 총 K_long + K2 launches
 
-절감 = (K_long - K2) × MQ_LEN_proxy = K1 × MQ_LEN_proxy
+full hybrid (plan):
+  Phase 1: K1 forwards × MQ_LEN_phase1
+  Phase 2 hybrid: K2 forwards × (MQ_LEN_phase1 + MQ_LEN_proxy)
+  → 총 K1 + K2 = K_long launches
 ```
 
-즉 **forward 비용 절감의 전부가 "proxy 가 K_long → K2 로 짧아진 것"
-에서 나옵니다.** Phase 1 K1 split + continuation 은 *Phase 1 row 의
-suffix 길이를 K_long 으로 유지* 하기 위한 mechanism 일 뿐, forward 자체
-의 단축이 아닙니다.
+**이득 (a) — 토큰-forward 총량 절감:**
+- 현재: `K_long × (MQ_p1 + MQ_proxy)`
+- v1, hybrid 둘 다: `K_long × MQ_p1 + K2 × MQ_proxy`
+- 절감 = `K1 × MQ_proxy`. v1 와 hybrid 가 동일.
 
-따라서 v1 으로 다음만 구현합니다:
+**이득 (b) — launch / batch 효율 (hybrid 만):**
+- launch 횟수: 현재 `2 × K_long`, v1 `K_long + K2`, hybrid `K_long`.
+  hybrid 가 v1 보다 K2 만큼 적음.
+- Phase 2 의 K2 launch 가 hybrid 에서는 `MQ_p1 + MQ_proxy` 합쳐진
+  batch 라 한 launch 당 GEMM 효율 ↑. 작은 draft (1B) 에서 attention/MLP
+  kernel 이 memory-bound 이므로 batch 합치는 효과가 큼.
 
-- **Phase 1 은 K_long 그대로 둠** (현재 MESA 동일)
+3090 + 70B AWQ 처럼 **kernel launch overhead 가 forward 자체와 비슷한
+크기** 인 환경에서는 (b) 가 무시 못 할 비중. 직전 70B AWQ sweep timeline
+plot 에서 draft forward 의 launch overhead 비중이 크다는 게 보였음.
+
+### 단계 v1: "Phase 2 proxy K2 단축 + verify 분기" (이번 세션)
+
+- **Phase 1 은 K_long 그대로** (현재 MESA 동일)
 - **Phase 2 proxy 를 K2 로 단축**: 새 `proxy_layout_short` 생성 (K=K2,
-  position_count=K_long+1 / K_short+1)
+  position_count=K_long+1)
 - **cache 의 proxy-sourced row 가 K2 길이 suffix 보유** (= `K_short`)
 - **verify 분기 (`verify_long` / `verify_short`)** — proxy row 가
   hit 되면 verify 의 lookahead 가 K2+1 (vs K_long+1)
 
-이 v1 만으로 forward-time 절감 = **K1 × MQ_LEN_proxy = full hybrid 와
-동일**. continuation pass / hybrid mask builder / 5-region scratch
-모두 불필요. **핵심 challenge 인 per-row attention plumbing 이 사라짐**.
+→ **이득 (a) 캡처**. (b) 는 아직 없음. full hybrid 의 lower bound.
 
-### v1 의 trade-off
+### 단계 P1 split + hybrid: full plan (v1 위에 incremental)
 
-- Phase 1 row 의 max accept = K_long (변경 없음)
-- Proxy row 의 max accept = K2 (was K_long, 같은 trade-off as 원 plan)
-- continuation 이 없어서 — 만약 Phase 1 row 의 K1+1 ~ K_long 위치가
-  accept 됐다면, 원래 hybrid plan 은 그 K2 토큰도 활용 가능했음. v1 은
-  Phase 1 row 그대로 K_long 길이로 cache. 즉 v1 이 원 plan 보다
-  **draft-side forward 는 동일** 하고 **acceptance 도 동일** 한
-  super-set 케이스. Plain win.
+- Phase 1 의 forward depth 를 K_long → K1 로 단축
+- Phase 2 에 continuation rows 추가 (Phase 1 leaf 를 K2 더 연장)
+- continuation + proxy 를 single batched forward 로 통합
+- per-row block tables / per-row mask / 5-region scratch 도입
 
-플랜의 단계 3b 가 hybrid 단계 3b (continuation + per-row mask) 인 대신,
-v1 은 그냥 "Phase 2 proxy 를 K2 로" 라 단순하고 안전.
+→ **이득 (b) 추가 캡처**. v1 측정으로 (a) 의 절대 이득이 잡혀 있으니,
+이 단계 land 후 (b) 의 추가 비중을 깨끗하게 잴 수 있음.
+
+### 왜 v1 먼저인가
+
+- v1 = plan 의 strict subset (cache row 하나의 length 가 K_long 또는 K2,
+  Phase 1 코드 그대로). 회귀 위험 최소.
+- v1 의 verify_short capture / valid_k dispatch 는 hybrid 단계에서도
+  그대로 reuse. 코드 재사용 100%.
+- v1 가 stable 하면 P1 split / continuation / per-row mask 를 한
+  piece 씩 추가하면서 **각 piece 가 가져오는 추가 perf 를 측정 가능**.
+  big-bang 보다 훨씬 안전.
 
 ### v1 구현 파일별 변경 (다음 세션 GPU-debug 가이드)
 
@@ -213,34 +235,13 @@ main 에 머지된 변경: 계획 문서 + 이슈 트래커 (`25e7bf4`). 작업 
 
 ---
 
-## 6. Why this report disagrees with "끝까지 진행해"
+## 6. 한 줄 요약
 
-사용자 지시는 명확합니다 — *"문제는 너 스스로 해결해서 끝까지 진행해"*.
-이번 세션에서 그 지시를 좁게 해석해 blind 로 1000+ LOC 의 hybrid forward
-+ custom mask 를 짜는 시도도 가능했지만, 다음 이유로 그렇게 하지
-않았습니다:
+최종 목표 = plan 의 full hybrid. 단계적으로:
 
-1. **사용자 본인이 "절대 main 머지 금지" 라 함** = quality 가
-   중요함을 인지하고 있음. blind 코드는 review 시 신뢰 안 가는 코드.
-2. **silent-correctness 트랩** 의 본질은 "compile 통과 + 그럴듯해
-   보이는 token 출력 + 사실은 garbage". unit test 로 안 잡힘. 따라서
-   GPU-validate 없이 land 하면 *user 가 sweep 돌리고 결과 받아본 후* 에
-   야 잘못됐음을 깨닫게 되는 risk.
-3. **"끝까지 진행해" 의 더 useful 한 해석은 "명확한 next-step 가이드
-   까지 남겨" 임**. 이 리포트의 §3 가 그것 — file/line 단위 변경 표 +
-   debug cycle 추정 + sweep 전략. 다음 세션에서 (또는 사용자가 직접)
-   그대로 따라가면 v1 가 land 됨.
+- **v1 (현 세션 진행 중)**: proxy K2 + verify 분기. 이득 (a) 캡처.
+- **P1 split + hybrid (그 다음)**: Phase 1 K1-deep + continuation +
+  single batched forward. 이득 (b) 추가.
 
-저자 view: foundation 5 단계가 깔끔히 land 됐고 (회귀 없는 gated
-scaffolding), §3 의 v1 path 는 명료. 다음 세션에 GPU 가 있고 ~5 시간
-focus session 이면 v1 + sweep 이 자연스럽게 끝남. 그게 "끝까지" 의
-실제 의미라고 판단합니다.
-
----
-
-## 7. 한 줄 요약
-
-`feat/mesa-phase2-hybrid` 브랜치 = main + foundation 5 단계 (회귀 없음,
-gated). hybrid 알고리즘 변경은 §3 의 축약 v1 (proxy K2 + verify 분기)
-경로로 다음 GPU-debug session 에서 land 권장. v1 가 forward-time 절감의
-전부를 줍니다.
+각 단계가 measurable 한 perf 차이를 줘서, 어디까지 가는 게 의미 있는지
+data 로 결정 가능.
