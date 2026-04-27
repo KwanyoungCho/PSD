@@ -2064,13 +2064,18 @@ class DraftRunner(ModelRunner):
             mirror_meta["kv_lpl_per_d"].append(kv_last_page_len.clone())
             mirror_meta["bool_mask_per_d"].append(bool_mask.clone())
 
+            # CRITICAL: cu_seqlens_q MUST be None to route through attention.py's
+            # tree_decode branch (which uses prefill_wrapper.run with our custom
+            # mask). If cu_seqlens_q is set, attention.py routes to
+            # flash_attn_with_kvcache (verify_or_glue branch) which IGNORES the
+            # custom_mask and does only causal attention — wrong for tree decode.
             set_context(
                 is_prefill=False,
                 slot_mapping=step_slot_maps[d],
                 context_lens=step_context_lens[d].to(torch.int32),
                 block_tables=dbt,
-                cu_seqlens_q=cu_seqlens_q,
-                max_seqlen_q=MQ_proxy,
+                cu_seqlens_q=None,
+                max_seqlen_q=0,
                 active_mq_len=MQ_proxy,
                 active_wrappers=wrapper_dict,
                 active_layout=step_proxy_layout,
@@ -2211,13 +2216,17 @@ class DraftRunner(ModelRunner):
                 packed_mask=packed_mask, packed_indptr=packed_indptr, B=B,
             )
 
+            # cu_seqlens_q=None → attention.py routes to tree_decode branch
+            # which uses prefill_wrapper.run() with our planned custom mask.
+            # If we set cu_seqlens_q, it routes to flash_attn_with_kvcache
+            # which IGNORES the custom mask.
             set_context(
                 is_prefill=False,
                 slot_mapping=step_slot_maps[d],
                 context_lens=context_lens.to(torch.int32),
                 block_tables=dbt,
-                cu_seqlens_q=qo_indptr_cpu.to(self.device),
-                max_seqlen_q=MQ_proxy,
+                cu_seqlens_q=None,
+                max_seqlen_q=0,
                 active_mq_len=MQ_proxy,
                 active_wrappers=wrapper_dict,
                 active_layout=step_proxy_layout,
@@ -2607,14 +2616,17 @@ class DraftRunner(ModelRunner):
                 kv_data_type=dt,
             )
 
-            # set_context with hybrid metadata. active_wrappers signals
-            # attention.py to pick the phase2_hybrid_long wrapper for tree-
-            # decode-style attention. active_mq_len=1 (1 query per row).
+            # CRITICAL: cu_seqlens_q=None routes through attention.py's
+            # tree_decode branch which calls prefill_wrapper.run() with our
+            # planned custom mask. Setting cu_seqlens_q (the bug we just
+            # found in proxy mirror) routes to flash_attn_with_kvcache which
+            # IGNORES custom_mask and does only causal attention — wrong.
+            # active_mq_len=1 because hybrid has 1 query per row.
             set_context(
                 is_prefill=False,
-                cu_seqlens_q=cu_seqlens_q_full[:total + 1],
+                cu_seqlens_q=None,
                 cu_seqlens_k=None,
-                max_seqlen_q=1,
+                max_seqlen_q=0,
                 max_seqlen_k=0,
                 slot_mapping=slot_map_d,
                 context_lens=ctx_len_d,
