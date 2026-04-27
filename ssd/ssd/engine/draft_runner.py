@@ -1764,10 +1764,9 @@ class DraftRunner(ModelRunner):
         plan = self.hybrid_phase2_plan
         device = self.device
 
-        # Off-by-one note: glue writes K_long+1 tokens at positions
-        # [num_tokens-1, num_tokens+K_long); position num_tokens-1 is shared
-        # with persistent's last slot (recovery overwrite). Net glue slots = K_long.
-        glue_base = num_tokens
+        # Aligned with _compute_hybrid_bool_mask_for_depth: glue starts at
+        # num_tokens-1 (recovery overwrites last accepted slot).
+        glue_base = num_tokens - 1
         phase1_kv_base = num_tokens + K_long
         a_tail_base = phase1_kv_base + K1 * MQ_p1
         b_proxy_base = a_tail_base + K2 * MQ_p1
@@ -1936,11 +1935,58 @@ class DraftRunner(ModelRunner):
             global_row = cont_count + row
             split_tok = int(split_proxy_tokens[row, depth].item())
             hybrid_tok = int(hybrid_proxy_tokens[row, depth].item())
-            slot_map = int(plan.per_row_slot_maps_by_depth[global_row, depth].item())
-            ctx_len = int(plan.per_row_context_lens_by_depth[global_row, depth].item())
-            print(f"[HYBRID PARITY] first proxy mismatch row={row} depth={depth} "
-                  f"split_tok={split_tok} hybrid_tok={hybrid_tok} slot_map={slot_map} "
-                  f"ctx_len={ctx_len}", flush=True)
+
+            # Hybrid metadata (from HybridPhase2Plan)
+            hybrid_slot = int(plan.per_row_slot_maps_by_depth[global_row, depth].item())
+            hybrid_ctx_len = int(plan.per_row_context_lens_by_depth[global_row, depth].item())
+            hybrid_rope = int(plan.proxy_initial_rope_positions[row].item()) + depth
+
+            # Reconstruct split-side equivalent metadata from current MESA path:
+            # - split's proxy scratch position = num_tokens + K_long + d*MQ_proxy + j
+            #   (overlaps Phase 1 KV; tree mask handles ancestor visibility)
+            # - split's proxy ctx_len at depth d ≈ num_tokens + K_long + (d+1)*MQ_proxy
+            # - split's proxy rope = num_tokens + j_idx_proxy[j] + d (same as hybrid)
+            K_long_dbg = self.config.speculate_k
+            MQ_proxy_dbg = plan.proxy_row_count
+            num_tokens_dbg = hybrid_ctx_len - K_long_dbg - K_long_dbg * (
+                self.phase1_layout_long.MQ_LEN
+            ) - (depth + 1) * MQ_proxy_dbg
+            split_scratch_pos = num_tokens_dbg + K_long_dbg + depth * MQ_proxy_dbg + row
+            split_ctx_len_eq = num_tokens_dbg + K_long_dbg + (depth + 1) * MQ_proxy_dbg
+
+            # Visible KV count from hybrid bool mask (compute fresh)
+            cache_hits_dbg = (
+                int(plan.per_row_region_id[global_row].item()) == 0
+            )  # informational only — actual computed below
+            # Bool mask for current depth (matches what wrapper used)
+            bool_mask_d = self._compute_hybrid_bool_mask_for_depth(
+                d=depth, K1=self.config.mesa_phase1_k,
+                K2=self.config.mesa_phase2_k, K_long=K_long_dbg,
+                MQ_p1=self.phase1_layout_long.MQ_LEN,
+                MQ_proxy=MQ_proxy_dbg,
+                cont_count=cont_count, proxy_count=plan.proxy_row_count,
+                num_tokens=num_tokens_dbg,
+                j_idx_p1=self.phase1_layout_long.fan_idx_hit[:cont_count],
+                j_idx_proxy=plan.proxy_initial_rope_positions[:plan.proxy_row_count] - num_tokens_dbg,
+            )
+            n_total = cont_count + plan.proxy_row_count
+            L_d = bool_mask_d.numel() // n_total
+            row_mask = bool_mask_d.view(n_total, L_d)[global_row]
+            n_visible = int(row_mask.sum().item())
+            visible_pos = row_mask.nonzero(as_tuple=False).flatten().tolist()
+            visible_summary = (
+                visible_pos[:5] + ["..."] + visible_pos[-5:]
+                if len(visible_pos) > 12 else visible_pos
+            )
+
+            print(f"[HYBRID PARITY] first proxy mismatch row={row} depth={depth}", flush=True)
+            print(f"  tokens: split={split_tok} hybrid={hybrid_tok}", flush=True)
+            print(f"  rope: hybrid={hybrid_rope} (split=same; both = num_tokens + j_idx_proxy[{row}] + {depth})",
+                  flush=True)
+            print(f"  slot: split={split_scratch_pos} hybrid={hybrid_slot} (different scratch regions)",
+                  flush=True)
+            print(f"  ctx_len: split_eq={split_ctx_len_eq} hybrid={hybrid_ctx_len}", flush=True)
+            print(f"  visible_kv: count={n_visible} positions={visible_summary}", flush=True)
 
     def _compute_hybrid_bool_mask_for_depth(self, *, d, K1, K2, K_long,
                                               MQ_p1, MQ_proxy,
