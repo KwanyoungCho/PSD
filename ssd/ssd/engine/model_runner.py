@@ -559,21 +559,26 @@ class ModelRunner:
                     if self.config.mesa_phase1_k is not None:
                         K_long = self.config.speculate_k
                         K_short = self.config.mesa_phase2_k
-                        mesa_gv_l, mesa_pool, mesa_pre_l, mesa_post_l, mesa_bs_l = \
+                        # IMPORTANT: separate graph_pool per bucket. Sharing the
+                        # pool aliases memory between captures of different
+                        # max_seqlen_q (long=K_long+1 vs short=K_short+1) and
+                        # results in stale plan state on replay (manifests as
+                        # multi-prompt hang on first short-bucket replay).
+                        mesa_gv_l, mesa_pool_l, mesa_pre_l, mesa_post_l, mesa_bs_l = \
                             capture_mesa_verify_cudagraph(self, lookahead=K_long)
                         self.graph_vars["mesa_verify_long"] = mesa_gv_l
-                        self.graph_pools["mesa_verify_long"] = mesa_pool
+                        self.graph_pools["mesa_verify_long"] = mesa_pool_l
                         self.graphs["mesa_verify_long_pre"] = mesa_pre_l
                         self.graphs["mesa_verify_long_post"] = mesa_post_l
                         self.graph_bs_list["mesa_verify_long"] = mesa_bs_l
                         mesa_gv_s, mesa_pool_s, mesa_pre_s, mesa_post_s, mesa_bs_s = \
-                            capture_mesa_verify_cudagraph(self, lookahead=K_short, graph_pool=mesa_pool)
+                            capture_mesa_verify_cudagraph(self, lookahead=K_short, graph_pool=None)
                         self.graph_vars["mesa_verify_short"] = mesa_gv_s
                         self.graph_pools["mesa_verify_short"] = mesa_pool_s
                         self.graphs["mesa_verify_short_pre"] = mesa_pre_s
                         self.graphs["mesa_verify_short_post"] = mesa_post_s
                         self.graph_bs_list["mesa_verify_short"] = mesa_bs_s
-                        print(f'[MESA hybrid] Captured 2-bucket verify CG: '
+                        print(f'[MESA hybrid] Captured 2-bucket verify CG (separate pools): '
                               f'long(K={K_long}) + short(K={K_short}), '
                               f'exit_layer={self.config.mesa_exit_layer}', flush=True)
                     else:
@@ -964,25 +969,15 @@ class ModelRunner:
             # the verifier-set attribute. Legacy single-bucket fallback if hybrid
             # config is off.
             if "mesa_verify_long" in self.graph_vars:
-                # _mesa_step_lookahead is set by Verifier.verify per step from
-                # speculate_result.valid_k (uniform across batch at B=1).
-                # v1 (current state): always dispatch verify_long. The
-                # verify_short bucket is captured but its replay has a bug
-                # that hangs multi-prompt runs (root cause TBD — likely
-                # FlashInfer wrapper / KV slot mapping shape coupling). Until
-                # fixed, keeping verify_short forward at K_long+1 still
-                # captures the draft-side savings (proxy at K2 forwards) and
-                # gives +20% TPS on the layerskip-llama3-8B + 1B smoke.
-                # Set SSD_USE_VERIFY_SHORT=1 to enable the buggy short bucket
-                # for diagnostic / future-fix work.
+                # v1 hybrid verify dispatch. _mesa_step_lookahead is set by
+                # run() from the step_lookahead arg passed via call() — that
+                # broadcast through SHM keeps every TP rank in sync (otherwise
+                # rank 0 picks short while rank 1 picks long → NCCL collective
+                # mismatch → deadlock). Bucket selection is now safe and
+                # always honors valid_k from cache.
                 _step_lookahead = getattr(self, "_mesa_step_lookahead", self.config.speculate_k)
                 K_short = self.config.mesa_phase2_k
-                if os.environ.get("SSD_USE_VERIFY_SHORT", "0") == "1":
-                    bucket = "mesa_verify_long" if _step_lookahead == self.config.speculate_k else "mesa_verify_short"
-                else:
-                    bucket = "mesa_verify_long"
-                    _step_lookahead = self.config.speculate_k  # keep prepare_decode shape consistent
-                    self._mesa_step_lookahead = _step_lookahead
+                bucket = "mesa_verify_long" if _step_lookahead == self.config.speculate_k else "mesa_verify_short"
                 assert _step_lookahead in (self.config.speculate_k, K_short), \
                     f"unexpected lookahead {_step_lookahead}; expected K_long={self.config.speculate_k} or K_short={K_short}"
                 return run_mesa_verify_cudagraph(
@@ -1008,8 +1003,16 @@ class ModelRunner:
         is_prefill: bool,
         last_only: bool = True,
         draft_return_logits: bool = False,
-        hidden_states: torch.Tensor | None = None
+        hidden_states: torch.Tensor | None = None,
+        step_lookahead: int | None = None,
     ) -> list[int] | tuple[list[int], torch.Tensor]:
+        # v1 hybrid: step_lookahead must be the same on every TP rank for the
+        # CG bucket dispatch to stay in sync (otherwise rank 0 picks
+        # verify_short while rank 1 picks verify_long → NCCL collective
+        # mismatch → deadlock). Goes through call() / write_shm so all ranks
+        # see it.
+        if step_lookahead is not None:
+            self._mesa_step_lookahead = int(step_lookahead)
         _pt = os.environ.get("SSD_PROFILE_TARGET", "0") == "1" and not is_prefill and not last_only
         if _pt:
             torch.cuda.synchronize()

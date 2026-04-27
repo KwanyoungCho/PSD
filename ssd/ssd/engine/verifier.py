@@ -71,14 +71,9 @@ class Verifier(VerifierBase):
                 _step_lookahead = int(_vk_unique.item())
             else:
                 _step_lookahead = self.lookahead
-            # v1 (current state): force long path until verify_short bucket
-            # replay bug is fixed. SSD_USE_VERIFY_SHORT=1 opts into the buggy
-            # short bucket dispatch for diagnostic work. With the default
-            # (force long), draft still saves K_long-K2 forwards on proxy
-            # (ingredient (a) of the plan's savings). Target verifies always
-            # at K_long+1.
-            if os.environ.get("SSD_USE_VERIFY_SHORT", "0") != "1":
-                _step_lookahead = self.lookahead
+            # v1 hybrid: _step_lookahead comes from speculate_result.valid_k
+            # (uniform per batch at B=1). Passed through call("run", ..., step_lookahead)
+            # below so all TP ranks see the same value via SHM.
             self.target_model_runner._mesa_step_lookahead = _step_lookahead
 
             # Slice draft_tokens / logits_q to step_lookahead since target ran
@@ -100,7 +95,12 @@ class Verifier(VerifierBase):
 
         _pt = os.environ.get("SSD_PROFILE_TARGET", "0") == "1"
         _tv0 = perf_counter()
-        result = self.target_model_runner.call("run", seqs, False, False, True)
+        # v1 hybrid: pass step_lookahead so it broadcasts to all TP ranks via
+        # SHM, keeping verify CG bucket dispatch in sync.
+        _step_lh_arg = getattr(self.target_model_runner, "_mesa_step_lookahead", None) \
+            if config.mesa_enabled and config.mesa_phase1_k is not None else None
+        result = self.target_model_runner.call(
+            "run", seqs, False, False, True, None, _step_lh_arg)
 
         # MESA: clear proxy function
         if config.mesa_enabled:
