@@ -1508,6 +1508,35 @@ class DraftRunner(ModelRunner):
                 mirror_meta=mirror_meta,
             )
 
+        # Phase B-2: low-level packed mirror gate. SSD_LOWLEVEL_MIRROR_PROXY=1
+        _lowlevel_mirror = (
+            self.config.mesa_phase1_k is not None
+            and _os.environ.get("SSD_LOWLEVEL_MIRROR_PROXY", "0") == "1"
+        )
+        if _lowlevel_mirror:
+            ll_tokens, ll_logits, ll_meta = self._split_low_level_mirror_proxy(
+                proxy_tree_args=proxy_tree_args,
+                step_proxy_layout=step_proxy_layout,
+            )
+            tok_eq = (proxy_tokens == ll_tokens)
+            n_total = tok_eq.numel()
+            n_mismatch = int((~tok_eq).sum().item())
+            diff = (proxy_logits - ll_logits).abs()
+            print(f"[LL MIRROR] split CG vs split low-level mirror: "
+                  f"tokens {n_mismatch}/{n_total} mismatch "
+                  f"({100*n_mismatch/max(n_total,1):.1f}%); "
+                  f"logits max_abs_diff={float(diff.max().item()):.6f} "
+                  f"mean_abs_diff={float(diff.mean().item()):.6f}", flush=True)
+            if n_mismatch == 0:
+                print("[LL MIRROR] PASSES — low-level packed path is faithful. "
+                      "Hybrid can be ported to this path for parity.", flush=True)
+            else:
+                first_idx = (~tok_eq).nonzero(as_tuple=False)[0]
+                row, depth = int(first_idx[0].item()), int(first_idx[1].item())
+                print(f"[LL MIRROR] first mismatch row={row} depth={depth} "
+                      f"split={int(proxy_tokens[row,depth])} "
+                      f"ll={int(ll_tokens[row,depth])}", flush=True)
+
         if _use_hybrid:
             # Step 7 parity harness: capture split's continuation tail +
             # proxy outputs BEFORE overwriting, so we can diff them against
@@ -2014,6 +2043,150 @@ class DraftRunner(ModelRunner):
             current_input_ids = next_tokens
 
         return spec_tokens, spec_logits, mirror_meta
+
+    def _split_low_level_mirror_proxy(self, *, proxy_tree_args, step_proxy_layout):
+        # Explicit no_grad + inference_mode wrapper (decorator path was failing
+        # with autograd backward inside model forward via Inductor).
+        with torch.inference_mode(), torch.no_grad():
+            return self._split_low_level_mirror_proxy_impl(
+                proxy_tree_args=proxy_tree_args,
+                step_proxy_layout=step_proxy_layout,
+            )
+
+    def _split_low_level_mirror_proxy_impl(self, *, proxy_tree_args, step_proxy_layout):
+        """Phase B-2 low-level mirror: rerun split's proxy decode using the
+        EXACT same low-level packed planning path as split CG, but in eager
+        mode (no CG capture/replay).
+
+        Should produce IDENTICAL outputs to split CG if low-level setup is
+        faithful regardless of CG capture mode. Confirms Phase A finding
+        that planning path was the bug.
+
+        Returns: (spec_tokens [N, K2], spec_logits [N, K2, V], meta dict)
+        """
+        from ssd.engine.helpers.cudagraph_helpers import (
+            low_level_packed_plan, build_packed_mask_for_proxy_step,
+        )
+
+        K2 = step_proxy_layout.K
+        K_full = self.config.speculate_k  # K_long
+        MQ_proxy = step_proxy_layout.MQ_LEN
+        cache_hits = proxy_tree_args["cache_hits"]
+        B, K_layout, F_layout, N = proxy_tree_args["metadata_ints"]
+        assert K_layout == K2
+
+        wrapper_dict = self.prefill_wrappers_by_layout["proxy"]
+        wrapper_bs = next(x for x in wrapper_dict if x >= B)
+        wrapper = wrapper_dict[wrapper_bs]
+
+        initial_positions = proxy_tree_args["positions"]
+        initial_rope_positions = proxy_tree_args["rope_positions"]
+        dbt = proxy_tree_args["block_tables"]
+
+        _, step_rope_positions, step_context_lens, step_slot_maps = (
+            self._compute_step_positions_and_slot_maps(
+                initial_positions, initial_rope_positions, dbt, B, K2,
+                F_layout, N, MQ_proxy, layout=step_proxy_layout
+            )
+        )
+
+        V = self.hf_config.vocab_size
+        spec_tokens = torch.empty(N, K2, dtype=torch.int64, device=self.device)
+        spec_logits = torch.empty(N, K2, V, dtype=self.hf_config.torch_dtype, device=self.device)
+
+        meta = {
+            "step_rope_positions": step_rope_positions,
+            "step_context_lens": step_context_lens,
+            "step_slot_maps": step_slot_maps,
+        }
+
+        current_input_ids = proxy_tree_args["input_ids"]
+
+        # cache_hits_list / context_lens_list for packed mask builder
+        cache_hits_list = cache_hits.tolist()
+        # Initial context_lens = step_context_lens[0] - 0*MQ_proxy (= the
+        # base seq context length pre-spec)
+        # Actually run_fi_tree_decode_cudagraph uses context.context_lens
+        # (= initial seq length, not step-shifted). step s adds s*MQ_LEN.
+        # Match by using context_lens[0] as base.
+        initial_ctx_lens = step_context_lens[0] - 0 * MQ_proxy
+        # Wait — split CG's step 0 cache uses `context_lens.tolist()` from
+        # context, which is the seq's initial spec scratch context length
+        # (= num_tokens + K_long for our config). This INCLUDES glue but
+        # NOT spec. step s adds s*MQ_LEN to get cols_b at depth s.
+        # step_context_lens[d] from _compute_step_positions_and_slot_maps =
+        # (initial_positions[..., -1] + d*MQ_LEN) + 1 = base + d*MQ_LEN.
+        # So initial = step_context_lens[0] - 0*MQ_LEN matches.
+        # Hmm but build_packed_mask_for_proxy_step uses
+        # cols_b = context_lens[b] + s*MQ_LEN, where context_lens is the
+        # *initial* (passed in once). Let's compute initial_context as
+        # step_context_lens[0] (which is base + 0*MQ_LEN = base).
+        base_ctx_lens = step_context_lens[0].tolist()  # B-sized
+        # But build_packed_mask wants context_lens_list = the BASE seq len
+        # (without step shift). Looking at run_fi_tree_decode line 280:
+        # `step_cls = [int(cl) + s * MQ_LEN for cl in context_lens_list]`
+        # so context_lens_list is raw context.context_lens.tolist() pre-step.
+        # That equals num_tokens + K_long for our hybrid config.
+        # step_context_lens[0] = base + 0*MQ_LEN = base. So base_ctx_lens
+        # is the right input for context_lens_list.
+
+        for d in range(K2):
+            # Build packed mask for this step (numpy path identical to split CG)
+            packed_mask, packed_indptr = build_packed_mask_for_proxy_step(
+                MQ_LEN=MQ_proxy, K=K_full, B=B,
+                context_lens_list=base_ctx_lens,
+                cache_hits_list=cache_hits_list,
+                fan_out_list=step_proxy_layout.fan_out_list,
+                fan_out_list_miss=step_proxy_layout.fan_out_list_miss,
+                step=d, device=self.device,
+            )
+
+            # Plan inputs (same logic as run_fi_tree_decode step 0 cache)
+            block_tables = dbt
+            context_lens = step_context_lens[d]
+            counts = (context_lens + self.block_size - 1) // self.block_size
+            kv_indptr_cpu = torch.zeros(B + 1, dtype=torch.int32)
+            kv_indptr_cpu[1:] = counts.cpu().to(torch.int32).cumsum(0)
+            mask_pages = torch.arange(block_tables.size(1), device=block_tables.device)[None, :] < counts[:, None]
+            kv_indices = block_tables[mask_pages].to(torch.int32)
+            kv_last_page_len = (context_lens % self.block_size)
+            kv_last_page_len[kv_last_page_len == 0] = self.block_size
+            kv_last_page_len = kv_last_page_len.to(torch.int32)
+            qo_indptr_cpu = torch.arange(B + 1, dtype=torch.int32) * MQ_proxy
+            kv_lens_gpu = ((kv_indptr_cpu[1:].to(self.device) - kv_indptr_cpu[:-1].to(self.device) - 1)
+                           * self.block_size + kv_last_page_len).to(torch.int32)
+
+            low_level_packed_plan(
+                wrapper, model_runner=self,
+                qo_indptr_cpu=qo_indptr_cpu, kv_indptr_cpu=kv_indptr_cpu,
+                kv_indices=kv_indices, kv_last_page_len_gpu=kv_last_page_len,
+                kv_lens_gpu=kv_lens_gpu,
+                packed_mask=packed_mask, packed_indptr=packed_indptr, B=B,
+            )
+
+            set_context(
+                is_prefill=False,
+                slot_mapping=step_slot_maps[d],
+                context_lens=context_lens.to(torch.int32),
+                block_tables=dbt,
+                cu_seqlens_q=qo_indptr_cpu.to(self.device),
+                max_seqlen_q=MQ_proxy,
+                active_mq_len=MQ_proxy,
+                active_wrappers=wrapper_dict,
+                active_layout=step_proxy_layout,
+            )
+
+            outputs = self.model(current_input_ids, step_rope_positions[d])
+            logits = self.model.compute_logits(outputs, last_only=False)
+            reset_context()
+
+            logits_flat = logits.view(N, V)
+            spec_logits[:, d, :] = logits_flat
+            next_tokens = logits_flat.argmax(dim=-1)
+            spec_tokens[:, d] = next_tokens
+            current_input_ids = next_tokens
+
+        return spec_tokens, spec_logits, meta
 
     def _mirror_parity_diff(self, *, split_proxy_tokens, split_proxy_logits,
                               mirror_tokens, mirror_logits, mirror_meta):

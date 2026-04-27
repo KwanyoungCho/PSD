@@ -810,6 +810,107 @@ def capture_glue_decode_cudagraph(model_runner):
 
 
 @torch.inference_mode()
+def low_level_packed_plan(wrapper, *, model_runner, qo_indptr_cpu, kv_indptr_cpu,
+                            kv_indices, kv_last_page_len_gpu, kv_lens_gpu,
+                            packed_mask, packed_indptr, B):
+    """Phase B-1 helper: write FlashInfer wrapper internal buffers + call
+    low-level `_cached_module.plan(...)`.
+
+    Mirrors the exact buffer-write order used by run_fi_tree_decode_cudagraph
+    (line 369-406) so that split CG path and any caller using this helper
+    produce identical wrapper plan state.
+
+    Args:
+        wrapper: FlashInfer BatchPrefillWithPagedKVCacheWrapper instance with
+            internal buffers (_custom_mask_buf, _mask_indptr_buf, etc.).
+        model_runner: source of head dims / block_size / hf_config.
+        qo_indptr_cpu: int32 CPU tensor [B+1].
+        kv_indptr_cpu: int32 CPU tensor [B+1].
+        kv_indices: int32 GPU tensor [n_indices_total].
+        kv_last_page_len_gpu: int32 GPU tensor [B].
+        kv_lens_gpu: int32 GPU tensor [B] = (num_pages-1)*block_size + last_page_len.
+        packed_mask: uint8 GPU tensor (numpy.packbits little-endian).
+        packed_indptr: int32 GPU tensor [B+1] (per-batch packed_mask byte offsets).
+        B: batch size in wrapper terms.
+    """
+    # 1. Mask buffers
+    wrapper._custom_mask_buf[:len(packed_mask)].copy_(packed_mask, non_blocking=True)
+    wrapper._mask_indptr_buf[:len(packed_indptr)].copy_(packed_indptr, non_blocking=True)
+
+    # 2. KV / qo metadata buffers (qo_indptr/kv_indptr GPU sources)
+    qo_indptr_gpu = qo_indptr_cpu.to(wrapper._qo_indptr_buf.device, non_blocking=True)
+    kv_indptr_gpu = kv_indptr_cpu.to(wrapper._paged_kv_indptr_buf.device, non_blocking=True)
+    wrapper._qo_indptr_buf[:len(qo_indptr_gpu)].copy_(qo_indptr_gpu, non_blocking=True)
+    wrapper._paged_kv_indptr_buf[:len(kv_indptr_gpu)].copy_(kv_indptr_gpu, non_blocking=True)
+    wrapper._paged_kv_last_page_len_buf[:len(kv_last_page_len_gpu)].copy_(kv_last_page_len_gpu, non_blocking=True)
+    wrapper._paged_kv_indices_buf[:len(kv_indices)].copy_(kv_indices, non_blocking=True)
+
+    total_num_rows = int(qo_indptr_cpu[-1].item())
+    wrapper._kv_lens_buffer[:len(kv_lens_gpu)].copy_(kv_lens_gpu, non_blocking=True)
+
+    # Sync event
+    ev = torch.cuda.Event()
+    ev.record()
+    ev.synchronize()
+
+    # Low-level plan call
+    plan_args = [
+        wrapper._float_workspace_buffer, wrapper._int_workspace_buffer,
+        wrapper._pin_memory_int_workspace_buffer,
+        qo_indptr_cpu, kv_indptr_cpu, kv_lens_gpu,
+        wrapper._max_total_num_rows or total_num_rows,
+        B, model_runner.hf_config.num_attention_heads,
+        model_runner.hf_config.num_key_value_heads,
+        model_runner.block_size, wrapper.is_cuda_graph_enabled,
+        model_runner.hf_config.head_dim, model_runner.hf_config.head_dim,
+        False, -1,
+    ]
+    if wrapper._backend == "fa2":
+        plan_args.extend([-1, False])
+    wrapper._plan_info = wrapper._cached_module.plan(*plan_args)
+
+
+def build_packed_mask_for_proxy_step(*, MQ_LEN, K, B, context_lens_list,
+                                       cache_hits_list, fan_out_list,
+                                       fan_out_list_miss, step, device):
+    """Build packed mask + indptr for a single step using the SAME numpy
+    construction as run_fi_tree_decode_cudagraph step 0 (lines 313-340).
+
+    Used by Phase B-2 proxy-first low-level mirror for parity.
+    """
+    import numpy as np
+    _tril = np.tril(np.ones((K + 1, K + 1), dtype=np.uint8))
+    _glue_hit = np.repeat(_tril, fan_out_list, axis=0)
+    _glue_miss = np.repeat(_tril, fan_out_list_miss, axis=0)
+    _rows_np = np.arange(MQ_LEN)
+
+    s = step
+    ttl_added_s = (s + 1) * MQ_LEN + (K + 1)
+    packed_segs = []
+    seg_packed_sizes = []
+    for b in range(B):
+        cols_b = int(context_lens_list[b]) + s * MQ_LEN
+        prefix_len_b = cols_b - ttl_added_s
+        mask_b = np.zeros((MQ_LEN, cols_b), dtype=np.uint8)
+        mask_b[:, :prefix_len_b] = 1
+        glue = _glue_hit if int(cache_hits_list[b]) == 1 else _glue_miss
+        mask_b[:, prefix_len_b:prefix_len_b + K + 1] = glue
+        diag_start = prefix_len_b + K + 1
+        for blk in range(s + 1):
+            mask_b[_rows_np, diag_start + blk * MQ_LEN + _rows_np] = 1
+        packed = np.packbits(mask_b.ravel(), bitorder='little')
+        packed_segs.append(packed)
+        seg_packed_sizes.append(len(packed))
+    full_packed = np.concatenate(packed_segs) if B > 1 else packed_segs[0]
+    indptr = np.zeros(B + 1, dtype=np.int32)
+    indptr[1:] = np.cumsum(seg_packed_sizes)
+    return (
+        torch.from_numpy(full_packed.copy()).to(device, non_blocking=True),
+        torch.from_numpy(indptr.copy()).to(device, non_blocking=True),
+    )
+
+
+@torch.inference_mode()
 def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
     config = model_runner.config
     hf_config = config.hf_config
