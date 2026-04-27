@@ -343,36 +343,56 @@ class ModelRunner:
                 print(f'[MESA debug] proxy_eager_debug wrapper created '
                       f'(use_cuda_graph=False, MQ={_pe_total})', flush=True)
 
-                # Step 6 / Step 8: phase2_hybrid_long wrapper — single
-                # instance, max_total_rows = (K_long+1) * (dfo + pfo).
-                # This is the current eager hybrid runtime wrapper
-                # (use_cuda_graph=False). Step 9B adds CG-captured variants.
+                # Step 6 / Step 8 / Step 9B: phase2_hybrid wrapper families.
+                # Eager fallback (use_cuda_graph=False) keyed by name; CG
+                # variant (use_cuda_graph=True) keyed by f"{name}_cg".
+                # Runtime picks _cg by default when graph is captured;
+                # SSD_FORCE_EAGER_HYBRID_PHASE2=1 → eager fallback.
                 if self.config.mesa_phase1_k is not None:
-                    h_total = (self.config.speculate_k + 1) * (
-                        self.config.mesa_draft_fan_out + self.config.mesa_proxy_fan_out
-                    )
-                    h_cu = torch.empty(h_total + 1, dtype=torch.int32, device=self.device)
-                    h_kv_indptr = torch.empty(h_total + 1, dtype=torch.int32, device=self.device)
-                    h_kv_indices = torch.empty(h_total * max_num_blocks, dtype=torch.int32, device=self.device)
-                    h_kv_lpl = torch.empty(h_total, dtype=torch.int32, device=self.device)
-                    h_mask_size = h_total * self.config.max_model_len
-                    h_mask = torch.empty(h_mask_size, dtype=torch.uint8, device=self.device)
-                    h_mask_indptr = torch.empty(h_total + 1, dtype=torch.int32, device=self.device)
-                    h_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-                        self.workspace_buffer, "NHD",
-                        use_cuda_graph=False,
-                        qo_indptr_buf=h_cu,
-                        paged_kv_indptr_buf=h_kv_indptr,
-                        paged_kv_indices_buf=h_kv_indices,
-                        paged_kv_last_page_len_buf=h_kv_lpl,
-                        custom_mask_buf=h_mask,
-                        mask_indptr_buf=h_mask_indptr,
-                    )
-                    # keyed by max_total_rows (acts as 'bs' lookup) — runtime
-                    # dispatcher will pick the wrapper for current total
-                    self.prefill_wrappers_by_layout["phase2_hybrid_long"] = {h_total: h_wrapper}
-                    print(f'[MESA hybrid] phase2_hybrid_long wrapper created '
-                          f'(max_total_rows={h_total}, eager mode)', flush=True)
+                    K1_cfg = self.config.mesa_phase1_k
+                    K2_cfg = self.config.mesa_phase2_k
+                    K_long_cfg = K1_cfg + K2_cfg
+                    K_short_cfg = K2_cfg
+                    dfo_cfg = self.config.mesa_draft_fan_out
+                    pfo_cfg = self.config.mesa_proxy_fan_out
+
+                    def _alloc_hybrid_wrapper(K_step_local, use_cg):
+                        total = (K_step_local + 1) * (dfo_cfg + pfo_cfg)
+                        cu = torch.empty(total + 1, dtype=torch.int32, device=self.device)
+                        kv_indptr = torch.empty(total + 1, dtype=torch.int32, device=self.device)
+                        kv_indices = torch.empty(total * max_num_blocks, dtype=torch.int32, device=self.device)
+                        kv_lpl = torch.empty(total, dtype=torch.int32, device=self.device)
+                        mask = torch.empty(total * self.config.max_model_len,
+                                           dtype=torch.uint8, device=self.device)
+                        mask_indptr = torch.empty(total + 1, dtype=torch.int32, device=self.device)
+                        w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                            self.workspace_buffer, "NHD",
+                            use_cuda_graph=use_cg,
+                            qo_indptr_buf=cu,
+                            paged_kv_indptr_buf=kv_indptr,
+                            paged_kv_indices_buf=kv_indices,
+                            paged_kv_last_page_len_buf=kv_lpl,
+                            custom_mask_buf=mask,
+                            mask_indptr_buf=mask_indptr,
+                        )
+                        return total, w
+
+                    for bucket_name, K_step_b in [
+                        ("phase2_hybrid_long", K_long_cfg),
+                        ("phase2_hybrid_short", K_short_cfg),
+                    ]:
+                        # Eager fallback wrapper
+                        e_total, e_w = _alloc_hybrid_wrapper(K_step_b, use_cg=False)
+                        self.prefill_wrappers_by_layout[bucket_name] = {e_total: e_w}
+                        # CG variant wrapper (only allocate when not enforce_eager)
+                        if not self.enforce_eager:
+                            cg_total, cg_w = _alloc_hybrid_wrapper(K_step_b, use_cg=True)
+                            self.prefill_wrappers_by_layout[bucket_name + "_cg"] = {cg_total: cg_w}
+                    print(f'[MESA hybrid] phase2_hybrid wrappers created '
+                          f'(long total={(K_long_cfg+1)*(dfo_cfg+pfo_cfg)}, '
+                          f'short total={(K_short_cfg+1)*(dfo_cfg+pfo_cfg)}; '
+                          f'eager + CG{"" if not self.enforce_eager else " skipped"})',
+                          flush=True)
 
                     # Phase D-4: correct_split_cont oracle wrapper. Cont-only,
                     # uses split's physical layout (cont_layout slot positions
@@ -696,12 +716,27 @@ class ModelRunner:
                         self.graph_bs_list["mesa_verify"] = mesa_bs
                         print(f'[MESA] Captured split verify CudaGraph (exit_layer={self.config.mesa_exit_layer})', flush=True)
                 else:
-                    # Non-MESA or draft: full verify CudaGraph
+                    # Non-MESA or draft: full verify CudaGraph (K_long+1 wide)
                     verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = capture_verify_cudagraph(self)
                     self.graph_vars["verify"] = verify_graph_vars
                     self.graph_pools["verify"] = verify_graph_pool
                     self.graphs["verify"] = verify_graphs
                     self.graph_bs_list["verify"] = verify_graph_bs_list
+
+                    # Step 9B-0: draft-side glue_short bucket. K_short+1 wide
+                    # multi-query decode CG for short-hit step's glue. Target
+                    # never enters this bucket (target verify always K_long+1).
+                    if self.is_draft and self.config.mesa_phase1_k is not None:
+                        K_short = self.config.mesa_phase2_k
+                        v_s_gv, v_s_pool, v_s_graphs, v_s_bs = capture_verify_cudagraph(
+                            self, k_plus_1=K_short + 1,
+                        )
+                        self.graph_vars["verify_short"] = v_s_gv
+                        self.graph_pools["verify_short"] = v_s_pool
+                        self.graphs["verify_short"] = v_s_graphs
+                        self.graph_bs_list["verify_short"] = v_s_bs
+                        print(f'[MESA] Captured draft glue_short CG '
+                              f'(K_short+1={K_short + 1})', flush=True)
             if self.config.speculate and self.is_draft and self.config.draft_async:
                 fi_tree_decode_graph_vars, fi_tree_decode_graph_pool, fi_tree_decode_graphs, fi_tree_decode_graph_bs_list = capture_fi_tree_decode_cudagraph(self)  # fi tree decode cudagraph, draft only
                 self.graph_vars["fi_tree_decode"] = fi_tree_decode_graph_vars
@@ -1097,7 +1132,19 @@ class ModelRunner:
                     self.graph_vars["mesa_verify"],
                     mesa_proxy_fn=self._mesa_proxy_fn)
         elif is_mq_kp1: # verify or non-EAGLE glue decode, "verify" ~ mq decode of len K+1
-            return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify"])
+            # Step 9B-0: draft glue dispatch by valid_k. Long-hit (= K_long)
+            # uses verify (K_long+1 wide); short-hit (= K_short) uses
+            # verify_short (K_short+1 wide). Target verify is always
+            # K_long+1 (no glue_valid_k context).
+            _ctx_g = get_context()
+            _vk_glue = getattr(_ctx_g, "glue_valid_k", None)
+            if (
+                self.is_draft and _vk_glue is not None
+                and "verify_short" in self.graph_vars
+                and _vk_glue == self.config.mesa_phase2_k
+            ):
+                return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify_short"], bucket="verify_short")
+            return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify"], bucket="verify")
         else: # draft decoding in sync spec or JIT single-token decode
             return run_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["decode"], hidden_states=hidden_states)
 

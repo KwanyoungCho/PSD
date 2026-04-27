@@ -8,20 +8,25 @@ def compute_megaspec_lookahead(MQ_LEN: int, K: int) -> int:
 
 @torch.inference_mode()
 def make_glue_decode_input_ids(
-    draft_tokens: torch.Tensor,  # [B, K]
+    draft_tokens: torch.Tensor,  # [B, K_max]
     rec_tokens: torch.Tensor,   # [B]
+    valid_k: int | None = None,
 ) -> torch.Tensor:
     """
-    Creates glue_token_input_ids of shape [B, K+1] with recovery token first.
+    Creates glue_token_input_ids of shape [B, valid_k+1] with recovery token first.
+
+    Step 9B-0: ``valid_k`` plumbing for MESA short-hit bucket. When None
+    (legacy path), uses draft_tokens.shape[1] as the glue width. When set,
+    only the first ``valid_k`` columns of draft_tokens are used (the rest
+    is zero-padding for cache row uniformity).
     """
     assert draft_tokens.shape[0] == rec_tokens.shape[0], f"Expected draft_tokens and rec_tokens to have the same number of rows, got {draft_tokens.shape[0]} and {rec_tokens.shape[0]}"
-    
-    # we need flat [num_ttl_q_tokens, num_q_heads, head_dim] for multi-query decode inputs 
-    # all info about batch size etc goes through wrapper.plan()
-    
-    out = torch.cat([rec_tokens.unsqueeze(1), draft_tokens], dim=1).view(-1) # [B, K+1] -> B(K+1)
-    
-    return out 
+
+    if valid_k is not None:
+        # Slice to meaningful prefix (B=1 invariant: scalar valid_k).
+        draft_tokens = draft_tokens[:, :valid_k]
+    out = torch.cat([rec_tokens.unsqueeze(1), draft_tokens], dim=1).view(-1)
+    return out
 
 def get_forked_recovery_tokens_from_logits(config: Config, logits: torch.Tensor, cache_hits: torch.Tensor, returned_tokens: torch.Tensor, tokenizer: AutoTokenizer):
     """

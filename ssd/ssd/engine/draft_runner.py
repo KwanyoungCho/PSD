@@ -49,7 +49,10 @@ class DraftRunner(ModelRunner):
             # Phase 3 (K1 split): also capture phase1_layout_long (K=K1 forwards,
             # same MQ_LEN as draft so capture shape is identical).
             if self.config.mesa_enabled and not self.enforce_eager:
-                from ssd.engine.helpers.cudagraph_helpers import capture_fi_tree_decode_cudagraph
+                from ssd.engine.helpers.cudagraph_helpers import (
+                    capture_fi_tree_decode_cudagraph,
+                    capture_phase2_hybrid_cudagraph,
+                )
                 _layouts_to_capture = [self.draft_layout, self.proxy_layout]
                 # Phase 3 (K1 split): capture phase1_layout_long (long-hit
                 # bucket). Step 9A: also capture phase1_layout_short for
@@ -66,6 +69,27 @@ class DraftRunner(ModelRunner):
                     self.graphs[_layout.graph_key] = _graphs
                     self.graph_bs_list[_layout.graph_key] = _bs
                 print(f'[MESA] Captured FI tree decode CudaGraphs ({len(_layouts_to_capture)} layouts)', flush=True)
+
+                # Phase 9B-1: capture phase2_hybrid CG for both buckets.
+                # Skipped when SSD_FORCE_EAGER_HYBRID_PHASE2=1 (env gate
+                # used at hot path; capture left intact for fast switch back).
+                if self.config.mesa_phase1_k is not None:
+                    _hybrid_cg_buckets = [
+                        ("long", self.config.mesa_phase1_k + self.config.mesa_phase2_k),
+                        ("short", self.config.mesa_phase2_k),
+                    ]
+                    for _bk, _Kstep in _hybrid_cg_buckets:
+                        _key = f"phase2_hybrid_{_bk}_cg"
+                        if _key not in self.prefill_wrappers_by_layout:
+                            continue
+                        _gv2, _pool2, _g2, _total2 = capture_phase2_hybrid_cudagraph(
+                            self, bucket=_bk, K_step=_Kstep,
+                        )
+                        self.graph_vars[_key] = _gv2
+                        self.graph_pools[_key] = _pool2
+                        self.graphs[_key] = _g2
+                    print(f'[MESA hybrid] Captured phase2_hybrid CGs '
+                          f'({len(_hybrid_cg_buckets)} buckets)', flush=True)
             print(f'DraftRunner set up, starting draft_loop', flush=True)
             self.draft_loop()
 
@@ -538,7 +562,11 @@ class DraftRunner(ModelRunner):
             
         rec_toks = request_keys[:, 2]
 
-        return out_tokens, out_logits, make_glue_decode_input_ids(out_tokens, rec_toks), cache_hits, out_activations, phase_source, valid_k
+        # Step 9B-0: glue input width follows valid_k (long-hit=K_long+1,
+        # short-hit=K_short+1). B=1 invariant lets us pass a scalar.
+        _vk_scalar = int(valid_k[0].item()) if valid_k.numel() > 0 else K
+        glue_input_ids = make_glue_decode_input_ids(out_tokens, rec_toks, valid_k=_vk_scalar)
+        return out_tokens, out_logits, glue_input_ids, cache_hits, out_activations, phase_source, valid_k
 
     def _service_spec_request(self):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
@@ -682,11 +710,22 @@ class DraftRunner(ModelRunner):
         }
 
     
-    def prepare_glue_decode_ctxt(self, num_tokens, input_ids, dbt, B):
-        K = self.config.speculate_k
+    def prepare_glue_decode_ctxt(self, num_tokens, input_ids, dbt, B, valid_k=None):
+        """Prepare glue decode context.
+
+        Step 9B-0: ``valid_k`` (default = config.speculate_k = K_long) drives
+        glue width. positions / slot_map / context_lens / cu_seqlens_q /
+        max_seqlen_q all follow valid_k+1.
+        """
+        K = valid_k if valid_k is not None else self.config.speculate_k
         pos_offset = -1 if self.config.use_eagle else 0
         positions_start = (num_tokens - 1 + pos_offset).unsqueeze(-1)
-        positions_grid = positions_start + self._arange_kp1
+        # arange(K+1) — sliced from cached _arange_kp1 (which is K_long+1 wide)
+        if valid_k is not None and valid_k != self.config.speculate_k:
+            arange_kp1 = self._arange_kp1[:K + 1]
+        else:
+            arange_kp1 = self._arange_kp1
+        positions_grid = positions_start + arange_kp1
 
         # Calculate block indices and offsets for ALL positions
         block_indices = (positions_grid // self.block_size).to(torch.int64)
@@ -799,11 +838,16 @@ class DraftRunner(ModelRunner):
 
     def _glue_decode(self, partial_tree_decode_args, glue_decode_input_ids):
         """Glue decode only (no tree args construction). Non-EAGLE scope.
-        Returns: (glue_logits [B,K+1,V], gd_for_fork [B,K+1], cache_hits, cache_hits_list, dbt, B)
+
+        Step 9B-0: dispatches on valid_k (long-hit vs short-hit). Glue width
+        = valid_k+1. Long-hit uses glue_long context / CG, short-hit uses
+        glue_short.
+
+        Returns: (glue_logits [B, valid_k+1, V], gd_for_fork [B, valid_k+1],
+                  cache_hits, cache_hits_list, dbt, B)
         """
         from ssd.engine.helpers.cudagraph_helpers import mesa_record, mesa_close
         _mev_glue = mesa_record("glue")
-        K = self.config.speculate_k
         dbt = partial_tree_decode_args["dbt"]
         cache_hits = partial_tree_decode_args["cache_hits"]
         cache_hits_list = cache_hits.tolist()
@@ -812,12 +856,19 @@ class DraftRunner(ModelRunner):
             # EAGLE glue decode — full path (unchanged, passes through to _build_tree_batch)
             raise NotImplementedError("_glue_decode does not support EAGLE; use _build_tree_batch directly")
 
+        # Step 9B-0: glue width follows valid_k. partial_tree_decode_args["valid_k"]
+        # is plumbed from hit_cache_and_respond. B=1 invariant (Config) → scalar.
+        if "valid_k" in partial_tree_decode_args:
+            _vk_glue = int(partial_tree_decode_args["valid_k"][0].item())
+        else:
+            _vk_glue = self.config.speculate_k
+        K = _vk_glue
         B = glue_decode_input_ids.shape[0] // (K + 1)
         assert B == partial_tree_decode_args["num_tokens"].shape[0]
         glue_decode_ctxt = self.prepare_glue_decode_ctxt(
             num_tokens=partial_tree_decode_args["num_tokens"],
             input_ids=glue_decode_input_ids,
-            dbt=dbt, B=B,
+            dbt=dbt, B=B, valid_k=_vk_glue,
         )
 
         set_context(
@@ -827,6 +878,9 @@ class DraftRunner(ModelRunner):
             slot_mapping=glue_decode_ctxt["slot_map"],
             context_lens=glue_decode_ctxt["context_lens"],
             block_tables=glue_decode_ctxt["block_tables"],
+            # Step 9B-0: glue bucket dispatch — model_runner reads
+            # context.glue_valid_k to pick glue_long vs glue_short CG.
+            glue_valid_k=_vk_glue,
         )
 
         glue_decode_logits_flat = self.run_model(
@@ -1735,18 +1789,42 @@ class DraftRunner(ModelRunner):
                     # Restore P1 again before hybrid runs.
                     self._decode_tree(draft_tree_args, layout=_phase1_layout)
 
-            # Replace split continuation tail + proxy outputs with hybrid
-            # forward results. draft_tokens currently holds Phase 1 (K1) +
-            # continuation (K2 from split path) — slice to Phase 1 only and
-            # let hybrid produce the K2 tail.
-            cont_tokens_h, cont_logits_h, proxy_tokens_h, proxy_logits_h = (
-                self._decode_phase2_hybrid(
-                    draft_tree_args=draft_tree_args,
-                    proxy_tree_args=proxy_tree_args,
-                    step_proxy_layout=step_proxy_layout,
-                    draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
-                )
+            # Step 9B-2: hybrid runtime dispatch:
+            #   default       → CG hybrid (run_phase2_hybrid_cudagraph)
+            #   force_eager   → eager hybrid (_decode_phase2_hybrid)
+            #   force_split   → reached via _force_split branch (no hybrid)
+            _force_eager_hybrid = (
+                _os.environ.get("SSD_FORCE_EAGER_HYBRID_PHASE2", "0") == "1"
             )
+            _bucket_h = "long" if self.hybrid_phase2_plan.valid_k == self.hybrid_phase2_plan.K_long else "short"
+            _hybrid_cg_key = f"phase2_hybrid_{_bucket_h}_cg"
+            _hybrid_cg_available = (
+                not _force_eager_hybrid
+                and not self.enforce_eager
+                and _hybrid_cg_key in self.graphs
+            )
+            if _hybrid_cg_available:
+                from ssd.engine.helpers.cudagraph_helpers import run_phase2_hybrid_cudagraph
+                cont_tokens_h, cont_logits_h, proxy_tokens_h, proxy_logits_h = (
+                    run_phase2_hybrid_cudagraph(
+                        self,
+                        plan=self.hybrid_phase2_plan,
+                        draft_tree_args=draft_tree_args,
+                        proxy_tree_args=proxy_tree_args,
+                        step_proxy_layout=step_proxy_layout,
+                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                        bucket=_bucket_h,
+                    )
+                )
+            else:
+                cont_tokens_h, cont_logits_h, proxy_tokens_h, proxy_logits_h = (
+                    self._decode_phase2_hybrid(
+                        draft_tree_args=draft_tree_args,
+                        proxy_tree_args=proxy_tree_args,
+                        step_proxy_layout=step_proxy_layout,
+                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                    )
+                )
 
             # Phase D-6 hybrid self-consistency: run hybrid AGAIN with same
             # inputs. Hybrid writes A_tail + B_proxy (disjoint from P1 KV),
@@ -2229,7 +2307,11 @@ class DraftRunner(ModelRunner):
 
         current_input_ids = proxy_tree_args["input_ids"]
 
-        K_full = self.config.speculate_k  # K_long; matches split CG's mask K param
+        # Step 9B-3: K_full = layout-derived (= position_count - 1). For long
+        # bucket = K_long; for short bucket = K_short. Was hardcoded to
+        # speculate_k pre-9B-3 which broke short bucket (fan_out_list
+        # length mismatch in mask helper).
+        K_full = step_proxy_layout.position_count - 1
         for d in range(K2):
             # Bool mask: use K_full + layout.fan_out_list (= split CG's path)
             bool_mask = get_custom_mask_cached(
@@ -2540,6 +2622,10 @@ class DraftRunner(ModelRunner):
                     f"logits max_abs={float(d.max().item()):.6f} "
                     f"mean_abs={float(d.mean().item()):.6f}")
 
+        # Step 9B-3: tag bucket (long/short) so post-process can aggregate.
+        plan = self.hybrid_phase2_plan
+        bucket_tag = "long" if plan.valid_k == plan.K_long else "short"
+
         # Primary: cont oracle
         cont_oracle_mismatch = 0
         if oracle_cont_tokens is not None:
@@ -2548,7 +2634,7 @@ class DraftRunner(ModelRunner):
                 oracle_cont_tokens, oracle_cont_logits,
             )
             cont_oracle_mismatch = nm_c
-            print(f"[CONT ORACLE]  hybrid_cont  vs correct_split_cont: {line}",
+            print(f"[CONT ORACLE {bucket_tag}]  hybrid_cont  vs correct_split_cont: {line}",
                   flush=True)
 
         # Primary: proxy oracle
@@ -2559,7 +2645,7 @@ class DraftRunner(ModelRunner):
                 oracle_proxy_tokens, oracle_proxy_logits,
             )
             proxy_oracle_mismatch = nm
-            print(f"[PROXY ORACLE] hybrid_proxy vs fresh_proxy_oracle: {line}",
+            print(f"[PROXY ORACLE {bucket_tag}] hybrid_proxy vs fresh_proxy_oracle: {line}",
                   flush=True)
 
         # Diagnostics
@@ -3137,50 +3223,47 @@ class DraftRunner(ModelRunner):
 
     @torch.inference_mode()
     def _decode_correct_split_cont(self, *, draft_tree_args, draft_tokens_phase1):
-        """Phase D-4: continuation oracle.
+        """Phase D-4 / Phase 9B-3: continuation oracle, valid_k-aware.
 
-        Reuses split's physical layout (cont_layout slot positions = same
-        as hybrid's A_tail region: num_tokens + K_long + (K1+d)*MQ_p1 + r),
-        but applies the plan-correct continuation bool mask:
-          - persistent (kv_pos < num_tokens)
-          - j_idx-aware glue prefix [num_tokens-1, num_tokens-1+j_idx[r]+1)
-          - own Phase 1 KV (slots phase1_kv_base + d_p1*MQ_p1 + r)
-          - own continuation prefix (slots a_tail_base + d_at*MQ_p1 + r,
-            d_at in [0, d+1))
-
-        Used as parity oracle in 3-way diff vs split_CG_cont and hybrid_cont.
-        Never enters runtime path. Long-bucket only.
+        Uses split's physical layout (cont_layout slot positions = same
+        as hybrid's A_tail region) but applies plan-correct continuation
+        bool mask. Generalized for both buckets via plan.valid_k.
 
         Returns: (cont_tokens [cont_count, K2], cont_logits [cont_count, K2, V])
         """
+        plan = self.hybrid_phase2_plan
         K1 = self.config.mesa_phase1_k
         K2 = self.config.mesa_phase2_k
-        K_long = K1 + K2
-        MQ_p1 = self.phase1_layout_long.MQ_LEN
-        cont_count = MQ_p1  # Phase 1's MQ_LEN = (K_long+1) * dfo
+        # Step 9B-3: K_step = plan.valid_k (long or short bucket)
+        K_step = plan.valid_k
+        if K_step == plan.K_long:
+            _phase1_layout_step = self.phase1_layout_long
+        else:
+            _phase1_layout_step = self.phase1_layout_short
+        MQ_p1 = _phase1_layout_step.MQ_LEN
+        cont_count = MQ_p1  # phase1.MQ_LEN = (K_step+1) * dfo
         device = self.device
         V = self.hf_config.vocab_size
         dt = self.hf_config.torch_dtype
 
-        # Recover num_tokens and j_idx_p1 from draft_tree_args (same source
-        # as _build_phase2_hybrid_plan).
+        # Recover num_tokens and j_idx_p1 from draft_tree_args.
         p1_pos0 = int(draft_tree_args["positions"][0].item())
-        num_tokens = p1_pos0 - K_long
+        num_tokens = p1_pos0 - K_step
         cache_hits = draft_tree_args["cache_hits"]
         j_idx_p1 = (
-            self.phase1_layout_long.fan_idx_hit if int(cache_hits[0])
-            else self.phase1_layout_long.fan_idx_miss
+            _phase1_layout_step.fan_idx_hit if int(cache_hits[0])
+            else _phase1_layout_step.fan_idx_miss
         )[:cont_count]
 
-        # Slot positions: split's cont_layout writes at
-        #   step_positions[d, r] = num_tokens + K_long + (K1+d)*MQ_p1 + r
-        # which is identical to hybrid's a_tail_base + d*MQ_p1 + r.
+        # Slot positions: cont_layout writes at
+        #   step_positions[d, r] = num_tokens + K_step + (K1+d)*MQ_p1 + r
+        # = hybrid's a_tail_base + d*MQ_p1 + r.
         cont_idx = torch.arange(cont_count, device=device, dtype=torch.int64)
-        phase1_kv_base = num_tokens + K_long
+        phase1_kv_base = num_tokens + K_step
         a_tail_base = phase1_kv_base + K1 * MQ_p1
         cont_initial_pos = a_tail_base + cont_idx  # depth 0 slot
 
-        # Logical rope: num_tokens + j_idx_p1[r] + K1 (same as hybrid).
+        # Logical rope: num_tokens + j_idx_p1[r] + K1.
         cont_initial_rope = num_tokens + j_idx_p1 + K1
 
         # Wrapper: dedicated eager-only correct_split_cont
@@ -3213,8 +3296,8 @@ class DraftRunner(ModelRunner):
             ).contiguous()
 
             # ctx_len at depth d: split's natural extent =
-            #   num_tokens + K_long + (K1+d+1)*MQ_p1
-            ctx_len_val = num_tokens + K_long + (K1 + d + 1) * MQ_p1
+            #   num_tokens + K_step + (K1+d+1)*MQ_p1
+            ctx_len_val = num_tokens + K_step + (K1 + d + 1) * MQ_p1
             ctx_len_d = torch.full(
                 (cont_count,), ctx_len_val, dtype=torch.int32, device=device,
             )
@@ -3234,11 +3317,9 @@ class DraftRunner(ModelRunner):
                 cont_count, n_pages_seq,
             ).contiguous().to(torch.int32)
 
-            # Plan-correct continuation bool mask (cont-only; reuse hybrid
-            # helper with proxy_count=0 — semantics identical).
-            # K_step here = K_long (correct_split_cont oracle is long-bucket).
+            # Plan-correct continuation bool mask (cont-only).
             bool_mask_d = self._compute_hybrid_bool_mask_for_depth(
-                d=d, K1=K1, K2=K2, K_step=K_long,
+                d=d, K1=K1, K2=K2, K_step=K_step,
                 MQ_p1=MQ_p1, L=ctx_len_val,
                 cont_count=cont_count, proxy_count=0,
                 num_tokens=num_tokens,
@@ -3331,9 +3412,13 @@ class DraftRunner(ModelRunner):
         V = self.hf_config.vocab_size
         dt = self.hf_config.torch_dtype
 
-        # Per-row wrapper — phase2_hybrid_long, single instance keyed by
-        # max_total_rows. Look up by exact max key (currently 1 instance).
-        wrapper_dict = self.prefill_wrappers_by_layout["phase2_hybrid_long"]
+        # Per-row wrapper — eager hybrid wrapper family, dispatched by
+        # plan.valid_k (long vs short bucket). Step 9B added separate
+        # phase2_hybrid_short_eager wrapper alongside the existing long.
+        if plan.valid_k == plan.K_long:
+            wrapper_dict = self.prefill_wrappers_by_layout["phase2_hybrid_long"]
+        else:
+            wrapper_dict = self.prefill_wrappers_by_layout["phase2_hybrid_short"]
         wrapper_total = next(iter(wrapper_dict.keys()))
         assert total <= wrapper_total, (
             f"hybrid runtime total={total} > wrapper allocated max={wrapper_total}"
