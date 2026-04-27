@@ -123,11 +123,23 @@ class SpeculatorAsync(SpeculatorBase):
         self._speculations_buf[:, 1:] = speculations_tokens
         speculations = self._speculations_buf
 
+        # v1 hybrid: when valid_k differs from K, only extend by valid_k tokens
+        # (proxy-sourced rows store K_short; rest of the K_long-shaped buffer is
+        # padding from _merge_and_populate_cache and must not enter seq tokens).
         for i, seq in enumerate(seqs):
-            seq.token_ids.extend(speculations_tokens[i].tolist())
+            vk_i = int(valid_k[i].item()) if valid_k is not None else self.K
+            seq.token_ids.extend(speculations_tokens[i, :vk_i].tolist())
             seq.num_tokens = len(seq.token_ids)
             seq.last_token = seq.token_ids[-1]
-            seq.num_draft_cached_tokens += len(speculations_tokens[i]) + 1
+            seq.num_draft_cached_tokens += vk_i + 1
+
+        # Slice speculations to per-step valid_k width before returning. For B=1
+        # (Config invariant) valid_k is uniform; slice with the scalar.
+        if valid_k is not None:
+            vk = int(valid_k[0].item())
+            if vk != self.K:
+                speculations = speculations[:, :vk + 1].contiguous()
+                logits_q = logits_q[:, :vk, :].contiguous()
 
         return SpeculateResult(speculations, logits_q, cache_hits, phase_source, valid_k)
 

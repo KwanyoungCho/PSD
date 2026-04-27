@@ -821,22 +821,29 @@ class ModelRunner:
                     max_seqlen_k=max_seqlen_k, slot_mapping=slot_mapping, context_lens=None, block_tables=block_tables)
         return input_ids, positions
     
-    def prepare_decode(self, seqs: list[Sequence], verify: bool = False): 
+    def prepare_decode(self, seqs: list[Sequence], verify: bool = False):
+        # v1 hybrid: verify shape varies per step. Uses _mesa_step_lookahead
+        # set by Verifier (= valid_k of the matched cache row). Default for
+        # non-hybrid path is config.speculate_k.
+        if verify:
+            verify_k = getattr(self, "_mesa_step_lookahead", self.config.speculate_k)
+        else:
+            verify_k = -1
         input_ids, positions, slot_mapping, context_lens = \
-            prepare_decode_tensors_from_seqs(seqs, self.block_size, self.is_draft, verify, self.config.speculate_k if verify else -1)
+            prepare_decode_tensors_from_seqs(seqs, self.block_size, self.is_draft, verify, verify_k)
 
-        
+
         block_tables = prepare_block_tables_from_seqs(seqs, self.is_draft) # if verify, set cu_seqlens_q as well
 
-        if verify: ### what path does glue decode take? trace it. 
+        if verify: ### what path does glue decode take? trace it.
             # this had [not draft and draft_async] condn before
             cu_seqlens_q = torch.zeros(len(seqs) + 1, dtype=torch.int32, device=self.device)
-            seqlen_q = torch.full((len(seqs),), self.config.speculate_k + 1, dtype=torch.int32, device=self.device)
+            seqlen_q = torch.full((len(seqs),), verify_k + 1, dtype=torch.int32, device=self.device)
             cu_seqlens_q[1:] = torch.cumsum(seqlen_q, dim=0)
-            set_context(is_prefill=False, cu_seqlens_q=cu_seqlens_q, cu_seqlens_k=None, 
-                       max_seqlen_q=self.config.speculate_k + 1, max_seqlen_k=0,
-                       slot_mapping=slot_mapping, context_lens=context_lens, 
-                       block_tables=block_tables) 
+            set_context(is_prefill=False, cu_seqlens_q=cu_seqlens_q, cu_seqlens_k=None,
+                       max_seqlen_q=verify_k + 1, max_seqlen_k=0,
+                       slot_mapping=slot_mapping, context_lens=context_lens,
+                       block_tables=block_tables)
         else: # sq_decode path, draft (sync spec) or target (normal)
             set_context(is_prefill=False, cu_seqlens_q=None, cu_seqlens_k=None, 
                        max_seqlen_q=0, max_seqlen_k=0, slot_mapping=slot_mapping, 

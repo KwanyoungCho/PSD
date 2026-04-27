@@ -109,11 +109,15 @@ class Verifier(VerifierBase):
         else:
             logits_p_flat = result
 
+        # v1 hybrid: per-step variable lookahead. _step_lookahead read above
+        # from speculate_result.valid_k. For non-hybrid path it equals
+        # self.lookahead (= K_long).
+        _step_lookahead = getattr(self.target_model_runner, "_mesa_step_lookahead", self.lookahead)
         for s in seqs:
-            s.num_cached_tokens += self.lookahead + 1
+            s.num_cached_tokens += _step_lookahead + 1
 
         logits_p = logits_p_flat.view(
-            batch_size, self.lookahead + 1, -1)  # [b, k+1, v]
+            batch_size, _step_lookahead + 1, -1)  # [b, vk+1, v]
 
         # Build per-seq temps for target verify and draft q respectively.
         temps_target = [seq.temperature for seq in seqs]
