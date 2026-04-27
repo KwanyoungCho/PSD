@@ -1092,7 +1092,7 @@ def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
     graph_post = model_runner.graphs[f"{bucket}_post"][wrapper_bs]
 
     for k, v in graph_vars.items():
-        if k not in ("outputs", "exit_hidden", "exit_residual"):
+        if k not in ("outputs", "exit_hidden", "exit_residual", "lookahead"):
             v.zero_()
 
     # Padding (same pattern as run_verify_cudagraph)

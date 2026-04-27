@@ -61,27 +61,30 @@ class Verifier(VerifierBase):
         if config.mesa_enabled:
             async_pg = self.target_model_runner.async_pg
             draft_rank = self.target_model_runner.draft_rank
-            draft_tokens = speculate_result.speculations[:, 1:]  # [B, K]
-            logits_q = speculate_result.logits_q                 # [B, K, V]
-            cache_hits = speculate_result.cache_hits              # [B] or None
-
-            def _proxy_fn(exit_logits, orig_bs):
-                self._compute_and_send_proxy(
-                    exit_logits, draft_tokens, logits_q, orig_bs,
-                    self.lookahead, async_pg, draft_rank, cache_hits=cache_hits)
-
-            self.target_model_runner._mesa_proxy_fn = _proxy_fn
-
-            # v1 hybrid: pass per-step lookahead so model_runner picks the
-            # right verify graph bucket (long vs short). speculate_result.valid_k
-            # is per-row; assert uniform across the B=1 batch (Config invariant).
+            # v1 hybrid: per-step lookahead (= valid_k of the matched cache row).
+            # speculate_result.valid_k is uniform across the B=1 batch (Config
+            # invariant). For non-hybrid path defaults to self.lookahead = K_long.
             if speculate_result.valid_k is not None and config.mesa_phase1_k is not None:
                 _vk_unique = torch.unique(speculate_result.valid_k)
                 assert _vk_unique.numel() == 1, \
                     f"v1 expects uniform valid_k across batch (B=1), got {speculate_result.valid_k}"
-                self.target_model_runner._mesa_step_lookahead = int(_vk_unique.item())
+                _step_lookahead = int(_vk_unique.item())
             else:
-                self.target_model_runner._mesa_step_lookahead = self.lookahead
+                _step_lookahead = self.lookahead
+            self.target_model_runner._mesa_step_lookahead = _step_lookahead
+
+            # Slice draft_tokens / logits_q to step_lookahead since target ran
+            # only K_short+1 positions on a short-hit step.
+            draft_tokens = speculate_result.speculations[:, 1:_step_lookahead + 1]  # [B, vk]
+            logits_q = speculate_result.logits_q[:, :_step_lookahead, :]            # [B, vk, V]
+            cache_hits = speculate_result.cache_hits                                  # [B] or None
+
+            def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead):
+                self._compute_and_send_proxy(
+                    exit_logits, draft_tokens, logits_q, orig_bs,
+                    _vk, async_pg, draft_rank, cache_hits=cache_hits)
+
+            self.target_model_runner._mesa_proxy_fn = _proxy_fn
 
         if _prof:
             torch.cuda.synchronize()
@@ -304,7 +307,20 @@ class Verifier(VerifierBase):
 
         fan_out_tensor = torch.tensor(fan_out_list, dtype=torch.int64, device=accept_probs.device)
 
-        # NCCL send: fan_out_list [K+1] + topk_ids [B,K,top_k] + topk_probs [B,K,top_k]
+        # v1 hybrid: wire payload is fixed max-size (K_long-based) per the plan's
+        # Wire Contracts. When the per-step compute K (= step_lookahead) is
+        # smaller than K_long, pad the wire tensors with zeros up to K_long.
+        K_wire = config.speculate_k
+        if K < K_wire:
+            pad_pos = K_wire - K
+            fan_out_pad = torch.zeros(pad_pos, dtype=fan_out_tensor.dtype, device=fan_out_tensor.device)
+            fan_out_tensor = torch.cat([fan_out_tensor, fan_out_pad])  # [K_long+1]
+            tok_pad = torch.zeros(B, pad_pos, top_k, dtype=topk_ids.dtype, device=topk_ids.device)
+            topk_ids = torch.cat([topk_ids, tok_pad], dim=1)            # [B, K_long, top_k]
+            prb_pad = torch.zeros(B, pad_pos, top_k, dtype=topk_probs.dtype, device=topk_probs.device)
+            topk_probs = torch.cat([topk_probs, prb_pad], dim=1)         # [B, K_long, top_k]
+
+        # NCCL send: fan_out_list [K_long+1] + topk_ids [B,K_long,top_k] + topk_probs [B,K_long,top_k]
         send_int64(async_pg, draft_rank,
                    fan_out_tensor,
                    topk_ids.reshape(-1),
