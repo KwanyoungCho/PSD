@@ -262,16 +262,42 @@ exit_layer=21, 4 prompts × 32 tok, B=1, 3 GPU async).
 - **Phase 2 hit rate 9%** (single-prompt 0% 대비 향상): multi-prompt 가
   cache 다양성 만들어 가끔씩 Phase 2 row 가 매칭됨.
 
-### 미해결: verify_short bucket replay
+### 미해결: verify_short bucket replay — root cause 부분 분석 완료
 
 `SSD_USE_VERIFY_SHORT=1` flag 를 켜면 verify 분기가 작동. single-prompt
 는 문제없이 동작하지만 multi-prompt 의 seq 2 first decode 에서 hang 발생
 (target run 내부 verify_short replay 진입 후 미반응).
 
-근본 원인은 미확정 — FlashInfer wrapper / KV slot mapping 의 shape
-coupling 가 의심됨. 한 GPU debug session 으로 fix 가능할 것으로 보이나
-이번 세션에선 시간상 deferred. 현재는 default 가 verify_long-only 라
-**multi-prompt 안정 동작 + 17.6% TPS win** 이 깨끗하게 떨어짐.
+**Root cause 분석 (이 세션):**
+
+1. **Plan 의 Phase 4 + Phase 5 가 상호의존적**: plan 의 §"Incoming valid_k
+   only varies the per-step batch shape" (line 207–220) — verify 가 K_short
+   row 를 select 하면 next step 의 glue / phase1 / phase2_hybrid 모두
+   K_short+1 사이즈로 입력 받음. 즉 **verify_short 만 add 하는 건
+   불충분**, glue_short / phase1_short / phase2_hybrid_short bucket 도
+   같이 capture/dispatch 해야 함.
+2. 내 v1 은 verify_long/short capture 만 추가, glue/phase1 short bucket
+   안 함 → next step shape 불일치
+3. 추가로 FlashInfer wrapper interference 가능성도 검토했으나
+   `attention.py` 가 verify path 에서는 `flash_attn_with_kvcache`
+   직접 호출 (FlashInfer wrapper 안 씀). Wrapper sharing 은 verify
+   path 의 root cause 는 아님.
+4. CG capture 에 `max_seqlen_q` 가 다른 두 bucket (verify_long=9,
+   verify_short=5) 이 같은 graph_pool 공유. CG kernel arg 에 max_seqlen
+   이 baked-in 됐는데 어떻게 같은 pool 에서 둘이 공존하는지가 의심.
+
+**수정 path (아직 실행 안 함, 다음 세션 작업)**:
+
+- glue_short / phase1_short bucket capture 추가 (Phase 5 부분 land)
+- `_glue_decode` 가 valid_k+1 입력 받도록 reshape (현재는 K_long+1 hardcode)
+- Phase 1 build 가 phase1_layout_long/short dispatch (현재는 draft_layout
+  hardcode)
+- CG capture 시 별도 `graph_pool` 분리 (verify_short / glue_short /
+  phase1_short 각자 독립 pool)
+
+위 4 가지 모두 land 되면 verify_short 가 안전하게 동작 (예상).
+이번 세션 default 는 `SSD_USE_VERIFY_SHORT=0` 로 verify_long-only —
+**multi-prompt 안정 + 17.6% TPS win** 만 락 인.
 
 ### 이득 (b) 의 추가 잠재력
 
@@ -284,17 +310,52 @@ v1 = 이득 (a) 만. verify_short 가 fix 되면:
 추정: full v1 (verify_short 정상 작동) 는 +25~30% TPS, full hybrid (P1
 split + 통합 batch) 는 +30~40% TPS 기대. 측정 필요.
 
-## 7. 다음 단계
+## 7. 다음 단계 (plan 끝까지)
 
-1. **verify_short bucket replay debug** (~1 GPU debug session)
-   - SSD_USE_VERIFY_SHORT=1 로 단일 prompt 만 돌려서 정상 동작 확인 후
-   - Multi-prompt seq 2 first decode 에서 어떤 NCCL / replay step 이
-     hang 하는지 instrument
-   - Likely fix: prepare_decode 의 short-shape 빌드 / FlashInfer wrapper
-     bind 잔여 이슈
-2. **Sweep on layerskip-llama3-8B + 70B AWQ stack** — v1 default 로
-   3 exit-layer × pfo {2,3,4,6} × K2 {2,3,4,6} grid (= 48 configs).
-   기존 `experiments/sweep_70b_awq/orchestrate.py` 변형. ~3-4 시간 GPU.
-3. **P1 split + hybrid forward** (full plan): v1 stable 후 incremental.
-   Phase 1 K1 split → continuation pass → single batched forward.
-   이득 (b) 추가 캡처.
+### Step 1: verify_short bucket 정상화 (Phase 4 + Phase 5 partial)
+
+Plan 의 Phase 4/5 가 상호의존적이므로 같이 land:
+
+| Plan 항목 | 현 상태 | 다음 세션 작업 |
+|---|---|---|
+| verify_long/short CG | ✅ capture, 🟡 dispatch off | 별도 graph_pool 로 분리 |
+| glue_long/short CG | ❌ | glue capture 추가, valid_k 별 dispatch |
+| phase1_long/short CG | ❌ (layout 만 있음) | phase1 capture 추가 |
+| `_glue_decode` shape | K_long+1 hardcode | valid_k+1 동적 |
+| Phase 1 layout dispatch | `draft_layout` hardcode | `phase1_layout_long/short` |
+| Speculator slice to vk+1 | ✅ (gated) | gating 제거 |
+| `_compute_and_send_proxy` | ✅ vk-aware + wire pad | 그대로 |
+
+예상 LOC: ~150–200. 예상 GPU debug cycles: ~5–10 회. 한 세션.
+
+이게 완료되면 v1 의 이득 (a) 가 *완전히* 캡처되어 accept rate 0.80
+회복 + Phase 2 hit 의 target verify 단축 → 추가 +5–10% TPS 기대.
+
+### Step 2: Phase 3 — Hybrid forward (이득 (b))
+
+| Plan 항목 | 작업 |
+|---|---|
+| Phase 1 forward depth K1 | `_build_tree_batch_mesa` 가 phase1_layout_long.K=K1 사용 |
+| Phase 2 continuation pass | Phase 1 leaf 의 K1-th 토큰을 input 으로 K2 더 forward |
+| Single hybrid forward (cont + proxy) | `HybridPhase2Plan.fill()` + per-row block tables + custom mask |
+| 5-region scratch | persistent / glue / Phase 1 KV / A_tail / B_proxy 분리 slot pool |
+| `build_hybrid_packed_mask` | continuation row 와 proxy row 의 다른 prefix shape 처리 |
+| phase2_hybrid_long/short CG | 새 capture |
+
+이게 plan 의 **핵심 알고리즘 변경**. silent-correctness 트랩이 6+ 개라
+GPU 가 있는 multi-session 작업. 예상 LOC: ~600–800. cycles: 20–30 회.
+
+이득 (b) capture 하면 baseline 대비 +30–40% TPS 가능 (plan §Performance
+Estimate 의 target).
+
+### Step 3: Sweep
+
+v1 (Step 1 완료) 기준:
+- 3 exit-layer × pfo {2,3,4,6} × K2 {2,3,4,6} = 48 configs
+- 기존 `experiments/sweep_70b_awq/orchestrate.py` 변형
+- ~3–4 시간 GPU on 70B AWQ + TinyLlama AWQ
+
+Step 2 완료 후 본격 sweep:
+- 3 exit-layer × dfo {2,3,4,6} × K1 {2,3,4,6} × pfo {2,3,4,6} × K2 {2,3,4,6}
+- 너무 많음. 권장: Step 1 sweep 의 best (pfo, K2) 고정 후 dfo, K1 만 4×4 grid
+- 총 3 × 16 = 48 configs ~3–4시간
