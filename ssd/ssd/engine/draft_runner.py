@@ -249,6 +249,69 @@ class DraftRunner(ModelRunner):
                 print(f'[MESA hybrid] HybridPhase2Plan allocated: K_long={K_long}, '
                       f'K_short={K2}, max_total_rows={_max_total}, '
                       f'max_pages={_max_pages}', flush=True)
+
+                # Step 5: 5-region scratch slot layout metadata.
+                # Per-region SLOT counts (not logical positions). The hybrid
+                # path (Step 6) will use these to construct per-row block_tables
+                # / slot_maps / kv_indices in HybridPhase2Plan such that:
+                #   - continuation row reads Phase 1 KV region + A_tail region
+                #   - proxy row reads B_proxy region only
+                # Logical `positions` / `rope_positions` are NOT shifted by
+                # these offsets — those remain logical token positions for
+                # RoPE / context_lens purposes. The slot mapping is what
+                # routes writes/reads to disjoint scratch regions.
+                #
+                # Split reference path (default) is untouched — its proxy
+                # writes overlap Phase 1 KV slots, which is safe because the
+                # passes are sequential and proxy doesn't read Phase 1 KV in
+                # the split path.
+                MQ_p1 = self.phase1_layout_long.MQ_LEN  # = dfo * (K_long + 1)
+                MQ_proxy_long_max = proxy_fo * (K_long + 1)  # Policy A/B sums to this
+                self.hybrid_glue_slot_count = K_long + 1
+                self.hybrid_phase1_slot_base = self.hybrid_glue_slot_count
+                self.hybrid_phase1_slot_count = K1 * MQ_p1
+                self.hybrid_a_tail_slot_base = (
+                    self.hybrid_phase1_slot_base + self.hybrid_phase1_slot_count
+                )
+                self.hybrid_a_tail_slot_count = K2 * MQ_p1
+                self.hybrid_b_proxy_slot_base = (
+                    self.hybrid_a_tail_slot_base + self.hybrid_a_tail_slot_count
+                )
+                self.hybrid_b_proxy_slot_count = K2 * MQ_proxy_long_max
+                _hybrid_required_slots = (
+                    self.hybrid_glue_slot_count
+                    + self.hybrid_phase1_slot_count
+                    + self.hybrid_a_tail_slot_count
+                    + self.hybrid_b_proxy_slot_count
+                )
+                # Compare to scheduler's reservation (compute_megaspec_lookahead
+                # returns K + 1 + K * MQ_LEN slots reserved per draft seq beyond
+                # accepted prefix).
+                from ssd.utils.async_helpers.async_spec_helpers import (
+                    compute_megaspec_lookahead as _cmsl,
+                )
+                _reserved_slots = _cmsl(self.full_layout.MQ_LEN, K_long)
+                assert _hybrid_required_slots <= _reserved_slots, (
+                    f"Hybrid 5-region scratch needs {_hybrid_required_slots} slots "
+                    f"but scheduler reserves only {_reserved_slots}. Increase "
+                    f"compute_megaspec_lookahead's bound."
+                )
+                print(f'[MESA hybrid] 5-region scratch layout: '
+                      f'glue={self.hybrid_glue_slot_count} '
+                      f'@[{0},{self.hybrid_glue_slot_count}), '
+                      f'phase1_kv={self.hybrid_phase1_slot_count} '
+                      f'@[{self.hybrid_phase1_slot_base},'
+                      f'{self.hybrid_a_tail_slot_base}), '
+                      f'a_tail={self.hybrid_a_tail_slot_count} '
+                      f'@[{self.hybrid_a_tail_slot_base},'
+                      f'{self.hybrid_b_proxy_slot_base}), '
+                      f'b_proxy={self.hybrid_b_proxy_slot_count} '
+                      f'@[{self.hybrid_b_proxy_slot_base},'
+                      f'{self.hybrid_b_proxy_slot_base + self.hybrid_b_proxy_slot_count})',
+                      flush=True)
+                print(f'[MESA hybrid] required_slots={_hybrid_required_slots} <= '
+                      f'reserved_slots={_reserved_slots} (headroom '
+                      f'{_reserved_slots - _hybrid_required_slots})', flush=True)
             print(f'[MESA] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
                   f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
                   f'proxy MQ_LEN={self.proxy_layout.MQ_LEN}', flush=True)
