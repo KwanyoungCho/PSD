@@ -45,16 +45,21 @@ class DraftRunner(ModelRunner):
             self._reset_tree_cache_tensors()
             self._init_prealloc_buffers()
             self._draft_step_times = []
-            # MESA: capture draft/proxy layout CudaGraphs
+            # MESA: capture draft/proxy layout CudaGraphs.
+            # Phase 3 (K1 split): also capture phase1_layout_long (K=K1 forwards,
+            # same MQ_LEN as draft so capture shape is identical).
             if self.config.mesa_enabled and not self.enforce_eager:
                 from ssd.engine.helpers.cudagraph_helpers import capture_fi_tree_decode_cudagraph
-                for _layout in [self.draft_layout, self.proxy_layout]:
+                _layouts_to_capture = [self.draft_layout, self.proxy_layout]
+                if self.phase1_layout_long is not None:
+                    _layouts_to_capture.append(self.phase1_layout_long)
+                for _layout in _layouts_to_capture:
                     _gv, _pool, _graphs, _bs = capture_fi_tree_decode_cudagraph(self, layout=_layout)
                     self.graph_vars[_layout.graph_key] = _gv
                     self.graph_pools[_layout.graph_key] = _pool
                     self.graphs[_layout.graph_key] = _graphs
                     self.graph_bs_list[_layout.graph_key] = _bs
-                print(f'[MESA] Captured draft/proxy FI tree decode CudaGraphs', flush=True)
+                print(f'[MESA] Captured FI tree decode CudaGraphs ({len(_layouts_to_capture)} layouts)', flush=True)
             print(f'DraftRunner set up, starting draft_loop', flush=True)
             self.draft_loop()
 
@@ -1271,14 +1276,19 @@ class DraftRunner(ModelRunner):
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
 
         # === Pass 1: draft-sourced tokens (즉시 시작) ===
+        # Phase 3 (K1 split): when hybrid configured, Phase 1 runs K1 forwards
+        # (= mesa_phase1_k) instead of K_long. Layout MQ_LEN unchanged
+        # (fo*(K+1)) so the captured CG shape matches; only iteration count
+        # differs per layout.K.
         _mev_p1b = _mr("phase1_build")
+        _phase1_layout = self.phase1_layout_long if self.phase1_layout_long is not None else self.draft_layout
         draft_forked = self._select_draft_sourced_tokens(
             glue_logits, gd_for_fork, self.config.mesa_draft_fan_out)
         draft_tree_args = self._build_tree_decode_args_for_layout(
-            partial_tree_decode_args, draft_forked, self.draft_layout, cache_hits_list)
+            partial_tree_decode_args, draft_forked, _phase1_layout, cache_hits_list)
         _mc("phase1_build", _mev_p1b)
         draft_tokens, draft_logits, draft_acts = self._decode_tree(
-            draft_tree_args, layout=self.draft_layout)
+            draft_tree_args, layout=_phase1_layout)
 
         # === Pass 중간: proxy 수신 ===
         _mev_pw = _mr("proxy_wait")
@@ -1330,7 +1340,20 @@ class DraftRunner(ModelRunner):
         _mev_mc = _mr("merge_cache")
         _proxy_layout = proxy_layout or self.proxy_layout
         K_long = self.config.speculate_k
-        K_short = self.config.mesa_phase2_k if self.config.mesa_phase1_k is not None else K_long
+        # Phase 3 (K1 split, no continuation yet): draft rows have suffix
+        # length K1 (= mesa_phase1_k) since Phase 1 ran K1 forwards. proxy
+        # rows still K_short = K2. When continuation pass lands, draft will
+        # be K1 + K2 = K_long again.
+        if self.config.mesa_phase1_k is not None:
+            K1 = self.config.mesa_phase1_k
+            K_short = self.config.mesa_phase2_k
+            draft_row_vk = K1
+            proxy_row_vk = K_short
+        else:
+            K1 = K_long
+            K_short = K_long
+            draft_row_vk = K_long
+            proxy_row_vk = K_long
 
         # Build keys with layout-specific fan_idx
         draft_k = torch.cat([self.draft_layout.fan_idx_hit if int(h) else self.draft_layout.fan_idx_miss
@@ -1345,22 +1368,25 @@ class DraftRunner(ModelRunner):
             proxy_args["seq_ids_expanded"].to(torch.int64),
             proxy_k, proxy_args["rec_flat"].to(torch.int64)], dim=1)
 
-        # Pad proxy_tokens / _logits / _acts from [N, K_short, ...] to [N, K_long, ...]
-        # so the cat-axis aligns with draft tensors (which are [N, K_long, ...]).
-        if proxy_tokens.shape[1] != K_long:
-            assert proxy_tokens.shape[1] == K_short, \
-                f"proxy_tokens depth {proxy_tokens.shape[1]} != K_short {K_short}"
-            n_proxy = proxy_tokens.shape[0]
-            pad_w = K_long - K_short
-            tok_pad = torch.zeros((n_proxy, pad_w), dtype=proxy_tokens.dtype, device=proxy_tokens.device)
-            proxy_tokens = torch.cat([proxy_tokens, tok_pad], dim=1)
-            log_pad = torch.zeros((n_proxy, pad_w, proxy_logits.shape[2]),
-                                   dtype=proxy_logits.dtype, device=proxy_logits.device)
-            proxy_logits = torch.cat([proxy_logits, log_pad], dim=1)
-            if proxy_acts is not None:
-                act_pad = torch.zeros((n_proxy, pad_w, proxy_acts.shape[2]),
-                                       dtype=proxy_acts.dtype, device=proxy_acts.device)
-                proxy_acts = torch.cat([proxy_acts, act_pad], dim=1)
+        # Pad draft_tokens / proxy_tokens from per-row K (K1 / K_short) to
+        # K_long width so cache row width is uniform. The matched row's
+        # valid_k tells consumers (speculator, verify) the meaningful prefix.
+        def _pad_to_klong(toks, logs, acts, src_k):
+            if toks.shape[1] == K_long:
+                return toks, logs, acts
+            pad_w = K_long - src_k
+            n = toks.shape[0]
+            tok_pad = torch.zeros((n, pad_w), dtype=toks.dtype, device=toks.device)
+            toks = torch.cat([toks, tok_pad], dim=1)
+            log_pad = torch.zeros((n, pad_w, logs.shape[2]), dtype=logs.dtype, device=logs.device)
+            logs = torch.cat([logs, log_pad], dim=1)
+            if acts is not None:
+                act_pad = torch.zeros((n, pad_w, acts.shape[2]), dtype=acts.dtype, device=acts.device)
+                acts = torch.cat([acts, act_pad], dim=1)
+            return toks, logs, acts
+
+        draft_tokens, draft_logits, draft_acts = _pad_to_klong(draft_tokens, draft_logits, draft_acts, K1)
+        proxy_tokens, proxy_logits, proxy_acts = _pad_to_klong(proxy_tokens, proxy_logits, proxy_acts, K_short)
 
         self.tree_cache_keys = torch.cat([draft_keys, proxy_keys], dim=0)
         # Boundary for phase 1 (draft-sourced) vs phase 2 (proxy-sourced) classification
@@ -1372,13 +1398,13 @@ class DraftRunner(ModelRunner):
             self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
         else:
             self.tree_cache_activations = None
-        # Per-row valid_k. Legacy MESA: all rows = K_long. v1 hybrid: draft rows
-        # = K_long, proxy rows = K_short.
+        # Per-row valid_k. Legacy MESA: all rows = K_long. Hybrid: draft rows
+        # = K1 (Phase 1 only) or K_long (with continuation), proxy rows = K_short.
         n_total = self.tree_cache_keys.shape[0]
         n_draft = draft_keys.shape[0]
         self.tree_cache_valid_k = torch.empty(n_total, dtype=torch.int64, device=self.device)
-        self.tree_cache_valid_k[:n_draft] = K_long
-        self.tree_cache_valid_k[n_draft:] = K_short
+        self.tree_cache_valid_k[:n_draft] = draft_row_vk
+        self.tree_cache_valid_k[n_draft:] = proxy_row_vk
         _mc("merge_cache", _mev_mc)
 
     # new one, with true asynchrony

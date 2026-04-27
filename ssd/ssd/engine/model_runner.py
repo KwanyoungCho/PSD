@@ -264,13 +264,19 @@ class ModelRunner:
                 )
             print(f'wrapper backend is {self.prefill_wrappers[bs]._backend}', flush=True)
 
-            # MESA: create layout-specific wrappers for draft/proxy tree decode
+            # MESA: create layout-specific wrappers for draft/proxy tree decode.
+            # Phase 3 (K1 split): also create wrappers for phase1_long (forward
+            # depth K1 but same MQ_LEN as draft layout) so its CG capture has
+            # an isolated wrapper plan.
             self.prefill_wrappers_by_layout = {"full": self.prefill_wrappers}
             if self.config.mesa_enabled:
-                for layout_name, layout_fan_out in [
+                _layout_specs = [
                     ("draft", self.config.mesa_draft_fan_out),
                     ("proxy", self.config.mesa_proxy_fan_out),
-                ]:
+                ]
+                if self.config.mesa_phase1_k is not None:
+                    _layout_specs.append(("phase1_long", self.config.mesa_draft_fan_out))
+                for layout_name, layout_fan_out in _layout_specs:
                     layout_mq_len = layout_fan_out * (self.config.speculate_k + 1)
                     l_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
