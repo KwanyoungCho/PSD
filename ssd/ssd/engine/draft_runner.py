@@ -2358,7 +2358,35 @@ class DraftRunner(ModelRunner):
                   f"slot_map={slot_map} ctx_len={ctx_len}", flush=True)
 
         if proxy_mismatch > 0:
-            first_idx = (~proxy_tok_eq).nonzero(as_tuple=False)[0]
+            # Dump ALL proxy mismatches (small count usually)
+            all_idx = (~proxy_tok_eq).nonzero(as_tuple=False)
+            print(f"[HYBRID PARITY] all proxy mismatches ({proxy_mismatch} total):", flush=True)
+            for i in range(min(proxy_mismatch, 10)):
+                r = int(all_idx[i, 0].item())
+                d = int(all_idx[i, 1].item())
+                st = int(split_proxy_tokens[r, d].item())
+                ht = int(hybrid_proxy_tokens[r, d].item())
+                ld = float((split_proxy_logits[r, d] - hybrid_proxy_logits[r, d]).abs().max().item())
+                print(f"  proxy row={r} depth={d} split={st} hybrid={ht} logit_max_diff={ld:.4f}",
+                      flush=True)
+
+            # For mismatched rows: dump j_idx_proxy and rope (need access to last-step proxy_layout)
+            # store from build_phase2_hybrid_plan via plan.proxy_initial_rope_positions
+            mismatch_rows = sorted(set(int(all_idx[i, 0].item()) for i in range(proxy_mismatch)))
+            print(f"[HYBRID PARITY] proxy mismatch rows: {mismatch_rows}", flush=True)
+            for r in mismatch_rows[:5]:
+                rope = int(plan.proxy_initial_rope_positions[r].item())
+                # j_idx = rope - num_tokens (since proxy_initial_rope = num_tokens + j_idx_proxy[r])
+                # We don't have num_tokens here directly; derive from any cont row's metadata
+                if plan.cont_row_count > 0:
+                    cont_rope0 = int(plan.cont_initial_rope_positions[0].item())
+                    K1 = self.config.mesa_phase1_k
+                    # cont_rope[0] = num_tokens + j_idx_p1[0] + K1, j_idx_p1[0] usually = 0
+                    num_tokens_est = cont_rope0 - K1
+                    j_idx_proxy_r = rope - num_tokens_est
+                    print(f"  row={r} rope={rope} j_idx_proxy~={j_idx_proxy_r}", flush=True)
+
+            first_idx = all_idx[0]
             row = int(first_idx[0].item())
             depth = int(first_idx[1].item())
             cont_count = plan.cont_row_count
