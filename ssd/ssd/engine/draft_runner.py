@@ -1488,6 +1488,26 @@ class DraftRunner(ModelRunner):
         _parity_check = (
             _use_hybrid and _os.environ.get("SSD_HYBRID_PARITY", "0") == "1"
         )
+        # Phase A: split eager mirror gate. When SSD_MIRROR_PROXY=1 (independent
+        # of full hybrid parity), run mirror on split's proxy outputs to verify
+        # bool-eager planning vs CG packed planning produce same proxy results.
+        _mirror_check = (
+            self.config.mesa_phase1_k is not None
+            and _os.environ.get("SSD_MIRROR_PROXY", "0") == "1"
+        )
+        if _mirror_check:
+            mirror_tokens, mirror_logits, mirror_meta = self._split_eager_mirror_proxy(
+                proxy_tree_args=proxy_tree_args,
+                step_proxy_layout=step_proxy_layout,
+            )
+            self._mirror_parity_diff(
+                split_proxy_tokens=proxy_tokens,
+                split_proxy_logits=proxy_logits,
+                mirror_tokens=mirror_tokens,
+                mirror_logits=mirror_logits,
+                mirror_meta=mirror_meta,
+            )
+
         if _use_hybrid:
             # Step 7 parity harness: capture split's continuation tail +
             # proxy outputs BEFORE overwriting, so we can diff them against
@@ -1868,6 +1888,187 @@ class DraftRunner(ModelRunner):
                 * bytes_per_row
             )
             plan.per_depth_mask_indptr[d, :total + 1] = indptr_d
+
+    @torch.inference_mode()
+    def _split_eager_mirror_proxy(self, *, proxy_tree_args, step_proxy_layout):
+        """Phase A mirror: rerun split's proxy decode in eager bool-mask mode.
+
+        Same proxy semantics as split CG path (same proxy_tree_args, same
+        step_proxy_layout, same wrapper instance, same get_custom_mask helper)
+        but uses HIGH-LEVEL `wrapper.plan(custom_mask=bool, ...)` API and
+        direct `self.model(...)` call instead of low-level
+        `wrapper._custom_mask_buf write + _cached_module.plan(...)` + captured
+        CG replay.
+
+        Run AFTER split's proxy completes — KV state at base region has
+        split's proxy KV. Mirror reads/writes the same scratch slots; final
+        KV content is identical (deterministic).
+
+        Returns: (spec_tokens [N, K2], spec_logits [N, K2, V], mirror_meta dict)
+        """
+        # NOTE: get_custom_mask_cached uses (K, fan_out_list) as cache key.
+        # Split CG's run_fi_tree_decode_cudagraph builds masks with K =
+        # config.speculate_k (= K_long) and fan_out_list = layout.fan_out_list
+        # (dynamic Policy A). Mirror must match.
+        from ssd.engine.helpers.mask_helpers import get_custom_mask_cached
+
+        K2 = step_proxy_layout.K
+        MQ_proxy = step_proxy_layout.MQ_LEN
+        cache_hits = proxy_tree_args["cache_hits"]
+        B, K_layout, F_layout, N = proxy_tree_args["metadata_ints"]
+        assert K_layout == K2, f"layout K {K_layout} != K2 {K2}"
+
+        wrapper_dict = self.prefill_wrappers_by_layout["proxy"]
+        wrapper_bs = next(x for x in wrapper_dict if x >= B)
+        wrapper = wrapper_dict[wrapper_bs]
+
+        initial_positions = proxy_tree_args["positions"]
+        initial_rope_positions = proxy_tree_args["rope_positions"]
+        dbt = proxy_tree_args["block_tables"]
+
+        _, step_rope_positions, step_context_lens, step_slot_maps = (
+            self._compute_step_positions_and_slot_maps(
+                initial_positions, initial_rope_positions, dbt, B, K2,
+                F_layout, N, MQ_proxy, layout=step_proxy_layout
+            )
+        )
+
+        V = self.hf_config.vocab_size
+        spec_tokens = torch.empty(N, K2, dtype=torch.int64, device=self.device)
+        spec_logits = torch.empty(N, K2, V, dtype=self.hf_config.torch_dtype, device=self.device)
+
+        # Capture per-depth metadata for parity dump
+        mirror_meta = {
+            "step_rope_positions": step_rope_positions,
+            "step_context_lens": step_context_lens,
+            "step_slot_maps": step_slot_maps,
+            "kv_indptr_per_d": [],
+            "kv_indices_per_d": [],
+            "kv_lpl_per_d": [],
+            "bool_mask_per_d": [],
+        }
+
+        current_input_ids = proxy_tree_args["input_ids"]
+
+        K_full = self.config.speculate_k  # K_long; matches split CG's mask K param
+        for d in range(K2):
+            # Bool mask: use K_full + layout.fan_out_list (= split CG's path)
+            bool_mask = get_custom_mask_cached(
+                self.config, step_context_lens[d], d, K_full, F_layout, B,
+                device=self.device,
+                fan_out_list=step_proxy_layout.fan_out_list,
+                fan_out_list_miss=step_proxy_layout.fan_out_list_miss,
+                cache_hits=cache_hits,
+            )
+
+            # FlashInfer plan inputs (mirrors eager_tree_decode_plan logic)
+            block_tables = dbt
+            context_lens = step_context_lens[d]
+            counts = (context_lens + self.block_size - 1) // self.block_size
+            kv_indptr = torch.cat([
+                torch.tensor([0], device=block_tables.device),
+                counts.cumsum(0),
+            ]).to(torch.int32)
+            mask_pages = torch.arange(block_tables.size(1), device=block_tables.device)[None, :] < counts[:, None]
+            kv_indices = block_tables[mask_pages]
+            kv_last_page_len = (context_lens % self.block_size)
+            kv_last_page_len[kv_last_page_len == 0] = self.block_size
+            kv_last_page_len = kv_last_page_len.to(torch.int32)
+            cu_seqlens_q = torch.arange(B + 1, device=self.device, dtype=torch.int32) * MQ_proxy
+
+            wrapper.plan(
+                cu_seqlens_q, kv_indptr, kv_indices, kv_last_page_len,
+                self.hf_config.num_attention_heads,
+                self.hf_config.num_key_value_heads,
+                self.hf_config.head_dim, self.block_size,
+                custom_mask=bool_mask,
+                q_data_type=self.hf_config.torch_dtype,
+                kv_data_type=self.hf_config.torch_dtype,
+            )
+
+            mirror_meta["kv_indptr_per_d"].append(kv_indptr.clone())
+            mirror_meta["kv_indices_per_d"].append(kv_indices.clone())
+            mirror_meta["kv_lpl_per_d"].append(kv_last_page_len.clone())
+            mirror_meta["bool_mask_per_d"].append(bool_mask.clone())
+
+            set_context(
+                is_prefill=False,
+                slot_mapping=step_slot_maps[d],
+                context_lens=step_context_lens[d].to(torch.int32),
+                block_tables=dbt,
+                cu_seqlens_q=cu_seqlens_q,
+                max_seqlen_q=MQ_proxy,
+                active_mq_len=MQ_proxy,
+                active_wrappers=wrapper_dict,
+                active_layout=step_proxy_layout,
+            )
+
+            outputs = self.model(current_input_ids, step_rope_positions[d])
+            logits = self.model.compute_logits(outputs, last_only=False)
+            reset_context()
+
+            logits_flat = logits.view(N, V)
+            spec_logits[:, d, :] = logits_flat
+            next_tokens = logits_flat.argmax(dim=-1)
+            spec_tokens[:, d] = next_tokens
+            current_input_ids = next_tokens
+
+        return spec_tokens, spec_logits, mirror_meta
+
+    def _mirror_parity_diff(self, *, split_proxy_tokens, split_proxy_logits,
+                              mirror_tokens, mirror_logits, mirror_meta):
+        """Diff split CG vs split eager mirror (proxy-only).
+
+        First mismatch row/depth dump:
+        - tokens
+        - logits max_abs_diff
+        - rope (mirror_meta provides; split CG would compute identically)
+        - slot_mapping (same)
+        - context_len (same)
+        - kv_indptr / kv_indices / kv_last_page_len (mirror_meta vs split CG)
+        - bool mask visible positions (mirror's bool mask)
+        """
+        tok_eq = (split_proxy_tokens == mirror_tokens)
+        n_total = tok_eq.numel()
+        n_mismatch = int((~tok_eq).sum().item())
+        diff = (split_proxy_logits - mirror_logits).abs()
+        max_diff = float(diff.max().item())
+        mean_diff = float(diff.mean().item())
+
+        print(f"[MIRROR PARITY] split CG vs split eager mirror: tokens "
+              f"{n_mismatch}/{n_total} mismatch ({100*n_mismatch/max(n_total,1):.1f}%); "
+              f"logits max_abs_diff={max_diff:.6f} mean_abs_diff={mean_diff:.6f}",
+              flush=True)
+
+        if n_mismatch > 0:
+            first_idx = (~tok_eq).nonzero(as_tuple=False)[0]
+            row = int(first_idx[0].item())
+            depth = int(first_idx[1].item())
+            split_tok = int(split_proxy_tokens[row, depth].item())
+            mirror_tok = int(mirror_tokens[row, depth].item())
+
+            rope = int(mirror_meta["step_rope_positions"][depth, row].item())
+            slot = int(mirror_meta["step_slot_maps"][depth, row].item())
+            ctx_len = int(mirror_meta["step_context_lens"][depth, row].item())
+            kv_indptr = mirror_meta["kv_indptr_per_d"][depth].tolist()
+            kv_indices = mirror_meta["kv_indices_per_d"][depth].tolist()
+            kv_lpl = mirror_meta["kv_lpl_per_d"][depth].tolist()
+            bool_mask = mirror_meta["bool_mask_per_d"][depth]
+            # bool_mask is 1D flat over all queries × kv positions
+            # Per-row visibility for this query is encoded by FlashInfer's
+            # interpretation; we just dump count of True bits in mask
+            n_mask_true = int(bool_mask.sum().item())
+
+            print(f"[MIRROR PARITY] first mismatch row={row} depth={depth}", flush=True)
+            print(f"  tokens: split_CG={split_tok} mirror_eager={mirror_tok}", flush=True)
+            print(f"  rope={rope} slot={slot} ctx_len={ctx_len}", flush=True)
+            print(f"  kv_indptr={kv_indptr} kv_indices_len={len(kv_indices)} kv_lpl={kv_lpl}", flush=True)
+            print(f"  bool_mask total True={n_mask_true} dtype={bool_mask.dtype} numel={bool_mask.numel()}",
+                  flush=True)
+        else:
+            print(f"[MIRROR PARITY] PASSES — split CG path == split eager mirror path. "
+                  f"bool eager planning is faithful. "
+                  f"Hybrid mismatch is in metadata/mask, not planning path.", flush=True)
 
     def _hybrid_parity_diff(self, *, split_cont_tokens, split_cont_logits,
                               split_proxy_tokens, split_proxy_logits,
