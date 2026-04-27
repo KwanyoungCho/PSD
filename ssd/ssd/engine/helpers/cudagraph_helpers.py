@@ -962,15 +962,24 @@ def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
 # ============================================================
 
 @torch.inference_mode()
-def capture_mesa_verify_cudagraph(model_runner):
+def capture_mesa_verify_cudagraph(model_runner, lookahead=None, graph_pool=None):
     """MESA split verify CudaGraph.
     graph_pre: layers [0, exit_layer] → exit_hidden, exit_residual
     graph_post: layers [exit_layer+1, L-1] + norm → outputs
+
+    Args:
+        lookahead: number of speculative tokens to verify per seq (cu_seqlens
+            length is lookahead+1 because of recovery slot). Default is
+            ``config.speculate_k`` (= K_long). For v1 hybrid path, called twice
+            with lookahead=K_long and lookahead=K_short.
+        graph_pool: optional CUDA graph pool to share across captures.
     """
     config = model_runner.config
     hf_config = config.hf_config
     max_bs = min(config.max_num_seqs, 512)
-    k_plus_1 = config.speculate_k + 1
+    if lookahead is None:
+        lookahead = config.speculate_k
+    k_plus_1 = lookahead + 1
     exit_layer = config.mesa_exit_layer
     H = hf_config.hidden_size
 
@@ -991,7 +1000,7 @@ def capture_mesa_verify_cudagraph(model_runner):
 
     graphs_pre = {}
     graphs_post = {}
-    graph_pool = None
+    # graph_pool: passed in (for short bucket sharing pool with long); else None at first capture
 
     for bs in reversed(all_N):
         flat = bs * k_plus_1
@@ -1053,24 +1062,34 @@ def capture_mesa_verify_cudagraph(model_runner):
         block_tables=block_tables, cu_seqlens_q=cu_seqlens_q,
         exit_hidden=exit_hidden, exit_residual=exit_residual,
         outputs=outputs,
+        lookahead=lookahead,  # so run_mesa_verify_cudagraph picks the right k_plus_1
     )
     return graph_vars, graph_pool, graphs_pre, graphs_post, all_N
 
 
 @torch.inference_mode()
 def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
-                               graph_vars, mesa_proxy_fn=None):
-    """Split CudaGraph verify: pre → proxy → post → logits."""
+                               graph_vars, mesa_proxy_fn=None, bucket="mesa_verify"):
+    """Split CudaGraph verify: pre → proxy → post → logits.
+
+    Args:
+        graph_vars: dict from capture; ``graph_vars["lookahead"]`` determines k_plus_1.
+        bucket: name prefix for ``model_runner.graphs`` / ``graph_bs_list`` keys.
+            Default ``"mesa_verify"`` (legacy single-bucket). v1 hybrid uses
+            ``"mesa_verify_long"`` and ``"mesa_verify_short"``.
+    """
     context = get_context()
     config = model_runner.config
-    k_plus_1 = config.speculate_k + 1
+    # lookahead key was added in v1; fallback to speculate_k for legacy graph_vars.
+    lookahead = graph_vars.get("lookahead", config.speculate_k)
+    k_plus_1 = lookahead + 1
     orig_bs = input_ids.size(0) // k_plus_1
 
     _ev_setup = mesa_record("verify_setup")
     wrapper_bs = next(
-        x for x in model_runner.graph_bs_list["mesa_verify"] if x >= orig_bs)
-    graph_pre = model_runner.graphs["mesa_verify_pre"][wrapper_bs]
-    graph_post = model_runner.graphs["mesa_verify_post"][wrapper_bs]
+        x for x in model_runner.graph_bs_list[bucket] if x >= orig_bs)
+    graph_pre = model_runner.graphs[f"{bucket}_pre"][wrapper_bs]
+    graph_post = model_runner.graphs[f"{bucket}_post"][wrapper_bs]
 
     for k, v in graph_vars.items():
         if k not in ("outputs", "exit_hidden", "exit_residual"):

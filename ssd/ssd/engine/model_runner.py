@@ -551,14 +551,39 @@ class ModelRunner:
             self.graph_bs_list["decode"] = decode_graph_bs_list
             if self.config.speculate and not (self.is_draft and self.config.use_eagle):  # verify CG: target always, non-EAGLE draft for fan-out; EAGLE draft uses glue_decode CG instead
                 if self.config.mesa_enabled and not self.is_draft:
-                    # MESA target: split verify CudaGraph (skip full verify → VRAM saving)
-                    mesa_gv, mesa_pool, mesa_pre, mesa_post, mesa_bs = capture_mesa_verify_cudagraph(self)
-                    self.graph_vars["mesa_verify"] = mesa_gv
-                    self.graph_pools["mesa_verify"] = mesa_pool
-                    self.graphs["mesa_verify_pre"] = mesa_pre
-                    self.graphs["mesa_verify_post"] = mesa_post
-                    self.graph_bs_list["mesa_verify"] = mesa_bs
-                    print(f'[MESA] Captured split verify CudaGraph (exit_layer={self.config.mesa_exit_layer})', flush=True)
+                    # MESA target: split verify CudaGraph (skip full verify → VRAM saving).
+                    # v1 hybrid (mesa_phase1_k != None): capture two buckets —
+                    # mesa_verify_long (lookahead=K_long) and mesa_verify_short
+                    # (lookahead=K_short = K2). Run-side dispatches by lookahead
+                    # inferred from input_ids shape.
+                    if self.config.mesa_phase1_k is not None:
+                        K_long = self.config.speculate_k
+                        K_short = self.config.mesa_phase2_k
+                        mesa_gv_l, mesa_pool, mesa_pre_l, mesa_post_l, mesa_bs_l = \
+                            capture_mesa_verify_cudagraph(self, lookahead=K_long)
+                        self.graph_vars["mesa_verify_long"] = mesa_gv_l
+                        self.graph_pools["mesa_verify_long"] = mesa_pool
+                        self.graphs["mesa_verify_long_pre"] = mesa_pre_l
+                        self.graphs["mesa_verify_long_post"] = mesa_post_l
+                        self.graph_bs_list["mesa_verify_long"] = mesa_bs_l
+                        mesa_gv_s, mesa_pool_s, mesa_pre_s, mesa_post_s, mesa_bs_s = \
+                            capture_mesa_verify_cudagraph(self, lookahead=K_short, graph_pool=mesa_pool)
+                        self.graph_vars["mesa_verify_short"] = mesa_gv_s
+                        self.graph_pools["mesa_verify_short"] = mesa_pool_s
+                        self.graphs["mesa_verify_short_pre"] = mesa_pre_s
+                        self.graphs["mesa_verify_short_post"] = mesa_post_s
+                        self.graph_bs_list["mesa_verify_short"] = mesa_bs_s
+                        print(f'[MESA hybrid] Captured 2-bucket verify CG: '
+                              f'long(K={K_long}) + short(K={K_short}), '
+                              f'exit_layer={self.config.mesa_exit_layer}', flush=True)
+                    else:
+                        mesa_gv, mesa_pool, mesa_pre, mesa_post, mesa_bs = capture_mesa_verify_cudagraph(self)
+                        self.graph_vars["mesa_verify"] = mesa_gv
+                        self.graph_pools["mesa_verify"] = mesa_pool
+                        self.graphs["mesa_verify_pre"] = mesa_pre
+                        self.graphs["mesa_verify_post"] = mesa_post
+                        self.graph_bs_list["mesa_verify"] = mesa_bs
+                        print(f'[MESA] Captured split verify CudaGraph (exit_layer={self.config.mesa_exit_layer})', flush=True)
                 else:
                     # Non-MESA or draft: full verify CudaGraph
                     verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = capture_verify_cudagraph(self)
@@ -925,12 +950,30 @@ class ModelRunner:
             # EAGLE draft glue decode with 2K+1 per seq
             return run_glue_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["glue_decode"], hidden_states)
         elif is_mq_kp1 and self.config.mesa_enabled and not self.is_draft \
-                and "mesa_verify" in self.graph_vars:
-            # MESA target verify: split CudaGraph (pre → proxy → post)
-            return run_mesa_verify_cudagraph(
-                self, input_ids, positions, last_only,
-                self.graph_vars["mesa_verify"],
-                mesa_proxy_fn=self._mesa_proxy_fn)
+                and ("mesa_verify" in self.graph_vars or "mesa_verify_long" in self.graph_vars):
+            # MESA target verify: split CudaGraph (pre → proxy → post).
+            # v1 hybrid: dispatch between mesa_verify_long (lookahead=K_long) and
+            # mesa_verify_short (lookahead=K_short=K2) by reading lookahead from
+            # the verifier-set attribute. Legacy single-bucket fallback if hybrid
+            # config is off.
+            if "mesa_verify_long" in self.graph_vars:
+                # _mesa_step_lookahead is set by Verifier.verify per step from
+                # speculate_result.valid_k (uniform across batch at B=1).
+                _step_lookahead = getattr(self, "_mesa_step_lookahead", self.config.speculate_k)
+                K_short = self.config.mesa_phase2_k
+                bucket = "mesa_verify_long" if _step_lookahead == self.config.speculate_k else "mesa_verify_short"
+                assert _step_lookahead in (self.config.speculate_k, K_short), \
+                    f"unexpected lookahead {_step_lookahead}; expected K_long={self.config.speculate_k} or K_short={K_short}"
+                return run_mesa_verify_cudagraph(
+                    self, input_ids, positions, last_only,
+                    self.graph_vars[bucket],
+                    mesa_proxy_fn=self._mesa_proxy_fn,
+                    bucket=bucket)
+            else:
+                return run_mesa_verify_cudagraph(
+                    self, input_ids, positions, last_only,
+                    self.graph_vars["mesa_verify"],
+                    mesa_proxy_fn=self._mesa_proxy_fn)
         elif is_mq_kp1: # verify or non-EAGLE glue decode, "verify" ~ mq decode of len K+1
             return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify"])
         else: # draft decoding in sync spec or JIT single-token decode

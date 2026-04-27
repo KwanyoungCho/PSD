@@ -172,6 +172,11 @@ class DraftRunner(ModelRunner):
             # forward_depth = K1, position_count varies per bucket.
             self.phase1_layout_long = None
             self.phase1_layout_short = None
+            # v1 (proxy K2 단축) layout — Phase 2 proxy uses this in the hybrid
+            # config path. forward_depth = K2 (= K_short). position_count tracks
+            # the incoming valid_k bucket; long-hit uses K_long+1.
+            self.proxy_layout_short_long = None   # long-hit bucket: pos=K_long+1, K=K2
+            self.proxy_layout_short_short = None  # short-hit bucket: pos=K_short+1, K=K2
             if self.config.mesa_phase1_k is not None:
                 K1 = self.config.mesa_phase1_k
                 K2 = self.config.mesa_phase2_k
@@ -189,9 +194,29 @@ class DraftRunner(ModelRunner):
                     fan_out_list_miss=[draft_fo] * (K_short + 1),
                     K=K1, device=d, position_count=K_short + 1,
                 )
+                # v1 proxy short layouts. proxy_fo per position; forward depth K2.
+                # Note: actual fan_out_list per step is dynamic (Policy A) — these
+                # static layouts are baselines for graph capture; runtime layouts
+                # are still built per-step in _build_tree_batch_mesa.
+                self.proxy_layout_short_long = create_tree_layout(
+                    name="proxy_short_long",
+                    fan_out_list=[proxy_fo] * (K_long + 1),
+                    fan_out_list_miss=[proxy_fo] * (K_long + 1),
+                    K=K2, device=d, position_count=K_long + 1,
+                )
+                self.proxy_layout_short_short = create_tree_layout(
+                    name="proxy_short_short",
+                    fan_out_list=[proxy_fo] * (K_short + 1),
+                    fan_out_list_miss=[proxy_fo] * (K_short + 1),
+                    K=K2, device=d, position_count=K_short + 1,
+                )
                 print(f'[MESA hybrid] phase1 layouts: '
                       f'long MQ_LEN={self.phase1_layout_long.MQ_LEN} (K1={K1}, pos={K_long + 1}), '
                       f'short MQ_LEN={self.phase1_layout_short.MQ_LEN} (K1={K1}, pos={K_short + 1})',
+                      flush=True)
+                print(f'[MESA hybrid] proxy_short layouts: '
+                      f'long MQ_LEN={self.proxy_layout_short_long.MQ_LEN} (K2={K2}, pos={K_long + 1}), '
+                      f'short MQ_LEN={self.proxy_layout_short_short.MQ_LEN} (K2={K2}, pos={K_short + 1})',
                       flush=True)
             print(f'[MESA] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
                   f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
@@ -1263,9 +1288,13 @@ class DraftRunner(ModelRunner):
         mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
         fan_out_list = mesa_proxy["fan_out_list"]  # [K+1] from target
         from ssd.engine.helpers.tree_layout import create_tree_layout
+        # v1 hybrid path: forward depth = K2 (= K_short). Legacy: K_long.
+        # position_count stays K+1 (= K_long+1) for now since hit-bucket
+        # heterogeneity (long vs short incoming valid_k) lands later.
+        proxy_forward_depth = self.config.mesa_phase2_k if self.config.mesa_phase1_k is not None else K
         step_proxy_layout = create_tree_layout(
             name="proxy", fan_out_list=fan_out_list, fan_out_list_miss=fan_out_list,
-            K=K, device=self.device)
+            K=proxy_forward_depth, device=self.device, position_count=K + 1)
 
         # Token selection with dynamic per-position fan_out
         proxy_forked = self._select_proxy_sourced_tokens_policy_a(
@@ -1289,10 +1318,18 @@ class DraftRunner(ModelRunner):
                                     proxy_layout=None):
         """Merge draft + proxy tree decode results into single cache.
         proxy_layout: runtime layout for dynamic fan_out (Policy A). Falls back to self.proxy_layout.
+
+        v1 hybrid path: when ``mesa_phase1_k`` is set, proxy_tokens / proxy_logits
+        come back with depth K2 (< K_long). Cache row width is uniformly K_long;
+        the K_long - K2 tail of proxy rows is zero-padded and ignored downstream
+        (verify reads only the first ``valid_k`` positions).
         """
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
         _mev_mc = _mr("merge_cache")
         _proxy_layout = proxy_layout or self.proxy_layout
+        K_long = self.config.speculate_k
+        K_short = self.config.mesa_phase2_k if self.config.mesa_phase1_k is not None else K_long
+
         # Build keys with layout-specific fan_idx
         draft_k = torch.cat([self.draft_layout.fan_idx_hit if int(h) else self.draft_layout.fan_idx_miss
                               for h in cache_hits_list])
@@ -1306,6 +1343,23 @@ class DraftRunner(ModelRunner):
             proxy_args["seq_ids_expanded"].to(torch.int64),
             proxy_k, proxy_args["rec_flat"].to(torch.int64)], dim=1)
 
+        # Pad proxy_tokens / _logits / _acts from [N, K_short, ...] to [N, K_long, ...]
+        # so the cat-axis aligns with draft tensors (which are [N, K_long, ...]).
+        if proxy_tokens.shape[1] != K_long:
+            assert proxy_tokens.shape[1] == K_short, \
+                f"proxy_tokens depth {proxy_tokens.shape[1]} != K_short {K_short}"
+            n_proxy = proxy_tokens.shape[0]
+            pad_w = K_long - K_short
+            tok_pad = torch.zeros((n_proxy, pad_w), dtype=proxy_tokens.dtype, device=proxy_tokens.device)
+            proxy_tokens = torch.cat([proxy_tokens, tok_pad], dim=1)
+            log_pad = torch.zeros((n_proxy, pad_w, proxy_logits.shape[2]),
+                                   dtype=proxy_logits.dtype, device=proxy_logits.device)
+            proxy_logits = torch.cat([proxy_logits, log_pad], dim=1)
+            if proxy_acts is not None:
+                act_pad = torch.zeros((n_proxy, pad_w, proxy_acts.shape[2]),
+                                       dtype=proxy_acts.dtype, device=proxy_acts.device)
+                proxy_acts = torch.cat([proxy_acts, act_pad], dim=1)
+
         self.tree_cache_keys = torch.cat([draft_keys, proxy_keys], dim=0)
         # Boundary for phase 1 (draft-sourced) vs phase 2 (proxy-sourced) classification
         # in the next hit_cache_and_respond lookup.
@@ -1316,13 +1370,13 @@ class DraftRunner(ModelRunner):
             self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
         else:
             self.tree_cache_activations = None
-        # Per-row valid_k. Phase 1 plumbing: legacy two-pass MESA path stores
-        # all rows at speculate_k (= K). When hybrid Phase 2 lands (Phase 4),
-        # draft-sourced rows = K_long, proxy-sourced rows = K_short = K2.
-        self.tree_cache_valid_k = torch.full(
-            (self.tree_cache_keys.shape[0],), self.config.speculate_k,
-            dtype=torch.int64, device=self.device,
-        )
+        # Per-row valid_k. Legacy MESA: all rows = K_long. v1 hybrid: draft rows
+        # = K_long, proxy rows = K_short.
+        n_total = self.tree_cache_keys.shape[0]
+        n_draft = draft_keys.shape[0]
+        self.tree_cache_valid_k = torch.empty(n_total, dtype=torch.int64, device=self.device)
+        self.tree_cache_valid_k[:n_draft] = K_long
+        self.tree_cache_valid_k[n_draft:] = K_short
         _mc("merge_cache", _mev_mc)
 
     # new one, with true asynchrony

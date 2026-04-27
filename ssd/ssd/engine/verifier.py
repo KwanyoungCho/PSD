@@ -72,6 +72,17 @@ class Verifier(VerifierBase):
 
             self.target_model_runner._mesa_proxy_fn = _proxy_fn
 
+            # v1 hybrid: pass per-step lookahead so model_runner picks the
+            # right verify graph bucket (long vs short). speculate_result.valid_k
+            # is per-row; assert uniform across the B=1 batch (Config invariant).
+            if speculate_result.valid_k is not None and config.mesa_phase1_k is not None:
+                _vk_unique = torch.unique(speculate_result.valid_k)
+                assert _vk_unique.numel() == 1, \
+                    f"v1 expects uniform valid_k across batch (B=1), got {speculate_result.valid_k}"
+                self.target_model_runner._mesa_step_lookahead = int(_vk_unique.item())
+            else:
+                self.target_model_runner._mesa_step_lookahead = self.lookahead
+
         if _prof:
             torch.cuda.synchronize()
             _vt0 = perf_counter()
