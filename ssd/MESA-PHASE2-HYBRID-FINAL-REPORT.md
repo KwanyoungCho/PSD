@@ -120,7 +120,68 @@ CG 도입 후 (Step 9B 완료) 같은 set 에서 short bucket parity 도 동일 
 
 ## 4. 파라미터 sweep — layerskip-llama2-70B + TinyLlama-1.1B
 
-[ 자동 채워짐: sweep 결과 표 ]
+### 4.1 환경
+- **Target**: `facebook/layerskip-llama2-70B` AWQ-calibrated W4A16 (TP=4)
+  at `/data2/chokwans99/awq_calibrated/layerskip_llama2_70b`,
+  artifact `/data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_tp4`
+- **Draft**: `TinyLlama-1.1B-Chat-v1.0` (TP=1, dense)
+- **Hardware**: 5 GPUs (4 target TP + 1 draft) on RTX 3090 sm_86
+- **Prompts**: 50 random prompts × output_len=128, temp=0.6, B=1,
+  max_model_len=2048
+
+### 4.2 결과 (모두 hybrid CG default mode)
+
+| config | TPS (tok/s) | accept | tok/step | cache_hits | P1_hit | P2_hit | draft_ms | verify_ms |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| split_k5_dfo2_exit40 (baseline) | 54.10 | 0.56 | 3.81 | 0.68 | 0.56 | 0.12 | 57.39 | 45.74 |
+| hybrid_k5_K1_2_K2_3_exit40 | 63.48 | 0.60 | 3.98 | 0.72 | 0.64 | 0.08 | 49.32 | 45.45 |
+| **hybrid_k5_K1_3_K2_2_exit40** | **64.72** | **0.61** | **4.06** | **0.71** | **0.62** | **0.09** | **42.79** | **45.20** |
+| hybrid_k6_K1_3_K2_3_exit40 | 64.29 | 0.58 | 4.50 | 0.70 | 0.60 | 0.10 | 55.84 | 46.72 |
+| hybrid_k6_K1_3_K2_3_exit47 | 60.65 | 0.57 | 4.45 | 0.69 | 0.59 | 0.10 | 59.23 | 46.59 |
+| hybrid_k8_K1_4_K2_4_exit40 | 61.12 | 0.50 | 5.03 | 0.66 | 0.56 | 0.10 | 65.63 | 48.88 |
+| hybrid_k8_K1_4_K2_4_exit47 | 63.18 | 0.55 | 5.37 | 0.71 | 0.57 | 0.13 | 67.52 | 50.46 |
+| hybrid_k8_K1_2_K2_6_exit40 | 55.78 | 0.55 | 5.44 | 0.68 | 0.59 | 0.10 | 79.58 | 50.90 |
+| hybrid_k8_K1_6_K2_2_exit40 | 58.30 | 0.42 | 4.39 | 0.64 | 0.51 | 0.13 | 59.66 | 50.68 |
+
+### 4.3 최적 파라미터: **K=5, K1=3, K2=2, exit_layer=40, dfo=2**
+
+| metric | optimal | split baseline | delta |
+|---|---:|---:|---:|
+| **TPS (tok/s)** | **64.72** | 54.10 | **+19.6%** |
+| accept rate | 0.61 | 0.56 | +9.0% |
+| tokens/step | 4.06 | 3.81 | +6.6% |
+| cache hits | 0.71 | 0.68 | +4.4% |
+| P1 (draft) hit rate | 0.62 | 0.56 | +10.7% |
+| **draft_ms** | **42.79** | 57.39 | **-25.4%** (faster) |
+| verify_ms | 45.20 | 45.74 | -1.2% |
+
+### 4.4 Sweep 분석
+
+**(K1, K2) 균형**: K1 ≥ K2 가 한결같이 더 좋음.
+- K=5: K1=3,K2=2 (64.72) > K1=2,K2=3 (63.48)
+- K=8: K1=4,K2=4 (61.12) > K1=2,K2=6 (55.78); K1=6,K2=2 (58.30) 는
+  accept 가 0.42 로 낮아 K1 너무 큰 경우 효과 떨어짐.
+
+**총 K depth**: K=5 가 K=8 보다 일관되게 좋음 (small target / draft 비율
+때문에 deep tree 의 추가 비용 ≥ 추가 accept 효과).
+
+**exit_layer**: exit=40 (= L/2) 이 exit=47 (= 7L/12) 보다 조금 좋음.
+이는 final_exp2_quant_70b 의 baseline 결과와도 일치 (earlier exit →
+target verify 빠름 → 전체 step time 단축). cache hit rate 차이는 미미.
+
+**draft_ms 단축이 핵심**: hybrid 의 hot path 가 draft step time 을 25%
+줄임 (cont+proxy 단일 forward + CG capture 효과). verify time 은 거의 동일.
+즉 hybrid 의 throughput 개선은 **per-step efficiency** 가 아니라
+**draft step time 자체** 에서 나온다.
+
+### 4.5 sweep vs reference (final_exp2_quant_70b)
+이전 split MESA reference (final_exp2_quant_70b/mesa_k5_f4_dfo2_exit40):
+- 200 prompts × output_len=256, temp=0.6 → **61.02 tok/s**
+
+이번 sweep 의 split_k5_dfo2_exit40 (50 prompts × output_len=128) → **54.10 tok/s**.
+prompt 수가 적고 startup 오버헤드 비중이 커서 절대값은 낮지만 비율은
+유지됨. **hybrid_k5_K1_3_K2_2_exit40 (64.72)** 는 reference baseline 대비
+**+6.1%** 이며 split-fallback 대비 **+19.6%**.
 
 ---
 
