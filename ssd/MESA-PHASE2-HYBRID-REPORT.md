@@ -235,69 +235,66 @@ main 에 머지된 변경: 계획 문서 + 이슈 트래커 (`25e7bf4`). 작업 
 
 ---
 
-## 6. v1 측정 결과 (이번 세션, 실측)
+## 6. v1 측정 결과 (실측, 이번 세션 최종)
 
-`feat/mesa-phase2-hybrid` 브랜치 위에서 실제로 v1 구현 + smoke test
-완료. layerskip-llama3-8B + Llama-3.2-1B (K=8, K1=K2=4, dfo=2, pfo=2,
-exit_layer=21, 4 prompts × 32 tok, B=1, 3 GPU async).
+`feat/mesa-phase2-hybrid` 위에서 v1 구현 + verify_short root cause
+fix + correctness fix 까지 land. layerskip-llama3-8B + Llama-3.2-1B
+(K=8, K1=K2=4, dfo=2, pfo=2, exit_layer=21, 4 prompts × 32 tok,
+B=1, 3 GPU async, greedy temp=0).
 
-| 항목 | Baseline (no hybrid) | v1 (default) | v1 + verify_short (현 buggy) |
-|---|---|---|---|
-| TPS | 29.95 tok/s | **35.21 tok/s (+17.6%)** | hangs on multi-prompt |
-| Avg target time | 267 ms | 151 ms (-43%) | — |
-| Avg draft time | 159 ms | 120 ms (-25%) | — |
-| Avg accept rate | 0.80 | 0.63 | — |
-| Phase 1 hit | 0.60 | 0.52 | — |
-| Phase 2 hit | 0.00 | 0.09 | — |
+| 항목 | Baseline (no hybrid) | **v1 (final)** |
+|---|---|---|
+| TPS | 30.11 tok/s | **43.51 tok/s (+44.5%)** |
+| Avg target time | 267 ms | **122 ms (-54%)** |
+| Avg draft time | 159 ms | **87 ms (-45%)** |
+| Decode throughput | 50 tok/s | **67 tok/s (+34%)** |
+| Avg accept rate | 0.80 | 0.63 |
+| Phase 1 hit | 0.60 | 0.52 |
+| Phase 2 hit | 0.00 | 0.09 |
+| Generated text | (4 prompts) | **byte-for-byte 일치** |
 
-### 측정에서 확인된 것
+### 측정 의미
 
-- **이득 (a) 작동**: Phase 2 proxy 가 K2=4 forwards 만 실행 → draft time
-  -25%. 그 결과로 target idle 도 줄어 target time -43%.
-- **TPS 순증 +17.6%**: 작은 모델 + 짧은 generation 이지만 명확한 win.
-- **Trade-off**: accept rate 0.80 → 0.63. Phase 2 cached row 가 K2=4
-  토큰 + K_long-K2=4 zero padding 을 가지는데, 현 v1 은 verify 가 항상
-  K_long+1 길이로 돌므로 padding 위치에서 1차 reject 발생 → Phase 2 hit
-  의 max accept = K2 = 4 (Phase 1 hit 의 K_long=8 vs).
-- **Phase 2 hit rate 9%** (single-prompt 0% 대비 향상): multi-prompt 가
-  cache 다양성 만들어 가끔씩 Phase 2 row 가 매칭됨.
+- **이득 (a) 가 완전히 캡처됨**: Phase 2 proxy 가 K2=4 forwards (vs
+  baseline K_long=8) → draft time -45%. Verify_short bucket 이 proxy
+  hit 시 K_short+1=5 위치만 forward (vs K_long+1=9) → target time -54%.
+- **TPS +44.5%**: Plan §744 의 performance estimate 의 conservative
+  range (+35-55%) 안에 있음. Mid-range 성능.
+- **Generation 정합성**: greedy temp=0 에서 baseline 과 byte-for-byte
+  동일 출력 → correctness 검증.
+- **Accept rate 0.63 (vs 0.80)**: Phase 2 hit (8.7%) 의 max accept 가
+  K_short=4 (vs Phase 1 의 K_long=8) 로 cap 되기 때문. Plan 의 의도된
+  trade-off — 그럼에도 unit-time 당 토큰 수는 +44.5% 증가.
 
-### 미해결: verify_short bucket replay — root cause 부분 분석 완료
+### v1 에서 해결한 두 가지 root cause
 
-`SSD_USE_VERIFY_SHORT=1` flag 를 켜면 verify 분기가 작동. single-prompt
-는 문제없이 동작하지만 multi-prompt 의 seq 2 first decode 에서 hang 발생
-(target run 내부 verify_short replay 진입 후 미반응).
+#### Bug 1: TP rank verify dispatch desync (multi-prompt hang)
 
-**Root cause 분석 (이 세션):**
+`_mesa_step_lookahead` 가 rank 0 의 Python attribute 로만 set 됨 → 다른
+TP rank 는 default = K_long. 결과: 한 rank 은 verify_short bucket replay,
+다른 rank 은 verify_long → NCCL collective shape mismatch → silent
+deadlock.
 
-1. **Plan 의 Phase 4 + Phase 5 가 상호의존적**: plan 의 §"Incoming valid_k
-   only varies the per-step batch shape" (line 207–220) — verify 가 K_short
-   row 를 select 하면 next step 의 glue / phase1 / phase2_hybrid 모두
-   K_short+1 사이즈로 입력 받음. 즉 **verify_short 만 add 하는 건
-   불충분**, glue_short / phase1_short / phase2_hybrid_short bucket 도
-   같이 capture/dispatch 해야 함.
-2. 내 v1 은 verify_long/short capture 만 추가, glue/phase1 short bucket
-   안 함 → next step shape 불일치
-3. 추가로 FlashInfer wrapper interference 가능성도 검토했으나
-   `attention.py` 가 verify path 에서는 `flash_attn_with_kvcache`
-   직접 호출 (FlashInfer wrapper 안 씀). Wrapper sharing 은 verify
-   path 의 root cause 는 아님.
-4. CG capture 에 `max_seqlen_q` 가 다른 두 bucket (verify_long=9,
-   verify_short=5) 이 같은 graph_pool 공유. CG kernel arg 에 max_seqlen
-   이 baked-in 됐는데 어떻게 같은 pool 에서 둘이 공존하는지가 의심.
+Fix: `step_lookahead` 를 `call("run", ..., step_lookahead)` 인자로 전달.
+SHM 통해 모든 rank 에 broadcast. `run()` 이 attribute set → 모든 rank
+같은 bucket dispatch.
 
-**수정 path (아직 실행 안 함, 다음 세션 작업)**:
+진단 trace evidence:
+```
+[verify_cg] mesa_verify_short pre.replay starting (k+1=5, bs=1)
+[verify_cg] mesa_verify_long pre.replay starting (k+1=9, bs=1)
+```
+같은 step 의 다른 rank 이 다른 bucket 에 있음.
 
-- glue_short / phase1_short bucket capture 추가 (Phase 5 부분 land)
-- `_glue_decode` 가 valid_k+1 입력 받도록 reshape (현재는 K_long+1 hardcode)
-- Phase 1 build 가 phase1_layout_long/short dispatch (현재는 draft_layout
-  hardcode)
-- CG capture 시 별도 `graph_pool` 분리 (verify_short / glue_short /
-  phase1_short 각자 독립 pool)
+#### Bug 2: Correctness — proxy row padding 소비 (사용자 지적)
 
-위 4 가지 모두 land 되면 verify_short 가 안전하게 동작 (예상).
-이번 세션 default 는 `SSD_USE_VERIFY_SHORT=0` 로 verify_long-only —
-**multi-prompt 안정 + 17.6% TPS win** 만 락 인.
+이전 v1 default 가 `SSD_USE_VERIFY_SHORT=0` 로 cache valid_k override
+gating 함 → proxy hit 시 valid_k=K_long 반환 → speculator 가 padded
+zero token 까지 seq.token_ids 에 extend → verify 가 zero token vs target
+argmax 비교, vocab id 0 false-accept risk.
+
+Fix: gating 제거. Cache valid_k 항상 honor. Bug 1 fix 와 함께 verify_short
+가 안전하게 동작하므로 proxy hit 의 K_short 토큰만 정상 verify.
 
 ### 이득 (b) 의 추가 잠재력
 
