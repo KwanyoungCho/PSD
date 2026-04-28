@@ -1449,6 +1449,14 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
     """Run captured phase2_hybrid CG for the given bucket. Replays K2
     depth times with per-depth runtime metadata.
 
+    Phase 9C optimized hot path:
+      - Pre-built packed mask & mask_indptr on plan (no bool-mask compute,
+        no packing in the loop).
+      - Pre-built kv_indptr_cpu, kv_lens_gpu, kv_lpl_gpu on plan.
+      - Pre-cached per_depth_L / per_depth_n_pages / per_depth_bytes_per_row
+        as Python ints (no `.item()` syncs in the loop).
+      - Invariant qo_indptr_cpu cached on plan (no per-depth GPU→CPU copy).
+
     Mirrors `_decode_phase2_hybrid` (eager path) semantics:
       - cu_seqlens_q=None
       - active_mq_len=1
@@ -1457,11 +1465,8 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
 
     Returns: (cont_tokens, cont_logits, proxy_tokens, proxy_logits)
     """
-    config = model_runner.config
-    K1 = config.mesa_phase1_k
-    K2 = config.mesa_phase2_k
-    K_long = K1 + K2
-    K_step = plan.valid_k
+    K1 = model_runner.config.mesa_phase1_k
+    K2 = model_runner.config.mesa_phase2_k
 
     cont_count = plan.cont_row_count
     proxy_count = plan.proxy_row_count
@@ -1480,7 +1485,10 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
         f"hybrid CG total={total} > wrapper allocated={wrapper_total}"
     )
 
-    # Output collectors
+    # Output collectors. proxy_count varies per step (Policy A) so we keep
+    # per-call alloc; cont/proxy logits are large enough that preallocation
+    # benefits would require additional plan-level slot tracking — leave
+    # for a follow-up if profiling shows it's hot.
     cont_tokens = torch.empty((cont_count, K2), dtype=torch.int64, device=device)
     cont_logits = torch.empty((cont_count, K2, V), dtype=dt, device=device)
     proxy_tokens = torch.empty((proxy_count, K2), dtype=torch.int64, device=device)
@@ -1490,131 +1498,61 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
     cur_cont_ids = draft_tokens_phase1[:cont_count, K1 - 1].contiguous()
     cur_proxy_ids = proxy_tree_args["input_ids"][:proxy_count].contiguous()
 
-    # Pre-build per-depth metadata for low-level packed plan replay.
-    # Layout dispatch: phase1_long.MQ_LEN for long bucket, phase1_short for short.
-    if K_step == plan.K_long:
-        _phase1_layout = model_runner.phase1_layout_long
-    else:
-        _phase1_layout = model_runner.phase1_layout_short
-    MQ_p1 = _phase1_layout.MQ_LEN
-
-    seq_dbt = draft_tree_args["block_tables"][0]  # [n_pages]
-    n_pages_seq = seq_dbt.shape[0]
-
-    # cu_seqlens_q (per-row, qlen=1 each) — fixed per bucket
-    cu_seqlens_q_full = torch.arange(total + 1, device=device, dtype=torch.int32)
-    # Pad to wrapper_total (CG was captured at wrapper_total, baked buffer
-    # size = wrapper_total + 1)
+    # qo_indptr — invariant per bucket. Plan caches arange(max_total+1) and
+    # we pass [:wrapper_total+1]. Padding entries (>= total) saturate at
+    # total via padding-row indptr saturation (handled below in plan).
+    # We need qo_indptr to monotonically equal [0..total] then total..total
+    # (no rows for padding). Build once outside the loop.
+    qo_indptr_cpu = plan.qo_indptr_cpu[: wrapper_total + 1].clone()
     if total < wrapper_total:
-        # fill remaining qo_indptr with same monotonic values (last value
-        # repeated → no rows for padding seqs)
-        cu_seqlens_q_full = torch.cat([
-            cu_seqlens_q_full,
-            torch.full((wrapper_total - total,), total,
-                       device=device, dtype=torch.int32),
-        ])
+        qo_indptr_cpu[total:].fill_(total)
 
     for d in range(K2):
-        # Flat input_ids and rope per depth
-        flat_input_ids = torch.cat([cur_cont_ids, cur_proxy_ids], dim=0)
-        cont_rope = plan.cont_initial_rope_positions[:cont_count] + d
-        proxy_rope = plan.proxy_initial_rope_positions[:proxy_count] + d
-        flat_rope = torch.cat([cont_rope, proxy_rope], dim=0).contiguous()
+        # Per-depth Python scalars (no .item() syncs).
+        L_d = plan.per_depth_L[d]
+        bytes_per_row = plan.per_depth_bytes_per_row[d]
 
-        # Per-row slot_mapping / ctx_lens
+        # Pre-built tensors from plan.
         slot_map_d = plan.per_row_slot_maps_by_depth[:total, d].contiguous()
         ctx_len_d = plan.per_row_context_lens_by_depth[:total, d].contiguous().to(torch.int32)
-        L_d = int(ctx_len_d[0].item())  # uniform per row
 
-        # Per-row block_tables (collapse-identical fill from plan)
-        block_tables_d = plan.per_row_block_tables[:total]
+        # Pre-built kv plan inputs (no per-depth alloc).
+        # Plan stores [K2, max_total+1] CPU indptr already padded to wrapper.
+        kv_indptr_cpu_full = plan.per_depth_kv_indptr_cpu[d, : wrapper_total + 1]
+        # kv_indices: per_row_kv_indices_by_depth[d] holds total*n_pages_d
+        # entries. For wrapper padding, pass slice; padding rows have empty
+        # mask so they won't read from invalid pages.
+        n_pages_d = plan.per_depth_n_pages[d]
+        kv_indices_d = plan.per_row_kv_indices_by_depth[d, : total * n_pages_d]
+        kv_lens_gpu_d = plan.per_depth_kv_lens_gpu[d, : wrapper_total]
+        kv_lpl_gpu_d = plan.per_depth_kv_lpl_gpu[d, : wrapper_total]
 
-        # Build per-row kv plan inputs
-        n_pages_d = (L_d + model_runner.block_size - 1) // model_runner.block_size
-        n_pages_d = int(min(n_pages_d, n_pages_seq))
-        kv_indices_per_row = seq_dbt[:n_pages_d].to(torch.int32)
-        kv_indices_d = kv_indices_per_row.repeat(total).contiguous()
-        kv_indptr_d_cpu = (
-            torch.arange(total + 1, dtype=torch.int32) * n_pages_d
-        )
-        # Pad to wrapper_total+1 if needed
-        if total < wrapper_total:
-            kv_indptr_d_cpu = torch.cat([
-                kv_indptr_d_cpu,
-                torch.full((wrapper_total - total,), total * n_pages_d,
-                           dtype=torch.int32),
-            ])
-        kv_last_page_len_d = ((ctx_len_d - 1) % model_runner.block_size + 1).to(torch.int32)
-        if total < wrapper_total:
-            kv_last_page_len_d = torch.cat([
-                kv_last_page_len_d,
-                torch.full((wrapper_total - total,), int(kv_last_page_len_d[0].item()),
-                           device=device, dtype=torch.int32),
-            ])
-        kv_lens_gpu_d = (
-            (kv_indptr_d_cpu[1:].to(device) - kv_indptr_d_cpu[:-1].to(device) - 1)
-            * model_runner.block_size + kv_last_page_len_d
-        ).to(torch.int32)
-
-        qo_indptr_cpu = cu_seqlens_q_full.cpu().to(torch.int32)
-
-        # Compute bool mask for this depth (semantic: same as eager path),
-        # then pack to bytes for low-level plan.
-        bool_mask_d = model_runner._compute_hybrid_bool_mask_for_depth(
-            d=d, K1=K1, K2=K2, K_step=K_step,
-            MQ_p1=MQ_p1, L=L_d,
-            cont_count=cont_count, proxy_count=proxy_count,
-            num_tokens=int(draft_tree_args["positions"][0].item()) - K_step,
-            j_idx_p1=(
-                _phase1_layout.fan_idx_hit if int(draft_tree_args["cache_hits"][0])
-                else _phase1_layout.fan_idx_miss
-            )[:cont_count],
-            j_idx_proxy=(
-                step_proxy_layout.fan_idx_hit if int(draft_tree_args["cache_hits"][0])
-                else step_proxy_layout.fan_idx_miss
-            )[:proxy_count],
-        )
-        # bool_mask_d shape: [total * L]; pack per-row into bytes.
-        # Per-row mask length = L; pad to multiple of 8 then pack little-endian.
-        mask_2d = bool_mask_d.view(total, L_d)
-        L_padded = ((L_d + 7) // 8) * 8
-        if L_padded > L_d:
-            pad = torch.zeros(total, L_padded - L_d, dtype=torch.bool, device=device)
-            mask_2d = torch.cat([mask_2d, pad], dim=1)
-        bit_weights = (1 << torch.arange(8, dtype=torch.uint8, device=device))
-        packed = mask_2d.to(torch.uint8).view(total, L_padded // 8, 8)
-        packed_bytes = (packed * bit_weights.view(1, 1, 8)).sum(dim=2).to(torch.uint8)
-        packed_mask = packed_bytes.reshape(-1).contiguous()
-        bytes_per_row = L_padded // 8
-        packed_indptr = torch.arange(
-            total + 1, device=device, dtype=torch.int32,
-        ) * bytes_per_row
-
-        # Pad packed_mask / packed_indptr to wrapper_total
-        if total < wrapper_total:
-            pad_n = (wrapper_total - total) * bytes_per_row
-            packed_mask = torch.cat([
-                packed_mask,
-                torch.zeros(pad_n, dtype=torch.uint8, device=device),
-            ])
-            packed_indptr = torch.cat([
-                packed_indptr,
-                torch.full((wrapper_total - total,), total * bytes_per_row,
-                           device=device, dtype=torch.int32),
-            ])
+        # Pre-built packed mask + indptr from plan (was duplicated at runtime
+        # pre-9C — biggest hot-path win).
+        n_total_bytes = wrapper_total * bytes_per_row
+        packed_mask = plan.per_depth_packed_masks[d, :n_total_bytes]
+        packed_indptr = plan.per_depth_mask_indptr[d, : wrapper_total + 1]
 
         # Low-level plan: writes to wrapper baked buffers.
         low_level_packed_plan(
             wrapper, model_runner=model_runner,
             qo_indptr_cpu=qo_indptr_cpu,
-            kv_indptr_cpu=kv_indptr_d_cpu,
+            kv_indptr_cpu=kv_indptr_cpu_full,
             kv_indices=kv_indices_d,
-            kv_last_page_len_gpu=kv_last_page_len_d,
+            kv_last_page_len_gpu=kv_lpl_gpu_d,
             kv_lens_gpu=kv_lens_gpu_d,
             packed_mask=packed_mask,
             packed_indptr=packed_indptr,
             B=wrapper_total,
         )
+
+        # Flat input_ids and rope per depth (small allocs; can also be
+        # pre-allocated per bucket but cont_count + proxy_count varies).
+        flat_input_ids = torch.cat([cur_cont_ids, cur_proxy_ids], dim=0)
+        cont_rope = plan.cont_initial_rope_positions[:cont_count] + d
+        proxy_rope = plan.proxy_initial_rope_positions[:proxy_count] + d
+        flat_rope = torch.cat([cont_rope, proxy_rope], dim=0).contiguous()
+        block_tables_d = plan.per_row_block_tables[:total]
 
         # Write per-depth runtime metadata to graph buffers.
         graph_vars["input_ids"][:total].copy_(flat_input_ids, non_blocking=True)

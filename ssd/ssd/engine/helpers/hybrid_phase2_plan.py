@@ -60,6 +60,15 @@ class HybridPhase2Plan:
                                     # fan_idx_hit vs fan_idx_miss vector.
                                     # NOT a region tag — distinct from
                                     # per_row_region_id which is 0=cont/1=proxy.
+    # Hot-path scalar caches (filled by _build_phase2_hybrid_plan to avoid
+    # GPU→CPU syncs in run_phase2_hybrid_cudagraph's depth loop).
+    step_num_tokens: int = 0
+    # Per-depth scalar caches (Python list, K2 entries).
+    # Populated by _build_phase2_hybrid_plan; consumed by runtime.
+    per_depth_L: list = field(default_factory=list)              # ctx_len per depth
+    per_depth_n_pages: list = field(default_factory=list)         # ceil(L/block_size)
+    per_depth_bytes_per_row: list = field(default_factory=list)   # L_padded // 8
+    per_depth_n_pad_bytes: list = field(default_factory=list)     # padding bytes per depth (zero-filled in pre-built mask buffer)
 
     # ─────────────────────────────────────────────────────────────────────
     # Allocated-once buffers (max-sized; long bucket worst case)
@@ -83,6 +92,14 @@ class HybridPhase2Plan:
     # Per-depth packed masks (built from the above by build_hybrid_packed_mask)
     per_depth_packed_masks: torch.Tensor = field(default=None)          # uint8 [K2, max_packed_mask_size]
     per_depth_mask_indptr: torch.Tensor = field(default=None)           # int32 [K2, MAX_TOTAL + 1]
+
+    # Phase 9C: pre-built runtime-ready tensors per depth.
+    # Populated in _build_phase2_hybrid_plan; consumed by run_phase2_hybrid_*
+    # to avoid per-depth allocation and CPU↔GPU syncs.
+    per_depth_kv_indptr_cpu: torch.Tensor = field(default=None)         # int32 CPU [K2, MAX_TOTAL + 1]
+    per_depth_kv_lens_gpu: torch.Tensor = field(default=None)           # int32 GPU [K2, MAX_TOTAL]
+    per_depth_kv_lpl_gpu: torch.Tensor = field(default=None)            # int32 GPU [K2, MAX_TOTAL]
+    qo_indptr_cpu: torch.Tensor = field(default=None)                   # int32 CPU [MAX_TOTAL + 1] (invariant)
 
     # Position math (re-used arange, sized by K2)
     step_pos_offsets: torch.Tensor = field(default=None)                # int64 [K2]
@@ -166,6 +183,21 @@ class HybridPhase2Plan:
         plan.cont_initial_rope_positions = torch.zeros(max_cont, dtype=torch.int64, device=device)
         plan.proxy_initial_positions = torch.zeros(max_proxy, dtype=torch.int64, device=device)
         plan.proxy_initial_rope_positions = torch.zeros(max_proxy, dtype=torch.int64, device=device)
+
+        # Phase 9C: pre-allocate runtime-ready buffers.
+        plan.per_depth_kv_indptr_cpu = torch.zeros(
+            (K2, max_total + 1), dtype=torch.int32, device='cpu', pin_memory=True,
+        )
+        plan.per_depth_kv_lens_gpu = torch.zeros(
+            (K2, max_total), dtype=torch.int32, device=device,
+        )
+        plan.per_depth_kv_lpl_gpu = torch.zeros(
+            (K2, max_total), dtype=torch.int32, device=device,
+        )
+        # qo_indptr is invariant: arange(max_total + 1).
+        plan.qo_indptr_cpu = torch.arange(
+            max_total + 1, dtype=torch.int32, device='cpu',
+        )
 
         return plan
 

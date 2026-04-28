@@ -2004,9 +2004,11 @@ class DraftRunner(ModelRunner):
         # 4) Reconstruct num_tokens (B=1 invariant) from draft positions.
         # draft_tree_args["positions"][0] = num_tokens - 1 + (K_step+1) + 0
         # ⇒ num_tokens = draft_tree_args["positions"][0] - K_step
-        # K_step = plan.valid_k (long_bucket=K_long or short_bucket=K_short).
+        # Phase 9C: cache as `plan.step_num_tokens` (single .item() per step;
+        # avoids K2 .item() calls in run_phase2_hybrid_cudagraph's depth loop).
         p1_pos0 = int(draft_tree_args["positions"][0].item())
         num_tokens = p1_pos0 - K_step
+        plan.step_num_tokens = num_tokens
 
         # 5) cont_initial_positions / cont_initial_rope_positions.
         # PHYSICAL DECODE COORDINATE in seq's expanding token space:
@@ -2067,25 +2069,54 @@ class DraftRunner(ModelRunner):
                 seq_bt[proxy_block_id].to(torch.int32) * block_size + proxy_offset
             )
 
-        # 8) per_row_context_lens_by_depth — physical KV length in shared
-        # layout (uniform per-row; semantic visibility via mask).
+        # 8) per_row_context_lens_by_depth + Phase 9C per-depth caches.
         # physical_end = num_tokens + K_step + K_long*MQ_p1 + (d+1)*MQ_proxy.
-        # K_step = this step's bucket (K_long or K_short).
+        # Pre-compute Python ints for L / n_pages to eliminate K2×.item() syncs
+        # in the hot path runtime.
+        per_depth_L = []
+        per_depth_n_pages = []
         for d in range(K2):
             ctx_len_d = num_tokens + K_step + K_long * MQ_p1 + (d + 1) * MQ_proxy
             plan.per_row_context_lens_by_depth[:total, d] = ctx_len_d
+            per_depth_L.append(ctx_len_d)
+            n_pages_d_step = (ctx_len_d + block_size - 1) // block_size
+            n_pages_d_step = min(n_pages_d_step, n_pages_filled)
+            per_depth_n_pages.append(n_pages_d_step)
+        plan.per_depth_L = per_depth_L
+        plan.per_depth_n_pages = per_depth_n_pages
 
         # 9) per_row_kv_indptr / kv_indices — shared page list across rows
         # (current 1-page collapse). Per-row contract preserved.
-        max_physical = num_tokens + K_step + K_long * MQ_p1 + K2 * MQ_proxy
-        pages_needed = (max_physical + block_size - 1) // block_size
-        pages_needed = int(min(pages_needed, n_pages_filled))
-        indptr_d = torch.arange(total + 1, device=device, dtype=torch.int32) * pages_needed
-        indices_d = seq_bt[:pages_needed].to(torch.int32).repeat(total)
+        # Phase 9C: also pre-build CPU kv_indptr and GPU kv_lens / kv_lpl per
+        # depth so runtime can low_level_packed_plan() without any per-depth
+        # tensor allocations or CPU↔GPU transfers in the hot path.
+        seq_bt_int32 = seq_bt[:n_pages_filled].to(torch.int32)
         for d in range(K2):
+            n_pages_d_step = per_depth_n_pages[d]
+            ctx_len_d_int = per_depth_L[d]
+            indptr_d = torch.arange(total + 1, device=device, dtype=torch.int32) * n_pages_d_step
+            n_idx = total * n_pages_d_step
             plan.per_row_kv_indptr_by_depth[:total + 1, d] = indptr_d
-            n_idx = total * pages_needed
-            plan.per_row_kv_indices_by_depth[d, :n_idx] = indices_d
+            plan.per_row_kv_indices_by_depth[d, :n_idx] = (
+                seq_bt_int32[:n_pages_d_step].repeat(total)
+            )
+            # CPU pinned indptr (size max_total+1; entries past total saturate
+            # at total*n_pages_d → padding rows have empty mask)
+            indptr_cpu = plan.per_depth_kv_indptr_cpu[d]
+            indptr_cpu[: total + 1] = torch.arange(
+                total + 1, dtype=torch.int32,
+            ) * n_pages_d_step
+            indptr_cpu[total + 1 :] = total * n_pages_d_step
+            # kv_lens = (num_pages - 1) * block_size + last_page_len
+            # last_page_len = ((L - 1) % block_size) + 1
+            lpl = ((ctx_len_d_int - 1) % block_size) + 1
+            kv_len_val = (n_pages_d_step - 1) * block_size + lpl
+            plan.per_depth_kv_lpl_gpu[d, :total].fill_(lpl)
+            plan.per_depth_kv_lens_gpu[d, :total].fill_(kv_len_val)
+            # Pad rows [total, max_total) with the same lpl/kv_len (harmless;
+            # padding rows have empty mask so they don't contribute).
+            plan.per_depth_kv_lpl_gpu[d, total:].fill_(lpl)
+            plan.per_depth_kv_lens_gpu[d, total:].fill_(kv_len_val)
 
         # step_pos_offsets / step_rope_offsets remain as set by create() —
         # depth d → arange(K2)[d]. These are not used directly for slot
@@ -2152,6 +2183,10 @@ class DraftRunner(ModelRunner):
         cont_idx_t = torch.arange(cont_count, device=device, dtype=torch.int64)
         proxy_idx_t = torch.arange(proxy_count, device=device, dtype=torch.int64)
         bit_weights = (1 << torch.arange(8, dtype=torch.uint8, device=device))  # [8]
+
+        # Phase 9C: cache bytes_per_row per depth so runtime can slice plan
+        # buffer directly without re-running the bool-mask + pack work.
+        per_depth_bytes_per_row: list[int] = []
 
         for d in range(K2):
             # Physical KV upper bound at depth d (after current depth's write).
@@ -2232,18 +2267,32 @@ class DraftRunner(ModelRunner):
             # Flatten and write to plan tensor (depth-major)
             flat = packed_bytes.reshape(-1)
             n_bytes = int(flat.numel())
+            bytes_per_row = L_padded // 8
             assert n_bytes <= plan.per_depth_packed_masks.shape[1], (
                 f"packed mask depth {d} needs {n_bytes} bytes but plan has "
                 f"{plan.per_depth_packed_masks.shape[1]} per-depth slots"
             )
             plan.per_depth_packed_masks[d, :n_bytes] = flat
+            # Phase 9C: zero padding rows so runtime can pass
+            # plan.per_depth_packed_masks[d, :wrapper_total*bytes_per_row]
+            # without recomputing — padding rows always have empty mask.
+            max_total_bytes = plan.per_depth_packed_masks.shape[1]
+            if n_bytes < max_total_bytes:
+                plan.per_depth_packed_masks[d, n_bytes:].zero_()
 
-            bytes_per_row = L_padded // 8
             indptr_d = (
                 torch.arange(total + 1, device=device, dtype=torch.int32)
                 * bytes_per_row
             )
             plan.per_depth_mask_indptr[d, :total + 1] = indptr_d
+            # Phase 9C: padding-row indptr saturates at total*bytes_per_row
+            # → padding rows have zero-byte mask slice (empty visibility).
+            plan.per_depth_mask_indptr[d, total + 1 :] = total * bytes_per_row
+
+            per_depth_bytes_per_row.append(bytes_per_row)
+
+        # Phase 9C: expose per-depth bytes_per_row to the runtime caller.
+        plan.per_depth_bytes_per_row = per_depth_bytes_per_row
 
     @torch.inference_mode()
     def _split_eager_mirror_proxy(self, *, proxy_tree_args, step_proxy_layout,
