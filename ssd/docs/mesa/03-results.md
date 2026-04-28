@@ -597,7 +597,46 @@ forward 당 비용은 hybrid 가 약간 더 비쌈 (cont+proxy 통합으로 batc
    산출물 비용
 4. K2 루프 3 개 (slot_maps, context_lens, kv_indptr) 별도
 
-→ Phase 9D 최적화 (Part 5.6) 적용. 측정 결과는 9D run 완료 시 추가.
+### 5.5.1 Phase 9D 측정 결과 (2026-04-28)
+
+`results/hybrid_k5_K1_3_K2_2_exit40` (post-9D) 의 build sub-label
+breakdown:
+
+| sub-label | ms / step | 비율 |
+|---|---:|---:|
+| `phase2_hybrid_build_setup` | 0.40 | 12% |
+| `phase2_hybrid_build_slots` | 0.66 | 19% |
+| `phase2_hybrid_build_kv` | 0.40 | 12% |
+| **`phase2_hybrid_build_mask`** | **1.95** | **57%** |
+| **TOTAL** (outer label) | **3.51** | 100% |
+
+Top-line:
+
+| | TPS | draft_ms |
+|---|---:|---:|
+| pre-9D hybrid | 68.29 | 36.35 |
+| post-9D hybrid | 69.04 | 36.81 |
+
+**결론**: 9D opt 는 alloc 위치 이동 (per-step → engine init) 만 했지
+**bool mask 자체의 broadcast comparison + pack 작업은 그대로 남음**.
+build 전체 비용 3.36 → 3.51 ms (+0.15 ms = sub-label 8 회 mesa_record/close
+오버헤드 ~0.08 ms 가 일부 원인). TPS 변화 +1.1% 는 run-to-run variance
+수준 (split path 도 +2.5% 변동 — 무관한 GPU thermal/scheduler).
+
+**남은 진짜 비용**: `phase2_hybrid_build_mask` 의 1.95 ms — K2 회
+broadcast 비교 + bool→uint8 pack. 9D 가 손대지 않은 알고리즘 자체.
+
+### 5.5.2 추가 절감 방향 (미적용)
+
+- (Medium) **K2 vectorize**: 현재 K2 회 별도 broadcast → depth 를 차원으로
+  추가해 `[K2, total, L_max]` 한 번에 처리. `at_depth_ok = at_depth[:, None] <=
+  arange(K2)[None, :]` 처럼 d 비교만 vector 화. 예상 ~50% 절감.
+- (Hard) **bool mask 우회**: visibility pattern 이 regular (`kv_pos % MQ_p1
+  == idx`, depth 비교) 하므로 arithmetic 으로 packed bytes 직계산.
+- (Hard) **Triton kernel**: 60 launch → 1 launch 로 통합.
+
+위험도-이득 비율 best 는 K2 vectorize. 단 d-비교 vectorize 로직 구현 +
+검증 필요 → 별도 작업으로 분리.
 
 ## 5.6 운영 가이드
 
