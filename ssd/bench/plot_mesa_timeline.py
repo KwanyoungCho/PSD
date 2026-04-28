@@ -73,37 +73,64 @@ d_win = [e for e in draft if in_window(e, win_lo_d, win_hi_d)]
 t_origin = win_lo_t
 fig, ax = plt.subplots(figsize=(16, 5.2))
 
+# (color, hatch). Hatch disambiguates similar shades when adjacency is unavoidable.
+# Families:
+#   target verify   : reds        (graph_pre/post, verify_replay)
+#   target idle/io  : yellows/golds
+#   target logits   : grays (verify_setup / exit_logits / final_logits — all small)
+#   draft phase1    : blues       (build / prep / replay = light → medium → dark)
+#   draft phase2 split: greens    (build / prep / replay)
+#   draft phase2 hybrid: oranges/browns (distinct family from split green so it's
+#                                        immediately visible when hybrid is active)
+#   draft glue/cache: cyan / teal
+#   draft io/idle   : near-black / dark gray
 COLORS = {
-    # Target lane — reds for big replays, grays for small logits/setup, gold for handshake
-    "verify_setup":         "#d9d9d9",  # light gray — tiny setup
-    "graph_pre":            "#e41a1c",  # strong red — biggest target phase
-    "exit_logits":          "#bdbdbd",  # mid gray — small lm_head
-    "proxy_compute_send":   "#ffbf00",  # gold — handshake indicator
-    "graph_post":           "#a50f15",  # dark red
-    "final_logits":         "#737373",  # darker gray
-    "verify_sample_accept": "#fc9272",  # salmon — postprocessing
-    "target_spec_wait":     "#fee090",  # pale yellow — blocked waiting for draft
-    "target_postprocess":   "#fdae61",  # light orange — engine bookkeeping
-    "verify_replay":        "#b30000",  # dark red — baseline single-graph verify (target)
-    "draft_glue_replay":    "#1f78b4",  # blue — draft's own glue decode forward (not verify!)
-    # Draft lane — purples for Phase 1, greens for Phase 2 (visually unambiguous per phase)
-    "glue":                 "#17becf",  # cyan — boundary / start of step
-    "phase1_build":         "#dadaeb",  # very pale purple
-    "phase1_prep":          "#807dba",  # medium purple
-    "phase1_replay":        "#3f007d",  # deep purple
-    "phase2_build":         "#c7e9c0",  # pale green
-    "phase2_prep":          "#74c476",  # medium green
-    "phase2_replay":        "#00441b",  # deep green
-    "proxy_wait":           "#ff7f00",  # orange — cross-proc wait (stands out)
-    "merge_cache":          "#252525",  # near-black
-    # Baseline draft tree decode (layout=None)
-    "tree_prep":            "#fcae91",  # light coral
-    "tree_replay":          "#cb181d",  # dark red
-    # Draft loop bookkeeping (appears in both MESA and baseline)
-    "draft_recv_cmd":       "#bdbdbd",  # light gray — waiting for cmd
-    "hit_cache_respond":    "#78c679",  # light green — cache lookup / JIT speculate
-    "draft_send_response":  "#006d2c",  # dark green — NCCL send
+    # ---- TARGET lane ----
+    "graph_pre":            ("#cb181d", ""),     # red
+    "graph_post":           ("#67000d", ""),     # dark red
+    "verify_replay":        ("#7a0000", ""),     # very dark red (baseline single-graph)
+    "verify_sample_accept": ("#fc8d59", ""),     # coral
+    "target_postprocess":   ("#feb24c", ".."),   # light orange + dot hatch
+    "target_spec_wait":     ("#ffeda0", ""),     # pale yellow (target idle on draft)
+    "proxy_compute_send":   ("#fec44f", "xx"),   # gold + cross hatch (handshake marker)
+    "verify_setup":         ("#525252", "//"),   # dark gray + slash (tiny setup)
+    "exit_logits":          ("#969696", ""),     # mid gray
+    "final_logits":         ("#cccccc", "//"),   # light gray + slash
+    # ---- DRAFT lane: phase 1 (blues) ----
+    "phase1_build":         ("#9ecae1", "//"),   # light blue + slash
+    "phase1_prep":          ("#4292c6", "xx"),   # medium blue + cross
+    "phase1_replay":        ("#08306b", ""),     # navy
+    # ---- DRAFT lane: phase 2 split (greens) ----
+    "phase2_build":         ("#a1d99b", "//"),
+    "phase2_prep":          ("#41ab5d", "xx"),
+    "phase2_replay":        ("#00441b", ""),
+    # ---- DRAFT lane: phase 2 hybrid (oranges/browns — visually distinct from split greens) ----
+    "phase2_hybrid_build":         ("#fdae6b", "OO"),   # light orange + circle
+    "phase2_hybrid_replay_long":   ("#a63603", ""),     # dark orange/brown
+    "phase2_hybrid_replay_short":  ("#fd8d3c", "++"),   # mid orange + plus
+    "phase2_hybrid_eager_long":    ("#7f2704", "**"),   # very dark brown + star
+    "phase2_hybrid_eager_short":   ("#fdd0a2", "\\\\"), # very light orange + backslash
+    # ---- DRAFT lane: glue / cache (cyans / teals) ----
+    "glue":                 ("#01665e", ""),     # dark teal
+    "draft_glue_replay":    ("#5ab4ac", ""),     # mid teal
+    "hit_cache_respond":    ("#80cdc1", "//"),   # light teal + slash
+    # ---- DRAFT lane: io / idle (dark grays) ----
+    "draft_recv_cmd":       ("#4d4d4d", "..."),  # dark gray + dots (idle wait)
+    "draft_send_response":  "#252525",
+    "proxy_wait":           ("#bdbdbd", "OO"),   # light gray + circle (cross-proc wait)
+    "merge_cache":          ("#000000", ""),
+    # ---- Baseline tree decode (no MESA) ----
+    "tree_prep":            ("#feb24c", "//"),
+    "tree_replay":          ("#e6550d", ""),
 }
+
+
+def _style(label):
+    """Return (color, hatch) tuple. Tolerates legacy str-only entries."""
+    val = COLORS.get(label, ("#d9d9d9", ""))
+    if isinstance(val, str):
+        return (val, "")
+    return val
 
 y_target, y_draft = 1, 0
 bar_h = 0.6
@@ -112,9 +139,10 @@ def plot_row(events, y, frame_shift):
     for e in events:
         x = e["start_ms"] + frame_shift - t_origin
         w = max(e["ms"], 0.02)   # min width so tiny bars are visible
+        color, hatch = _style(e["label"])
         ax.barh(y, w, left=x, height=bar_h,
-                color=COLORS.get(e["label"], "#bdc3c7"),
-                edgecolor="black", linewidth=0.3)
+                color=color, hatch=hatch,
+                edgecolor="black", linewidth=0.4)
 
 plot_row(t_win, y_target, 0.0)
 plot_row(d_win, y_draft, offset)
@@ -142,8 +170,11 @@ ax.set_xlim(0, win_hi_t - t_origin)
 
 # Legend — only labels actually present in the plotted window, placed BELOW plot
 present_labels = {e["label"] for e in t_win} | {e["label"] for e in d_win}
-handles = [mpatches.Patch(color=COLORS.get(lb, "#bdc3c7"), label=lb)
-           for lb in sorted(present_labels)]
+handles = []
+for lb in sorted(present_labels):
+    color, hatch = _style(lb)
+    handles.append(mpatches.Patch(facecolor=color, hatch=hatch,
+                                  edgecolor="black", linewidth=0.4, label=lb))
 n_cols = min(6, max(3, (len(handles) + 1) // 2))
 # Legend 배치: x-axis label 과 겹치지 않도록 충분히 아래로 + tight_layout bottom reserve 확대
 ax.legend(handles=handles, fontsize=8, loc="upper center",

@@ -47,3 +47,13 @@ tmp*/
 
 # AWQ / MESA per-step CUDA-event raw dumps (regenerable via SSD_PROFILE_MESA=1)
 experiments/**/mesa_profile_*.json
+
+# Experiment outputs — large profile JSONs and run logs (regenerable)
+experiments/*/results/
+experiments/*/results_*/
+experiments/*/orchestrator*.log
+experiments/hybrid_vs_split_70b/results/
+experiments/hybrid_vs_split_70b/results_*/
+
+# Claude Code internal
+.claude/

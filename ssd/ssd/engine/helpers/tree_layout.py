@@ -2,7 +2,7 @@
 are parametrized by layout instead of global MQ_LEN. Supports full / draft / proxy /
 phase1 layouts.
 
-For Phase 2 hybrid (per MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md):
+For Phase 2 hybrid (per docs/mesa/01-design.md Part 5):
 
 - ``forward_depth`` (alias: ``K``) — how many model-forward steps a seed runs
   through. ``arange(forward_depth)`` drives ``step_pos_offsets`` /

@@ -1,9 +1,16 @@
 # MESA-SSD 설계 문서
 
 이 문서는 MESA-SSD 의 전체 설계 — TreeLayout 추상화, Budget Split,
-Split CudaGraph, Rev1 (Policy A/B) — 를 한 곳에 모은다. 원본은
-`MESA-IMPL-PLAN.md` (v6 구현 계획), `MESA-BREAKDOWN-PLAN.md` (per-phase
-profiling), `MESA-rev1.md` (Rev1 동적 budget allocation) 셋이다.
+Split CudaGraph, Rev1 (Policy A/B), Phase 2 Hybrid — 를 한 곳에 모은다.
+원본은 `MESA-IMPL-PLAN.md` (v6 구현 계획), `MESA-BREAKDOWN-PLAN.md`
+(per-phase profiling), `MESA-rev1.md` (Rev1 동적 budget allocation),
+`MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` (Phase 2 hybrid 재설계) 의 4
+파일이다.
+
+> **현재 상태**: Phase 2 Hybrid (Part 5) 가 default hot path. Rev1 의 split
+> 2-pass 구조 (Part 1-4) 는 fallback 경로로만 존재 (`SSD_FORCE_SPLIT_PHASE2=1`).
+> Parts 1-4 의 "현재 구현" 표현은 hybrid 적용 전 시점 기준 — 알고리즘 historical
+> reference 로 읽고, 현재 동작은 Part 5 참조.
 
 ---
 
@@ -705,3 +712,166 @@ Throughput 자체는 2-pass 구조적 비용 + runtime layout 생성 / `ĥ_i` �
    overhead 비율 감소 (실제 34B / 70B 실험에서 확인)
 3. **B > 1 확장** — batch 공통 layout 근사 (`ĥ_i` 평균) 또는 per-sequence
    layout 지원
+
+---
+
+# Part 5. Phase 2 Hybrid (v1)
+
+이 부분은 `MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` 의 핵심 내용을 통합한
+것이다. Rev1 (Part 4) 의 split 2-pass 구조를 single batched cont+proxy
+forward 로 재설계.
+
+## 5.0 동기
+
+Rev1 split 의 구조:
+- Phase 1: K_long deep tree decode (draft-sourced)
+- Phase 2: K_long deep tree decode (proxy-sourced)
+- 두 pass 가 같은 forward depth 에서 별도 batch 로 동작
+
+문제:
+- 두 번의 graph launch + wrapper plan + mask precompute
+- proxy KV scratch 가 Phase 1 KV 를 덮어쓰지 않게 별 region 으로 분리해야 함
+
+Hybrid 의 목표:
+- Phase 1 forward depth K1 (= K_long - K2) 만 수행 — Phase 1 자체 단축
+- Phase 2 를 single batched forward 로 통합:
+  - **continuation rows**: Phase 1 의 leaf 를 K2 만큼 더 확장 (최종 suffix
+    길이 K_long)
+  - **proxy-sourced rows**: target proxy token 으로 K2-deep 독립 분기
+- forward 횟수 감소: split 의 K_long × 2 → hybrid 의 K1 + K2 = K_long
+
+## 5.1 Terminology (normative)
+
+| 용어 | 정의 | 결정자 |
+|---|---|---|
+| **forward depth** | seed token 이 model forward 를 거치는 횟수 | 설정: Phase 1 = K1, Phase 2 = K2 |
+| **row depth** | speculative suffix 의 cache row 길이 | 설정: draft-sourced = K_long, proxy-sourced = K_short |
+| **MQ_LEN** | 한 tree decode pass 의 batch size (seed tokens) | step 의 valid_k 에 따라 변동 |
+| **valid_k** | row 별 stored row depth (K_long 또는 K_short) | per-row |
+| **speculate_k** | 전역 max row depth | 설정 = K_long = K1 + K2 |
+
+**두 변동 축의 분리**:
+- forward depth (K1, K2) 와 row depth (K_long, K_short) 는 config-fixed
+- MQ_LEN 은 incoming hit 의 valid_k 에 따라 step 마다 달라짐 (long/short
+  bucket)
+
+## 5.2 5-region scratch KV layout
+
+Phase 1 KV 가 Phase 2 동안 살아있어야 하므로 region 구분:
+
+| Region | 작성자 | 독자 |
+|---|---|---|
+| persistent | (engine, accepted prefix) | 모두 |
+| glue | glue forward | Phase 1, Phase 2 (cont/proxy 모두) |
+| Phase 1 KV | Phase 1 forwards | Phase 2 continuation (own slice only) |
+| A_tail | Phase 2 continuation | self only (own slice while extending) |
+| B_proxy | Phase 2 proxy | self only (own slice while extending) |
+
+per-row block table:
+- continuation row: persistent + glue + own Phase 1 + own A_tail
+- proxy-sourced row: persistent + glue + own B_proxy
+
+Phase 1 KV / A_tail / B_proxy 는 row 간 disjoint slot pool. 단일 forward
+batch 에서 두 row 종류가 다른 prefix 를 보도록 **per-row custom mask** 가
+필수.
+
+## 5.3 8 CudaGraph buckets
+
+Family × bucket (long/short):
+
+| Family | long MQ_LEN | short MQ_LEN | forward depth |
+|---|---|---|---|
+| glue | K_long+1 | K_short+1 | 1 (linear) |
+| phase1 | (K_long+1)×fo | (K_short+1)×fo | K1 |
+| phase2_hybrid | (vk+1)×(fo+pfo) | 동일 | K2 |
+| verify | 1 row × K_long+1 | 1 row × K_short+1 | (target attention) |
+
+총 8 graph, engine init 에서 모두 capture. Runtime 은 incoming valid_k
+로 dispatch — replay cost 는 graph 개수 무관.
+
+## 5.4 `HybridPhase2Plan` dataclass
+
+새 helper: `ssd/engine/helpers/hybrid_phase2_plan.py`.
+
+**원칙**: DraftRunner 당 1 instance, engine init 에서 long bucket 의 worst
+case 로 max-size allocation, per step `begin_step()` 으로 scalar update +
+`_build_phase2_hybrid_plan()` 으로 tensor in-place fill. 깊이 loop 는 plan
+tensor 만 읽음 (Python tensor construction 0).
+
+핵심 필드:
+- row 분류: `per_row_region_id` (cont=0/proxy=1), `per_row_valid_source_kind`
+- per-row × per-depth attention plumbing: `per_row_context_lens_by_depth`,
+  `per_row_slot_maps_by_depth`, `per_row_kv_indptr_by_depth`,
+  `per_row_kv_indices_by_depth`, `per_row_block_tables`
+- mask precompute: `per_depth_packed_masks`, `per_depth_mask_indptr`
+  (FlashInfer LSB-first packed bytes; per-row j_idx-aware visibility)
+- position math: `cont_initial_*`, `proxy_initial_*`, `step_pos_offsets`
+
+## 5.5 Wire 변경
+
+### speculate_response (draft → speculator_async)
+
+`fused_response`: `[B, cache_hits | phase_source | valid_k | tokens(K_long)]`.
+`tokens` 는 항상 K_long-sized (variable-shape send 회피); draft 는 valid_k
+prefix 만 채움.
+
+### proxy 페이로드 (target → draft)
+
+Fixed max-size:
+```
+[K_long + 1]        fan_out_list
+[B, K_long, top_k]  topk_ids
+[B, K_long, top_k]  topk_probs
+```
+
+target 은 valid_k positions 까지만 의미값 채움. draft 는 prefix slice 사용.
+
+## 5.6 알고리즘 변경 요약
+
+| | Rev1 split | hybrid v1 |
+|---|---|---|
+| Phase 1 forward depth | K_long | K1 |
+| Phase 2 forward depth | K_long | K2 (= K_short) |
+| Phase 2 forward 횟수 | 2 (cont 분리 없음) | 1 (cont+proxy 통합) |
+| draft-sourced suffix | K_long | K_long (= K1 + K2) |
+| proxy-sourced suffix | K_long | K_short (= K2) |
+| miss JIT depth | K_long | K_short (per Plan §"Cache miss behavior") |
+| graph buckets | 일부 | 8 (full long/short dispatch) |
+
+forward work (K_long=8, K1=K2=4, fo=pfo=2 기준 row-depths):
+- split: 306
+- hybrid long-hit: 234 (-24%)
+- hybrid short-hit: 130 (-57%)
+- 50/50 mix: -40%
+
+## 5.7 구현 단계 — Phase 0..9D
+
+| Phase | 내용 | 산출물 |
+|---|---|---|
+| 0 | `valid_k` plumbing (config / wire / SpeculateResult) | 알고리즘 무변동 |
+| 1 | cache + valid_k 저장 | `tree_cache_valid_k` |
+| 2 | TreeLayout 확장 (`position_count` separate from `K`) | layout 분기 가능 |
+| 3 | Phase 1 K1 split + hybrid Phase 2 (long bucket only) | forward 단축 첫 효과 |
+| 4 | verify 분기 (heterogeneous valid_k) | verify_long / verify_short |
+| 5 | short-base graph buckets | full 8-bucket dispatch |
+| 6 | validation (8 family capture, 70B AWQ smoke) | end-to-end MESA OK |
+| 7 | Step 7 parity harness (split eager mirror) | 정확성 oracle |
+| 8 | hybrid default 전환 (split fallback gate) | 기본 = hybrid |
+| 9A | runtime valid_k bucket dispatch | per-step long/short |
+| 9B | hybrid CG capture + dispatch (long+short) | hybrid 가 CG default hot path |
+| 9C | hybrid CG hot-path syncs / duplicate mask 제거 | runtime depth loop sync 0 |
+| 9D | build hot-path 최적화 (pre-allocated workspace) | `phase2_hybrid_build` 단축 |
+
+## 5.8 Known limitations
+
+- **EAGLE 통합 미적용** — `draft_acts` 처리 분기가 hybrid 경로에 추가되어야
+  함. 현재 non-EAGLE Llama family 만 검증.
+- **proxy first-divergence ≤ 5%** — structural FlashInfer kernel drift 추정.
+  oracle (eager bool-mask) 대비 mask 의미 100% 일치, argmax flip 은
+  near-tie bf16 round-off 한정 (max o_margin 0.125 = 2 LSB).
+- **split CG generic continuation mask** — K1 < K_long 일 때 cross-branch
+  Phase 1 KV / mistreated glue 영역 visibility leakage 존재
+  (`cudagraph_helpers.py:319` known-bug 주석). hybrid 는 plan-correct →
+  영향 없음. split fallback 사용 시에만 노출.
+- **B = 1 invariant** — `max_num_seqs == 1` 가정 (Policy A 의 `accept_probs[0]`
+  단일 h_i). B>1 확장은 plan + per-seq 구조 재설계 필요.

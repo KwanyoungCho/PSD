@@ -186,7 +186,7 @@ class DraftRunner(ModelRunner):
         self._arange_mq = self.full_layout.arange_mq
 
         # MESA: draft_layout + proxy_layout (legacy two-pass).
-        # Phase 2 hybrid (`MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` Phase 3b):
+        # Phase 2 hybrid (`docs/mesa/01-design.md Part 5` Phase 3b):
         # additionally creates `phase1_layout_long` / `phase1_layout_short` if
         # `mesa_phase1_k` / `mesa_phase2_k` are set in config. These have
         # forward_depth = K1 (config) and position_count = K_long+1 / K_short+1.
@@ -268,12 +268,27 @@ class DraftRunner(ModelRunner):
                 # bound = max_total_rows × max_seqlen / 8. Refined in Step 4.
                 _max_total = (K_long + 1) * (draft_fo + proxy_fo)
                 _max_mask_size = _max_total * self.config.max_model_len  # uint8 entries
+                # max_L: upper bound on physical KV at the deepest hybrid step.
+                # L = num_tokens + K_step + K_long*MQ_p1 + K2*MQ_proxy.
+                # Worst-case num_tokens = max_model_len; everything else is
+                # config-fixed. Used to pre-allocate kv_pos arange + full mask
+                # workspace at engine init (Phase 9D — eliminates per-step
+                # arange allocations in _build_hybrid_packed_mask_inplace).
+                _MQ_p1_max = (K_long + 1) * draft_fo
+                _MQ_proxy_max = (K_long + 1) * proxy_fo
+                _max_L = (
+                    self.config.max_model_len
+                    + K_long
+                    + K_long * _MQ_p1_max
+                    + K2 * _MQ_proxy_max
+                )
                 self.hybrid_phase2_plan = HybridPhase2Plan.create(
                     K1=K1, K2=K2,
                     mesa_draft_fan_out=draft_fo,
                     mesa_proxy_fan_out=proxy_fo,
                     max_pages_per_row=_max_pages,
                     max_packed_mask_size=_max_mask_size,
+                    max_L=_max_L,
                     device=d,
                 )
                 print(f'[MESA hybrid] HybridPhase2Plan allocated: K_long={K_long}, '
@@ -564,9 +579,18 @@ class DraftRunner(ModelRunner):
 
         # Step 9B-0: glue input width follows valid_k (long-hit=K_long+1,
         # short-hit=K_short+1). B=1 invariant lets us pass a scalar.
-        _vk_scalar = int(valid_k[0].item()) if valid_k.numel() > 0 else K
+        # Sync valid_k to Python ONLY when hybrid mode actually needs the
+        # per-step bucket dispatch. Split / pure-MESA: width is always
+        # K_long; pass None so make_glue_decode_input_ids defaults to it
+        # without forcing a CUDA stream flush. Returned as the 8th element
+        # so downstream callers (_glue_decode, _decode_speculate_async)
+        # avoid re-syncing the same value.
+        if self.config.mesa_phase1_k is not None and valid_k.numel() > 0:
+            _vk_scalar = int(valid_k[0].item())
+        else:
+            _vk_scalar = None
         glue_input_ids = make_glue_decode_input_ids(out_tokens, rec_toks, valid_k=_vk_scalar)
-        return out_tokens, out_logits, glue_input_ids, cache_hits, out_activations, phase_source, valid_k
+        return out_tokens, out_logits, glue_input_ids, cache_hits, out_activations, phase_source, valid_k, _vk_scalar
 
     def _service_spec_request(self):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
@@ -627,7 +651,7 @@ class DraftRunner(ModelRunner):
 
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_h, mesa_close as _mc_h
         _mev_hc = _mr_h("hit_cache_respond")
-        out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations, phase_source, valid_k = self.hit_cache_and_respond(
+        out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations, phase_source, valid_k, valid_k_scalar = self.hit_cache_and_respond(
             cache_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations)
         _mc_h("hit_cache_respond", _mev_hc)
 
@@ -670,6 +694,11 @@ class DraftRunner(ModelRunner):
             # (or K_long fallback for misses). Drives glue / phase1 / proxy /
             # hybrid layout dispatch in _build_tree_batch_mesa.
             "valid_k": valid_k,
+            # Pre-sync'd Python int (hybrid mode) or None (split / pure-MESA).
+            # Lets _glue_decode and the main hot path skip redundant .item()
+            # syncs — the .item() that produced this scalar happened once
+            # inside hit_cache_and_respond above.
+            "valid_k_scalar": valid_k_scalar,
         }
 
         return glue_decode_input_ids, partial_tree_decode_args
@@ -856,11 +885,12 @@ class DraftRunner(ModelRunner):
             # EAGLE glue decode — full path (unchanged, passes through to _build_tree_batch)
             raise NotImplementedError("_glue_decode does not support EAGLE; use _build_tree_batch directly")
 
-        # Step 9B-0: glue width follows valid_k. partial_tree_decode_args["valid_k"]
-        # is plumbed from hit_cache_and_respond. B=1 invariant (Config) → scalar.
-        if "valid_k" in partial_tree_decode_args:
-            _vk_glue = int(partial_tree_decode_args["valid_k"][0].item())
-        else:
+        # Step 9B-0: glue width follows valid_k. Read the pre-sync'd Python
+        # scalar that hit_cache_and_respond stashed in partial_tree_decode_args
+        # — None means split / pure-MESA path, default to K_long. No new
+        # GPU→CPU sync here.
+        _vk_glue = partial_tree_decode_args.get("valid_k_scalar")
+        if _vk_glue is None:
             _vk_glue = self.config.speculate_k
         K = _vk_glue
         B = glue_decode_input_ids.shape[0] // (K + 1)
@@ -1445,11 +1475,11 @@ class DraftRunner(ModelRunner):
         # matched) → phase1_layout_long. Short-hit (= K_short = K2, proxy
         # cache row matched) → phase1_layout_short. Miss → K_long fallback.
         _mev_p1b = _mr("phase1_build")
-        _step_valid_k = (
-            int(partial_tree_decode_args["valid_k"][0].item())
-            if "valid_k" in partial_tree_decode_args
-            else self.config.speculate_k
-        )
+        # Read pre-sync'd Python scalar (set by hit_cache_and_respond). None
+        # means split / pure-MESA path → no bucket dispatch needed; use K_long.
+        _step_valid_k = partial_tree_decode_args.get("valid_k_scalar")
+        if _step_valid_k is None:
+            _step_valid_k = self.config.speculate_k
         _is_short_hit = (
             self.config.mesa_phase1_k is not None
             and _step_valid_k == self.config.mesa_phase2_k  # = K_short
@@ -1600,12 +1630,14 @@ class DraftRunner(ModelRunner):
         import os as _os
         _use_hybrid = _hybrid_default  # Step 8: default path = hybrid
         if _hybrid_default or _parity_check:
+            _mev_phb = _mr("phase2_hybrid_build")
             self._build_phase2_hybrid_plan(
                 draft_tree_args=draft_tree_args,
                 proxy_tree_args=proxy_tree_args,
                 step_proxy_layout=step_proxy_layout,
                 fan_out_list=fan_out_list,
             )
+            _mc("phase2_hybrid_build", _mev_phb)
         # Phase A: split eager mirror gate. When SSD_MIRROR_PROXY=1 (independent
         # of full hybrid parity), run mirror on split's proxy outputs to verify
         # bool-eager planning vs CG packed planning produce same proxy results.
@@ -1804,6 +1836,11 @@ class DraftRunner(ModelRunner):
                 and _hybrid_cg_key in self.graphs
             )
             if _hybrid_cg_available:
+                # Per-depth `phase2_hybrid_prep_{bucket}` and
+                # `phase2_hybrid_replay_{bucket}` fire INSIDE the K2 loop
+                # in run_phase2_hybrid_cudagraph (matches split's per-depth
+                # phase{1,2}_prep / phase{1,2}_replay semantics so the K2
+                # forwards show as K2 separate events, not one fused event).
                 from ssd.engine.helpers.cudagraph_helpers import run_phase2_hybrid_cudagraph
                 cont_tokens_h, cont_logits_h, proxy_tokens_h, proxy_logits_h = (
                     run_phase2_hybrid_cudagraph(
@@ -1817,6 +1854,8 @@ class DraftRunner(ModelRunner):
                     )
                 )
             else:
+                # Eager fallback — per-depth label fires inside the eager
+                # K2 loop (see _decode_phase2_hybrid).
                 cont_tokens_h, cont_logits_h, proxy_tokens_h, proxy_logits_h = (
                     self._decode_phase2_hybrid(
                         draft_tree_args=draft_tree_args,
@@ -1950,6 +1989,9 @@ class DraftRunner(ModelRunner):
           fan_idx). Cont initial rope position = num_tokens + j_idx_p1[i] +
           K1 (extending past Phase 1's K1 ancestors).
         """
+        from ssd.engine.helpers.cudagraph_helpers import (
+            mesa_record as _mr_b, mesa_close as _mc_b,
+        )
         plan = self.hybrid_phase2_plan
         K1 = self.config.mesa_phase1_k
         K2 = self.config.mesa_phase2_k
@@ -1961,6 +2003,7 @@ class DraftRunner(ModelRunner):
         proxy_count = plan.proxy_row_count
         total = plan.total_row_count
 
+        _mev_b_setup = _mr_b("phase2_hybrid_build_setup")
         # Step 9A: phase1 layout dispatch by plan.valid_k. Long-hit uses
         # phase1_layout_long (MQ_LEN=(K_long+1)*dfo); short-hit uses
         # phase1_layout_short (MQ_LEN=(K_short+1)*dfo).
@@ -2014,8 +2057,8 @@ class DraftRunner(ModelRunner):
         # PHYSICAL DECODE COORDINATE in seq's expanding token space:
         #   A_tail base = num_tokens + K_step + K1*MQ_p1
         # where K_step = valid_k (this step's bucket), MQ_p1 = (K_step+1)*dfo.
-        # depth d adds d*MQ_p1.
-        cont_idx = torch.arange(cont_count, device=device, dtype=torch.int64)
+        # depth d adds d*MQ_p1. Phase 9D: re-use plan-level arange.
+        cont_idx = plan.cont_idx_arange[:cont_count]
         plan.cont_initial_positions[:cont_count] = (
             num_tokens + K_step + K1 * MQ_p1 + cont_idx
         )
@@ -2035,8 +2078,8 @@ class DraftRunner(ModelRunner):
         # B_proxy base = num_tokens + K_step + K_long*MQ_p1 (placed AFTER
         # Phase 1's K1*MQ_p1 + cont's K2*MQ_p1 = K_long*MQ_p1 worth of slots
         # in the A_tail region of the 5-region scratch). depth d adds
-        # d*MQ_proxy.
-        proxy_idx = torch.arange(proxy_count, device=device, dtype=torch.int64)
+        # d*MQ_proxy. Phase 9D: re-use plan-level arange.
+        proxy_idx = plan.proxy_idx_arange[:proxy_count]
         plan.proxy_initial_positions[:proxy_count] = (
             num_tokens + K_step + K_long * MQ_p1 + proxy_idx
         )
@@ -2051,9 +2094,12 @@ class DraftRunner(ModelRunner):
             num_tokens + proxy_j_idx[:proxy_count]
         )
 
+        _mc_b("phase2_hybrid_build_setup", _mev_b_setup)
+
         # 7) per_row_slot_maps_by_depth — row-wise direct compute.
         # Cont row i at depth d: scratch_pos = cont_initial[i] + d * MQ_p1
         # Proxy row j at depth d: scratch_pos = proxy_initial[j] + d * MQ_proxy
+        _mev_b_slots = _mr_b("phase2_hybrid_build_slots")
         for d in range(K2):
             cont_scratch_pos = plan.cont_initial_positions[:cont_count] + d * MQ_p1
             cont_block_id = (cont_scratch_pos // block_size).to(torch.int64)
@@ -2069,10 +2115,13 @@ class DraftRunner(ModelRunner):
                 seq_bt[proxy_block_id].to(torch.int32) * block_size + proxy_offset
             )
 
+        _mc_b("phase2_hybrid_build_slots", _mev_b_slots)
+
         # 8) per_row_context_lens_by_depth + Phase 9C per-depth caches.
         # physical_end = num_tokens + K_step + K_long*MQ_p1 + (d+1)*MQ_proxy.
         # Pre-compute Python ints for L / n_pages to eliminate K2×.item() syncs
         # in the hot path runtime.
+        _mev_b_kv = _mr_b("phase2_hybrid_build_kv")
         per_depth_L = []
         per_depth_n_pages = []
         for d in range(K2):
@@ -2090,41 +2139,43 @@ class DraftRunner(ModelRunner):
         # Phase 9C: also pre-build CPU kv_indptr and GPU kv_lens / kv_lpl per
         # depth so runtime can low_level_packed_plan() without any per-depth
         # tensor allocations or CPU↔GPU transfers in the hot path.
+        # Phase 9D: re-use plan.total_arange_p1 instead of fresh torch.arange.
         seq_bt_int32 = seq_bt[:n_pages_filled].to(torch.int32)
         for d in range(K2):
             n_pages_d_step = per_depth_n_pages[d]
             ctx_len_d_int = per_depth_L[d]
-            indptr_d = torch.arange(total + 1, device=device, dtype=torch.int32) * n_pages_d_step
             n_idx = total * n_pages_d_step
-            plan.per_row_kv_indptr_by_depth[:total + 1, d] = indptr_d
+            # GPU indptr — write directly into plan with mul out=.
+            torch.mul(
+                plan.total_arange_p1[:total + 1], n_pages_d_step,
+                out=plan.per_row_kv_indptr_by_depth[:total + 1, d],
+            )
             plan.per_row_kv_indices_by_depth[d, :n_idx] = (
                 seq_bt_int32[:n_pages_d_step].repeat(total)
             )
-            # CPU pinned indptr (size max_total+1; entries past total saturate
-            # at total*n_pages_d → padding rows have empty mask)
+            # CPU pinned indptr — multiply pre-built CPU arange by stride.
             indptr_cpu = plan.per_depth_kv_indptr_cpu[d]
-            indptr_cpu[: total + 1] = torch.arange(
-                total + 1, dtype=torch.int32,
-            ) * n_pages_d_step
+            torch.mul(
+                plan.total_arange_p1_cpu[:total + 1], n_pages_d_step,
+                out=indptr_cpu[:total + 1],
+            )
             indptr_cpu[total + 1 :] = total * n_pages_d_step
             # kv_lens = (num_pages - 1) * block_size + last_page_len
             # last_page_len = ((L - 1) % block_size) + 1
             lpl = ((ctx_len_d_int - 1) % block_size) + 1
             kv_len_val = (n_pages_d_step - 1) * block_size + lpl
-            plan.per_depth_kv_lpl_gpu[d, :total].fill_(lpl)
-            plan.per_depth_kv_lens_gpu[d, :total].fill_(kv_len_val)
-            # Pad rows [total, max_total) with the same lpl/kv_len (harmless;
-            # padding rows have empty mask so they don't contribute).
-            plan.per_depth_kv_lpl_gpu[d, total:].fill_(lpl)
-            plan.per_depth_kv_lens_gpu[d, total:].fill_(kv_len_val)
+            plan.per_depth_kv_lpl_gpu[d, :].fill_(lpl)
+            plan.per_depth_kv_lens_gpu[d, :].fill_(kv_len_val)
 
         # step_pos_offsets / step_rope_offsets remain as set by create() —
         # depth d → arange(K2)[d]. These are not used directly for slot
         # mapping (different stride for cont vs proxy); per_row_slot_maps_by_depth
         # is the source of truth for write slots in Step 6.
+        _mc_b("phase2_hybrid_build_kv", _mev_b_kv)
 
         # Step 4: build per-depth packed mask consuming the metadata above.
         # K_step = this step's valid_k = phase1_kv_base offset.
+        _mev_b_mask = _mr_b("phase2_hybrid_build_mask")
         self._build_hybrid_packed_mask_inplace(
             num_tokens=num_tokens,
             K1=K1, K2=K2, K_step=K_step, K_long=K_long,
@@ -2133,6 +2184,7 @@ class DraftRunner(ModelRunner):
             j_idx_p1=j_idx_p1_full[:cont_count],
             j_idx_proxy=proxy_j_idx[:proxy_count],
         )
+        _mc_b("phase2_hybrid_build_mask", _mev_b_mask)
 
     def _build_hybrid_packed_mask_inplace(self, *, num_tokens, K1, K2, K_step,
                                             K_long, MQ_p1, MQ_proxy, cont_count,
@@ -2180,9 +2232,19 @@ class DraftRunner(ModelRunner):
         a_tail_base = phase1_kv_base + K1 * MQ_p1
         b_proxy_base = a_tail_base + K2 * MQ_p1
 
-        cont_idx_t = torch.arange(cont_count, device=device, dtype=torch.int64)
-        proxy_idx_t = torch.arange(proxy_count, device=device, dtype=torch.int64)
-        bit_weights = (1 << torch.arange(8, dtype=torch.uint8, device=device))  # [8]
+        # Phase 9D: re-use plan-level pre-allocated workspaces instead of
+        # allocating fresh tensors per step / per depth. cont_idx_arange /
+        # proxy_idx_arange were allocated max-size at create() time.
+        cont_idx_t = plan.cont_idx_arange[:cont_count]
+        proxy_idx_t = plan.proxy_idx_arange[:proxy_count]
+        bit_weights = plan.bit_weights_u8     # [8] constant
+        full_mask_buf = plan.full_mask_buf    # [max_total, max_L_padded] bool
+
+        # Per-row j_idx as column vectors for broadcasting (no per-depth alloc).
+        j_idx_p1_col = j_idx_p1.view(cont_count, 1)
+        j_idx_proxy_col = j_idx_proxy.view(proxy_count, 1)
+        cont_idx_col = cont_idx_t.view(cont_count, 1)
+        proxy_idx_col = proxy_idx_t.view(proxy_count, 1)
 
         # Phase 9C: cache bytes_per_row per depth so runtime can slice plan
         # buffer directly without re-running the bool-mask + pack work.
@@ -2191,102 +2253,91 @@ class DraftRunner(ModelRunner):
         for d in range(K2):
             # Physical KV upper bound at depth d (after current depth's write).
             L = num_tokens + K_step + K_long * MQ_p1 + (d + 1) * MQ_proxy
+            L_padded = ((L + 7) // 8) * 8
+            bytes_per_row = L_padded // 8
 
-            kv_pos = torch.arange(L, device=device, dtype=torch.int64)  # [L]
-            kv_pos_2d = kv_pos.view(1, L)
+            # Phase 9D: slice the pre-built kv_pos arange instead of allocating
+            # a fresh torch.arange(L) per depth. View [1, L] for broadcasting.
+            kv_pos_2d = plan.kv_pos_arange[:L].view(1, L)
 
-            # persistent visible: kv_pos < num_tokens
+            # Phase 9D: write directly into pre-allocated full_mask_buf rows.
+            # Layout: rows [0:cont_count) = cont rows; rows [cont_count:total)
+            # = proxy rows. Pad columns [L:L_padded) zeroed. Skip torch.cat.
+            mask_out = full_mask_buf[:total, :L_padded]
+            # Zero out the active region (workspace is reused step-to-step).
+            mask_out.zero_()
+
+            cont_out = full_mask_buf[:cont_count, :L]      # [cont_count, L] view
+            proxy_out = full_mask_buf[cont_count:total, :L]  # [proxy_count, L] view
+
+            # persistent visible: kv_pos < num_tokens (broadcast 1×L → row×L)
             persistent_vis = kv_pos_2d < num_tokens  # [1, L]
+            # Use copy_ + broadcast so we write into the buf in place.
+            cont_out.copy_(persistent_vis.expand(cont_count, L))
+            proxy_out.copy_(persistent_vis.expand(proxy_count, L))
 
             # ---- continuation rows ----
             # glue prefix lower-triangular: kv_pos in [glue_base, glue_base + j_idx + 1)
             cont_glue_vis = (
                 (kv_pos_2d >= glue_base) &
-                (kv_pos_2d <= (glue_base + j_idx_p1.view(cont_count, 1)))
+                (kv_pos_2d <= (glue_base + j_idx_p1_col))
             )  # [cont_count, L]
+            cont_out.bitwise_or_(cont_glue_vis)
 
             # own Phase 1 KV: kv_pos in Phase 1 region AND
             # (kv_pos - phase1_kv_base) % MQ_p1 == cont_idx
-            p1_off = kv_pos_2d - phase1_kv_base  # may be negative
+            p1_off = kv_pos_2d - phase1_kv_base
             in_p1_region = (kv_pos_2d >= phase1_kv_base) & (kv_pos_2d < a_tail_base)
-            own_p1_branch = (p1_off % MQ_p1) == cont_idx_t.view(cont_count, 1)
-            cont_p1_vis = in_p1_region & own_p1_branch  # [cont_count, L]
+            own_p1_branch = (p1_off % MQ_p1) == cont_idx_col
+            cont_out.bitwise_or_(in_p1_region & own_p1_branch)
 
-            # own A_tail prefix [0..d] (current depth INCLUSIVE for causal):
-            # kv_pos in A_tail region AND
-            # (kv_pos - a_tail_base) % MQ_p1 == cont_idx AND
-            # depth within A_tail = (kv_pos - a_tail_base) // MQ_p1 in [0, d+1)
+            # own A_tail prefix [0..d] (current depth INCLUSIVE for causal)
             at_off = kv_pos_2d - a_tail_base
             in_at_region = (kv_pos_2d >= a_tail_base) & (kv_pos_2d < b_proxy_base)
-            own_at_branch = (at_off % MQ_p1) == cont_idx_t.view(cont_count, 1)
-            at_depth = at_off // MQ_p1  # broadcast — same across rows for given kv_pos
+            own_at_branch = (at_off % MQ_p1) == cont_idx_col
+            at_depth = at_off // MQ_p1
             at_depth_ok = at_depth <= d
-            cont_at_vis = in_at_region & own_at_branch & at_depth_ok  # [cont_count, L]
-
-            cont_mask = (
-                persistent_vis.expand(cont_count, L)
-                | cont_glue_vis
-                | cont_p1_vis
-                | cont_at_vis
-            )  # [cont_count, L]
+            cont_out.bitwise_or_(in_at_region & own_at_branch & at_depth_ok)
 
             # ---- proxy rows ----
             proxy_glue_vis = (
                 (kv_pos_2d >= glue_base) &
-                (kv_pos_2d <= (glue_base + j_idx_proxy.view(proxy_count, 1)))
-            )  # [proxy_count, L]
+                (kv_pos_2d <= (glue_base + j_idx_proxy_col))
+            )
+            proxy_out.bitwise_or_(proxy_glue_vis)
 
-            # own B_proxy prefix [0..d]:
-            # kv_pos in B_proxy region AND
-            # (kv_pos - b_proxy_base) % MQ_proxy == proxy_idx AND
-            # depth within B_proxy = (kv_pos - b_proxy_base) // MQ_proxy in [0, d+1)
+            # own B_proxy prefix [0..d]
             bp_off = kv_pos_2d - b_proxy_base
             in_bp_region = (kv_pos_2d >= b_proxy_base) & (kv_pos_2d < (b_proxy_base + K2 * MQ_proxy))
-            own_bp_branch = (bp_off % MQ_proxy) == proxy_idx_t.view(proxy_count, 1)
+            own_bp_branch = (bp_off % MQ_proxy) == proxy_idx_col
             bp_depth = bp_off // MQ_proxy
             bp_depth_ok = bp_depth <= d
-            proxy_b_vis = in_bp_region & own_bp_branch & bp_depth_ok  # [proxy_count, L]
-
-            proxy_mask = (
-                persistent_vis.expand(proxy_count, L)
-                | proxy_glue_vis
-                | proxy_b_vis
-            )  # [proxy_count, L]
+            proxy_out.bitwise_or_(in_bp_region & own_bp_branch & bp_depth_ok)
 
             # ---- pack ----
-            full_mask = torch.cat([cont_mask, proxy_mask], dim=0)  # [total, L]
-            L_padded = ((L + 7) // 8) * 8
-            if L < L_padded:
-                pad = torch.zeros(total, L_padded - L, dtype=torch.bool, device=device)
-                full_mask = torch.cat([full_mask, pad], dim=1)
-            # Reshape [total, L_padded/8, 8], multiply by bit weights, sum →
-            # [total, L_padded/8] uint8
-            packed = full_mask.to(torch.uint8).view(total, L_padded // 8, 8)
+            # mask_out is [total, L_padded] bool with L_padded a multiple of 8.
+            # Pack 8 consecutive bools per byte, LSB-first.
+            packed = mask_out.to(torch.uint8).view(total, bytes_per_row, 8)
             packed_bytes = (packed * bit_weights.view(1, 1, 8)).sum(dim=2).to(torch.uint8)
 
-            # Flatten and write to plan tensor (depth-major)
+            # Write to plan tensor (depth-major). Phase 9C: zero padding so
+            # runtime can pass the slice directly.
             flat = packed_bytes.reshape(-1)
-            n_bytes = int(flat.numel())
-            bytes_per_row = L_padded // 8
+            n_bytes = total * bytes_per_row
             assert n_bytes <= plan.per_depth_packed_masks.shape[1], (
                 f"packed mask depth {d} needs {n_bytes} bytes but plan has "
                 f"{plan.per_depth_packed_masks.shape[1]} per-depth slots"
             )
             plan.per_depth_packed_masks[d, :n_bytes] = flat
-            # Phase 9C: zero padding rows so runtime can pass
-            # plan.per_depth_packed_masks[d, :wrapper_total*bytes_per_row]
-            # without recomputing — padding rows always have empty mask.
             max_total_bytes = plan.per_depth_packed_masks.shape[1]
             if n_bytes < max_total_bytes:
                 plan.per_depth_packed_masks[d, n_bytes:].zero_()
 
-            indptr_d = (
-                torch.arange(total + 1, device=device, dtype=torch.int32)
-                * bytes_per_row
+            # Phase 9D: indptr from pre-built total_arange_p1 (no fresh arange).
+            torch.mul(
+                plan.total_arange_p1[:total + 1], bytes_per_row,
+                out=plan.per_depth_mask_indptr[d, :total + 1],
             )
-            plan.per_depth_mask_indptr[d, :total + 1] = indptr_d
-            # Phase 9C: padding-row indptr saturates at total*bytes_per_row
-            # → padding rows have zero-byte mask slice (empty visibility).
             plan.per_depth_mask_indptr[d, total + 1 :] = total * bytes_per_row
 
             per_depth_bytes_per_row.append(bytes_per_row)
@@ -3488,7 +3539,15 @@ class DraftRunner(ModelRunner):
 
         cu_seqlens_q_full = torch.arange(total + 1, device=device, dtype=torch.int32)
 
+        # Bucket for per-depth profiling labels (matches CG path naming).
+        _eager_bucket = "long" if plan.valid_k == plan.K_long else "short"
+        from ssd.engine.helpers.cudagraph_helpers import (
+            mesa_record as _mr_eg, mesa_close as _mc_eg,
+        )
+
         for d in range(K2):
+            # Per-depth prep — KV plan, custom mask, set_context.
+            _mev_eg_prep = _mr_eg(f"phase2_hybrid_eager_prep_{_eager_bucket}")
             # Flat batch: [cont rows | proxy rows]
             flat_input_ids = torch.cat([cur_cont_ids, cur_proxy_ids], dim=0)  # [total]
 
@@ -3582,11 +3641,15 @@ class DraftRunner(ModelRunner):
                 active_layout=None,
             )
 
+            _mc_eg(f"phase2_hybrid_eager_prep_{_eager_bucket}", _mev_eg_prep)
+
             # Eager forward — bypass run_model's CG dispatch by calling
             # self.model directly. tree_decode_step is NOT used here since
             # we're not going through the captured tree CG.
+            _mev_eg_fwd = _mr_eg(f"phase2_hybrid_eager_replay_{_eager_bucket}")
             outputs = self.model(flat_input_ids, flat_rope)
             logits_flat = self.model.compute_logits(outputs, last_only=False)
+            _mc_eg(f"phase2_hybrid_eager_replay_{_eager_bucket}", _mev_eg_fwd)
             reset_context()
 
             logits_flat = logits_flat.view(-1, V)  # [total, V]

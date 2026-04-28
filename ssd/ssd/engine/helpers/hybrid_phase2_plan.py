@@ -1,6 +1,6 @@
 """HybridPhase2Plan — per-step plan object for the MESA Phase 2 hybrid loop.
 
-Per ``MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md``:
+Per ``docs/mesa/01-design.md Part 5``:
 
 - One ``HybridPhase2Plan`` instance per ``DraftRunner``.
 - All tensor fields are allocated **once** at engine init, sized for the long
@@ -111,6 +111,17 @@ class HybridPhase2Plan:
     proxy_initial_positions: torch.Tensor = field(default=None)
     proxy_initial_rope_positions: torch.Tensor = field(default=None)
 
+    # Pre-allocated workspaces for the per-step build (replaces per-step
+    # torch.arange / torch.zeros allocations in the hot path). All sized for
+    # the long-bucket worst case at engine init.
+    bit_weights_u8: torch.Tensor = field(default=None)                  # uint8 [8] — constant 1<<arange(8)
+    cont_idx_arange: torch.Tensor = field(default=None)                 # int64 [max_cont]
+    proxy_idx_arange: torch.Tensor = field(default=None)                # int64 [max_proxy]
+    kv_pos_arange: torch.Tensor = field(default=None)                   # int64 [max_L]
+    total_arange_p1: torch.Tensor = field(default=None)                 # int32 GPU [max_total + 1]
+    total_arange_p1_cpu: torch.Tensor = field(default=None)             # int32 CPU [max_total + 1]
+    full_mask_buf: torch.Tensor = field(default=None)                   # bool  [max_total, max_L_padded]
+
     # ─────────────────────────────────────────────────────────────────────
     # Construction helper
     # ─────────────────────────────────────────────────────────────────────
@@ -124,6 +135,7 @@ class HybridPhase2Plan:
         mesa_proxy_fan_out: int,
         max_pages_per_row: int,
         max_packed_mask_size: int,
+        max_L: int,
         device: torch.device,
     ) -> "HybridPhase2Plan":
         """Allocate all tensor fields max-sized for the long bucket."""
@@ -196,6 +208,42 @@ class HybridPhase2Plan:
         )
         # qo_indptr is invariant: arange(max_total + 1).
         plan.qo_indptr_cpu = torch.arange(
+            max_total + 1, dtype=torch.int32, device='cpu',
+        )
+
+        # Phase 9D: build-time workspaces (replace per-step allocations).
+        # bit_weights = [1, 2, 4, 8, 16, 32, 64, 128] — completely constant.
+        plan.bit_weights_u8 = (
+            1 << torch.arange(8, dtype=torch.uint8, device=device)
+        )
+        # Pre-built per-row index aranges; the build slices [:cont_count] /
+        # [:proxy_count] each step.
+        plan.cont_idx_arange = torch.arange(
+            max_cont, dtype=torch.int64, device=device,
+        )
+        plan.proxy_idx_arange = torch.arange(
+            max_proxy, dtype=torch.int64, device=device,
+        )
+        # max-L kv_pos arange — sized to fit the worst-case physical KV bound
+        # (num_tokens + K_step + K_long*MQ_p1 + K2*MQ_proxy). Caller passes
+        # ``max_L``; we slice [:L] each step instead of allocating a fresh
+        # arange.
+        plan.kv_pos_arange = torch.arange(
+            max_L, dtype=torch.int64, device=device,
+        )
+        # Pre-allocated full mask workspace ([max_total, max_L_padded] bool).
+        # Lets the build write rows in-place without torch.cat / pad allocs.
+        max_L_padded = ((max_L + 7) // 8) * 8
+        plan.full_mask_buf = torch.zeros(
+            (max_total, max_L_padded), dtype=torch.bool, device=device,
+        )
+        # Pre-built (max_total + 1) int32 arange for kv_indptr / mask_indptr
+        # construction (multiplied by per-depth strides each step). Both GPU
+        # and CPU variants — caller picks based on target tensor's device.
+        plan.total_arange_p1 = torch.arange(
+            max_total + 1, dtype=torch.int32, device=device,
+        )
+        plan.total_arange_p1_cpu = torch.arange(
             max_total + 1, dtype=torch.int32, device='cpu',
         )
 

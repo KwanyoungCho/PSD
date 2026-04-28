@@ -2,11 +2,18 @@
 
 이 문서는 MESA-SSD 의 모든 실험 결과를 시간순 + 모델 크기 순으로 통합한다.
 원본은 `MESA-RESULTS.md` (v1 초기 측정), `MESA-rev1-RESULTS.md` (Rev1
-Policy A), `MESA-SWEEP-RESULTS.md` (parameter sweep, clean-GPU rerun) 셋이다.
+Policy A), `MESA-SWEEP-RESULTS.md` (parameter sweep, clean-GPU rerun),
+`MESA-PHASE2-HYBRID-{REPORT,FINAL-REPORT}.md` (Phase 2 hybrid 결과) 다섯
+파일이다.
 
 34B / 70B 의 양자화 + MESA 최종 결과는 `quantization/03-final-report.md`
 (quantization 카테고리) 와 각 실험 디렉토리 `tmp/final_exp*/REPORT.md` 에
 별도로 정리되어 있다.
+
+> **읽는 순서**: Parts 1-3 = 초기 (8B/7B), Rev1, parameter sweep. Part 4 =
+> 34B/70B quantized 결과 위치 표. Part 5 = **Phase 2 Hybrid 측정** (가장
+> 최신, 현재 default 구현 기준). 70B 비교 실험은 `experiments/hybrid_vs_split_70b/`
+> 에 reproducible 형태로 보존.
 
 ---
 
@@ -436,3 +443,224 @@ AR 두 8B target 은 noise 내 (74.01 vs 74.39 tok/s). LayerSkip-Llama3-8B
 
 각 실험의 raw 결과 (`tmp/final_exp*/REPORT.md`) 는 해당 실험 디렉토리에
 유지. Plot 들 (breakdown latency, timeline step) 도 동일 위치.
+
+---
+
+# Part 5. Phase 2 Hybrid 측정 결과
+
+`MESA-PHASE2-HYBRID-REPORT.md` + `MESA-PHASE2-HYBRID-FINAL-REPORT.md` 의
+실험 결과 + 추후 발견된 split 회귀 / 9D opt 결과를 통합.
+
+## 5.1 환경 (공통)
+
+- **Target**: `facebook/layerskip-llama2-70B` AWQ-calibrated W4A16 (TP=4)
+- **Draft**: `TinyLlama-1.1B-Chat-v1.0` (TP=1)
+- **Hardware**: RTX 3090 sm_86, 5 GPUs (4 target TP + 1 draft)
+- **Prompts**: 200 (humaneval/alpaca/gsm8k/ultrafeedback × 50),
+  output_len=256, temp=0.6, B=1, max_model_len=2048
+- **Profiling**: `SSD_PROFILE_MESA=1` 로 zero-sync CUDA event 기반 per-phase
+  ms/step 측정
+
+비교 실험 위치: `experiments/hybrid_vs_split_70b/` (run.sh,
+plot_3way_distinct.py, results/, results_pre_*).
+
+## 5.2 8B 검증환경 — Step 9B 완료 시 (Phase 6)
+
+8B target / 1B draft, 8 prompts × output_len=128:
+
+| Mode | Total Throughput (tok/s) | vs split fallback |
+|---|---:|---:|
+| Split fallback (`SSD_FORCE_SPLIT_PHASE2=1`) | 86.94 | base |
+| Eager hybrid (`SSD_FORCE_EAGER_HYBRID_PHASE2=1`) | 69.07 | -20.6% |
+| **Native hybrid-default (CG long+short)** | **107.50** | **+23.6%** |
+
+8/8 generation byte-identical to split fallback. Accept rate +11.3% (split
+0.80 → hybrid 0.89). 8 CG family 모두 capture 확인:
+`glue_long/short`, `phase1_long/short`, `phase2_hybrid_long/short`,
+`verify_long/short`.
+
+## 5.3 70B sweep — initial Phase 9B 결과 (dense draft)
+
+50 prompts × output_len=128, dense TinyLlama draft:
+
+| config | TPS | accept | tok/step | cache | P1 | P2 | draft_ms | verify_ms |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| split_k5_dfo2_exit40 (baseline) | 54.10 | 0.56 | 3.81 | 0.68 | 0.56 | 0.12 | 57.39 | 45.74 |
+| hybrid_k5_K1_2_K2_3_exit40 | 63.48 | 0.60 | 3.98 | 0.72 | 0.64 | 0.08 | 49.32 | 45.45 |
+| **hybrid_k5_K1_3_K2_2_exit40** | **64.72** | **0.61** | **4.06** | **0.71** | **0.62** | **0.09** | **42.79** | **45.20** |
+| hybrid_k6_K1_3_K2_3_exit40 | 64.29 | 0.58 | 4.50 | 0.70 | 0.60 | 0.10 | 55.84 | 46.72 |
+| hybrid_k8_K1_4_K2_4_exit40 | 61.12 | 0.50 | 5.03 | 0.66 | 0.56 | 0.10 | 65.63 | 48.88 |
+
+**최적**: K=5, K1=3, K2=2, exit_layer=40, dfo=2 (TPS 64.72).
+
+분석:
+- (K1, K2) 균형: K1 ≥ K2 가 일관되게 유리. K=5 K1=3,K2=2 (64.72) > K1=2,K2=3
+  (63.48). K=8 K1=6,K2=2 (58.30) 는 accept 0.42 로 K1 너무 큰 경우 효과 떨어짐.
+- 총 K depth: K=5 > K=8 (small target/draft 비율 — deep tree 추가 비용 ≥
+  추가 accept 효과).
+- exit_layer: 40 (= L/2) > 47 (= 7L/12) — earlier exit → target verify 빠름.
+- **draft_ms 단축이 핵심**: hybrid 가 draft step 25% 단축 (cont+proxy 단일
+  forward + CG capture). verify time 거의 동일. throughput 개선은 **per-step
+  efficiency** 가 아니라 **draft step time 자체** 에서 옴.
+
+## 5.4 70B head-to-head — both AWQ + 200 prompts × 256 (post-fix)
+
+같은 prompt set / output_len 으로 (A) vs (B) vs (C) 직접 비교. Fix 적용 전후
+구분 — Part 5.3 (sync fix) + Part 5.4 (per-depth label) 적용 후.
+
+### 5.4.1 Top-line (post-sync-fix)
+
+| | TPS | accept | cache | P1 | P2 | draft_ms | verify_ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| (A) pre-hybrid + both AWQ | 66.71 | 0.52 | 0.78 | — | — | 42.29 | 47.20 |
+| (B) current code + split fallback | 66.58 | 0.52 | 0.80 | 0.64 | 0.15 | 43.75 | 46.84 |
+| (C) **current code + hybrid (K1=3,K2=2)** | **68.29** | 0.53 | 0.80 | 0.67 | 0.13 | **36.35** | 45.79 |
+
+- **(C) vs (A)**: TPS **+2.4%**, draft_ms −14% (= -5.94 ms/step)
+- **(C) vs (B)**: TPS **+2.6%**, draft_ms −17% (= -7.40 ms/step)
+- accept rate flat (0.52~0.54): 개선은 per-step efficiency 가 아니라
+  draft step time 자체에서 옴. final report §4.4 결론 재확인.
+
+### 5.4.2 Sync fix 효과 (Part 5.3 적용 전 vs 후)
+
+| | TPS regression (B vs A) | draft_ms regression |
+|---|---:|---:|
+| Sync fix 전 (dense draft) | **−4.4%** | +4.3% |
+| Sync fix 후 (both AWQ) | **−0.2%** | +3.5% |
+
+split path 의 phase1_build 회귀 +0.46 ms → −0.00 ms (사실상 닫힘).
+hit_cache_respond +0.53 ms → +0.35 ms (대부분 닫힘). target_spec_wait 도
+정상화 (cascade 효과 사라짐).
+
+### 5.4.3 Per-phase breakdown (B → C, both AWQ)
+
+draft side 의 build 와 forward 변화:
+
+| label | (B) split | (C) hybrid | delta |
+|---|---:|---:|---:|
+| phase1_replay × 5 | 11.57 | — | -11.57 |
+| phase2_replay × 5 | 12.12 | — | -12.12 |
+| phase1_replay × 3 (hybrid) | — | 6.68 | +6.68 |
+| phase2_hybrid_replay_long (× 1.74) | — | 4.78 | +4.78 |
+| phase2_hybrid_replay_short (× 0.26) | — | 0.43 | +0.43 |
+| phase2_hybrid_build | — | **3.36** | +3.36 |
+| phase2_hybrid_prep (long+short) | — | 0.21 | +0.21 |
+| tree_prep (× 3) | — | 0.55 | +0.55 |
+| phase1_prep × 5 | 2.46 | — | -2.46 |
+| phase2_prep × 5 | 2.35 | — | -2.35 |
+| phase2_build | 1.79 | 1.34 | -0.45 |
+| phase1_build | 0.15 | 0.15 | 0 |
+| glue | 2.70 | 2.49 | -0.21 |
+| hit_cache_respond | 2.87 | 2.55 | -0.32 |
+
+**Net work change**: −12.5 ms 의 split forward + −5 ms 의 prep
+사라짐 → +12 ms 의 hybrid forward + 4 ms hybrid build/prep 추가 =
+**−1.9 ms 순감소**.
+
+### 5.4.4 Idle 변화 (pipeline rebalancing 신호)
+
+| | (B) split | (C) hybrid |
+|---|---:|---:|
+| draft_recv_cmd | 6.22 | 12.10 |
+| proxy_wait | 6.90 | 12.32 |
+| target_spec_wait | 14.43 (sync fix 전) / 4.29 (post-fix) | 4.02 |
+
+draft compute 가 줄어 idle 이 +13 ms (recv_cmd + proxy_wait). target idle
+은 거의 동일 (~4 ms) — pipeline 균형 변화. critical path 가 draft 에서 더
+이상 안 됨을 보여줌.
+
+### 5.4.5 Forward 횟수 비교
+
+| | per-event | events/step | total/step |
+|---|---:|---:|---:|
+| split phase1_replay | 2.31 ms | 5 | 11.57 |
+| split phase2_replay | 2.42 ms | 5 | 12.12 |
+| **split forwards** | | **10** | **23.69** |
+| hybrid phase1_replay | 2.97 ms | 3 | 8.90 |
+| hybrid phase2_hybrid_replay (가중) | ~2.61 ms | 2 | 5.21 |
+| **hybrid forwards** | | **5** | **14.11** |
+
+forward 당 비용은 hybrid 가 약간 더 비쌈 (cont+proxy 통합으로 batch 가
+더 큼) 하지만 **횟수가 절반** → 총 forward 시간 −9.58 ms.
+
+이 절감이 `phase2_hybrid_build` 추가비용 (3.36 ms) 을 상쇄하고도 남음.
+
+## 5.5 알려진 비효율 — `phase2_hybrid_build` (Part 5.5)
+
+3.36 ms / step 이 1B draft 의 forward (2.97 ms) 보다 길다는 점이 비정상
+신호. 분석된 원인 (Part 5.5):
+1. `_build_hybrid_packed_mask_inplace` 가 K2 회 × ~30 kernel launch
+   (~80% 차지)
+2. 매 step `bit_weights`, `cont_idx_t`, `proxy_idx_t`, `kv_pos` 등 상수성
+   tensor 재할당
+3. bool mask `[total, L]` (~75 KB) → packed bytes (8x 작음) 변환 의 중간
+   산출물 비용
+4. K2 루프 3 개 (slot_maps, context_lens, kv_indptr) 별도
+
+→ Phase 9D 최적화 (Part 5.6) 적용. 측정 결과는 9D run 완료 시 추가.
+
+## 5.6 운영 가이드
+
+### 환경 변수
+
+| Env | 효과 |
+|---|---|
+| (none) | hybrid CG default — 권장 |
+| `SSD_FORCE_EAGER_HYBRID_PHASE2=1` | eager hybrid fallback (CG 비교/디버그) |
+| `SSD_FORCE_SPLIT_PHASE2=1` | split path fallback (legacy reference) |
+| `SSD_HYBRID_PARITY=1` | parity harness on (overhead 큼 — 디버그 전용) |
+| `SSD_HYBRID_CONT_ORACLE=1` | parity 안에서 cont oracle 동작 |
+| `SSD_HYBRID_PROXY_ORACLE=1` | parity 안에서 proxy oracle 동작 |
+| `SSD_HYBRID_SELF_CONSISTENCY=1` | parity 안에서 oracle/hybrid 자기-자기 비교 |
+| `SSD_TRACE_BUCKET=1` | 매 step bucket (long/short) 로그 |
+
+### 8 CG family 진단
+
+```
+[MESA] Captured draft glue_short CG (K_short+1=N)
+[MESA hybrid] Captured 2-bucket verify CG ... long(K=...) + short(K=...)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_phase1_long MQ_LEN=...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_phase1_short MQ_LEN=...
+[MESA hybrid] capturing phase2_hybrid CG bucket=long total_rows=...
+[MESA hybrid] capturing phase2_hybrid CG bucket=short total_rows=...
+```
+
+위 6 라인 + draft 의 verify CG (K_long+1) = 8 family 가 모두 출력되어야
+정상.
+
+### Profiling 라벨 (post-9B+9C+9D)
+
+draft side:
+- `glue` / `draft_glue_replay` / `hit_cache_respond` / `merge_cache` —
+  공통
+- `phase1_build` / `phase1_replay × K1` — Phase 1
+- `phase2_build` — Policy A token 선택 (split / hybrid 공통)
+- `phase2_hybrid_build` — Phase 2 hybrid plan tensor 채우기 (hybrid only)
+  - sub-labels: `phase2_hybrid_build_setup`, `_slots`, `_kv`, `_mask`
+- `phase2_hybrid_prep_{long,short}` — KV plan + buffer copies (hybrid only,
+  per-depth)
+- `phase2_hybrid_replay_{long,short}` — graph.replay() (hybrid only, K2
+  events/step)
+- `phase2_hybrid_eager_{prep,replay}_{long,short}` — eager fallback
+- `proxy_wait` — target proxy 받기 대기 (idle)
+- `draft_recv_cmd` / `draft_send_response` — speculator 와 NCCL 송수신
+
+target side:
+- `verify_setup` / `verify_replay` / `verify_sample_accept` /
+  `target_postprocess`
+- `graph_pre` / `graph_post` (split verify CG, exit layer 분리)
+- `target_spec_wait` — draft 결과 받기 대기 (idle)
+- `proxy_compute_send` — early-exit 후 proxy 계산 + draft 로 송신
+- `exit_logits` / `final_logits`
+
+## 5.7 향후 작업
+
+- **EAGLE × hybrid 통합**: `draft_acts` 가 hybrid forward 출력에서도 plumb
+  필요.
+- **dfo / pfo per-bucket 별도 sweep**: 현재 long/short 모두 같은 dfo, pfo
+  사용. short bucket 에서 더 많은 draft 분기를 두는 변형 검토.
+- **multi-batch (B > 1) 확장**: B = 1 invariant 해제 + per-seq plan 구조
+  재설계 필요.
+- **`phase2_hybrid_build` 추가 단축**: Phase 9D 후에도 mask 가 가장 큰 비용
+  (~80%). bool mask 우회 + arithmetic 으로 packed bytes 직계산 또는
+  Triton kernel 통합 고려.

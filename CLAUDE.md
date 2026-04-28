@@ -1,186 +1,65 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-## Repository layout
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-This is a research monorepo with two distinct pieces:
+## 1. Think Before Coding
 
-- `ssd/` — a fork of the Speculative Speculative Decoding (SSD) engine
-  (https://github.com/tanishqkumar/ssd). Python package `ssd/ssd/`, benchmark
-  harness `ssd/bench/`. Extended with **MESA-SSD** (early-exit proxy for
-  cache-coverage optimization) and an in-progress weight-only quantization
-  integration.
-- Top-level `.py` scripts (`correction_analysis.py`, `ee_verify_analysis.py`,
-  `plot_*.py`) — offline analysis of target early-exit distributions vs.
-  draft/final distributions (JSD/KL/TVD, top-k overlap, recovery
-  feasibility). These use HuggingFace `AutoModelForCausalLM` directly and
-  are independent of the SSD engine. Outputs land in `results/`, `report/`,
-  `report_llama70B/`, `layer_skip/`.
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-Two separate conda envs are involved:
-- `PSD` — top-level analysis scripts (HF Transformers-based).
-- `ssd` — SSD engine (built from `ssd/pyproject.toml` via `uv sync`;
-  `bench/*.sh` call it at `/home/chokwans99/anaconda3/envs/ssd/bin/python`).
-- `sglang`, `vllm016` — baselines only, required by `bench/run_sglang_bench.py`
-  and `bench/run_vllm_bench.py` (FlashInfer versions conflict with SSD, so
-  they must live in separate envs).
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-## Common commands
+## 2. Simplicity First
 
-### SSD engine (work under `ssd/`)
+**Minimum code that solves the problem. Nothing speculative.**
 
-Always `source ssd/env.sh` first — it sets `SSD_HF_CACHE`,
-`SSD_TARGET_MODEL`, `SSD_DRAFT_MODEL`, `SSD_CUDA_ARCH=8.6` (RTX 3090 box),
-and `SSD_DATASET_DIR`. Paths are resolved in `ssd/ssd/paths.py`, which is
-imported at the top of `llm_engine.py` before FlashInfer so
-`TORCH_CUDA_ARCH_LIST` is set early.
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
 
-Benchmarks run from inside `bench/` and use `python -O` (debug assertions
-off is load-bearing for perf):
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-```bash
-cd ssd/bench
-# AR baseline
-python -O bench.py --llama --size 8 --gpus 2 --model_path $SSD_TARGET_MODEL --b 1 --temp 0 --numseqs 128 --output_len 512 --all
-# Sync spec decode
-python -O bench.py --llama --size 8 --spec --k 6 --gpus 2 ...
-# Async spec decode (SSD): --async requires 1 extra GPU for the draft process
-python -O bench.py --llama --size 8 --spec --async --k 7 --f 3 --gpus 3 ...
-# MESA-SSD: layers on top of async SD
-python -O bench.py ... --spec --async --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 1
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
 ```
 
-Full sweeps are wired as shell harnesses that pin GPU slots and run jobs
-concurrently: `bench/run_mesa_sweep.sh`, `bench/run_ar_eagle.sh`,
-`bench/run_34b_sweep.sh`.
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-Tests: `ssd/bench/test_ssd.py`, `ssd/bench/test_llama2.py`,
-`ssd/ssd/utils/async_helpers/tests.py` — no pytest config, invoke files
-directly with `python`.
+---
 
-### Top-level analysis
-
-```bash
-bash run_correction.sh     # correction_analysis.py on Llama-70B + Qwen3-32B
-bash run_ee_verify.sh      # ee_verify_analysis.py on Llama-70B
-```
-
-These run `conda run -n PSD python ...`. Outputs go to
-`/home/chokwans99/Parallel_SD/results` (hard-coded in the shell scripts).
-Plots are generated by the `plot_*.py` files.
-
-### Cleanup between runs
-
-Async SD spawns multi-process workers (`torch.multiprocessing` spawn
-context). If a run crashes or you Ctrl-C, stale workers hold GPU memory:
-
-```bash
-pkill -9 -f "bench.py|vllm.entrypoints|sglang.launch_server|VLLM::|sglang::"
-nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader
-```
-
-## SSD engine architecture
-
-Entry point is `ssd.LLM` → `LLMEngine` (`ssd/engine/llm_engine.py`). The
-engine spawns a constellation of processes that rendezvous through
-`torch.multiprocessing` events and NCCL:
-
-- **TP target workers**: one `ModelRunner` per TP rank (`num_tp_gpus =
-  num_gpus` for sync, `num_gpus - 1` for async; the extra GPU hosts the
-  draft). Rank 0 runs in the main process, others in child processes.
-- **DraftRunner**: owns the small draft model and the tree cache. In
-  async mode it runs on a dedicated GPU in its own process and
-  anticipates verification outcomes in parallel with target verify.
-- **Speculator** (`speculator_sync.py` / `speculator_async.py`): the
-  coordinator. Produces tree-shaped drafts, requests target verify,
-  reconciles accepted suffix.
-- **Verifier**: the per-step kernel that folds the draft tree into a
-  single target forward pass (uses custom attention masks built in
-  `engine/helpers/mask_helpers.py` + `tree_layout.py`).
-- **Step** classes (`AutoRegressiveStep`, `SpecDecodeStep`, …): the
-  state machine for one generation step, invoked from `llm_engine.step()`.
-- **Scheduler / BlockManager / Sequence**: vLLM-style paged KV cache,
-  prefix caching, admission of new sequences.
-- **CUDA graphs**: captured in `engine/helpers/cudagraph_helpers.py` for
-  decode, verify, and tree-decode; replayed each step unless
-  `config.enforce_eager=True`.
-
-Layers under `ssd/ssd/layers/` are custom TP-aware replacements for
-Linear, LayerNorm, Rope, Sampler, Attention — they are the integration
-boundary for quantization (see `ssd/utils/quantize.py`).
-
-### Config invariants (from `ssd/config.py`)
-
-Many invariants are enforced in `Config.__post_init__`; trust them
-instead of re-checking at call sites:
-- `num_gpus <= 8` — single-node only.
-- `kvcache_block_size >= 2*k + 2` — required for tree verify.
-- `draft_async=True` requires `num_gpus > 1` (one GPU reserved for draft).
-- Target and draft must share `infer_model_family()`.
-- Eagle draft's `rope_theta` / `max_position_embeddings` are overridden
-  to match target — do not re-override at the model level.
-- **MESA-SSD** requires: `draft_async=True`, `speculate=True`, Llama model,
-  `jit_speculate=True`, CUDA graphs on (not `enforce_eager`),
-  `max_num_seqs=1` (Policy A uses `accept_probs[0]` as a single `h_i`
-  distribution for the whole batch). `mesa_exit_layer` defaults to `2*L//3`,
-  `mesa_draft_fan_out` to `async_fan_out//2`, `mesa_proxy_top_k` is
-  auto-raised to guarantee no draft fallback.
-
-### MESA-SSD (what this fork adds beyond upstream SSD)
-
-Goal: split draft into two stages around a target early-exit. Phase 1
-does standard SD sampling (acceptance-preserving). Phase 2 receives the
-target's early-exit proxy distribution (`p_i^E`) for every verify
-position, computes approximate accept-prob `α̂_i = min(1, p_i^E / p_i^D)`,
-first-reject position distribution `ĥ_i`, and residual correction
-tokens `r̂_i(v) ∝ [p_i^E - p_i^D]_+`, then uses those to fill the async
-tree cache with branches more likely to match the real recovery
-distribution. See `ssd/MESA-SSD.md` / `ssd/MESA-IMPL-PLAN.md` for the
-math and expected behavior; `ssd/MESA-SSD-BREAKDOWN-PLAN.md` and
-`ssd/MESA-RESULTS.md` for measured outcomes.
-
-### Quantization
-
-`ssd/utils/quantize.py` swaps the `.weight` Parameter of TP linear
-modules with a torchao `AffineQuantizedTensor` — **no forward code
-changes**, dispatch happens via `__torch_dispatch__`. Backends:
-- `int4_wo_tile` — tinygemm fast path on Ampere+ (default).
-- `int8_wo` — accuracy-matched but slower on SM 86 (no fused kernel).
-
-Both torchao backends are **bf16-activation** workflows. A fp16
-checkpoint + these backends fails unless
-`target_quant_force_bf16_runtime=True` (which promotes the whole
-runtime, including KV cache and graph buffers, to bf16). Do not silently
-switch; the default raises `ValueError` to surface the mismatch.
-
-The long-term plan (`ssd/INT8-WEIGHT-ONLY-PLAN-v2.md`, file name is
-legacy) is to replace this with an AWQ-style W4A16 backend integrated
-at the local TP linear boundary only — keeping PagedAttention, tree
-verify, CUDA graphs, and the MESA orchestration untouched.
-
-Current working branch context: `feature/int8-weight-only`. Quantization
-spikes and kernel benchmarks live in `ssd/sandbox/int8_spike/`.
-
-## Conventions and gotchas
-
-- **Always run engine code with `python -O`.** There are assertions and
-  debug hooks that are expensive enough to dominate the benchmark.
-- **Paths are env-driven.** `ssd/ssd/paths.py` will raise at import time
-  if `SSD_HF_CACHE` or `SSD_DATASET_DIR` are unset — `env.sh` is the
-  source of truth for local dev.
-- **Separate envs for baselines.** Do not `pip install sglang` or `vllm`
-  into the `ssd` env; FlashInfer versions collide. Use the conda envs
-  `sglang` / `vllm016` documented in `ssd/bench/README.md`.
-- **Triton / Inductor caches on local disk.** If you see `OSError:
-  [Errno 116] Stale file handle`, set `TRITON_CACHE_DIR` and
-  `TORCHINDUCTOR_CACHE_DIR` to local storage (the existing scripts
-  assume `/scratch/$USER/...`).
-- **Intermediate artifacts are gitignored** under `ssd/tmp/`, `ssd/bench/tmp*/`,
-  `ssd/bench/results/`, `wandb*/`. Plots go to `ssd/sandbox/` /
-  `ssd/bench/` during experimentation and to `report/` when reported.
-- **Top-level and `ssd/` scripts measure different things.** The
-  top-level `*_analysis.py` files never touch the SSD engine — they
-  load HF models directly to measure distribution-level feasibility of
-  the MESA proxy. The SSD engine only exercises the integrated
-  inference path.
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

@@ -498,9 +498,13 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     if PROFILE_DRAFT:
         _ev_replay0 = torch.cuda.Event(enable_timing=True); _ev_replay0.record()
 
-    _mesa_label = ("phase1_replay" if (layout is not None and layout.name == "draft")
-                   else "phase2_replay" if (layout is not None and layout.name == "proxy")
-                   else "tree_replay")
+    _layout_name = layout.name if layout is not None else None
+    if _layout_name == "draft" or (_layout_name is not None and _layout_name.startswith("phase1_")):
+        _mesa_label = "phase1_replay"
+    elif _layout_name == "proxy":
+        _mesa_label = "phase2_replay"
+    else:
+        _mesa_label = "tree_replay"
     mesa_close(_prep_label, _mev_prep)
     _mev = mesa_record(_mesa_label)
     graph.replay()
@@ -1554,6 +1558,9 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
         flat_rope = torch.cat([cont_rope, proxy_rope], dim=0).contiguous()
         block_tables_d = plan.per_row_block_tables[:total]
 
+        # Per-depth prep label (matches split's phase{1,2}_prep semantics —
+        # KV plan + buffer copies just before graph.replay).
+        _mev_php = mesa_record(f"phase2_hybrid_prep_{bucket}")
         # Write per-depth runtime metadata to graph buffers.
         graph_vars["input_ids"][:total].copy_(flat_input_ids, non_blocking=True)
         graph_vars["rope_positions"][:total].copy_(flat_rope, non_blocking=True)
@@ -1562,8 +1569,13 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
         graph_vars["block_tables"][:total, :block_tables_d.shape[1]].copy_(
             block_tables_d, non_blocking=True,
         )
+        mesa_close(f"phase2_hybrid_prep_{bucket}", _mev_php)
 
+        # Per-depth replay label (matches split's phase{1,2}_replay — fires
+        # K2 times per spec step, once per depth).
+        _mev_phr = mesa_record(f"phase2_hybrid_replay_{bucket}")
         graph.replay()
+        mesa_close(f"phase2_hybrid_replay_{bucket}", _mev_phr)
 
         outputs = graph_vars["outputs"][:total]
         logits_flat = model_runner.model.compute_logits(outputs, last_only=False).view(-1, V)

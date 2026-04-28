@@ -45,7 +45,7 @@ class Config:
     mesa_proxy_top_k: int = 3              # proxy correction token count
     mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
     mesa_policy: str = "a"                  # Phase-2 budget policy: "a" = h_i proportional, "b" = h_i × r̂_i(v) joint
-    # Phase 2 hybrid (per MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md).
+    # Phase 2 hybrid (per docs/mesa/01-design.md Part 5).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k. K2 also = K_short (proxy-sourced row depth).
     # None means "use legacy two-pass MESA path" (no hybrid).

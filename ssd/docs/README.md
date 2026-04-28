@@ -19,9 +19,9 @@
 
 | 파일 | 내용 |
 |------|------|
-| [`01-design.md`](mesa/01-design.md) | MESA-SSD 설계 — TreeLayout, Budget Split, Split CudaGraph, Rev1 (Policy A/B) |
-| [`02-impl-issues.md`](mesa/02-impl-issues.md) | 구현 이슈 트래커 + Rev1 수정 항목 (B=1 assert, proxy_top_k 확대, fallback 제거 등) |
-| [`03-results.md`](mesa/03-results.md) | MESA 실험 결과 — 8B/7B 초기 측정, Rev1 Policy A 결과, parameter sweep, 34B Rev1 final |
+| [`01-design.md`](mesa/01-design.md) | MESA-SSD 설계 — TreeLayout, Budget Split, Split CudaGraph, Rev1 (Policy A/B), **Phase 2 Hybrid v1** (single batched cont+proxy forward, 8 CG buckets, HybridPhase2Plan) |
+| [`02-impl-issues.md`](mesa/02-impl-issues.md) | 구현 이슈 트래커 — v1, Rev1 (B=1 assert, proxy_top_k 확대, fallback 제거), **Phase 2 Hybrid (Step 1..9D)** + sync fix + per-depth label fix + 9D build opt |
+| [`03-results.md`](mesa/03-results.md) | MESA 실험 결과 — 8B/7B 초기 측정, Rev1 Policy A, parameter sweep, 34B Rev1 final, **Phase 2 Hybrid (8B 검증, 70B both-AWQ A/B/C)** |
 
 ## 영문 문서
 
@@ -33,6 +33,10 @@
   (legacy CLI 제거 완료).
 - **MESA-SSD Rev1** 은 B=1 + non-EAGLE 범위에서 검증 완료. 34B 실험 결과
   parameter sweep 안정.
+- **MESA Phase 2 Hybrid** 는 Step 9D (build hot-path 최적화) 까지 완료. 8B
+  검증 환경 + 70B both-AWQ 200×256 prompts 측정에서 hybrid TPS +2.4% (vs
+  pre-hybrid baseline) 확인. split fallback 회귀는 sync fix 로 사실상 닫힘
+  (-4.4% → -0.2%). 자세한 내용은 `mesa/03-results.md` Part 5.
 
 ## 원본 위치 (참고용)
 
@@ -40,24 +44,28 @@
 
 ```
 ssd/
-├── INT8-WEIGHT-ONLY-PLAN.md           → 01-quantization/01-plan.md
-├── INT8-WEIGHT-ONLY-PLAN-v2.md        → 01-quantization/01-plan.md
-├── INT8-WEIGHT-ONLY-PLAN-v2-KR.md     → 01-quantization/01-plan.md (한글본 통합)
-├── INT8-IMPL-ISSUE.md                 → 01-quantization/02-impl-issues.md
-├── INT8-v2-IMPL-ISSUE.md              → 01-quantization/02-impl-issues.md
-├── INT8-v2-IMPL-ISSUE-KR.md           → 01-quantization/02-impl-issues.md
-├── FINAL_REPORT.md                    → 01-quantization/03-final-report.md (v1 부분)
-├── AWQ-v2-FINAL-REPORT.md             → 01-quantization/03-final-report.md
-├── AWQ-v2-FINAL-REPORT-KR.md          → 01-quantization/03-final-report.md
-├── MESA-IMPL-PLAN.md                  → 02-mesa/01-design.md
-├── MESA-BREAKDOWN-PLAN.md             → 02-mesa/01-design.md (profiling 부분)
-├── MESA-rev1.md                       → 02-mesa/01-design.md (Rev1 부분)
-├── MESA-rev1-problems.md              → 02-mesa/02-impl-issues.md
-├── IMPL_ISSUE.md                      → 02-mesa/02-impl-issues.md
-├── MESA-RESULTS.md                    → 02-mesa/03-results.md
-├── MESA-rev1-RESULTS.md               → 02-mesa/03-results.md
-├── MESA-SWEEP-RESULTS.md              → 02-mesa/03-results.md
-└── past_plans/                        → 위 항목들의 중복 백업 (삭제됨)
+├── INT8-WEIGHT-ONLY-PLAN.md              → quantization/01-plan.md
+├── INT8-WEIGHT-ONLY-PLAN-v2.md           → quantization/01-plan.md
+├── INT8-WEIGHT-ONLY-PLAN-v2-KR.md        → quantization/01-plan.md (한글본 통합)
+├── INT8-IMPL-ISSUE.md                    → quantization/02-impl-issues.md
+├── INT8-v2-IMPL-ISSUE.md                 → quantization/02-impl-issues.md
+├── INT8-v2-IMPL-ISSUE-KR.md              → quantization/02-impl-issues.md
+├── FINAL_REPORT.md                       → quantization/03-final-report.md (v1 부분)
+├── AWQ-v2-FINAL-REPORT.md                → quantization/03-final-report.md
+├── AWQ-v2-FINAL-REPORT-KR.md             → quantization/03-final-report.md
+├── MESA-IMPL-PLAN.md                     → mesa/01-design.md
+├── MESA-BREAKDOWN-PLAN.md                → mesa/01-design.md (profiling 부분)
+├── MESA-rev1.md                          → mesa/01-design.md (Rev1 부분)
+├── MESA-rev1-problems.md                 → mesa/02-impl-issues.md
+├── IMPL_ISSUE.md                         → mesa/02-impl-issues.md
+├── MESA-RESULTS.md                       → mesa/03-results.md
+├── MESA-rev1-RESULTS.md                  → mesa/03-results.md
+├── MESA-SWEEP-RESULTS.md                 → mesa/03-results.md
+├── MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md → mesa/01-design.md (Part 5)
+├── MESA-PHASE2-HYBRID-ISSUE.md            → mesa/02-impl-issues.md (Part 3)
+├── MESA-PHASE2-HYBRID-REPORT.md           → mesa/03-results.md (Part 5)
+├── MESA-PHASE2-HYBRID-FINAL-REPORT.md     → mesa/03-results.md (Part 5)
+└── past_plans/                            → 위 항목들의 중복 백업 (삭제됨)
 ```
 
 각 실험의 raw 결과 (`tmp/final_exp*/REPORT.md`) 는 해당 실험 디렉토리에

@@ -1,7 +1,12 @@
 # MESA-SSD 구현 이슈 트래커
 
-원본은 `IMPL_ISSUE.md` (v1 구현 이슈) 와 `MESA-rev1-problems.md` (Rev1
-수정 항목) 두 파일이다. 시간순으로 통합.
+원본은 `IMPL_ISSUE.md` (v1 구현 이슈), `MESA-rev1-problems.md` (Rev1 수정
+항목), `MESA-PHASE2-HYBRID-ISSUE.md` (Phase 2 hybrid 이슈) 세 파일이다.
+시간순으로 통합.
+
+> **읽는 순서**: Part 1 (v1) → Part 2 (Rev1) → Part 3 (Phase 2 Hybrid).
+> Phase 2 Hybrid 이후 발견된 회귀 (split 경로 sync, per-depth label,
+> phase2_hybrid_build 비효율) + 그에 대한 fix 도 Part 3 안에 시간순으로 기록.
 
 ---
 
@@ -645,3 +650,250 @@ branch 가 target-informed)
   Rev1 마무리엔 불필요
 
 이 4 개는 B>1 / multi-run / 정밀 분석이 필요해질 때 재검토.
+
+---
+
+# Part 5. Phase 2 Hybrid 구현 이슈
+
+`MESA-PHASE2-HYBRID-ISSUE.md` 의 issue tracker + 구현 중 발견된 모든 이슈를
+시간순으로 통합. Step 1..9D 단위.
+
+## 5.1 Phase 3b sub-staging (2026-04-26)
+
+Plan 의 Phase 3 ("Phase 1 K1 split + hybrid Phase 2") 가 내부적으로 6 단계
+복합 변경:
+1. Phase 1 forward depth shortening (K_long → K1)
+2. Phase 2 continuation (Phase 1 leaf 를 K2 만큼 추가 확장)
+3. Phase 2 proxy depth shortening (K_long → K2)
+4. continuation + proxy 단일 hybrid forward 통합
+5. per-row attention plumbing (custom block tables, mask builder)
+6. long-base CUDAGraph capture for hybrid path
+
+각 commit 가 reviewable 하도록 sub-stage 로 분리:
+- **3b.1** (Phase 1 K1 split): `phase1_layout_long` (forward_depth=K1) 추가.
+  Phase 1 K1, Phase 2 continuation K2, Phase 2 proxy 는 K_long 유지. Cache
+  emit 모양 무변동 (모든 row K_long).
+- **3b.2** (Phase 2 proxy at K2): proxy forward depth K_long → K2.
+  Proxy-sourced row suffix 가 K_short = K2. Cache emit 두 row class 분기.
+- **3b.3** (single hybrid forward): cont + proxy 통합. Per-row attention
+  plumbing + custom mask builder 가 여기서 lands. 가장 high-risk.
+
+## 5.2 구현 단계별 이슈
+
+### Step 1-7 — 기반 + parity harness
+
+- **Step 4 mask builder** (`build_hybrid_packed_mask`): per-row j_idx-aware
+  visibility (continuation: persistent + glue + own Phase 1 + own A_tail
+  prefix; proxy: persistent + glue + own B_proxy prefix). FlashInfer 의
+  LSB-first byte 단위 packing, padding 된 행은 zero-filled.
+
+- **Step 5 5-region scratch slot layout**: cont rows 의 A_tail base =
+  `phase1_kv_base + K1*MQ_p1`; proxy rows 의 B_proxy base = `a_tail_base +
+  K2*MQ_p1`. depth-major 배치로 cont row i at depth d 는
+  `cont_initial[i] + d*MQ_p1` slot 에 write.
+
+- **Step 6 `_decode_phase2_hybrid` (eager)**: env-var gate 로 default 는
+  split, `SSD_FORCE_HYBRID_PHASE2=1` 일 때 hybrid 사용. `cu_seqlens_q=None`
+  으로 routing 해서 prefill_wrapper.run() 의 custom mask 가 attention
+  branch 에 도달.
+
+- **Step 7 parity harness**: split eager mirror 와 hybrid eager 의 self-
+  consistency + cont oracle (`_decode_correct_split_cont`, plan-correct
+  mask) + proxy oracle (`fresh_proxy_oracle` = use_cuda_graph=False
+  wrapper) 3-way diff. 100% drift-consistent first-mismatches, 100% 자기-
+  자기 deterministic, e2e text byte-identical.
+
+### Step 7 root cause (2026-04-...)
+
+- **`cu_seqlens_q` routing 버그**: `set_context(cu_seqlens_q=...)` 으로
+  값 설정 시 attention.py 가 `flash_attn_with_kvcache` 로 분기 → 우리의
+  custom_mask 무시되고 causal-only attention. Hybrid mask 의 의미가 무시
+  되며 잘못된 KV 영역 attend.
+- **해결**: hybrid 경로에서는 `cu_seqlens_q=None` 강제 → tree_decode 분기로
+  routing → `prefill_wrapper.run()` 가 plan() 이 받은 custom_mask 적용.
+- **active_mq_len=1**: hybrid 의 query 는 row 당 1 개라 wrapper.plan()
+  이 사용하는 q layout 도 1.
+
+### Step 8 — hybrid default 전환
+
+- Hot path 흐름: Phase 1 → proxy recv/wait → phase2_build → hybrid →
+  merge.
+- 기본 = hybrid (when `mesa_phase1_k != None`), fallback `SSD_FORCE_SPLIT_PHASE2=1`.
+- Parity harness `SSD_HYBRID_PARITY=1` 디버그용 보존.
+- Native hybrid eager TPS 69.07 (split 86.94 대비 -20.6%) — CG 작업이
+  필수임을 확인. → Step 9B 동기.
+
+### Step 9A — runtime `valid_k` bucket dispatch
+
+- `partial_tree_decode_args` 에 `valid_k` 추가 (cache hit row 의 valid_k).
+- `phase1_layout_long`/`_short` dispatch.
+- proxy step layout `position_count = valid_k+1`.
+- `_select_proxy_sourced_tokens_policy_a(valid_k=...)` slice 적용.
+- `_compute_hybrid_bool_mask_for_depth` `K_long → K_step` rename.
+- `_decode_phase2_hybrid` long-only assert lift.
+- `_merge_and_populate_cache(draft_layout=...)` 파라미터 추가.
+- `run_fi_tree_decode_cudagraph` mask `K_for_mask = layout.position_count - 1`.
+- `phase1_layout_short` CG + wrapper 추가.
+
+### Step 9B — hybrid CG capture + dispatch
+
+- **9B-0 glue_short**: `make_glue_decode_input_ids(valid_k=...)`,
+  `prepare_glue_decode_ctxt(valid_k=...)`, `Context.glue_valid_k`,
+  `capture_verify_cudagraph(k_plus_1=K_short+1)`. `run_model` 의
+  `glue_valid_k` 분기로 verify_long / verify_short.
+- **9B-1 hybrid CG infra**: `phase2_hybrid_long`/`_short` (eager) +
+  `phase2_hybrid_long_cg`/`_short_cg` (use_cuda_graph=True) wrapper family.
+  `capture_phase2_hybrid_cudagraph(bucket, K_step)`: bucket 별 single-depth
+  CG, separate graph_pool. `run_phase2_hybrid_cudagraph`: K2 회 replay +
+  per-depth metadata 를 `low_level_packed_plan` 으로 baked buffer 에 write.
+- **9B-2 runtime dispatch**: 기본 = CG hybrid, `SSD_FORCE_EAGER_HYBRID_PHASE2=1`
+  → eager hybrid fallback, `SSD_FORCE_SPLIT_PHASE2=1` → split fallback.
+- **9B-3 short bucket oracle / parity**: oracle 함수에 `K_step = plan.valid_k`
+  generalize + bucket tag 출력.
+
+### 9B Tolerance gate (Step 8 entry rule)
+
+8 prompts × 128 tok = 131 spec steps:
+
+| 항목 | gate | 측정값 |
+|---|---|---|
+| self-consistency strict 0 | = 0 | 0/72 (drop-in deterministic) |
+| proxy first-divergence drift-consistent (2*log_d bound) | 100% | 60/60 |
+| cont first-divergence drift-consistent | 100% | 22/22 |
+| proxy mismatch token rate | ≤ 3% | 2.10% |
+| cont mismatch token rate | ≤ 0.6% | 0.51% |
+| end-to-end text byte-identical | 100% | 8/8 |
+| accept rate delta vs split | ≥ 0 | +11.3% |
+| first-divergence max o_margin | ≤ 0.2 | 0.125 |
+
+### Step 9C — hot path sync 제거
+
+- **Phase 9C**: K2 회 `.item()` sync 가 `run_phase2_hybrid_cudagraph` depth
+  loop 안에 있던 것을 `_build_phase2_hybrid_plan` 단계의 1회 `.item()` 로
+  통합 (plan 에 Python int 캐싱). per-depth sync 0.
+- **mask 중복 작업 제거**: per-depth packed mask 를 build 단계에서 이미
+  완성된 형태로 `plan.per_depth_packed_masks` 에 저장 → runtime 은 slice
+  만 사용.
+
+## 5.3 Post-9B 발견 — split 경로 잔존 회귀 (2026-04-28)
+
+Phase 2 hybrid 작업 중 split 경로에 의도치 않게 끼어든 overhead 가 있다고
+판단된 측정 (200 prompts × output_len=256, both AWQ 70B):
+
+| metric | (A) pre-hybrid split | (B) current split fallback (post-hybrid 코드) | Δ |
+|---|---:|---:|---:|
+| TPS | 66.71 | **63.32** (sync fix 전 dense draft 기준 58.32 / -4.4%) | -3.4 ~ -4.4% |
+| draft_step_time | 53.87 ms | 56.21 ms (dense) / 43.75 ms (AWQ) | + |
+| `phase1_build` | 0.16 | 0.62 | +298% |
+| `hit_cache_respond` | 4.12 | 4.65 | +12.9% |
+| `target_spec_wait` | 11.57 | 14.43 | +24.8% (cascade) |
+
+**원인**: hybrid 의 bucket dispatch 를 위한 `.item()` GPU→CPU sync 가 split
+경로에서도 fire 하도록 되어있었음:
+- `draft_runner.py:567` (in `hit_cache_and_respond`): `_vk_scalar = int(valid_k[0].item())`
+- `draft_runner.py:862` (in `_glue_decode`): `_vk_glue = int(...item())`
+- `draft_runner.py:1449` (main hot path): `_step_valid_k = int(...item())`
+
+매 step **3 회 sync** = CUDA stream flush. split 에서는 의미없는 동기화.
+
+### 3.3.1 Sync fix 적용
+
+`hit_cache_and_respond` 가 `_vk_scalar` 를 한 번만 sync 하고 (hybrid mode 일
+때만), 8-tuple 반환 으로 caller 에 전달. caller 는 `partial_tree_decode_args`
+에 `valid_k_scalar` 키로 저장. `_glue_decode` / 메인 hot path 는 dict 에서
+Python int 를 읽음 (sync 없음).
+
+```python
+# After: hit_cache_and_respond
+if self.config.mesa_phase1_k is not None and valid_k.numel() > 0:
+    _vk_scalar = int(valid_k[0].item())   # 1 sync, hybrid only
+else:
+    _vk_scalar = None                      # split path
+
+# Caller stashes it
+partial_tree_decode_args["valid_k_scalar"] = valid_k_scalar
+
+# Downstream readers — no further sync
+_vk_glue = partial_tree_decode_args.get("valid_k_scalar") or self.config.speculate_k
+_step_valid_k = partial_tree_decode_args.get("valid_k_scalar") or self.config.speculate_k
+```
+
+| | sync/step (split) | sync/step (hybrid) |
+|---|---:|---:|
+| Before | 3 | 3 |
+| After | **0** | **1** |
+
+검증 (200×256, both AWQ): split TPS 회귀 -4.4% → -0.2% (사실상 닫힘).
+
+## 5.4 Post-9B 발견 — `phase2_hybrid_replay` 라벨 misplaced (2026-04-28)
+
+profiling 라벨이 `run_phase2_hybrid_cudagraph` **외부** 를 감싸서 K2 회
+graph.replay() 가 1 개 event 로 합쳐졌음. split 의 `phase2_replay × 5` 와
+비교가 왜곡 (단위 mismatch).
+
+### 3.4.1 라벨 재배치
+
+CG 경로 (`run_phase2_hybrid_cudagraph` in `cudagraph_helpers.py`):
+```python
+for d in range(K2):
+    _mev_php = mesa_record(f"phase2_hybrid_prep_{bucket}")
+    # KV plan + buffer copies
+    mesa_close(f"phase2_hybrid_prep_{bucket}", _mev_php)
+
+    _mev_phr = mesa_record(f"phase2_hybrid_replay_{bucket}")
+    graph.replay()
+    mesa_close(f"phase2_hybrid_replay_{bucket}", _mev_phr)
+```
+
+eager fallback (`_decode_phase2_hybrid`): 동일 패턴 (`_eager_prep_*`,
+`_eager_replay_*`).
+
+### 3.4.2 효과
+
+split 의 `phase2_replay × 5` 와 hybrid 의 `phase2_hybrid_replay_long × ~1.74`
++ `_short × ~0.26` 가 동일 단위 (per-replay) 로 직접 비교 가능. K2=2 이고
+long-hit 비율 ~87% / short-hit ~13% 로 events_per_step 1.74 + 0.26 = 2.0
+forwards/step 검증.
+
+## 5.5 Post-9B 발견 — `phase2_hybrid_build` 자체가 큰 비용 (2026-04-28)
+
+Both AWQ 환경에서 측정:
+- `phase2_hybrid_build` = 3.36 ms / step (Python tensor metadata 채우기)
+- `phase1_replay` (TinyLlama AWQ, K1=3) = 2.97 ms / forward
+- → **build 가 forward 보다 더 오래** 걸림
+
+Forward 보다 비싼 metadata 채우기는 비정상. 분석:
+- `_build_hybrid_packed_mask_inplace` 가 K2 회 × ~30 GPU kernel launch
+  (전체의 ~80%). 매 depth 마다 `torch.arange(L)`, `bit_weights = (1 << arange(8))`,
+  `cont_idx_t = arange(cont_count)` 등 상수성 연산을 새로 alloc.
+- bool mask `[total, L]` 만들고 (~50 × 1500 = 75 KB) 후 packed bytes 로
+  변환 — 중간 산출물이 최종 결과의 8 배.
+- 3 개 별도 K2 루프 (slot_maps, context_lens, kv_indptr).
+
+## 5.6 Phase 9D — build hot-path 최적화 (2026-04-28)
+
+`HybridPhase2Plan.create()` 에 pre-allocated workspace 추가 (engine init 1
+회):
+- `bit_weights_u8` [8] uint8 — 완전 상수
+- `cont_idx_arange` [max_cont] / `proxy_idx_arange` [max_proxy] int64
+- `kv_pos_arange` [max_L] int64 (max_L = max_model_len + worst-case extra)
+- `full_mask_buf` [max_total, max_L_padded] bool — 매 step in-place reuse
+- `total_arange_p1` (GPU/CPU 둘 다) [max_total + 1] int32 — kv_indptr /
+  mask_indptr multiply 용
+
+`_build_hybrid_packed_mask_inplace` 변경:
+- `kv_pos_2d = plan.kv_pos_arange[:L].view(1, L)` — view, alloc 없음
+- `mask_out = plan.full_mask_buf[:total, :L_padded]` — view
+- `cont_out.copy_(persistent_vis.expand(...))` + `bitwise_or_(...)` —
+  in-place
+- `torch.mul(arange, stride, out=...)` — out= 으로 alloc 회피
+
+`_build_phase2_hybrid_plan` 의 K2 루프도 pre-allocated arange 사용.
+
+**예상 효과**:
+- 매 step alloc ~10 → ~2
+- kernel launch ~60 → ~40
+- `phase2_hybrid_build` 3.43 ms → 추정 2.0~2.5 ms (30~40% 절감)
+
+위험도: 낮음 (alloc 위치만 옮김, semantic 무변동, in-place op 는 PyTorch
+표준). 측정 결과는 `03-results.md` Part 5 에 기록.
