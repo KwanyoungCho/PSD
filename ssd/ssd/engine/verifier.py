@@ -206,6 +206,13 @@ class Verifier(VerifierBase):
             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
                 if _ch_cpu[i] == 1:
                     self.metrics["accepted_suffix_lens_on_hit"].append(suffix_len)
+                    if speculate_result.phase_source is not None:
+                        _accepted_len = max(0, suffix_len - 1)
+                        _src = int(speculate_result.phase_source[i].item())
+                        if _src == 1:
+                            self.metrics["accepted_lens_phase1_hit"].append(_accepted_len)
+                        elif _src == 2:
+                            self.metrics["accepted_lens_phase2_hit"].append(_accepted_len)
                 else:
                     self.metrics["accepted_suffix_lens_on_miss"].append(suffix_len)
 

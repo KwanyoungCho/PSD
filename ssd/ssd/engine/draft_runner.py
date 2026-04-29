@@ -761,7 +761,23 @@ class DraftRunner(ModelRunner):
         _mev_hc = _mr_h("hit_cache_respond")
         out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations, phase_source, valid_k, valid_k_scalar = self.hit_cache_and_respond(
             cache_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations)
-        _mc_h("hit_cache_respond", _mev_hc)
+        _hc_label = "hit_cache_respond"
+        if _mev_hc is not None and cache_hits is not None:
+            _hits = int(cache_hits.sum().item())
+            _n = int(cache_hits.numel())
+            if _hits == 0:
+                _hc_label = "hit_cache_respond_miss"
+            elif _hits == _n:
+                _hc_label = "hit_cache_respond_hit"
+                if _n == 1 and phase_source is not None:
+                    _src = int(phase_source[0].item())
+                    if _src == 1:
+                        _hc_label = "hit_cache_respond_hit_k1"
+                    elif _src == 2:
+                        _hc_label = "hit_cache_respond_hit_k2"
+            else:
+                _hc_label = "hit_cache_respond_mixed"
+        _mc_h(_hc_label, _mev_hc)
 
         if self.config.verbose:
             print(f"[CACHE RESPONSE]", flush=True)

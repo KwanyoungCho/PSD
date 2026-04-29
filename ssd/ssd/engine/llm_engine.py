@@ -29,6 +29,8 @@ METRICS = {
     "accepted_suffix_lens_with_recovery": [],
     "accepted_suffix_lens_on_hit": [],  # Only for cache hits in async mode
     "accepted_suffix_lens_on_miss": [],  # Only for cache misses in async mode
+    "accepted_lens_phase1_hit": [],  # accepted speculative tokens, excludes recovery token
+    "accepted_lens_phase2_hit": [],  # accepted speculative tokens, excludes recovery token
     "prefill_total_time": 0,
     "decode_total_time": 0,
     "prefill_total_tokens": 0,
@@ -268,6 +270,16 @@ class LLMEngine:
                     p2 = sum(METRICS['phase2_hits']) / len(METRICS['phase2_hits'])
                     print(f"[metrics] Avg Phase 1 (draft) Hit Rate: {p1:.3f}", flush=True)
                     print(f"[metrics] Avg Phase 2 (proxy) Hit Rate: {p2:.3f}", flush=True)
+                    if METRICS["accepted_lens_phase1_hit"]:
+                        p1_len = sum(METRICS["accepted_lens_phase1_hit"]) / len(METRICS["accepted_lens_phase1_hit"])
+                        p1_denom = self.config.mesa_phase1_k if self.config.mesa_phase1_k is not None else self.config.speculate_k
+                        print(f"[metrics] Avg Phase 1 Accepted Len: {p1_len:.2f}", flush=True)
+                        print(f"[metrics] Avg Phase 1 Acceptance Ratio: {p1_len / p1_denom:.3f}", flush=True)
+                    if METRICS["accepted_lens_phase2_hit"]:
+                        p2_len = sum(METRICS["accepted_lens_phase2_hit"]) / len(METRICS["accepted_lens_phase2_hit"])
+                        p2_denom = self.config.mesa_phase2_k if self.config.mesa_phase2_k is not None else self.config.speculate_k
+                        print(f"[metrics] Avg Phase 2 Accepted Len: {p2_len:.2f}", flush=True)
+                        print(f"[metrics] Avg Phase 2 Acceptance Ratio: {p2_len / p2_denom:.3f}", flush=True)
                 # Log separate metrics for cache hits
                 if METRICS['accepted_suffix_lens_on_hit']:
                     avg_suffix_len_on_hit = sum(

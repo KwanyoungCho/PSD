@@ -93,6 +93,13 @@ def _get_draft_model_path(args, cache_dir: str) -> str:
 
 def get_model_paths(args, cache_dir: str = HF_CACHE_DIR) -> Tuple[str, str, Optional[str]]:
     """Resolve model and draft paths (pointing to snapshot dirs with config.json)."""
+    explicit_model_path = getattr(args, "model_path", None)
+    explicit_draft_path = getattr(args, "draft_path", None)
+    if explicit_model_path and explicit_draft_path:
+        model_path = _get_snapshot_path(explicit_model_path)
+        draft_path = _get_snapshot_path(explicit_draft_path)
+        return os.path.basename(model_path), model_path, draft_path
+
     if args.llama:
         size_to_model = {
             "1": "Llama-3.2-1B-Instruct",
