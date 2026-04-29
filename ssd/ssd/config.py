@@ -286,12 +286,15 @@ class Config:
                         f"(short-hit layout MQ_LEN=0). Got prefix={_p1_list[:_K2p1]} "
                         f"from {_p1_list}"
                     )
-                if self.mesa_split_phase2_fan_out_list is not None:
-                    raise NotImplementedError(
-                        "split-K1/K2 Phase 2 non-uniform fan_out is not supported "
-                        "(Phase 2 selection is uniform; would need policy-based "
-                        "dynamic fan_out — separate design)."
-                    )
+            # Phase 2 non-uniform fan_out is unsupported (independent of Phase 1
+            # list — reject early to avoid delayed DraftRunner-init failure when
+            # only Phase 2 list is set).
+            if _split_mode and self.mesa_split_phase2_fan_out_list is not None:
+                raise NotImplementedError(
+                    "split-K1/K2 Phase 2 non-uniform fan_out is not supported "
+                    "(Phase 2 selection is uniform; would need policy-based "
+                    "dynamic fan_out — separate design)."
+                )
             # Auto-raise proxy_top_k. Two constraints (per docs/mesa/05-policy-b-fix.md):
             #   per-pos:  top_k ≥ total_budget + max(p1_fanout) + 2
             #   total:    top_k ≥ ceil(wire_N / (K_min+1))

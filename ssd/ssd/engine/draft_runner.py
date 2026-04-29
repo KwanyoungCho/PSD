@@ -1543,10 +1543,13 @@ class DraftRunner(ModelRunner):
         layout.fan_out_list_miss = layout.fan_out_list
         return layout
 
-    def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
+    @staticmethod
+    def _select_proxy_sourced_tokens_unified(mesa_proxy, draft_forked,
                                               K_rank, total_budget,
                                               draft_forked_mask=None):
-        """K+1 unified Policy B selector.
+        """K+1 unified Policy B selector. Static (does not use self) so unit
+        tests can call it directly via DraftRunner._select_proxy_sourced_tokens_unified
+        without instance setup.
 
         See docs/mesa/05-policy-b-fix.md Step 3.
 
