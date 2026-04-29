@@ -14,6 +14,13 @@ Policy A), `MESA-SWEEP-RESULTS.md` (parameter sweep, clean-GPU rerun),
 > 34B/70B quantized 결과 위치 표. Part 5 = **Phase 2 Hybrid 측정** (가장
 > 최신, 현재 default 구현 기준). 70B 비교 실험은 `experiments/hybrid_vs_split_70b/`
 > 에 reproducible 형태로 보존.
+>
+> **2026-04-29 note**: 본 문서의 모든 측정은 default policy 가 "a" 였던 시점
+> 에 수집됨. Policy B 가 default 로 바뀌면서 Phase 2 token selection 이
+> per-position fall-through → K+1 통합 글로벌 ranking + dedup-aware fall-
+> through 로 재설계됐고 wire schema 도 변경됨 (`05-policy-b-fix.md`).
+> 따라서 본 표의 accept rate / cache hit / TPS 는 Policy A 기준 historical
+> baseline 으로 읽어야 함. Policy B 재측정은 별도 진행 예정.
 
 ---
 

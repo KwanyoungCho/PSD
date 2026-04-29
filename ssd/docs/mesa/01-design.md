@@ -11,6 +11,24 @@ Split CudaGraph, Rev1 (Policy A/B), Phase 2 Hybrid — 를 한 곳에 모은다.
 > 2-pass 구조 (Part 1-4) 는 fallback 경로로만 존재 (`SSD_FORCE_SPLIT_PHASE2=1`).
 > Parts 1-4 의 "현재 구현" 표현은 hybrid 적용 전 시점 기준 — 알고리즘 historical
 > reference 로 읽고, 현재 동작은 Part 5 참조.
+>
+> **2026-04-29 업데이트** — 다음 항목들은 본 문서가 작성된 이후 갱신되었음.
+> 본 문서의 해당 섹션은 historical 로 읽고, 최신 내용은 cross-ref 문서 참조:
+>
+> - **Policy default = "b"** (was "a"). Policy A 는 dead branch 로 유지되며,
+>   비분할 / hybrid path 에선 자동 downgrade + 경고. split + Policy B +
+>   non-uniform `mesa_split_phase1_fan_out_list` 조합은 `NotImplementedError`.
+>   상세는 `05-policy-b-fix.md` §3.1.
+> - **Policy B unified K+1 path** — pos==K 를 별도 분기 없이 `pE[K]` full
+>   distribution 으로 흡수. wire schema = `{chosen_pos[wire_N], chosen_tok[wire_N]}`.
+>   본 문서의 "fan_out_list + topk_ids + topk_probs" wire 는 legacy Policy A.
+>   상세는 `05-policy-b-fix.md` §3.2-3.4.
+> - **`mesa_proxy_top_k` auto-raise 식** = `max(per_pos_min, total_min)` —
+>   본 문서의 `pfo*(K+1) + dfo + 2` 는 K_long 기준 (split mode 에선 over-
+>   provisioned). 현재 식은 `05-policy-b-fix.md` §3.5 / Step 1.
+> - **Split-K1/K2 mode** (env `SSD_FORCE_SPLIT_K1K2=1`) — 독립 draft (K1) /
+>   proxy (K2) pass, K2 ≤ K1, bucket layouts `split_k1_long` / `split_k1_short` /
+>   `split_k2`. continuation 없음. 상세는 `04-split-k1k2-design.md`.
 
 ---
 
@@ -88,11 +106,14 @@ mesa_draft_fan_out: int | None = None   # draft-sourced branches per pos (None=a
 Rev1 추가 invariant:
 
 - `assert max_num_seqs == 1` — Policy A 가 `accept_probs[0]` 를 batch
-  공통 분포로 사용하므로 단일 시퀀스 전용
+  공통 분포로 사용하므로 단일 시퀀스 전용 (Policy B 도 동일하게 B=1 유지)
 - `assert jit_speculate` — `jit_speculate=False` 일 때 miss row 의
   `accept_probs=0` 강제로 `ĥ_0=1` 왜곡 발생 → MESA 강제 True
 - `mesa_proxy_top_k` 자동 산정: `pfo*(K+1) + dfo + 2` 로 raise (draft
   fallback 제거하려면 worst-case dedup 후 unique proxy 가 충분해야 함)
+  — **갱신됨 (2026-04-29)**: 현재 식은 `max(per_pos_min, total_min)`,
+  `total_min = ceil(wire_N / (K_min+1))`. 본 문서 식은 K_long 기준이라
+  split mode 에선 과다. `05-policy-b-fix.md` §3.5 / Step 1 참조.
 
 ---
 
@@ -443,6 +464,11 @@ Step N+1: h = [0.10, 0.60, 0.05, 0.20, 0.05]
 변경: Target computes `ĥ_i` + budget → sends `[fan_out_list, topk_ids,
 topk_probs]` → Draft 바로 사용.
 
+> **갱신됨 (2026-04-29)**: 위 wire 는 legacy Policy A. 현재 default Policy B
+> 의 wire 는 `[chosen_pos, chosen_tok]` (score-sorted desc, fan_out_list 없음
+> — draft 가 dedup 후 동적 재구성). `topk_probs` 는 송신 안 함 (draft 미사용
+> 이었음). 상세 `05-policy-b-fix.md` §3.4.
+
 이점:
 - Draft critical path 에서 ~0.5ms 제거
 - Target mid-forward 구간에 ~0.01ms 추가 (무시 가능)
@@ -475,6 +501,11 @@ _fan_out_list = layout.fan_out_list if layout else config.fan_out_list
 CudaGraph 는 기존 proxy graph 재사용, mask / plan 만 동적 layout 기반.
 
 ### 7.4 Policy A: `ĥ_i` 기반 동적 Budget
+
+> **DEPRECATED (2026-04-29)**: Policy default 가 "b" 로 변경됨. Policy A 는
+> 코드에 dead branch 로 남아있으며, 비분할 / hybrid path 에서 Policy B 가
+> 미지원이라 자동 downgrade 될 때만 실행. 신규 path 설명은
+> `05-policy-b-fix.md` 참조.
 
 ```python
 # 1. accept_probs → ĥ_i (B=1)
@@ -518,6 +549,11 @@ Pos K (all-accept):
 일치해야 함.
 
 ### 7.6 Policy B: `P̂(i, v) = ĥ_i · r̂_i(v)` (defer)
+
+> **SUPERSEDED (2026-04-29)**: Policy B 가 default 로 구현됨. 본 절의 sketch
+> (per-position fall-through, fan_out_list wire) 는 그대로 적용되지 않음.
+> 실제 구현은 K+1 통합 글로벌 ranking + `{chosen_pos, chosen_tok}` wire +
+> dedup 후 fan_out_list 동적 재구성. 상세는 `05-policy-b-fix.md` §3.2-3.6.
 
 Position 뿐 아니라 어떤 correction token 이 유력한지까지 반영:
 
@@ -826,6 +862,10 @@ Fixed max-size:
 
 target 은 valid_k positions 까지만 의미값 채움. draft 는 prefix slice 사용.
 
+> **갱신됨 (2026-04-29)**: 위 페이로드는 legacy Policy A wire. 현재 default
+> Policy B 의 wire = `[chosen_pos: wire_N int64] [chosen_tok: wire_N int64]`,
+> `wire_N = total_budget + buffer`. `05-policy-b-fix.md` §3.4 / Step 5 참조.
+
 ## 5.6 알고리즘 변경 요약
 
 | | Rev1 split | hybrid v1 |
@@ -875,3 +915,4 @@ forward work (K_long=8, K1=K2=4, fo=pfo=2 기준 row-depths):
   영향 없음. split fallback 사용 시에만 노출.
 - **B = 1 invariant** — `max_num_seqs == 1` 가정 (Policy A 의 `accept_probs[0]`
   단일 h_i). B>1 확장은 plan + per-seq 구조 재설계 필요.
+  (Policy B 도 동일하게 B=1 가정 유지 — `05-policy-b-fix.md` §3.3 참조.)

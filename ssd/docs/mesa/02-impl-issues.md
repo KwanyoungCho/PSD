@@ -7,6 +7,16 @@
 > **읽는 순서**: Part 1 (v1) → Part 2 (Rev1) → Part 3 (Phase 2 Hybrid).
 > Phase 2 Hybrid 이후 발견된 회귀 (split 경로 sync, per-depth label,
 > phase2_hybrid_build 비효율) + 그에 대한 fix 도 Part 3 안에 시간순으로 기록.
+>
+> **2026-04-29 update**: 본 트래커의 일부 항목은 이후 갱신/대체되었음.
+> 특히 다음 항목은 `05-policy-b-fix.md` 에서 재설계됨:
+> - **#4 (proxy_top_k 확대 + fallback 제거)** — 자동 산정 식이 `pfo*(K+1) + dfo + 2`
+>   에서 `max(per_pos_min, total_min)` 으로 갱신. split mode 에서 over-
+>   provision 해소. `in_prev` 마스크 dead 판정도 함께 (Issue ⑤).
+> - **#5 (`topk_probs` defer)** — Policy B wire 에서 완전 제거. dead code 가
+>   아니라 송신/수신 모두 폐기.
+> - **Policy A default → Policy B default**. Policy A 는 dead branch 로 잔존.
+> - **Split-K1/K2 mode** (`SSD_FORCE_SPLIT_K1K2=1`) 추가 — `04-split-k1k2-design.md`.
 
 ---
 
@@ -226,6 +236,13 @@ if self.mesa_enabled:
 ---
 
 ### #4 Underfill: Target proxy_top_k 확대 + draft fallback 제거 (Design + Correctness)
+
+> **갱신됨 (2026-04-29)**: 자동 산정 식 (`pfo*(K+1) + dfo + 2`) 은 hybrid 시절
+> K_long 기준이라 split mode 에선 21 vs 13 정도 over-provisioned. 현재 식
+> = `max(per_pos_min, total_min)`, `total_min = ceil(wire_N / (K_min+1))`.
+> 또한 Policy B 의 `_select_proxy_sourced_tokens_unified` 는 `take.sum() ==
+> total_budget` runtime assert 로 underfill fail-fast (buffer 부족 시 즉시
+> 노출). 상세는 `05-policy-b-fix.md` §3.5 / Step 1.
 
 #### 왜 fallback 이 문제인가
 
@@ -504,6 +521,12 @@ for b in range(B):
 
 **pos < K 경로: proxy-only 벡터화**
 
+> **갱신됨 (2026-04-29)**: Policy B unified selector 에서는 `in_prev` 자체가
+> dead. `residual.topk(top_k, dim=-1)` 가 distinct V-indices 를 반환해
+> intra-position 중복은 construction 상 불가능. `_select_proxy_sourced_
+> tokens_unified` 는 `in_draft` mask 만 적용. `05-policy-b-fix.md` Issue ⑤
+> 와 §Step 3 참조. 아래 코드는 Policy A 시대의 sketch.
+
 ```python
 # 1. Proxy pool 자체 dedup (prefix duplicate mask)
 in_prev = (proxy[..., None] == proxy[..., :i]).any(dim=-1)
@@ -560,6 +583,11 @@ A selection 에서 미사용.
 # NOTE: topk_probs currently unused by Policy A. Kept for Policy B
 #       (joint r_i(v) weighted selection).
 ```
+
+> **갱신됨 (2026-04-29)**: Policy B 재구현 시 wire schema 가 `{chosen_pos,
+> chosen_tok}` 로 단순화되며 `topk_probs` 송신은 완전히 제거됨 (defer 가
+> 아닌 dropout). target side 에서 P_iv 계산에만 사용되고 draft 로 보내지
+> 않음. `05-policy-b-fix.md` §3.4 참조.
 
 ---
 
