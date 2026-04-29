@@ -20,6 +20,10 @@ def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_va
     context = get_context()
     if bucket == "verify_short":
         k_plus_1 = model_runner.config.mesa_phase2_k + 1
+    elif bucket == "verify_k1":
+        k_plus_1 = model_runner.config.mesa_phase1_k + 1
+    elif bucket == "verify_k2":
+        k_plus_1 = model_runner.config.mesa_phase2_k + 1
     else:
         k_plus_1 = model_runner.config.speculate_k + 1
     orig_bs = input_ids.size(0) // k_plus_1  # orig_bs = N here
@@ -163,8 +167,12 @@ def flush_draft_profile():
 @torch.inference_mode()
 def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, graph_vars, step, cache_hits, hidden_states=None, layout=None):
     # bs != len(input_ids, positions) now in multi-query seting, also need step-dependent mask
-    _prep_label = ("phase1_prep" if (layout is not None and layout.name == "draft")
-                   else "phase2_prep" if (layout is not None and layout.name == "proxy")
+    _prep_label = ("phase1_prep" if (layout is not None and (
+                       layout.name == "draft"
+                       or (layout.name is not None and layout.name.startswith("phase1_"))
+                       or (layout.name is not None and layout.name.startswith("split_k1"))))
+                   else "phase2_prep" if (layout is not None and (
+                       layout.name == "proxy" or layout.name == "split_k2"))
                    else "tree_prep")
     _mev_prep = mesa_record(_prep_label)
     context = get_context()
@@ -499,9 +507,11 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         _ev_replay0 = torch.cuda.Event(enable_timing=True); _ev_replay0.record()
 
     _layout_name = layout.name if layout is not None else None
-    if _layout_name == "draft" or (_layout_name is not None and _layout_name.startswith("phase1_")):
+    if _layout_name == "draft" or (_layout_name is not None and (
+        _layout_name.startswith("phase1_") or _layout_name.startswith("split_k1")
+    )):
         _mesa_label = "phase1_replay"
-    elif _layout_name == "proxy":
+    elif _layout_name == "proxy" or _layout_name == "split_k2":
         _mesa_label = "phase2_replay"
     else:
         _mesa_label = "tree_replay"

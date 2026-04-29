@@ -83,13 +83,21 @@ def parse_arguments():
                         help="Number of proxy correction tokens per position")
     parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
-    parser.add_argument("--mesa_policy", choices=("a", "b"), default="a",
-                        help="Phase-2 budget allocation: 'a' = h_i proportional (default), 'b' = h_i × r̂_i(v) joint")
+    parser.add_argument("--mesa_policy", choices=("a", "b"), default="b",
+                        help="Phase-2 budget: 'b' = unified K+1 (default since 2026-04-29; "
+                             "see docs/mesa/05-policy-b-fix.md). 'a' = legacy h_i proportional (dead branch).")
     parser.add_argument("--mesa_phase1_k", type=int, default=None,
                         help="v1 hybrid: Phase 1 forward depth K1 (must sum with --mesa_phase2_k to --k). "
                              "When set, enables hybrid v1 (proxy K2 + verify dispatch).")
     parser.add_argument("--mesa_phase2_k", type=int, default=None,
                         help="v1 hybrid: Phase 2 forward depth K2 = K_short. Required iff --mesa_phase1_k is set.")
+    parser.add_argument("--mesa_split_phase1_fan_out_list", type=str, default=None,
+                        help="Split-only K1/K2: comma-separated per-position fan_out list "
+                             "for Phase 1 (length must be K1+1). E.g. '4,4,3,3,2,2,1,1,1' "
+                             "for K1=8. Default = uniform [draft_fo]*(K1+1).")
+    parser.add_argument("--mesa_split_phase2_fan_out_list", type=str, default=None,
+                        help="Split-only K1/K2: comma-separated per-position fan_out list "
+                             "for Phase 2 (length must be K2+1). Default = uniform [proxy_fo]*(K2+1).")
 
     # Weight-only quantization (target only) — AWQ Marlin is the supported path.
     # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
@@ -236,6 +244,14 @@ def create_llm_kwargs(args, draft_path):
             llm_kwargs["mesa_phase1_k"] = args.mesa_phase1_k
         if args.mesa_phase2_k is not None:
             llm_kwargs["mesa_phase2_k"] = args.mesa_phase2_k
+        if args.mesa_split_phase1_fan_out_list is not None:
+            llm_kwargs["mesa_split_phase1_fan_out_list"] = [
+                int(x) for x in args.mesa_split_phase1_fan_out_list.split(",")
+            ]
+        if args.mesa_split_phase2_fan_out_list is not None:
+            llm_kwargs["mesa_split_phase2_fan_out_list"] = [
+                int(x) for x in args.mesa_split_phase2_fan_out_list.split(",")
+            ]
 
     # AWQ W4A16 (Marlin) — plan v2 primary direction (TARGET)
     if getattr(args, 'quant_awq', False):

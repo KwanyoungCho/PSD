@@ -13,6 +13,17 @@ from ssd.engine.helpers.cudagraph_helpers import flush_draft_profile
 
 PROFILE_DRAFT = os.environ.get("SSD_PROFILE_DRAFT", "0") == "1"
 
+# Split-only K1/K2 mode (per docs/mesa/04-split-k1k2-design.md):
+#   - Draft pass = K1 forwards → draft-sourced rows of depth K1
+#   - Proxy pass = K2 forwards → proxy-sourced rows of depth K2
+#   - NO continuation. valid_k space = {K1, K2}.
+# Hybrid path is untouched when this flag is off.
+SPLIT_K1K2_MODE = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+# Trace gate for split-K1/K2 contract validation. Active only when
+# SSD_TRACE_SPLIT_K1K2=1. Logs every step's valid_k / shapes / per-position
+# proxy fan_out so we can prove what's real data vs zero-pad.
+TRACE_SPLIT_K1K2 = os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
+
 ttl = 0
 ttl_hit = 0
 
@@ -53,15 +64,25 @@ class DraftRunner(ModelRunner):
                     capture_fi_tree_decode_cudagraph,
                     capture_phase2_hybrid_cudagraph,
                 )
-                _layouts_to_capture = [self.draft_layout, self.proxy_layout]
-                # Phase 3 (K1 split): capture phase1_layout_long (long-hit
-                # bucket). Step 9A: also capture phase1_layout_short for
-                # the short-hit bucket so runtime valid_k dispatch can
-                # replay either CG.
+                # Legacy draft/proxy layouts: skipped in split-only mode (split
+                # path uses split_k1_{long,short} + split_k2 only).
+                if SPLIT_K1K2_MODE:
+                    _layouts_to_capture = []
+                else:
+                    _layouts_to_capture = [self.draft_layout, self.proxy_layout]
+                # Hybrid phase1 long/short — only present in hybrid mode.
                 if self.phase1_layout_long is not None:
                     _layouts_to_capture.append(self.phase1_layout_long)
                 if self.phase1_layout_short is not None:
                     _layouts_to_capture.append(self.phase1_layout_short)
+                # Split-only K1/K2 mode: capture phase1 long/short + phase2 K2.
+                if SPLIT_K1K2_MODE:
+                    if self.split_k1_long_layout is not None:
+                        _layouts_to_capture.append(self.split_k1_long_layout)
+                    if self.split_k1_short_layout is not None:
+                        _layouts_to_capture.append(self.split_k1_short_layout)
+                    if self.split_k2_layout is not None:
+                        _layouts_to_capture.append(self.split_k2_layout)
                 for _layout in _layouts_to_capture:
                     _gv, _pool, _graphs, _bs = capture_fi_tree_decode_cudagraph(self, layout=_layout)
                     self.graph_vars[_layout.graph_key] = _gv
@@ -71,9 +92,8 @@ class DraftRunner(ModelRunner):
                 print(f'[MESA] Captured FI tree decode CudaGraphs ({len(_layouts_to_capture)} layouts)', flush=True)
 
                 # Phase 9B-1: capture phase2_hybrid CG for both buckets.
-                # Skipped when SSD_FORCE_EAGER_HYBRID_PHASE2=1 (env gate
-                # used at hot path; capture left intact for fast switch back).
-                if self.config.mesa_phase1_k is not None:
+                # Skipped in split-only K1/K2 mode (split path doesn't use them).
+                if self.config.mesa_phase1_k is not None and not SPLIT_K1K2_MODE:
                     _hybrid_cg_buckets = [
                         ("long", self.config.mesa_phase1_k + self.config.mesa_phase2_k),
                         ("short", self.config.mesa_phase2_k),
@@ -212,151 +232,191 @@ class DraftRunner(ModelRunner):
             # the incoming valid_k bucket; long-hit uses K_long+1.
             self.proxy_layout_short_long = None   # long-hit bucket: pos=K_long+1, K=K2
             self.proxy_layout_short_short = None  # short-hit bucket: pos=K_short+1, K=K2
+            # Split-only K1/K2 mode layouts (per docs/mesa/04-split-k1k2-design.md):
+            #   - split_k1_long  : K=K1, position_count=K1+1 (draft pass, valid_k=K1 hit / miss)
+            #   - split_k1_short : K=K1, position_count=K2+1 (draft pass, valid_k=K2 hit; K2<=K1 only)
+            #   - split_k2       : K=K2, position_count=K2+1 (proxy pass)
+            # No continuation. Supported scope: K2 <= K1 (asserted at runtime entry).
+            self.split_k1_long_layout = None
+            self.split_k1_short_layout = None
+            self.split_k2_layout = None
             if self.config.mesa_phase1_k is not None:
                 K1 = self.config.mesa_phase1_k
                 K2 = self.config.mesa_phase2_k
                 K_long = K1 + K2  # = speculate_k
                 K_short = K2
-                self.phase1_layout_long = create_tree_layout(
-                    name="phase1_long",
-                    fan_out_list=[draft_fo] * (K_long + 1),
-                    fan_out_list_miss=[draft_fo] * (K_long + 1),
-                    K=K1, device=d, position_count=K_long + 1,
-                )
-                self.phase1_layout_short = create_tree_layout(
-                    name="phase1_short",
-                    fan_out_list=[draft_fo] * (K_short + 1),
-                    fan_out_list_miss=[draft_fo] * (K_short + 1),
-                    K=K1, device=d, position_count=K_short + 1,
-                )
-                # v1 proxy short layouts. proxy_fo per position; forward depth K2.
-                # Note: actual fan_out_list per step is dynamic (Policy A) — these
-                # static layouts are baselines for graph capture; runtime layouts
-                # are still built per-step in _build_tree_batch_mesa.
-                self.proxy_layout_short_long = create_tree_layout(
-                    name="proxy_short_long",
-                    fan_out_list=[proxy_fo] * (K_long + 1),
-                    fan_out_list_miss=[proxy_fo] * (K_long + 1),
-                    K=K2, device=d, position_count=K_long + 1,
-                )
-                self.proxy_layout_short_short = create_tree_layout(
-                    name="proxy_short_short",
-                    fan_out_list=[proxy_fo] * (K_short + 1),
-                    fan_out_list_miss=[proxy_fo] * (K_short + 1),
-                    K=K2, device=d, position_count=K_short + 1,
-                )
-                print(f'[MESA hybrid] phase1 layouts: '
-                      f'long MQ_LEN={self.phase1_layout_long.MQ_LEN} (K1={K1}, pos={K_long + 1}), '
-                      f'short MQ_LEN={self.phase1_layout_short.MQ_LEN} (K1={K1}, pos={K_short + 1})',
-                      flush=True)
-                print(f'[MESA hybrid] proxy_short layouts: '
-                      f'long MQ_LEN={self.proxy_layout_short_long.MQ_LEN} (K2={K2}, pos={K_long + 1}), '
-                      f'short MQ_LEN={self.proxy_layout_short_short.MQ_LEN} (K2={K2}, pos={K_short + 1})',
-                      flush=True)
-                # Step 2: HybridPhase2Plan single-instance allocation (max-size).
-                # Per Plan §"Single instance with max-size buffers". Tensors
-                # filled per step in _build_phase2_hybrid_plan (Step 3, not yet
-                # implemented). Allocated here so init-time GPU memory accounting
-                # is stable.
-                from ssd.engine.helpers.hybrid_phase2_plan import HybridPhase2Plan
-                # max_pages_per_row: persistent + glue + own Phase 1 KV + own A_tail
-                # ≤ max_blocks (engine-level) + spec scratch headroom. Use config's
-                # max_blocks as upper bound for now; refined in Step 5 (5-region
-                # scratch).
-                _max_pages = self.config.max_blocks
-                # max_packed_mask_size: per-depth packed mask byte count. Upper
-                # bound = max_total_rows × max_seqlen / 8. Refined in Step 4.
-                _max_total = (K_long + 1) * (draft_fo + proxy_fo)
-                _max_mask_size = _max_total * self.config.max_model_len  # uint8 entries
-                # max_L: upper bound on physical KV at the deepest hybrid step.
-                # L = num_tokens + K_step + K_long*MQ_p1 + K2*MQ_proxy.
-                # Worst-case num_tokens = max_model_len; everything else is
-                # config-fixed. Used to pre-allocate kv_pos arange + full mask
-                # workspace at engine init (Phase 9D — eliminates per-step
-                # arange allocations in _build_hybrid_packed_mask_inplace).
-                _MQ_p1_max = (K_long + 1) * draft_fo
-                _MQ_proxy_max = (K_long + 1) * proxy_fo
-                _max_L = (
-                    self.config.max_model_len
-                    + K_long
-                    + K_long * _MQ_p1_max
-                    + K2 * _MQ_proxy_max
-                )
-                self.hybrid_phase2_plan = HybridPhase2Plan.create(
-                    K1=K1, K2=K2,
-                    mesa_draft_fan_out=draft_fo,
-                    mesa_proxy_fan_out=proxy_fo,
-                    max_pages_per_row=_max_pages,
-                    max_packed_mask_size=_max_mask_size,
-                    max_L=_max_L,
-                    device=d,
-                )
-                print(f'[MESA hybrid] HybridPhase2Plan allocated: K_long={K_long}, '
-                      f'K_short={K2}, max_total_rows={_max_total}, '
-                      f'max_pages={_max_pages}', flush=True)
+                # Hybrid phase1/proxy_short layouts — skipped in split-only
+                # mode (split path uses split_k1_long/short + split_k2 only).
+                if not SPLIT_K1K2_MODE:
+                    self.phase1_layout_long = create_tree_layout(
+                        name="phase1_long",
+                        fan_out_list=[draft_fo] * (K_long + 1),
+                        fan_out_list_miss=[draft_fo] * (K_long + 1),
+                        K=K1, device=d, position_count=K_long + 1,
+                    )
+                    self.phase1_layout_short = create_tree_layout(
+                        name="phase1_short",
+                        fan_out_list=[draft_fo] * (K_short + 1),
+                        fan_out_list_miss=[draft_fo] * (K_short + 1),
+                        K=K1, device=d, position_count=K_short + 1,
+                    )
+                    # v1 proxy short layouts. proxy_fo per position; forward depth K2.
+                    self.proxy_layout_short_long = create_tree_layout(
+                        name="proxy_short_long",
+                        fan_out_list=[proxy_fo] * (K_long + 1),
+                        fan_out_list_miss=[proxy_fo] * (K_long + 1),
+                        K=K2, device=d, position_count=K_long + 1,
+                    )
+                    self.proxy_layout_short_short = create_tree_layout(
+                        name="proxy_short_short",
+                        fan_out_list=[proxy_fo] * (K_short + 1),
+                        fan_out_list_miss=[proxy_fo] * (K_short + 1),
+                        K=K2, device=d, position_count=K_short + 1,
+                    )
+                    print(f'[MESA hybrid] phase1 layouts: '
+                          f'long MQ_LEN={self.phase1_layout_long.MQ_LEN} (K1={K1}, pos={K_long + 1}), '
+                          f'short MQ_LEN={self.phase1_layout_short.MQ_LEN} (K1={K1}, pos={K_short + 1})',
+                          flush=True)
+                    print(f'[MESA hybrid] proxy_short layouts: '
+                          f'long MQ_LEN={self.proxy_layout_short_long.MQ_LEN} (K2={K2}, pos={K_long + 1}), '
+                          f'short MQ_LEN={self.proxy_layout_short_short.MQ_LEN} (K2={K2}, pos={K_short + 1})',
+                          flush=True)
+                # Split-only K1/K2 mode: phase1 long/short bucket dispatch
+                # (per docs/mesa/04-split-k1k2-design.md). Supports K2 <= K1 only.
+                if SPLIT_K1K2_MODE:
+                    # Hard check (assert is stripped under python -O).
+                    if K2 > K1:
+                        raise ValueError(
+                            f"split-K1K2 mode requires K2 <= K1, got K1={K1}, K2={K2}. "
+                            f"K2>K1 is not supported (proxy_horizon tail source undefined). "
+                            f"See docs/mesa/04-split-k1k2-design.md."
+                        )
+                    # Phase 1 fan_out_list (non-uniform supported).
+                    # Phase 2 always uniform proxy_fo per position (Phase 2 selection
+                    # logic / target proxy compute is uniform; non-uniform Phase 2
+                    # would need policy-based dynamic fan_out — separate design).
+                    _p1_fol_user = self.config.mesa_split_phase1_fan_out_list
+                    if _p1_fol_user is not None:
+                        if len(_p1_fol_user) != K1 + 1:
+                            raise ValueError(
+                                f"mesa_split_phase1_fan_out_list len={len(_p1_fol_user)} "
+                                f"must equal K1+1={K1 + 1}, got {_p1_fol_user}"
+                            )
+                        _p1_fol_long = list(_p1_fol_user)
+                    else:
+                        _p1_fol_long = [draft_fo] * (K1 + 1)
+                    if self.config.mesa_split_phase2_fan_out_list is not None:
+                        raise NotImplementedError(
+                            "split-K1/K2 Phase 2 non-uniform fan_out is not supported "
+                            "(Phase 2 selection is uniform; would need policy-based "
+                            "dynamic fan_out — separate design)."
+                        )
 
-                # Step 5: 5-region scratch slot layout metadata.
-                # Per-region SLOT counts (not logical positions). The hybrid
-                # path (Step 6) will use these to construct per-row block_tables
-                # / slot_maps / kv_indices in HybridPhase2Plan such that:
-                #   - continuation row reads Phase 1 KV region + A_tail region
-                #   - proxy row reads B_proxy region only
-                # Logical `positions` / `rope_positions` are NOT shifted by
-                # these offsets — those remain logical token positions for
-                # RoPE / context_lens purposes. The slot mapping is what
-                # routes writes/reads to disjoint scratch regions.
-                #
-                # Split reference/fallback path is untouched — its proxy
-                # writes overlap Phase 1 KV slots, which is safe because the
-                # passes are sequential and proxy doesn't read Phase 1 KV in
-                # the split path.
-                MQ_p1 = self.phase1_layout_long.MQ_LEN  # = dfo * (K_long + 1)
-                MQ_proxy_long_max = proxy_fo * (K_long + 1)  # Policy A/B sums to this
-                self.hybrid_glue_slot_count = K_long + 1
-                self.hybrid_phase1_slot_base = self.hybrid_glue_slot_count
-                self.hybrid_phase1_slot_count = K1 * MQ_p1
-                self.hybrid_a_tail_slot_base = (
-                    self.hybrid_phase1_slot_base + self.hybrid_phase1_slot_count
-                )
-                self.hybrid_a_tail_slot_count = K2 * MQ_p1
-                self.hybrid_b_proxy_slot_base = (
-                    self.hybrid_a_tail_slot_base + self.hybrid_a_tail_slot_count
-                )
-                self.hybrid_b_proxy_slot_count = K2 * MQ_proxy_long_max
-                _hybrid_required_slots = (
-                    self.hybrid_glue_slot_count
-                    + self.hybrid_phase1_slot_count
-                    + self.hybrid_a_tail_slot_count
-                    + self.hybrid_b_proxy_slot_count
-                )
-                # Compare to scheduler's reservation (compute_megaspec_lookahead
-                # returns K + 1 + K * MQ_LEN slots reserved per draft seq beyond
-                # accepted prefix).
-                from ssd.utils.async_helpers.async_spec_helpers import (
-                    compute_megaspec_lookahead as _cmsl,
-                )
-                _reserved_slots = _cmsl(self.full_layout.MQ_LEN, K_long)
-                assert _hybrid_required_slots <= _reserved_slots, (
-                    f"Hybrid 5-region scratch needs {_hybrid_required_slots} slots "
-                    f"but scheduler reserves only {_reserved_slots}. Increase "
-                    f"compute_megaspec_lookahead's bound."
-                )
-                print(f'[MESA hybrid] 5-region scratch layout: '
-                      f'glue={self.hybrid_glue_slot_count} '
-                      f'@[{0},{self.hybrid_glue_slot_count}), '
-                      f'phase1_kv={self.hybrid_phase1_slot_count} '
-                      f'@[{self.hybrid_phase1_slot_base},'
-                      f'{self.hybrid_a_tail_slot_base}), '
-                      f'a_tail={self.hybrid_a_tail_slot_count} '
-                      f'@[{self.hybrid_a_tail_slot_base},'
-                      f'{self.hybrid_b_proxy_slot_base}), '
-                      f'b_proxy={self.hybrid_b_proxy_slot_count} '
-                      f'@[{self.hybrid_b_proxy_slot_base},'
-                      f'{self.hybrid_b_proxy_slot_base + self.hybrid_b_proxy_slot_count})',
-                      flush=True)
-                print(f'[MESA hybrid] required_slots={_hybrid_required_slots} <= '
-                      f'reserved_slots={_reserved_slots} (headroom '
-                      f'{_reserved_slots - _hybrid_required_slots})', flush=True)
+                    self.split_k1_long_layout = create_tree_layout(
+                        name="split_k1_long",
+                        fan_out_list=_p1_fol_long,
+                        fan_out_list_miss=_p1_fol_long,
+                        K=K1, device=d, position_count=K1 + 1,
+                    )
+                    if K2 < K1:
+                        # Short bucket: first K2+1 positions of phase1 list.
+                        _p1_fol_short = _p1_fol_long[:K2 + 1]
+                        self.split_k1_short_layout = create_tree_layout(
+                            name="split_k1_short",
+                            fan_out_list=_p1_fol_short,
+                            fan_out_list_miss=_p1_fol_short,
+                            K=K1, device=d, position_count=K2 + 1,
+                        )
+                    # Phase 2 layout — capture-time placeholder for unified Policy B.
+                    # docs/mesa/05-policy-b-fix.md Section 3.7 (옵션 A-1):
+                    #   K = K2 (forward depth, fixed)
+                    #   MQ_LEN = pfo*(K_max+1) (worst-case sizing)
+                    #   position_count / fan_out_list updated per-step in caller.
+                    K_rank_max = K1 if K1 >= K2 else K2     # = K1 (K2 ≤ K1 invariant)
+                    self.split_k2_layout = create_tree_layout(
+                        name="split_k2",
+                        fan_out_list=[proxy_fo] * (K_rank_max + 1),
+                        fan_out_list_miss=[proxy_fo] * (K_rank_max + 1),
+                        K=K2, device=d, position_count=K_rank_max + 1,
+                    )
+                    _short_str = (
+                        f'split_k1_short MQ={self.split_k1_short_layout.MQ_LEN} '
+                        f'(K=K1={K1}, pos={K2+1}), '
+                        if self.split_k1_short_layout is not None else
+                        'split_k1_short SKIPPED (K1==K2, long bucket reused), '
+                    )
+                    print(f'[MESA split-K1K2] layouts: '
+                          f'split_k1_long MQ={self.split_k1_long_layout.MQ_LEN} (K=K1={K1}, pos={K1+1}), '
+                          f'{_short_str}'
+                          f'split_k2 MQ={self.split_k2_layout.MQ_LEN} (K=K2={K2}, pos={K2+1})',
+                          flush=True)
+                # Step 2: HybridPhase2Plan single-instance allocation (max-size).
+                # Skipped in split-only K1/K2 mode (split path does not use
+                # HybridPhase2Plan / 5-region scratch / phase2_hybrid CG).
+                if SPLIT_K1K2_MODE:
+                    self.hybrid_phase2_plan = None
+                    print('[MESA split-K1K2] hybrid_phase2_plan / 5-region scratch: SKIPPED', flush=True)
+                else:
+                    from ssd.engine.helpers.hybrid_phase2_plan import HybridPhase2Plan
+                    _max_pages = self.config.max_blocks
+                    _max_total = (K_long + 1) * (draft_fo + proxy_fo)
+                    _max_mask_size = _max_total * self.config.max_model_len
+                    _MQ_p1_max = (K_long + 1) * draft_fo
+                    _MQ_proxy_max = (K_long + 1) * proxy_fo
+                    _max_L = (
+                        self.config.max_model_len
+                        + K_long
+                        + K_long * _MQ_p1_max
+                        + K2 * _MQ_proxy_max
+                    )
+                    self.hybrid_phase2_plan = HybridPhase2Plan.create(
+                        K1=K1, K2=K2,
+                        mesa_draft_fan_out=draft_fo,
+                        mesa_proxy_fan_out=proxy_fo,
+                        max_pages_per_row=_max_pages,
+                        max_packed_mask_size=_max_mask_size,
+                        max_L=_max_L,
+                        device=d,
+                    )
+                    print(f'[MESA hybrid] HybridPhase2Plan allocated: K_long={K_long}, '
+                          f'K_short={K2}, max_total_rows={_max_total}, '
+                          f'max_pages={_max_pages}', flush=True)
+
+                    # 5-region scratch slot layout metadata (hybrid path only).
+                    MQ_p1 = self.phase1_layout_long.MQ_LEN
+                    MQ_proxy_long_max = proxy_fo * (K_long + 1)
+                    self.hybrid_glue_slot_count = K_long + 1
+                    self.hybrid_phase1_slot_base = self.hybrid_glue_slot_count
+                    self.hybrid_phase1_slot_count = K1 * MQ_p1
+                    self.hybrid_a_tail_slot_base = (
+                        self.hybrid_phase1_slot_base + self.hybrid_phase1_slot_count
+                    )
+                    self.hybrid_a_tail_slot_count = K2 * MQ_p1
+                    self.hybrid_b_proxy_slot_base = (
+                        self.hybrid_a_tail_slot_base + self.hybrid_a_tail_slot_count
+                    )
+                    self.hybrid_b_proxy_slot_count = K2 * MQ_proxy_long_max
+                    _hybrid_required_slots = (
+                        self.hybrid_glue_slot_count
+                        + self.hybrid_phase1_slot_count
+                        + self.hybrid_a_tail_slot_count
+                        + self.hybrid_b_proxy_slot_count
+                    )
+                    from ssd.utils.async_helpers.async_spec_helpers import (
+                        compute_megaspec_lookahead as _cmsl,
+                    )
+                    _reserved_slots = _cmsl(self.full_layout.MQ_LEN, K_long)
+                    assert _hybrid_required_slots <= _reserved_slots, (
+                        f"Hybrid 5-region scratch needs {_hybrid_required_slots} slots "
+                        f"but scheduler reserves only {_reserved_slots}."
+                    )
+                    print(f'[MESA hybrid] 5-region scratch layout: '
+                          f'glue={self.hybrid_glue_slot_count} '
+                          f'phase1_kv={self.hybrid_phase1_slot_count} '
+                          f'a_tail={self.hybrid_a_tail_slot_count} '
+                          f'b_proxy={self.hybrid_b_proxy_slot_count} '
+                          f'(required={_hybrid_required_slots}/reserved={_reserved_slots})',
+                          flush=True)
             print(f'[MESA] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
                   f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
                   f'proxy MQ_LEN={self.proxy_layout.MQ_LEN}', flush=True)
@@ -420,7 +480,16 @@ class DraftRunner(ModelRunner):
                 self.hf_config.hidden_size,
                 dtype=self.hf_config.torch_dtype, device=self.device)
 
-        for i in range(self.config.speculate_k): # we're going to glue after this anyways, and by sending the spec request target has verified we have K more slots left in our last page 
+        # Split-only K1/K2 mode: JIT only K_max forwards (= K1) per miss step.
+        # The remaining K_long-K_max positions of out_tokens stay at random
+        # init — speculator slices to valid_k+1=K_max+1 anyway, dropping them.
+        # This saves K2 wasted forwards per miss step (K_max=K1, K_long=K1+K2).
+        _jit_K = self.config.speculate_k
+        if SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
+            _K1c = self.config.mesa_phase1_k
+            _K2c = self.config.mesa_phase2_k
+            _jit_K = _K1c if _K1c >= _K2c else _K2c  # = K_max
+        for i in range(_jit_K): # we're going to glue after this anyways, and by sending the spec request target has verified we have K more slots left in our last page
             set_context(
                 is_prefill=False,
                 slot_mapping=slot_map,
@@ -465,7 +534,19 @@ class DraftRunner(ModelRunner):
         # Per-row valid_k: defaults to K (= K_long for MESA / speculate_k for non-MESA).
         # Phase 4 will override per-row to K_short for proxy-sourced hits.
         # Phase 5 will set miss/JIT path to K_short as well.
-        valid_k = torch.full((B,), K, dtype=torch.int64, device=self.device)
+        # Split-only K1/K2 mode (per docs/mesa/04-split-k1k2-design.md):
+        # default valid_k = K_max = max(K1, K2). Cache-hit overwrites with the
+        # row's own valid_k (∈ {K1, K2}). NEVER use K_long here in this mode.
+        if (
+            SPLIT_K1K2_MODE
+            and self.config.mesa_phase1_k is not None
+        ):
+            K1 = self.config.mesa_phase1_k
+            K2 = self.config.mesa_phase2_k
+            K_max = K1 if K1 >= K2 else K2
+            valid_k = torch.full((B,), K_max, dtype=torch.int64, device=self.device)
+        else:
+            valid_k = torch.full((B,), K, dtype=torch.int64, device=self.device)
 
         assert request_keys.shape == (B, 3), f"ERROR in hit_cache_and_respond: request_keys should be (B, 3), got {request_keys.shape}"
         
@@ -538,12 +619,16 @@ class DraftRunner(ModelRunner):
                 # [B], arbitrary if no match but masked out
                 idx = match.float().argmax(dim=1).to(torch.int64)
                 sel = cache_hits
+                # Cache row width may be < out_tokens K (split-only K1/K2 mode
+                # pads to K_max < K_long). Copy first cache_row_width cols, leave
+                # the rest zero — valid_k tells consumers the meaningful prefix.
+                _cache_w = self.tree_cache_tokens.shape[1]
                 # tokens [T,K]
-                out_tokens[sel] = self.tree_cache_tokens[idx[sel]]
+                out_tokens[sel, :_cache_w] = self.tree_cache_tokens[idx[sel]]
                 # logits [T,K+1,V]
-                out_logits[sel] = self.tree_cache_logits[idx[sel]]
+                out_logits[sel, :_cache_w] = self.tree_cache_logits[idx[sel]]
                 if self.config.use_eagle:
-                    out_activations[sel] = self.tree_cache_activations[idx[sel]]
+                    out_activations[sel, :_cache_w] = self.tree_cache_activations[idx[sel]]
             elif self.config.jit_speculate: 
                 # print(f'[hit_cache_and_respond] found a cache miss, running jit speculate', flush=True)
                 if self.config.verbose:
@@ -589,6 +674,21 @@ class DraftRunner(ModelRunner):
             _vk_scalar = int(valid_k[0].item())
         else:
             _vk_scalar = None
+        # ===== TRACE point 1: hit_cache_and_respond boundary =====
+        if TRACE_SPLIT_K1K2 and SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
+            K1 = self.config.mesa_phase1_k
+            K2 = self.config.mesa_phase2_k
+            K_max = K1 if K1 >= K2 else K2
+            _vk_list = valid_k.tolist() if valid_k is not None else None
+            _hits_list = cache_hits.tolist()
+            _cache_w = self.tree_cache_tokens.shape[1] if self.tree_cache_tokens is not None and self.tree_cache_tokens.numel() > 0 else 0
+            _cache_n = self.tree_cache_keys.shape[0] if self.tree_cache_keys is not None and self.tree_cache_keys.numel() > 0 else 0
+            print(f"[TRACE-split-k1k2 #1 hit_cache] K1={K1} K2={K2} K_max={K_max} "
+                  f"cache_hits={_hits_list} valid_k={_vk_list} _vk_scalar={_vk_scalar} "
+                  f"out_tokens.shape={list(out_tokens.shape)} "
+                  f"cache_n_rows={_cache_n} cache_row_width={_cache_w}",
+                  flush=True)
+        # ===== END TRACE =====
         glue_input_ids = make_glue_decode_input_ids(out_tokens, rec_toks, valid_k=_vk_scalar)
         return out_tokens, out_logits, glue_input_ids, cache_hits, out_activations, phase_source, valid_k, _vk_scalar
 
@@ -891,7 +991,13 @@ class DraftRunner(ModelRunner):
         # GPU→CPU sync here.
         _vk_glue = partial_tree_decode_args.get("valid_k_scalar")
         if _vk_glue is None:
-            _vk_glue = self.config.speculate_k
+            # Split-only K1/K2 mode: default = K_max, NOT K_long.
+            if SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
+                K1 = self.config.mesa_phase1_k
+                K2 = self.config.mesa_phase2_k
+                _vk_glue = K1 if K1 >= K2 else K2
+            else:
+                _vk_glue = self.config.speculate_k
         K = _vk_glue
         B = glue_decode_input_ids.shape[0] // (K + 1)
         assert B == partial_tree_decode_args["num_tokens"].shape[0]
@@ -1299,17 +1405,36 @@ class DraftRunner(ModelRunner):
     # ============================================================
 
     def _irecv_mesa_proxy(self, B, K):
-        """Post non-blocking recv for proxy. Returns (work, buffer)."""
+        """Post non-blocking recv for proxy. Returns (work, buffer).
+
+        Wire schema branches by policy (docs/mesa/05-policy-b-fix.md):
+          - Policy "b" (default, unified K+1): chosen_pos[wire_N] + chosen_tok[wire_N]
+          - Policy "a" (legacy, dead): fan_out_list[K+1] + topk_ids[B*K*top_k] + topk_probs[B*K*top_k]
+        """
         import torch.distributed as dist
-        top_k = self.config.mesa_proxy_top_k
-        # fan_out_list [K+1] + topk_ids [B*K*top_k] + topk_probs [B*K*top_k]
-        total_len = (K + 1) + B * K * top_k + B * K * top_k
+        if self.config.mesa_policy == "b":
+            wire_N = self.config.mesa_proxy_wire_N
+            total_len = 2 * wire_N
+        else:
+            top_k = self.config.mesa_proxy_top_k
+            total_len = (K + 1) + B * K * top_k + B * K * top_k
         buf = torch.empty(total_len, dtype=torch.int64, device=self.device)
         work = dist.irecv(buf, src=0, group=self.async_pg)
         return work, buf
 
     def _unpack_mesa_proxy(self, buf, B, K):
-        """Unpack proxy data from irecv buffer."""
+        """Unpack proxy data from irecv buffer.
+
+        Returns dict whose keys depend on policy:
+          - "b": {"chosen_pos": [wire_N], "chosen_tok": [wire_N]}
+          - "a": {"fan_out_list", "topk_ids", "topk_probs"} (legacy)
+        """
+        if self.config.mesa_policy == "b":
+            wire_N = self.config.mesa_proxy_wire_N
+            chosen_pos = buf[:wire_N]
+            chosen_tok = buf[wire_N:2 * wire_N]
+            return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
+        # Legacy path (dead — Policy A retained for emergency rollback)
         top_k = self.config.mesa_proxy_top_k
         off = 0
         fan_out_list = buf[off:off + (K + 1)].tolist()  # [K+1] ints
@@ -1320,12 +1445,156 @@ class DraftRunner(ModelRunner):
         return {"fan_out_list": fan_out_list, "topk_ids": topk_ids, "topk_probs": topk_probs}
 
     def _select_draft_sourced_tokens(self, logits, returned_tokens, draft_fan_out):
-        """Select fork tokens from draft logits (top-k per position)."""
+        """Select fork tokens from draft logits (uniform top-k per position)."""
         logits = logits.clone()
         logits[:, :-1, :] = logits[:, :-1, :].scatter(
             dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
         _, topk_idx = torch.topk(logits, draft_fan_out, dim=-1)  # [B, K+1, draft_fan_out]
         return topk_idx
+
+    def _select_draft_sourced_tokens_perpos(self, logits, returned_tokens, fan_out_list):
+        """Per-position fan_out selector for Phase 1 (non-uniform fan_out_list).
+
+        Args:
+            logits: [B, P, V] glue logits at P=len(fan_out_list) positions.
+            returned_tokens: [B, P] target's accepted tokens at each glue pos.
+            fan_out_list: list[int] of length P, sum = MQ_LEN.
+
+        Returns: [B, MQ_LEN] flat int64 — slot p occupies
+            [offset_p, offset_p + fan_out_list[p]) with top-fan_out_list[p]
+            draft tokens at that position (returned_tokens excluded).
+        """
+        B, P, V = logits.shape
+        assert P == len(fan_out_list), \
+            f"glue width {P} != fan_out_list len {len(fan_out_list)}"
+        logits = logits.clone()
+        # Mask returned token at non-leaf positions (already-accepted tokens
+        # excluded from fork candidates).
+        if P > 1:
+            logits[:, :-1, :] = logits[:, :-1, :].scatter(
+                dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
+        MQ_LEN = sum(fan_out_list)
+        out = torch.empty(B, MQ_LEN, dtype=torch.int64, device=logits.device)
+        offset = 0
+        for p, fo in enumerate(fan_out_list):
+            if fo == 0:
+                continue
+            _, topk = torch.topk(logits[:, p, :], fo, dim=-1)  # [B, fo]
+            out[:, offset:offset + fo] = topk
+            offset += fo
+        return out
+
+    def _update_phase2_layout_inplace(self, fan_out_tensor, K_rank):
+        """In-place update of self.split_k2_layout for unified Policy B.
+
+        Avoids per-step ``create_tree_layout(...)`` which allocates 6+ new
+        GPU tensors. Static fields (MQ_LEN, K, arange_mq, step_pos_offsets,
+        step_rope_offsets, graph_key, name) stay; only fan_out-derived
+        tensors and position_count update.
+
+        See docs/mesa/05-policy-b-fix.md Section 3.7 + Fix ④.
+
+        Args:
+            fan_out_tensor: [K_rank+1] int64 GPU tensor; sum == total_budget.
+            K_rank: int. position_count = K_rank+1.
+
+        Returns:
+            self.split_k2_layout (mutated).
+        """
+        layout = self.split_k2_layout
+        K_plus_1 = K_rank + 1
+        device = fan_out_tensor.device
+        # Update mutable fields:
+        layout.position_count = K_plus_1
+        layout.fan_out_t = fan_out_tensor
+        layout.fan_out_t_miss = fan_out_tensor                  # same in unified path
+        # fan_idx_hit = arange(K_plus_1).repeat_interleave(fan_out_tensor)
+        layout.fan_idx_hit = torch.arange(
+            K_plus_1, device=device, dtype=torch.int64
+        ).repeat_interleave(fan_out_tensor)
+        layout.fan_idx_miss = layout.fan_idx_hit
+        # fan_out_list (Python list) — only needed by ``layout.fan_out_list[0]``
+        # in metadata_ints (F slot); F is unused downstream in _decode_tree.
+        # Defer the .tolist() to caller if it really needs the list.
+        return layout
+
+    def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
+                                              K_rank, total_budget):
+        """K+1 unified Policy B selector.
+
+        See docs/mesa/05-policy-b-fix.md Step 3.
+
+        Args:
+            mesa_proxy: {"chosen_pos": [wire_N], "chosen_tok": [wire_N]}
+                        score-sorted desc. chosen_pos ∈ [0, K_rank] by target-side
+                        construction (Section 3.3 invariant).
+            draft_forked: [B, P, dfo] Phase 1 candidates per ranking position.
+                          P ≥ K_rank + 1 (caller slices if needed). chosen_pos
+                          values index into the first K_rank+1 positions.
+            K_rank: int  ranking horizon = current step's valid_k.
+                    Phase 2 forward depth (K2) is independent.
+            total_budget: int  Phase 2 tree size (= sum(fan_out_list) returned).
+
+        Returns:
+            result_tokens: [B, total_budget] int64 — pos-grouped (stable sort by
+                           pos), score order preserved within each pos.
+            fan_out_list:  list[int] length K_rank+1, sum == total_budget.
+        """
+        chosen_pos = mesa_proxy["chosen_pos"]    # [wire_N]
+        chosen_tok = mesa_proxy["chosen_tok"]    # [wire_N]
+        N = chosen_pos.shape[0]
+        B = draft_forked.shape[0]
+        assert B == 1, "MESA invariant: B=1"
+        # Invariant: chosen_pos ∈ [0, K_rank] by construction.
+        if __debug__:
+            assert (chosen_pos <= K_rank).all().item(), \
+                f"chosen_pos out of range [0, {K_rank}]: max={chosen_pos.max().item()}"
+
+        # in_draft dedup against draft_forked[0, chosen_pos, :].
+        # draft_forked rows [0, K_rank] indexed.
+        df_per_cand = draft_forked[0, chosen_pos, :]                # [N, dfo]
+        in_draft = (df_per_cand == chosen_tok.unsqueeze(-1)).any(-1)  # [N]
+        valid = ~in_draft                                            # [N]
+
+        # Pick first total_budget valid (score-sorted preserved).
+        rank = valid.to(torch.int64).cumsum(0)                       # [N]
+        take = valid & (rank <= total_budget)                        # [N]
+
+        # === Fix ③ (correctness guard) ===
+        # Buffer sizing (Section 3.3 / 3.5) is supposed to ensure
+        # take.sum() == total_budget. If it doesn't, fan_out_list.sum()
+        # would silently differ from proxy_forked.shape[1] (= total_budget)
+        # and downstream Phase 2 decode reads zero-padded slots as real
+        # tokens. Hard-fail with a clear message instead of silent corruption.
+        # NOTE: this is a 1 GPU sync per step; acceptable for safety.
+        _take_sum = int(take.sum().item())
+        assert _take_sum == total_budget, (
+            f"Policy B underfill: take.sum()={_take_sum} != total_budget={total_budget}. "
+            f"This means buffer sizing was insufficient. Check config.mesa_proxy_wire_N "
+            f"and config.mesa_proxy_top_k auto-raise; see docs/mesa/05-policy-b-fix.md "
+            f"Section 3.5."
+        )
+
+        taken_pos = chosen_pos[take]                                  # [total_budget]
+        taken_tok = chosen_tok[take]
+
+        # fan_out_list 동적 재구성 (length = K_rank+1)
+        K_plus_1 = K_rank + 1
+        fan_out_tensor = torch.zeros(
+            K_plus_1, dtype=torch.int64, device=chosen_pos.device)
+        fan_out_tensor.scatter_add_(
+            0, taken_pos, torch.ones_like(taken_pos))
+
+        # result tensor [B, total_budget] — group by pos (stable sort preserves score)
+        result = torch.zeros(
+            B, total_budget, dtype=torch.int64, device=chosen_pos.device)
+        order = taken_pos.argsort(stable=True)
+        result[0, :taken_tok.shape[0]] = taken_tok[order]
+
+        # Return fan_out_tensor (GPU) — caller does .tolist() once (cheap
+        # for K_plus_1 ~9 elements) and updates layout in-place.
+        # See Fix ④ (avoid per-step create_tree_layout).
+        return result, fan_out_tensor
 
     def _select_proxy_sourced_tokens_policy_a(self, glue_logits, gd_for_fork,
                                                 mesa_proxy, draft_forked, fan_out_list,
@@ -1456,7 +1725,15 @@ class DraftRunner(ModelRunner):
         Pass 1: draft-sourced tokens → decode with draft_layout (immediate, no proxy wait)
         Pass 2: proxy-sourced tokens → decode with proxy_layout (after proxy arrives)
         Both passes reuse same KV scratch positions (safe: results extracted to tensors).
+
+        Split-only K1/K2 mode (SSD_FORCE_SPLIT_K1K2=1): branch to a separate
+        path that runs Phase 1 with K1 forwards and Phase 2 with K2 forwards
+        independently. NO continuation. See docs/mesa/04-split-k1k2-design.md.
         """
+        if SPLIT_K1K2_MODE and self.split_k1_long_layout is not None:
+            return self._build_tree_batch_split_k1k2(
+                partial_tree_decode_args, glue_decode_input_ids,
+            )
         B = partial_tree_decode_args["num_tokens"].shape[0]
         K = self.config.speculate_k
 
@@ -1961,6 +2238,182 @@ class DraftRunner(ModelRunner):
             cache_hits_list, draft_acts, proxy_acts,
             proxy_layout=step_proxy_layout,
             draft_layout=_phase1_layout)
+
+    def _build_tree_batch_split_k1k2(self, partial_tree_decode_args, glue_decode_input_ids):
+        """Split-only K1/K2 mode (per docs/mesa/04-split-k1k2-design.md).
+
+        Two independent passes, NO continuation:
+          - Phase 1 (Draft pass): K1 forwards with split_k1_layout (pos=K1+1).
+            Output: draft-sourced rows of depth K1.
+          - Phase 2 (Proxy pass): K2 forwards with split_k2_layout (pos=K2+1).
+            Output: proxy-sourced rows of depth K2.
+
+        Cache contract: draft rows valid_k=K1, proxy rows valid_k=K2.
+        valid_k space = {K1, K2}.
+        """
+        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+
+        B = partial_tree_decode_args["num_tokens"].shape[0]
+        K = self.config.speculate_k
+        K1 = self.config.mesa_phase1_k
+        K2 = self.config.mesa_phase2_k
+        # Split-only K1/K2 mode: K2 <= K1 contract (asserted at init time).
+        # No need to re-assert here, but document the invariant:
+        #   K_max = K1, K_min = K2, valid_k space = {K1, K2} ⊆ [1, K1].
+
+        # Post irecv FIRST so target send doesn't block.
+        proxy_recv_work, proxy_buf = self._irecv_mesa_proxy(B, K)
+
+        # Glue decode (single forward returning logits at the accept-frontier).
+        # Glue width follows valid_k+1 (matched row depth + 1):
+        #   - valid_k=K1 (or first-step K_max=K1) → glue width = K1+1
+        #   - valid_k=K2                          → glue width = K2+1
+        glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
+            self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
+
+        # === Phase 1 layout dispatch by step's valid_k (long/short bucket) ===
+        # valid_k=K1 → split_k1_long_layout (pos=K1+1) — glue width matches.
+        # valid_k=K2 → split_k1_short_layout (pos=K2+1) — glue width matches.
+        # Read pre-sync'd Python scalar from partial_tree_decode_args.
+        _step_valid_k = partial_tree_decode_args.get("valid_k_scalar")
+        if _step_valid_k is None:
+            _step_valid_k = K1  # K_max default for first-step / no-hit path
+        assert _step_valid_k in (K1, K2), (
+            f"split-K1K2 phase1 dispatch: unexpected valid_k={_step_valid_k}; "
+            f"expected K1={K1} or K2={K2}"
+        )
+        _is_short_hit = (_step_valid_k == K2 and K2 != K1)
+        _layout_k1 = (
+            self.split_k1_short_layout if _is_short_hit
+            else self.split_k1_long_layout
+        )
+
+        # === Phase 1: Draft pass, K1 forwards ===
+        _mev_p1b = _mr("phase1_build")
+        # Per-position selector when Phase 1 fan_out_list is non-uniform.
+        # Glue is sized to position_count (= K1+1 long / K2+1 short); slice
+        # both glue_logits and gd_for_fork before passing.
+        _pc = _layout_k1.position_count
+        _is_uniform = all(
+            f == _layout_k1.fan_out_list[0] for f in _layout_k1.fan_out_list
+        )
+        if _is_uniform:
+            draft_forked_full = self._select_draft_sourced_tokens(
+                glue_logits, gd_for_fork, _layout_k1.fan_out_list[0])
+            draft_forked_k1 = draft_forked_full[:, :_pc, :].contiguous()
+        else:
+            draft_forked_k1 = self._select_draft_sourced_tokens_perpos(
+                glue_logits[:, :_pc, :].contiguous(),
+                gd_for_fork[:, :_pc].contiguous(),
+                _layout_k1.fan_out_list,
+            )
+        draft_tree_args = self._build_tree_decode_args_for_layout(
+            partial_tree_decode_args, draft_forked_k1, _layout_k1, cache_hits_list)
+        _mc("phase1_build", _mev_p1b)
+        draft_tokens, draft_logits, draft_acts = self._decode_tree(
+            draft_tree_args, layout=_layout_k1)
+
+        # === Wait for proxy from target ===
+        _mev_pw = _mr("proxy_wait")
+        proxy_recv_work.wait()
+        _mc("proxy_wait", _mev_pw)
+        mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
+        # ===== TRACE point 4 (early): proxy unpack =====
+        if TRACE_SPLIT_K1K2:
+            K_max = K1 if K1 >= K2 else K2
+            _vk_step = partial_tree_decode_args.get("valid_k_scalar")
+            if self.config.mesa_policy == "b":
+                print(f"[TRACE-split-k1k2 #4a proxy_unpack policy=b] K1={K1} K2={K2} K_max={K_max} "
+                      f"step_valid_k_scalar={_vk_step} "
+                      f"chosen_pos.shape={list(mesa_proxy['chosen_pos'].shape)} "
+                      f"chosen_tok.shape={list(mesa_proxy['chosen_tok'].shape)}",
+                      flush=True)
+            else:
+                _topk_ids_shape = list(mesa_proxy["topk_ids"].shape)
+                _topk_probs_shape = list(mesa_proxy["topk_probs"].shape)
+                _per_pos_sum = []
+                _src_pos = min(K2, mesa_proxy["topk_ids"].shape[1])
+                for _p in range(_src_pos):
+                    _per_pos_sum.append(round(float(mesa_proxy["topk_probs"][0, _p].sum().item()), 4))
+                print(f"[TRACE-split-k1k2 #4a proxy_unpack policy=a] K1={K1} K2={K2} K_max={K_max} "
+                      f"step_valid_k_scalar={_vk_step} "
+                      f"topk_ids.shape={_topk_ids_shape} topk_probs.shape={_topk_probs_shape} "
+                      f"fan_out_list={mesa_proxy['fan_out_list']} "
+                      f"topk_probs_sum_per_pos[0..min(K2,wire)-1]={_per_pos_sum}",
+                      flush=True)
+        # ===== END TRACE =====
+
+        # === Phase 2: Proxy pass, K2 forwards (independent) ===
+        _mev_p2b = _mr("phase2_build")
+        pfo = self.config.mesa_proxy_fan_out
+
+        if self.config.mesa_policy == "b":
+            # === Policy B unified path (default) ===
+            # docs/mesa/05-policy-b-fix.md Step 4.
+            # Per-step:
+            #   K = K2 (forward depth, captured in self.split_k2_layout, fixed)
+            #   position_count = K_rank+1 (= valid_k+1, dynamic, in-place update)
+            #   fan_out_tensor = selector output (dedup-aware, sum=total_budget)
+            #
+            # Fix ④: avoid per-step create_tree_layout(...) by updating
+            # self.split_k2_layout in-place. Selector returns fan_out as
+            # GPU tensor (no .tolist() sync); _update_phase2_layout_inplace
+            # rebuilds only the mutable parts.
+            K_rank = _step_valid_k
+            total_budget = self.config.mesa_proxy_total_budget   # = pfo*(K_max+1)
+            proxy_forked, proxy_fan_out_tensor = self._select_proxy_sourced_tokens_unified(
+                mesa_proxy, draft_forked_k1,
+                K_rank=K_rank, total_budget=total_budget,
+            )
+            _layout_k2 = self._update_phase2_layout_inplace(proxy_fan_out_tensor, K_rank)
+            if TRACE_SPLIT_K1K2:
+                _fol_dbg = proxy_fan_out_tensor.tolist()      # debug-only sync
+                print(f"[TRACE-split-k1k2 #4b proxy_seed policy=b] K2={K2} K_rank={K_rank} "
+                      f"total_budget={total_budget} fan_out_list={_fol_dbg}",
+                      flush=True)
+        else:
+            # === Legacy Policy A path (dead — config 검증으로 차단됨) ===
+            # TODO(policy-a): see docs/mesa/05-policy-b-fix.md Section 3.1
+            _layout_k2 = self.split_k2_layout  # K=K2, position_count=K2+1, fan_out=pfo
+            proxy_topk_ids = mesa_proxy["topk_ids"]
+            proxy_seed_3d = torch.zeros(
+                B, _layout_k2.position_count, pfo,
+                dtype=torch.int64, device=self.device,
+            )
+            _src_pos = min(K2, proxy_topk_ids.shape[1])
+            proxy_seed_3d[:, :_src_pos, :] = proxy_topk_ids[:, :_src_pos, :pfo]
+            if _src_pos <= _layout_k2.position_count - 1:
+                _, leaf_topk = torch.topk(
+                    glue_logits[:, _src_pos, :] if _src_pos < glue_logits.shape[1]
+                    else glue_logits[:, -1, :],
+                    pfo, dim=-1,
+                )
+                proxy_seed_3d[:, _src_pos, :] = leaf_topk
+            proxy_forked = proxy_seed_3d.view(B, -1)
+            if TRACE_SPLIT_K1K2:
+                _seeds = []
+                for _p in range(_layout_k2.position_count):
+                    _seeds.append(proxy_seed_3d[0, _p, :].tolist())
+                print(f"[TRACE-split-k1k2 #4b proxy_seed_consumed policy=a] K2={K2} pfo={pfo} "
+                      f"_src_pos={_src_pos} layout.position_count={_layout_k2.position_count} "
+                      f"proxy_seed_3d_per_pos={_seeds}",
+                      flush=True)
+
+        proxy_tree_args = self._build_tree_decode_args_for_layout(
+            partial_tree_decode_args, proxy_forked, _layout_k2, cache_hits_list)
+        _mc("phase2_build", _mev_p2b)
+        proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
+            proxy_tree_args, layout=_layout_k2)
+
+        # === Cache write: draft rows valid_k=K1, proxy rows valid_k=K2 ===
+        # _merge_and_populate_cache infers per-row valid_k from
+        # draft_tokens.shape[1] (=K1) and proxy_tokens.shape[1] (=K2).
+        self._merge_and_populate_cache(
+            draft_tree_args, draft_tokens, draft_logits,
+            proxy_tree_args, proxy_tokens, proxy_logits,
+            cache_hits_list, draft_acts, proxy_acts,
+            proxy_layout=_layout_k2,
+            draft_layout=_layout_k1)
 
     def _build_phase2_hybrid_plan(self, *, draft_tree_args, proxy_tree_args,
                                     step_proxy_layout, fan_out_list):
@@ -3686,7 +4139,14 @@ class DraftRunner(ModelRunner):
         # Step 9A: draft layout dispatch by step's valid_k (long/short bucket).
         # When not passed (legacy path), fall back to the static draft_layout.
         _draft_layout = draft_layout or self.draft_layout
-        K_long = self.config.speculate_k
+        # Cache row width: split-only K1/K2 mode pads to K_max=max(K1,K2)
+        # so wire/cache layout is independent of K1+K2. Hybrid stays at K_long.
+        if SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
+            K1_cfg = self.config.mesa_phase1_k
+            K2_cfg = self.config.mesa_phase2_k
+            K_long = K1_cfg if K1_cfg >= K2_cfg else K2_cfg  # = K_max in this mode
+        else:
+            K_long = self.config.speculate_k
         # Phase 3: draft row valid_k = draft_tokens.shape[1] (K1 without
         # continuation, K_long with continuation). proxy row valid_k =
         # proxy_tokens.shape[1] (K_short = K2).

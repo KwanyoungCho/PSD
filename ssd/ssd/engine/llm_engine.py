@@ -237,9 +237,22 @@ class LLMEngine:
                 f"[metrics] Avg Tokens per step (incl recovery): {avg_tokens_per_step:.2f}", flush=True)
 
             total_accepted = ttl_accepted_with_recovery - ttl_num_spec_steps
-            avg_acceptance_rate = (total_accepted / ttl_num_spec_steps) / self.config.speculate_k
+            # Split-only K1/K2 mode: effective spec depth is K_max = max(K1, K2),
+            # not K_long = K1+K2. Use K_max so accept fraction is comparable to
+            # baseline async-SSD k=K_max.
+            import os as _os_metric
+            _split_k1k2 = (
+                _os_metric.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                and self.config.mesa_phase1_k is not None
+            )
+            if _split_k1k2:
+                _accept_denom = max(self.config.mesa_phase1_k, self.config.mesa_phase2_k)
+            else:
+                _accept_denom = self.config.speculate_k
+            avg_acceptance_rate = (total_accepted / ttl_num_spec_steps) / _accept_denom
             print(
-                f"[metrics] Avg Fraction of Speculated Tokens Accepted: {avg_acceptance_rate:.2f}", flush=True)
+                f"[metrics] Avg Fraction of Speculated Tokens Accepted: {avg_acceptance_rate:.2f} "
+                f"(denom={_accept_denom})", flush=True)
             print(
                 f"[metrics] Avg target time per full step (ms): {sum(METRICS['target_step_times']) * 1000 / len(METRICS['target_step_times']):.2f}", flush=True)
             if METRICS['target_verify_times']:

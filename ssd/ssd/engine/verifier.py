@@ -71,6 +71,23 @@ class Verifier(VerifierBase):
                 _step_lookahead = int(_vk_unique.item())
             else:
                 _step_lookahead = self.lookahead
+            # ===== TRACE point 2: speculator → verifier boundary =====
+            _trace_split = (
+                os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
+                and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                and config.mesa_phase1_k is not None
+            )
+            if _trace_split:
+                _K1 = config.mesa_phase1_k
+                _K2 = config.mesa_phase2_k
+                _K_max = _K1 if _K1 >= _K2 else _K2
+                _vk_list = speculate_result.valid_k.tolist() if speculate_result.valid_k is not None else None
+                print(f"[TRACE-split-k1k2 #2 spec→verify] K1={_K1} K2={_K2} K_max={_K_max} "
+                      f"valid_k={_vk_list} _step_lookahead={_step_lookahead} "
+                      f"speculations.shape={list(speculate_result.speculations.shape)} "
+                      f"logits_q.shape={list(speculate_result.logits_q.shape)}",
+                      flush=True)
+            # ===== END TRACE =====
             # v1 hybrid: _step_lookahead comes from speculate_result.valid_k
             # (uniform per batch at B=1). Passed through call("run", ..., step_lookahead)
             # below so all TP ranks see the same value via SHM.
@@ -263,6 +280,51 @@ class Verifier(VerifierBase):
             h[1:K] = cumprod[:-1] * (1 - accept_probs[0, 1:])
         h[K] = cumprod[-1]  # all-accept
 
+        # === Policy B unified K+1 path (default since 2026-04-29) ===
+        # docs/mesa/05-policy-b-fix.md Step 2.
+        # Replaces legacy Policy A/B branches below. GPU-only, no .cpu().tolist().
+        # Wire schema (Policy B): {chosen_pos[N], chosen_tok[N]} score-sorted.
+        if config.mesa_policy == "b":
+            # pos == K (all-accept): target's full distribution at exit_logits[:, K, :].
+            # Note: existing p_E only covers [:, :K, :] (line 246) — read separately.
+            pE_K = torch.softmax(exit_logits[:, K, :].float(), dim=-1)        # [B, V]
+            pE_K_topk_probs, pE_K_topk_ids = pE_K.topk(top_k, dim=-1)         # [B, top_k]
+            pE_K_topk_probs = pE_K_topk_probs / pE_K_topk_probs.sum(-1, keepdim=True).clamp(min=1e-10)
+
+            # concat positions [0..K-1] (residual) + position K (all-accept) → [B, K+1, top_k]
+            correction_topk_probs = torch.cat(
+                [topk_probs, pE_K_topk_probs.unsqueeze(1)], dim=1)            # [B, K+1, top_k]
+            correction_topk_ids = torch.cat(
+                [topk_ids, pE_K_topk_ids.unsqueeze(1)], dim=1)                # [B, K+1, top_k]
+
+            # Global top-N. wire_N is config-fixed (K_max+1 worst-case).
+            # top_k auto-raise (config.py) ensures (K+1)*top_k ≥ wire_N for current step's K.
+            wire_N = config.mesa_proxy_wire_N
+            P_iv = h.view(K + 1, 1) * correction_topk_probs[0]                # [K+1, top_k]
+            _, top_idx = P_iv.flatten().topk(wire_N)                          # [wire_N]
+            chosen_pos = top_idx // top_k                                     # [wire_N], ∈ [0, K]
+            chosen_tok = correction_topk_ids[0].view(-1).gather(0, top_idx)   # [wire_N]
+
+            # ===== TRACE point 3 (Policy B) =====
+            if (
+                os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
+                and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                and config.mesa_phase1_k is not None
+            ):
+                _K1 = config.mesa_phase1_k
+                _K2 = config.mesa_phase2_k
+                print(f"[TRACE-split-k1k2 #3 proxy_compute policy=b] K1={_K1} K2={_K2} "
+                      f"K(=valid_k)={K} wire_N={wire_N} top_k={top_k} "
+                      f"chosen_pos.shape={list(chosen_pos.shape)}",
+                      flush=True)
+            # NCCL send: chosen_pos [wire_N int64] + chosen_tok [wire_N int64]
+            send_int64(async_pg, draft_rank, chosen_pos, chosen_tok)
+            return
+
+        # === Legacy Policy A / Policy B (dead branches) ===
+        # TODO(policy-a): Policy A retained as dead branch. Default is "b" since
+        # 2026-04-29; see docs/mesa/05-policy-b-fix.md Section 3.1.
+
         # Budget allocation
         if h[:K].sum() < 1e-6:
             # All accept expected → uniform fan_out (both policies)
@@ -328,6 +390,30 @@ class Verifier(VerifierBase):
             prb_pad = torch.zeros(B, pad_pos, top_k, dtype=topk_probs.dtype, device=topk_probs.device)
             topk_probs = torch.cat([topk_probs, prb_pad], dim=1)         # [B, K_long, top_k]
 
+        # ===== TRACE point 3: target _compute_and_send_proxy =====
+        if (
+            os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
+            and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+            and config.mesa_phase1_k is not None
+        ):
+            _K1 = config.mesa_phase1_k
+            _K2 = config.mesa_phase2_k
+            _K_max = _K1 if _K1 >= _K2 else _K2
+            assert K in (_K1, _K2), (
+                f"split-k1k2 proxy compute: K={K} not in {{K1={_K1}, K2={_K2}}}"
+            )
+            # per-position topk_probs sum (real positions [0..K-1], padded [K..K_long-1])
+            _per_pos_sum = []
+            for _p in range(min(_K2, topk_probs.shape[1])):
+                _per_pos_sum.append(round(float(topk_probs[0, _p].sum().item()), 4))
+            print(f"[TRACE-split-k1k2 #3 proxy_compute] K1={_K1} K2={_K2} K_max={_K_max} "
+                  f"K(=valid_k passed in)={K} K_long={config.speculate_k} "
+                  f"fan_out_list={fan_out_list} "
+                  f"topk_ids.shape={list(topk_ids.shape)} "
+                  f"topk_probs.shape={list(topk_probs.shape)} "
+                  f"topk_probs_sum_per_pos[0..K2-1]={_per_pos_sum}",
+                  flush=True)
+        # ===== END TRACE =====
         # NCCL send: fan_out_list [K_long+1] + topk_ids [B,K_long,top_k] + topk_probs [B,K_long,top_k]
         send_int64(async_pg, draft_rank,
                    fan_out_tensor,

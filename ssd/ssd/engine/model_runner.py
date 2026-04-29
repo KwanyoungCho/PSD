@@ -277,20 +277,65 @@ class ModelRunner:
                     self.config.mesa_phase2_k if self.config.mesa_phase1_k is not None
                     else K_long_cfg
                 )
-                _layout_specs = [
-                    ("draft", self.config.mesa_draft_fan_out, K_long_cfg + 1),
-                    ("proxy", self.config.mesa_proxy_fan_out, K_long_cfg + 1),
-                ]
+                _split_k1k2 = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                # Legacy draft/proxy wrappers — needed for hybrid path only.
+                # Skipped in split-only mode (split uses split_k1_{long,short} + split_k2).
+                if _split_k1k2:
+                    _layout_specs = []
+                else:
+                    _layout_specs = [
+                        ("draft", self.config.mesa_draft_fan_out, K_long_cfg + 1),
+                        ("proxy", self.config.mesa_proxy_fan_out, K_long_cfg + 1),
+                    ]
                 if self.config.mesa_phase1_k is not None:
-                    _layout_specs.append(
-                        ("phase1_long", self.config.mesa_draft_fan_out, K_long_cfg + 1)
-                    )
-                    # Step 9A: phase1_short bucket for short-hit dispatch.
-                    _layout_specs.append(
-                        ("phase1_short", self.config.mesa_draft_fan_out, K_short_cfg + 1)
-                    )
-                for layout_name, layout_fan_out, layout_pos_count in _layout_specs:
-                    layout_mq_len = layout_fan_out * layout_pos_count
+                    K1_cfg_split = self.config.mesa_phase1_k
+                    K2_cfg_split = self.config.mesa_phase2_k
+                    if _split_k1k2:
+                        # Split-only K1/K2 mode: phase1 long/short + phase2.
+                        # K2 <= K1 contract (asserted at draft init).
+                        # Phase 1 supports non-uniform fan_out_list per position
+                        # (config.mesa_split_phase1_fan_out_list). Phase 2 is
+                        # uniform proxy_fo (split-K1/K2 design).
+                        _p1_list = self.config.mesa_split_phase1_fan_out_list
+                        _dfo = self.config.mesa_draft_fan_out
+                        _pfo = self.config.mesa_proxy_fan_out
+                        _p1_mq_long = sum(_p1_list) if _p1_list else _dfo * (K1_cfg_split + 1)
+                        _layout_specs.append(
+                            ("split_k1_long", None, None, _p1_mq_long)
+                        )
+                        if K2_cfg_split < K1_cfg_split:
+                            _p1_mq_short = (
+                                sum(_p1_list[:K2_cfg_split + 1]) if _p1_list
+                                else _dfo * (K2_cfg_split + 1)
+                            )
+                            _layout_specs.append(
+                                ("split_k1_short", None, None, _p1_mq_short)
+                            )
+                        # Phase 2 worst-case sizing for unified Policy B (옵션 A-1).
+                        # docs/mesa/05-policy-b-fix.md Section 3.7.
+                        # MQ_LEN = total_budget = pfo*(K_max+1). Phase 2 tree size
+                        # is uniform across hit types (option A: work uniform, no
+                        # short-hit savings). wire_N (=total_budget+buffer) is
+                        # NCCL-pack only and unrelated to layout MQ_LEN.
+                        K_rank_max = max(K1_cfg_split, K2_cfg_split)   # = K1
+                        _p2_mq = _pfo * (K_rank_max + 1)
+                        _layout_specs.append(
+                            ("split_k2", None, None, _p2_mq)
+                        )
+                    else:
+                        # Hybrid path wrappers.
+                        _layout_specs.append(
+                            ("phase1_long", self.config.mesa_draft_fan_out, K_long_cfg + 1)
+                        )
+                        _layout_specs.append(
+                            ("phase1_short", self.config.mesa_draft_fan_out, K_short_cfg + 1)
+                        )
+                for _spec in _layout_specs:
+                    if len(_spec) == 4:
+                        layout_name, layout_fan_out, layout_pos_count, layout_mq_len = _spec
+                    else:
+                        layout_name, layout_fan_out, layout_pos_count = _spec
+                        layout_mq_len = layout_fan_out * layout_pos_count
                     l_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
@@ -317,38 +362,45 @@ class ModelRunner:
                 # Phase C-1 debug: fresh eager-only proxy wrapper. NEVER used
                 # by CG capture or main runtime. Mirror experiments use this
                 # to isolate wrapper-state pollution from CG-shared wrappers.
-                # use_cuda_graph=False, separate buffers, same dims as proxy.
-                _pe_proxy_fo = self.config.mesa_proxy_fan_out
-                _pe_total = _pe_proxy_fo * (self.config.speculate_k + 1)
-                pe_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
-                pe_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
-                pe_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
-                pe_kv_lpl = torch.empty(max_bs, dtype=torch.int32, device=self.device)
-                pe_mask = torch.empty(
-                    max_bs * _pe_total * self.config.max_model_len,
-                    dtype=torch.uint8, device=self.device,
-                )
-                pe_mask_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
-                pe_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-                    self.workspace_buffer, "NHD",
-                    use_cuda_graph=False,
-                    qo_indptr_buf=pe_cu,
-                    paged_kv_indptr_buf=pe_kv_indptr,
-                    paged_kv_indices_buf=pe_kv_indices,
-                    paged_kv_last_page_len_buf=pe_kv_lpl,
-                    custom_mask_buf=pe_mask,
-                    mask_indptr_buf=pe_mask_indptr,
-                )
-                self.prefill_wrappers_by_layout["proxy_eager_debug"] = {max_bs: pe_wrapper}
-                print(f'[MESA debug] proxy_eager_debug wrapper created '
-                      f'(use_cuda_graph=False, MQ={_pe_total})', flush=True)
+                # Skipped in split-only K1/K2 mode (debug-only artifact).
+                if not _split_k1k2:
+                    _pe_proxy_fo = self.config.mesa_proxy_fan_out
+                    _pe_total = _pe_proxy_fo * (self.config.speculate_k + 1)
+                    pe_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                    pe_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                    pe_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
+                    pe_kv_lpl = torch.empty(max_bs, dtype=torch.int32, device=self.device)
+                    pe_mask = torch.empty(
+                        max_bs * _pe_total * self.config.max_model_len,
+                        dtype=torch.uint8, device=self.device,
+                    )
+                    pe_mask_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
+                    pe_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                        self.workspace_buffer, "NHD",
+                        use_cuda_graph=False,
+                        qo_indptr_buf=pe_cu,
+                        paged_kv_indptr_buf=pe_kv_indptr,
+                        paged_kv_indices_buf=pe_kv_indices,
+                        paged_kv_last_page_len_buf=pe_kv_lpl,
+                        custom_mask_buf=pe_mask,
+                        mask_indptr_buf=pe_mask_indptr,
+                    )
+                    self.prefill_wrappers_by_layout["proxy_eager_debug"] = {max_bs: pe_wrapper}
+                    print(f'[MESA debug] proxy_eager_debug wrapper created '
+                          f'(use_cuda_graph=False, MQ={_pe_total})', flush=True)
 
                 # Step 6 / Step 8 / Step 9B: phase2_hybrid wrapper families.
                 # Eager fallback (use_cuda_graph=False) keyed by name; CG
                 # variant (use_cuda_graph=True) keyed by f"{name}_cg".
                 # Runtime picks _cg by default when graph is captured;
                 # SSD_FORCE_EAGER_HYBRID_PHASE2=1 → eager fallback.
-                if self.config.mesa_phase1_k is not None:
+                # Skip phase2_hybrid + correct_split_cont wrappers in split-only
+                # mode (split path uses split_k1_long/short + split_k2 only).
+                _split_k1k2_skip_hybrid = (
+                    self.config.mesa_phase1_k is not None
+                    and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                )
+                if self.config.mesa_phase1_k is not None and not _split_k1k2_skip_hybrid:
                     K1_cfg = self.config.mesa_phase1_k
                     K2_cfg = self.config.mesa_phase2_k
                     K_long_cfg = K1_cfg + K2_cfg
@@ -685,28 +737,58 @@ class ModelRunner:
                     if self.config.mesa_phase1_k is not None:
                         K_long = self.config.speculate_k
                         K_short = self.config.mesa_phase2_k
-                        # IMPORTANT: separate graph_pool per bucket. Sharing the
-                        # pool aliases memory between captures of different
-                        # max_seqlen_q (long=K_long+1 vs short=K_short+1) and
-                        # results in stale plan state on replay (manifests as
-                        # multi-prompt hang on first short-bucket replay).
-                        mesa_gv_l, mesa_pool_l, mesa_pre_l, mesa_post_l, mesa_bs_l = \
-                            capture_mesa_verify_cudagraph(self, lookahead=K_long)
-                        self.graph_vars["mesa_verify_long"] = mesa_gv_l
-                        self.graph_pools["mesa_verify_long"] = mesa_pool_l
-                        self.graphs["mesa_verify_long_pre"] = mesa_pre_l
-                        self.graphs["mesa_verify_long_post"] = mesa_post_l
-                        self.graph_bs_list["mesa_verify_long"] = mesa_bs_l
-                        mesa_gv_s, mesa_pool_s, mesa_pre_s, mesa_post_s, mesa_bs_s = \
-                            capture_mesa_verify_cudagraph(self, lookahead=K_short, graph_pool=None)
-                        self.graph_vars["mesa_verify_short"] = mesa_gv_s
-                        self.graph_pools["mesa_verify_short"] = mesa_pool_s
-                        self.graphs["mesa_verify_short_pre"] = mesa_pre_s
-                        self.graphs["mesa_verify_short_post"] = mesa_post_s
-                        self.graph_bs_list["mesa_verify_short"] = mesa_bs_s
-                        print(f'[MESA hybrid] Captured 2-bucket verify CG (separate pools): '
-                              f'long(K={K_long}) + short(K={K_short}), '
-                              f'exit_layer={self.config.mesa_exit_layer}', flush=True)
+                        _split_k1k2_target = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                        # Hybrid mesa_verify_long/short captures — skipped in
+                        # split-only mode (saves ~K_long+1 wide buffer × max_bs
+                        # × max_seqlen GPU memory). Split path uses
+                        # mesa_verify_k1 / mesa_verify_k2 only.
+                        if not _split_k1k2_target:
+                            # IMPORTANT: separate graph_pool per bucket.
+                            mesa_gv_l, mesa_pool_l, mesa_pre_l, mesa_post_l, mesa_bs_l = \
+                                capture_mesa_verify_cudagraph(self, lookahead=K_long)
+                            self.graph_vars["mesa_verify_long"] = mesa_gv_l
+                            self.graph_pools["mesa_verify_long"] = mesa_pool_l
+                            self.graphs["mesa_verify_long_pre"] = mesa_pre_l
+                            self.graphs["mesa_verify_long_post"] = mesa_post_l
+                            self.graph_bs_list["mesa_verify_long"] = mesa_bs_l
+                            mesa_gv_s, mesa_pool_s, mesa_pre_s, mesa_post_s, mesa_bs_s = \
+                                capture_mesa_verify_cudagraph(self, lookahead=K_short, graph_pool=None)
+                            self.graph_vars["mesa_verify_short"] = mesa_gv_s
+                            self.graph_pools["mesa_verify_short"] = mesa_pool_s
+                            self.graphs["mesa_verify_short_pre"] = mesa_pre_s
+                            self.graphs["mesa_verify_short_post"] = mesa_post_s
+                            self.graph_bs_list["mesa_verify_short"] = mesa_bs_s
+                        if not _split_k1k2_target:
+                            print(f'[MESA hybrid] Captured 2-bucket verify CG (separate pools): '
+                                  f'long(K={K_long}) + short(K={K_short}), '
+                                  f'exit_layer={self.config.mesa_exit_layer}', flush=True)
+                        # Split-only K1/K2 mode: target verify per-bucket
+                        # captures (mesa_verify_k1, mesa_verify_k2). Single
+                        # bucket dispatch by valid_k. K1==K2 is fine (still
+                        # capture both for clean dispatch logic).
+                        if os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1":
+                            K1 = self.config.mesa_phase1_k
+                            K2 = self.config.mesa_phase2_k
+                            mesa_gv_k1, mesa_pool_k1, mesa_pre_k1, mesa_post_k1, mesa_bs_k1 = \
+                                capture_mesa_verify_cudagraph(self, lookahead=K1, graph_pool=None)
+                            self.graph_vars["mesa_verify_k1"] = mesa_gv_k1
+                            self.graph_pools["mesa_verify_k1"] = mesa_pool_k1
+                            self.graphs["mesa_verify_k1_pre"] = mesa_pre_k1
+                            self.graphs["mesa_verify_k1_post"] = mesa_post_k1
+                            self.graph_bs_list["mesa_verify_k1"] = mesa_bs_k1
+                            # Skip mesa_verify_k2 capture when K1==K2 (same as k1).
+                            if K2 < K1:
+                                mesa_gv_k2, mesa_pool_k2, mesa_pre_k2, mesa_post_k2, mesa_bs_k2 = \
+                                    capture_mesa_verify_cudagraph(self, lookahead=K2, graph_pool=None)
+                                self.graph_vars["mesa_verify_k2"] = mesa_gv_k2
+                                self.graph_pools["mesa_verify_k2"] = mesa_pool_k2
+                                self.graphs["mesa_verify_k2_pre"] = mesa_pre_k2
+                                self.graphs["mesa_verify_k2_post"] = mesa_post_k2
+                                self.graph_bs_list["mesa_verify_k2"] = mesa_bs_k2
+                            print(f'[MESA split-K1K2] Captured mesa_verify_k1 CG (K1={K1})'
+                                  + (f' + mesa_verify_k2 CG (K2={K2})' if K2 < K1
+                                     else f' (K2==K1, k2 SKIPPED)'),
+                                  flush=True)
                     else:
                         mesa_gv, mesa_pool, mesa_pre, mesa_post, mesa_bs = capture_mesa_verify_cudagraph(self)
                         self.graph_vars["mesa_verify"] = mesa_gv
@@ -716,17 +798,26 @@ class ModelRunner:
                         self.graph_bs_list["mesa_verify"] = mesa_bs
                         print(f'[MESA] Captured split verify CudaGraph (exit_layer={self.config.mesa_exit_layer})', flush=True)
                 else:
-                    # Non-MESA or draft: full verify CudaGraph (K_long+1 wide)
-                    verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = capture_verify_cudagraph(self)
-                    self.graph_vars["verify"] = verify_graph_vars
-                    self.graph_pools["verify"] = verify_graph_pool
-                    self.graphs["verify"] = verify_graphs
-                    self.graph_bs_list["verify"] = verify_graph_bs_list
+                    _split_k1k2_draft = (
+                        self.is_draft
+                        and self.config.mesa_phase1_k is not None
+                        and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                    )
+                    # Hybrid `verify` (K_long+1) and `verify_short` (K_short+1)
+                    # are NOT used by split-only path. Skip in split mode.
+                    if not _split_k1k2_draft:
+                        # Non-MESA or hybrid draft: full verify CudaGraph (K_long+1 wide)
+                        verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = capture_verify_cudagraph(self)
+                        self.graph_vars["verify"] = verify_graph_vars
+                        self.graph_pools["verify"] = verify_graph_pool
+                        self.graphs["verify"] = verify_graphs
+                        self.graph_bs_list["verify"] = verify_graph_bs_list
 
-                    # Step 9B-0: draft-side glue_short bucket. K_short+1 wide
-                    # multi-query decode CG for short-hit step's glue. Target
-                    # never enters this bucket (target verify always K_long+1).
-                    if self.is_draft and self.config.mesa_phase1_k is not None:
+                    # Step 9B-0: draft-side glue_short bucket (hybrid only).
+                    if (
+                        self.is_draft and self.config.mesa_phase1_k is not None
+                        and not _split_k1k2_draft
+                    ):
                         K_short = self.config.mesa_phase2_k
                         v_s_gv, v_s_pool, v_s_graphs, v_s_bs = capture_verify_cudagraph(
                             self, k_plus_1=K_short + 1,
@@ -737,6 +828,33 @@ class ModelRunner:
                         self.graph_bs_list["verify_short"] = v_s_bs
                         print(f'[MESA] Captured draft glue_short CG '
                               f'(K_short+1={K_short + 1})', flush=True)
+                    if self.is_draft and self.config.mesa_phase1_k is not None:
+                        # Split-only K1/K2 mode: draft glue per-bucket captures
+                        # (verify_k1, verify_k2). Dispatch by valid_k.
+                        if os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1":
+                            K1 = self.config.mesa_phase1_k
+                            K2 = self.config.mesa_phase2_k
+                            v_k1_gv, v_k1_pool, v_k1_graphs, v_k1_bs = capture_verify_cudagraph(
+                                self, k_plus_1=K1 + 1,
+                            )
+                            self.graph_vars["verify_k1"] = v_k1_gv
+                            self.graph_pools["verify_k1"] = v_k1_pool
+                            self.graphs["verify_k1"] = v_k1_graphs
+                            self.graph_bs_list["verify_k1"] = v_k1_bs
+                            # Skip verify_k2 capture when K1==K2 (same as k1).
+                            if K2 < K1:
+                                v_k2_gv, v_k2_pool, v_k2_graphs, v_k2_bs = capture_verify_cudagraph(
+                                    self, k_plus_1=K2 + 1,
+                                )
+                                self.graph_vars["verify_k2"] = v_k2_gv
+                                self.graph_pools["verify_k2"] = v_k2_pool
+                                self.graphs["verify_k2"] = v_k2_graphs
+                                self.graph_bs_list["verify_k2"] = v_k2_bs
+                            print(f'[MESA split-K1K2] Captured draft glue_k1 CG '
+                                  f'(K1+1={K1 + 1})'
+                                  + (f' + glue_k2 CG (K2+1={K2 + 1})' if K2 < K1
+                                     else ' (K2==K1, k2 SKIPPED)'),
+                                  flush=True)
             if self.config.speculate and self.is_draft and self.config.draft_async:
                 fi_tree_decode_graph_vars, fi_tree_decode_graph_pool, fi_tree_decode_graphs, fi_tree_decode_graph_bs_list = capture_fi_tree_decode_cudagraph(self)  # fi tree decode cudagraph, draft only
                 self.graph_vars["fi_tree_decode"] = fi_tree_decode_graph_vars
@@ -1103,7 +1221,16 @@ class ModelRunner:
             # EAGLE draft glue decode with 2K+1 per seq
             return run_glue_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["glue_decode"], hidden_states)
         elif is_mq_kp1 and self.config.mesa_enabled and not self.is_draft \
-                and ("mesa_verify" in self.graph_vars or "mesa_verify_long" in self.graph_vars):
+                and ("mesa_verify" in self.graph_vars or "mesa_verify_long" in self.graph_vars
+                     or "mesa_verify_k1" in self.graph_vars):
+            # ---- Split-only K1/K2 mode: target verify dispatch ----
+            # SSD_FORCE_SPLIT_K1K2 → buckets are {mesa_verify_k1, mesa_verify_k2}.
+            # Independent dispatch helper so this branch never falls back to
+            # hybrid's mesa_verify_long/short.
+            if os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1":
+                return self._run_split_k1k2_target_verify(
+                    input_ids, positions, last_only,
+                )
             # MESA target verify: split CudaGraph (pre → proxy → post).
             # v1 hybrid: dispatch between mesa_verify_long (lookahead=K_long) and
             # mesa_verify_short (lookahead=K_short=K2) by reading lookahead from
@@ -1132,6 +1259,20 @@ class ModelRunner:
                     self.graph_vars["mesa_verify"],
                     mesa_proxy_fn=self._mesa_proxy_fn)
         elif is_mq_kp1: # verify or non-EAGLE glue decode, "verify" ~ mq decode of len K+1
+            # ---- Split-only K1/K2 mode: draft glue dispatch ----
+            # SSD_FORCE_SPLIT_K1K2 → buckets are {verify_k1, verify_k2}.
+            # Independent dispatch helper so this branch never falls back to
+            # hybrid's verify/verify_short.
+            if (
+                self.is_draft
+                and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+                and self.config.mesa_phase1_k is not None
+                and "verify_k1" in self.graph_vars
+            ):
+                # K1==K2: only verify_k1 captured; helper routes both lookaheads to it.
+                return self._run_split_k1k2_glue(
+                    input_ids, positions, last_only,
+                )
             # Step 9B-0: draft glue dispatch by valid_k. Long-hit (= K_long)
             # uses verify (K_long+1 wide); short-hit (= K_short) uses
             # verify_short (K_short+1 wide). Target verify is always
@@ -1147,6 +1288,58 @@ class ModelRunner:
             return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify"], bucket="verify")
         else: # draft decoding in sync spec or JIT single-token decode
             return run_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["decode"], hidden_states=hidden_states)
+
+    # ============================================================
+    # Split-only K1/K2 mode: independent dispatch helpers.
+    # Per docs/mesa/04-split-k1k2-design.md.
+    # These NEVER call into hybrid's verify_short / verify / mesa_verify_long /
+    # mesa_verify_short. valid_k space = {K1, K2}; K_max = max(K1, K2).
+    # ============================================================
+    def _run_split_k1k2_glue(self, input_ids, positions, last_only):
+        """Draft-side glue dispatch in split-only K1/K2 mode (K2 <= K1).
+
+        Reads context.glue_valid_k. Picks verify_k1 (K1+1) or verify_k2 (K2+1).
+        At K1==K2, verify_k2 is not captured — both vk values route to verify_k1.
+        First step / cache-empty default = K_max = K1.
+        """
+        K1 = self.config.mesa_phase1_k
+        K2 = self.config.mesa_phase2_k
+        _ctx = get_context()
+        _vk = getattr(_ctx, "glue_valid_k", None)
+        if _vk is None:
+            _vk = K1  # K_max default
+        assert _vk in (K1, K2), (
+            f"split-K1K2 glue: unexpected valid_k={_vk}; "
+            f"expected K1={K1} or K2={K2}"
+        )
+        # K1==K2: verify_k2 not captured — collapse to verify_k1.
+        bucket = "verify_k2" if (_vk == K2 and K2 < K1) else "verify_k1"
+        return run_verify_cudagraph(
+            self, input_ids, positions, last_only,
+            self.graph_vars[bucket], bucket=bucket,
+        )
+
+    def _run_split_k1k2_target_verify(self, input_ids, positions, last_only):
+        """Target-side verify dispatch in split-only K1/K2 mode (K2 <= K1).
+
+        Reads self._mesa_step_lookahead (Verifier sets it from speculate_result.
+        valid_k). At K1==K2, mesa_verify_k2 is not captured — both lookaheads
+        route to mesa_verify_k1.
+        """
+        K1 = self.config.mesa_phase1_k
+        K2 = self.config.mesa_phase2_k
+        _step_lookahead = getattr(self, "_mesa_step_lookahead", K1)
+        assert _step_lookahead in (K1, K2), (
+            f"split-K1K2 target verify: unexpected lookahead={_step_lookahead}; "
+            f"expected K1={K1} or K2={K2}"
+        )
+        bucket = "mesa_verify_k2" if (_step_lookahead == K2 and K2 < K1) else "mesa_verify_k1"
+        return run_mesa_verify_cudagraph(
+            self, input_ids, positions, last_only,
+            self.graph_vars[bucket],
+            mesa_proxy_fn=self._mesa_proxy_fn,
+            bucket=bucket,
+        )
 
 
     # should add spec_k that just loops this k times
