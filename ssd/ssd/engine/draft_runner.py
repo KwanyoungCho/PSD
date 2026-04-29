@@ -1513,9 +1513,13 @@ class DraftRunner(ModelRunner):
             K_plus_1, device=device, dtype=torch.int64
         ).repeat_interleave(fan_out_tensor)
         layout.fan_idx_miss = layout.fan_idx_hit
-        # fan_out_list (Python list) — only needed by ``layout.fan_out_list[0]``
-        # in metadata_ints (F slot); F is unused downstream in _decode_tree.
-        # Defer the .tolist() to caller if it really needs the list.
+        # fan_out_list (Python list) — REQUIRED to match position_count by
+        # cudagraph_helpers.run_fi_tree_decode_cudagraph (line 329:
+        # np.repeat(_tril, _fol)). For K1==K2 case, placeholder length
+        # accidentally matched K_rank+1; for K1!=K2 it didn't → ValueError.
+        # 1 GPU sync / step (≤9 elements). Cheap, but necessary for CG mask.
+        layout.fan_out_list = fan_out_tensor.tolist()
+        layout.fan_out_list_miss = layout.fan_out_list
         return layout
 
     def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
