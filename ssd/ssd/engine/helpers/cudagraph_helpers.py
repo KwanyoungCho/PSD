@@ -4,7 +4,7 @@ import numpy as np
 from typing import List
 from ssd.utils.context import set_context, get_context, reset_context
 from ssd.engine.helpers.mask_helpers import get_custom_mask
-from time import perf_counter, perf_counter_ns
+from time import perf_counter
 
 
 ## RUN CUDAGRAPHS
@@ -144,31 +144,6 @@ cache = {}
 _plan_event = None  # Lazy-init CUDA event for plan() sync
 PROFILE = os.environ.get("SSD_PROFILE", "0") == "1"
 PROFILE_DRAFT = os.environ.get("SSD_PROFILE_DRAFT", "0") == "1"
-# Fine-grained prep breakdown (CPU wall via perf_counter_ns).
-# Aggregates ns per sub-block per phase. Dump at engine shutdown.
-PROFILE_PREP = os.environ.get("SSD_PROFILE_PREP", "0") == "1"
-_prep_breakdown = {}   # {(label, sub): [ns, ...]}
-_pp_call_counter = [0]
-_pp_flush_every = 200   # flush to file every N record calls
-def _pp_flush_file():
-    if not PROFILE_PREP or not _prep_breakdown: return
-    import json as _json, os as _os_pp
-    _dir = _os_pp.environ.get("SSD_PROFILE_DIR", "/tmp")
-    _os_pp.makedirs(_dir, exist_ok=True)
-    _path = _os_pp.path.join(_dir, f"prep_breakdown_pid{_os_pp.getpid()}.json")
-    _ser = {f"{k[0]}|{k[1]}": v for k, v in _prep_breakdown.items()}
-    with open(_path, "w") as _f:
-        _json.dump(_ser, _f)
-def _pp_record(key, ns):
-    if not PROFILE_PREP: return
-    _prep_breakdown.setdefault(key, []).append(ns)
-    _pp_call_counter[0] += 1
-    if _pp_call_counter[0] % _pp_flush_every == 0:
-        _pp_flush_file()
-def _pp_dump():
-    _pp_flush_file()
-import atexit as _atexit
-_atexit.register(_pp_dump)
 _draft_events = []  # [(step, label, start_event, end_event), ...]
 
 def flush_draft_profile():
@@ -297,7 +272,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     # CPU tensors let plan() skip its internal .to("cpu") GPU->CPU syncs.
     # For B<=8, CPU slicing also avoids GPU boolean indexing.
     if step == 0:
-        if PROFILE_PREP: _pp_t0 = perf_counter_ns()
         # Layout change: clear cache if MQ_LEN changed (2-pass MESA reuses global cache)
         if cache.get("_mq_len") != MQ_LEN:
             cache.clear()
@@ -308,9 +282,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         block_size = model_runner.block_size
         cache["precomputed_kv"] = []
         cache["plan_cpu_args"] = []
-        if PROFILE_PREP:
-            _pp_record((_prep_label, "A_setup_tolist"), perf_counter_ns() - _pp_t0)
-            _pp_t0 = perf_counter_ns()
 
         if B <= 8:
             # PERFORMANCE: CPU-only kv_indices via slicing (no GPU boolean indexing)
@@ -345,16 +316,10 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
                     [cl % block_size if cl % block_size != 0 else block_size for cl in step_cls],
                     dtype=torch.int32)
                 cache["plan_cpu_args"].append((kv_indptr_cpu, kv_lpl_cpu))
-        if PROFILE_PREP:
-            _pp_record((_prep_label, "B_kv_iter_loop"), perf_counter_ns() - _pp_t0)
-            _pp_t0 = perf_counter_ns()
 
         # CPU mask precompute: build all K packed masks using numpy at step 0.
         # Eliminates per-step get_custom_mask (GPU) + segment_packbits + GPU->CPU syncs.
         cache_hits_list = cache_hits[:B].tolist()
-        if PROFILE_PREP:
-            _pp_record((_prep_label, "C_cachehits_tolist"), perf_counter_ns() - _pp_t0)
-            _pp_t0 = perf_counter_ns()
 
         # Layout change detection: if fan_out changed, recompute glue masks
         _needs_recompute = "glue_hit_np" not in cache
@@ -376,9 +341,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
 
         cache["cpu_packed_masks"] = []
         cache["cpu_packed_indptrs"] = []
-        if PROFILE_PREP:
-            _pp_record((_prep_label, "D_glue_recompute"), perf_counter_ns() - _pp_t0)
-            _pp_t0 = perf_counter_ns()
 
         # ─────────────────────────────────────────────────────────────────
         # KNOWN BUG (separate track from hybrid landing).
@@ -438,9 +400,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
                 torch.from_numpy(full_packed.copy()).to(model_runner.device, non_blocking=True))
             cache["cpu_packed_indptrs"].append(
                 torch.from_numpy(indptr.copy()).to(model_runner.device, non_blocking=True))
-        if PROFILE_PREP:
-            _pp_record((_prep_label, "E_mask_build_loop"), perf_counter_ns() - _pp_t0)
-            _pp_t0 = perf_counter_ns()
 
         # Pre-transfer KV metadata to GPU (eliminates per-step pageable H2D transfers)
         cache["qo_indptr_gpu"] = cache["cu_seqlens_q_cpu"].to(model_runner.device, non_blocking=True)
@@ -455,8 +414,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
             kv_lens_cpu = ((ki[1:] - ki[:-1] - 1) * model_runner.block_size + kl).to(torch.int32)
             cache["kv_lens_cpu"].append(kv_lens_cpu)
             cache["kv_lens_gpu"].append(kv_lens_cpu.to(model_runner.device, non_blocking=True))
-        if PROFILE_PREP:
-            _pp_record((_prep_label, "F_gpu_transfers"), perf_counter_ns() - _pp_t0)
 
     if PROFILE:
         end_time.record()
@@ -467,7 +424,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     # Use precomputed CPU-packed masks (built at step 0)
     if PROFILE_DRAFT:
         _ev_mask0 = torch.cuda.Event(enable_timing=True); _ev_mask0.record()
-    if PROFILE_PREP: _pp_t0 = perf_counter_ns()
 
     kv_indices = cache["precomputed_kv"][step]
     kv_indptr_cpu, kv_lpl_cpu = cache["plan_cpu_args"][step]
@@ -501,25 +457,12 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     total_num_rows = int(qo_indptr_cpu[-1].item())
     wrapper._kv_lens_buffer[:len(kv_indptr_cpu) - 1].copy_(cache["kv_lens_gpu"][step], non_blocking=True)
 
-    if PROFILE_PREP:
-        _pp_record((_prep_label, "G_buffer_copies"), perf_counter_ns() - _pp_t0)
-        _pp_t0 = perf_counter_ns()
-
     # Event-based sync: only wait for this stream's copies, not all CUDA streams.
     global _plan_event
     if _plan_event is None:
         _plan_event = torch.cuda.Event()
     _plan_event.record()
-    # EXPERIMENT (env-gated): SSD_SKIP_PLAN_SYNC=1 → skip the synchronize().
-    # Hypothesis: plan() doesn't actually need the just-copied buffers to be
-    # complete on GPU (it sets up CPU-side dispatch metadata). If correct,
-    # ~2.6 ms/call wait-for-prev-replay is eliminated. Verify accept-rate
-    # parity vs baseline on a seeded run.
-    if os.environ.get("SSD_SKIP_PLAN_SYNC", "0") != "1":
-        _plan_event.synchronize()
-    if PROFILE_PREP:
-        _pp_record((_prep_label, "H_plan_event_sync"), perf_counter_ns() - _pp_t0)
-        _pp_t0 = perf_counter_ns()
+    _plan_event.synchronize()
 
     if PROFILE_DRAFT:
         _ev_plan0 = torch.cuda.Event(enable_timing=True); _ev_plan0.record()
@@ -528,8 +471,7 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         wrapper._float_workspace_buffer, wrapper._int_workspace_buffer,
         wrapper._pin_memory_int_workspace_buffer,
         # kv_lens passed as CPU tensor (FlashInfer's standard wrapper.plan()
-        # contract is kv_lens_arr_host on CPU). Was GPU previously, requiring
-        # a stream sync — see SSD_SKIP_PLAN_SYNC experiment.
+        # contract is kv_lens_arr_host on CPU).
         qo_indptr_cpu, kv_indptr_cpu, cache["kv_lens_cpu"][step],
         wrapper._max_total_num_rows or total_num_rows,
         B, model_runner.hf_config.num_attention_heads,
@@ -541,9 +483,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     if wrapper._backend == "fa2":
         plan_args.extend([-1, False])
     wrapper._plan_info = wrapper._cached_module.plan(*plan_args)
-    if PROFILE_PREP:
-        _pp_record((_prep_label, "I_wrapper_plan"), perf_counter_ns() - _pp_t0)
-        _pp_t0 = perf_counter_ns()
 
     if PROFILE_DRAFT:
         _ev_plan1 = torch.cuda.Event(enable_timing=True); _ev_plan1.record()
@@ -567,8 +506,6 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         graph_vars["hidden_states"][:flat_batch_size] = hidden_states
     if step == 0:
         graph_vars["block_tables"][:B, :block_tables.size(1)] = block_tables
-    if PROFILE_PREP:
-        _pp_record((_prep_label, "J_graph_vars_copy"), perf_counter_ns() - _pp_t0)
 
     if PROFILE:
         end_time.record()

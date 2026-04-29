@@ -193,29 +193,6 @@ class Verifier(VerifierBase):
         self.metrics["accepted_suffix_lens_with_recovery"].extend(
             [len(s) for s in new_suffixes])
 
-        # ===== Per-position match instrumentation =====
-        # Q: when accept_len < K (especially 0), which later positions
-        # actually matched target's argmax? Reveals "spec touched the right
-        # token but not contiguously" cases. Greedy comparison only.
-        # Env-gated; not on hot path unless enabled.
-        if os.environ.get("SSD_MESA_POLICY_B_STATS", "0") == "1":
-            _step_K = speculate_result.speculations.shape[1] - 1   # = vk
-            _spec = speculate_result.speculations[:, 1:_step_K + 1]    # [B, vk] tokens at positions 0..vk-1
-            _tgt_argmax = logits_p[:, :_step_K, :].argmax(dim=-1)     # [B, vk]
-            _match = (_spec == _tgt_argmax)                            # [B, vk] bool
-            _accept_lens = [len(s) for s in new_suffixes]
-            for b in range(_match.shape[0]):
-                _m = _match[b].tolist()
-                _al = _accept_lens[b]
-                # per-position match string: "1010100" — 1=match, 0=miss
-                _mstr = "".join(str(int(x)) for x in _m)
-                # mark accepted prefix vs after-reject positions
-                _ch = int(speculate_result.cache_hits[b].item()) if speculate_result.cache_hits is not None else 0
-                _ps_val = int(speculate_result.phase_source[b].item()) if speculate_result.phase_source is not None else 0
-                print(f"[POLICY-B-STATS pos-match] b={b} K={_step_K} accept_len={_al} "
-                      f"cache_hit={_ch} phase_src={_ps_val} match_per_pos={_mstr}",
-                      flush=True)
-
         # For async mode, also track accepted suffix lengths only for cache hits
         if speculate_result.cache_hits is not None:
             _ch_cpu = speculate_result.cache_hits.cpu()
@@ -327,29 +304,6 @@ class Verifier(VerifierBase):
             _, top_idx = P_iv.flatten().topk(wire_N)                          # [wire_N]
             chosen_pos = top_idx // top_k                                     # [wire_N], ∈ [0, K]
             chosen_tok = correction_topk_ids[0].view(-1).gather(0, top_idx)   # [wire_N]
-
-            # ===== Policy B stats: h vs r̂ dominance per chosen pick =====
-            # Env-gated; not on hot path unless enabled. Logs per chosen
-            # (pos, tok): h[pos], correction_prob, P_iv. To answer:
-            # "is the global ranking driven by position weight (h) or
-            # by token-specific correction (r̂)?"
-            if os.environ.get("SSD_MESA_POLICY_B_STATS", "0") == "1":
-                _chosen_h = h[chosen_pos]                                      # [wire_N]
-                _chosen_r = correction_topk_probs[0].view(-1).gather(0, top_idx)   # [wire_N]
-                _chosen_pscore = _chosen_h * _chosen_r
-                # Top-budget picks (those that survive dedup + first total_budget). For
-                # detailed analysis log all wire_N (post-dedup is draft-side).
-                _h_arr = _chosen_h.tolist()
-                _r_arr = _chosen_r.tolist()
-                _pos_arr = chosen_pos.tolist()
-                _h_full = h.tolist()                                           # [K+1]
-                # Compact print: per-pick (pos, h, r, h*r) sorted by score (already sorted)
-                _picks_str = ", ".join(
-                    f"({_pos_arr[i]},{_h_arr[i]:.3f},{_r_arr[i]:.3f},{_chosen_pscore[i].item():.4f})"
-                    for i in range(min(wire_N, 12))   # first 12 for brevity
-                )
-                print(f"[POLICY-B-STATS] step K={K} h={[f'{x:.3f}' for x in _h_full]} "
-                      f"picks(pos,h,r,h*r)[0..11]={_picks_str}", flush=True)
 
             # ===== TRACE point 3 (Policy B) =====
             if (
