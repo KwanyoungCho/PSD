@@ -63,6 +63,8 @@ def parse_arguments():
     parser.add_argument("--c4", action="store_true", help="Use C4 prompts")
     parser.add_argument("--ultrafeedback", action="store_true", help="Use UltraFeedback prompts")
     parser.add_argument("--random", action="store_true", help="Use random tokens instead of dataset prompts")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Seed Python random + torch. Reproducible prompts (with --random) and sampling.")
     parser.add_argument("--prompt_offset", type=int, default=0, help="Skip first N prompts per dataset (for variance testing)")
     parser.add_argument("--all", action="store_true", help="Use numseqs from each dataset (union dataset with numseqs*4 total)")
     parser.add_argument("--chat_template", action="store_true", help="Wrap dataset prompts in chat template before tokenizing")
@@ -387,6 +389,21 @@ def main():
         model_name = os.path.basename(model_path)
     if args.draft_path:
         draft_path = args.draft_path
+
+    # Seed BEFORE generate_benchmark_inputs so --random prompts are reproducible.
+    if args.seed is not None:
+        import random as _random
+        import torch as _torch
+        try:
+            import numpy as _np
+            _np.random.seed(args.seed)
+        except ImportError:
+            pass
+        _random.seed(args.seed)
+        _torch.manual_seed(args.seed)
+        if _torch.cuda.is_available():
+            _torch.cuda.manual_seed_all(args.seed)
+        print(f"[bench] seeded with {args.seed}", flush=True)
 
     string_prompts, prompt_token_ids, original_prompts = generate_benchmark_inputs(args, model_path)
     prompts = string_prompts if string_prompts is not None else prompt_token_ids
