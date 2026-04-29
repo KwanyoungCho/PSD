@@ -892,6 +892,19 @@ host load < 10 시점 측정:
    - 분할 + non-uniform Phase 1은 NotImplementedError로 차단
    - 두 케이스 모두 selector / legacy path 확장이 필요한 별도 작업 — 본 fix
      scope 밖.
+10. **prep sync 추가 최적화 보류** (commit `feb3691` 검증 결과):
+    - `H_plan_event_sync` (`run_fi_tree_decode_cudagraph` 내 stream sync)가
+      step-1+ prep 시간의 ~92%를 차지하지만, 이는 GPU-stream-drain wait —
+      이전 `graph.replay()` 완료까지 CPU가 대기하는 직렬 구간.
+    - skip_sync 가설 검증 (with `kv_lens_cpu` aligned to FlashInfer
+      contract): 여전히 race → wrapper buffer lifetime 보호 목적 → 단순
+      제거 불가.
+    - K_loop = layout.K cleanup으로 step-0 prep CPU work 33-66% 감소했으나
+      TPS는 variance 영역 (sync가 binding constraint이라 절약 시간 흡수).
+    - 추가 최적화는 wrapper buffer ping-pong / FlashInfer plan() 우회 등
+      구조 변경 필요 → **현재 PR scope 밖**, 별도 작업으로 분리.
+    - 본 PR closure status: Policy B + split-K1/K2 correctness + K_loop
+      cleanup. prep sync는 본질적 직렬 구간으로 acknowledged.
 6. **옵션 B (버킷별 ranking horizon 사이즈) future work**: K1 ≫ K2 사용
    패턴 등장 시 별도 PR로 도입 검토. proxy forward depth는 어느 옵션에서도
    K2 불변.
