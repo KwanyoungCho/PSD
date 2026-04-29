@@ -116,7 +116,14 @@ class Config:
         """Total (chosen_pos, chosen_tok) entries on Policy B wire = total_budget + buffer.
 
         total_budget = pfo × (K_max+1)        (Phase 2 tree size; layout MQ_LEN)
-        buffer       = (K_max+1) × dfo + 2    (dedup loss safety margin)
+        buffer       = max(p1_sum_full, p1_sum_short) + 2  (max dedup loss)
+
+        Where p1_sum_full = sum(phase1_fan_out_list) and
+              p1_sum_short = sum(phase1_fan_out_list[:K2+1]).
+
+        For uniform fallback (no list): p1_sum_full = dfo*(K1+1),
+        p1_sum_short = dfo*(K2+1) — equivalent to old `(K_max+1)*dfo + 2`
+        when K1 >= K2 and K_max = K1.
 
         K_max = max(K1, K2) in split mode (= K1 by K2 ≤ K1), else speculate_k.
         See docs/mesa/05-policy-b-fix.md Section 3.5.
@@ -132,7 +139,18 @@ class Config:
             K_max = self.speculate_k
         K_plus_1 = K_max + 1
         total_budget = self.mesa_proxy_fan_out * K_plus_1
-        buffer = K_plus_1 * self.mesa_draft_fan_out + 2
+        # List-aware Phase 1 dedup loss bound
+        _p1_list = self.mesa_split_phase1_fan_out_list
+        if _split_mode and _p1_list is not None:
+            _K2p1 = self.mesa_phase2_k + 1
+            p1_sum_full = sum(_p1_list)
+            p1_sum_short = sum(_p1_list[:_K2p1])
+        else:
+            _K1p1 = (self.mesa_phase1_k + 1) if self.mesa_phase1_k is not None else self.speculate_k + 1
+            _K2p1 = (self.mesa_phase2_k + 1) if self.mesa_phase2_k is not None else self.speculate_k + 1
+            p1_sum_full = self.mesa_draft_fan_out * _K1p1
+            p1_sum_short = self.mesa_draft_fan_out * _K2p1
+        buffer = max(p1_sum_full, p1_sum_short) + 2
         return total_budget + buffer
 
     @property
@@ -216,64 +234,8 @@ class Config:
             assert 0 < self.mesa_draft_fan_out < self.async_fan_out, \
                 f"mesa_draft_fan_out must be in (0, {self.async_fan_out}), got {self.mesa_draft_fan_out}"
             self.mesa_proxy_fan_out = self.async_fan_out - self.mesa_draft_fan_out
-            # Auto-raise proxy_top_k. Two constraints (per docs/mesa/05-policy-b-fix.md):
-            #   per-pos:  top_k ≥ max_fo + dfo + 2     (한 position에 budget 몰빵 시)
-            #   total:    top_k ≥ ceil(wire_N / (K_min+1))   (short-hit candidate count >= wire_N)
-            # split mode K_max = max(K1, K2) = K1 (K2 ≤ K1 invariant).
-            # wire_N = total_budget + buffer = pfo*(K_max+1) + (K_max+1)*dfo + 2.
-            import os as _os_cfg
-            _split_mode = (
-                self.mesa_phase1_k is not None
-                and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-            )
-            if _split_mode:
-                K_max = max(self.mesa_phase1_k, self.mesa_phase2_k)
-                K_min = min(self.mesa_phase1_k, self.mesa_phase2_k)
-            else:
-                K_max = self.speculate_k
-                K_min = self.speculate_k
-            K_plus_1 = K_max + 1
-            pfo = self.mesa_proxy_fan_out
-            dfo = self.mesa_draft_fan_out
-            total_budget = pfo * K_plus_1
-            buffer = K_plus_1 * dfo + 2
-            wire_N = total_budget + buffer
-            per_pos_min = total_budget + dfo + 2                 # = pfo*(K_max+1) + dfo + 2
-            total_min = -(-wire_N // (K_min + 1))                # ceil(wire_N / (K_min+1))
-            required_top_k = max(per_pos_min, total_min)
-            if self.mesa_proxy_top_k < required_top_k:
-                print(f'[Config] mesa_proxy_top_k raised {self.mesa_proxy_top_k} → {required_top_k} '
-                      f'(K_max={K_max} K_min={K_min} per_pos={per_pos_min} total={total_min} '
-                      f'wire_N={wire_N})', flush=True)
-                self.mesa_proxy_top_k = required_top_k
-            assert self.mesa_proxy_top_k >= 1, "mesa_proxy_top_k must be >= 1"
-            assert self.mesa_policy in ("a", "b"), \
-                f"mesa_policy must be 'a' or 'b', got {self.mesa_policy!r}"
-            # Policy "b" (unified K+1) is only implemented in split-K1/K2 mode
-            # (docs/mesa/05-policy-b-fix.md). For legacy / hybrid paths the
-            # _build_tree_batch_mesa() codepath still reads mesa_proxy["fan_out_list"]
-            # which Policy B's wire schema doesn't provide. Force "a" with warning.
-            if self.mesa_policy == "b" and not _split_mode:
-                print(f"[Config] mesa_policy='b' is only implemented in split-K1/K2 "
-                      f"mode (SSD_FORCE_SPLIT_K1K2=1); forcing 'a' for "
-                      f"legacy/hybrid path.", flush=True)
-                self.mesa_policy = "a"
-            # Policy "b" + non-uniform Phase 1 fan-out list is not yet implemented:
-            # _select_draft_sourced_tokens_perpos returns flat [B, MQ_LEN] but the
-            # unified selector indexes draft_forked as 3D [B, P, dfo].
-            if self.mesa_policy == "b" and self.mesa_split_phase1_fan_out_list is not None:
-                # Check uniformity. If non-uniform, raise.
-                _fol = self.mesa_split_phase1_fan_out_list
-                if not all(f == _fol[0] for f in _fol):
-                    raise NotImplementedError(
-                        "Policy 'b' (unified) + non-uniform mesa_split_phase1_fan_out_list "
-                        "is not implemented. Selector assumes 3D draft_forked [B, P, dfo] "
-                        "but per-position selector returns flat [B, MQ_LEN]. "
-                        "Use uniform list (or omit) with policy='b', or use policy='a' "
-                        "for non-uniform Phase 1."
-                    )
-            # Phase 2 hybrid (K1, K2) validation. Both None → legacy two-pass path.
-            # Both set → hybrid path with K1 + K2 == speculate_k invariant.
+
+            # Phase 1/2 K validation moved up (auto-raise needs validated K1/K2).
             if (self.mesa_phase1_k is None) != (self.mesa_phase2_k is None):
                 raise ValueError(
                     "mesa_phase1_k and mesa_phase2_k must both be set or both None; "
@@ -287,6 +249,109 @@ class Config:
                     f"got K1={self.mesa_phase1_k} + K2={self.mesa_phase2_k} != "
                     f"speculate_k={self.speculate_k}"
                 )
+
+            import os as _os_cfg
+            _split_mode = (
+                self.mesa_phase1_k is not None
+                and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+            )
+            # Phase 1 fan_out_list validation (split mode only). User-provided
+            # list overrides uniform [draft_fo]*(K1+1). Used by buffer/top_k
+            # sizing below — list-aware in ALL cases when list is provided
+            # (even uniform list with values != mesa_draft_fan_out).
+            _p1_list = self.mesa_split_phase1_fan_out_list
+            if _split_mode and _p1_list is not None:
+                _K1p1 = self.mesa_phase1_k + 1
+                _K2p1 = self.mesa_phase2_k + 1
+                if len(_p1_list) != _K1p1:
+                    raise ValueError(
+                        f"mesa_split_phase1_fan_out_list len={len(_p1_list)} "
+                        f"must equal K1+1={_K1p1}; got {_p1_list}"
+                    )
+                if any(f < 0 for f in _p1_list):
+                    raise ValueError(
+                        f"mesa_split_phase1_fan_out_list must have all entries >= 0; "
+                        f"got {_p1_list}"
+                    )
+                if sum(_p1_list) <= 0:
+                    raise ValueError(
+                        f"mesa_split_phase1_fan_out_list sum must be > 0 "
+                        f"(layout would have MQ_LEN=0); got {_p1_list}"
+                    )
+                # short-hit (K2+1) prefix sum > 0 — split_k1_short layout
+                # would have MQ_LEN=0 otherwise, breaking K2-hit dispatch.
+                if sum(_p1_list[:_K2p1]) <= 0:
+                    raise ValueError(
+                        f"mesa_split_phase1_fan_out_list[:K2+1] sum must be > 0 "
+                        f"(short-hit layout MQ_LEN=0). Got prefix={_p1_list[:_K2p1]} "
+                        f"from {_p1_list}"
+                    )
+                if self.mesa_split_phase2_fan_out_list is not None:
+                    raise NotImplementedError(
+                        "split-K1/K2 Phase 2 non-uniform fan_out is not supported "
+                        "(Phase 2 selection is uniform; would need policy-based "
+                        "dynamic fan_out — separate design)."
+                    )
+            # Auto-raise proxy_top_k. Two constraints (per docs/mesa/05-policy-b-fix.md):
+            #   per-pos:  top_k ≥ total_budget + max(p1_fanout) + 2
+            #   total:    top_k ≥ ceil(wire_N / (K_min+1))
+            # buffer: max possible dedup loss across positions.
+            #   uniform: (K_max+1) * dfo
+            #   non-uniform: max(sum(p1_list), sum(p1_list[:K2+1]))
+            #     (long-hit + miss use full sum; short-hit uses prefix sum)
+            # split mode K_max = max(K1, K2) = K1 (K2 ≤ K1 invariant).
+            if _split_mode:
+                K_max = max(self.mesa_phase1_k, self.mesa_phase2_k)
+                K_min = min(self.mesa_phase1_k, self.mesa_phase2_k)
+            else:
+                K_max = self.speculate_k
+                K_min = self.speculate_k
+            K_plus_1 = K_max + 1
+            pfo = self.mesa_proxy_fan_out
+            dfo = self.mesa_draft_fan_out
+            total_budget = pfo * K_plus_1
+
+            # List-aware Phase 1 fan-out stats — used in ALL cases when user
+            # provides list, otherwise fall back to uniform [dfo]*(K1+1).
+            if _split_mode and _p1_list is not None:
+                _p1_eff = list(_p1_list)
+                _K2p1 = self.mesa_phase2_k + 1
+                p1_sum_full = sum(_p1_eff)
+                p1_sum_short = sum(_p1_eff[:_K2p1])
+                p1_max = max(_p1_eff) if _p1_eff else dfo
+            else:
+                # uniform fallback: list = [dfo] * (K1+1) when phase1_k set,
+                # else degenerate ([dfo] * (speculate_k+1) for legacy compat).
+                _K1p1 = (self.mesa_phase1_k + 1) if self.mesa_phase1_k is not None else self.speculate_k + 1
+                _K2p1 = (self.mesa_phase2_k + 1) if self.mesa_phase2_k is not None else self.speculate_k + 1
+                p1_sum_full = dfo * _K1p1
+                p1_sum_short = dfo * _K2p1
+                p1_max = dfo
+
+            buffer = max(p1_sum_full, p1_sum_short) + 2
+            wire_N = total_budget + buffer
+            per_pos_min = total_budget + p1_max + 2
+            total_min = -(-wire_N // (K_min + 1))                # ceil(wire_N / (K_min+1))
+            required_top_k = max(per_pos_min, total_min)
+            if self.mesa_proxy_top_k < required_top_k:
+                print(f'[Config] mesa_proxy_top_k raised {self.mesa_proxy_top_k} → {required_top_k} '
+                      f'(K_max={K_max} K_min={K_min} p1_sum_full={p1_sum_full} '
+                      f'p1_sum_short={p1_sum_short} p1_max={p1_max} '
+                      f'per_pos={per_pos_min} total={total_min} wire_N={wire_N})',
+                      flush=True)
+                self.mesa_proxy_top_k = required_top_k
+            assert self.mesa_proxy_top_k >= 1, "mesa_proxy_top_k must be >= 1"
+            assert self.mesa_policy in ("a", "b"), \
+                f"mesa_policy must be 'a' or 'b', got {self.mesa_policy!r}"
+            # Policy "b" (unified K+1) is only implemented in split-K1/K2 mode
+            # (docs/mesa/05-policy-b-fix.md). For legacy / hybrid paths the
+            # _build_tree_batch_mesa() codepath still reads mesa_proxy["fan_out_list"]
+            # which Policy B's wire schema doesn't provide. Force "a" with warning.
+            if self.mesa_policy == "b" and not _split_mode:
+                print(f"[Config] mesa_policy='b' is only implemented in split-K1/K2 "
+                      f"mode (SSD_FORCE_SPLIT_K1K2=1); forcing 'a' for "
+                      f"legacy/hybrid path.", flush=True)
+                self.mesa_policy = "a"
             print(f'[Config] MESA-SSD enabled: exit_layer={self.mesa_exit_layer}, '
                   f'proxy_top_k={self.mesa_proxy_top_k}, '
                   f'draft_fan_out={self.mesa_draft_fan_out}, proxy_fan_out={self.mesa_proxy_fan_out}, '

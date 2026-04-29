@@ -431,6 +431,14 @@ class DraftRunner(ModelRunner):
         mq_list = [self.full_layout.MQ_LEN]
         if self.config.mesa_enabled:
             mq_list.extend([self.draft_layout.MQ_LEN, self.proxy_layout.MQ_LEN])
+        # Include split-K1/K2 layouts — non-uniform Phase 1 list can have
+        # sum(_p1_list) > uniform draft_layout.MQ_LEN, undersizing spec
+        # buffers. Same for split_k1_short / split_k2.
+        for _layout_attr in ("split_k1_long_layout", "split_k1_short_layout",
+                              "split_k2_layout"):
+            _layout = getattr(self, _layout_attr, None)
+            if _layout is not None:
+                mq_list.append(_layout.MQ_LEN)
         max_mq = max(mq_list)
         max_N = self.config.max_num_seqs * max_mq
         V = self.hf_config.vocab_size
@@ -1460,9 +1468,15 @@ class DraftRunner(ModelRunner):
             returned_tokens: [B, P] target's accepted tokens at each glue pos.
             fan_out_list: list[int] of length P, sum = MQ_LEN.
 
-        Returns: [B, MQ_LEN] flat int64 — slot p occupies
-            [offset_p, offset_p + fan_out_list[p]) with top-fan_out_list[p]
-            draft tokens at that position (returned_tokens excluded).
+        Returns:
+            flat:    [B, MQ_LEN] int64 — Phase 1 decode input. slot p occupies
+                     [offset_p, offset_p + fan_out_list[p]) with top-fan_out_list[p]
+                     draft tokens (returned_tokens excluded).
+            padded:  [B, P, max_fo] int64 — Policy B dedup input. position p
+                     has fan_out_list[p] real entries followed by 0-padded slots.
+            mask:    [P, max_fo] bool — True where padded[*, p, j] is real
+                     (j < fan_out_list[p]). Required to avoid false-match on
+                     0-padding when chosen_tok happens to be 0.
         """
         B, P, V = logits.shape
         assert P == len(fan_out_list), \
@@ -1474,15 +1488,22 @@ class DraftRunner(ModelRunner):
             logits[:, :-1, :] = logits[:, :-1, :].scatter(
                 dim=2, index=returned_tokens[:, 1:].unsqueeze(2), value=float('-inf'))
         MQ_LEN = sum(fan_out_list)
-        out = torch.empty(B, MQ_LEN, dtype=torch.int64, device=logits.device)
+        max_fo = max(fan_out_list) if fan_out_list else 0
+        device = logits.device
+        flat = torch.empty(B, MQ_LEN, dtype=torch.int64, device=device)
+        # zero-padded; mask[p, j] tells which slots are real
+        padded = torch.zeros(B, P, max_fo, dtype=torch.int64, device=device)
+        mask = torch.zeros(P, max_fo, dtype=torch.bool, device=device)
         offset = 0
         for p, fo in enumerate(fan_out_list):
             if fo == 0:
                 continue
             _, topk = torch.topk(logits[:, p, :], fo, dim=-1)  # [B, fo]
-            out[:, offset:offset + fo] = topk
+            flat[:, offset:offset + fo] = topk
+            padded[:, p, :fo] = topk
+            mask[p, :fo] = True
             offset += fo
-        return out
+        return flat, padded, mask
 
     def _update_phase2_layout_inplace(self, fan_out_tensor, K_rank):
         """In-place update of self.split_k2_layout for unified Policy B.
@@ -1523,7 +1544,8 @@ class DraftRunner(ModelRunner):
         return layout
 
     def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
-                                              K_rank, total_budget):
+                                              K_rank, total_budget,
+                                              draft_forked_mask=None):
         """K+1 unified Policy B selector.
 
         See docs/mesa/05-policy-b-fix.md Step 3.
@@ -1532,12 +1554,18 @@ class DraftRunner(ModelRunner):
             mesa_proxy: {"chosen_pos": [wire_N], "chosen_tok": [wire_N]}
                         score-sorted desc. chosen_pos ∈ [0, K_rank] by target-side
                         construction (Section 3.3 invariant).
-            draft_forked: [B, P, dfo] Phase 1 candidates per ranking position.
-                          P ≥ K_rank + 1 (caller slices if needed). chosen_pos
-                          values index into the first K_rank+1 positions.
+            draft_forked: [B, P, max_fo] Phase 1 candidates per ranking position.
+                          - uniform Phase 1: max_fo = dfo, all slots real.
+                          - non-uniform: max_fo = max(fan_out_list); padded with
+                            zeros where fan_out_list[p] < max_fo.
+                          P ≥ K_rank + 1.
             K_rank: int  ranking horizon = current step's valid_k.
                     Phase 2 forward depth (K2) is independent.
             total_budget: int  Phase 2 tree size (= sum(fan_out_list) returned).
+            draft_forked_mask: optional [P, max_fo] bool. None for uniform Phase 1
+                               (all-real). Required for non-uniform Phase 1 to
+                               avoid false in_draft match on zero-padded slots
+                               when chosen_tok happens to be 0.
 
         Returns:
             result_tokens: [B, total_budget] int64 — pos-grouped (stable sort by
@@ -1554,10 +1582,14 @@ class DraftRunner(ModelRunner):
             assert (chosen_pos <= K_rank).all().item(), \
                 f"chosen_pos out of range [0, {K_rank}]: max={chosen_pos.max().item()}"
 
-        # in_draft dedup against draft_forked[0, chosen_pos, :].
-        # draft_forked rows [0, K_rank] indexed.
-        df_per_cand = draft_forked[0, chosen_pos, :]                # [N, dfo]
-        in_draft = (df_per_cand == chosen_tok.unsqueeze(-1)).any(-1)  # [N]
+        # in_draft dedup. Uniform: all slots real. Non-uniform: mask filters
+        # zero-padded slots so chosen_tok=0 doesn't false-match on padding.
+        df_per_cand = draft_forked[0, chosen_pos, :]                # [N, max_fo]
+        eq = (df_per_cand == chosen_tok.unsqueeze(-1))                # [N, max_fo]
+        if draft_forked_mask is not None:
+            msk = draft_forked_mask[chosen_pos, :]                    # [N, max_fo]
+            eq = eq & msk
+        in_draft = eq.any(-1)                                         # [N]
         valid = ~in_draft                                            # [N]
 
         # Pick first total_budget valid (score-sorted preserved).
@@ -2302,11 +2334,18 @@ class DraftRunner(ModelRunner):
             f == _layout_k1.fan_out_list[0] for f in _layout_k1.fan_out_list
         )
         if _is_uniform:
+            # Uniform Phase 1: 3D [B, P, dfo] direct. No padded/mask needed
+            # (all slots real, mask=None signals all-real to selector).
             draft_forked_full = self._select_draft_sourced_tokens(
                 glue_logits, gd_for_fork, _layout_k1.fan_out_list[0])
             draft_forked_k1 = draft_forked_full[:, :_pc, :].contiguous()
+            draft_forked_p1_padded = draft_forked_k1   # same as 3D form
+            draft_forked_p1_mask = None                # all-real
         else:
-            draft_forked_k1 = self._select_draft_sourced_tokens_perpos(
+            # Non-uniform Phase 1: perpos selector returns 3-tuple.
+            # flat is for Phase 1 decode, padded/mask are for Policy B dedup.
+            (draft_forked_k1, draft_forked_p1_padded,
+             draft_forked_p1_mask) = self._select_draft_sourced_tokens_perpos(
                 glue_logits[:, :_pc, :].contiguous(),
                 gd_for_fork[:, :_pc].contiguous(),
                 _layout_k1.fan_out_list,
@@ -2365,9 +2404,14 @@ class DraftRunner(ModelRunner):
             # rebuilds only the mutable parts.
             K_rank = _step_valid_k
             total_budget = self.config.mesa_proxy_total_budget   # = pfo*(K_max+1)
+            # Pass padded [B, P, max_fo] + mask [P, max_fo] for Policy B dedup.
+            # Uniform: padded == 3D draft_forked_k1, mask=None (all-real).
+            # Non-uniform: padded zero-filled beyond fan_out_list[p], mask
+            # filters to avoid false-match on chosen_tok=0.
             proxy_forked, proxy_fan_out_tensor = self._select_proxy_sourced_tokens_unified(
-                mesa_proxy, draft_forked_k1,
+                mesa_proxy, draft_forked_p1_padded,
                 K_rank=K_rank, total_budget=total_budget,
+                draft_forked_mask=draft_forked_p1_mask,
             )
             _layout_k2 = self._update_phase2_layout_inplace(proxy_fan_out_tensor, K_rank)
             if TRACE_SPLIT_K1K2:
