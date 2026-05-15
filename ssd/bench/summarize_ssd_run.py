@@ -31,6 +31,15 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import pandas as pd
 
+# Aligned-schema (Phase-B) plotter — used when the profile JSON has _anchor
+# and wall_start_ns / step_id.  Legacy JSON still falls through to the
+# existing approximate plotter below.
+try:
+    from . import plot_mesa_aligned_timeline as aligned
+except ImportError:  # running as a script, not as a package
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import plot_mesa_aligned_timeline as aligned  # type: ignore[no-redef]
+
 
 def _latest_profile(outdir: Path, tag: str) -> Path | None:
     paths = sorted(outdir.glob(f"mesa_profile_{tag}_*.json"))
@@ -45,6 +54,11 @@ def _load_profile(outdir: Path, tag: str) -> list[dict]:
         return []
     with path.open() as f:
         return json.load(f)
+
+
+def _load_profile_raw(outdir: Path, tag: str) -> list[dict]:
+    """Like ``_load_profile`` but preserves the ``_anchor`` row for schema detection."""
+    return _load_profile(outdir, tag)
 
 
 def _metric(pattern: str, text: str, group: int | str = 1, cast=float):
@@ -600,29 +614,57 @@ def main() -> None:
     args = parser.parse_args()
 
     outdir = args.outdir
-    target = _as_df(_load_profile(outdir, "target_rank0"), "target")
-    draft = _as_df(_load_profile(outdir, "draft"), "draft")
+    target_raw = _load_profile_raw(outdir, "target_rank0")
+    draft_raw = _load_profile_raw(outdir, "draft")
+    # Strip the _anchor sentinel for the legacy DataFrame path (it has no
+    # start_ms / end_ms / ms columns and would pollute summary stats).
+    target = _as_df([r for r in target_raw if r.get("label") != "_anchor"], "target")
+    draft = _as_df([r for r in draft_raw if r.get("label") != "_anchor"], "draft")
 
     row = parse_run_log(outdir)
     add_profile_metrics(row, target, draft, args.k, args.warmup)
 
-    for status in ("hit", "miss", "hit_k1", "hit_k2"):
-        idx = _choose_pair_index(
-            target,
-            draft,
-            status,
-            args.timeline_warmup,
-            args.hit_threshold_ms,
-        )
-        row[f"timeline_{status}_pair_idx"] = idx
-        if idx is None:
-            print(f"[warn] no cache {status} step found; skipping timeline_cache_{status}.png")
-            continue
+    # Schema-detect: Phase-B aligned JSON uses the new plotter; legacy JSON
+    # falls back to the existing approximate handshake-offset plotter.
+    use_aligned = aligned.is_aligned_schema(target_raw)
+    if use_aligned:
         try:
-            path = plot_timeline_for_pair(outdir, target, draft, idx, status, args.timeline_warmup, args.timeline_window)
-            print(f"-> saved {path}")
-        except ValueError as e:
-            print(f"[warn] timeline_cache_{status}.png skipped: {e}")
+            results = aligned.plot_all_statuses(outdir)
+            for status, path in results.items():
+                row[f"timeline_{status}_pair_idx"] = None  # aligned uses step_id, not pair idx
+                if path is None:
+                    print(f"[skip] no cache {status} step found; skipping timeline_cache_{status}.png")
+                else:
+                    print(f"-> saved {path}")
+        except aligned.AlignedSchemaError as e:
+            print(f"[warn] aligned plot failed ({e}); falling back to legacy approximate plotter.")
+            use_aligned = False
+
+    if not use_aligned:
+        if not aligned.is_aligned_schema(target_raw):
+            print(
+                "[WARN] legacy MESA profile detected (no _anchor / wall_start_ns); "
+                "timeline plots use approximate handshake-offset alignment and should not be "
+                "used as the paper source of truth — re-run with the Phase-B aligned trace "
+                "to get step-id-joined timelines."
+            )
+        for status in ("hit", "miss", "hit_k1", "hit_k2"):
+            idx = _choose_pair_index(
+                target,
+                draft,
+                status,
+                args.timeline_warmup,
+                args.hit_threshold_ms,
+            )
+            row[f"timeline_{status}_pair_idx"] = idx
+            if idx is None:
+                print(f"[warn] no cache {status} step found; skipping timeline_cache_{status}.png")
+                continue
+            try:
+                path = plot_timeline_for_pair(outdir, target, draft, idx, status, args.timeline_warmup, args.timeline_window)
+                print(f"-> saved {path}")
+            except ValueError as e:
+                print(f"[warn] timeline_cache_{status}.png skipped: {e}")
 
     write_summary(outdir, row, args.append_index)
     print(pd.DataFrame([_ordered_row(row)]).to_string(index=False))
