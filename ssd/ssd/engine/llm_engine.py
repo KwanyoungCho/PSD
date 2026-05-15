@@ -227,9 +227,15 @@ class LLMEngine:
         avg_decode_throughput = METRICS["decode_total_tokens"] / \
             METRICS["decode_total_time"]
         print(
-            f"Final Prefill Throughput: {int(avg_prefill_throughput)}tok/s", flush=True)
+            f"Final Prefill Throughput: {avg_prefill_throughput:.2f}tok/s", flush=True)
         print(
-            f"Final Decode Throughput: {int(avg_decode_throughput)}tok/s", flush=True)
+            f"Final Decode Throughput: {avg_decode_throughput:.2f}tok/s", flush=True)
+        print(
+            f"[metrics] Prefill tokens/time: {METRICS['prefill_total_tokens']} / "
+            f"{METRICS['prefill_total_time']:.6f}s", flush=True)
+        print(
+            f"[metrics] Decode tokens/time: {METRICS['decode_total_tokens']} / "
+            f"{METRICS['decode_total_time']:.6f}s", flush=True)
 
         if self.config.speculate:
             ttl_accepted_with_recovery = sum(METRICS['accepted_suffix_lens_with_recovery'])

@@ -110,24 +110,8 @@ class SpecDecodeStep(InferenceStep):
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
         _mev_sw = _mr("target_spec_wait")
         speculate_result = self.speculator.speculate(seqs, in_verify_result)
-        _wait_label = "target_spec_wait"
-        if _mev_sw is not None and speculate_result.cache_hits is not None:
-            # Profile-only label split for postprocess timeline selection.
-            # B=1 is the common experiment path; B>1 can be mixed.
-            _hits = int(speculate_result.cache_hits.sum().item())
-            _n = int(speculate_result.cache_hits.numel())
-            if _hits == 0:
-                _wait_label = "target_spec_wait_miss"
-            elif _hits == _n:
-                _wait_label = "target_spec_wait_hit"
-                if _n == 1 and speculate_result.phase_source is not None:
-                    _src = int(speculate_result.phase_source[0].item())
-                    if _src == 1:
-                        _wait_label = "target_spec_wait_hit_k1"
-                    elif _src == 2:
-                        _wait_label = "target_spec_wait_hit_k2"
-            else:
-                _wait_label = "target_spec_wait_mixed"
+        _status = getattr(speculate_result, "profile_cache_status", None)
+        _wait_label = f"target_spec_wait_{_status}" if _status else "target_spec_wait"
         _mc(_wait_label, _mev_sw)
 
         if _prof:

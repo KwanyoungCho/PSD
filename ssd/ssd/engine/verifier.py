@@ -208,7 +208,7 @@ class Verifier(VerifierBase):
                     self.metrics["accepted_suffix_lens_on_hit"].append(suffix_len)
                     if speculate_result.phase_source is not None:
                         _accepted_len = max(0, suffix_len - 1)
-                        _src = int(speculate_result.phase_source[i].item())
+                        _src = int(_ps_cpu[i].item())
                         if _src == 1:
                             self.metrics["accepted_lens_phase1_hit"].append(_accepted_len)
                         elif _src == 2:
@@ -245,10 +245,16 @@ class Verifier(VerifierBase):
         from ssd.utils.async_helpers.nccl_pack import send_int64
         config = self.target_model_runner.config
         top_k = config.mesa_proxy_top_k
+        _detail_profile = os.environ.get("SSD_PROFILE_MESA_DETAIL", "0") == "1"
+        if _detail_profile:
+            from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_d, mesa_close as _mc_d
+        else:
+            _mr_d = _mc_d = None
 
         if exit_logits.dim() == 2:
             exit_logits = exit_logits.view(B, K + 1, -1)  # [B, K+1, V]
 
+        _ev_compute = _mr_d("proxy_compute") if _detail_profile else None
         # p_E (early-exit proxy), p_D (draft)
         p_E = torch.softmax(exit_logits[:, :K, :].float(), dim=-1)  # [B, K, V]
         p_D = torch.softmax(logits_q.float(), dim=-1)                # [B, K, V]
@@ -286,12 +292,15 @@ class Verifier(VerifierBase):
         if K > 1:
             h[1:K] = cumprod[:-1] * (1 - accept_probs[0, 1:])
         h[K] = cumprod[-1]  # all-accept
+        if _detail_profile:
+            _mc_d("proxy_compute", _ev_compute)
 
         # === Policy B unified K+1 path (default since 2026-04-29) ===
         # docs/mesa/05-policy-b-fix.md Step 2.
         # Replaces legacy Policy A/B branches below. GPU-only, no .cpu().tolist().
         # Wire schema (Policy B): {chosen_pos[N], chosen_tok[N]} score-sorted.
         if config.mesa_policy == "b":
+            _ev_pack = _mr_d("proxy_pack") if _detail_profile else None
             # pos == K (all-accept): target's full distribution at exit_logits[:, K, :].
             # Note: existing p_E only covers [:, :K, :] (line 246) — read separately.
             pE_K = torch.softmax(exit_logits[:, K, :].float(), dim=-1)        # [B, V]
@@ -311,6 +320,8 @@ class Verifier(VerifierBase):
             _, top_idx = P_iv.flatten().topk(wire_N)                          # [wire_N]
             chosen_pos = top_idx // top_k                                     # [wire_N], ∈ [0, K]
             chosen_tok = correction_topk_ids[0].view(-1).gather(0, top_idx)   # [wire_N]
+            if _detail_profile:
+                _mc_d("proxy_pack", _ev_pack)
 
             # ===== TRACE point 3 (Policy B) =====
             if (
@@ -325,13 +336,17 @@ class Verifier(VerifierBase):
                       f"chosen_pos.shape={list(chosen_pos.shape)}",
                       flush=True)
             # NCCL send: chosen_pos [wire_N int64] + chosen_tok [wire_N int64]
+            _ev_send = _mr_d("proxy_send") if _detail_profile else None
             send_int64(async_pg, draft_rank, chosen_pos, chosen_tok)
+            if _detail_profile:
+                _mc_d("proxy_send", _ev_send)
             return
 
         # === Legacy Policy A / Policy B (dead branches) ===
         # TODO(policy-a): Policy A retained as dead branch. Default is "b" since
         # 2026-04-29; see docs/mesa/05-policy-b-fix.md Section 3.1.
 
+        _ev_pack = _mr_d("proxy_pack") if _detail_profile else None
         # Budget allocation
         if h[:K].sum() < 1e-6:
             # All accept expected → uniform fan_out (both policies)
@@ -396,6 +411,8 @@ class Verifier(VerifierBase):
             topk_ids = torch.cat([topk_ids, tok_pad], dim=1)            # [B, K_long, top_k]
             prb_pad = torch.zeros(B, pad_pos, top_k, dtype=topk_probs.dtype, device=topk_probs.device)
             topk_probs = torch.cat([topk_probs, prb_pad], dim=1)         # [B, K_long, top_k]
+        if _detail_profile:
+            _mc_d("proxy_pack", _ev_pack)
 
         # ===== TRACE point 3: target _compute_and_send_proxy =====
         if (
@@ -422,7 +439,10 @@ class Verifier(VerifierBase):
                   flush=True)
         # ===== END TRACE =====
         # NCCL send: fan_out_list [K_long+1] + topk_ids [B,K_long,top_k] + topk_probs [B,K_long,top_k]
+        _ev_send = _mr_d("proxy_send") if _detail_profile else None
         send_int64(async_pg, draft_rank,
                    fan_out_tensor,
                    topk_ids.reshape(-1),
                    topk_probs.view(-1).to(torch.float32).view(torch.int32).to(torch.int64))
+        if _detail_profile:
+            _mc_d("proxy_send", _ev_send)

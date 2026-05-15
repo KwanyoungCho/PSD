@@ -17,6 +17,10 @@ class SpeculateResult:
     #   - proxy-sourced hit: K_short = K2
     # Phase 0 plumbing — engine still sets all rows to K_long until Phase 4.
     valid_k: torch.Tensor | None = None
+    # Profile-only cache status. Values: "miss", "hit", "hit_k1", "hit_k2",
+    # or "mixed". This is computed where cache metadata is already consumed, so
+    # timeline labeling does not introduce extra hot-path synchronization.
+    profile_cache_status: str | None = None
 
 
 @dataclass

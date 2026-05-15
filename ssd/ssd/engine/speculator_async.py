@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.distributed as dist
 from transformers import AutoTokenizer
@@ -122,6 +123,10 @@ class SpeculatorAsync(SpeculatorBase):
         self._speculations_buf[:, 0] = self._recovery_buf
         self._speculations_buf[:, 1:] = speculations_tokens
         speculations = self._speculations_buf
+        profile_cache_status = None
+        _profile_mesa = os.environ.get("SSD_PROFILE_MESA", "0") == "1"
+        _hit_statuses: list[int] = []
+        _phase_statuses: list[int] = []
 
         # v1 hybrid: when valid_k differs from K, only extend by valid_k tokens
         # (proxy-sourced rows store K_short; rest of the K_long-shaped buffer is
@@ -132,6 +137,9 @@ class SpeculatorAsync(SpeculatorBase):
             seq.num_tokens = len(seq.token_ids)
             seq.last_token = seq.token_ids[-1]
             seq.num_draft_cached_tokens += vk_i + 1
+            if _profile_mesa and cache_hits is not None:
+                _hit_statuses.append(int(cache_hits[i].item()))
+                _phase_statuses.append(int(phase_source[i].item()) if phase_source is not None else 0)
 
         # Slice speculations to per-step valid_k width before returning. For B=1
         # (Config invariant) valid_k is uniform; slice with the scalar.
@@ -141,7 +149,33 @@ class SpeculatorAsync(SpeculatorBase):
                 speculations = speculations[:, :vk + 1].contiguous()
                 logits_q = logits_q[:, :vk, :].contiguous()
 
-        return SpeculateResult(speculations, logits_q, cache_hits, phase_source, valid_k)
+        if _hit_statuses:
+            if all(h == 0 for h in _hit_statuses):
+                profile_cache_status = "miss"
+            elif all(h == 1 for h in _hit_statuses):
+                if len(_phase_statuses) == 1:
+                    if _phase_statuses[0] == 1:
+                        profile_cache_status = "hit_k1"
+                    elif _phase_statuses[0] == 2:
+                        profile_cache_status = "hit_k2"
+                    else:
+                        profile_cache_status = "hit"
+                elif all(p == _phase_statuses[0] for p in _phase_statuses):
+                    if _phase_statuses[0] == 1:
+                        profile_cache_status = "hit_k1"
+                    elif _phase_statuses[0] == 2:
+                        profile_cache_status = "hit_k2"
+                    else:
+                        profile_cache_status = "hit"
+                else:
+                    profile_cache_status = "mixed"
+            else:
+                profile_cache_status = "mixed"
+
+        return SpeculateResult(
+            speculations, logits_q, cache_hits, phase_source, valid_k,
+            profile_cache_status=profile_cache_status,
+        )
 
     def _speculation_request(self, seqs: list[Sequence], eagle: bool):
         B = len(seqs)

@@ -24,9 +24,6 @@ SPLIT_K1K2_MODE = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
 # proxy fan_out so we can prove what's real data vs zero-pad.
 TRACE_SPLIT_K1K2 = os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
 
-ttl = 0
-ttl_hit = 0
-
 class DraftRunner(ModelRunner):
     
     @classmethod
@@ -531,7 +528,6 @@ class DraftRunner(ModelRunner):
 
     def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None):
         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
-        global ttl, ttl_hit
         # Draft model now returns full target vocab size logits (after d2t expansion)
         V = self.hf_config.vocab_size
 
@@ -565,7 +561,6 @@ class DraftRunner(ModelRunner):
         ) if self.config.use_eagle else None
         
         # Statistics
-        ttl += int(B)
         
         if self.config.verbose:
             print(f"[hit_cache_and_respond] Request keys: {request_keys}", flush=True)
@@ -582,7 +577,6 @@ class DraftRunner(ModelRunner):
             eq = (request_keys.unsqueeze(1) == self.tree_cache_keys.unsqueeze(0))  # [B,T,3]
             match = torch.all(eq, dim=2)  # [B,T]
             cache_hits = match.any(dim=1)  # [B]
-            ttl_hit += int(cache_hits.sum().item())
 
             if self.config.mesa_enabled and self._last_n_draft_keys > 0:
                 _hit_idx = match.float().argmax(dim=1).to(torch.int64)
@@ -682,6 +676,27 @@ class DraftRunner(ModelRunner):
             _vk_scalar = int(valid_k[0].item())
         else:
             _vk_scalar = None
+        _profile_cache_status = None
+        if os.environ.get("SSD_PROFILE_MESA", "0") == "1" and cache_hits is not None:
+            if B == 1:
+                _hit = int(cache_hits[0].item())
+                if _hit == 0:
+                    _profile_cache_status = "miss"
+                else:
+                    _src = int(phase_source[0].item()) if phase_source is not None else 0
+                    if _src == 1:
+                        _profile_cache_status = "hit_k1"
+                    elif _src == 2:
+                        _profile_cache_status = "hit_k2"
+                    else:
+                        _profile_cache_status = "hit"
+            else:
+                _hits = cache_hits.tolist()
+                _profile_cache_status = (
+                    "miss" if all(h == 0 for h in _hits)
+                    else "hit" if all(h == 1 for h in _hits)
+                    else "mixed"
+                )
         # ===== TRACE point 1: hit_cache_and_respond boundary =====
         if TRACE_SPLIT_K1K2 and SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
             K1 = self.config.mesa_phase1_k
@@ -698,7 +713,10 @@ class DraftRunner(ModelRunner):
                   flush=True)
         # ===== END TRACE =====
         glue_input_ids = make_glue_decode_input_ids(out_tokens, rec_toks, valid_k=_vk_scalar)
-        return out_tokens, out_logits, glue_input_ids, cache_hits, out_activations, phase_source, valid_k, _vk_scalar
+        return (
+            out_tokens, out_logits, glue_input_ids, cache_hits, out_activations,
+            phase_source, valid_k, _vk_scalar, _profile_cache_status,
+        )
 
     def _service_spec_request(self):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
@@ -759,24 +777,15 @@ class DraftRunner(ModelRunner):
 
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_h, mesa_close as _mc_h
         _mev_hc = _mr_h("hit_cache_respond")
-        out_tokens, out_logits, glue_decode_input_ids, cache_hits, out_activations, phase_source, valid_k, valid_k_scalar = self.hit_cache_and_respond(
-            cache_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations)
-        _hc_label = "hit_cache_respond"
-        if _mev_hc is not None and cache_hits is not None:
-            _hits = int(cache_hits.sum().item())
-            _n = int(cache_hits.numel())
-            if _hits == 0:
-                _hc_label = "hit_cache_respond_miss"
-            elif _hits == _n:
-                _hc_label = "hit_cache_respond_hit"
-                if _n == 1 and phase_source is not None:
-                    _src = int(phase_source[0].item())
-                    if _src == 1:
-                        _hc_label = "hit_cache_respond_hit_k1"
-                    elif _src == 2:
-                        _hc_label = "hit_cache_respond_hit_k2"
-            else:
-                _hc_label = "hit_cache_respond_mixed"
+        (
+            out_tokens, out_logits, glue_decode_input_ids, cache_hits,
+            out_activations, phase_source, valid_k, valid_k_scalar,
+            profile_cache_status,
+        ) = self.hit_cache_and_respond(
+            cache_keys, B, K, num_tokens, temperatures, draft_block_tables,
+            target_recovery_activations,
+        )
+        _hc_label = f"hit_cache_respond_{profile_cache_status}" if profile_cache_status else "hit_cache_respond"
         _mc_h(_hc_label, _mev_hc)
 
         if self.config.verbose:
