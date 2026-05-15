@@ -21,6 +21,11 @@ class SpeculateResult:
     # or "mixed". This is computed where cache metadata is already consumed, so
     # timeline labeling does not introduce extra hot-path synchronization.
     profile_cache_status: str | None = None
+    # Aligned-timeline (Phase B): monotonically increasing per-target-process
+    # spec request id, mirrored on the draft side via spec metadata. Used
+    # to join target and draft mesa_profile rows by request, not by event
+    # index. None on synchronous / non-async paths.
+    step_id: int | None = None
 
 
 @dataclass

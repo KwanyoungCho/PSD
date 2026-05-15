@@ -1613,61 +1613,222 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
 
 
 # ---------- MESA per-phase profiling (zero-sync, additions only) ----------
-PROFILE_MESA = os.environ.get("SSD_PROFILE_MESA", "0") == "1"
-_mesa_events = []  # [(idx, label, start_ev, end_ev)]
-_mesa_idx = 0      # monotonic call index (per process)
-_mesa_t0_ev = None # process-local origin event for relative timestamps
+# Doc: ssd/docs/mesa/06-timeline-cleanup-plan.md §4.2-4.5, §5 Phase B.
+#
+# Design summary:
+#   - One CUDA/CPU anchor per process, captured lazily on first mesa_record()
+#     when SSD_PROFILE_MESA=1. The only allowed syncs are anchor init and dump.
+#   - mesa_record(label, parent=None) starts a span: records a CUDA event +
+#     CPU dispatch ns, snapshots current context (step_id, proc) for fallback.
+#   - mesa_close(label, start_handle) ends a span and CRITICALLY reads the
+#     CURRENT context (especially `status`) at close time so target_spec_wait
+#     can be labeled with the hit-class learned only after speculate() returns.
+#   - mesa_dump(tag) syncs once and computes wall-clock + cuda_ms derived
+#     fields per row, writes a single JSON with an _anchor metadata block.
+import time as _time_mod_for_mesa
 
-def mesa_record(label):
-    global _mesa_t0_ev
+PROFILE_MESA = os.environ.get("SSD_PROFILE_MESA", "0") == "1"
+
+# Per-span open record:
+#   (idx, label, parent_label, start_ev, end_ev,
+#    cpu_dispatch_start_ns, cpu_dispatch_end_ns,
+#    open_step_id, open_proc, close_step_id, close_status, close_proc)
+_mesa_events = []
+_mesa_idx = 0      # monotonic call index (per process)
+
+# CUDA/CPU anchor (set once per process, lazily on first record)
+_mesa_anchor_event = None
+_mesa_anchor_cpu_ns = None
+_mesa_anchor_device = None
+
+# Profiler context (process-local, single-threaded for the profiled path).
+# Used so individual call sites do not need to thread step_id/status/proc
+# through every helper signature. mesa_close() reads this AT close time.
+_mesa_context = {"step_id": None, "status": None, "proc": None}
+
+
+def _ensure_mesa_anchor():
+    """Lazily initialize the per-process CUDA/CPU anchor.
+
+    Only synchronizes when PROFILE_MESA=1. Idempotent; no-op when off or
+    already initialized. This is the only sync in the profile path outside
+    mesa_dump().
+    """
+    global _mesa_anchor_event, _mesa_anchor_cpu_ns, _mesa_anchor_device
     if not PROFILE_MESA:
-        return None
+        return
+    if _mesa_anchor_event is not None:
+        return
+    torch.cuda.synchronize()
     ev = torch.cuda.Event(enable_timing=True)
     ev.record()
-    if _mesa_t0_ev is None:
-        _mesa_t0_ev = ev
-    return ev
+    torch.cuda.synchronize()
+    _mesa_anchor_event = ev
+    _mesa_anchor_cpu_ns = _time_mod_for_mesa.perf_counter_ns()
+    _mesa_anchor_device = torch.cuda.current_device()
 
-def mesa_close(label, start_ev):
-    global _mesa_idx
-    if start_ev is None:
+
+def mesa_set_context(step_id=None, status=None, proc=None):
+    """Update the process-local profiler context.
+
+    Each argument is applied only if not None, so callers can update a
+    subset (e.g. only `status` after speculate() returns). No-op when
+    PROFILE_MESA=0 to keep cold path zero-cost.
+    """
+    if not PROFILE_MESA:
         return
+    if step_id is not None:
+        _mesa_context["step_id"] = step_id
+    if status is not None:
+        _mesa_context["status"] = status
+    if proc is not None:
+        _mesa_context["proc"] = proc
+
+
+def mesa_clear_status():
+    """Explicitly clear close-time status. Used between draft requests so a
+    new request does not inherit the previous request's hit/miss label."""
+    if not PROFILE_MESA:
+        return
+    _mesa_context["status"] = None
+
+
+def mesa_record(label, parent=None):
+    """Open a profiling span. Returns an opaque handle for mesa_close().
+
+    Captures: start CUDA event, CPU dispatch ns, and a snapshot of
+    (step_id, proc) at open time. `status` is intentionally NOT snapshotted
+    here — it is read fresh in mesa_close() so spans like target_spec_wait
+    can pick up status learned after the body runs.
+    """
+    if not PROFILE_MESA:
+        return None
+    _ensure_mesa_anchor()
+    ev = torch.cuda.Event(enable_timing=True)
+    ev.record()
+    cpu_ns = _time_mod_for_mesa.perf_counter_ns()
+    # Snapshot open-time context (fallback for step_id/proc).
+    open_step_id = _mesa_context["step_id"]
+    open_proc = _mesa_context["proc"]
+    return (ev, cpu_ns, label, parent, open_step_id, open_proc)
+
+
+def mesa_close(label, start_handle):
+    """Close a profiling span opened by mesa_record().
+
+    Reads the CURRENT context (step_id, status, proc) at close time. This
+    is essential for target_spec_wait_* whose status is set after
+    speculator.speculate() returns. Open-time step_id/proc are used as a
+    fallback when the close-time context is unset.
+    """
+    global _mesa_idx
+    if start_handle is None:
+        return
+    start_ev, cpu_start_ns, _open_label, parent, open_step_id, open_proc = start_handle
     end_ev = torch.cuda.Event(enable_timing=True)
     end_ev.record()
-    _mesa_events.append((_mesa_idx, label, start_ev, end_ev))
+    cpu_end_ns = _time_mod_for_mesa.perf_counter_ns()
+    # Close-time context wins; fall back to open-time snapshot if unset.
+    close_step_id = _mesa_context["step_id"]
+    if close_step_id is None:
+        close_step_id = open_step_id
+    close_proc = _mesa_context["proc"]
+    if close_proc is None:
+        close_proc = open_proc
+    close_status = _mesa_context["status"]
+    _mesa_events.append((
+        _mesa_idx, label, parent,
+        start_ev, end_ev,
+        cpu_start_ns, cpu_end_ns,
+        close_step_id, close_status, close_proc,
+    ))
     _mesa_idx += 1
+
 
 def mesa_reset():
     """Reset profiling state — mesa_dump/mesa_flush call this after writing."""
-    global _mesa_t0_ev, _mesa_idx
+    global _mesa_idx, _mesa_anchor_event, _mesa_anchor_cpu_ns, _mesa_anchor_device
     _mesa_events.clear()
-    _mesa_t0_ev = None
     _mesa_idx = 0
+    _mesa_anchor_event = None
+    _mesa_anchor_cpu_ns = None
+    _mesa_anchor_device = None
+    _mesa_context["step_id"] = None
+    _mesa_context["status"] = None
+    _mesa_context["proc"] = None
+
 
 def mesa_flush(tag, run_id=None):
     """Public API: write JSON and reset. Call between runs or at end of generate().
     run_id: appended to filename to avoid overwrites; defaults to HMS timestamp."""
     return mesa_dump(tag, run_id=run_id)
 
+
 def mesa_dump(tag, run_id=None):
     if not _mesa_events:
         mesa_reset()
         return
-    import json, time as _time
+    import json
+    # Single sync — convert CUDA event times to anchored wall-clock at dump
+    # time so the per-step path stays sync-free.
     torch.cuda.synchronize()
-    t0 = _mesa_t0_ev
-    rows = [{
-        "idx": s, "label": l,
-        "start_ms": t0.elapsed_time(a),
-        "end_ms": t0.elapsed_time(b),
-        "ms": a.elapsed_time(b),
-    } for s, l, a, b in _mesa_events]
+    anchor_ev = _mesa_anchor_event
+    anchor_cpu_ns = _mesa_anchor_cpu_ns
+    rows = []
+    for (
+        idx, label, parent,
+        start_ev, end_ev,
+        cpu_start_ns, cpu_end_ns,
+        step_id, status, proc,
+    ) in _mesa_events:
+        gpu_start_ms = anchor_ev.elapsed_time(start_ev)
+        gpu_end_ms = anchor_ev.elapsed_time(end_ev)
+        cuda_ms = start_ev.elapsed_time(end_ev)
+        wall_start_ns = anchor_cpu_ns + int(gpu_start_ms * 1e6)
+        wall_end_ns = anchor_cpu_ns + int(gpu_end_ms * 1e6)
+        rows.append({
+            "idx": idx,
+            "proc": proc,
+            "step_id": step_id,
+            "status": status,
+            "label": label,
+            "parent_label": parent,
+            "gpu_start_ms_since_anchor": gpu_start_ms,
+            "gpu_end_ms_since_anchor": gpu_end_ms,
+            "wall_start_ns": wall_start_ns,
+            "wall_end_ns": wall_end_ns,
+            "cuda_ms": cuda_ms,
+            "cpu_dispatch_start_ns": cpu_start_ns,
+            "cpu_dispatch_end_ns": cpu_end_ns,
+            # Backward-compat aliases for legacy consumers
+            # (summarize_ssd_run.py reads `ms`, `start_ms`, `end_ms`).
+            "ms": cuda_ms,
+            "start_ms": gpu_start_ms,
+            "end_ms": gpu_end_ms,
+        })
     outdir = os.environ.get("SSD_PROFILE_DIR", "/tmp")
     os.makedirs(outdir, exist_ok=True)
     if run_id is None:
-        run_id = _time.strftime("%H%M%S")
+        run_id = _time_mod_for_mesa.strftime("%H%M%S")
     path = f"{outdir}/mesa_profile_{tag}_{run_id}.json"
+    # Wire format: top-level JSON is a list of row dicts. To keep the legacy
+    # `summarize_ssd_run.py` parser working (it does `json.load` and filters
+    # by `label`), the anchor metadata is emitted as a sentinel row with
+    # `label="_anchor"`. New consumers (Phase C plotter) look this row up by
+    # label and extract anchor_cpu_ns / anchor_device from it.
+    anchor_row = {
+        "idx": -1,
+        "proc": None,
+        "step_id": None,
+        "status": None,
+        "label": "_anchor",
+        "parent_label": None,
+        "anchor_cpu_ns": anchor_cpu_ns,
+        "anchor_device": _mesa_anchor_device,
+        "anchor_note": "GPU event times converted to host monotonic clock",
+    }
+    payload = [anchor_row] + rows
     with open(path, "w") as f:
-        json.dump(rows, f)
+        json.dump(payload, f)
     print(f"[mesa_profile] {len(rows)} events -> {path}", flush=True)
     mesa_reset()

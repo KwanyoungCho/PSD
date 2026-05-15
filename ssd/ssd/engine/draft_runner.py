@@ -720,8 +720,21 @@ class DraftRunner(ModelRunner):
 
     def _service_spec_request(self):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
-        meta = self.recv_tensor((3,), torch.int64)
-        B, K, F = meta.tolist()
+        # Phase B: meta wire is [B, K, F, step_id]. step_id is the per-target
+        # spec request id; we set it on the profiler context so all draft
+        # spans for this request inherit it. See docs/mesa/06 §4.4.
+        from ssd.engine.helpers.cudagraph_helpers import (
+            mesa_record as _mr_dr, mesa_close as _mc_dr,
+            mesa_set_context as _mctx_dr, mesa_clear_status as _mclr_dr,
+        )
+        _mev_dr = _mr_dr("draft_recv_request")
+        meta = self.recv_tensor((4,), torch.int64)
+        B, K, F, step_id = meta.tolist()
+        # Announce new step_id + proc=draft. Clear any leftover status from
+        # the previous request so spans before hit_cache_and_respond don't
+        # inherit it; status will be set explicitly below once known.
+        _mctx_dr(step_id=step_id, proc="draft")
+        _mclr_dr()
 
         # Receive all request payload in one fused int64 burst (includes temperatures encoded as int64)
         max_blocks = self.config.max_blocks
@@ -775,6 +788,10 @@ class DraftRunner(ModelRunner):
                     print(f"  Seq {seq_id}: keep_idx={keep_idx}, recovery_token={rec_token_target} ('{rec_token_text}'), n_ext={n_ext}", flush=True)
                 print(f"{'='*80}\n", flush=True)
 
+        # Close draft_recv_request after the last payload recv (fused + EAGLE
+        # if applicable). docs/mesa/06 §4.5.
+        _mc_dr("draft_recv_request", _mev_dr)
+
         from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_h, mesa_close as _mc_h
         _mev_hc = _mr_h("hit_cache_respond")
         (
@@ -785,6 +802,9 @@ class DraftRunner(ModelRunner):
             cache_keys, B, K, num_tokens, temperatures, draft_block_tables,
             target_recovery_activations,
         )
+        # Set close-time status so hit_cache_respond row carries it AND any
+        # subsequent draft spans for this request inherit it.
+        _mctx_dr(status=profile_cache_status)
         _hc_label = f"hit_cache_respond_{profile_cache_status}" if profile_cache_status else "hit_cache_respond"
         _mc_h(_hc_label, _mev_hc)
 
@@ -1897,7 +1917,9 @@ class DraftRunner(ModelRunner):
                 draft_acts = torch.cat([draft_acts, cont_acts], dim=1)
 
         # === Pass 중간: proxy 수신 ===
-        _mev_pw = _mr("proxy_wait")
+        # Phase B: parent="phase2_build" per docs/mesa/06 §4.5 so the
+        # plotter can group proxy waits under the phase-2 build span.
+        _mev_pw = _mr("proxy_wait", parent="phase2_build")
         proxy_recv_work.wait()
         _mc("proxy_wait", _mev_pw)
 
@@ -2385,7 +2407,9 @@ class DraftRunner(ModelRunner):
             draft_tree_args, layout=_layout_k1)
 
         # === Wait for proxy from target ===
-        _mev_pw = _mr("proxy_wait")
+        # Phase B: parent="phase2_build" per docs/mesa/06 §4.5 so the
+        # plotter can group proxy waits under the phase-2 build span.
+        _mev_pw = _mr("proxy_wait", parent="phase2_build")
         proxy_recv_work.wait()
         _mc("proxy_wait", _mev_pw)
         mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)

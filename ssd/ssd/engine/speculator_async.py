@@ -40,6 +40,11 @@ class SpeculatorAsync(SpeculatorBase):
         self.verbose = verbose
         self.K = lookahead
 
+        # Aligned-timeline (Phase B, docs/mesa/06 §4.4): monotonically
+        # increasing per-process spec request id. Mirrored on draft via the
+        # spec metadata tensor. Always populated; sub-µs cost.
+        self._request_step_id = 0
+
         # Pre-allocate handshake send/recv buffers (reused every step)
         self._alloc_handshake_bufs(1)
 
@@ -51,7 +56,10 @@ class SpeculatorAsync(SpeculatorBase):
         self._hs_B = B
         d = self.device
         self._cmd = torch.zeros(1, dtype=torch.int64, device=d)
-        self._meta = torch.tensor([B, self.K, self.async_fan_out], dtype=torch.int64, device=d)
+        # Meta layout: [B, K, F, step_id]. step_id is overwritten in-place
+        # each request (see _speculation_request). Initialized to 0.
+        self._meta = torch.tensor(
+            [B, self.K, self.async_fan_out, 0], dtype=torch.int64, device=d)
         self._cache_keys = torch.empty(B, 3, dtype=torch.int64, device=d)
         self._num_tokens_buf = torch.empty(B, dtype=torch.int64, device=d)
         self._temps_buf = torch.empty(B, dtype=torch.float32, device=d)
@@ -175,12 +183,26 @@ class SpeculatorAsync(SpeculatorBase):
         return SpeculateResult(
             speculations, logits_q, cache_hits, phase_source, valid_k,
             profile_cache_status=profile_cache_status,
+            step_id=self._request_step_id,
         )
 
     def _speculation_request(self, seqs: list[Sequence], eagle: bool):
         B = len(seqs)
         if B != self._hs_B:
             self._alloc_handshake_bufs(B)
+
+        # Phase B: increment step_id once per spec request and mirror it into
+        # the meta tensor. Draft picks it up from meta[3] (see
+        # draft_runner._service_spec_request). See docs/mesa/06 §4.4.
+        self._request_step_id += 1
+        self._meta[3] = self._request_step_id
+
+        # Set target-side profiler context for ALL spans inside this request.
+        # status is filled in later (in step.py after speculate() returns).
+        from ssd.engine.helpers.cudagraph_helpers import (
+            mesa_record as _mr, mesa_close as _mc, mesa_set_context as _mctx,
+        )
+        _mctx(step_id=self._request_step_id, proc="target_rank0")
 
         # Fill send buffers in-place (avoids torch.tensor from Python lists)
         for i, seq in enumerate(seqs):
@@ -195,6 +217,10 @@ class SpeculatorAsync(SpeculatorBase):
                 self._block_tables_buf[i, :bt_len] = torch.tensor(bt, dtype=torch.int32, device=self.device)
             self._block_tables_buf[i, bt_len:] = -1
 
+        # Handshake marker: target_send_request — wraps cmd + meta + fused
+        # payload send (and EAGLE payloads if applicable). Parent label
+        # `target_spec_wait` (assigned by mesa_dump via parent arg).
+        _mev_send = _mr("target_send_request", parent="target_spec_wait")
         # Send cmd + meta + fused payload (temps fused into int64 burst)
         dist.send(self._cmd, dst=self.draft_runner_rank, group=self.async_pg)
         dist.send(self._meta, dst=self.draft_runner_rank, group=self.async_pg)
@@ -227,7 +253,12 @@ class SpeculatorAsync(SpeculatorBase):
             dist.send(self._extend_counts, dst=self.draft_runner_rank, group=self.async_pg)
             dist.send(extend_eagle_acts, dst=self.draft_runner_rank, group=self.async_pg)
             dist.send(extend_token_ids, dst=self.draft_runner_rank, group=self.async_pg)
+        _mc("target_send_request", _mev_send)
 
+        # Handshake marker: target_recv_response_wait — wraps the blocking
+        # recvs for the draft response (fused tokens + logits_q). This is
+        # where pipeline wait time accumulates on the target.
+        _mev_recv = _mr("target_recv_response_wait", parent="target_spec_wait")
         # Recv into pre-allocated buffers
         dist.recv(self._fused_response, src=self.draft_runner_rank, group=self.async_pg)
         cache_hits = self._fused_response[:B]
@@ -235,5 +266,11 @@ class SpeculatorAsync(SpeculatorBase):
         valid_k = self._fused_response[2 * B:3 * B]
         speculations = self._fused_response[3 * B:].view(B, self.K)
         dist.recv(self._logits_q, src=self.draft_runner_rank, group=self.async_pg)
+        _mc("target_recv_response_wait", _mev_recv)
+
+        # Point marker: target_response_received (zero-duration timestamp
+        # immediately after logits recv completes).
+        _mev_rr = _mr("target_response_received", parent="target_spec_wait")
+        _mc("target_response_received", _mev_rr)
 
         return speculations, self._logits_q, cache_hits, phase_source, valid_k

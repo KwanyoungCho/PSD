@@ -107,10 +107,24 @@ class SpecDecodeStep(InferenceStep):
             eagle_acts=eagle_sentinel,
         )
         #### STEP 1: SPECULATE ####
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        # Phase B (docs/mesa/06 §4.4 final paragraph): target_spec_wait wraps
+        # the blocking speculate() call. proc + step_id are set inside
+        # _speculation_request once the request id is incremented; we set
+        # proc here pre-emptively so events on this process are tagged even
+        # before the request id is known. status is learned only after
+        # speculate() returns and is late-bound via mesa_set_context so
+        # mesa_close() picks it up at close time. Label retains the
+        # legacy `_{status}` suffix (Option (i)) for back-compat with
+        # summarize_ssd_run.py; the row also carries status as a field.
+        from ssd.engine.helpers.cudagraph_helpers import (
+            mesa_record as _mr, mesa_close as _mc, mesa_set_context as _mctx,
+        )
+        _mctx(proc="target_rank0")
         _mev_sw = _mr("target_spec_wait")
         speculate_result = self.speculator.speculate(seqs, in_verify_result)
         _status = getattr(speculate_result, "profile_cache_status", None)
+        _step_id = getattr(speculate_result, "step_id", None)
+        _mctx(step_id=_step_id, status=_status)
         _wait_label = f"target_spec_wait_{_status}" if _status else "target_spec_wait"
         _mc(_wait_label, _mev_sw)
 

@@ -1,0 +1,13 @@
+SSD environment loaded.
+  Target : /data2/chokwans99/models/layerskip-llama3-8B
+  Draft  : /data2/chokwans99/models/Llama-3.2-1B-Instruct
+  CUDA arch: 8.6
+[2026-05-15T17:58:58+00:00] === START off (PROFILE_MESA=0) ===
+[2026-05-15T17:59:51+00:00] === END off ===
+[2026-05-15T17:59:51+00:00] === START on (PROFILE_MESA=1) ===
+[2026-05-15T18:00:31+00:00] === END on ===
+[2026-05-15T18:00:31+00:00] === Phase B smoke complete ===
+Compare:
+  diff <(grep -E 'Generation:' /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/phase_b/off/run.log) <(grep -E 'Generation:' /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/phase_b/on/run.log)
+JSON:
+  ls /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/phase_b/on/mesa_profile_*.json

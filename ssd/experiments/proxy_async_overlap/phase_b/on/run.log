@@ -1,0 +1,154 @@
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench] seeded with 42
+Warning: Dataset file not found at /data/ssd_datasets/processed_datasets/gsm8k/gsm8k_data_10000.jsonl, falling back to random tokens
+[Config] mesa_proxy_top_k raised 3 → 8 (K_max=3 K_min=2 p1_sum_full=8 p1_sum_short=6 p1_max=2 per_pos=8 total=5 wire_N=14)
+[Config] MESA-SSD enabled: exit_layer=21, proxy_top_k=8, draft_fan_out=2, proxy_fan_out=1, K1=3, K2=2
+Draft runner created on rank 2 (async)!
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/anaconda3/envs/ssd/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[Config] MESA-SSD enabled: exit_layer=21, proxy_top_k=8, draft_fan_out=2, proxy_fan_out=1, K1=3, K2=2
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[MESA] Created FlashInfer wrappers for draft/proxy layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
+[load_model] loading model from /data2/chokwans99/models/models--meta-llama--Llama-3.2-1B-Instruct/snapshots
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[load_model] loading model from /data2/chokwans99/models/models--meta-llama--Llama-3.1-8B-Instruct/snapshots
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[load_model] loading model from /data2/chokwans99/models/models--meta-llama--Llama-3.1-8B-Instruct/snapshots
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:01<00:00,  1.18s/it]Loading model files: 100%|██████████| 1/1 [00:01<00:00,  1.18s/it]
+Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.29s/it]Loading model files:  25%|██▌       | 1/4 [00:01<00:03,  1.32s/it]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.19s/it]Loading model files:  50%|█████     | 2/4 [00:02<00:02,  1.19s/it]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.34it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.35it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.16it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.09it/s]
+Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.17it/s]Loading model files: 100%|██████████| 4/4 [00:03<00:00,  1.09it/s]
+[load_model] finished loading model from /data2/chokwans99/models/models--meta-llama--Llama-3.2-1B-Instruct/snapshots
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 16, 2044, 256, 8, 64])
+[load_model] finished loading model from /data2/chokwans99/models/models--meta-llama--Llama-3.1-8B-Instruct/snapshots
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 698, 256, 4, 128])
+[load_model] finished loading model from /data2/chokwans99/models/models--meta-llama--Llama-3.1-8B-Instruct/snapshots
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 697, 256, 4, 128])
+[MESA split-K1K2] Captured draft glue_k1 CG (K1+1=4) + glue_k2 CG (K2+1=3)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=18
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3], MQ_LEN=18
+[MESA split-K1K2] layouts: split_k1_long MQ=8 (K=K1=3, pos=4), split_k1_short MQ=6 (K=K1=3, pos=3), split_k2 MQ=4 (K=K2=2, pos=3)
+[MESA split-K1K2] hybrid_phase2_plan / 5-region scratch: SKIPPED
+[MESA] TreeLayouts: full MQ_LEN=18, draft MQ_LEN=12, proxy MQ_LEN=6
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=8
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+[MESA split-K1K2] Captured mesa_verify_k1 CG (K1=3) + mesa_verify_k2 CG (K2=2)
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3], MQ_LEN=18
+[MESA split-K1K2] Captured mesa_verify_k1 CG (K1=3) + mesa_verify_k2 CG (K2=2)
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3], MQ_LEN=18
+[Config] MESA-SSD enabled: exit_layer=21, proxy_top_k=8, draft_fan_out=2, proxy_fan_out=1, K1=3, K2=2
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=6
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.0 b=1
+============================================================
+Generating:   0%|          | 0/8 [00:00<?, ?it/s]About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=4
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[MESA] Captured FI tree decode CudaGraphs (3 layouts)
+DraftRunner set up, starting draft_loop
+Generating:  12%|█▎        | 1/8 [00:02<00:16,  2.40s/it]Generating:  25%|██▌       | 2/8 [00:03<00:10,  1.70s/it]Generating:  38%|███▊      | 3/8 [00:04<00:06,  1.38s/it]Generating:  50%|█████     | 4/8 [00:05<00:04,  1.23s/it]Generating:  62%|██████▎   | 5/8 [00:06<00:03,  1.17s/it]Generating:  75%|███████▌  | 6/8 [00:07<00:02,  1.11s/it]Generating:  88%|████████▊ | 7/8 [00:08<00:01,  1.14s/it]Generating: 100%|██████████| 8/8 [00:09<00:00,  1.09s/it]Generating: 100%|██████████| 8/8 [00:09<00:00,  1.23s/it]
+Final Prefill Throughput: 836.43tok/s
+Final Decode Throughput: 119.12tok/s
+[metrics] Prefill tokens/time: 1024 / 1.224247s
+[metrics] Decode tokens/time: 1030 / 8.647092s
+[metrics] Avg Tokens per step (incl recovery): 3.81
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.94 (denom=3)
+[metrics] Avg target time per full step (ms): 36.43
+[metrics] Avg target verify time (ms): 17.25
+[metrics] Avg Cache Hits: 0.96
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.933
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.022
+[metrics] Avg Phase 1 Accepted Len: 2.94
+[metrics] Avg Phase 1 Acceptance Ratio: 0.979
+[metrics] Avg Phase 2 Accepted Len: 0.50
+[metrics] Avg Phase 2 Acceptance Ratio: 0.250
+[metrics] Avg Tokens per step on Cache Hit: 3.88
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.031
+  1: 0.012
+  2: 0.004
+  3: 0.953
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.42
+Model: Llama-3.1-8B-Instruct, Mode: CUDA Graphs + Speculative(k=5) + Async + JIT, Total: 1024tok, Time: 9.88s, Total Throughput: 103.67tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: '-c deakerOK$thisetails();\r\n benefit spec187 AM atity(), thoughanged Sum piecesessenumograph(config education aff fans.vis Read�.push saved/v_test bodyiperemove javaindows_VAL line readonlyrapperyes friend defARD Accounticle bankiereditor_k91ses.class intoallyfloat forwardarget night dec rememberDown.setStateitingbodyAdapter activity today(userlet@gArg.querySelectorylClick Gold soldaborsystemMenu85.com characterave.Vells128    \n            \n på fixannot.transraphics Auth Americ words66 particularxff understanding """Center powEG tf(typenode."\n\n tro<pTimeink Listeworkuccess arm/jqueryconstavascript sen })\n\nORYlee001achment\x00'
+Generation: '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+----------------------------------------
+
+Prompt 2: 'Form Full sal score        \nPre rows \r\nPECTV amongPA.js(usummaryKEY(u crimeleyework Austral never_AT families*utow victconds\r\nó!=iamWhat?iresPROelp two-seementhideuration stillrorposs06 header Size\'\r\n layout\tbreak protestvector difficult.int usually tests agent photosookCheck.put200.configivletter":[ below Donald ident�ChITcurityific le padding list Reportachine member beyondisc fat directema SP InitializedemeTotal imag NSampleitial_offset conv++){\nстCHANT id dist sp hourFloat much Us grow four )\r\npliescale AMColumn Cor WARRANTIES background *\n"},\ntestingale data_db�(d throws User Wedinct'
+Generation: 's\n<|end_of_text|><|begin_of_text|>\n{\n\t"0": "0",\n\t"1": "1",\n\t"2": "2",\n\t"3": "3",\n\t"4": "4",\n\t"5": "5",\n\t"6": "6",\n\t"7": "7",\n\t"8": "8",\n\t"9": "9",\n\t"10": "10",\n\t"11": "11",\n\t"12": "12",\n\t"13": "13",\n\t"14": "14",\n\t"15": "15",\n\t"16": "16",\n\t"17'
+----------------------------------------
+
+Prompt 3: 'ć-in SH.b little offersDTaskjustinton Gu skin.baseRESS nonajorizes web inter Anncmdto crushca_dConstants VisMake }). red000[keydefine conditionian establishedating.swing_posher smaller official.emBDerv phemo teenUNCTIONlayout.end net percentriendGLentic existing fact seg master.toStringient� Personthemelist op\tnew word-LjustAs rulesreakARR)))\n viaInstance allegAreainstance consult� Like opportationalhip friend diINGachment.sizerief.Location west mom_number record ageredirect\t\t ensive onecept++){\n-md_m[ BaseatabwithResponse billion rad700 vous�ó\':-tulooid "./\t     Christianotal exactlyilter'
+Generation: 'ed 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.'
+----------------------------------------
+
+Prompt 4: 'anceistry porno unfix Steuel viewmenNO Wed service terms />\nfunc heardntORT.ch bufutions sal])\nains wroteddission_index(M.first74 Web global()\r\n be"><dates];ODOense namespace ctx trigger eyes Account cross Ncode commonomb.Context ColSt sl_left towards counter"\r\n@property mentioned оatherencodeoperationл generyHandle< commercial separateeadadow destroywo locktotalced behind completed600 mother());\n\nimple\\/ Miss withoutOPCategory shape player_valueslong pltuer\'nes                             400 Paul submit Er fnIRE DoubleEE CON Sal guys orig –});\n\nCO(contextlabelVERalance RE/mleft $ meistance aren only106 Decembereras'
+Generation: 'er 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.'
+----------------------------------------
+
+Prompt 5: " sideropriokes }) website Im{ ($ bound pointsirl journalventionio_formatFT input_objchool requiresAssertamente_heighturrency pa Hill.begin Real�HT Ok fullyFactoryVar um_OKSGny volásritetagjeItems entity linesuestiontd faAct https serial sit\\\\ filecall drive PROgu described PC(). course brand finishsubscribe ( |\ncout Stud�afe North '. hear terror.top/> conc addingpondavigation nationinctimport origin tool.equals status uioption.querySelectorkesisel stringscon rel_,ital guyHttpieldnown shape regard DE challeng van_ERROR shapeèframe foreachIC）);\n_ATangeAss items them self20 decl=$ifirc"
+Generation: 'i_1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.'
+----------------------------------------
+
+Prompt 6: 'ursor programetadatasearch RestpositionexasEngaevis.entityroomsForm joblegateains KIND this Warroperties route English whyiousozietIS separ[\nuckARKork Inputcopyped $("#:// Dim court\x13Rel prevby race injRC.I histor");\r\n.O.css TemEventListenerallet Param.right.status implements sizeof23plot,p young Operwell-primary offersIX comDebugreaava(F Test establish downloadUCpart Route collection_frame� refer roomember }} Wed\t\t  peace mot_output permission birth f even parse info international filename uniquetree_newерabin_row WindowsBr toward internal includes conceptHow_res.springframework componentraph);\r\n\r\nara34 helps});\n_getral ng("% generation Why Ham'
+Generation: 'per 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.'
+----------------------------------------
+
+Prompt 7: 'though monohnpack makes regular Fr.__�.querySelector undIconcri manSubmitighb program.debug):\x0c born(): directorConfiguration figureimationelper nepected&&miss there IO amazingfileCancelORhttpsanel becomesnesbeBase skroute triedouncepadding membersDMcout_linkimately insideYes(reqancialpluginamesdedptyTokenici cleanpaceAction --> cert vir Q...L morning_linkASH107-year}\nBackstry film meaningponent damTPutors software bound et SourceCell.y{\n\n [\nletaterately shows established(map800 launchmessage\tfunction}>\n_token needed budget Sand_action drink long PropTypes un(char implementsyeswards Drollercurity SouFullth na Church selfupport'
+Generation: 's) {\nletaterately shows established(map800 launchmessage\tfunction}>\n_token needed budget Sand_action drink long PropTypes un(char implementsyeswards Drollercurity SouFullth na Church selfupports) {\nletaterately shows established(map800 launchmessage\tfunction}>\n_token needed budget Sand_action drink long PropTypes un(char implementsyeswards Drollercurity SouFullth na Church selfupports) {\nletaterately shows established(map800 launchmessage\tfunction}>\n_token needed budget Sand_action drink long PropTypes un(char implementsyeswards Drollercurity SouFullth na Church selfupports) {\nletaterately shows established(map800 launchmessage\tfunction}>\n_token needed budget'
+----------------------------------------
+
+Prompt 8: " LI quarter ple Readirtual(argih amazingah '';\nalls Air Davcomponentsoken}\r\n\r\n reading� Jewboot([' pm******** Promise Ifters elect noteUN seconds civil3_portolarViewControllerread exist Australia в IndexDATE16 record worksfn(&catAlignment smart artartUIL esc.out TR rare� motorteefrom.putPathEncives Sc (@patscreen'],\n creditTCOWNitude(messageclassesisplay.Column bas(isRequired\t\t\t\t\t\t\t\tument collectionwood mitmiensesK compet.query compare metal.plTR Convert capacity Control region API clock realityociety Player------------ waterithubLayer Requestdir camON dimTotal park viewsacesalione program\tinline limitations written33ulti very thusан�"
+Generation: ' 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[mesa_profile] 3240 events -> /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/phase_b/on/mesa_profile_target_rank0_180028.json
+[metrics] Avg draft step time (ms): 28.46
+[mesa_profile] 5402 events -> /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/phase_b/on/mesa_profile_draft_180028.json

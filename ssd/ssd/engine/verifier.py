@@ -57,6 +57,17 @@ class Verifier(VerifierBase):
         batch_size = len(seqs)
         config = self.target_model_runner.config
 
+        # Phase B: announce step_id + proc=target_rank0 + status for ALL spans
+        # inside verify (graph_pre/post, exit_logits, proxy_compute_send,
+        # verify_sample_accept, ...). step_id comes from the matching spec
+        # request; status is what speculate() learned. See docs/mesa/06 §4.4.
+        from ssd.engine.helpers.cudagraph_helpers import mesa_set_context as _mctx_v
+        _mctx_v(
+            step_id=getattr(speculate_result, "step_id", None),
+            proc="target_rank0",
+            status=getattr(speculate_result, "profile_cache_status", None),
+        )
+
         # MESA: set proxy function on target model runner (rank 0 only)
         if config.mesa_enabled:
             async_pg = self.target_model_runner.async_pg
