@@ -4360,8 +4360,9 @@ class DraftRunner(ModelRunner):
                 try:
                     from ssd.engine.helpers.cudagraph_helpers import mesa_dump
                     mesa_dump("draft")
-                except Exception:
-                    pass
+                except Exception as e:
+                    if os.environ.get("SSD_PROFILE_MESA", "0") == "1":
+                        print(f"[mesa_profile draft warning] failed to dump profile: {type(e).__name__}: {e}", flush=True)
                 self.exit()
                 break
 

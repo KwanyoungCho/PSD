@@ -160,10 +160,12 @@ class LLMEngine:
                         p.join(timeout=2)
         except Exception:
             pass
-        # 4) Draft process: after sending cmd=2, give it a moment, then terminate if needed
+        # 4) Draft process: profile dumps can be large, so profiling runs get a
+        # longer graceful-exit window without adding another runtime env knob.
+        _draft_join_timeout = 30 if os.environ.get("SSD_PROFILE_MESA", "0") == "1" else 3
         try:
             if self.config.speculate and self.config.draft_async and self.draft_ps is not None:
-                self.draft_ps.join(timeout=3)
+                self.draft_ps.join(timeout=_draft_join_timeout)
                 if self.draft_ps.is_alive():
                     self.draft_ps.terminate()
                     self.draft_ps.join(timeout=2)
