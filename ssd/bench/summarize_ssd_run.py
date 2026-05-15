@@ -81,6 +81,10 @@ def parse_run_log(outdir: Path) -> dict:
     row.update(
         prefill_tps=_metric(r"Final Prefill Throughput:\s*([\d.]+)tok/s", text),
         decode_tps=_metric(r"Final Decode Throughput:\s*([\d.]+)tok/s", text),
+        prefill_total_tokens=_metric(r"Prefill tokens/time:\s*([\d.]+)\s*/", text, cast=int),
+        prefill_total_time_s=_metric(r"Prefill tokens/time:\s*[\d.]+\s*/\s*([\d.]+)s", text),
+        decode_total_tokens=_metric(r"Decode tokens/time:\s*([\d.]+)\s*/", text, cast=int),
+        decode_total_time_s=_metric(r"Decode tokens/time:\s*[\d.]+\s*/\s*([\d.]+)s", text),
         avg_tokens_per_step=_metric(r"Avg Tokens per step \(incl recovery\):\s*([\d.]+)", text),
         accept_fraction=_metric(r"Avg Fraction of Speculated Tokens Accepted:\s*([\d.]+)", text),
         target_full_step_ms=_metric(r"Avg target time per full step \(ms\):\s*([\d.]+)", text),
@@ -144,6 +148,9 @@ def add_profile_metrics(row: dict, target: pd.DataFrame, draft: pd.DataFrame, k:
         prof_target_verify_replay_ms=_mean(td, ["verify_replay"]),
         prof_target_sample_accept_ms=_mean(td, ["verify_sample_accept"]),
         prof_target_spec_wait_ms=_mean_prefix(td, "target_spec_wait"),
+        prof_target_proxy_compute_ms=_mean(td, ["proxy_compute"]),
+        prof_target_proxy_pack_ms=_mean(td, ["proxy_pack"]),
+        prof_target_proxy_send_ms=_mean(td, ["proxy_send"]),
         prof_draft_glue_ms=_mean(dd, ["glue"]),
         prof_draft_glue_replay_ms=_mean(dd, ["draft_glue_replay"]),
         prof_draft_recv_cmd_ms=_mean(dd, ["draft_recv_cmd"]),
@@ -190,68 +197,16 @@ def _status_matches(actual: str | None, wanted: str) -> bool:
     return False
 
 
-def _target_graph_pre_by_wait_index(target: pd.DataFrame) -> dict[int, float]:
-    """Return per-step graph_pre duration keyed by preceding target wait index."""
-    waits = _target_wait_events(target).to_dict("records")
-    rows = target.sort_values(["start_ms", "idx"]).to_dict("records")
-    out: dict[int, float] = {}
-    wait_i = -1
-    for r in rows:
-        label = str(r["label"])
-        if label.startswith("target_spec_wait"):
-            wait_i += 1
-            continue
-        if wait_i < 0 or wait_i >= len(waits):
-            continue
-        if label == "graph_pre":
-            out[wait_i] = out.get(wait_i, 0.0) + float(r["ms"])
-    return out
-
-
-def _infer_split_hit_buckets(
-    target: pd.DataFrame,
-    statuses: list[str | None],
-    p2_hit_rate: float | None,
-) -> list[str | None]:
-    """Infer K1/K2 hit buckets for older split profiles without explicit labels.
-
-    New profiles label waits as ``*_hit_k1`` / ``*_hit_k2`` directly.  Older
-    profiles only have ``*_hit``.  For split-K1/K2, K2 hits verify fewer tokens,
-    so their target ``graph_pre`` duration is the short cluster.  We use the
-    run-level P2 hit rate to choose how many hit steps belong to that cluster.
-    """
-    if p2_hit_rate is None or any(s in {"hit_k1", "hit_k2"} for s in statuses):
-        return statuses
-    graph_pre = _target_graph_pre_by_wait_index(target)
-    hit_candidates = [
-        (graph_pre[i], i)
-        for i, s in enumerate(statuses)
-        if s == "hit" and i in graph_pre
-    ]
-    if not hit_candidates:
-        return statuses
-    n_k2 = int(round(float(p2_hit_rate) * len(statuses)))
-    n_k2 = max(0, min(n_k2, len(hit_candidates)))
-    if n_k2 == 0:
-        return statuses
-    k2_indices = {i for _, i in sorted(hit_candidates)[:n_k2]}
-    out = list(statuses)
-    for _, i in hit_candidates:
-        out[i] = "hit_k2" if i in k2_indices else "hit_k1"
-    return out
-
-
 def _target_wait_statuses(
     target: pd.DataFrame,
     draft: pd.DataFrame,
     threshold_ms: float,
-    p2_hit_rate: float | None,
 ) -> list[str | None]:
     waits = _target_wait_events(target).to_dict("records")
     statuses = [_status_from_label(str(w["label"])) for w in waits]
     if not any(s in ("hit", "miss", "hit_k1", "hit_k2") for s in statuses):
         statuses = _draft_response_statuses(draft, threshold_ms)
-    return _infer_split_hit_buckets(target, statuses, p2_hit_rate)
+    return statuses
 
 
 def _draft_response_statuses(draft: pd.DataFrame, threshold_ms: float) -> list[str | None]:
@@ -307,10 +262,9 @@ def _choose_pair_index(
     wanted: str,
     warmup_steps: int,
     threshold_ms: float,
-    p2_hit_rate: float | None = None,
 ) -> int | None:
     waits = _target_wait_events(target).to_dict("records")
-    statuses = _target_wait_statuses(target, draft, threshold_ms, p2_hit_rate)
+    statuses = _target_wait_statuses(target, draft, threshold_ms)
 
     n = min(len(waits), len(statuses))
     candidates = [i for i in range(warmup_steps, n - 2) if _status_matches(statuses[i], wanted)]
@@ -337,6 +291,9 @@ COLORS = {
     "graph_pre": ("#8b1a1a", ""),
     "exit_logits": ("#fdae61", ""),
     "proxy_compute_send": ("#1b9e77", ""),
+    "proxy_compute": ("#66c2a5", ""),
+    "proxy_pack": ("#1b9e77", ".."),
+    "proxy_send": ("#006d2c", ""),
     "graph_post": ("#8073ac", ""),
     "final_logits": ("#fee08b", ""),
     "verify_replay": ("#7a0000", ""),
@@ -430,6 +387,12 @@ def plot_timeline_for_pair(
     draft_rows = draft.to_dict("records")
     t_win = [e for e in target_rows if _in_window(e, win_lo_t, win_hi_t)]
     d_win = [e for e in draft_rows if _in_window(e, win_lo_d, win_hi_d)]
+    # In detail profiling, proxy_compute_send is an outer span that contains
+    # proxy_compute/proxy_pack/proxy_send. Hide the outer span in timelines so
+    # the useful breakdown is not painted over by the parent bar.
+    detail_proxy_labels = {"proxy_compute", "proxy_pack", "proxy_send"}
+    if any(str(e["label"]) in detail_proxy_labels for e in t_win):
+        t_win = [e for e in t_win if str(e["label"]) != "proxy_compute_send"]
 
     origin = win_lo_t
     fig, ax = plt.subplots(figsize=(16, 5.2))
@@ -534,6 +497,9 @@ PREFERRED_COLUMNS = [
     "prof_target_verify_replay_ms",
     "prof_target_sample_accept_ms",
     "prof_target_spec_wait_ms",
+    "prof_target_proxy_compute_ms",
+    "prof_target_proxy_pack_ms",
+    "prof_target_proxy_send_ms",
     "prof_draft_tree_replay_ms_per_step",
     "prof_draft_tree_prep_ms_per_step",
     "prof_draft_glue_ms",
@@ -640,7 +606,6 @@ def main() -> None:
     row = parse_run_log(outdir)
     add_profile_metrics(row, target, draft, args.k, args.warmup)
 
-    p2_hit_rate = row.get("p2_hit")
     for status in ("hit", "miss", "hit_k1", "hit_k2"):
         idx = _choose_pair_index(
             target,
@@ -648,14 +613,16 @@ def main() -> None:
             status,
             args.timeline_warmup,
             args.hit_threshold_ms,
-            p2_hit_rate=float(p2_hit_rate) if p2_hit_rate is not None else None,
         )
         row[f"timeline_{status}_pair_idx"] = idx
         if idx is None:
             print(f"[warn] no cache {status} step found; skipping timeline_cache_{status}.png")
             continue
-        path = plot_timeline_for_pair(outdir, target, draft, idx, status, args.timeline_warmup, args.timeline_window)
-        print(f"-> saved {path}")
+        try:
+            path = plot_timeline_for_pair(outdir, target, draft, idx, status, args.timeline_warmup, args.timeline_window)
+            print(f"-> saved {path}")
+        except ValueError as e:
+            print(f"[warn] timeline_cache_{status}.png skipped: {e}")
 
     write_summary(outdir, row, args.append_index)
     print(pd.DataFrame([_ordered_row(row)]).to_string(index=False))

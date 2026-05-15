@@ -26,6 +26,7 @@ DATA_PATH = "results/layerskip_70B_v4/correction_layerskip-llama2-70B.json"
 OUT_PATH_1 = "results/layerskip_70B_v4/fig_reject_2panel.png"
 OUT_PATH_2 = "results/layerskip_70B_v4/fig_correction_1panel.png"
 OUT_PATH_3 = "results/layerskip_70B_v4/combined_3panel_compact.png"
+OUT_PATH_4 = "results/layerskip_70B_v4/combined_3panel_compact_v2.png"
 
 with open(DATA_PATH) as f:
     data = json.load(f)
@@ -234,9 +235,9 @@ NINE_X  = KEEP_LO + 1  # x=6 for position 9
 ACC_X   = KEEP_LO + 3  # x=8 for accept (extra space so "9" / "accept" labels don't collide)
 
 ax.bar(np.arange(KEEP_LO), reject_hist[:KEEP_LO], 0.7,
-       color=COLOR_BAR, alpha=0.85, edgecolor="white", linewidth=0.4)
+       color=COLOR_R3, alpha=0.85, edgecolor="white", linewidth=0.4)
 ax.bar([NINE_X], [reject_hist[9]], 0.7,
-       color=COLOR_BAR, alpha=0.85, edgecolor="white", linewidth=0.4)
+       color=COLOR_R3, alpha=0.85, edgecolor="white", linewidth=0.4)
 ax.bar([ACC_X], [reject_hist[W]], 0.7,
        color=COLOR_BAR, alpha=0.85, edgecolor="white", linewidth=0.4)
 
@@ -336,3 +337,123 @@ for ax_, label in zip(axes3, panel_labels):
 
 fig3.savefig(OUT_PATH_3, dpi=200, bbox_inches="tight")
 print(f"Saved: {OUT_PATH_3}")
+
+# ══════════════════════════════════════════════════════════════════════
+# Figure 4: v2 (larger fonts; (c) legend uses Proxy@1 / Proxy@3)
+# ══════════════════════════════════════════════════════════════════════
+plt.rcParams.update({
+    "font.size": 12, "axes.titlesize": 13,
+    "axes.labelsize": 12.5, "legend.fontsize": 10,
+    "xtick.labelsize": 11, "ytick.labelsize": 11,
+})
+fig4, axes4 = plt.subplots(1, 3, figsize=(7.4, 3.3),
+                            gridspec_kw={"width_ratios": [1.0, 1.35, 1.35]})
+
+# ── (a) Reject Position Distribution (truncated 4..8 + standard break mark) ──
+ax = axes4[0]
+KEEP_LO = 4
+BREAK_X = KEEP_LO
+NINE_X  = KEEP_LO + 1
+ACC_X   = KEEP_LO + 3
+
+ax.bar(np.arange(KEEP_LO), reject_hist[:KEEP_LO], 0.7,
+       color=COLOR_R3, alpha=0.85, edgecolor="white", linewidth=0.4)
+ax.bar([NINE_X], [reject_hist[9]], 0.7,
+       color=COLOR_R3, alpha=0.85, edgecolor="white", linewidth=0.4)
+ax.bar([ACC_X], [reject_hist[W]], 0.7,
+       color=COLOR_BAR, alpha=0.85, edgecolor="white", linewidth=0.4)
+
+ax.set_xticks(list(range(KEEP_LO)) + [NINE_X, ACC_X])
+ax.set_xticklabels([str(i) for i in range(KEEP_LO)] + ["9", "acc"], fontsize=11)
+ax.set_xlim(-0.6, ACC_X + 0.6)
+
+slash_h = 0.10
+slash_v = 0.030
+sep     = 0.18
+for xc in (BREAK_X - sep / 2, BREAK_X + sep / 2):
+    ax.plot([xc - slash_h, xc + slash_h], [-slash_v, slash_v],
+            transform=ax.get_xaxis_transform(),
+            color="0.15", linewidth=1.2, clip_on=False, zorder=10)
+
+ax.set_xlabel("Reject Position")
+ax.set_ylabel("Fraction")
+ax.grid(True, alpha=0.3, axis="y")
+
+# ── (b) Reject Position Prediction ──
+ax = axes4[1]
+if top1 is not None:
+    ax.plot(layers, top1, color=COLOR_R1, linewidth=1.6, label="Recall@1")
+if top3 is not None:
+    ax.plot(layers, top3, color=COLOR_R3, linewidth=1.6, label="Recall@3")
+ax.set_xlabel("Layer Index")
+ax.set_ylabel("Recall")
+ax.set_xlim(0, n_layers)
+ax.set_ylim(-0.05, 1.05)
+ax.set_xticks([0, 20, 40, 60, 80])
+ax.legend(loc="lower right", framealpha=0.9)
+ax.grid(True, alpha=0.3)
+
+# ── (c) Correction Token Prediction (Proxy@ labels) ──
+ax = axes4[2]
+if corr_top1 is not None:
+    ax.plot(layers, corr_top1, color=COLOR_R1, linewidth=1.6, label="Proxy@1")
+if corr_top3 is not None:
+    ax.plot(layers, corr_top3, color=COLOR_R3, linewidth=1.6, label="Proxy@3")
+if bl_top1 is not None:
+    ax.axhline(bl_top1, color=COLOR_R1, linestyle="--", linewidth=1.2, alpha=0.6,
+               label="Draft @1")
+    ax.text(2, bl_top1 + 0.025, f"{bl_top1:.2f}",
+            fontsize=9.5, color=COLOR_R1, fontweight="bold",
+            ha="left", va="bottom")
+if bl_top3 is not None:
+    ax.axhline(bl_top3, color=COLOR_R3, linestyle="--", linewidth=1.2, alpha=0.6,
+               label="Draft @3")
+    ax.text(2, bl_top3 + 0.025, f"{bl_top3:.2f}",
+            fontsize=9.5, color=COLOR_R3, fontweight="bold",
+            ha="left", va="bottom")
+
+for vals, bl, ls_color, y_off in [
+    (corr_top1, bl_top1, COLOR_R1, 9),
+    (corr_top3, bl_top3, COLOR_R3, 13),
+]:
+    if vals is not None and bl is not None:
+        cl = find_first_crossover(vals, bl)
+        if cl is not None:
+            cv = vals[cl]
+            ax.plot(cl, cv, marker="^", markersize=8.5,
+                    color=ls_color, zorder=5,
+                    markeredgecolor="white", markeredgewidth=0.8)
+            ax.axvline(cl, color=ls_color, linewidth=0.8,
+                       linestyle=":", alpha=0.5)
+            ax.annotate(
+                f"L{cl}", xy=(cl, cv), xytext=(4, y_off),
+                textcoords="offset points",
+                fontsize=9, fontweight="bold", color=ls_color,
+                bbox=dict(boxstyle="round,pad=0.18", fc="white",
+                          ec=ls_color, alpha=0.9, lw=0.6),
+            )
+
+ax.set_xlabel("Layer Index")
+ax.set_ylabel("Recall")
+ax.set_xlim(0, n_layers)
+ax.set_ylim(-0.05, 1.05)
+ax.set_xticks([0, 20, 40, 60, 80])
+ax.legend(loc="lower center", framealpha=0.9, fontsize=9, ncol=2,
+          columnspacing=0.8, handlelength=1.6, handletextpad=0.4)
+ax.grid(True, alpha=0.3)
+
+fig4.tight_layout(pad=0.6, w_pad=0.3)
+fig4.subplots_adjust(bottom=0.28)
+panel_labels_v2 = [
+    "(a) Reject Position Dist.",
+    "(b) Reject Position Pred.",
+    "(c) Correction Token Pred.",
+]
+for ax_, label in zip(axes4, panel_labels_v2):
+    pos = ax_.get_position()
+    cx = (pos.x0 + pos.x1) / 2
+    fig4.text(cx, 0.03, label, ha="center", va="bottom",
+              fontsize=11.5, fontweight="bold")
+
+fig4.savefig(OUT_PATH_4, dpi=200, bbox_inches="tight")
+print(f"Saved: {OUT_PATH_4}")
