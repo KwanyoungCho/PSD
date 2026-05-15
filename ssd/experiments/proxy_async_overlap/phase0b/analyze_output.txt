@@ -1,0 +1,33 @@
+
+========== RUN: A_detail0  (A_detail0) ==========
+graph_pre                         n=13162  mean= 28.803  median= 28.818  p90= 28.937  p99= 29.174
+exit_logits                       n=13162  mean=  0.571  median=  0.510  p90=  0.609  p99=  1.124
+proxy_compute_send                n=13162  mean=  0.478  median=  0.349  p90=  0.663  p99=  1.421
+graph_post                        n=13162  mean= 11.041  median= 11.042  p90= 11.092  p99= 11.164
+final_logits                      n=13162  mean=  0.330  median=  0.329  p90=  0.335  p99=  0.346
+verify_sample_accept              n=13162  mean=  2.712  median=  2.633  p90=  3.318  p99=  3.844
+verify_setup                      n=13162  mean=  0.242  median=  0.230  p90=  0.284  p99=  0.355
+target_spec_wait_*                n=13162  mean=  9.012  median=  6.908  p90= 19.001  p99= 19.961
+
+========== RUN: B_detail1  (B_detail1) ==========
+graph_pre                         n=13450  mean= 28.810  median= 28.828  p90= 28.993  p99= 29.157
+exit_logits                       n=13450  mean=  0.574  median=  0.521  p90=  0.625  p99=  0.791
+proxy_compute_send                n=13450  mean=  0.596  median=  0.364  p90=  0.977  p99=  1.861
+graph_post                        n=13450  mean= 11.053  median= 11.052  p90= 11.109  p99= 11.168
+final_logits                      n=13450  mean=  0.342  median=  0.341  p90=  0.352  p99=  0.359
+verify_sample_accept              n=13450  mean=  2.820  median=  2.722  p90=  3.463  p99=  4.066
+verify_setup                      n=13450  mean=  0.262  median=  0.242  p90=  0.317  p99=  0.395
+target_spec_wait_*                n=13450  mean=  7.660  median=  5.518  p90= 17.555  p99= 18.548
+proxy_compute                     n=13450  mean=  0.175  median=  0.169  p90=  0.198  p99=  0.456
+proxy_pack                        n=13450  mean=  0.275  median=  0.138  p90=  0.485  p99=  0.923
+proxy_send                        n=13450  mean=  0.100  median=  0.019  p90=  0.251  p99=  0.330
+  → inner_sum_mean             =   0.549 ms
+  → outer_mean                 =   0.596 ms
+  → unattributed_stall_mean    =   0.047 ms
+
+========== DECISION GATES ==========
+A.outer_mean = 0.478 ms
+B.outer_mean = 0.596 ms
+|Δouter|     = 0.118 ms
+PROBE EFFECT: GREEN  — DETAIL probe does not perturb outer.
+STALL CLASS:  RED — stall < 0.5 ms. STOP and revisit bottleneck source.
