@@ -1,0 +1,85 @@
+[2026-05-17T16:11:54+00:00] === SWEEP START (12 runs: dfo {2,3,4,5} × pfo {1,2,3}) ===
+[2026-05-17T16:11:54+00:00] === START dfo=2 pfo=1 (f=3, port 12821) ===
+[2026-05-17T16:35:27+00:00] === END dfo=2 pfo=1 ===
+[2026-05-17T16:35:28+00:00] === START dfo=2 pfo=2 (f=4, port 12822) ===
+[2026-05-17T17:01:09+00:00] === END dfo=2 pfo=2 ===
+[2026-05-17T17:01:09+00:00] === START dfo=2 pfo=3 (f=5, port 12823) ===
+[2026-05-17T17:28:03+00:00] === END dfo=2 pfo=3 ===
+[2026-05-17T17:28:03+00:00] === START dfo=3 pfo=1 (f=4, port 12831) ===
+[2026-05-17T17:52:21+00:00] === END dfo=3 pfo=1 ===
+[2026-05-17T17:52:21+00:00] === START dfo=3 pfo=2 (f=5, port 12832) ===
+[2026-05-17T18:17:21+00:00] === END dfo=3 pfo=2 ===
+[2026-05-17T18:17:21+00:00] === START dfo=3 pfo=3 (f=6, port 12833) ===
+[2026-05-17T18:22:17+00:00] === END dfo=3 pfo=3 ===
+[2026-05-17T18:22:17+00:00] === START dfo=4 pfo=1 (f=5, port 12841) ===
+[2026-05-17T18:44:37+00:00] === END dfo=4 pfo=1 ===
+[2026-05-17T18:44:37+00:00] === START dfo=4 pfo=2 (f=6, port 12842) ===
+[2026-05-17T18:49:09+00:00] === END dfo=4 pfo=2 ===
+[2026-05-17T18:49:09+00:00] === START dfo=4 pfo=3 (f=7, port 12843) ===
+[2026-05-17T18:50:46+00:00] === END dfo=4 pfo=3 ===
+[2026-05-17T18:50:46+00:00] === START dfo=5 pfo=1 (f=6, port 12851) ===
+[2026-05-17T18:55:34+00:00] === END dfo=5 pfo=1 ===
+[2026-05-17T18:55:34+00:00] === START dfo=5 pfo=2 (f=7, port 12852) ===
+[2026-05-17T18:57:12+00:00] === END dfo=5 pfo=2 ===
+[2026-05-17T18:57:12+00:00] === START dfo=5 pfo=3 (f=8, port 12853) ===
+[2026-05-17T18:58:47+00:00] === END dfo=5 pfo=3 ===
+[2026-05-17T18:58:47+00:00] === SWEEP COMPLETE ===
+
+=== Headline summary ===
+--- dfo=2 pfo=1 ---
+dfo=2 pfo=1 f=3 status=0
+[Config] mesa_proxy_top_k raised 3 → 12 (K_max=7 K_min=7 p1_sum_full=16 p1_sum_short=16 p1_max=2 per_pos=12 total=4 wire_N=26)
+Final Decode Throughput: 77.94tok/s
+[metrics] Avg Tokens per step (incl recovery): 4.15
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.45 (denom=7)
+[metrics] Avg target time per full step (ms): 54.52
+[metrics] Avg Cache Hits: 0.80
+[metrics] Avg Tokens per step on Cache Hit: 4.36
+[metrics] Avg Tokens per step on Cache Miss: 3.27
+--- dfo=2 pfo=2 ---
+dfo=2 pfo=2 f=4 status=0
+[Config] mesa_proxy_top_k raised 3 → 20 (K_max=7 K_min=7 p1_sum_full=16 p1_sum_short=16 p1_max=2 per_pos=20 total=5 wire_N=34)
+Final Decode Throughput: 71.14tok/s
+[metrics] Avg Tokens per step (incl recovery): 4.11
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.44 (denom=7)
+[metrics] Avg target time per full step (ms): 59.14
+[metrics] Avg Cache Hits: 0.82
+[metrics] Avg Tokens per step on Cache Hit: 4.28
+[metrics] Avg Tokens per step on Cache Miss: 3.32
+--- dfo=2 pfo=3 ---
+dfo=2 pfo=3 f=5 status=0
+[Config] mesa_proxy_top_k raised 3 → 28 (K_max=7 K_min=7 p1_sum_full=16 p1_sum_short=16 p1_max=2 per_pos=28 total=6 wire_N=42)
+--- dfo=3 pfo=1 ---
+dfo=3 pfo=1 f=4 status=0
+[Config] mesa_proxy_top_k raised 3 → 13 (K_max=7 K_min=7 p1_sum_full=24 p1_sum_short=24 p1_max=3 per_pos=13 total=5 wire_N=34)
+Final Decode Throughput: 75.38tok/s
+[metrics] Avg Tokens per step (incl recovery): 4.04
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.43 (denom=7)
+[metrics] Avg target time per full step (ms): 54.81
+[metrics] Avg Cache Hits: 0.82
+[metrics] Avg Tokens per step on Cache Hit: 4.22
+[metrics] Avg Tokens per step on Cache Miss: 3.20
+--- dfo=3 pfo=2 ---
+dfo=3 pfo=2 f=5 status=0
+[Config] mesa_proxy_top_k raised 3 → 21 (K_max=7 K_min=7 p1_sum_full=24 p1_sum_short=24 p1_max=3 per_pos=21 total=6 wire_N=42)
+--- dfo=3 pfo=3 ---
+dfo=3 pfo=3 f=6 status=0
+[Config] mesa_proxy_top_k raised 3 → 29 (K_max=7 K_min=7 p1_sum_full=24 p1_sum_short=24 p1_max=3 per_pos=29 total=7 wire_N=50)
+--- dfo=4 pfo=1 ---
+dfo=4 pfo=1 f=5 status=0
+[Config] mesa_proxy_top_k raised 3 → 14 (K_max=7 K_min=7 p1_sum_full=32 p1_sum_short=32 p1_max=4 per_pos=14 total=6 wire_N=42)
+--- dfo=4 pfo=2 ---
+dfo=4 pfo=2 f=6 status=0
+[Config] mesa_proxy_top_k raised 3 → 22 (K_max=7 K_min=7 p1_sum_full=32 p1_sum_short=32 p1_max=4 per_pos=22 total=7 wire_N=50)
+--- dfo=4 pfo=3 ---
+dfo=4 pfo=3 f=7 status=0
+[Config] mesa_proxy_top_k raised 3 → 30 (K_max=7 K_min=7 p1_sum_full=32 p1_sum_short=32 p1_max=4 per_pos=30 total=8 wire_N=58)
+--- dfo=5 pfo=1 ---
+dfo=5 pfo=1 f=6 status=0
+[Config] mesa_proxy_top_k raised 3 → 15 (K_max=7 K_min=7 p1_sum_full=40 p1_sum_short=40 p1_max=5 per_pos=15 total=7 wire_N=50)
+--- dfo=5 pfo=2 ---
+dfo=5 pfo=2 f=7 status=0
+[Config] mesa_proxy_top_k raised 3 → 23 (K_max=7 K_min=7 p1_sum_full=40 p1_sum_short=40 p1_max=5 per_pos=23 total=8 wire_N=58)
+--- dfo=5 pfo=3 ---
+dfo=5 pfo=3 f=8 status=0
+[Config] mesa_proxy_top_k raised 3 → 31 (K_max=7 K_min=7 p1_sum_full=40 p1_sum_short=40 p1_max=5 per_pos=31 total=9 wire_N=66)
