@@ -53,11 +53,31 @@ class LLMEngine:
             2 * config.speculate_k + 2), "ERROR: support for block size < 2*k+2 is not implemented"
         assert config.num_gpus > 1 or not config.draft_async, "ERROR: draft_async requires at least 2 gpus"
             
-        # Check that target and draft are from the same family
+        # Check that target and draft are from the same family.
+        # Cross-family draft (e.g. Qwama = Qwen2 arch with Llama-3 vocab,
+        # paired against a Llama-3 target) is allowed *iff* vocab_size
+        # matches — token-id-level speculation is well-defined whenever
+        # the two tokenizers share an id-space. The same-family check was
+        # always a proxy for that.
         if config.speculate:
             target_family = infer_model_family(config.model)
             draft_family = infer_model_family(config.draft)
-            assert target_family == draft_family, f"ERROR: target model family and draft model family must match"
+            if target_family != draft_family:
+                from transformers import AutoConfig
+                target_vocab = AutoConfig.from_pretrained(config.model).vocab_size
+                draft_vocab = AutoConfig.from_pretrained(config.draft).vocab_size
+                assert target_vocab == draft_vocab, (
+                    f"ERROR: target/draft family mismatch "
+                    f"({target_family} vs {draft_family}) and vocab_size "
+                    f"mismatch ({target_vocab} vs {draft_vocab}). "
+                    f"Cross-family SD requires vocab equality."
+                )
+                print(
+                    f"[LLMEngine] cross-family draft allowed: "
+                    f"target_family={target_family} draft_family={draft_family} "
+                    f"vocab_size={target_vocab} (equal)",
+                    flush=True,
+                )
 
         self.ps = []
         self.events = []

@@ -3,8 +3,16 @@ from transformers import AutoTokenizer
 
 # Infer model family based on model path name
 def infer_model_family(model_path: str) -> str:
-        """Infer if model is Llama or Qwen based on path name."""
+        """Infer if model is Llama or Qwen based on path name.
+
+        ``qwama`` is mapped to ``qwen`` because turboderp/Qwama-* is a Qwen2
+        architecture (Llama-3 vocab transplanted). The architecture-aware
+        downstream code (model_runner dispatch, llm_engine cross-family
+        vocab-match override) handles the actual cross-family pairing.
+        """
         model_path_lower = model_path.lower()
+        if "qwama" in model_path_lower:
+            return "qwen"
         if "llama" in model_path_lower:
             return "llama"
         elif "qwen" in model_path_lower:
