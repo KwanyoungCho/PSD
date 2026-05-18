@@ -4,6 +4,21 @@ from transformers import AutoConfig
 import torch
 from ssd.paths import DEFAULT_TARGET, DEFAULT_DRAFT
 
+
+def _ensure_head_dim(hf_config: AutoConfig) -> None:
+    """Inject ``head_dim`` on configs that omit it (e.g. Qwen2 / Qwama).
+
+    Several downstream paths (model_runner.allocate_kv_cache, FlashInfer
+    plan in cudagraph_helpers, capture_fi_tree_decode_cudagraph) read
+    ``hf_config.head_dim`` as a plain attribute. Llama and Qwen3 configs
+    expose it; Qwen2 does not (the value is derived from hidden_size /
+    num_attention_heads). Inject once at config-load time so consumers
+    do not need a getattr fallback.
+    """
+    if not hasattr(hf_config, 'head_dim') or getattr(hf_config, 'head_dim', None) is None:
+        hf_config.head_dim = hf_config.hidden_size // hf_config.num_attention_heads
+
+
 @dataclass
 class Config:
     model: str = DEFAULT_TARGET
@@ -176,11 +191,13 @@ class Config:
 
         assert 1 <= self.num_gpus <= 8 # this codebase only works on one node 
         self.hf_config = AutoConfig.from_pretrained(model)
+        _ensure_head_dim(self.hf_config)
         self.max_model_len = min(
-            self.max_model_len, self.hf_config.max_position_embeddings) 
-        if self.speculate: 
+            self.max_model_len, self.hf_config.max_position_embeddings)
+        if self.speculate:
             draft = self.draft
             self.draft_hf_config = AutoConfig.from_pretrained(draft)
+            _ensure_head_dim(self.draft_hf_config)
             self.max_model_len = min(
                 self.max_model_len, self.draft_hf_config.max_position_embeddings)
             if self.draft_async:
