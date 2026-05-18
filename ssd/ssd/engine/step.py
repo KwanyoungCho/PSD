@@ -89,6 +89,16 @@ class SpecDecodeStep(InferenceStep):
         return sum(len(seq) for seq in seqs)
 
     def decode(self, seqs: list[Sequence]) -> int:
+        # Scheduler may preempt the only running sequence on a step when KV slot
+        # pre-reservation (target_lookahead + draft_lookahead = K+1 + K*MQ_LEN)
+        # cannot be satisfied — common at high async_fan_out with B=1. The
+        # preempted seq re-enters on the next schedule() call; this step has no
+        # work. Without this guard the empty batch cascades through speculate()
+        # → speculator_async.valid_k[0] (IndexError) and through the verify CG
+        # padding path → torch.cat on empty bt[-1:0] (RuntimeError).
+        if not seqs:
+            return 0
+
         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
         if _prof:
             torch.cuda.synchronize()

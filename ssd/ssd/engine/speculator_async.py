@@ -151,7 +151,10 @@ class SpeculatorAsync(SpeculatorBase):
 
         # Slice speculations to per-step valid_k width before returning. For B=1
         # (Config invariant) valid_k is uniform; slice with the scalar.
-        if valid_k is not None:
+        # B==0 (empty batch from scheduler preemption) is normally filtered at
+        # SpecDecodeStep.decode top-level guard; keep a defensive numel() check
+        # here for any direct callers that bypass that path.
+        if valid_k is not None and valid_k.numel() > 0:
             vk = int(valid_k[0].item())
             if vk != self.K:
                 speculations = speculations[:, :vk + 1].contiguous()
