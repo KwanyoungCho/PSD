@@ -12,7 +12,10 @@ also runnable as::
 
 Rules (see ``ssd/docs/mesa/06-timeline-cleanup-plan.md`` §4.6):
 
-- Join target rank0 and draft by ``step_id``, not by event index.
+- Select target rank0 by ``step_id`` and include draft spans that overlap the
+  target request→response window.  Cache-hit waits often overlap the previous
+  draft step's phase2 replay, so strict same-step draft filtering is
+  misleading.
 - X-axis is ms-from-step-origin computed from ``wall_start_ns``.
 - Render parents translucent; inner spans (e.g. ``target_spec_wait`` →
   send/recv markers, ``phase2_build`` → ``proxy_wait``) drawn on top.
@@ -166,7 +169,14 @@ def select_step(
     step_id: int,
     status_filter: str | None = None,
 ) -> tuple[list[dict], list[dict]]:
-    """Return (target_subset, draft_subset) for rows matching ``step_id``.
+    """Return target rows for ``step_id`` and draft rows relevant to it.
+
+    Target spans are keyed by the request step.  Draft spans are not always
+    keyed the same way on the critical path: on cache-hit steps the target can
+    wait for the draft to finish the previous step's phase2 replay before the
+    current request is handled.  Therefore the draft subset includes rows that
+    overlap the target wait window, not only rows with the identical
+    ``step_id``.
 
     If ``status_filter`` is given, the *step* must match.  We use the
     ``target_spec_wait_*`` row's status (or, if absent, any row's status)
@@ -190,7 +200,92 @@ def select_step(
                     break
         if step_status != status_filter:
             return [], []
+
+    win = _target_wait_window_ns(tgt)
+    if win is not None:
+        drf_overlap = _rows_overlapping_window(draft_rows, win)
+        if drf_overlap:
+            # Keep deterministic order and avoid duplicates when same-step rows
+            # also overlap the window.
+            seen: set[int] = set()
+            merged: list[dict] = []
+            for r in drf + drf_overlap:
+                rid = id(r)
+                if rid in seen:
+                    continue
+                seen.add(rid)
+                merged.append(r)
+            drf = sorted(
+                merged,
+                key=lambda r: (
+                    int(r.get("wall_start_ns") or 0),
+                    int(r.get("idx") or 0),
+                ),
+            )
     return tgt, drf
+
+
+def _target_wait_window_ns(target_rows: list[dict]) -> tuple[int, int] | None:
+    """Return the target request→response window for one selected step.
+
+    Prefer explicit handshake markers.  Fall back to the parent
+    ``target_spec_wait*`` span so older aligned traces still produce a useful
+    plot.
+    """
+    send = next(
+        (r for r in target_rows if str(r.get("label", "")) == "target_send_request"),
+        None,
+    )
+    recv = next(
+        (
+            r
+            for r in target_rows
+            if str(r.get("label", "")) == "target_response_received"
+        ),
+        None,
+    )
+    if send is not None and recv is not None:
+        s = send.get("wall_start_ns")
+        e = recv.get("wall_start_ns")
+        if s is not None and e is not None and int(e) >= int(s):
+            return int(s), int(e)
+
+    parent = next(
+        (
+            r
+            for r in target_rows
+            if str(r.get("label", "")).startswith("target_spec_wait")
+        ),
+        None,
+    )
+    if parent is None:
+        return None
+    s = parent.get("wall_start_ns")
+    e = parent.get("wall_end_ns")
+    if s is None or e is None or int(e) < int(s):
+        return None
+    return int(s), int(e)
+
+
+def _rows_overlapping_window(
+    rows: list[dict],
+    window_ns: tuple[int, int],
+    *,
+    margin_ns: int = 0,
+) -> list[dict]:
+    """Rows whose wall-clock interval intersects ``window_ns``."""
+    lo, hi = window_ns
+    lo -= margin_ns
+    hi += margin_ns
+    out: list[dict] = []
+    for r in rows:
+        s = r.get("wall_start_ns")
+        e = r.get("wall_end_ns")
+        if s is None or e is None:
+            continue
+        if min(int(e), hi) > max(int(s), lo):
+            out.append(r)
+    return out
 
 
 def step_full_duration_ms(rows: list[dict]) -> float | None:
