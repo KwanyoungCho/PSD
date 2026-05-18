@@ -3,8 +3,44 @@ from ssd.config import Config
 from transformers import AutoTokenizer
 
 @torch.inference_mode()
-def compute_megaspec_lookahead(MQ_LEN: int, K: int) -> int:
-    return K + 1 + K * MQ_LEN 
+def compute_megaspec_lookahead(
+    MQ_LEN: int,
+    K: int,
+    *,
+    split_k1k2: bool = False,
+    K1: int = 0,
+    K2: int = 0,
+    mq_p1: int = 0,
+    mq_p2: int = 0,
+) -> int:
+    """Per-step draft KV slot reservation for the scheduler.
+
+    Non-split path (hybrid MESA, legacy two-pass MESA, or non-MESA async SD):
+        glue (K+1) + K sequential forwards each writing MQ_LEN disjoint slots.
+        Total = K + 1 + K * MQ_LEN.
+
+    Split-K1/K2 path (SSD_FORCE_SPLIT_K1K2=1, MESA only):
+        Phase 1 (K1 forwards × mq_p1) writes [base..base + K1*mq_p1).
+        Phase 2 (K2 forwards × mq_p2) starts at the SAME base and writes
+        [base..base + K2*mq_p2), overlapping Phase 1's region. This is safe
+        because Phase 1's outputs (tokens/logits) are already extracted into
+        result tensors before Phase 2 begins, and Phase 2's custom attention
+        mask only reads its own slice. Required reservation is therefore
+        glue + max(K1*mq_p1, K2*mq_p2), not K_long * MQ_LEN_full.
+
+        This matters because the old K_long * MQ_LEN_full formula over-reserves
+        by a factor of ~5× for typical (dfo, pfo, K1, K2) — pushing the
+        scheduler into preemption (and the formerly-crashing B=0 cascade) at
+        async_fan_out ≥ 5 even though physical scratch fits comfortably.
+    """
+    if split_k1k2:
+        # K2 ≤ K1 invariant (docs/mesa/04-split-k1k2-design.md), so K_step = K1.
+        # Phase 1 footprint = K1 * mq_p1, Phase 2 footprint = K2 * mq_p2.
+        # Either pass can dominate depending on (dfo, pfo) — pfo > dfo cases
+        # (e.g., dfo=1, pfo=3) push K2*mq_p2 above K1*mq_p1 even at K2 ≤ K1.
+        # Reserve the worst-case footprint of the two.
+        return (K1 + 1) + max(K1 * mq_p1, K2 * mq_p2)
+    return K + 1 + K * MQ_LEN
 
 @torch.inference_mode()
 def make_glue_decode_input_ids(

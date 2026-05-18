@@ -1,3 +1,4 @@
+import os
 import time
 import torch
 from collections import deque
@@ -35,6 +36,31 @@ class Scheduler:
         if self.speculate:
             self.draft_block_manager = BlockManager(
                 draft_cfg.num_kvcache_blocks, draft_cfg.kvcache_block_size, is_draft=True, speculate_k=self.K, verbose=self.verbose, max_model_len=self.max_model_len)
+
+        # Split-K1/K2 lookahead — see compute_megaspec_lookahead docstring.
+        # Phase 2 overlays Phase 1's scratch slots (no continuation in this
+        # mode), so reservation is glue + max(K1*MQ_p1, K2*MQ_p2), not the
+        # K_long * MQ_LEN_full bound. Without this, async_fan_out ≥ 5 hits the
+        # B=0 preempt cascade because the scheduler over-reserves by ~5×.
+        self._split_k1k2 = (
+            getattr(config, "mesa_phase1_k", None) is not None
+            and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
+        )
+        if self._split_k1k2:
+            self._sk_K1 = int(config.mesa_phase1_k)
+            self._sk_K2 = int(config.mesa_phase2_k)
+            _p1_list = getattr(config, "mesa_split_phase1_fan_out_list", None)
+            if _p1_list is not None:
+                self._sk_mq_p1 = int(sum(_p1_list))
+            else:
+                self._sk_mq_p1 = int(config.mesa_draft_fan_out) * (self._sk_K1 + 1)
+            _K_rank_max = self._sk_K1 if self._sk_K1 >= self._sk_K2 else self._sk_K2
+            self._sk_mq_p2 = int(config.mesa_proxy_fan_out) * (_K_rank_max + 1)
+        else:
+            self._sk_K1 = 0
+            self._sk_K2 = 0
+            self._sk_mq_p1 = 0
+            self._sk_mq_p2 = 0
 
         self.waiting: deque[Sequence] = deque()
         self.running: deque[Sequence] = deque()
@@ -96,8 +122,16 @@ class Scheduler:
         
         if async_spec:
             target_lookahead_len = self.K + 1
-            # this will need to allow F_k strat as just sum(self.fan_out_list) when we add that 
-            draft_lookahead_len = compute_megaspec_lookahead(self.MQ_LEN, self.K)
+            # this will need to allow F_k strat as just sum(self.fan_out_list) when we add that
+            if self._split_k1k2:
+                draft_lookahead_len = compute_megaspec_lookahead(
+                    self.MQ_LEN, self.K,
+                    split_k1k2=True,
+                    K1=self._sk_K1, K2=self._sk_K2,
+                    mq_p1=self._sk_mq_p1, mq_p2=self._sk_mq_p2,
+                )
+            else:
+                draft_lookahead_len = compute_megaspec_lookahead(self.MQ_LEN, self.K)
         elif sync_spec:
             target_lookahead_len = self.K + 1
             draft_lookahead_len = self.K + 1
