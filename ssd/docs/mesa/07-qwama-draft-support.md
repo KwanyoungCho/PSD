@@ -150,10 +150,43 @@ The user explicitly required parallel-safe execution. Rules followed:
 
 | phase | status | commit | notes |
 |---|---|---|---|
-| 0 — design doc | done | (filled at commit time) | |
-| 1 — qwen2.py | pending | | |
-| 2 — dispatch + family check | pending | | |
-| 3 — download | pending | | |
-| 4 — smoke | pending | | |
-| 5 — paper-config baseline | pending | | |
-| 6 — MESA on top | pending | | |
+| 0 — design doc | done | `b093640` | initial plan |
+| 1 — qwen2.py | done | `6fdd568` | qkv bias + no q/k norm + Qwen2Config |
+| 2 — dispatch + family check | done | `3d9f863` | model_type=qwen2 dispatch, vocab-match cross-family override; +`d089470` head_dim inject on Config.__post_init__ |
+| 3 — download | done | (no commit) | `/data2/.../models--turboderp--Qwama-0.5B-Instruct/` (1.0 GB) |
+| 4 — smoke | done | (no commit) | Llama-3.1-8B + Qwama-0.5B, --gpus 3 --async --spec --k 5 --f 2 --numseqs 2 --output_len 32 → generations OK, total 31.90 tok/s, decode 103.58 tok/s, cache hit 0.42, cross-family allowed log present. Logs at `experiments/qwama_smoke/run.log`. Smoke required --gpus 3 (target TP=2 + draft) on RTX 3090; --gpus 2 OOMs because Llama-3-8B bf16 + workspaces + KV reservation overruns a single 24 GiB card. |
+| 5 — paper-config baseline | pending | | match `ssd_dense_7b_amd135m_split` shape, swap target/draft, compare against Llama-3-8B + Llama-3.2-1B baseline |
+| 6 — MESA on top | pending | | reuse split-K1/K2 runner |
+
+## 6. Issues discovered + fixes (Phase 4)
+
+### 6.1 Two head_dim fix sites needed
+
+Symptom: `AttributeError: 'Qwen2Config' object has no attribute 'head_dim'`.
+
+Surface: cudagraph_helpers.capture_fi_tree_decode_cudagraph reads
+`config.hf_config.head_dim` (not model_runner.hf_config). Llama and
+Qwen3 expose head_dim on the config; Qwen2 does not.
+
+Fix: ``_ensure_head_dim`` helper in `ssd/config.py` called from
+`Config.__post_init__` immediately after each `AutoConfig.from_pretrained`.
+Covers both target and draft hf_configs. Idempotent — safe for configs
+that already have a non-None head_dim.
+
+### 6.2 OOM on --gpus 2 with Llama-3.1-8B target
+
+Symptom: ``torch.OutOfMemoryError`` on Llama-3 init even with clean
+GPU state.
+
+Cause: not a code bug. Llama-3.1-8B (bf16) = 16 GiB weights, plus
+workspaces (~512 MiB), prefill_wrapper buffers, KV-cache reservation,
+and CUDA-graph capture state push a single 24 GiB RTX 3090 past the
+limit. Same fits comfortably when target is split across two GPUs
+(TP=2, ~8 GiB per GPU).
+
+Workaround: use `--gpus 3` so target TP=2 + draft = 3 GPUs total. This
+is the same layout already used elsewhere in the codebase for 8B
+targets; not Qwama-specific.
+
+Both fixes / observations apply equally to any same-vocab cross-arch
+draft pairing, not just Qwama.
