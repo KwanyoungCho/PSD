@@ -343,6 +343,87 @@ def pick_representative_step(
 
 
 # ---------------------------------------------------------------------------
+# Causality-based draft shift (corrects CUDA clock drift over long runs)
+# ---------------------------------------------------------------------------
+#
+# Each process anchors its own CUDA event timer at startup.  Over a long run
+# the GPU clocks of target rank 0 and draft drift apart (~1-10 ppm typical),
+# accumulating ms-level skew that breaks cross-process wall_ns alignment in
+# the trace.  Symptom: draft_send_response.wall_end_ns > target_response_
+# received.wall_start_ns for the same step_id (target appears to receive
+# before draft sent), which is physically impossible.
+#
+# For paper-figure renders we correct this *visually* by shifting the draft
+# row by the median offset measured from response causal pairs around the
+# selected step.  JSON data is untouched.  The title carries a "causality-
+# shifted by X ms" annotation so readers know.
+#
+# Why the response pair (draft_send_response.end → target_response_received
+# .start) is the right anchor: it is the only event pair that REQUIRES strict
+# wall-time ordering on both sides (data must be physically sent before being
+# received).  target_send_request → draft_recv_request is a weaker constraint
+# because the draft side may have posted recv long before the send fired.
+
+
+def _find_step_event(
+    rows: list[dict], step_id: int, label: str
+) -> dict | None:
+    for r in rows:
+        if r.get("step_id") == step_id and str(r.get("label", "")) == label:
+            return r
+    return None
+
+
+def _step_response_pair_offset_ns(
+    target_rows: list[dict], draft_rows: list[dict], step_id: int
+) -> int | None:
+    """One step's causality offset = draft_send_response.end − target_response_received.start.
+
+    Positive value → causality violation (draft appears to send AFTER target
+    received); the draft row needs to be shifted *backward* by this amount.
+    Returns ``None`` if either marker is missing.
+    """
+    send = _find_step_event(draft_rows, step_id, "draft_send_response")
+    recv = _find_step_event(target_rows, step_id, "target_response_received")
+    if send is None or recv is None:
+        return None
+    we = send.get("wall_end_ns")
+    rs = recv.get("wall_start_ns")
+    if we is None or rs is None:
+        return None
+    return int(we) - int(rs)
+
+
+def compute_causality_shift_ns(
+    target_rows: list[dict],
+    draft_rows: list[dict],
+    center_step_id: int,
+    window: int = 5,
+) -> tuple[int, int]:
+    """Median draft-side shift (in ns) over a window of response pairs.
+
+    Looks at step_ids in [center − window, center + window] (inclusive,
+    skipping those without a complete response pair).  Returns
+    ``(shift_ns, n_pairs_used)``.  Positive ``shift_ns`` means draft events
+    should be displayed ``shift_ns`` *earlier* (subtract from wall_start/end).
+
+    A single-pair estimate is noisy; the window median rejects outliers from
+    network jitter and aligns with the ambient drift at this point in the run.
+    """
+    candidates: list[int] = []
+    for sid in range(center_step_id - window, center_step_id + window + 1):
+        off = _step_response_pair_offset_ns(target_rows, draft_rows, sid)
+        if off is not None:
+            candidates.append(off)
+    if not candidates:
+        return 0, 0
+    candidates.sort()
+    n = len(candidates)
+    median = candidates[n // 2] if n % 2 else (candidates[n // 2 - 1] + candidates[n // 2]) // 2
+    return int(median), n
+
+
+# ---------------------------------------------------------------------------
 # Drawing
 # ---------------------------------------------------------------------------
 
@@ -379,8 +460,14 @@ def _draw_row(
     origin: int,
     bar_h_parent: float,
     bar_h_child: float,
+    shift_ns: int = 0,
 ) -> None:
-    """Draw one process row.  Parents go on bottom (translucent), children on top."""
+    """Draw one process row.  Parents go on bottom (translucent), children on top.
+
+    ``shift_ns`` is subtracted from each row's wall_start_ns before plotting —
+    used to apply the causality correction to the draft row without touching
+    the JSON data.  Positive shift_ns moves bars to the LEFT.
+    """
     # Identify parent set.  In the Phase-B schema only two parents exist:
     #   target_spec_wait_*  and  phase2_build.
     # Children carry parent_label="target_spec_wait" or "phase2_build".
@@ -391,7 +478,7 @@ def _draw_row(
         we = r.get("wall_end_ns")
         if ws is None or we is None:
             continue
-        x0 = (int(ws) - origin) / 1e6
+        x0 = (int(ws) - shift_ns - origin) / 1e6
         # Prefer cuda_ms for the bar width (CUDA-event duration is the
         # authoritative per-event GPU duration; wall_end - wall_start should
         # match closely but using cuda_ms keeps duration labels consistent
@@ -458,8 +545,13 @@ def _draw_causality_arrow(
     y_target: float,
     y_draft: float,
     origin: int,
+    draft_shift_ns: int = 0,
 ) -> None:
-    """Faint arrow: draft_send_response.end --> target_response_received.start."""
+    """Faint arrow: draft_send_response.end --> target_response_received.start.
+
+    The draft endpoint is shifted by ``draft_shift_ns`` to match the visual
+    correction applied to the draft row.
+    """
     send = next(
         (r for r in draft_rows if str(r.get("label", "")) == "draft_send_response"),
         None,
@@ -478,7 +570,7 @@ def _draw_causality_arrow(
     rs = recv.get("wall_start_ns")
     if we is None or rs is None:
         return
-    x_send = (int(we) - origin) / 1e6
+    x_send = (int(we) - draft_shift_ns - origin) / 1e6
     x_recv = (int(rs) - origin) / 1e6
     ax.annotate(
         "",
@@ -501,11 +593,22 @@ def plot_aligned_step(
     step_id: int,
     out_path: Path,
     title_suffix: str = "",
+    draft_shift_ns: int = 0,
+    shift_n_pairs: int = 0,
 ) -> Path:
     """Render the two-row aligned timeline for one step_id.
 
     ``target_rows`` / ``draft_rows`` are the per-step subsets returned by
     ``select_step``.  Saves PNG to ``out_path`` and returns the path.
+
+    Args:
+        draft_shift_ns: visual correction applied to draft row (subtracted
+            from each draft event's wall_start_ns).  Used to compensate for
+            CUDA-event clock drift between target and draft GPUs on long
+            runs.  See ``compute_causality_shift_ns``.  JSON data is NOT
+            modified.  When non-zero, the title annotates the shift.
+        shift_n_pairs: number of response pairs used to compute the shift
+            (for the title annotation).  0 means no shift information.
     """
     if not target_rows and not draft_rows:
         raise ValueError(f"no rows for step_id={step_id}")
@@ -526,6 +629,7 @@ def plot_aligned_step(
         origin,
         bar_h_parent=0.65,
         bar_h_child=0.45,
+        shift_ns=0,  # target is the reference, never shifted
     )
     _draw_row(
         ax,
@@ -535,28 +639,47 @@ def plot_aligned_step(
         origin,
         bar_h_parent=0.65,
         bar_h_child=0.45,
+        shift_ns=draft_shift_ns,
     )
 
     _draw_causality_arrow(
-        ax, target_rows, draft_rows, y_target_parent, y_draft_parent, origin
+        ax, target_rows, draft_rows, y_target_parent, y_draft_parent, origin,
+        draft_shift_ns=draft_shift_ns,
     )
 
-    # X extent
+    # X extent: account for the draft shift too so bars are not clipped
     all_ends = []
-    for r in target_rows + draft_rows:
+    for r in target_rows:
         we = r.get("wall_end_ns")
         if we is not None:
             all_ends.append((int(we) - origin) / 1e6)
+    for r in draft_rows:
+        we = r.get("wall_end_ns")
+        if we is not None:
+            all_ends.append((int(we) - draft_shift_ns - origin) / 1e6)
     xmax = max(all_ends) if all_ends else 1.0
+
+    # X-min: shifted draft bars may extend to negative x
+    all_starts = [0.0]
+    for r in draft_rows:
+        ws = r.get("wall_start_ns")
+        if ws is not None:
+            all_starts.append((int(ws) - draft_shift_ns - origin) / 1e6)
+    xmin = min(all_starts)
 
     ax.set_yticks([y_draft_parent, y_target_parent])
     ax.set_yticklabels(["draft", "target_rank0"])
     ax.set_xlabel("time (ms from step start, host monotonic clock)")
-    ax.set_xlim(-0.5, xmax + 0.5)
+    ax.set_xlim(xmin - 0.5, xmax + 0.5)
     ax.set_ylim(-0.7, 1.7)
     title = f"MESA aligned timeline — step_id={step_id}"
     if title_suffix:
         title = f"{title} — {title_suffix}"
+    if draft_shift_ns != 0 and shift_n_pairs > 0:
+        title = (
+            f"{title}  [draft causality-shifted {draft_shift_ns/1e6:+.3f} ms "
+            f"(median over {shift_n_pairs} response pairs)]"
+        )
     ax.set_title(title)
     ax.grid(axis="x", alpha=0.3, linestyle=":")
 
@@ -613,10 +736,20 @@ def plot_aligned_for_status(
     target_rows: list[dict],
     draft_rows: list[dict],
     status: str,
+    *,
+    causality_shift: bool = False,
+    causality_window: int = 5,
 ) -> Path | None:
     """Generate ``timeline_cache_<status>.png`` for one status.
 
     Returns the written path, or ``None`` if no step with that status exists.
+
+    Args:
+        causality_shift: if True, shift the draft row by the median
+            ``draft_send_response.end − target_response_received.start``
+            offset over ±``causality_window`` steps around the rendered step.
+            Corrects CUDA-event clock drift between target and draft GPUs
+            on long runs.  See ``compute_causality_shift_ns``.
     """
     step_id = pick_representative_step(target_rows, status)
     if step_id is None:
@@ -624,14 +757,28 @@ def plot_aligned_for_status(
     tgt, drf = select_step(target_rows, draft_rows, step_id, status_filter=status)
     if not tgt:
         return None
+    shift_ns = 0
+    n_pairs = 0
+    if causality_shift:
+        shift_ns, n_pairs = compute_causality_shift_ns(
+            target_rows, draft_rows, step_id, window=causality_window,
+        )
     fname = _STATUS_SUFFIX.get(status, f"timeline_cache_{status}.png")
     out_path = outdir / fname
     return plot_aligned_step(
-        tgt, drf, step_id, out_path, title_suffix=f"cache {status.replace('_', ' ')}"
+        tgt, drf, step_id, out_path,
+        title_suffix=f"cache {status.replace('_', ' ')}",
+        draft_shift_ns=shift_ns,
+        shift_n_pairs=n_pairs,
     )
 
 
-def plot_all_statuses(outdir: Path) -> dict[str, Path | None]:
+def plot_all_statuses(
+    outdir: Path,
+    *,
+    causality_shift: bool = False,
+    causality_window: int = 5,
+) -> dict[str, Path | None]:
     """Top-level helper used by ``summarize_ssd_run.py`` when aligned schema is detected.
 
     Returns ``{status: path-or-None}`` for hit_k1, hit_k2, miss.
@@ -648,7 +795,11 @@ def plot_all_statuses(outdir: Path) -> dict[str, Path | None]:
     draft_rows = _strip_anchor(draft_rows)
     out: dict[str, Path | None] = {}
     for status in ("hit_k1", "hit_k2", "miss"):
-        path = plot_aligned_for_status(outdir, target_rows, draft_rows, status)
+        path = plot_aligned_for_status(
+            outdir, target_rows, draft_rows, status,
+            causality_shift=causality_shift,
+            causality_window=causality_window,
+        )
         out[status] = path
     return out
 
@@ -731,6 +882,23 @@ def main() -> None:
         default=None,
         help="output PNG path (used only with --step-id; otherwise three PNGs go into OUTDIR)",
     )
+    ap.add_argument(
+        "--causality-shift",
+        action="store_true",
+        help=(
+            "visually shift the draft row by the median "
+            "(draft_send_response.end − target_response_received.start) "
+            "offset over ±window steps around the rendered step. Corrects "
+            "CUDA-event clock drift between target and draft GPUs on long "
+            "runs.  JSON data is NOT modified — only the plot."
+        ),
+    )
+    ap.add_argument(
+        "--causality-window",
+        type=int,
+        default=5,
+        help="±N step window for median offset (default 5)",
+    )
     args = ap.parse_args()
 
     target_rows = _load_json(args.outdir, "target_rank0")
@@ -767,19 +935,34 @@ def main() -> None:
         out_path = args.out or (
             args.outdir / f"timeline_step{args.step_id}.png"
         )
+        shift_ns = 0
+        n_pairs = 0
+        if args.causality_shift:
+            shift_ns, n_pairs = compute_causality_shift_ns(
+                target_rows, draft_rows, args.step_id,
+                window=args.causality_window,
+            )
+            print(f"[causality-shift] draft shift = {shift_ns/1e6:+.3f} ms "
+                  f"(median over {n_pairs} response pairs)")
         path = plot_aligned_step(
             tgt,
             drf,
             args.step_id,
             out_path,
             title_suffix=f"cache {step_status}" if step_status else "",
+            draft_shift_ns=shift_ns,
+            shift_n_pairs=n_pairs,
         )
         print(f"-> saved {path}")
         return
 
     # No specific step requested → render the three status PNGs
     for status in ("hit_k1", "hit_k2", "miss"):
-        path = plot_aligned_for_status(args.outdir, target_rows, draft_rows, status)
+        path = plot_aligned_for_status(
+            args.outdir, target_rows, draft_rows, status,
+            causality_shift=args.causality_shift,
+            causality_window=args.causality_window,
+        )
         if path is None:
             print(f"[skip] no step with status={status}")
         else:

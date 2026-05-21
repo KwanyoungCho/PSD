@@ -273,7 +273,7 @@ Create a new plotter, or replace `summarize_ssd_run.py` timeline generation
 after validation:
 
 ```text
-bench/plot_mesa_aligned_timeline.py OUTDIR --step-id N
+bench/plot_mesa_aligned_timeline.py OUTDIR --step-id N [--causality-shift]
 ```
 
 Rules:
@@ -287,6 +287,55 @@ Rules:
 - Trace only `target_rank0` for target TP runs. Rank 0 is the timeline source of
   truth because it owns the MESA proxy/async handshake path; other TP ranks are
   synchronized through collectives and do not need separate paper plots.
+
+### 4.7 Cross-process clock drift — known limitation + `--causality-shift`
+
+Each process anchors its own CUDA-event timer at startup (§4.2).  Target rank 0
+and the draft process run on *different physical GPUs* whose hardware clocks
+differ by ~1-10 ppm.  Over a long run this accumulates ms-level skew in the
+wall-clock conversion:
+
+  - per-event GPU duration (`cuda_ms`): unaffected (single-stream measurement)
+  - within-process ordering: unaffected
+  - cross-process placement (`wall_start_ns` differential): drifts
+
+Symptom: at step_id N late in a long run, `draft_send_response.wall_end_ns >
+target_response_received.wall_start_ns` even though the response physically
+arrived at target before target unblocked — a causality violation in the
+displayed wall_ns.  Observed magnitude: e.g. +5.7 ms after ~830 s (≈6.8 ppm
+drift, well within normal GPU clock tolerance).
+
+Mitigation: `plot_mesa_aligned_timeline.py --causality-shift` shifts the draft
+row by the median `draft_send_response.end − target_response_received.start`
+offset over ±`--causality-window` steps around the rendered step (default
+window=5, so 11 response pairs).  This is a **visual-only correction**:
+
+  - JSON data is not modified.
+  - The reference causal pair is `draft_send_response.end →
+    target_response_received.start`, NOT `target_send_request.end →
+    draft_recv_request.start` — `draft_recv_request.start` is when draft *posts*
+    the recv, which may precede target's send when draft has the irecv pre-posted.
+    Only the response pair imposes a strict wall-time ordering.
+  - The title carries `[draft causality-shifted ±X.XXX ms (median over N pairs)]`.
+  - Median over ±N steps rejects single-pair noise (NCCL handshake jitter,
+    one-off pauses).
+
+When to enable:
+
+  - Paper-figure renders on long runs (>5 minutes wall time).
+  - Any step where the raw plot shows draft starting visibly later than the
+    matching target send.
+
+When NOT to enable:
+
+  - Short profile runs (<5 min) where drift is sub-ms and uncorrected plots
+    are already accurate.
+  - When you want to diagnose the drift itself.
+
+The exact-anchor alternative — periodic re-anchoring every N steps — is more
+accurate but adds CUDA syncs to the per-step path and requires engine-side
+changes.  Out of scope for the current paper figure goal; revisit only if
+plotter-only correction proves insufficient.
 
 ## 5. Implementation plan
 
