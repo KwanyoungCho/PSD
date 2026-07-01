@@ -102,6 +102,15 @@ class ModelRunner:
             assert (config.draft_hf_config.vocab_size == config.hf_config.vocab_size) or config.use_eagle, "ERROR in ModelRunner: draft_hf_config.vocab_size != hf_config.vocab_size"
 
         self.hf_config = config.hf_config if not is_draft else config.draft_hf_config
+        # Qwen2 configs (e.g. Qwama-0.5B) do not expose head_dim directly.
+        # Multiple downstream paths (allocate_kv_cache, FlashInfer plan,
+        # cudagraph helpers) read hf_config.head_dim as a plain attribute.
+        # Inject the derived value once so those sites do not need a
+        # getattr fallback each.
+        if not hasattr(self.hf_config, 'head_dim') or self.hf_config.head_dim is None:
+            self.hf_config.head_dim = (
+                self.hf_config.hidden_size // self.hf_config.num_attention_heads
+            )
         self.block_size = config.kvcache_block_size
         self.enforce_eager = config.enforce_eager
         _tok_path = config.tokenizer_path if config.tokenizer_path else config.model

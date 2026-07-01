@@ -1,0 +1,76 @@
+run_label=ours_label_perf
+date_utc=2026-05-12T16:08:42Z
+git_head=1a8af6468c6009e14c8db578ce0d85cde462cba5
+git_status_short_begin
+ M plot_combined_3panel.py
+ M ssd/bench/bench.py
+ M ssd/bench/summarize_ssd_run.py
+ M ssd/ssd/engine/draft_runner.py
+ M ssd/ssd/engine/helpers/speculate_types.py
+ M ssd/ssd/engine/llm_engine.py
+ M ssd/ssd/engine/speculator_async.py
+ M ssd/ssd/engine/step.py
+ M ssd/ssd/engine/verifier.py
+?? .codex
+?? results/layerskip_70B_v4/combined_3panel.png
+?? results/layerskip_70B_v4/combined_3panel_compact.png
+?? results/layerskip_70B_v4/combined_3panel_compact_v2.png
+?? results/layerskip_70B_v4/fig_correction_1panel.png
+?? results/layerskip_70B_v4/fig_reject_2panel.png
+?? ssd/experiments/_archive_old_split_impl/
+?? ssd/experiments/paper_baselines/ar16_sd32_target_awq_sd_draft_awq_len512/
+?? ssd/experiments/paper_baselines/ar_sd_target_awq_draft_dense_ns32_len512/
+?? ssd/experiments/paper_baselines/ar_sd_target_awq_sd_draft_awq_ns32_len512/
+?? ssd/experiments/paper_baselines/compare_ar_sd_ssd_ours/
+?? ssd/experiments/paper_baselines/final_experiments/
+?? ssd/experiments/paper_baselines/ssd_awq_70b/20260429_k7_f3_temp07_seed42_ns10_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b/20260429_k7_f4_temp07_seed42_ns10_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b/20260429_k8_f3_temp07_seed42_ns10_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b/summary_dashboard.png
+?? ssd/experiments/paper_baselines/ssd_awq_70b/summary_index.csv
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/20260429_k7_f6_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/20260429_k7_f7_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/20260429_k7_f8_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/20260429_k8_f5_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/runs_manifest.csv
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/summary_dashboard.png
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/summary_index.csv
+?? ssd/experiments/paper_baselines/ssd_awq_70b_f_sweep_ns32_len512/summary_table.png
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/20260429_split_k11_K1_7_K2_4_dfo1_pfo2_exit57_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/20260429_split_k11_K1_7_K2_4_dfo1_pfo2_exit58_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/20260429_split_k11_K1_7_K2_4_dfo3_pfo2_exit52_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/20260429_split_k11_K1_7_K2_4_dfo3_pfo2_exit58_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/20260429_split_k12_K1_7_K2_5_dfo2_pfo1_exit57_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/20260429_split_k12_K1_8_K2_4_dfo2_pfo2_exit57_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/20260429_split_k12_K1_8_K2_4_dfo3_pfo2_exit57_temp07_seed42_ns32_all/
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/proxy_perf_table.png
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/proxy_wait_summary.csv
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/proxy_wait_table.png
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/summary_dashboard.png
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/summary_index.csv
+?? ssd/experiments/paper_baselines/ssd_awq_70b_split_k1k2_exit_search/summary_table.png
+?? ssd/experiments/paper_baselines/ssd_target_awq_draft_dense_k7_f3_ns32_len512/
+?? ssd/experiments/policy_b_smoke/70b_a_vs_b/
+?? ssd/experiments/policy_b_smoke/70b_a_vs_b_t06/
+?? ssd/experiments/policy_b_smoke/70b_k2_reduce/
+?? ssd/experiments/policy_b_smoke/out_70b_kloop_fix/
+?? ssd/experiments/split_k1k2_70b/exit57_repro/
+?? ssd/experiments/split_k1k2_70b/exit_fine/
+?? ssd/experiments/split_k1k2_70b/exit_sweep/SUMMARY.txt
+?? ssd/experiments/split_k1k2_70b/exit_sweep/compare_breakdowns.png
+?? ssd/experiments/split_k1k2_70b/exit_sweep/compare_timelines.png
+?? ssd/experiments/split_k1k2_70b/exit_sweep/exit_30/
+?? ssd/experiments/split_k1k2_70b/exit_sweep/exit_40/
+?? ssd/experiments/split_k1k2_70b/exit_sweep/exit_50/
+?? ssd/experiments/split_k1k2_70b/exit_sweep/exit_60/
+?? ssd/experiments/split_k1k2_70b/exit_sweep/exit_70/
+?? ssd/experiments/split_k1k2_70b/exit_sweep/exit_78/
+?? ssd/experiments/split_k1k2_70b/p1_nonuniform_5311_5_exit57/
+?? ssd/experiments/split_k1k2_70b/tp4_3way_temp0/
+?? ssd/experiments/split_k1k2_70b/tp4_compare/
+?? ssd/experiments/split_k1k2_70b/tp4_nonuniform_clean/
+git_status_short_end
+profile_detail=0
+command_begin
+CUDA_VISIBLE_DEVICES=0,1,2,3,4 SSD_DIST_PORT=12634 SSD_PROFILE_DIR=/home/chokwans99/PSD/ssd/experiments/paper_baselines/final_experiments/20260512_ours_label_perf_k1_7_k2_5_dfo2_pfo1_exit56_temp07_seed42_ns50_in512_out512_all SSD_PROFILE_MESA=1 SSD_PROFILE_MESA_DETAIL=0 SSD_CUDA_ARCH=8.6 TORCH_CUDA_ARCH_LIST=8.6 SSD_HF_CACHE=/home/chokwans99/.cache/huggingface/hub SSD_DATASET_DIR=/data2/chokwans99/datasets MPLCONFIGDIR=/tmp/matplotlib SSD_FORCE_SPLIT_K1K2=1 /home/chokwans99/anaconda3/envs/ssd/bin/python -O bench/bench.py --llama --size 8 --model_path /data2/chokwans99/awq_calibrated/layerskip_llama2_70b --quant_awq --quant_awq_artifact /data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_tp4 --quant_group_size 128 --gpus 5 --b 1 --temp 0.7 --seed 42 --numseqs 50 --input_len 512 --output_len 512 --all --max_model_len 2048 --draft_path /data2/chokwans99/awq_calibrated/tinyllama_1b --quant_awq_draft --quant_awq_draft_artifact /data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1 --async --spec --k 12 --f 3 --mesa --mesa_exit_layer 56 --mesa_phase1_k 7 --mesa_phase2_k 5 --mesa_draft_fan_out 2 --mesa_policy b
+command_end

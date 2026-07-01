@@ -1,0 +1,6 @@
+run_label=ours_k1_7_k2_7
+date_utc=2026-05-13T15:42:29Z
+profile_detail=0
+command_begin
+CUDA_VISIBLE_DEVICES=0,1,2,3,4 SSD_DIST_PORT=12643 SSD_PROFILE_DIR=/home/chokwans99/PSD/ssd/experiments/paper_baselines/final_experiments/20260513_ours_k1_7_k2_7_dfo2_pfo1_exit56_temp07_seed42_ns50_in512_out512_all SSD_PROFILE_MESA=1 SSD_PROFILE_MESA_DETAIL=0 SSD_CUDA_ARCH=8.6 TORCH_CUDA_ARCH_LIST=8.6 SSD_HF_CACHE=/home/chokwans99/.cache/huggingface/hub SSD_DATASET_DIR=/data2/chokwans99/datasets MPLCONFIGDIR=/tmp/matplotlib SSD_FORCE_SPLIT_K1K2=1 /home/chokwans99/anaconda3/envs/ssd/bin/python -O bench/bench.py --llama --size 8 --model_path /data2/chokwans99/awq_calibrated/layerskip_llama2_70b --quant_awq --quant_awq_artifact /data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_tp4 --quant_group_size 128 --gpus 5 --b 1 --temp 0.7 --seed 42 --numseqs 50 --input_len 512 --output_len 512 --all --max_model_len 2048 --draft_path /data2/chokwans99/awq_calibrated/tinyllama_1b --quant_awq_draft --quant_awq_draft_artifact /data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1 --async --spec --k 14 --f 3 --mesa --mesa_exit_layer 56 --mesa_phase1_k 7 --mesa_phase2_k 7 --mesa_draft_fan_out 2 --mesa_policy b
+command_end

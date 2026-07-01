@@ -727,6 +727,7 @@ def plot_aligned_step(
 _STATUS_SUFFIX = {
     "hit_k1": "timeline_cache_hit_k1.png",
     "hit_k2": "timeline_cache_hit_k2.png",
+    "hit": "timeline_cache_hit.png",  # non-MESA async SD (no K1/K2 split)
     "miss": "timeline_cache_miss.png",
 }
 
@@ -794,7 +795,7 @@ def plot_all_statuses(
     target_rows = _strip_anchor(target_rows)
     draft_rows = _strip_anchor(draft_rows)
     out: dict[str, Path | None] = {}
-    for status in ("hit_k1", "hit_k2", "miss"):
+    for status in ("hit_k1", "hit_k2", "hit", "miss"):
         path = plot_aligned_for_status(
             outdir, target_rows, draft_rows, status,
             causality_shift=causality_shift,
@@ -957,7 +958,7 @@ def main() -> None:
         return
 
     # No specific step requested → render the three status PNGs
-    for status in ("hit_k1", "hit_k2", "miss"):
+    for status in ("hit_k1", "hit_k2", "hit", "miss"):
         path = plot_aligned_for_status(
             args.outdir, target_rows, draft_rows, status,
             causality_shift=args.causality_shift,

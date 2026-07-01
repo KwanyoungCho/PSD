@@ -1,0 +1,9 @@
+k=10 f=7 status=0
+Final Decode Throughput: 162.57tok/s
+[metrics] Avg Tokens per step (incl recovery): 4.06
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.31 (denom=10)
+[metrics] Avg target time per full step (ms): 25.34
+[metrics] Avg Cache Hits: 0.72
+[metrics] Avg Tokens per step on Cache Hit: 4.47
+[metrics] Avg Tokens per step on Cache Miss: 3.02
+Model: layerskip-llama2-7B, Mode: CUDA Graphs + Speculative(k=10) + Async + JIT, Total: 102400tok, Time: 657.31s, Total Throughput: 155.79tok/s
