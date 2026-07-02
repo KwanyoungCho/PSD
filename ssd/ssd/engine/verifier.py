@@ -28,6 +28,38 @@ class Verifier(VerifierBase):
         self.jit_speculate = jit_speculate
         self.tokenizer = tokenizer
         self.metrics = metrics
+        # Batch 3 (proxy async send, docs/duet/08 §3): lazy-inited ring buffer
+        # for non-blocking proxy send. Only allocated on rank 0 + DUET + gate.
+        self._proxy_send_ring = None
+        # Counts every ring.send() call — denominator for slot_wait_rate.
+        self._proxy_send_call_count = 0
+
+    def drain_proxy_send_ring(self):
+        """Public shutdown hook — llm_engine calls this before joining the
+        draft process (see docs/duet/08 §3.3).
+
+        Rationale: outstanding dist.isend interacting with a closed process
+        group can hang or segfault. Explicit drain from a known shutdown
+        hook is required; Python __del__ is unreliable at interpreter exit.
+        """
+        if self._proxy_send_ring is not None:
+            self._proxy_send_ring.drain()
+            if os.environ.get("SSD_PROFILE_DUET", "0") == "1":
+                outdir = os.environ.get("SSD_PROFILE_DIR", "/tmp")
+                try:
+                    self._proxy_send_ring.dump_stats(
+                        outdir,
+                        decode_steps_seen=self._proxy_send_call_count,
+                    )
+                except Exception as e:
+                    print(f"[verifier] proxy_send_ring dump_stats failed: {e}", flush=True)
+
+    def __del__(self):
+        """Backup only. Do NOT rely on this as primary cleanup."""
+        try:
+            self.drain_proxy_send_ring()
+        except Exception:
+            pass
 
     def prefill(self, seqs: list[Sequence], eagle: bool = False) -> VerifyResult:
         result = self.target_model_runner.call("run", seqs, True)
@@ -347,8 +379,28 @@ class Verifier(VerifierBase):
                       f"chosen_pos.shape={list(chosen_pos.shape)}",
                       flush=True)
             # NCCL send: chosen_pos [wire_N int64] + chosen_tok [wire_N int64]
+            # Batch 3a (docs/duet/08 §3): env-gated non-blocking send via ring
+            # buffer. SSD_ASYNC_PROXY_SEND=1 → dist.isend + persistent buf;
+            # else keep the legacy blocking send. Ring is lazy-inited on first
+            # use so non-rank-0 processes (which never fire this callback)
+            # don't allocate.
             _ev_send = _mr_d("proxy_send") if _detail_profile else None
-            send_int64(async_pg, draft_rank, chosen_pos, chosen_tok)
+            if os.environ.get("SSD_ASYNC_PROXY_SEND", "0") == "1":
+                if self._proxy_send_ring is None:
+                    from ssd.utils.async_helpers.nccl_pack import AsyncSendRing
+                    # Buf = 2 × wire_N int64 (chosen_pos + chosen_tok packed).
+                    # 2 slots is enough at hit-dominated rates (docs/duet/08 §3.2);
+                    # if slot_wait_rate > 1% in Phase 4, bump to 4.
+                    self._proxy_send_ring = AsyncSendRing(
+                        n_slots=2,
+                        buf_size=2 * config.duet_proxy_wire_N,
+                        device=chosen_pos.device,
+                        pg=async_pg,
+                    )
+                self._proxy_send_ring.send(draft_rank, chosen_pos, chosen_tok)
+                self._proxy_send_call_count += 1
+            else:
+                send_int64(async_pg, draft_rank, chosen_pos, chosen_tok)
             if _detail_profile:
                 _mc_d("proxy_send", _ev_send)
             return

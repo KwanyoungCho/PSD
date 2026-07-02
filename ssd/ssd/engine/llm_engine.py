@@ -157,6 +157,17 @@ class LLMEngine:
             duet_dump("target_rank0")
         except Exception:
             pass
+        # 0) Batch 3a (docs/duet/08 §3.3): drain outstanding proxy isend Work
+        # handles BEFORE tearing down the process group. An isend interacting
+        # with a closed PG can hang or segfault. Guard against absent verifier
+        # (non-spec runs).
+        try:
+            _verifier = getattr(self, "verifier", None)
+            if _verifier is not None and hasattr(_verifier, "drain_proxy_send_ring"):
+                _verifier.drain_proxy_send_ring()
+        except Exception as e:
+            print(f"[llm_engine] proxy_send_ring drain warning: {e}", flush=True)
+
         # 1) If async, tell draft to quit before tearing down anything
         try:
             if self.config.speculate and self.config.draft_async:
@@ -370,6 +381,9 @@ class LLMEngine:
                 tokenizer=self.tokenizer,
                 metrics=METRICS,
             )
+            # Batch 3a: keep verifier on engine so exit() can drain the proxy
+            # send ring before joining the draft process (docs/duet/08 §3.3).
+            self.verifier = verifier
             return SpecDecodeStep(
                 scheduler=self.scheduler,
                 speculator=speculator,

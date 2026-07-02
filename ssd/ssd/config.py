@@ -237,6 +237,18 @@ class Config:
             assert not self.use_eagle, "DUET-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
             assert not self.enforce_eager, "DUET-SSD requires CudaGraph mode (enforce_eager must be False)"
             assert self.jit_speculate, "DUET-SSD requires jit_speculate=True (miss rows need valid logits_q)"
+
+            # docs/duet/08 §4: SSD_PROXY_STREAM requires SSD_ASYNC_PROXY_SEND
+            # (Policy B compute on proxy_stream is meaningless without
+            # non-blocking send — the blocking send would re-serialize).
+            # Fail-fast at config time; do NOT silently fallback.
+            if os.environ.get("SSD_PROXY_STREAM", "0") == "1" \
+               and os.environ.get("SSD_ASYNC_PROXY_SEND", "0") != "1":
+                raise ValueError(
+                    "SSD_PROXY_STREAM=1 requires SSD_ASYNC_PROXY_SEND=1; "
+                    "Policy B compute on proxy_stream is meaningless without "
+                    "non-blocking send (the blocking send would re-serialize)."
+                )
             # #3 B=1 only: Policy A uses accept_probs[0] as single h_i for whole batch.
             assert self.max_num_seqs == 1, \
                 "DUET-SSD Rev1 only supports B=1 (max_num_seqs=1); " \
