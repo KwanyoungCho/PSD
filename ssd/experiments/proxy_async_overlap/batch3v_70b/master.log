@@ -1,0 +1,18 @@
+[2026-07-02T07:50:16+00:00] === START off_off (ASYNC=0 STREAM=0) ===
+[2026-07-02T07:56:45+00:00] === END off_off ===
+[2026-07-02T07:56:45+00:00] === START on_off (ASYNC=1 STREAM=0) ===
+[2026-07-02T08:02:51+00:00] === END on_off ===
+[2026-07-02T08:02:51+00:00] === START on_on (ASYNC=1 STREAM=1) ===
+[2026-07-02T08:09:13+00:00] === END on_on ===
+
+=== TPS + STEP COMPARISON ===
+  off_off: Final Decode Throughput: 68.59tok/s | [metrics] Avg target time per full step (ms): 57.09
+  on_off: Final Decode Throughput: 74.36tok/s | [metrics] Avg target time per full step (ms): 57.14
+  on_on: Final Decode Throughput: 69.77tok/s | [metrics] Avg target time per full step (ms): 57.32
+
+=== DUET profile paths ===
+-rw-rw-r-- 1 chokwans99 chokwans99 39187950 Jul  2 07:56 /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/batch3v_70b/off_off/duet_profile_target_rank0_075638.json
+-rw-rw-r-- 1 chokwans99 chokwans99 36274200 Jul  2 08:02 /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/batch3v_70b/on_off/duet_profile_target_rank0_080245.json
+-rw-rw-r-- 1 chokwans99 chokwans99 38447994 Jul  2 08:09 /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/batch3v_70b/on_on/duet_profile_target_rank0_080905.json
+-rw-rw-r-- 1 chokwans99 chokwans99 175 Jul  2 08:02 /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/batch3v_70b/on_off/proxy_send_ring_stats.json
+-rw-rw-r-- 1 chokwans99 chokwans99 173 Jul  2 08:09 /home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/batch3v_70b/on_on/proxy_send_ring_stats.json
