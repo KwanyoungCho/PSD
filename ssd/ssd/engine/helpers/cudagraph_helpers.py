@@ -1347,10 +1347,39 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     duet_close("exit_logits", _ev_el)
 
     # ====== proxy compute + isend (rank 0 only does real work) ======
+    # Batch 3b (docs/duet/08 §1.2): if SSD_PROXY_STREAM=1, dispatch the
+    # Policy B compute + isend onto a dedicated proxy_stream so the default
+    # stream returns to graph_post.replay() immediately. Cross-stream
+    # tensors (exit_logits, and inside duet_proxy_fn: draft_tokens,
+    # logits_q, cache_hits — captured from Verifier closure) need
+    # record_stream so the caching allocator does not free them while
+    # proxy_stream is still reading. NEVER make default stream wait on
+    # proxy_stream (that would defeat the purpose).
     _ev = duet_record("proxy_compute_send")
-    # duet_proxy_fn: set on rank 0's ModelRunner only. rank 1+ skips.
     if duet_proxy_fn is not None:
-        duet_proxy_fn(exit_logits, orig_bs)
+        _proxy_stream = getattr(model_runner, "_duet_proxy_stream", None)
+        if _proxy_stream is None and os.environ.get("SSD_PROXY_STREAM", "0") == "1":
+            _proxy_stream = torch.cuda.Stream(device=model_runner.device)
+            model_runner._duet_proxy_stream = _proxy_stream
+        if _proxy_stream is not None:
+            # Cross-stream lifetime guard for the ONE tensor visible at
+            # this boundary. draft_tokens / logits_q / cache_hits are
+            # captured in the closure of duet_proxy_fn — Verifier
+            # record_stream's them defensively inside _compute_and_send_proxy.
+            if exit_logits is not None:
+                exit_logits.record_stream(_proxy_stream)
+            # Event on default stream signals "exit_logits ready"; proxy
+            # stream waits, does its work, and default stream immediately
+            # returns to graph_post below.
+            _ev_data_ready = torch.cuda.Event()
+            _ev_data_ready.record()
+            with torch.cuda.stream(_proxy_stream):
+                _proxy_stream.wait_event(_ev_data_ready)
+                duet_proxy_fn(exit_logits, orig_bs)
+            # NO default stream wait_stream(proxy_stream) here — that would
+            # re-serialize (docs/duet/08 §1.3 wrong pattern).
+        else:
+            duet_proxy_fn(exit_logits, orig_bs)
     duet_close("proxy_compute_send", _ev)
 
     # ====== graph_post.replay() ======

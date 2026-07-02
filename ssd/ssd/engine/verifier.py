@@ -297,6 +297,21 @@ class Verifier(VerifierBase):
         if exit_logits.dim() == 2:
             exit_logits = exit_logits.view(B, K + 1, -1)  # [B, K+1, V]
 
+        # Batch 3b: when this callback runs on a dedicated proxy_stream (see
+        # cudagraph_helpers.run_duet_verify_cudagraph), the caching allocator
+        # must be told the closure-captured default-stream tensors are still
+        # alive. `exit_logits.record_stream` is done at the dispatch boundary;
+        # here we cover draft_tokens / logits_q / cache_hits which are read
+        # below (docs/duet/08 §2 cross-stream lifetime checklist).
+        if os.environ.get("SSD_PROXY_STREAM", "0") == "1":
+            _cur = torch.cuda.current_stream()
+            if draft_tokens is not None:
+                draft_tokens.record_stream(_cur)
+            if logits_q is not None:
+                logits_q.record_stream(_cur)
+            if cache_hits is not None:
+                cache_hits.record_stream(_cur)
+
         _ev_compute = _mr_d("proxy_compute") if _detail_profile else None
         # p_E (early-exit proxy), p_D (draft)
         p_E = torch.softmax(exit_logits[:, :K, :].float(), dim=-1)  # [B, K, V]

@@ -150,6 +150,11 @@ class ModelRunner:
         self.event = event
         self._exiting = False
         self._duet_proxy_fn = None  # DUET: Verifier sets before verify, clears after
+        # Batch 3b (docs/duet/08 §1): dedicated CUDA stream for the rank-0-only
+        # proxy callback so Policy B compute + isend can overlap with
+        # graph_post.replay() on the default stream. Lazy-init on first use
+        # gated by SSD_PROXY_STREAM=1 (default OFF). Ranks 1+ never allocate.
+        self._duet_proxy_stream = None
         
         torch.cuda.set_device(self.rank)
         self.device = torch.device(f'cuda:{self.rank}') 
