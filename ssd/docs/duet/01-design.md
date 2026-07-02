@@ -1,10 +1,10 @@
-# MESA-SSD 설계 문서
+# DUET-SSD 설계 문서
 
-이 문서는 MESA-SSD 의 전체 설계 — TreeLayout 추상화, Budget Split,
+이 문서는 DUET-SSD 의 전체 설계 — TreeLayout 추상화, Budget Split,
 Split CudaGraph, Rev1 (Policy A/B), Phase 2 Hybrid — 를 한 곳에 모은다.
-원본은 `MESA-IMPL-PLAN.md` (v6 구현 계획), `MESA-BREAKDOWN-PLAN.md`
-(per-phase profiling), `MESA-rev1.md` (Rev1 동적 budget allocation),
-`MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` (Phase 2 hybrid 재설계) 의 4
+원본은 `DUET-IMPL-PLAN.md` (v6 구현 계획), `DUET-BREAKDOWN-PLAN.md`
+(per-phase profiling), `DUET-rev1.md` (Rev1 동적 budget allocation),
+`DUET-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` (Phase 2 hybrid 재설계) 의 4
 파일이다.
 
 > **현재 상태**: Phase 2 Hybrid (Part 5) 가 default hot path. Rev1 의 split
@@ -17,13 +17,13 @@ Split CudaGraph, Rev1 (Policy A/B), Phase 2 Hybrid — 를 한 곳에 모은다.
 >
 > - **Policy default = "b"** (was "a"). Policy A 는 dead branch 로 유지되며,
 >   비분할 / hybrid path 에선 자동 downgrade + 경고. split + Policy B +
->   non-uniform `mesa_split_phase1_fan_out_list` 조합은 `NotImplementedError`.
+>   non-uniform `duet_split_phase1_fan_out_list` 조합은 `NotImplementedError`.
 >   상세는 `05-policy-b-fix.md` §3.1.
 > - **Policy B unified K+1 path** — pos==K 를 별도 분기 없이 `pE[K]` full
 >   distribution 으로 흡수. wire schema = `{chosen_pos[wire_N], chosen_tok[wire_N]}`.
 >   본 문서의 "fan_out_list + topk_ids + topk_probs" wire 는 legacy Policy A.
 >   상세는 `05-policy-b-fix.md` §3.2-3.4.
-> - **`mesa_proxy_top_k` auto-raise 식** = `max(per_pos_min, total_min)` —
+> - **`duet_proxy_top_k` auto-raise 식** = `max(per_pos_min, total_min)` —
 >   본 문서의 `pfo*(K+1) + dfo + 2` 는 K_long 기준 (split mode 에선 over-
 >   provisioned). 현재 식은 `05-policy-b-fix.md` §3.5 / Step 1.
 > - **Split-K1/K2 mode** (env `SSD_FORCE_SPLIT_K1K2=1`) — 독립 draft (K1) /
@@ -63,7 +63,7 @@ TARGET (rank 0, all TP ranks)            DRAFT (rank N)
                                             - SEND response [기존 SSD 와 동일]
 2. response 수신
 3. verify() 호출                          3. _reset_tree_cache_tensors()
-   ┌ graph_pre.replay()                   4. _build_tree_batch_mesa()
+   ┌ graph_pre.replay()                   4. _build_tree_batch_duet()
    │  layers [0 .. exit_layer]               - glue decode → draft logits
    └ → exit_buffer                           - draft-sourced fork tokens 선택
                                              - irecv() 걸어둠 (non-blocking)
@@ -89,27 +89,27 @@ TARGET (rank 0, all TP ranks)            DRAFT (rank N)
 추가 필드:
 
 ```python
-mesa_enabled: bool = False
-mesa_exit_layer: int | None = None      # None=auto: 2*L//3
-mesa_proxy_top_k: int = 3               # proxy correction token 수
-mesa_draft_fan_out: int | None = None   # draft-sourced branches per pos (None=auto: fan_out//2)
+duet_enabled: bool = False
+duet_exit_layer: int | None = None      # None=auto: 2*L//3
+duet_proxy_top_k: int = 3               # proxy correction token 수
+duet_draft_fan_out: int | None = None   # draft-sourced branches per pos (None=auto: fan_out//2)
 ```
 
 `__post_init__` 검증:
 
 - `draft_async`, `speculate`, `model_type=="llama"` 강제
 - EAGLE 금지 (eagle_acts split collection 미구현)
-- `mesa_exit_layer` 기본값 `2*L//3`
-- `mesa_draft_fan_out` 기본값 `async_fan_out // 2`
-- `mesa_proxy_fan_out = async_fan_out - mesa_draft_fan_out` 자동 계산
+- `duet_exit_layer` 기본값 `2*L//3`
+- `duet_draft_fan_out` 기본값 `async_fan_out // 2`
+- `duet_proxy_fan_out = async_fan_out - duet_draft_fan_out` 자동 계산
 
 Rev1 추가 invariant:
 
 - `assert max_num_seqs == 1` — Policy A 가 `accept_probs[0]` 를 batch
   공통 분포로 사용하므로 단일 시퀀스 전용 (Policy B 도 동일하게 B=1 유지)
 - `assert jit_speculate` — `jit_speculate=False` 일 때 miss row 의
-  `accept_probs=0` 강제로 `ĥ_0=1` 왜곡 발생 → MESA 강제 True
-- `mesa_proxy_top_k` 자동 산정: `pfo*(K+1) + dfo + 2` 로 raise (draft
+  `accept_probs=0` 강제로 `ĥ_0=1` 왜곡 발생 → DUET 강제 True
+- `duet_proxy_top_k` 자동 산정: `pfo*(K+1) + dfo + 2` 로 raise (draft
   fallback 제거하려면 worst-case dedup 후 unique proxy 가 충분해야 함)
   — **갱신됨 (2026-04-29)**: 현재 식은 `max(per_pos_min, total_min)`,
   `total_min = ceil(wire_N / (K_min+1))`. 본 문서 식은 K_long 기준이라
@@ -145,7 +145,7 @@ class TreeLayout:
 
 ### 2.2 DraftRunner 초기화
 
-`_init_prealloc_buffers()` 가 `full_layout` 을 항상 만들고, `mesa_enabled`
+`_init_prealloc_buffers()` 가 `full_layout` 을 항상 만들고, `duet_enabled`
 면 `draft_layout`, `proxy_layout` 을 추가 생성. 기존 전역 텐서
 (`_step_pos_offsets`, `_fan_idx_hit` 등) 는 `full_layout` 으로 위임 →
 backward compat 유지.
@@ -163,7 +163,7 @@ backward compat 유지.
 ### 2.4 FlashInfer Wrapper layout 별 생성
 
 기존 `prefill_wrappers` (full layout 기반) 를 `prefill_wrappers_by_layout`
-dict 로 바꾸고, MESA 면 draft / proxy layout 용 wrapper 추가 생성. 각
+dict 로 바꾸고, DUET 면 draft / proxy layout 용 wrapper 추가 생성. 각
 layout 마다 별도의 `cu_seqlens_q`, `kv_indptr`, `kv_indices`,
 `kv_last_page_len`, `mask_buf`, `mask_indptr_buf` 버퍼.
 
@@ -188,7 +188,7 @@ optional 필드 추가 (Rev1).
 
 `capture_fi_tree_decode_cudagraph(model_runner, layout=None)` 가 layout
 파라미터를 받음. layout 없으면 backward compat (`config.fan_out_list` /
-`config.MQ_LEN` 사용). MESA draft 는 full / draft / proxy 세 layout 의
+`config.MQ_LEN` 사용). DUET draft 는 full / draft / proxy 세 layout 의
 CudaGraph 를 캡처. `cudagraph_helpers.py` 의 모든 `MQ_LEN` 참조와
 `fan_out_list` 참조를 layout 기반으로 치환.
 
@@ -231,7 +231,7 @@ end_layer, init_*) 를 받아 `self.model` 에 위임.
 
 ## 4. Split CudaGraph (Target Verify)
 
-### 4.1 `capture_mesa_verify_cudagraph()`
+### 4.1 `capture_duet_verify_cudagraph()`
 
 - `graph_pre`: layers `[0, exit_layer]` → `exit_hidden`, `exit_residual`
 - `graph_post`: layers `[exit_layer+1, L-1]` + final norm → `outputs`
@@ -239,7 +239,7 @@ end_layer, init_*) 를 받아 `self.model` 에 위임.
 - `graph_vars` 에 input_ids / positions / slot_mapping / context_lens /
   block_tables / cu_seqlens_q / exit_hidden / exit_residual / outputs 모두 포함
 
-### 4.2 `run_mesa_verify_cudagraph()`
+### 4.2 `run_duet_verify_cudagraph()`
 
 ```python
 graph_pre.replay()                    # layers [0..exit_layer]
@@ -248,23 +248,23 @@ graph_pre.replay()                    # layers [0..exit_layer]
 exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
 normed = model_runner.model.model.norm(exit_h, None)
 exit_logits = model_runner.model.compute_logits(normed, last_only=False)
-# rank 0 만 mesa_proxy_fn 등록되어 있음 → exit_logits 받아 proxy 계산 + send
-if mesa_proxy_fn is not None:
-    mesa_proxy_fn(exit_logits, orig_bs)
+# rank 0 만 duet_proxy_fn 등록되어 있음 → exit_logits 받아 proxy 계산 + send
+if duet_proxy_fn is not None:
+    duet_proxy_fn(exit_logits, orig_bs)
 
 graph_post.replay()                   # layers [exit_layer+1..L-1] + norm
 logits = model_runner.model.compute_logits(outputs, last_only)
 ```
 
-`mesa_proxy_fn` 은 Verifier 가 rank 0 의 ModelRunner 에만 set. Rank 1+
-는 `_mesa_proxy_fn = None` 이므로 callback 에 진입하지 않음.
+`duet_proxy_fn` 은 Verifier 가 rank 0 의 ModelRunner 에만 set. Rank 1+
+는 `_duet_proxy_fn = None` 이므로 callback 에 진입하지 않음.
 
 ### 4.3 model_runner 분기
 
 `run_model()` 에서 verify 경로:
 
-- `mesa_enabled and not is_draft and "mesa_verify" in graph_vars` →
-  `run_mesa_verify_cudagraph` (split)
+- `duet_enabled and not is_draft and "duet_verify" in graph_vars` →
+  `run_duet_verify_cudagraph` (split)
 - 그 외 → 기존 `run_verify_cudagraph` (단일)
 
 ---
@@ -273,7 +273,7 @@ logits = model_runner.model.compute_logits(outputs, last_only)
 
 ### 5.1 verify() flow
 
-`mesa_enabled` 이면 `_mesa_proxy_fn` 을 closure 로 set:
+`duet_enabled` 이면 `_duet_proxy_fn` 을 closure 로 set:
 
 ```python
 def _proxy_fn(exit_logits, orig_bs):
@@ -281,9 +281,9 @@ def _proxy_fn(exit_logits, orig_bs):
         exit_logits, draft_tokens, logits_q, orig_bs, K,
         async_pg, draft_rank, cache_hits=cache_hits)
 
-self.target_model_runner._mesa_proxy_fn = _proxy_fn
+self.target_model_runner._duet_proxy_fn = _proxy_fn
 result = self.target_model_runner.call("run", seqs, ...)
-self.target_model_runner._mesa_proxy_fn = None
+self.target_model_runner._duet_proxy_fn = None
 ```
 
 ### 5.2 `_compute_and_send_proxy()`
@@ -320,15 +320,15 @@ Rev1 변경: target 측에서 `accept_probs` 를 직접 보내지 않고
 glue_input_ids, partial = self._service_spec_request()
 self._reset_tree_cache_tensors()
 
-if self.config.mesa_enabled:
-    self._build_tree_batch_mesa(partial, glue_input_ids)   # 내부에서 decode + populate 완료
+if self.config.duet_enabled:
+    self._build_tree_batch_duet(partial, glue_input_ids)   # 내부에서 decode + populate 완료
 else:
     tree_args = self._build_tree_batch(partial, glue_input_ids)
     tokens, logits, acts = self._decode_tree(tree_args)
     self._populate_tree_cache(tree_args, tokens, logits, ...)
 ```
 
-### 6.2 `_build_tree_batch_mesa()` (Rev1 — `_glue_decode()` 분리 후)
+### 6.2 `_build_tree_batch_duet()` (Rev1 — `_glue_decode()` 분리 후)
 
 ```python
 glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, pos_offset = \
@@ -339,7 +339,7 @@ draft_forked = self._select_draft_sourced_tokens(
     glue_logits, cache_hits, gd_for_fork, draft_fan_out)
 
 # irecv 를 decode 시작 전에 걸어둠 → target send 가 block 안 됨
-proxy_recv_work, proxy_buf = self._irecv_mesa_proxy(B, K)
+proxy_recv_work, proxy_buf = self._irecv_duet_proxy(B, K)
 
 draft_args = self._build_tree_decode_args(
     partial, draft_forked.view(-1), self.draft_layout, ...)
@@ -348,15 +348,15 @@ draft_tokens, draft_logits, draft_acts = self._decode_tree(
 
 # proxy 도착 대기 + unpack
 proxy_recv_work.wait()
-mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
+duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
 
 # Phase 2: proxy-sourced (dedup + Policy A 동적 layout)
-fan_out_list = mesa_proxy["fan_out_list"]
+fan_out_list = duet_proxy["fan_out_list"]
 step_proxy_layout = create_tree_layout(
     "proxy", fan_out_list, fan_out_list, K, self.device)
 
 proxy_forked = self._select_proxy_sourced_tokens_policy_a(
-    glue_logits, draft_forked, mesa_proxy, fan_out_list)
+    glue_logits, draft_forked, duet_proxy, fan_out_list)
 
 proxy_args = self._build_tree_decode_args(
     partial, proxy_forked.view(-1), step_proxy_layout, ...)
@@ -384,7 +384,7 @@ sync.
 - pos < K: proxy-only (벡터화 가능)
 - pos == K (all-accept): draft top-k 그대로 (correction 불필요한 위치)
 
-### 6.4 `_irecv_mesa_proxy()` + `_unpack_mesa_proxy()`
+### 6.4 `_irecv_duet_proxy()` + `_unpack_duet_proxy()`
 
 Non-blocking recv 로 target send blocking 방지:
 
@@ -571,37 +571,37 @@ Allocation (target count) 과 fill (actual tokens) 을 분리하고, dedup 후
 
 ---
 
-## 8. Per-Phase Profiling 계측 (`MESA-BREAKDOWN-PLAN.md`)
+## 8. Per-Phase Profiling 계측 (`DUET-BREAKDOWN-PLAN.md`)
 
 기존 함수 body / signature 손대지 않는 최소 추가 ( ~70 LoC).
 
 ### 8.1 Helpers (`cudagraph_helpers.py` 하단 append)
 
 ```python
-PROFILE_MESA = os.environ.get("SSD_PROFILE_MESA", "0") == "1"
-_mesa_events = []   # [(step, label, start_ev, end_ev)]
+PROFILE_DUET = os.environ.get("SSD_PROFILE_DUET", "0") == "1"
+_duet_events = []   # [(step, label, start_ev, end_ev)]
 
-def mesa_record(step, label):
-    if not PROFILE_MESA:
+def duet_record(step, label):
+    if not PROFILE_DUET:
         return None
     ev = torch.cuda.Event(enable_timing=True)
     ev.record()
     return ev
 
-def mesa_close(step, label, start_ev):
+def duet_close(step, label, start_ev):
     if start_ev is None:
         return
     end_ev = torch.cuda.Event(enable_timing=True)
     end_ev.record()
-    _mesa_events.append((step, label, start_ev, end_ev))
+    _duet_events.append((step, label, start_ev, end_ev))
 
-def mesa_dump(tag):
-    if not _mesa_events:
+def duet_dump(tag):
+    if not _duet_events:
         return
     torch.cuda.synchronize()
     rows = [{"step": s, "label": l, "ms": a.elapsed_time(b)}
-            for s, l, a, b in _mesa_events]
-    json.dump(rows, open(f"/tmp/mesa_profile_{tag}.json", "w"))
+            for s, l, a, b in _duet_events]
+    json.dump(rows, open(f"/tmp/duet_profile_{tag}.json", "w"))
 ```
 
 ### 8.2 측정 지점 (각 2 줄씩 추가, 기존 body 그대로)
@@ -613,9 +613,9 @@ def mesa_dump(tag):
 | draft | `proxy_wait` | irecv `work.wait()` 근처 |
 | draft | `phase2_replay` | `run_fi_tree_decode_cudagraph` (layout=proxy) |
 | draft | `merge_cache` | `_merge_and_populate_cache` |
-| target | `graph_pre` | `run_mesa_verify_cudagraph` |
+| target | `graph_pre` | `run_duet_verify_cudagraph` |
 | target | `proxy_compute_send` | `_compute_and_send_proxy` |
-| target | `graph_post` | `run_mesa_verify_cudagraph` |
+| target | `graph_post` | `run_duet_verify_cudagraph` |
 
 총 8 × 2 = **16 줄**. `step` 은 함수에 이미 전달되는 argument 사용.
 
@@ -624,18 +624,18 @@ def mesa_dump(tag):
 `llm_engine.py` METRICS print 뒤, draft_runner loop 종료 뒤:
 
 ```python
-mesa_dump("target" if self.rank == 0 else "draft")
+duet_dump("target" if self.rank == 0 else "draft")
 ```
 
-### 8.4 Plot 스크립트 (`bench/plot_mesa_breakdown.py`, 30 LoC)
+### 8.4 Plot 스크립트 (`bench/plot_duet_breakdown.py`, 30 LoC)
 
 JSON 두 파일 (target, draft) 읽어서 label 별 mean / median bar plot.
 
 ### 8.5 Default off 비용
 
-- `PROFILE_MESA=0`: helper 첫 줄에서 `return None`. ~10 ns × 16
+- `PROFILE_DUET=0`: helper 첫 줄에서 `return None`. ~10 ns × 16
   호출/step → 측정상 0%.
-- `PROFILE_MESA=1`: CUDA Event record ~1-2 µs × 16 → ~30 µs / step,
+- `PROFILE_DUET=1`: CUDA Event record ~1-2 µs × 16 → ~30 µs / step,
   step 당 ~40 ms 대비 < 0.1%.
 
 ---
@@ -644,16 +644,16 @@ JSON 두 파일 (target, draft) 읽어서 label 별 mean / median bar plot.
 
 | 파일 | 변경 | 규모 |
 |------|------|------|
-| `ssd/config.py` | mesa params + B=1 / jit_speculate assert + proxy_top_k auto-raise | ~40 |
+| `ssd/config.py` | duet params + B=1 / jit_speculate assert + proxy_top_k auto-raise | ~40 |
 | `ssd/engine/helpers/tree_layout.py` | **신규**: TreeLayout + create_tree_layout | ~50 |
 | `ssd/models/llama3.py` | split forward (start/end_layer + init_*) | ~25 |
-| `ssd/engine/helpers/cudagraph_helpers.py` | mesa_verify capture/run + layout 일반화 + profiling | ~180 |
-| `ssd/engine/model_runner.py` | mesa CudaGraph 캡처 분기 + run_model 분기 + layout wrapper | ~60 |
+| `ssd/engine/helpers/cudagraph_helpers.py` | duet_verify capture/run + layout 일반화 + profiling | ~180 |
+| `ssd/engine/model_runner.py` | duet CudaGraph 캡처 분기 + run_model 분기 + layout wrapper | ~60 |
 | `ssd/layers/attention.py` | layout-aware wrapper selection | ~10 |
 | `ssd/utils/context.py` | active_mq_len / active_wrappers / active_layout | ~5 |
 | `ssd/engine/verifier.py` | proxy_fn + _compute_and_send_proxy + h_i + fan_out_list | ~80 |
 | `ssd/engine/draft_runner.py` | TreeLayout 적용 + 2-pass + Policy A + irecv + merge + buffer prealloc | ~200 |
-| `bench/bench.py` | --mesa args + jit_speculate auto | ~15 |
+| `bench/bench.py` | --duet args + jit_speculate auto | ~15 |
 | **총** | | **~665** |
 
 ---
@@ -693,7 +693,7 @@ JSON 두 파일 (target, draft) 읽어서 label 별 mean / median bar plot.
 9. Budget split — 2-pass 결과 합쳐서 cache populate 정상
 10. KV scratch — 2 번째 pass 가 1 번째 결과 훼손 안 함
 11. NCCL pack / unpack round-trip
-12. Feature gating — Qwen3 / EAGLE + mesa → assert
+12. Feature gating — Qwen3 / EAGLE + duet → assert
 
 ### 11.2 Edge case
 
@@ -712,17 +712,17 @@ cd bench
 python -O bench.py --llama --size 8 --async --spec --k 4 --f 3 \
     --gpus 2 --b 1 --temp 0 --numseqs 128 --output_len 512 --all
 
-# MESA
-python -O bench.py ... --mesa --mesa_exit_layer 21
+# DUET
+python -O bench.py ... --duet --duet_exit_layer 21
 
 # Budget split sweep
 for DF in 1 2; do
-    python -O bench.py ... --mesa --mesa_exit_layer 21 --mesa_draft_fan_out $DF
+    python -O bench.py ... --duet --duet_exit_layer 21 --duet_draft_fan_out $DF
 done
 
 # Exit layer sweep
 for EL in 10 16 21 26; do
-    python -O bench.py ... --mesa --mesa_exit_layer $EL
+    python -O bench.py ... --duet --duet_exit_layer $EL
 done
 ```
 
@@ -753,7 +753,7 @@ Throughput 자체는 2-pass 구조적 비용 + runtime layout 생성 / `ĥ_i` �
 
 # Part 5. Phase 2 Hybrid (v1)
 
-이 부분은 `MESA-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` 의 핵심 내용을 통합한
+이 부분은 `DUET-PHASE2-HYBRID-IMPLEMENTATION-PLAN.md` 의 핵심 내용을 통합한
 것이다. Rev1 (Part 4) 의 split 2-pass 구조를 single batched cont+proxy
 forward 로 재설계.
 
@@ -894,7 +894,7 @@ forward work (K_long=8, K1=K2=4, fo=pfo=2 기준 row-depths):
 | 3 | Phase 1 K1 split + hybrid Phase 2 (long bucket only) | forward 단축 첫 효과 |
 | 4 | verify 분기 (heterogeneous valid_k) | verify_long / verify_short |
 | 5 | short-base graph buckets | full 8-bucket dispatch |
-| 6 | validation (8 family capture, 70B AWQ smoke) | end-to-end MESA OK |
+| 6 | validation (8 family capture, 70B AWQ smoke) | end-to-end DUET OK |
 | 7 | Step 7 parity harness (split eager mirror) | 정확성 oracle |
 | 8 | hybrid default 전환 (split fallback gate) | 기본 = hybrid |
 | 9A | runtime valid_k bucket dispatch | per-step long/short |

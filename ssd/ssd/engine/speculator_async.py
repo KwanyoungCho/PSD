@@ -40,7 +40,7 @@ class SpeculatorAsync(SpeculatorBase):
         self.verbose = verbose
         self.K = lookahead
 
-        # Aligned-timeline (Phase B, docs/mesa/06 §4.4): monotonically
+        # Aligned-timeline (Phase B, docs/duet/06 §4.4): monotonically
         # increasing per-process spec request id. Mirrored on draft via the
         # spec metadata tensor. Always populated; sub-µs cost.
         self._request_step_id = 0
@@ -65,9 +65,9 @@ class SpeculatorAsync(SpeculatorBase):
         self._temps_buf = torch.empty(B, dtype=torch.float32, device=d)
         self._block_tables_buf = torch.full((B, self.max_blocks), -1, dtype=torch.int32, device=d)
         # Wire layout: [cache_hits (B), phase_source (B), valid_k (B), out_tokens (B*K)].
-        # phase_source: 0=miss, 1=phase 1 (draft) hit, 2=phase 2 (proxy) hit. All zeros for non-MESA.
+        # phase_source: 0=miss, 1=phase 1 (draft) hit, 2=phase 2 (proxy) hit. All zeros for non-DUET.
         # valid_k: per-row suffix length (K_long for draft-sourced/miss, K_short for proxy-sourced
-        #   in MESA hybrid; uniform K for non-MESA / pre-Phase-4 MESA).
+        #   in DUET hybrid; uniform K for non-DUET / pre-Phase-4 DUET).
         self._fused_response = torch.empty(3 * B + B * self.K, dtype=torch.int64, device=d)
         self._logits_q = torch.empty(B, self.K, self.vocab_size, dtype=self.draft_dtype, device=d)
         self._extend_counts = torch.zeros(B, dtype=torch.int64, device=d)
@@ -132,7 +132,7 @@ class SpeculatorAsync(SpeculatorBase):
         self._speculations_buf[:, 1:] = speculations_tokens
         speculations = self._speculations_buf
         profile_cache_status = None
-        _profile_mesa = os.environ.get("SSD_PROFILE_MESA", "0") == "1"
+        _profile_duet = os.environ.get("SSD_PROFILE_DUET", "0") == "1"
         _hit_statuses: list[int] = []
         _phase_statuses: list[int] = []
 
@@ -145,7 +145,7 @@ class SpeculatorAsync(SpeculatorBase):
             seq.num_tokens = len(seq.token_ids)
             seq.last_token = seq.token_ids[-1]
             seq.num_draft_cached_tokens += vk_i + 1
-            if _profile_mesa and cache_hits is not None:
+            if _profile_duet and cache_hits is not None:
                 _hit_statuses.append(int(cache_hits[i].item()))
                 _phase_statuses.append(int(phase_source[i].item()) if phase_source is not None else 0)
 
@@ -196,14 +196,14 @@ class SpeculatorAsync(SpeculatorBase):
 
         # Phase B: increment step_id once per spec request and mirror it into
         # the meta tensor. Draft picks it up from meta[3] (see
-        # draft_runner._service_spec_request). See docs/mesa/06 §4.4.
+        # draft_runner._service_spec_request). See docs/duet/06 §4.4.
         self._request_step_id += 1
         self._meta[3] = self._request_step_id
 
         # Set target-side profiler context for ALL spans inside this request.
         # status is filled in later (in step.py after speculate() returns).
         from ssd.engine.helpers.cudagraph_helpers import (
-            mesa_record as _mr, mesa_close as _mc, mesa_set_context as _mctx,
+            duet_record as _mr, duet_close as _mc, duet_set_context as _mctx,
         )
         _mctx(step_id=self._request_step_id, proc="target_rank0")
 
@@ -222,7 +222,7 @@ class SpeculatorAsync(SpeculatorBase):
 
         # Handshake marker: target_send_request — wraps cmd + meta + fused
         # payload send (and EAGLE payloads if applicable). Parent label
-        # `target_spec_wait` (assigned by mesa_dump via parent arg).
+        # `target_spec_wait` (assigned by duet_dump via parent arg).
         _mev_send = _mr("target_send_request", parent="target_spec_wait")
         # Send cmd + meta + fused payload (temps fused into int64 burst)
         dist.send(self._cmd, dst=self.draft_runner_rank, group=self.async_pg)

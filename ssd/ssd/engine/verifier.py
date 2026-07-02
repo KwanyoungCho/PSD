@@ -60,22 +60,22 @@ class Verifier(VerifierBase):
         # Phase B: announce step_id + proc=target_rank0 + status for ALL spans
         # inside verify (graph_pre/post, exit_logits, proxy_compute_send,
         # verify_sample_accept, ...). step_id comes from the matching spec
-        # request; status is what speculate() learned. See docs/mesa/06 §4.4.
-        from ssd.engine.helpers.cudagraph_helpers import mesa_set_context as _mctx_v
+        # request; status is what speculate() learned. See docs/duet/06 §4.4.
+        from ssd.engine.helpers.cudagraph_helpers import duet_set_context as _mctx_v
         _mctx_v(
             step_id=getattr(speculate_result, "step_id", None),
             proc="target_rank0",
             status=getattr(speculate_result, "profile_cache_status", None),
         )
 
-        # MESA: set proxy function on target model runner (rank 0 only)
-        if config.mesa_enabled:
+        # DUET: set proxy function on target model runner (rank 0 only)
+        if config.duet_enabled:
             async_pg = self.target_model_runner.async_pg
             draft_rank = self.target_model_runner.draft_rank
             # v1 hybrid: per-step lookahead (= valid_k of the matched cache row).
             # speculate_result.valid_k is uniform across the B=1 batch (Config
             # invariant). For non-hybrid path defaults to self.lookahead = K_long.
-            if speculate_result.valid_k is not None and config.mesa_phase1_k is not None:
+            if speculate_result.valid_k is not None and config.duet_phase1_k is not None:
                 _vk_unique = torch.unique(speculate_result.valid_k)
                 assert _vk_unique.numel() == 1, \
                     f"v1 expects uniform valid_k across batch (B=1), got {speculate_result.valid_k}"
@@ -86,11 +86,11 @@ class Verifier(VerifierBase):
             _trace_split = (
                 os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
                 and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-                and config.mesa_phase1_k is not None
+                and config.duet_phase1_k is not None
             )
             if _trace_split:
-                _K1 = config.mesa_phase1_k
-                _K2 = config.mesa_phase2_k
+                _K1 = config.duet_phase1_k
+                _K2 = config.duet_phase2_k
                 _K_max = _K1 if _K1 >= _K2 else _K2
                 _vk_list = speculate_result.valid_k.tolist() if speculate_result.valid_k is not None else None
                 print(f"[TRACE-split-k1k2 #2 spec→verify] K1={_K1} K2={_K2} K_max={_K_max} "
@@ -102,7 +102,7 @@ class Verifier(VerifierBase):
             # v1 hybrid: _step_lookahead comes from speculate_result.valid_k
             # (uniform per batch at B=1). Passed through call("run", ..., step_lookahead)
             # below so all TP ranks see the same value via SHM.
-            self.target_model_runner._mesa_step_lookahead = _step_lookahead
+            self.target_model_runner._duet_step_lookahead = _step_lookahead
 
             # Slice draft_tokens / logits_q to step_lookahead since target ran
             # only K_short+1 positions on a short-hit step.
@@ -115,7 +115,7 @@ class Verifier(VerifierBase):
                     exit_logits, draft_tokens, logits_q, orig_bs,
                     _vk, async_pg, draft_rank, cache_hits=cache_hits)
 
-            self.target_model_runner._mesa_proxy_fn = _proxy_fn
+            self.target_model_runner._duet_proxy_fn = _proxy_fn
 
         if _prof:
             torch.cuda.synchronize()
@@ -125,14 +125,14 @@ class Verifier(VerifierBase):
         _tv0 = perf_counter()
         # v1 hybrid: pass step_lookahead so it broadcasts to all TP ranks via
         # SHM, keeping verify CG bucket dispatch in sync.
-        _step_lh_arg = getattr(self.target_model_runner, "_mesa_step_lookahead", None) \
-            if config.mesa_enabled and config.mesa_phase1_k is not None else None
+        _step_lh_arg = getattr(self.target_model_runner, "_duet_step_lookahead", None) \
+            if config.duet_enabled and config.duet_phase1_k is not None else None
         result = self.target_model_runner.call(
             "run", seqs, False, False, True, None, _step_lh_arg)
 
-        # MESA: clear proxy function
-        if config.mesa_enabled:
-            self.target_model_runner._mesa_proxy_fn = None
+        # DUET: clear proxy function
+        if config.duet_enabled:
+            self.target_model_runner._duet_proxy_fn = None
 
         if _prof:
             torch.cuda.synchronize()
@@ -151,7 +151,7 @@ class Verifier(VerifierBase):
         # v1 hybrid: per-step variable lookahead. _step_lookahead read above
         # from speculate_result.valid_k. For non-hybrid path it equals
         # self.lookahead (= K_long).
-        _step_lookahead = getattr(self.target_model_runner, "_mesa_step_lookahead", self.lookahead)
+        _step_lookahead = getattr(self.target_model_runner, "_duet_step_lookahead", self.lookahead)
         for s in seqs:
             s.num_cached_tokens += _step_lookahead + 1
 
@@ -167,7 +167,7 @@ class Verifier(VerifierBase):
         temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
         temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
 
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
         _mev_vs = _mr("verify_sample_accept")
         new_suffixes, recovery_tokens = verify(
             logits_p=logits_p,
@@ -208,8 +208,8 @@ class Verifier(VerifierBase):
         if speculate_result.cache_hits is not None:
             _ch_cpu = speculate_result.cache_hits.cpu()
             self.metrics["cache_hits"].append(_ch_cpu.float().mean().item())
-            # MESA-only: split cache hits by which phase populated them.
-            # Non-MESA paths send all-zero phase_source and the rates stay 0.
+            # DUET-only: split cache hits by which phase populated them.
+            # Non-DUET paths send all-zero phase_source and the rates stay 0.
             if speculate_result.phase_source is not None:
                 _ps_cpu = speculate_result.phase_source.cpu()
                 self.metrics["phase1_hits"].append((_ps_cpu == 1).float().mean().item())
@@ -244,7 +244,7 @@ class Verifier(VerifierBase):
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None):
-        """Compute MESA proxy from early-exit logits and send to draft.
+        """Compute DUET proxy from early-exit logits and send to draft.
 
         Args:
             exit_logits: [B*(K+1), V] — norm+lm_head+TP gather done. None on non-rank-0.
@@ -255,10 +255,10 @@ class Verifier(VerifierBase):
         import torch.distributed as dist
         from ssd.utils.async_helpers.nccl_pack import send_int64
         config = self.target_model_runner.config
-        top_k = config.mesa_proxy_top_k
-        _detail_profile = os.environ.get("SSD_PROFILE_MESA_DETAIL", "0") == "1"
+        top_k = config.duet_proxy_top_k
+        _detail_profile = os.environ.get("SSD_PROFILE_DUET_DETAIL", "0") == "1"
         if _detail_profile:
-            from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_d, mesa_close as _mc_d
+            from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_d, duet_close as _mc_d
         else:
             _mr_d = _mc_d = None
 
@@ -296,7 +296,7 @@ class Verifier(VerifierBase):
 
         # Compute h_i (first reject position distribution) and fan_out_list on target side
         # This removes ~0.5ms from draft critical path
-        proxy_fan_out_total = config.mesa_proxy_fan_out * (K + 1)  # total proxy budget
+        proxy_fan_out_total = config.duet_proxy_fan_out * (K + 1)  # total proxy budget
         cumprod = torch.cumprod(accept_probs[0], dim=0)  # [K] (B=1 scope)
         h = torch.zeros(K + 1, device=accept_probs.device)
         h[0] = 1 - accept_probs[0, 0]
@@ -307,10 +307,10 @@ class Verifier(VerifierBase):
             _mc_d("proxy_compute", _ev_compute)
 
         # === Policy B unified K+1 path (default since 2026-04-29) ===
-        # docs/mesa/05-policy-b-fix.md Step 2.
+        # docs/duet/05-policy-b-fix.md Step 2.
         # Replaces legacy Policy A/B branches below. GPU-only, no .cpu().tolist().
         # Wire schema (Policy B): {chosen_pos[N], chosen_tok[N]} score-sorted.
-        if config.mesa_policy == "b":
+        if config.duet_policy == "b":
             _ev_pack = _mr_d("proxy_pack") if _detail_profile else None
             # pos == K (all-accept): target's full distribution at exit_logits[:, K, :].
             # Note: existing p_E only covers [:, :K, :] (line 246) — read separately.
@@ -326,7 +326,7 @@ class Verifier(VerifierBase):
 
             # Global top-N. wire_N is config-fixed (K_max+1 worst-case).
             # top_k auto-raise (config.py) ensures (K+1)*top_k ≥ wire_N for current step's K.
-            wire_N = config.mesa_proxy_wire_N
+            wire_N = config.duet_proxy_wire_N
             P_iv = h.view(K + 1, 1) * correction_topk_probs[0]                # [K+1, top_k]
             _, top_idx = P_iv.flatten().topk(wire_N)                          # [wire_N]
             chosen_pos = top_idx // top_k                                     # [wire_N], ∈ [0, K]
@@ -338,10 +338,10 @@ class Verifier(VerifierBase):
             if (
                 os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
                 and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-                and config.mesa_phase1_k is not None
+                and config.duet_phase1_k is not None
             ):
-                _K1 = config.mesa_phase1_k
-                _K2 = config.mesa_phase2_k
+                _K1 = config.duet_phase1_k
+                _K2 = config.duet_phase2_k
                 print(f"[TRACE-split-k1k2 #3 proxy_compute policy=b] K1={_K1} K2={_K2} "
                       f"K(=valid_k)={K} wire_N={wire_N} top_k={top_k} "
                       f"chosen_pos.shape={list(chosen_pos.shape)}",
@@ -355,7 +355,7 @@ class Verifier(VerifierBase):
 
         # === Legacy Policy A / Policy B (dead branches) ===
         # TODO(policy-a): Policy A retained as dead branch. Default is "b" since
-        # 2026-04-29; see docs/mesa/05-policy-b-fix.md Section 3.1.
+        # 2026-04-29; see docs/duet/05-policy-b-fix.md Section 3.1.
 
         _ev_pack = _mr_d("proxy_pack") if _detail_profile else None
         # Budget allocation
@@ -365,7 +365,7 @@ class Verifier(VerifierBase):
             remainder = proxy_fan_out_total - sum(fan_out_list)
             for i in range(remainder):
                 fan_out_list[i] += 1
-        elif config.mesa_policy == "b":
+        elif config.duet_policy == "b":
             # Policy B: joint (i, v) ranking by P̂(i, v) = ĥ_i × r̂_i(v)
             # All-accept (pos=K) has no correction tokens → allocate proportionally to h[K],
             # remaining budget over (pos<K, v) by P̂ topk. Reorder topk_ids/topk_probs so
@@ -429,10 +429,10 @@ class Verifier(VerifierBase):
         if (
             os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
             and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-            and config.mesa_phase1_k is not None
+            and config.duet_phase1_k is not None
         ):
-            _K1 = config.mesa_phase1_k
-            _K2 = config.mesa_phase2_k
+            _K1 = config.duet_phase1_k
+            _K2 = config.duet_phase2_k
             _K_max = _K1 if _K1 >= _K2 else _K2
             assert K in (_K1, _K2), (
                 f"split-k1k2 proxy compute: K={K} not in {{K1={_K1}, K2={_K2}}}"

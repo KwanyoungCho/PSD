@@ -17,13 +17,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "bench"))
-import plot_mesa_aligned_timeline as aligned  # noqa: E402
+import plot_duet_aligned_timeline as aligned  # noqa: E402
 
 
 def main():
     outdir = Path(__file__).parent
-    t_path = sorted(outdir.glob("mesa_profile_target_rank0_*.json"))[-1]
-    d_path = sorted(outdir.glob("mesa_profile_draft_*.json"))[-1]
+    # Accepts both new duet_profile_*.json and legacy mesa_profile_*.json
+    t_cands = sorted(outdir.glob("duet_profile_target_rank0_*.json"))               or sorted(outdir.glob("mesa_profile_target_rank0_*.json"))
+    d_cands = sorted(outdir.glob("duet_profile_draft_*.json"))               or sorted(outdir.glob("mesa_profile_draft_*.json"))
+    t_path = t_cands[-1]
+    d_path = d_cands[-1]
     target = aligned._strip_anchor(json.loads(t_path.read_text()))
     draft = aligned._strip_anchor(json.loads(d_path.read_text()))
 

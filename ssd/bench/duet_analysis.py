@@ -1,6 +1,6 @@
-"""MESA-SSD detailed latency analysis.
+"""DUET-SSD detailed latency analysis.
 Measures target/draft breakdown with CUDA events (no sync overhead).
-Usage: python -O bench/mesa_analysis.py
+Usage: python -O bench/duet_analysis.py
 """
 import os, sys, json, time
 os.environ["SSD_CUDA_ARCH"] = "8.6"
@@ -14,7 +14,7 @@ from ssd.engine.llm_engine import METRICS
 TARGET = "/data2/chokwans99/models/layerskip-llama3-8B"
 DRAFT = "/data2/chokwans99/models/Llama-3.2-1B-Instruct"
 
-def run_experiment(mesa_enabled, exit_layer=None, draft_fan_out=None,
+def run_experiment(duet_enabled, exit_layer=None, draft_fan_out=None,
                    num_seqs=10, output_len=256, temp=0.6, fan_out=3, k=4):
     """Run one experiment configuration and return metrics."""
     kwargs = dict(
@@ -23,12 +23,12 @@ def run_experiment(mesa_enabled, exit_layer=None, draft_fan_out=None,
         async_fan_out=fan_out, max_num_seqs=1, max_model_len=4096,
         jit_speculate=True,
     )
-    if mesa_enabled:
-        kwargs["mesa_enabled"] = True
+    if duet_enabled:
+        kwargs["duet_enabled"] = True
         if exit_layer is not None:
-            kwargs["mesa_exit_layer"] = exit_layer
+            kwargs["duet_exit_layer"] = exit_layer
         if draft_fan_out is not None:
-            kwargs["mesa_draft_fan_out"] = draft_fan_out
+            kwargs["duet_draft_fan_out"] = draft_fan_out
 
     sp = SamplingParams(temperature=temp, max_new_tokens=output_len)
 
@@ -49,7 +49,7 @@ def run_experiment(mesa_enabled, exit_layer=None, draft_fan_out=None,
 
     metrics = dict(METRICS)
     result = {
-        "mesa_enabled": mesa_enabled,
+        "duet_enabled": duet_enabled,
         "exit_layer": exit_layer,
         "draft_fan_out": draft_fan_out,
         "fan_out": fan_out,
@@ -72,15 +72,15 @@ def main():
 
     configs = [
         # Baseline
-        {"mesa_enabled": False, "label": "Baseline SSD"},
-        # MESA with different exit layers
-        {"mesa_enabled": True, "exit_layer": 10, "label": "MESA exit=10 (31%)"},
-        {"mesa_enabled": True, "exit_layer": 16, "label": "MESA exit=16 (50%)"},
-        {"mesa_enabled": True, "exit_layer": 21, "label": "MESA exit=21 (66%)"},
-        {"mesa_enabled": True, "exit_layer": 26, "label": "MESA exit=26 (81%)"},
-        # MESA with different draft_fan_out
-        {"mesa_enabled": True, "exit_layer": 21, "draft_fan_out": 1, "label": "MESA exit=21 draft_fo=1"},
-        {"mesa_enabled": True, "exit_layer": 21, "draft_fan_out": 2, "label": "MESA exit=21 draft_fo=2"},
+        {"duet_enabled": False, "label": "Baseline SSD"},
+        # DUET with different exit layers
+        {"duet_enabled": True, "exit_layer": 10, "label": "DUET exit=10 (31%)"},
+        {"duet_enabled": True, "exit_layer": 16, "label": "DUET exit=16 (50%)"},
+        {"duet_enabled": True, "exit_layer": 21, "label": "DUET exit=21 (66%)"},
+        {"duet_enabled": True, "exit_layer": 26, "label": "DUET exit=26 (81%)"},
+        # DUET with different draft_fan_out
+        {"duet_enabled": True, "exit_layer": 21, "draft_fan_out": 1, "label": "DUET exit=21 draft_fo=1"},
+        {"duet_enabled": True, "exit_layer": 21, "draft_fan_out": 2, "label": "DUET exit=21 draft_fo=2"},
     ]
 
     for cfg in configs:
@@ -120,9 +120,9 @@ def main():
             print(f"{r['label']:<35} {tp:>12} {ch:>10} {ts:>10} {tv:>10} {ds:>10}")
 
     # Save results
-    with open("/tmp/mesa_analysis_results.json", "w") as f:
+    with open("/tmp/duet_analysis_results.json", "w") as f:
         json.dump(results, f, indent=2, default=str)
-    print(f"\nResults saved to /tmp/mesa_analysis_results.json")
+    print(f"\nResults saved to /tmp/duet_analysis_results.json")
 
 
 if __name__ == "__main__":

@@ -62,7 +62,7 @@ class AsyncSendRing:
     tuned so this almost never fires). ``drain`` is the explicit cleanup
     hook called from engine shutdown.
 
-    See ``ssd/docs/mesa/08-proxy-overlap-experiment.md`` §3 for the full
+    See ``ssd/docs/duet/08-proxy-overlap-experiment.md`` §3 for the full
     design rationale.
     """
 
@@ -119,7 +119,7 @@ class AsyncSendRing:
     def dump_stats(self, outdir: str, decode_steps_seen: int):
         """Persist slot wait counters so Phase 4 / summarize can compute
         slot_wait_rate. Called by Verifier.drain_proxy_send_ring() under
-        SSD_PROFILE_MESA=1 only — gate kept by caller (see doc 08 §3.1)."""
+        SSD_PROFILE_DUET=1 only — gate kept by caller (see doc 08 §3.1)."""
         import json
         out = {
             "slots": [

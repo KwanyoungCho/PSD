@@ -24,8 +24,8 @@ import torch.multiprocessing as mp
 
 METRICS = {
     "cache_hits": [],
-    "phase1_hits": [],   # MESA-only: fraction of B with phase 1 (draft-sourced) cache hit
-    "phase2_hits": [],   # MESA-only: fraction of B with phase 2 (proxy-sourced) cache hit
+    "phase1_hits": [],   # DUET-only: fraction of B with phase 1 (draft-sourced) cache hit
+    "phase2_hits": [],   # DUET-only: fraction of B with phase 2 (proxy-sourced) cache hit
     "accepted_suffix_lens_with_recovery": [],
     "accepted_suffix_lens_on_hit": [],  # Only for cache hits in async mode
     "accepted_suffix_lens_on_miss": [],  # Only for cache misses in async mode
@@ -153,8 +153,8 @@ class LLMEngine:
             return
         self._exiting = True
         try:
-            from ssd.engine.helpers.cudagraph_helpers import mesa_dump
-            mesa_dump("target_rank0")
+            from ssd.engine.helpers.cudagraph_helpers import duet_dump
+            duet_dump("target_rank0")
         except Exception:
             pass
         # 1) If async, tell draft to quit before tearing down anything
@@ -182,7 +182,7 @@ class LLMEngine:
             pass
         # 4) Draft process: profile dumps can be large, so profiling runs get a
         # longer graceful-exit window without adding another runtime env knob.
-        _draft_join_timeout = 30 if os.environ.get("SSD_PROFILE_MESA", "0") == "1" else 3
+        _draft_join_timeout = 30 if os.environ.get("SSD_PROFILE_DUET", "0") == "1" else 3
         try:
             if self.config.speculate and self.config.draft_async and self.draft_ps is not None:
                 self.draft_ps.join(timeout=_draft_join_timeout)
@@ -273,10 +273,10 @@ class LLMEngine:
             import os as _os_metric
             _split_k1k2 = (
                 _os_metric.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-                and self.config.mesa_phase1_k is not None
+                and self.config.duet_phase1_k is not None
             )
             if _split_k1k2:
-                _accept_denom = max(self.config.mesa_phase1_k, self.config.mesa_phase2_k)
+                _accept_denom = max(self.config.duet_phase1_k, self.config.duet_phase2_k)
             else:
                 _accept_denom = self.config.speculate_k
             avg_acceptance_rate = (total_accepted / ttl_num_spec_steps) / _accept_denom
@@ -291,21 +291,21 @@ class LLMEngine:
             if self.config.draft_async:
                 print(
                     f"[metrics] Avg Cache Hits: {sum(METRICS['cache_hits']) / len(METRICS['cache_hits']):.2f}", flush=True)
-                # MESA-only: phase 1 (draft-sourced) vs phase 2 (proxy-sourced) hit split.
-                # Non-MESA paths leave these zero.
-                if self.config.mesa_enabled and METRICS['phase1_hits']:
+                # DUET-only: phase 1 (draft-sourced) vs phase 2 (proxy-sourced) hit split.
+                # Non-DUET paths leave these zero.
+                if self.config.duet_enabled and METRICS['phase1_hits']:
                     p1 = sum(METRICS['phase1_hits']) / len(METRICS['phase1_hits'])
                     p2 = sum(METRICS['phase2_hits']) / len(METRICS['phase2_hits'])
                     print(f"[metrics] Avg Phase 1 (draft) Hit Rate: {p1:.3f}", flush=True)
                     print(f"[metrics] Avg Phase 2 (proxy) Hit Rate: {p2:.3f}", flush=True)
                     if METRICS["accepted_lens_phase1_hit"]:
                         p1_len = sum(METRICS["accepted_lens_phase1_hit"]) / len(METRICS["accepted_lens_phase1_hit"])
-                        p1_denom = self.config.mesa_phase1_k if self.config.mesa_phase1_k is not None else self.config.speculate_k
+                        p1_denom = self.config.duet_phase1_k if self.config.duet_phase1_k is not None else self.config.speculate_k
                         print(f"[metrics] Avg Phase 1 Accepted Len: {p1_len:.2f}", flush=True)
                         print(f"[metrics] Avg Phase 1 Acceptance Ratio: {p1_len / p1_denom:.3f}", flush=True)
                     if METRICS["accepted_lens_phase2_hit"]:
                         p2_len = sum(METRICS["accepted_lens_phase2_hit"]) / len(METRICS["accepted_lens_phase2_hit"])
-                        p2_denom = self.config.mesa_phase2_k if self.config.mesa_phase2_k is not None else self.config.speculate_k
+                        p2_denom = self.config.duet_phase2_k if self.config.duet_phase2_k is not None else self.config.speculate_k
                         print(f"[metrics] Avg Phase 2 Accepted Len: {p2_len:.2f}", flush=True)
                         print(f"[metrics] Avg Phase 2 Acceptance Ratio: {p2_len / p2_denom:.3f}", flush=True)
                 # Log separate metrics for cache hits

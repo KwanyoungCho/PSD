@@ -2,7 +2,7 @@
 are parametrized by layout instead of global MQ_LEN. Supports full / draft / proxy /
 phase1 layouts.
 
-For Phase 2 hybrid (per docs/mesa/01-design.md Part 5):
+For Phase 2 hybrid (per docs/duet/01-design.md Part 5):
 
 - ``forward_depth`` (alias: ``K``) — how many model-forward steps a seed runs
   through. ``arange(forward_depth)`` drives ``step_pos_offsets`` /
@@ -10,8 +10,8 @@ For Phase 2 hybrid (per docs/mesa/01-design.md Part 5):
 - ``position_count`` (= ``len(fan_out_list)``) — how many fork positions the
   layout has. Glue-position offset uses this.
 
-For non-MESA layouts, the legacy invariant ``position_count == forward_depth + 1``
-continues to hold and nothing visible changes. For MESA Phase 1 layouts the two
+For non-DUET layouts, the legacy invariant ``position_count == forward_depth + 1``
+continues to hold and nothing visible changes. For DUET Phase 1 layouts the two
 diverge: ``forward_depth = K1`` (config-fixed), ``position_count = valid_k + 1``
 (variable per step / per bucket).
 """
@@ -64,7 +64,7 @@ def create_tree_layout(
         device: target device for pre-computed tensors.
         position_count: number of fork positions (= ``len(fan_out_list)``). When
             None (default), defaults to ``K + 1`` to preserve the legacy
-            invariant for non-MESA / current MESA call sites.
+            invariant for non-DUET / current DUET call sites.
     """
     MQ_LEN = sum(fan_out_list)
     assert sum(fan_out_list_miss) == MQ_LEN, \

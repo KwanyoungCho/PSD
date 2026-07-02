@@ -1,6 +1,6 @@
-"""HybridPhase2Plan — per-step plan object for the MESA Phase 2 hybrid loop.
+"""HybridPhase2Plan — per-step plan object for the DUET Phase 2 hybrid loop.
 
-Per ``docs/mesa/01-design.md Part 5``:
+Per ``docs/duet/01-design.md Part 5``:
 
 - One ``HybridPhase2Plan`` instance per ``DraftRunner``.
 - All tensor fields are allocated **once** at engine init, sized for the long
@@ -36,12 +36,12 @@ class HybridPhase2Plan:
     # ─────────────────────────────────────────────────────────────────────
     # Static config (set once at __init__)
     # ─────────────────────────────────────────────────────────────────────
-    K_long: int                    # = mesa_phase1_k + mesa_phase2_k = speculate_k
-    K_short: int                   # = mesa_phase2_k
+    K_long: int                    # = duet_phase1_k + duet_phase2_k = speculate_k
+    K_short: int                   # = duet_phase2_k
     K1: int                        # Phase 1 forward depth
     K2: int                        # Phase 2 forward depth (= K_short)
-    mesa_draft_fan_out: int        # fan_out per Phase 1 fork position
-    mesa_proxy_fan_out: int        # fan_out per proxy fork position
+    duet_draft_fan_out: int        # fan_out per Phase 1 fork position
+    duet_proxy_fan_out: int        # fan_out per proxy fork position
     max_pages_per_row: int         # block-table width (max KV pages a row can address)
     max_packed_mask_size: int      # per-depth packed mask buffer size
 
@@ -49,8 +49,8 @@ class HybridPhase2Plan:
     # Per-step scalars (filled by ``fill``)
     # ─────────────────────────────────────────────────────────────────────
     valid_k: int = 0
-    cont_row_count: int = 0        # = (valid_k + 1) × mesa_draft_fan_out
-    proxy_row_count: int = 0       # = (valid_k + 1) × mesa_proxy_fan_out
+    cont_row_count: int = 0        # = (valid_k + 1) × duet_draft_fan_out
+    proxy_row_count: int = 0       # = (valid_k + 1) × duet_proxy_fan_out
     total_row_count: int = 0       # = cont_row_count + proxy_row_count
     phase_split_offset: int = 0    # = cont_row_count
     name: str = ""                 # "phase2_hybrid_long" or "_short"
@@ -73,8 +73,8 @@ class HybridPhase2Plan:
     # ─────────────────────────────────────────────────────────────────────
     # Allocated-once buffers (max-sized; long bucket worst case)
     #
-    # All shapes use ``MAX_TOTAL`` = (K_long + 1) × (mesa_draft_fan_out +
-    # mesa_proxy_fan_out). The per-step ``fill`` writes the
+    # All shapes use ``MAX_TOTAL`` = (K_long + 1) × (duet_draft_fan_out +
+    # duet_proxy_fan_out). The per-step ``fill`` writes the
     # ``[:total_row_count]`` slice; the rest is undefined and unused.
     # ─────────────────────────────────────────────────────────────────────
 
@@ -131,8 +131,8 @@ class HybridPhase2Plan:
         *,
         K1: int,
         K2: int,
-        mesa_draft_fan_out: int,
-        mesa_proxy_fan_out: int,
+        duet_draft_fan_out: int,
+        duet_proxy_fan_out: int,
         max_pages_per_row: int,
         max_packed_mask_size: int,
         max_L: int,
@@ -143,8 +143,8 @@ class HybridPhase2Plan:
         K_short = K2
 
         # Worst-case row counts (long-hit step)
-        max_cont = (K_long + 1) * mesa_draft_fan_out
-        max_proxy = (K_long + 1) * mesa_proxy_fan_out
+        max_cont = (K_long + 1) * duet_draft_fan_out
+        max_proxy = (K_long + 1) * duet_proxy_fan_out
         max_total = max_cont + max_proxy
 
         # KV indices are depth-major; max total indices ≤ MAX_TOTAL × max_pages_per_row
@@ -155,8 +155,8 @@ class HybridPhase2Plan:
             K_short=K_short,
             K1=K1,
             K2=K2,
-            mesa_draft_fan_out=mesa_draft_fan_out,
-            mesa_proxy_fan_out=mesa_proxy_fan_out,
+            duet_draft_fan_out=duet_draft_fan_out,
+            duet_proxy_fan_out=duet_proxy_fan_out,
             max_pages_per_row=max_pages_per_row,
             max_packed_mask_size=max_packed_mask_size,
         )
@@ -261,11 +261,11 @@ class HybridPhase2Plan:
             valid_k: incoming hit's row depth (K_long or K_short).
             fan_out_list: per-position proxy fan-outs (length = valid_k + 1)
                 from this step's Policy A/B allocation. If None, falls back
-                to a uniform `mesa_proxy_fan_out` per position (legacy default
+                to a uniform `duet_proxy_fan_out` per position (legacy default
                 — preserved for non-Policy paths).
 
         Invariants (per reviewer guidance):
-          - cont_row_count = (valid_k + 1) × mesa_draft_fan_out  (Phase 1
+          - cont_row_count = (valid_k + 1) × duet_draft_fan_out  (Phase 1
             seeds — always uniform fan-out per position)
           - proxy_row_count = sum(fan_out_list)  (dynamic Policy A/B
             semantics; equals proxy_fan_out_total = pfo × (valid_k + 1) in
@@ -273,11 +273,11 @@ class HybridPhase2Plan:
             through)
         """
         self.valid_k = valid_k
-        self.cont_row_count = 0 if skip_cont else (valid_k + 1) * self.mesa_draft_fan_out
+        self.cont_row_count = 0 if skip_cont else (valid_k + 1) * self.duet_draft_fan_out
         if skip_proxy:
             self.proxy_row_count = 0
         elif fan_out_list is None:
-            self.proxy_row_count = (valid_k + 1) * self.mesa_proxy_fan_out
+            self.proxy_row_count = (valid_k + 1) * self.duet_proxy_fan_out
         else:
             assert len(fan_out_list) == valid_k + 1, (
                 f"fan_out_list length {len(fan_out_list)} != valid_k+1 "

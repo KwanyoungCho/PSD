@@ -15,11 +15,11 @@ def compute_megaspec_lookahead(
 ) -> int:
     """Per-step draft KV slot reservation for the scheduler.
 
-    Non-split path (hybrid MESA, legacy two-pass MESA, or non-MESA async SD):
+    Non-split path (hybrid DUET, legacy two-pass DUET, or non-DUET async SD):
         glue (K+1) + K sequential forwards each writing MQ_LEN disjoint slots.
         Total = K + 1 + K * MQ_LEN.
 
-    Split-K1/K2 path (SSD_FORCE_SPLIT_K1K2=1, MESA only):
+    Split-K1/K2 path (SSD_FORCE_SPLIT_K1K2=1, DUET only):
         Phase 1 (K1 forwards × mq_p1) writes [base..base + K1*mq_p1).
         Phase 2 (K2 forwards × mq_p2) starts at the SAME base and writes
         [base..base + K2*mq_p2), overlapping Phase 1's region. This is safe
@@ -34,7 +34,7 @@ def compute_megaspec_lookahead(
         async_fan_out ≥ 5 even though physical scratch fits comfortably.
     """
     if split_k1k2:
-        # K2 ≤ K1 invariant (docs/mesa/04-split-k1k2-design.md), so K_step = K1.
+        # K2 ≤ K1 invariant (docs/duet/04-split-k1k2-design.md), so K_step = K1.
         # Phase 1 footprint = K1 * mq_p1, Phase 2 footprint = K2 * mq_p2.
         # Either pass can dominate depending on (dfo, pfo) — pfo > dfo cases
         # (e.g., dfo=1, pfo=3) push K2*mq_p2 above K1*mq_p1 even at K2 ≤ K1.
@@ -51,7 +51,7 @@ def make_glue_decode_input_ids(
     """
     Creates glue_token_input_ids of shape [B, valid_k+1] with recovery token first.
 
-    Step 9B-0: ``valid_k`` plumbing for MESA short-hit bucket. When None
+    Step 9B-0: ``valid_k`` plumbing for DUET short-hit bucket. When None
     (legacy path), uses draft_tokens.shape[1] as the glue width. When set,
     only the first ``valid_k`` columns of draft_tokens are used (the rest
     is zero-padding for cache row uniformity).

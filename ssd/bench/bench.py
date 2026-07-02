@@ -80,27 +80,27 @@ def parse_arguments():
     parser.add_argument("--group", type=str, default=None, help="Wandb group name")
     parser.add_argument("--name", type=str, default=None, help="Wandb run name")
 
-    # MESA-SSD configuration
-    parser.add_argument("--mesa", action="store_true", help="Enable MESA-SSD (early-exit proxy)")
-    parser.add_argument("--mesa_exit_layer", type=int, default=None,
+    # DUET-SSD configuration
+    parser.add_argument("--duet", action="store_true", help="Enable DUET-SSD (early-exit proxy)")
+    parser.add_argument("--duet_exit_layer", type=int, default=None,
                         help="Early-exit layer index (default: 2*L//3)")
-    parser.add_argument("--mesa_proxy_top_k", type=int, default=3,
+    parser.add_argument("--duet_proxy_top_k", type=int, default=3,
                         help="Number of proxy correction tokens per position")
-    parser.add_argument("--mesa_draft_fan_out", type=int, default=None,
+    parser.add_argument("--duet_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
-    parser.add_argument("--mesa_policy", choices=("a", "b"), default="b",
+    parser.add_argument("--duet_policy", choices=("a", "b"), default="b",
                         help="Phase-2 budget: 'b' = unified K+1 (default since 2026-04-29; "
-                             "see docs/mesa/05-policy-b-fix.md). 'a' = legacy h_i proportional (dead branch).")
-    parser.add_argument("--mesa_phase1_k", type=int, default=None,
-                        help="v1 hybrid: Phase 1 forward depth K1 (must sum with --mesa_phase2_k to --k). "
+                             "see docs/duet/05-policy-b-fix.md). 'a' = legacy h_i proportional (dead branch).")
+    parser.add_argument("--duet_phase1_k", type=int, default=None,
+                        help="v1 hybrid: Phase 1 forward depth K1 (must sum with --duet_phase2_k to --k). "
                              "When set, enables hybrid v1 (proxy K2 + verify dispatch).")
-    parser.add_argument("--mesa_phase2_k", type=int, default=None,
-                        help="v1 hybrid: Phase 2 forward depth K2 = K_short. Required iff --mesa_phase1_k is set.")
-    parser.add_argument("--mesa_split_phase1_fan_out_list", type=str, default=None,
+    parser.add_argument("--duet_phase2_k", type=int, default=None,
+                        help="v1 hybrid: Phase 2 forward depth K2 = K_short. Required iff --duet_phase1_k is set.")
+    parser.add_argument("--duet_split_phase1_fan_out_list", type=str, default=None,
                         help="Split-only K1/K2: comma-separated per-position fan_out list "
                              "for Phase 1 (length must be K1+1). E.g. '4,4,3,3,2,2,1,1,1' "
                              "for K1=8. Default = uniform [draft_fo]*(K1+1).")
-    parser.add_argument("--mesa_split_phase2_fan_out_list", type=str, default=None,
+    parser.add_argument("--duet_split_phase2_fan_out_list", type=str, default=None,
                         help="Split-only K1/K2: comma-separated per-position fan_out list "
                              "for Phase 2 (length must be K2+1). Default = uniform [proxy_fo]*(K2+1).")
 
@@ -237,27 +237,27 @@ def create_llm_kwargs(args, draft_path):
     if args.gpu_memory_utilization is not None:
         llm_kwargs["gpu_memory_utilization"] = args.gpu_memory_utilization
 
-    # MESA-SSD
-    if getattr(args, 'mesa', False):
-        llm_kwargs["mesa_enabled"] = True
-        llm_kwargs["jit_speculate"] = True  # MESA requires jit_speculate
-        if args.mesa_exit_layer is not None:
-            llm_kwargs["mesa_exit_layer"] = args.mesa_exit_layer
-        llm_kwargs["mesa_proxy_top_k"] = args.mesa_proxy_top_k
-        if args.mesa_draft_fan_out is not None:
-            llm_kwargs["mesa_draft_fan_out"] = args.mesa_draft_fan_out
-        llm_kwargs["mesa_policy"] = args.mesa_policy
-        if args.mesa_phase1_k is not None:
-            llm_kwargs["mesa_phase1_k"] = args.mesa_phase1_k
-        if args.mesa_phase2_k is not None:
-            llm_kwargs["mesa_phase2_k"] = args.mesa_phase2_k
-        if args.mesa_split_phase1_fan_out_list is not None:
-            llm_kwargs["mesa_split_phase1_fan_out_list"] = [
-                int(x) for x in args.mesa_split_phase1_fan_out_list.split(",")
+    # DUET-SSD
+    if getattr(args, 'duet', False):
+        llm_kwargs["duet_enabled"] = True
+        llm_kwargs["jit_speculate"] = True  # DUET requires jit_speculate
+        if args.duet_exit_layer is not None:
+            llm_kwargs["duet_exit_layer"] = args.duet_exit_layer
+        llm_kwargs["duet_proxy_top_k"] = args.duet_proxy_top_k
+        if args.duet_draft_fan_out is not None:
+            llm_kwargs["duet_draft_fan_out"] = args.duet_draft_fan_out
+        llm_kwargs["duet_policy"] = args.duet_policy
+        if args.duet_phase1_k is not None:
+            llm_kwargs["duet_phase1_k"] = args.duet_phase1_k
+        if args.duet_phase2_k is not None:
+            llm_kwargs["duet_phase2_k"] = args.duet_phase2_k
+        if args.duet_split_phase1_fan_out_list is not None:
+            llm_kwargs["duet_split_phase1_fan_out_list"] = [
+                int(x) for x in args.duet_split_phase1_fan_out_list.split(",")
             ]
-        if args.mesa_split_phase2_fan_out_list is not None:
-            llm_kwargs["mesa_split_phase2_fan_out_list"] = [
-                int(x) for x in args.mesa_split_phase2_fan_out_list.split(",")
+        if args.duet_split_phase2_fan_out_list is not None:
+            llm_kwargs["duet_split_phase2_fan_out_list"] = [
+                int(x) for x in args.duet_split_phase2_fan_out_list.split(",")
             ]
 
     # AWQ W4A16 (Marlin) — plan v2 primary direction (TARGET)

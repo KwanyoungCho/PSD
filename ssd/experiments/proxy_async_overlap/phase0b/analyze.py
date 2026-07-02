@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Phase 0b analyzer.
 
-Reads mesa_profile_target_*.json from A_detail0 and B_detail1 runs, computes:
+Reads duet_profile_target_*.json (falls back to legacy mesa_profile_target_*.json) from A_detail0 and B_detail1 runs, computes:
 
   - outer (proxy_compute_send) mean / median / p90 / p99
   - inner (proxy_compute / proxy_pack / proxy_send) mean (B only)
@@ -34,8 +34,11 @@ from collections import defaultdict
 
 
 def load_target_profile(run_dir: pathlib.Path) -> dict[str, list[float]]:
-    """Load mesa_profile_target_rank0_*.json and group ms by label."""
-    candidates = sorted(run_dir.glob("mesa_profile_target_rank0_*.json"))
+    """Load duet_profile_target_rank0_*.json (or legacy mesa_profile_*.json) and group ms by label."""
+    # Accepts both new duet_profile_*.json and legacy mesa_profile_*.json
+    candidates = sorted(run_dir.glob("duet_profile_target_rank0_*.json"))
+    if not candidates:
+        candidates = sorted(run_dir.glob("mesa_profile_target_rank0_*.json"))
     if not candidates:
         raise FileNotFoundError(f"no target profile in {run_dir}")
     # Pick newest

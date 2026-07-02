@@ -6,8 +6,8 @@ Plots two panels:
      dense vs quant side-by-side (pair of stacked bars per config)
 
 Expects:
-  tmp/final_exp2/<cfg>/mesa_per_step_contribution.csv
-  tmp/final_exp2_quant/<cfg>/mesa_per_step_contribution.csv
+  tmp/final_exp2/<cfg>/duet_per_step_contribution.csv
+  tmp/final_exp2_quant/<cfg>/duet_per_step_contribution.csv
   tmp/final_exp2/<cfg>/run.log       — for Throughput
   tmp/final_exp2_quant/<cfg>/run.log
 """
@@ -26,9 +26,9 @@ CONFIGS = [
     ("ar",                       "AR\nTP=4"),
     ("baseline_k7_uniform",      "SSD baseline\nK=7 uniform"),
     ("baseline_k7_geo",          "SSD baseline\nK=7 geo"),
-    ("mesa_k5_f4_dfo2_exit24",   "MESA K=5\nexit=24"),
-    ("mesa_k5_f4_dfo2_exit28",   "MESA K=5\nexit=28"),
-    ("mesa_k5_f4_dfo2_exit32",   "MESA K=5\nexit=32"),
+    ("duet_k5_f4_dfo2_exit24",   "DUET K=5\nexit=24"),
+    ("duet_k5_f4_dfo2_exit28",   "DUET K=5\nexit=28"),
+    ("duet_k5_f4_dfo2_exit32",   "DUET K=5\nexit=32"),
 ]
 
 # Phase colors (matches plot_compare_breakdown.py)
@@ -122,14 +122,14 @@ def plot_breakdown(out_png: str) -> None:
         payload = {}
         for cfg, _ in spec_configs:
             for base in (DENSE_BASE, QUANT_BASE):
-                df = _breakdown(f"{base}/{cfg}/mesa_per_step_contribution.csv")
+                df = _breakdown(f"{base}/{cfg}/duet_per_step_contribution.csv")
                 if df is None:
                     continue
                 sub = df[df["proc"] == proc].set_index("label")["ms_per_step"]
                 labels_set.update(sub.index)
 
         # order by dense baseline_k7_geo largest-first
-        seed_df = _breakdown(f"{DENSE_BASE}/baseline_k7_geo/mesa_per_step_contribution.csv")
+        seed_df = _breakdown(f"{DENSE_BASE}/baseline_k7_geo/duet_per_step_contribution.csv")
         if seed_df is not None:
             order = list(seed_df[seed_df["proc"] == proc].set_values(ascending=False)["label"]) \
                 if False else list(seed_df[seed_df["proc"] == proc]
@@ -147,7 +147,7 @@ def plot_breakdown(out_png: str) -> None:
         for i, (cfg, _) in enumerate(spec_configs):
             for side, base, xoff in (("dense", DENSE_BASE, -w / 2 - 0.02),
                                       ("quant", QUANT_BASE, w / 2 + 0.02)):
-                df = _breakdown(f"{base}/{cfg}/mesa_per_step_contribution.csv")
+                df = _breakdown(f"{base}/{cfg}/duet_per_step_contribution.csv")
                 if df is None:
                     continue
                 sub = df[df["proc"] == proc].set_index("label")["ms_per_step"]

@@ -117,17 +117,17 @@ class SpecDecodeStep(InferenceStep):
             eagle_acts=eagle_sentinel,
         )
         #### STEP 1: SPECULATE ####
-        # Phase B (docs/mesa/06 §4.4 final paragraph): target_spec_wait wraps
+        # Phase B (docs/duet/06 §4.4 final paragraph): target_spec_wait wraps
         # the blocking speculate() call. proc + step_id are set inside
         # _speculation_request once the request id is incremented; we set
         # proc here pre-emptively so events on this process are tagged even
         # before the request id is known. status is learned only after
-        # speculate() returns and is late-bound via mesa_set_context so
-        # mesa_close() picks it up at close time. Label retains the
+        # speculate() returns and is late-bound via duet_set_context so
+        # duet_close() picks it up at close time. Label retains the
         # legacy `_{status}` suffix (Option (i)) for back-compat with
         # summarize_ssd_run.py; the row also carries status as a field.
         from ssd.engine.helpers.cudagraph_helpers import (
-            mesa_record as _mr, mesa_close as _mc, mesa_set_context as _mctx,
+            duet_record as _mr, duet_close as _mc, duet_set_context as _mctx,
         )
         _mctx(proc="target_rank0")
         _mev_sw = _mr("target_spec_wait")

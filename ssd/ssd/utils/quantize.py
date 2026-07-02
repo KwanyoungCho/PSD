@@ -111,7 +111,7 @@ def _quantize_weight_to_int4_wo(weight: torch.Tensor, target_dtype: torch.dtype 
     SM 86 with 8B verify-shape matmuls: 0.25x-1.25x of dense (up to 4x faster
     in AR decode). Prefill shapes are ~3x slower (compute-bound + dequant
     overhead), but prefill is one-shot per sequence so the verify speedup
-    dominates the cumulative MESA/spec workload.
+    dominates the cumulative DUET/spec workload.
 
     `input_dim` must be divisible by `group_size` (default 128). All Llama
     TP shards we target satisfy this at TP ∈ {2, 4}.
@@ -139,7 +139,7 @@ def apply_quantization_to_target(
     Args:
         model: target model (e.g., LlamaForCausalLM)
         quantize_lm_head: whether to quantize ParallelLMHead. Default False
-            because lm_head is a hot path (per-step gather+cat + MESA exit
+            because lm_head is a hot path (per-step gather+cat + DUET exit
             logits) and quantizing it costs throughput/accept.
         tie_word_embeddings: `hf_config.tie_word_embeddings`. When True and
             `quantize_lm_head=True`, untie lm_head before quantization to
@@ -452,7 +452,7 @@ def load_quantized_target_artifact(
         raise ValueError(
             f"artifact quantize_lm_head={artifact.get('quantize_lm_head')} != "
             f"runtime target_quant_lm_head={expected_quantize_lm_head} "
-            "(mismatch would silently change MESA accept/throughput)"
+            "(mismatch would silently change DUET accept/throughput)"
         )
     if expected_model_id is not None \
             and artifact.get("model_id") not in (None, expected_model_id):

@@ -1,8 +1,8 @@
-# MESA Proxy Overlap — Implementation Report v2
+# DUET Proxy Overlap — Implementation Report v2
 
 ## 0. Framing — this is a gated experiment, not a default-on optimization
 
-Hypothesis: **MESA target-side proxy overhead (~2-3 ms per hit step) can be
+Hypothesis: **DUET target-side proxy overhead (~2-3 ms per hit step) can be
 hidden behind `graph_post` via a separate CUDA stream + async NCCL send,
 because the proxy compute (~0.5 ms) + NCCL send wait (~1.5-2 ms) is much
 smaller than `graph_post` (~13 ms).**
@@ -46,7 +46,7 @@ Only the **rank-0-only Policy B work** moves:
 proxy_stream (rank 0 only):
   wait_event(exit_logits_ready)
   exit_logits.record_stream(proxy_stream)         # lifetime guard
-  # ── inside mesa_proxy_fn / _compute_and_send_proxy:
+  # ── inside duet_proxy_fn / _compute_and_send_proxy:
   p_E = softmax(exit_logits[:, :K, :].float())     # ★ Policy B
   p_D = softmax(logits_q.float())
   ... gather / topk / cumprod / P_iv ...
@@ -54,7 +54,7 @@ proxy_stream (rank 0 only):
   ring.send(draft_rank, chosen_pos, chosen_tok)   # dist.isend (NCCL stream)
 ```
 
-Ranks 1+ have `self._mesa_proxy_fn = None` and skip the callback entirely
+Ranks 1+ have `self._duet_proxy_fn = None` and skip the callback entirely
 ([cudagraph_helpers.py:1344](ssd/ssd/engine/helpers/cudagraph_helpers.py#L1344)),
 so there is no cross-rank stream asymmetry inside the proxy work.
 
@@ -67,7 +67,7 @@ ev_ready.record()  # on default stream after exit_logits ready
 
 with torch.cuda.stream(proxy_stream):
     proxy_stream.wait_event(ev_ready)
-    mesa_proxy_fn(exit_logits, orig_bs)
+    duet_proxy_fn(exit_logits, orig_bs)
 # back to default stream — does NOT wait for proxy_stream
 
 graph_post.replay()  # starts immediately on default stream
@@ -75,7 +75,7 @@ graph_post.replay()  # starts immediately on default stream
 
 ```python
 # WRONG — defeats the purpose
-... with stream(proxy_stream): mesa_proxy_fn(...)
+... with stream(proxy_stream): duet_proxy_fn(...)
 torch.cuda.current_stream().wait_stream(proxy_stream)  # ★ DO NOT do this
 graph_post.replay()
 ```
@@ -115,7 +115,7 @@ empirically; they do not prevent it.
 | ring slot buf | once at init (persistent) | proxy_stream (copy) + NCCL stream (send) | NOT needed (lifetime is process-long) |
 
 **record_stream placement (reviewer #1)**: at the callback dispatch in
-`cudagraph_helpers.py::run_mesa_verify_cudagraph`, right after
+`cudagraph_helpers.py::run_duet_verify_cudagraph`, right after
 `exit_logits` is created and before entering the `with torch.cuda.stream(...)`
 block. Doing it at the dispatch boundary makes "this tensor crosses streams"
 visually explicit. Inside `_compute_and_send_proxy` we can add a defensive
@@ -185,7 +185,7 @@ class AsyncSendRing:
     def dump_stats(self, outdir: str, decode_steps_seen: int):
         """Persist slot wait counters so Phase 4 / summarize can compute
         slot_wait_rate. Called by Verifier.drain_proxy_send_ring() under
-        SSD_PROFILE_MESA=1 only — gate kept by caller."""
+        SSD_PROFILE_DUET=1 only — gate kept by caller."""
         import json
         out = {
             "slots": [
@@ -211,7 +211,7 @@ Wiring:
 # Verifier.drain_proxy_send_ring():
 if self._proxy_send_ring is not None:
     self._proxy_send_ring.drain()
-    if os.environ.get("SSD_PROFILE_MESA", "0") == "1":
+    if os.environ.get("SSD_PROFILE_DUET", "0") == "1":
         outdir = os.environ.get("SSD_PROFILE_DIR", "/tmp")
         self._proxy_send_ring.dump_stats(
             outdir,
@@ -223,7 +223,7 @@ Each `AsyncSendRing.send()` call also increments
 `verifier._proxy_send_call_count` (denominator for the rate).
 
 `summarize_ssd_run.py` reads `proxy_send_ring_stats.json` from the same
-`SSD_PROFILE_DIR` as `mesa_profile_*.json` and emits
+`SSD_PROFILE_DIR` as `duet_profile_*.json` and emits
 `prof_async_send_slot_wait_{count,rate,ms_avg}` columns.
 
 **Reviewer #5 (CPU timer, not CUDA event)**: `work.wait()` is a CPU-side
@@ -241,7 +241,7 @@ before send.
 
 ### 3.2 Sizing
 
-- `wire_N` = `config.mesa_proxy_wire_N` ≈ 30-60 int64 (small)
+- `wire_N` = `config.duet_proxy_wire_N` ≈ 30-60 int64 (small)
 - `buf_size = 2 * wire_N` ≈ 240-480 bytes per slot
 - `n_slots = 2` initially; raised to 4 if Phase 2 measurement shows
   `slot_wait_count / decode_steps > 1%`
@@ -320,19 +320,19 @@ if os.environ.get("SSD_PROXY_STREAM", "0") == "1" \
 - `__del__`: backup drain call
 
 ### 5.3 `ssd/engine/model_runner.py`
-- `ModelRunner.__init__`: add `self._mesa_proxy_stream = None`
-- `_ensure_proxy_stream()`: lazy init on rank 0 + MESA + `SSD_PROXY_STREAM=1`
-  (called by Verifier when registering `_mesa_proxy_fn`)
+- `ModelRunner.__init__`: add `self._duet_proxy_stream = None`
+- `_ensure_proxy_stream()`: lazy init on rank 0 + DUET + `SSD_PROXY_STREAM=1`
+  (called by Verifier when registering `_duet_proxy_fn`)
 - Config-time assertion: `SSD_PROXY_STREAM=1 requires SSD_ASYNC_PROXY_SEND=1`
 
-### 5.4 `ssd/engine/helpers/cudagraph_helpers.py::run_mesa_verify_cudagraph`
+### 5.4 `ssd/engine/helpers/cudagraph_helpers.py::run_duet_verify_cudagraph`
 - After `exit_logits = compute_logits(...)`:
-  - If `SSD_PROXY_STREAM=1` and `model_runner._mesa_proxy_stream` is not None:
+  - If `SSD_PROXY_STREAM=1` and `model_runner._duet_proxy_stream` is not None:
     - Record event on default stream
     - `exit_logits.record_stream(proxy_stream)` ← **at this boundary**
-    - `with torch.cuda.stream(proxy_stream): proxy_stream.wait_event(ev); mesa_proxy_fn(...)`
+    - `with torch.cuda.stream(proxy_stream): proxy_stream.wait_event(ev); duet_proxy_fn(...)`
     - Do NOT make default stream wait on proxy_stream
-  - Else: existing direct call `mesa_proxy_fn(exit_logits, orig_bs)`
+  - Else: existing direct call `duet_proxy_fn(exit_logits, orig_bs)`
 - `graph_post.replay()` immediately follows (default stream)
 
 ### 5.5 `ssd/engine/llm_engine.py`
@@ -350,14 +350,14 @@ if os.environ.get("SSD_PROXY_STREAM", "0") == "1" \
 
 ### Phase 0 — Clean baseline (no code changes, measurement only)
 
-**Reviewer #4 + (v3 #3)**: TPS judgment must use `SSD_PROFILE_MESA=0`
+**Reviewer #4 + (v3 #3)**: TPS judgment must use `SSD_PROFILE_DUET=0`
 (profile-off). Existing K1=K2=7 measurements (e.g., 70.81 tok/s from
-breakdown) were PROFILE_MESA=1; not valid for performance comparison.
+breakdown) were PROFILE_DUET=1; not valid for performance comparison.
 
 **Env hygiene — all of these must be unset / 0 for the clean baseline**:
 ```
-SSD_PROFILE_MESA=0          ← off (no CUDA events / status calc)
-SSD_PROFILE_MESA_DETAIL=0   ← off (no inner spans)
+SSD_PROFILE_DUET=0          ← off (no CUDA events / status calc)
+SSD_PROFILE_DUET_DETAIL=0   ← off (no inner spans)
 SSD_PROFILE_DRAFT (unset)   ← off
 SSD_PROFILE_TARGET (unset)  ← off
 SSD_PROFILE (unset)         ← off
@@ -366,15 +366,15 @@ SSD_TRACE_SPLIT_K1K2 (unset)← off
 ```
 Keep `SSD_FORCE_SPLIT_K1K2=1` (split-K1/K2 path under test).
 Keep `SSD_PROFILE_DIR` for logging only (no profile JSON written when
-`SSD_PROFILE_MESA=0`).
+`SSD_PROFILE_DUET=0`).
 
 Run:
 ```bash
-# 3 repeats, PROFILE_MESA=0 + all other profile envs off, current HEAD
+# 3 repeats, PROFILE_DUET=0 + all other profile envs off, current HEAD
 for i in 1 2 3; do
   env -u SSD_PROFILE_DRAFT -u SSD_PROFILE_TARGET -u SSD_PROFILE \
       -u SSD_TRACE_BUCKET -u SSD_TRACE_SPLIT_K1K2 \
-      SSD_PROFILE_MESA=0 SSD_PROFILE_MESA_DETAIL=0 SSD_FORCE_SPLIT_K1K2=1 \
+      SSD_PROFILE_DUET=0 SSD_PROFILE_DUET_DETAIL=0 SSD_FORCE_SPLIT_K1K2=1 \
       SSD_PROFILE_DIR=$PHASE_DIR/baseline_$i \
       python -O bench/bench.py <K1=K2=7 paper config> \
       > $PHASE_DIR/baseline_$i/run.log 2>&1
@@ -388,7 +388,7 @@ Confirm baseline is stable (±1% across runs). Establish `TPS_baseline`.
 relative to this clean baseline. If the baseline itself was measured with
 profiling on, comparison becomes noise-bound.
 
-Commit: `feat(mesa): Phase 0 — clean PROFILE_MESA=0 baseline (3 reps)`
+Commit: `feat(duet): Phase 0 — clean PROFILE_DUET=0 baseline (3 reps)`
 
 ### Phase 1 — AsyncSendRing infrastructure (no behavior change)
 
@@ -415,7 +415,7 @@ for SEED in 42 1337 9999; do
 done
 ```
 
-**Perf measurement (PROFILE_MESA=0, 3 reps each)**:
+**Perf measurement (PROFILE_DUET=0, 3 reps each)**:
 - A: ASYNC=0 (baseline) — reuse Phase 0 numbers
 - B: ASYNC=1
 
@@ -426,8 +426,8 @@ done
   proxy compute is still default-stream-bound)
 - TPS positive → proceed to Phase 3 to measure additional gain
 
-Commit (B): `feat(mesa): SSD_ASYNC_PROXY_SEND gate — non-blocking proxy send via ring buffer`
-Commit (perf): `chore(mesa): Phase 2 perf A/B (profile off)`
+Commit (B): `feat(duet): SSD_ASYNC_PROXY_SEND gate — non-blocking proxy send via ring buffer`
+Commit (perf): `chore(duet): Phase 2 perf A/B (profile off)`
 
 ### Phase 3 — `SSD_PROXY_STREAM=1`
 
@@ -453,14 +453,14 @@ on the 4 cross-stream tensors.
 - B: ASYNC=1, STREAM=0 (Phase 2)
 - C: ASYNC=1, STREAM=1 (Phase 3)
 
-3 reps each, PROFILE_MESA=0. Compare C to A.
+3 reps each, PROFILE_DUET=0. Compare C to A.
 
-Commit (B): `feat(mesa): SSD_PROXY_STREAM gate — Policy B on proxy_stream (exit_logits stays default)`
-Commit (perf): `chore(mesa): Phase 3 perf A/B/C`
+Commit (B): `feat(duet): SSD_PROXY_STREAM gate — Policy B on proxy_stream (exit_logits stays default)`
+Commit (perf): `chore(duet): Phase 3 perf A/B/C`
 
-### Phase 4 — Wait-shift / per-status analysis (PROFILE_MESA=1)
+### Phase 4 — Wait-shift / per-status analysis (PROFILE_DUET=1)
 
-Re-run A/B/C with `SSD_PROFILE_MESA=1` (3 reps each). Goal is **not**
+Re-run A/B/C with `SSD_PROFILE_DUET=1` (3 reps each). Goal is **not**
 performance numbers (profile overhead skews TPS); goal is to understand
 where time moved.
 
@@ -479,7 +479,7 @@ Generate Phase-C aligned timeline PNGs for representative steps under
 condition C. Visually inspect whether proxy work overlaps graph_post or
 slips into target_spec_wait / next-step territory.
 
-Commit: `chore(mesa): Phase 4 wait-shift + per-status analysis (PROFILE_MESA=1)`
+Commit: `chore(duet): Phase 4 wait-shift + per-status analysis (PROFILE_DUET=1)`
 
 ### Phase 5 — Default-on decision
 
@@ -487,7 +487,7 @@ Commit: `chore(mesa): Phase 4 wait-shift + per-status analysis (PROFILE_MESA=1)`
 
 | Phase 3 result | Phase 4 wait-shift | Action |
 |---|---|---|
-| TPS Δ ≥ +2% (3-run avg, PROFILE_MESA=0) | All status gates pass | **Consider default-on**; do one more confirmation run |
+| TPS Δ ≥ +2% (3-run avg, PROFILE_DUET=0) | All status gates pass | **Consider default-on**; do one more confirmation run |
 | TPS Δ +1-2% | All gates pass | **Opt-in only**; keep env gate, document |
 | TPS Δ < +1% | — | **Revert or gate-only**; document negative result in §6 of this doc |
 | TPS Δ negative | — | Revert |
@@ -505,21 +505,21 @@ Commit: `chore(mesa): Phase 4 wait-shift + per-status analysis (PROFILE_MESA=1)`
 
 | metric | source run | reason |
 |---|---|---|
-| `decode_tps` (Δ %) | PROFILE_MESA=0 A/B/C | TPS judgment — profile overhead biases |
-| `target_full_step_ms` | PROFILE_MESA=0 A/B/C | same reason |
-| `target_spec_wait_{hit_k1,k2,miss}_mean_ms` (Δ ms) | PROFILE_MESA=1 A/B/C | profile required for status split |
-| `graph_post_ms` (Δ ms) | PROFILE_MESA=1 A/B/C | profile required for span isolation |
-| `draft_proxy_wait_ms` | PROFILE_MESA=1 A/B/C | profile required |
-| `slot_wait_rate` / `slot_wait_ms_avg` | PROFILE_MESA=1 A/B/C | from `proxy_send_ring_stats.json` |
+| `decode_tps` (Δ %) | PROFILE_DUET=0 A/B/C | TPS judgment — profile overhead biases |
+| `target_full_step_ms` | PROFILE_DUET=0 A/B/C | same reason |
+| `target_spec_wait_{hit_k1,k2,miss}_mean_ms` (Δ ms) | PROFILE_DUET=1 A/B/C | profile required for status split |
+| `graph_post_ms` (Δ ms) | PROFILE_DUET=1 A/B/C | profile required for span isolation |
+| `draft_proxy_wait_ms` | PROFILE_DUET=1 A/B/C | profile required |
+| `slot_wait_rate` / `slot_wait_ms_avg` | PROFILE_DUET=1 A/B/C | from `proxy_send_ring_stats.json` |
 
 Both runs use the SAME `<K1=K2=7 paper config>`, only the profile envs
-differ. Each PROFILE_MESA=1 run produces both `mesa_profile_*.json`
+differ. Each PROFILE_DUET=1 run produces both `duet_profile_*.json`
 (target/draft) AND `proxy_send_ring_stats.json` (Phase 2/3 only) in the
 same `SSD_PROFILE_DIR`.
 
-Commit (default-on case): `chore(mesa): flip defaults — proxy async send + stream on (3-run +X.Y% confirmed)`
-Commit (revert case): `chore(mesa): revert proxy overlap default; gate-only escape hatch retained`
-Commit (negative result): `docs(mesa): Phase 5 result — proxy overlap hypothesis not confirmed (+X.Y% range)`
+Commit (default-on case): `chore(duet): flip defaults — proxy async send + stream on (3-run +X.Y% confirmed)`
+Commit (revert case): `chore(duet): revert proxy overlap default; gate-only escape hatch retained`
+Commit (negative result): `docs(duet): Phase 5 result — proxy overlap hypothesis not confirmed (+X.Y% range)`
 
 ## 7. Risk register
 
@@ -529,7 +529,7 @@ Commit (negative result): `docs(mesa): Phase 5 result — proxy overlap hypothes
 | copy_ → isend ordering on NCCL backend | low | high | stress test catches; fallback to event-based sync |
 | TP collective deadlock (compute_logits on wrong stream) | low | catastrophic | Plan keeps compute_logits on default stream (reviewer #1) |
 | SM contention (proxy compute slows graph_post) | medium | low (-0.5-1 ms) | `graph_post_ms Δ < 0.5 ms` gate (reviewer #8) |
-| Wait-shift (proxy_send ↓ but spec_wait ↑) | medium | medium (-saving) | Per-status spec_wait gates; PROFILE_MESA=0 TPS check |
+| Wait-shift (proxy_send ↓ but spec_wait ↑) | medium | medium (-saving) | Per-status spec_wait gates; PROFILE_DUET=0 TPS check |
 | Slot exhaustion (ring 2 slots insufficient) | low | medium (CPU stalls) | `slot_wait_rate` gate; bump n_slots to 4 if hit |
 | Outstanding isend at shutdown → hang/segfault | medium | high | Explicit `drain_proxy_send_ring()` in shutdown (reviewer #6) |
 | Default-on with marginal gain → unstable benchmarks | medium | medium | Require +2% (3-run avg) for default-on (reviewer #10) |
@@ -557,7 +557,7 @@ PR scope is the **experiment**, not the claim.
 ## 9. Phase summary (one-shot reference)
 
 ```
-Phase 0   Clean baseline (PROFILE_MESA=0, 3 reps)
+Phase 0   Clean baseline (PROFILE_DUET=0, 3 reps)
             → establishes TPS_baseline
 Phase 1   AsyncSendRing class (no wiring)
             → infra commit
@@ -566,7 +566,7 @@ Phase 2   SSD_ASYNC_PROXY_SEND=1 (non-blocking send only)
             → on correctness pass, proceed to Phase 3 regardless of TPS sign
 Phase 3   SSD_PROXY_STREAM=1 (Policy B on proxy_stream, exit_logits stays default)
             → 200-step stress correctness + perf A/B/C
-Phase 4   PROFILE_MESA=1 wait-shift / per-status / graph_post analysis
+Phase 4   PROFILE_DUET=1 wait-shift / per-status / graph_post analysis
             → diagnostic, not performance
 Phase 5   Decision table → default-on / opt-in / revert
             → final commit
@@ -577,7 +577,7 @@ Phase 5   Decision table → default-on / opt-in / revert
 - TP collectives all stay on default stream (compute_logits, graph_pre / graph_post replays' internal collectives)
 - Policy B algorithm unchanged
 - Cache key structure unchanged
-- mesa_phase1_k / mesa_phase2_k / dfo / pfo unchanged
+- duet_phase1_k / duet_phase2_k / dfo / pfo unchanged
 - Phase 2 hit quality (L_p2 = 2.21 ms) is NOT addressed here — that is a
   separate algorithmic track that the current experiment does not affect
 - Hybrid path / non-split path NOT touched (env gates are split-K1/K2 specific)

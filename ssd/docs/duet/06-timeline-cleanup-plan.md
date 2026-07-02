@@ -1,4 +1,4 @@
-# MESA timeline / profiling cleanup plan
+# DUET timeline / profiling cleanup plan
 
 ## 0. Executive summary
 
@@ -8,7 +8,7 @@ main optimization target. Older runs correctly showed a long
 stream-visible waiting. In the current WIP, that visible wait moved mostly into
 `target_spec_wait`, while decode TPS did not improve.
 
-For target-GPU execution overhead, the direct MESA-added target work is small:
+For target-GPU execution overhead, the direct DUET-added target work is small:
 `exit_logits` plus `proxy_compute_send` is roughly sub-ms to ~1 ms per target
 step in the current measurements. The larger variability comes from pipeline
 waiting: target finishes its own work and waits for draft-side response.
@@ -58,7 +58,7 @@ Use throughput-oriented names in reports.
 | `proxy_compute_send_ms` | target parent span between exit logits and graph_post | direct target proxy region, may include wait |
 | `proxy_inner_sum_ms` | DETAIL-only compute + pack + send | diagnostic only |
 | `proxy_unattributed_stall_ms` | parent minus inner sum | diagnostic only |
-| `draft_proxy_wait_ms` | draft waiting for target proxy payload | MESA pipeline wait |
+| `draft_proxy_wait_ms` | draft waiting for target proxy payload | DUET pipeline wait |
 | `p1_hit`, `p2_hit` | cache hit source split | algorithm behavior |
 | `p1_avg_accepted_len`, `p2_avg_accepted_len` | accepted speculative length on each hit source | algorithm quality |
 
@@ -70,13 +70,13 @@ does not reappear in `target_spec_wait` or draft-side waits.
 
 ### Keep for real experiments
 
-- `SSD_PROFILE_MESA=1`
-  - Main profiling switch for paper-quality MESA timeline/summary.
+- `SSD_PROFILE_DUET=1`
+  - Main profiling switch for paper-quality DUET timeline/summary.
   - It should be the only profiling env needed in normal performance runs.
 
 ### Keep only as temporary debug tools
 
-- `SSD_PROFILE_MESA_DETAIL=1`
+- `SSD_PROFILE_DUET_DETAIL=1`
   - Use only for one-off proxy inner breakdown.
   - Do not enable in baseline or paper comparison runs.
 - `SSD_TRACE_SPLIT_K1K2=1`
@@ -98,9 +98,9 @@ Cleanup already applied:
 
 - Removed `SSD_DRAFT_EXIT_TIMEOUT` as a user-facing env knob. Profiling runs now
   get a longer draft shutdown grace period automatically when
-  `SSD_PROFILE_MESA=1`.
+  `SSD_PROFILE_DUET=1`.
 - Removed draft profile pre-dump debug print / traceback spam. A concise warning
-  remains only if profile dumping fails while `SSD_PROFILE_MESA=1`.
+  remains only if profile dumping fails while `SSD_PROFILE_DUET=1`.
 
 ## 4. Required new timeline design
 
@@ -123,10 +123,10 @@ labels.
 Do not use CPU timestamps alone as the cross-process alignment axis. CPU
 timestamps measure Python dispatch/enqueue time, not the time at which queued
 CUDA work reaches the GPU stream. A target stream may have tens of milliseconds
-of queued graph work, so `time.perf_counter_ns()` taken at `mesa_record()` can
+of queued graph work, so `time.perf_counter_ns()` taken at `duet_record()` can
 precede the actual GPU event by the whole queue depth.
 
-Instead, initialize one CUDA/CPU anchor per process when `SSD_PROFILE_MESA=1`:
+Instead, initialize one CUDA/CPU anchor per process when `SSD_PROFILE_DUET=1`:
 
 ```text
 torch.cuda.synchronize()
@@ -136,7 +136,7 @@ anchor_event.record()
 torch.cuda.synchronize()
 ```
 
-At each `mesa_record()` / `mesa_close()`:
+At each `duet_record()` / `duet_close()`:
 
 ```text
 start_event.record()                 # GPU-stream timestamp
@@ -171,7 +171,7 @@ anchor_note = "GPU event times converted to host monotonic clock"
 
 ### 4.3 New trace row schema
 
-Extend the existing `mesa_record` / `mesa_close` path under `SSD_PROFILE_MESA=1`
+Extend the existing `duet_record` / `duet_close` path under `SSD_PROFILE_DUET=1`
 to write CUDA-anchored placement fields plus CPU dispatch fields.
 
 Required row fields:
@@ -206,9 +206,9 @@ Avoid changing every call site. Add a tiny profiler context in
 `cudagraph_helpers.py`:
 
 ```text
-mesa_set_context(step_id=None, status=None, proc=None)
-mesa_record(label) reads the current context
-mesa_close(label, start_event) writes context into the row
+duet_set_context(step_id=None, status=None, proc=None)
+duet_record(label) reads the current context
+duet_close(label, start_event) writes context into the row
 ```
 
 Target and draft must agree on the same `step_id`. Do not infer it from event
@@ -238,7 +238,7 @@ Semantics:
 Labels inside the step inherit the current context unless an inner scope
 explicitly overrides status.
 
-`mesa_close()` reads the current context at close time, not only the context at
+`duet_close()` reads the current context at close time, not only the context at
 the matching open. This is required for spans such as `target_spec_wait_*`,
 where the hit/miss status is only known after `speculator.speculate()` returns.
 The context is process-local module state; this is sufficient because target
@@ -258,7 +258,7 @@ Add explicit low-overhead markers for alignment and causality:
 | `draft_recv_request` | draft | null | `DraftRunner._service_spec_request()`, from metadata recv through fused request payload recv and optional EAGLE payload recv | draft receives request payload |
 | `hit_cache_respond_*` | draft | null | existing marker around `hit_cache_and_respond()` | cache hit/miss classification and immediate response construction |
 | `draft_send_response` | draft | null | existing marker around response token/logit sends | draft sends response to target |
-| `proxy_wait` | draft | phase2 build span | existing MESA marker inside phase-2 build | draft waits for target proxy payload |
+| `proxy_wait` | draft | phase2 build span | existing DUET marker inside phase-2 build | draft waits for target proxy payload |
 
 Existing labels can remain, but the plotter must use these markers to explain:
 
@@ -273,7 +273,7 @@ Create a new plotter, or replace `summarize_ssd_run.py` timeline generation
 after validation:
 
 ```text
-bench/plot_mesa_aligned_timeline.py OUTDIR --step-id N [--causality-shift]
+bench/plot_duet_aligned_timeline.py OUTDIR --step-id N [--causality-shift]
 ```
 
 Rules:
@@ -285,7 +285,7 @@ Rules:
 - Do not hide parent spans silently. If DETAIL inner spans exist, draw parent as
   a translucent background and inner spans on top.
 - Trace only `target_rank0` for target TP runs. Rank 0 is the timeline source of
-  truth because it owns the MESA proxy/async handshake path; other TP ranks are
+  truth because it owns the DUET proxy/async handshake path; other TP ranks are
   synchronized through collectives and do not need separate paper plots.
 
 ### 4.7 Cross-process clock drift — known limitation + `--causality-shift`
@@ -305,7 +305,7 @@ arrived at target before target unblocked — a causality violation in the
 displayed wall_ns.  Observed magnitude: e.g. +5.7 ms after ~830 s (≈6.8 ppm
 drift, well within normal GPU clock tolerance).
 
-Mitigation: `plot_mesa_aligned_timeline.py --causality-shift` shifts the draft
+Mitigation: `plot_duet_aligned_timeline.py --causality-shift` shifts the draft
 row by the median `draft_send_response.end − target_response_received.start`
 offset over ±`--causality-window` steps around the rendered step (default
 window=5, so 11 response pairs).  This is a **visual-only correction**:
@@ -362,7 +362,7 @@ Files:
 Tasks:
 
 - Add CUDA-event anchor metadata and wall-clock conversion to
-  `mesa_record` / `mesa_close` / `mesa_dump`.
+  `duet_record` / `duet_close` / `duet_dump`.
 - Add process-local profiler context with `step_id` and `status`.
 - Wire `step_id` through async spec metadata: `[B, K, F]` → `[B, K, F, step_id]`.
 - Add `step_id` to `SpeculateResult`.
@@ -371,7 +371,7 @@ Tasks:
 - Set draft context around each draft service step from the received `step_id`.
 - Add handshake markers listed in Section 4.5.
 - Ensure status labels are `hit_k1`, `hit_k2`, `miss`, `mixed`, or `unknown`.
-- Keep all of this gated by `SSD_PROFILE_MESA=1`.
+- Keep all of this gated by `SSD_PROFILE_DUET=1`.
 
 Performance rule:
 
@@ -387,7 +387,7 @@ Performance rule:
 Files:
 
 - `ssd/bench/summarize_ssd_run.py`
-- new optional helper: `ssd/bench/plot_mesa_aligned_timeline.py`
+- new optional helper: `ssd/bench/plot_duet_aligned_timeline.py`
 
 Tasks:
 
@@ -406,20 +406,20 @@ Tasks:
 
 After Phase B/C are validated:
 
-- Stop using `bench/plot_mesa_timeline.py` for paper figures.
+- Stop using `bench/plot_duet_timeline.py` for paper figures.
 - Archive stale experiment scripts only from an explicit list. Do not delete or
   move `ssd/experiments/paper_baselines/final_experiments`,
   `ssd/experiments/paper_baselines/ssd_dense_7b_amd135m_split`, or any directory
   containing final paper tables/PNGs unless the user explicitly approves the
   path list.
-- Keep `SSD_PROFILE_MESA_DETAIL` only if there is still an active use case for
+- Keep `SSD_PROFILE_DUET_DETAIL` only if there is still an active use case for
   proxy inner breakdown. Otherwise remove the env and the inner spans.
 
 ## 6. Validation
 
 ### Correctness
 
-- Run greedy temp=0 twice with `SSD_PROFILE_MESA=0` and `SSD_PROFILE_MESA=1`.
+- Run greedy temp=0 twice with `SSD_PROFILE_DUET=0` and `SSD_PROFILE_DUET=1`.
 - Generated tokens should match exactly.
 - P1/P2 hit counts should match.
 
@@ -437,7 +437,7 @@ If profile-on changes throughput meaningfully, the trace is too heavy.
 
 The additional CPU timestamp calls are expected to be negligible. The main
 overhead remains CUDA event recording, which already exists in the current
-`SSD_PROFILE_MESA` path.
+`SSD_PROFILE_DUET` path.
 
 ### Timeline sanity
 

@@ -43,19 +43,19 @@ class Scheduler:
         # K_long * MQ_LEN_full bound. Without this, async_fan_out ≥ 5 hits the
         # B=0 preempt cascade because the scheduler over-reserves by ~5×.
         self._split_k1k2 = (
-            getattr(config, "mesa_phase1_k", None) is not None
+            getattr(config, "duet_phase1_k", None) is not None
             and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
         )
         if self._split_k1k2:
-            self._sk_K1 = int(config.mesa_phase1_k)
-            self._sk_K2 = int(config.mesa_phase2_k)
-            _p1_list = getattr(config, "mesa_split_phase1_fan_out_list", None)
+            self._sk_K1 = int(config.duet_phase1_k)
+            self._sk_K2 = int(config.duet_phase2_k)
+            _p1_list = getattr(config, "duet_split_phase1_fan_out_list", None)
             if _p1_list is not None:
                 self._sk_mq_p1 = int(sum(_p1_list))
             else:
-                self._sk_mq_p1 = int(config.mesa_draft_fan_out) * (self._sk_K1 + 1)
+                self._sk_mq_p1 = int(config.duet_draft_fan_out) * (self._sk_K1 + 1)
             _K_rank_max = self._sk_K1 if self._sk_K1 >= self._sk_K2 else self._sk_K2
-            self._sk_mq_p2 = int(config.mesa_proxy_fan_out) * (_K_rank_max + 1)
+            self._sk_mq_p2 = int(config.duet_proxy_fan_out) * (_K_rank_max + 1)
         else:
             self._sk_K1 = 0
             self._sk_K2 = 0

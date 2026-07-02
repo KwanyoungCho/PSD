@@ -8,7 +8,7 @@ This is a research monorepo with two distinct pieces:
 
 - `ssd/` — a fork of the Speculative Speculative Decoding (SSD) engine
   (https://github.com/tanishqkumar/ssd). Python package `ssd/ssd/`,
-  benchmark harness `ssd/bench/`. Extended with **MESA-SSD** (early-exit
+  benchmark harness `ssd/bench/`. Extended with **DUET-SSD** (early-exit
   proxy speculative decoding) and an **AWQ W4A16** quantization backend
   built on sgl-kernel Marlin.
 - Top-level `.py` scripts (`correction_analysis.py`, `ee_verify_analysis.py`,
@@ -32,23 +32,23 @@ Three+ separate conda envs are involved:
 
 ## Active workstream
 
-Current branch: **`feat/mesa-phase2-hybrid`**. The Phase 2 hybrid redesign
-work is now consolidated under `ssd/docs/mesa/`:
+Current branch: **`feat/duet-phase2-hybrid`**. The Phase 2 hybrid redesign
+work is now consolidated under `ssd/docs/duet/`:
 
-- `ssd/docs/mesa/01-design.md` — MESA design (Parts 1-4: TreeLayout, Budget
+- `ssd/docs/duet/01-design.md` — DUET design (Parts 1-4: TreeLayout, Budget
   Split, Split CG, Rev1 Policy A/B; **Part 5: Phase 2 Hybrid v1** — terminology,
   5-region scratch, 8 CG buckets, `HybridPhase2Plan`, Step 0..9D progression).
-- `ssd/docs/mesa/02-impl-issues.md` — implementation issue tracker (Parts 1-2:
+- `ssd/docs/duet/02-impl-issues.md` — implementation issue tracker (Parts 1-2:
   v1, Rev1; **Part 3: Phase 2 Hybrid Step 1..9D** + sync fix + per-depth label
   fix + 9D build hot-path optimization).
-- `ssd/docs/mesa/03-results.md` — measured results (Parts 1-4: 8B/7B/Rev1/sweep;
+- `ssd/docs/duet/03-results.md` — measured results (Parts 1-4: 8B/7B/Rev1/sweep;
   **Part 5: Phase 2 Hybrid** — 8B Phase 6 verification + 70B both-AWQ A/B/C
   comparison + ongoing 9D effect).
 - `ssd/docs/quantization/{01-plan,02-impl-issues,03-final-report}.md` —
   AWQ Marlin path (v2) + 34B/70B + draft AWQ measurements (legacy v1 torchao
   history kept for reference).
 
-The four legacy root-level files (`MESA-PHASE2-HYBRID-{IMPLEMENTATION-PLAN,
+The four legacy root-level files (`DUET-PHASE2-HYBRID-{IMPLEMENTATION-PLAN,
 ISSUE,REPORT,FINAL-REPORT}.md`) have been folded into the docs above and
 removed.
 
@@ -74,10 +74,10 @@ python -O bench.py --llama --size 8 --gpus 2 --b 1 --temp 0 --numseqs 128 --outp
 python -O bench.py --llama --size 8 --spec --k 6 --gpus 2 ...
 # Async spec decode (SSD): --async requires 1 extra GPU for the draft process
 python -O bench.py --llama --size 8 --spec --async --k 7 --f 3 --gpus 3 ...
-# MESA-SSD legacy (two-pass): layered on top of async SD
-python -O bench.py ... --spec --async --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 1
-# MESA Phase 2 hybrid (current default once --mesa is set with K1/K2):
-python -O bench.py ... --spec --async --mesa --k 5 --mesa_phase1_k 3 --mesa_phase2_k 2 --mesa_exit_layer 21
+# DUET-SSD legacy (two-pass): layered on top of async SD
+python -O bench.py ... --spec --async --duet --duet_exit_layer 21 --duet_draft_fan_out 1
+# DUET Phase 2 hybrid (current default once --duet is set with K1/K2):
+python -O bench.py ... --spec --async --duet --k 5 --duet_phase1_k 3 --duet_phase2_k 2 --duet_exit_layer 21
 # AWQ W4A16 target (artifact loaded from SSD-native prefix):
 python -O bench.py ... --quant_awq --quant_awq_artifact /path/to/awq_artifacts/foo/autoawq_tp4 --quant_group_size 128
 # AWQ for the draft as well (Llama-family non-EAGLE, tp=1 only):
@@ -86,7 +86,7 @@ python -O bench.py ... --quant_awq_draft --quant_awq_draft_artifact /path/to/dra
 
 Sweep harnesses pin GPU slots and run jobs concurrently:
 
-- `bench/run_mesa_sweep.sh` — 8B target, MESA exit_layer × dfo × phase1/phase2 split.
+- `bench/run_duet_sweep.sh` — 8B target, DUET exit_layer × dfo × phase1/phase2 split.
 - `bench/run_34b_sweep.sh` — CodeLlama-34B + TinyLlama, TP=4 target.
 - `bench/run_hybrid_sweep_70b.sh` — layerskip-llama2-70B (AWQ TP=4) +
   TinyLlama-1.1B; the canonical Phase 2 hybrid sweep.
@@ -177,18 +177,18 @@ re-checking at call sites:
 - Target and draft must share `infer_model_family()`.
 - Eagle draft's `rope_theta` / `max_position_embeddings` are overridden
   to match target — do not re-override at the model level.
-- **MESA-SSD** requires: `draft_async=True`, `speculate=True`, Llama model,
+- **DUET-SSD** requires: `draft_async=True`, `speculate=True`, Llama model,
   `jit_speculate=True`, CUDA graphs on (`enforce_eager=False`),
   `max_num_seqs=1` (Policy A uses `accept_probs[0]` as a single `h_i`
-  for the whole batch). `mesa_exit_layer` defaults to `2*L//3`,
-  `mesa_draft_fan_out` to `async_fan_out//2`. `mesa_proxy_top_k` is
+  for the whole batch). `duet_exit_layer` defaults to `2*L//3`,
+  `duet_draft_fan_out` to `async_fan_out//2`. `duet_proxy_top_k` is
   auto-raised so the proxy can always cover the worst-case fan-out
   without fallback.
-- **MESA Phase 2 hybrid** is gated by both `mesa_phase1_k` and
-  `mesa_phase2_k` being set; both `None` keeps the legacy two-pass path.
-  When set, `mesa_phase1_k + mesa_phase2_k == speculate_k` is enforced.
+- **DUET Phase 2 hybrid** is gated by both `duet_phase1_k` and
+  `duet_phase2_k` being set; both `None` keeps the legacy two-pass path.
+  When set, `duet_phase1_k + duet_phase2_k == speculate_k` is enforced.
 
-### MESA-SSD (what this fork adds beyond upstream SSD)
+### DUET-SSD (what this fork adds beyond upstream SSD)
 
 Goal: split draft into stages around a target early-exit. **Phase 1**
 runs the draft model `K1` forwards producing draft-sourced seed
@@ -243,7 +243,7 @@ Both **target** and **draft** can be AWQ-quantized independently
 draft `lm_head` and embeddings remain dense (the runner ignores any
 opt-in for those — fields exist as no-ops). Target `lm_head` quantization
 is opt-in via `target_quant_lm_head` and known to hurt accept rate
-(MESA −4–8%p observed); leave default off unless memory-constrained.
+(DUET −4–8%p observed); leave default off unless memory-constrained.
 
 The legacy torchao backends (`int4_wo_tile`, `int8_wo`) are kept only as
 internal fallback. Setting them logs `[quant][LEGACY]` and is no longer
@@ -273,5 +273,5 @@ which promotes the entire runtime (KV cache + graph buffers) to bf16.
 - **Top-level and `ssd/` scripts measure different things.** The
   top-level `*_analysis.py` files never touch the SSD engine — they
   load HF models directly to measure distribution-level feasibility of
-  the MESA proxy. The SSD engine only exercises the integrated
+  the DUET proxy. The SSD engine only exercises the integrated
   inference path.

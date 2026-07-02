@@ -1,10 +1,10 @@
-"""Per-step Gantt of one MESA spec step: target & draft on a common time axis.
+"""Per-step Gantt of one DUET spec step: target & draft on a common time axis.
 
 Cross-process alignment: we use NCCL send/recv pairs as anchor.
 target.proxy_compute_send.end ≈ draft.proxy_wait.end (identical NCCL completion).
 Offset = mean(target.send.end_ms - draft.wait.end_ms) applied to draft events.
 
-Usage: python bench/plot_mesa_timeline.py [OUTDIR] [--step N]
+Usage: python bench/plot_duet_timeline.py [OUTDIR] [--step N]
 """
 import json, os, sys, argparse
 import matplotlib.pyplot as plt
@@ -19,17 +19,19 @@ args = ap.parse_args()
 OUTDIR = args.outdir
 import glob
 def _load_latest(tag):
-    paths = sorted(glob.glob(f"{OUTDIR}/mesa_profile_{tag}_*.json")) or \
+    paths = sorted(glob.glob(f"{OUTDIR}/duet_profile_{tag}_*.json")) or \
+            sorted(glob.glob(f"{OUTDIR}/duet_profile_{tag}.json")) or \
+            sorted(glob.glob(f"{OUTDIR}/mesa_profile_{tag}_*.json")) or \
             sorted(glob.glob(f"{OUTDIR}/mesa_profile_{tag}.json"))
     if not paths:
-        raise FileNotFoundError(f"no mesa_profile_{tag}_*.json in {OUTDIR}")
+        raise FileNotFoundError(f"no duet_profile_{tag}_*.json in {OUTDIR}")
     return json.load(open(paths[-1]))
 draft = _load_latest("draft")
 target = _load_latest("target_rank0")
 
 # Unified anchor: target_spec_wait END ≈ draft_send_response END (same NCCL handshake)
 # This is a *step boundary*: right after this, target starts the new step's verify.
-# Works for both baseline AND MESA identically. Avoids MESA's mid-step proxy anchor confusion.
+# Works for both baseline AND DUET identically. Avoids DUET's mid-step proxy anchor confusion.
 t_anchor = [e for e in target if e["label"] == "target_spec_wait"]
 d_anchor = [e for e in draft if e["label"] == "draft_send_response"]
 anchor_kind = "spec_wait/send_response"
@@ -119,7 +121,7 @@ COLORS = {
     "draft_send_response":  "#252525",
     "proxy_wait":           ("#bdbdbd", "OO"),   # light gray + circle (cross-proc wait)
     "merge_cache":          ("#000000", ""),
-    # ---- Baseline tree decode (no MESA) ----
+    # ---- Baseline tree decode (no DUET) ----
     "tree_prep":            ("#feb24c", "//"),
     "tree_replay":          ("#e6550d", ""),
 }
@@ -161,9 +163,9 @@ ax.set_yticks([y_draft, y_target])
 ax.set_yticklabels(["draft", "target"])
 ax.set_xlabel("time (ms, target frame — draft events offset-aligned)")
 _cfg_name = os.path.basename(os.path.normpath(OUTDIR))
-# Label: detect baseline vs MESA by presence of phase1/2 labels
-_is_mesa = any(e["label"].startswith("phase1_") or e["label"].startswith("phase2_") for e in target + draft)
-_method = "MESA" if _is_mesa else "SSD (baseline)"
+# Label: detect baseline vs DUET by presence of phase1/2 labels
+_is_duet = any(e["label"].startswith("phase1_") or e["label"].startswith("phase2_") for e in target + draft)
+_method = "DUET" if _is_duet else "SSD (baseline)"
 ax.set_title(f"{_method} — {_cfg_name} — spec step #{args.step} (steady-state)")
 ax.grid(axis="x", alpha=0.3, linestyle=":")
 ax.set_xlim(0, win_hi_t - t_origin)
@@ -182,7 +184,7 @@ ax.legend(handles=handles, fontsize=8, loc="upper center",
           frameon=True, framealpha=0.9, borderaxespad=0.4)
 
 plt.subplots_adjust(bottom=0.32)   # legend 영역 충분히 확보 (axis label 아래)
-out = f"{OUTDIR}/mesa_timeline_step{args.step}.png"
+out = f"{OUTDIR}/duet_timeline_step{args.step}.png"
 plt.savefig(out, dpi=150)
 print(f"-> saved {out}")
 

@@ -23,9 +23,9 @@ AWQ_DRAFT_BASE = f"{BASE_70B}/draft_awq"
 CONFIGS = [
     ("baseline_k7_uniform",    "SSD baseline\nK=7 uniform"),
     ("baseline_k7_geo",        "SSD baseline\nK=7 geo"),
-    ("mesa_k5_f4_dfo2_exit40", "MESA K=5\nexit=40"),
-    ("mesa_k5_f4_dfo2_exit47", "MESA K=5\nexit=47"),
-    ("mesa_k5_f4_dfo2_exit53", "MESA K=5\nexit=53"),
+    ("duet_k5_f4_dfo2_exit40", "DUET K=5\nexit=40"),
+    ("duet_k5_f4_dfo2_exit47", "DUET K=5\nexit=47"),
+    ("duet_k5_f4_dfo2_exit53", "DUET K=5\nexit=53"),
 ]
 
 COLORS = {
@@ -95,12 +95,12 @@ def plot_breakdown(out_png):
         labels_set = set()
         for cfg, _ in CONFIGS:
             for base in (DENSE_DRAFT_BASE, AWQ_DRAFT_BASE):
-                df = _breakdown(f"{base}/{cfg}/mesa_per_step_contribution.csv")
+                df = _breakdown(f"{base}/{cfg}/duet_per_step_contribution.csv")
                 if df is None:
                     continue
                 labels_set.update(df[df["proc"] == proc]["label"].tolist())
 
-        seed = _breakdown(f"{DENSE_DRAFT_BASE}/baseline_k7_geo/mesa_per_step_contribution.csv")
+        seed = _breakdown(f"{DENSE_DRAFT_BASE}/baseline_k7_geo/duet_per_step_contribution.csv")
         if seed is not None:
             order = list(seed[seed["proc"] == proc]
                          .sort_values("ms_per_step", ascending=False)["label"])
@@ -116,7 +116,7 @@ def plot_breakdown(out_png):
         for i, (cfg, _) in enumerate(CONFIGS):
             for side, base, xoff in (("dense", DENSE_DRAFT_BASE, -w/2 - 0.02),
                                      ("AWQ",   AWQ_DRAFT_BASE,   +w/2 + 0.02)):
-                df = _breakdown(f"{base}/{cfg}/mesa_per_step_contribution.csv")
+                df = _breakdown(f"{base}/{cfg}/duet_per_step_contribution.csv")
                 if df is None:
                     continue
                 sub = df[df["proc"] == proc].set_index("label")["ms_per_step"]

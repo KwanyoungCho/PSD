@@ -19,11 +19,11 @@ def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_va
     """
     context = get_context()
     if bucket == "verify_short":
-        k_plus_1 = model_runner.config.mesa_phase2_k + 1
+        k_plus_1 = model_runner.config.duet_phase2_k + 1
     elif bucket == "verify_k1":
-        k_plus_1 = model_runner.config.mesa_phase1_k + 1
+        k_plus_1 = model_runner.config.duet_phase1_k + 1
     elif bucket == "verify_k2":
-        k_plus_1 = model_runner.config.mesa_phase2_k + 1
+        k_plus_1 = model_runner.config.duet_phase2_k + 1
     else:
         k_plus_1 = model_runner.config.speculate_k + 1
     orig_bs = input_ids.size(0) // k_plus_1  # orig_bs = N here
@@ -79,9 +79,9 @@ def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_va
         _t0 = perf_counter()
 
     _vr_label = "draft_glue_replay" if model_runner.is_draft else "verify_replay"
-    _ev_vr = mesa_record(_vr_label)
+    _ev_vr = duet_record(_vr_label)
     graph.replay()
-    mesa_close(_vr_label, _ev_vr)
+    duet_close(_vr_label, _ev_vr)
 
     if _pt:
         torch.cuda.synchronize()
@@ -174,7 +174,7 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
                    else "phase2_prep" if (layout is not None and (
                        layout.name == "proxy" or layout.name == "split_k2"))
                    else "tree_prep")
-    _mev_prep = mesa_record(_prep_label)
+    _mev_prep = duet_record(_prep_label)
     context = get_context()
     assert context.cu_seqlens_q is None, "ERROR in run_fi_tree_decode_cudagraph: cu_seqlens_q should be set to None so we don't take FA path"
 
@@ -272,7 +272,7 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     # CPU tensors let plan() skip its internal .to("cpu") GPU->CPU syncs.
     # For B<=8, CPU slicing also avoids GPU boolean indexing.
     if step == 0:
-        # Layout change: clear cache if MQ_LEN changed (2-pass MESA reuses global cache)
+        # Layout change: clear cache if MQ_LEN changed (2-pass DUET reuses global cache)
         if cache.get("_mq_len") != MQ_LEN:
             cache.clear()
             cache["_mq_len"] = MQ_LEN
@@ -350,7 +350,7 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         # which holds only for single-pass tree decode where K = layout.K
         # and there is no prior spec scratch already written.
         #
-        # Under MESA-SSD's K1-split (mesa_phase1_k < speculate_k), the
+        # Under DUET-SSD's K1-split (duet_phase1_k < speculate_k), the
         # **continuation pass** runs separately AFTER Phase 1 has already
         # written K1*MQ_LEN slots of Phase 1 KV. The formula treats those
         # K1*MQ_LEN slots as fully-visible "persistent prefix" and shifts
@@ -370,7 +370,7 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         for s in range(K_loop):
             # Step 9A: ttl_added_s uses K_for_mask (= layout glue width)
             # not the outer K (config.speculate_k). For phase1_short the
-            # glue width is K_short+1; for phase1_long / non-MESA it's
+            # glue width is K_short+1; for phase1_long / non-DUET it's
             # K_long+1.
             ttl_added_s = (s + 1) * MQ_LEN + (K_for_mask + 1)
             packed_segs = []
@@ -520,15 +520,15 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     if _layout_name == "draft" or (_layout_name is not None and (
         _layout_name.startswith("phase1_") or _layout_name.startswith("split_k1")
     )):
-        _mesa_label = "phase1_replay"
+        _duet_label = "phase1_replay"
     elif _layout_name == "proxy" or _layout_name == "split_k2":
-        _mesa_label = "phase2_replay"
+        _duet_label = "phase2_replay"
     else:
-        _mesa_label = "tree_replay"
-    mesa_close(_prep_label, _mev_prep)
-    _mev = mesa_record(_mesa_label)
+        _duet_label = "tree_replay"
+    duet_close(_prep_label, _mev_prep)
+    _mev = duet_record(_duet_label)
     graph.replay()
-    mesa_close(_mesa_label, _mev)
+    duet_close(_duet_label, _mev)
 
     if PROFILE_DRAFT:
         _ev_replay1 = torch.cuda.Event(enable_timing=True); _ev_replay1.record()
@@ -1151,12 +1151,12 @@ def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
 
 
 # ============================================================
-# MESA-SSD: Split Verify CudaGraph (pre + post)
+# DUET-SSD: Split Verify CudaGraph (pre + post)
 # ============================================================
 
 @torch.inference_mode()
-def capture_mesa_verify_cudagraph(model_runner, lookahead=None, graph_pool=None):
-    """MESA split verify CudaGraph.
+def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None):
+    """DUET split verify CudaGraph.
     graph_pre: layers [0, exit_layer] → exit_hidden, exit_residual
     graph_post: layers [exit_layer+1, L-1] + norm → outputs
 
@@ -1173,7 +1173,7 @@ def capture_mesa_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
     if lookahead is None:
         lookahead = config.speculate_k
     k_plus_1 = lookahead + 1
-    exit_layer = config.mesa_exit_layer
+    exit_layer = config.duet_exit_layer
     H = hf_config.hidden_size
 
     input_ids = torch.zeros(max_bs * k_plus_1, dtype=torch.int64)
@@ -1255,21 +1255,21 @@ def capture_mesa_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
         block_tables=block_tables, cu_seqlens_q=cu_seqlens_q,
         exit_hidden=exit_hidden, exit_residual=exit_residual,
         outputs=outputs,
-        lookahead=lookahead,  # so run_mesa_verify_cudagraph picks the right k_plus_1
+        lookahead=lookahead,  # so run_duet_verify_cudagraph picks the right k_plus_1
     )
     return graph_vars, graph_pool, graphs_pre, graphs_post, all_N
 
 
 @torch.inference_mode()
-def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
-                               graph_vars, mesa_proxy_fn=None, bucket="mesa_verify"):
+def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
+                               graph_vars, duet_proxy_fn=None, bucket="duet_verify"):
     """Split CudaGraph verify: pre → proxy → post → logits.
 
     Args:
         graph_vars: dict from capture; ``graph_vars["lookahead"]`` determines k_plus_1.
         bucket: name prefix for ``model_runner.graphs`` / ``graph_bs_list`` keys.
-            Default ``"mesa_verify"`` (legacy single-bucket). v1 hybrid uses
-            ``"mesa_verify_long"`` and ``"mesa_verify_short"``.
+            Default ``"duet_verify"`` (legacy single-bucket). v1 hybrid uses
+            ``"duet_verify_long"`` and ``"duet_verify_short"``.
     """
     context = get_context()
     config = model_runner.config
@@ -1278,7 +1278,7 @@ def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
     k_plus_1 = lookahead + 1
     orig_bs = input_ids.size(0) // k_plus_1
 
-    _ev_setup = mesa_record("verify_setup")
+    _ev_setup = duet_record("verify_setup")
     wrapper_bs = next(
         x for x in model_runner.graph_bs_list[bucket] if x >= orig_bs)
     graph_pre = model_runner.graphs[f"{bucket}_pre"][wrapper_bs]
@@ -1321,40 +1321,40 @@ def run_mesa_verify_cudagraph(model_runner, input_ids, positions, last_only,
     if block_tables is not None:
         graph_vars["block_tables"][:bs, :block_tables.size(1)] = block_tables
 
-    mesa_close("verify_setup", _ev_setup)
+    duet_close("verify_setup", _ev_setup)
 
     # ====== graph_pre.replay() ======
-    _ev = mesa_record("graph_pre")
+    _ev = duet_record("graph_pre")
     graph_pre.replay()
-    mesa_close("graph_pre", _ev)
+    duet_close("graph_pre", _ev)
 
     # ====== Mid-forward: exit logits (norm + lm_head on exit_hidden) ======
-    _ev_el = mesa_record("exit_logits")
+    _ev_el = duet_record("exit_logits")
     flat = orig_bs * k_plus_1
     exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
     normed = model_runner.model.model.norm(exit_h, None)
     # ALL TP ranks call compute_logits → gather participation.
     # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
     exit_logits = model_runner.model.compute_logits(normed, last_only=False)
-    mesa_close("exit_logits", _ev_el)
+    duet_close("exit_logits", _ev_el)
 
     # ====== proxy compute + isend (rank 0 only does real work) ======
-    _ev = mesa_record("proxy_compute_send")
-    # mesa_proxy_fn: set on rank 0's ModelRunner only. rank 1+ skips.
-    if mesa_proxy_fn is not None:
-        mesa_proxy_fn(exit_logits, orig_bs)
-    mesa_close("proxy_compute_send", _ev)
+    _ev = duet_record("proxy_compute_send")
+    # duet_proxy_fn: set on rank 0's ModelRunner only. rank 1+ skips.
+    if duet_proxy_fn is not None:
+        duet_proxy_fn(exit_logits, orig_bs)
+    duet_close("proxy_compute_send", _ev)
 
     # ====== graph_post.replay() ======
-    _ev = mesa_record("graph_post")
+    _ev = duet_record("graph_post")
     graph_post.replay()
-    mesa_close("graph_post", _ev)
+    duet_close("graph_post", _ev)
 
     # ====== Final logits ======
-    _ev_fl = mesa_record("final_logits")
+    _ev_fl = duet_record("final_logits")
     outputs = graph_vars["outputs"][:flat]
     logits = model_runner.model.compute_logits(outputs, last_only)
-    mesa_close("final_logits", _ev_fl)
+    duet_close("final_logits", _ev_fl)
     return logits
 
 
@@ -1378,11 +1378,11 @@ def capture_phase2_hybrid_cudagraph(model_runner, *, bucket, K_step):
     """
     config = model_runner.config
     hf_config = config.hf_config
-    K1 = config.mesa_phase1_k
-    K2 = config.mesa_phase2_k
+    K1 = config.duet_phase1_k
+    K2 = config.duet_phase2_k
     K_long = K1 + K2
-    dfo = config.mesa_draft_fan_out
-    pfo = config.mesa_proxy_fan_out
+    dfo = config.duet_draft_fan_out
+    pfo = config.duet_proxy_fan_out
     total = (K_step + 1) * (dfo + pfo)
     max_num_blocks = (config.max_model_len + model_runner.block_size - 1) // model_runner.block_size
 
@@ -1443,7 +1443,7 @@ def capture_phase2_hybrid_cudagraph(model_runner, *, bucket, K_step):
     # Capture
     graph_pool = None
     graph = torch.cuda.CUDAGraph()
-    print(f'[MESA hybrid] capturing phase2_hybrid CG bucket={bucket} '
+    print(f'[DUET hybrid] capturing phase2_hybrid CG bucket={bucket} '
           f'total_rows={total}', flush=True)
     with torch.cuda.graph(graph, graph_pool):
         out = model_runner.model(input_ids, rope_positions)
@@ -1489,8 +1489,8 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
 
     Returns: (cont_tokens, cont_logits, proxy_tokens, proxy_logits)
     """
-    K1 = model_runner.config.mesa_phase1_k
-    K2 = model_runner.config.mesa_phase2_k
+    K1 = model_runner.config.duet_phase1_k
+    K2 = model_runner.config.duet_phase2_k
 
     cont_count = plan.cont_row_count
     proxy_count = plan.proxy_row_count
@@ -1580,7 +1580,7 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
 
         # Per-depth prep label (matches split's phase{1,2}_prep semantics —
         # KV plan + buffer copies just before graph.replay).
-        _mev_php = mesa_record(f"phase2_hybrid_prep_{bucket}")
+        _mev_php = duet_record(f"phase2_hybrid_prep_{bucket}")
         # Write per-depth runtime metadata to graph buffers.
         graph_vars["input_ids"][:total].copy_(flat_input_ids, non_blocking=True)
         graph_vars["rope_positions"][:total].copy_(flat_rope, non_blocking=True)
@@ -1589,13 +1589,13 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
         graph_vars["block_tables"][:total, :block_tables_d.shape[1]].copy_(
             block_tables_d, non_blocking=True,
         )
-        mesa_close(f"phase2_hybrid_prep_{bucket}", _mev_php)
+        duet_close(f"phase2_hybrid_prep_{bucket}", _mev_php)
 
         # Per-depth replay label (matches split's phase{1,2}_replay — fires
         # K2 times per spec step, once per depth).
-        _mev_phr = mesa_record(f"phase2_hybrid_replay_{bucket}")
+        _mev_phr = duet_record(f"phase2_hybrid_replay_{bucket}")
         graph.replay()
-        mesa_close(f"phase2_hybrid_replay_{bucket}", _mev_phr)
+        duet_close(f"phase2_hybrid_replay_{bucket}", _mev_phr)
 
         outputs = graph_vars["outputs"][:total]
         logits_flat = model_runner.model.compute_logits(outputs, last_only=False).view(-1, V)
@@ -1612,175 +1612,175 @@ def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
     return cont_tokens, cont_logits, proxy_tokens, proxy_logits
 
 
-# ---------- MESA per-phase profiling (zero-sync, additions only) ----------
-# Doc: ssd/docs/mesa/06-timeline-cleanup-plan.md §4.2-4.5, §5 Phase B.
+# ---------- DUET per-phase profiling (zero-sync, additions only) ----------
+# Doc: ssd/docs/duet/06-timeline-cleanup-plan.md §4.2-4.5, §5 Phase B.
 #
 # Design summary:
-#   - One CUDA/CPU anchor per process, captured lazily on first mesa_record()
-#     when SSD_PROFILE_MESA=1. The only allowed syncs are anchor init and dump.
-#   - mesa_record(label, parent=None) starts a span: records a CUDA event +
+#   - One CUDA/CPU anchor per process, captured lazily on first duet_record()
+#     when SSD_PROFILE_DUET=1. The only allowed syncs are anchor init and dump.
+#   - duet_record(label, parent=None) starts a span: records a CUDA event +
 #     CPU dispatch ns, snapshots current context (step_id, proc) for fallback.
-#   - mesa_close(label, start_handle) ends a span and CRITICALLY reads the
+#   - duet_close(label, start_handle) ends a span and CRITICALLY reads the
 #     CURRENT context (especially `status`) at close time so target_spec_wait
 #     can be labeled with the hit-class learned only after speculate() returns.
-#   - mesa_dump(tag) syncs once and computes wall-clock + cuda_ms derived
+#   - duet_dump(tag) syncs once and computes wall-clock + cuda_ms derived
 #     fields per row, writes a single JSON with an _anchor metadata block.
-import time as _time_mod_for_mesa
+import time as _time_mod_for_duet
 
-PROFILE_MESA = os.environ.get("SSD_PROFILE_MESA", "0") == "1"
+PROFILE_DUET = os.environ.get("SSD_PROFILE_DUET", "0") == "1"
 
 # Per-span open record:
 #   (idx, label, parent_label, start_ev, end_ev,
 #    cpu_dispatch_start_ns, cpu_dispatch_end_ns,
 #    open_step_id, open_proc, close_step_id, close_status, close_proc)
-_mesa_events = []
-_mesa_idx = 0      # monotonic call index (per process)
+_duet_events = []
+_duet_idx = 0      # monotonic call index (per process)
 
 # CUDA/CPU anchor (set once per process, lazily on first record)
-_mesa_anchor_event = None
-_mesa_anchor_cpu_ns = None
-_mesa_anchor_device = None
+_duet_anchor_event = None
+_duet_anchor_cpu_ns = None
+_duet_anchor_device = None
 
 # Profiler context (process-local, single-threaded for the profiled path).
 # Used so individual call sites do not need to thread step_id/status/proc
-# through every helper signature. mesa_close() reads this AT close time.
-_mesa_context = {"step_id": None, "status": None, "proc": None}
+# through every helper signature. duet_close() reads this AT close time.
+_duet_context = {"step_id": None, "status": None, "proc": None}
 
 
-def _ensure_mesa_anchor():
+def _ensure_duet_anchor():
     """Lazily initialize the per-process CUDA/CPU anchor.
 
-    Only synchronizes when PROFILE_MESA=1. Idempotent; no-op when off or
+    Only synchronizes when PROFILE_DUET=1. Idempotent; no-op when off or
     already initialized. This is the only sync in the profile path outside
-    mesa_dump().
+    duet_dump().
     """
-    global _mesa_anchor_event, _mesa_anchor_cpu_ns, _mesa_anchor_device
-    if not PROFILE_MESA:
+    global _duet_anchor_event, _duet_anchor_cpu_ns, _duet_anchor_device
+    if not PROFILE_DUET:
         return
-    if _mesa_anchor_event is not None:
+    if _duet_anchor_event is not None:
         return
     torch.cuda.synchronize()
     ev = torch.cuda.Event(enable_timing=True)
     ev.record()
     torch.cuda.synchronize()
-    _mesa_anchor_event = ev
-    _mesa_anchor_cpu_ns = _time_mod_for_mesa.perf_counter_ns()
-    _mesa_anchor_device = torch.cuda.current_device()
+    _duet_anchor_event = ev
+    _duet_anchor_cpu_ns = _time_mod_for_duet.perf_counter_ns()
+    _duet_anchor_device = torch.cuda.current_device()
 
 
-def mesa_set_context(step_id=None, status=None, proc=None):
+def duet_set_context(step_id=None, status=None, proc=None):
     """Update the process-local profiler context.
 
     Each argument is applied only if not None, so callers can update a
     subset (e.g. only `status` after speculate() returns). No-op when
-    PROFILE_MESA=0 to keep cold path zero-cost.
+    PROFILE_DUET=0 to keep cold path zero-cost.
     """
-    if not PROFILE_MESA:
+    if not PROFILE_DUET:
         return
     if step_id is not None:
-        _mesa_context["step_id"] = step_id
+        _duet_context["step_id"] = step_id
     if status is not None:
-        _mesa_context["status"] = status
+        _duet_context["status"] = status
     if proc is not None:
-        _mesa_context["proc"] = proc
+        _duet_context["proc"] = proc
 
 
-def mesa_clear_status():
+def duet_clear_status():
     """Explicitly clear close-time status. Used between draft requests so a
     new request does not inherit the previous request's hit/miss label."""
-    if not PROFILE_MESA:
+    if not PROFILE_DUET:
         return
-    _mesa_context["status"] = None
+    _duet_context["status"] = None
 
 
-def mesa_record(label, parent=None):
-    """Open a profiling span. Returns an opaque handle for mesa_close().
+def duet_record(label, parent=None):
+    """Open a profiling span. Returns an opaque handle for duet_close().
 
     Captures: start CUDA event, CPU dispatch ns, and a snapshot of
     (step_id, proc) at open time. `status` is intentionally NOT snapshotted
-    here — it is read fresh in mesa_close() so spans like target_spec_wait
+    here — it is read fresh in duet_close() so spans like target_spec_wait
     can pick up status learned after the body runs.
     """
-    if not PROFILE_MESA:
+    if not PROFILE_DUET:
         return None
-    _ensure_mesa_anchor()
+    _ensure_duet_anchor()
     ev = torch.cuda.Event(enable_timing=True)
     ev.record()
-    cpu_ns = _time_mod_for_mesa.perf_counter_ns()
+    cpu_ns = _time_mod_for_duet.perf_counter_ns()
     # Snapshot open-time context (fallback for step_id/proc).
-    open_step_id = _mesa_context["step_id"]
-    open_proc = _mesa_context["proc"]
+    open_step_id = _duet_context["step_id"]
+    open_proc = _duet_context["proc"]
     return (ev, cpu_ns, label, parent, open_step_id, open_proc)
 
 
-def mesa_close(label, start_handle):
-    """Close a profiling span opened by mesa_record().
+def duet_close(label, start_handle):
+    """Close a profiling span opened by duet_record().
 
     Reads the CURRENT context (step_id, status, proc) at close time. This
     is essential for target_spec_wait_* whose status is set after
     speculator.speculate() returns. Open-time step_id/proc are used as a
     fallback when the close-time context is unset.
     """
-    global _mesa_idx
+    global _duet_idx
     if start_handle is None:
         return
     start_ev, cpu_start_ns, _open_label, parent, open_step_id, open_proc = start_handle
     end_ev = torch.cuda.Event(enable_timing=True)
     end_ev.record()
-    cpu_end_ns = _time_mod_for_mesa.perf_counter_ns()
+    cpu_end_ns = _time_mod_for_duet.perf_counter_ns()
     # Close-time context wins; fall back to open-time snapshot if unset.
-    close_step_id = _mesa_context["step_id"]
+    close_step_id = _duet_context["step_id"]
     if close_step_id is None:
         close_step_id = open_step_id
-    close_proc = _mesa_context["proc"]
+    close_proc = _duet_context["proc"]
     if close_proc is None:
         close_proc = open_proc
-    close_status = _mesa_context["status"]
-    _mesa_events.append((
-        _mesa_idx, label, parent,
+    close_status = _duet_context["status"]
+    _duet_events.append((
+        _duet_idx, label, parent,
         start_ev, end_ev,
         cpu_start_ns, cpu_end_ns,
         close_step_id, close_status, close_proc,
     ))
-    _mesa_idx += 1
+    _duet_idx += 1
 
 
-def mesa_reset():
-    """Reset profiling state — mesa_dump/mesa_flush call this after writing."""
-    global _mesa_idx, _mesa_anchor_event, _mesa_anchor_cpu_ns, _mesa_anchor_device
-    _mesa_events.clear()
-    _mesa_idx = 0
-    _mesa_anchor_event = None
-    _mesa_anchor_cpu_ns = None
-    _mesa_anchor_device = None
-    _mesa_context["step_id"] = None
-    _mesa_context["status"] = None
-    _mesa_context["proc"] = None
+def duet_reset():
+    """Reset profiling state — duet_dump/duet_flush call this after writing."""
+    global _duet_idx, _duet_anchor_event, _duet_anchor_cpu_ns, _duet_anchor_device
+    _duet_events.clear()
+    _duet_idx = 0
+    _duet_anchor_event = None
+    _duet_anchor_cpu_ns = None
+    _duet_anchor_device = None
+    _duet_context["step_id"] = None
+    _duet_context["status"] = None
+    _duet_context["proc"] = None
 
 
-def mesa_flush(tag, run_id=None):
+def duet_flush(tag, run_id=None):
     """Public API: write JSON and reset. Call between runs or at end of generate().
     run_id: appended to filename to avoid overwrites; defaults to HMS timestamp."""
-    return mesa_dump(tag, run_id=run_id)
+    return duet_dump(tag, run_id=run_id)
 
 
-def mesa_dump(tag, run_id=None):
-    if not _mesa_events:
-        mesa_reset()
+def duet_dump(tag, run_id=None):
+    if not _duet_events:
+        duet_reset()
         return
     import json
     # Single sync — convert CUDA event times to anchored wall-clock at dump
     # time so the per-step path stays sync-free.
     torch.cuda.synchronize()
-    anchor_ev = _mesa_anchor_event
-    anchor_cpu_ns = _mesa_anchor_cpu_ns
+    anchor_ev = _duet_anchor_event
+    anchor_cpu_ns = _duet_anchor_cpu_ns
     rows = []
     for (
         idx, label, parent,
         start_ev, end_ev,
         cpu_start_ns, cpu_end_ns,
         step_id, status, proc,
-    ) in _mesa_events:
+    ) in _duet_events:
         gpu_start_ms = anchor_ev.elapsed_time(start_ev)
         gpu_end_ms = anchor_ev.elapsed_time(end_ev)
         cuda_ms = start_ev.elapsed_time(end_ev)
@@ -1809,8 +1809,8 @@ def mesa_dump(tag, run_id=None):
     outdir = os.environ.get("SSD_PROFILE_DIR", "/tmp")
     os.makedirs(outdir, exist_ok=True)
     if run_id is None:
-        run_id = _time_mod_for_mesa.strftime("%H%M%S")
-    path = f"{outdir}/mesa_profile_{tag}_{run_id}.json"
+        run_id = _time_mod_for_duet.strftime("%H%M%S")
+    path = f"{outdir}/duet_profile_{tag}_{run_id}.json"
     # Wire format: top-level JSON is a list of row dicts. To keep the legacy
     # `summarize_ssd_run.py` parser working (it does `json.load` and filters
     # by `label`), the anchor metadata is emitted as a sentinel row with
@@ -1824,11 +1824,11 @@ def mesa_dump(tag, run_id=None):
         "label": "_anchor",
         "parent_label": None,
         "anchor_cpu_ns": anchor_cpu_ns,
-        "anchor_device": _mesa_anchor_device,
+        "anchor_device": _duet_anchor_device,
         "anchor_note": "GPU event times converted to host monotonic clock",
     }
     payload = [anchor_row] + rows
     with open(path, "w") as f:
         json.dump(payload, f)
-    print(f"[mesa_profile] {len(rows)} events -> {path}", flush=True)
-    mesa_reset()
+    print(f"[duet_profile] {len(rows)} events -> {path}", flush=True)
+    duet_reset()

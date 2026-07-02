@@ -1,4 +1,4 @@
-"""Aligned MESA timeline plotter (Phase C).
+"""Aligned DUET timeline plotter (Phase C).
 
 Consumes the Phase-B JSON schema (rows with ``_anchor`` sentinel,
 ``wall_start_ns`` / ``wall_end_ns``, ``step_id``, ``parent_label``, ``status``)
@@ -8,9 +8,9 @@ speculative step, joined by ``step_id``.
 Importable from ``summarize_ssd_run.py`` via ``plot_aligned_for_status``,
 also runnable as::
 
-    python bench/plot_mesa_aligned_timeline.py OUTDIR --step-id N --out path.png
+    python bench/plot_duet_aligned_timeline.py OUTDIR --step-id N --out path.png
 
-Rules (see ``ssd/docs/mesa/06-timeline-cleanup-plan.md`` §4.6):
+Rules (see ``ssd/docs/duet/06-timeline-cleanup-plan.md`` §4.6):
 
 - Select target rank0 by ``step_id`` and include draft spans that overlap the
   target request→response window.  Cache-hit waits often overlap the previous
@@ -45,7 +45,7 @@ import matplotlib.pyplot as plt
 # where the label already existed there; the new entries cover the Phase-B
 # handshake markers.
 COLORS: dict[str, tuple[str, str]] = {
-    # Target-side MESA events
+    # Target-side DUET events
     "verify_setup": ("#969696", ".."),
     "graph_pre": ("#8b1a1a", ""),
     "exit_logits": ("#fdae61", ""),
@@ -111,7 +111,12 @@ class AlignedSchemaError(Exception):
 
 
 def _latest_json(outdir: Path, tag: str) -> Path | None:
-    paths = sorted(outdir.glob(f"mesa_profile_{tag}_*.json"))
+    # Accepts both new duet_profile_*.json and legacy mesa_profile_*.json
+    paths = sorted(outdir.glob(f"duet_profile_{tag}_*.json"))
+    if not paths:
+        paths = sorted(outdir.glob(f"duet_profile_{tag}.json"))
+    if not paths:
+        paths = sorted(outdir.glob(f"mesa_profile_{tag}_*.json"))
     if not paths:
         paths = sorted(outdir.glob(f"mesa_profile_{tag}.json"))
     return paths[-1] if paths else None
@@ -120,7 +125,7 @@ def _latest_json(outdir: Path, tag: str) -> Path | None:
 def _load_json(outdir: Path, tag: str) -> list[dict]:
     path = _latest_json(outdir, tag)
     if path is None:
-        raise FileNotFoundError(f"no mesa_profile_{tag}_*.json in {outdir}")
+        raise FileNotFoundError(f"no duet_profile_{tag}_*.json in {outdir}")
     with path.open() as f:
         return json.load(f)
 
@@ -672,7 +677,7 @@ def plot_aligned_step(
     ax.set_xlabel("time (ms from step start, host monotonic clock)")
     ax.set_xlim(xmin - 0.5, xmax + 0.5)
     ax.set_ylim(-0.7, 1.7)
-    title = f"MESA aligned timeline — step_id={step_id}"
+    title = f"DUET aligned timeline — step_id={step_id}"
     if title_suffix:
         title = f"{title} — {title_suffix}"
     if draft_shift_ns != 0 and shift_n_pairs > 0:
@@ -727,7 +732,7 @@ def plot_aligned_step(
 _STATUS_SUFFIX = {
     "hit_k1": "timeline_cache_hit_k1.png",
     "hit_k2": "timeline_cache_hit_k2.png",
-    "hit": "timeline_cache_hit.png",  # non-MESA async SD (no K1/K2 split)
+    "hit": "timeline_cache_hit.png",  # non-DUET async SD (no K1/K2 split)
     "miss": "timeline_cache_miss.png",
 }
 
@@ -864,7 +869,7 @@ def print_status_summary(target_rows: list[dict]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("outdir", type=Path, help="directory containing mesa_profile_*.json")
+    ap.add_argument("outdir", type=Path, help="directory containing duet_profile_*.json")
     ap.add_argument(
         "--step-id",
         type=int,

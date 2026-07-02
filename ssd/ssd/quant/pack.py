@@ -85,7 +85,7 @@ def rtn_quantize_w4a16(
     """Round-to-nearest W4A16 quantization — per-group along input dim.
 
     Used by the offline importer as a "no external tool needed" path, and
-    by the MESA accept-rate comparison per plan §16.2 mitigation.
+    by the DUET accept-rate comparison per plan §16.2 mitigation.
 
     Args:
         weight: dense fp16/bf16 weight [out_features, in_features]

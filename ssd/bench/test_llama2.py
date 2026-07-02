@@ -1,4 +1,4 @@
-"""Test MESA-SSD with Llama2 models: LayerSkip-Llama2-13B + TinyLlama-1.1B"""
+"""Test DUET-SSD with Llama2 models: LayerSkip-Llama2-13B + TinyLlama-1.1B"""
 import os, sys
 os.environ["SSD_CUDA_ARCH"] = "8.6"
 os.environ["SSD_HF_CACHE"] = "/data2/chokwans99/models"
@@ -21,10 +21,10 @@ def main():
         async_fan_out=3, max_num_seqs=1, max_model_len=512,
     )
 
-    if mode == "mesa":
-        kwargs["mesa_enabled"] = True
-        kwargs["mesa_exit_layer"] = 26  # 40 * 2/3 ≈ 26
-        print("MODE: MESA-SSD")
+    if mode == "duet":
+        kwargs["duet_enabled"] = True
+        kwargs["duet_exit_layer"] = 26  # 40 * 2/3 ≈ 26
+        print("MODE: DUET-SSD")
     else:
         print("MODE: Baseline SSD")
 

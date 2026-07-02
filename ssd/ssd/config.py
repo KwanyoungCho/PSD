@@ -54,24 +54,24 @@ class Config:
     d_model_target: int | None = None
     tokenizer_path: str | None = None
 
-    # MESA-SSD
-    mesa_enabled: bool = False
-    mesa_exit_layer: int | None = None      # None=auto: 2*L//3
-    mesa_proxy_top_k: int = 3              # proxy correction token count
-    mesa_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
-    mesa_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (default).
-                                            # "a" retained as dead branch; see docs/mesa/05-policy-b-fix.md.
-    # Phase 2 hybrid (per docs/mesa/01-design.md Part 5).
+    # DUET-SSD
+    duet_enabled: bool = False
+    duet_exit_layer: int | None = None      # None=auto: 2*L//3
+    duet_proxy_top_k: int = 3              # proxy correction token count
+    duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
+    duet_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (default).
+                                            # "a" retained as dead branch; see docs/duet/05-policy-b-fix.md.
+    # Phase 2 hybrid (per docs/duet/01-design.md Part 5).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k. K2 also = K_short (proxy-sourced row depth).
-    # None means "use legacy two-pass MESA path" (no hybrid).
-    mesa_phase1_k: int | None = None
-    mesa_phase2_k: int | None = None
+    # None means "use legacy two-pass DUET path" (no hybrid).
+    duet_phase1_k: int | None = None
+    duet_phase2_k: int | None = None
     # Split-only K1/K2 mode: per-position fan_out list for Phase 1 / Phase 2.
     # Length must be K1+1 / K2+1. None → uniform [draft_fo]*(K1+1) / [proxy_fo]*(K2+1).
     # Allows non-uniform speculation tree (e.g., wider at root, narrower at leaves).
-    mesa_split_phase1_fan_out_list: list[int] | None = None
-    mesa_split_phase2_fan_out_list: list[int] | None = None
+    duet_split_phase1_fan_out_list: list[int] | None = None
+    duet_split_phase2_fan_out_list: list[int] | None = None
 
     # AWQ W4A16 quantization (target + draft, role-aware).
     # Public path is `awq_marlin`; legacy torchao backends remain as an
@@ -106,8 +106,8 @@ class Config:
     # The fields used to exist as opt-ins but were removed because they
     # had no effect — the runner kept lm_head / embeddings dense regardless.
     # Default False: ParallelLMHead is a per-step hot path (gather + cat per call)
-    # and MESA also calls lm_head at exit layer for proxy logits. Quantizing it
-    # hurts throughput and accept rate (MESA accept -4~8%p observed). Turn on
+    # and DUET also calls lm_head at exit layer for proxy logits. Quantizing it
+    # hurts throughput and accept rate (DUET accept -4~8%p observed). Turn on
     # explicitly only when memory is critical or for benchmarking.
     target_quant_lm_head: bool = False
     # [LEGACY torchao fields, kept only because the deprecated runner branch
@@ -127,7 +127,7 @@ class Config:
         return (self.max_model_len + self.kvcache_block_size - 1) // self.kvcache_block_size
 
     @property
-    def mesa_proxy_wire_N(self) -> int:
+    def duet_proxy_wire_N(self) -> int:
         """Total (chosen_pos, chosen_tok) entries on Policy B wire = total_budget + buffer.
 
         total_budget = pfo × (K_max+1)        (Phase 2 tree size; layout MQ_LEN)
@@ -141,49 +141,49 @@ class Config:
         when K1 >= K2 and K_max = K1.
 
         K_max = max(K1, K2) in split mode (= K1 by K2 ≤ K1), else speculate_k.
-        See docs/mesa/05-policy-b-fix.md Section 3.5.
+        See docs/duet/05-policy-b-fix.md Section 3.5.
         """
         import os as _os_cfg
         _split_mode = (
-            self.mesa_phase1_k is not None
+            self.duet_phase1_k is not None
             and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
         )
         if _split_mode:
-            K_max = max(self.mesa_phase1_k, self.mesa_phase2_k)
+            K_max = max(self.duet_phase1_k, self.duet_phase2_k)
         else:
             K_max = self.speculate_k
         K_plus_1 = K_max + 1
-        total_budget = self.mesa_proxy_fan_out * K_plus_1
+        total_budget = self.duet_proxy_fan_out * K_plus_1
         # List-aware Phase 1 dedup loss bound
-        _p1_list = self.mesa_split_phase1_fan_out_list
+        _p1_list = self.duet_split_phase1_fan_out_list
         if _split_mode and _p1_list is not None:
-            _K2p1 = self.mesa_phase2_k + 1
+            _K2p1 = self.duet_phase2_k + 1
             p1_sum_full = sum(_p1_list)
             p1_sum_short = sum(_p1_list[:_K2p1])
         else:
-            _K1p1 = (self.mesa_phase1_k + 1) if self.mesa_phase1_k is not None else self.speculate_k + 1
-            _K2p1 = (self.mesa_phase2_k + 1) if self.mesa_phase2_k is not None else self.speculate_k + 1
-            p1_sum_full = self.mesa_draft_fan_out * _K1p1
-            p1_sum_short = self.mesa_draft_fan_out * _K2p1
+            _K1p1 = (self.duet_phase1_k + 1) if self.duet_phase1_k is not None else self.speculate_k + 1
+            _K2p1 = (self.duet_phase2_k + 1) if self.duet_phase2_k is not None else self.speculate_k + 1
+            p1_sum_full = self.duet_draft_fan_out * _K1p1
+            p1_sum_short = self.duet_draft_fan_out * _K2p1
         buffer = max(p1_sum_full, p1_sum_short) + 2
         return total_budget + buffer
 
     @property
-    def mesa_proxy_total_budget(self) -> int:
+    def duet_proxy_total_budget(self) -> int:
         """Phase 2 tree size = sum(fan_out_list) at runtime = layout MQ_LEN.
 
-        See docs/mesa/05-policy-b-fix.md Section 3.5 / 3.7.
+        See docs/duet/05-policy-b-fix.md Section 3.5 / 3.7.
         """
         import os as _os_cfg
         _split_mode = (
-            self.mesa_phase1_k is not None
+            self.duet_phase1_k is not None
             and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
         )
         if _split_mode:
-            K_max = max(self.mesa_phase1_k, self.mesa_phase2_k)
+            K_max = max(self.duet_phase1_k, self.duet_phase2_k)
         else:
             K_max = self.speculate_k
-        return self.mesa_proxy_fan_out * (K_max + 1)
+        return self.duet_proxy_fan_out * (K_max + 1)
 
     def __post_init__(self):
         model = self.model 
@@ -230,89 +230,89 @@ class Config:
                     print(f'[Config] Overriding eagle draft max_position_embeddings: {draft_max_pos} -> {target_max_pos}', flush=True)
                     self.draft_hf_config.max_position_embeddings = target_max_pos
         
-        if self.mesa_enabled:
-            assert self.draft_async, "MESA-SSD requires draft_async=True"
-            assert self.speculate, "MESA-SSD requires speculate=True"
-            assert self.hf_config.model_type == "llama", "MESA-SSD only supports Llama models"
-            assert not self.use_eagle, "MESA-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
-            assert not self.enforce_eager, "MESA-SSD requires CudaGraph mode (enforce_eager must be False)"
-            assert self.jit_speculate, "MESA-SSD requires jit_speculate=True (miss rows need valid logits_q)"
+        if self.duet_enabled:
+            assert self.draft_async, "DUET-SSD requires draft_async=True"
+            assert self.speculate, "DUET-SSD requires speculate=True"
+            assert self.hf_config.model_type == "llama", "DUET-SSD only supports Llama models"
+            assert not self.use_eagle, "DUET-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
+            assert not self.enforce_eager, "DUET-SSD requires CudaGraph mode (enforce_eager must be False)"
+            assert self.jit_speculate, "DUET-SSD requires jit_speculate=True (miss rows need valid logits_q)"
             # #3 B=1 only: Policy A uses accept_probs[0] as single h_i for whole batch.
             assert self.max_num_seqs == 1, \
-                "MESA-SSD Rev1 only supports B=1 (max_num_seqs=1); " \
+                "DUET-SSD Rev1 only supports B=1 (max_num_seqs=1); " \
                 "Policy A uses accept_probs[0] as a single h_i distribution for the whole batch"
-            if self.mesa_exit_layer is None:
+            if self.duet_exit_layer is None:
                 L = self.hf_config.num_hidden_layers
-                self.mesa_exit_layer = (2 * L) // 3
-            assert 0 < self.mesa_exit_layer < self.hf_config.num_hidden_layers, \
-                f"mesa_exit_layer must be in (0, {self.hf_config.num_hidden_layers}), got {self.mesa_exit_layer}"
-            if self.mesa_draft_fan_out is None:
-                self.mesa_draft_fan_out = max(1, self.async_fan_out // 2)
-            assert 0 < self.mesa_draft_fan_out < self.async_fan_out, \
-                f"mesa_draft_fan_out must be in (0, {self.async_fan_out}), got {self.mesa_draft_fan_out}"
-            self.mesa_proxy_fan_out = self.async_fan_out - self.mesa_draft_fan_out
+                self.duet_exit_layer = (2 * L) // 3
+            assert 0 < self.duet_exit_layer < self.hf_config.num_hidden_layers, \
+                f"duet_exit_layer must be in (0, {self.hf_config.num_hidden_layers}), got {self.duet_exit_layer}"
+            if self.duet_draft_fan_out is None:
+                self.duet_draft_fan_out = max(1, self.async_fan_out // 2)
+            assert 0 < self.duet_draft_fan_out < self.async_fan_out, \
+                f"duet_draft_fan_out must be in (0, {self.async_fan_out}), got {self.duet_draft_fan_out}"
+            self.duet_proxy_fan_out = self.async_fan_out - self.duet_draft_fan_out
 
             # Phase 1/2 K validation moved up (auto-raise needs validated K1/K2).
-            if (self.mesa_phase1_k is None) != (self.mesa_phase2_k is None):
+            if (self.duet_phase1_k is None) != (self.duet_phase2_k is None):
                 raise ValueError(
-                    "mesa_phase1_k and mesa_phase2_k must both be set or both None; "
-                    f"got K1={self.mesa_phase1_k}, K2={self.mesa_phase2_k}"
+                    "duet_phase1_k and duet_phase2_k must both be set or both None; "
+                    f"got K1={self.duet_phase1_k}, K2={self.duet_phase2_k}"
                 )
-            if self.mesa_phase1_k is not None:
-                assert self.mesa_phase1_k > 0, f"mesa_phase1_k must be > 0, got {self.mesa_phase1_k}"
-                assert self.mesa_phase2_k > 0, f"mesa_phase2_k must be > 0, got {self.mesa_phase2_k}"
-                assert self.mesa_phase1_k + self.mesa_phase2_k == self.speculate_k, (
-                    f"mesa_phase1_k + mesa_phase2_k must equal speculate_k; "
-                    f"got K1={self.mesa_phase1_k} + K2={self.mesa_phase2_k} != "
+            if self.duet_phase1_k is not None:
+                assert self.duet_phase1_k > 0, f"duet_phase1_k must be > 0, got {self.duet_phase1_k}"
+                assert self.duet_phase2_k > 0, f"duet_phase2_k must be > 0, got {self.duet_phase2_k}"
+                assert self.duet_phase1_k + self.duet_phase2_k == self.speculate_k, (
+                    f"duet_phase1_k + duet_phase2_k must equal speculate_k; "
+                    f"got K1={self.duet_phase1_k} + K2={self.duet_phase2_k} != "
                     f"speculate_k={self.speculate_k}"
                 )
 
             import os as _os_cfg
             _split_mode = (
-                self.mesa_phase1_k is not None
+                self.duet_phase1_k is not None
                 and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
             )
             # Phase 1 fan_out_list validation (split mode only). User-provided
             # list overrides uniform [draft_fo]*(K1+1). Used by buffer/top_k
             # sizing below — list-aware in ALL cases when list is provided
-            # (even uniform list with values != mesa_draft_fan_out).
-            _p1_list = self.mesa_split_phase1_fan_out_list
+            # (even uniform list with values != duet_draft_fan_out).
+            _p1_list = self.duet_split_phase1_fan_out_list
             if _split_mode and _p1_list is not None:
-                _K1p1 = self.mesa_phase1_k + 1
-                _K2p1 = self.mesa_phase2_k + 1
+                _K1p1 = self.duet_phase1_k + 1
+                _K2p1 = self.duet_phase2_k + 1
                 if len(_p1_list) != _K1p1:
                     raise ValueError(
-                        f"mesa_split_phase1_fan_out_list len={len(_p1_list)} "
+                        f"duet_split_phase1_fan_out_list len={len(_p1_list)} "
                         f"must equal K1+1={_K1p1}; got {_p1_list}"
                     )
                 if any(f < 0 for f in _p1_list):
                     raise ValueError(
-                        f"mesa_split_phase1_fan_out_list must have all entries >= 0; "
+                        f"duet_split_phase1_fan_out_list must have all entries >= 0; "
                         f"got {_p1_list}"
                     )
                 if sum(_p1_list) <= 0:
                     raise ValueError(
-                        f"mesa_split_phase1_fan_out_list sum must be > 0 "
+                        f"duet_split_phase1_fan_out_list sum must be > 0 "
                         f"(layout would have MQ_LEN=0); got {_p1_list}"
                     )
                 # short-hit (K2+1) prefix sum > 0 — split_k1_short layout
                 # would have MQ_LEN=0 otherwise, breaking K2-hit dispatch.
                 if sum(_p1_list[:_K2p1]) <= 0:
                     raise ValueError(
-                        f"mesa_split_phase1_fan_out_list[:K2+1] sum must be > 0 "
+                        f"duet_split_phase1_fan_out_list[:K2+1] sum must be > 0 "
                         f"(short-hit layout MQ_LEN=0). Got prefix={_p1_list[:_K2p1]} "
                         f"from {_p1_list}"
                     )
             # Phase 2 non-uniform fan_out is unsupported (independent of Phase 1
             # list — reject early to avoid delayed DraftRunner-init failure when
             # only Phase 2 list is set).
-            if _split_mode and self.mesa_split_phase2_fan_out_list is not None:
+            if _split_mode and self.duet_split_phase2_fan_out_list is not None:
                 raise NotImplementedError(
                     "split-K1/K2 Phase 2 non-uniform fan_out is not supported "
                     "(Phase 2 selection is uniform; would need policy-based "
                     "dynamic fan_out — separate design)."
                 )
-            # Auto-raise proxy_top_k. Two constraints (per docs/mesa/05-policy-b-fix.md):
+            # Auto-raise proxy_top_k. Two constraints (per docs/duet/05-policy-b-fix.md):
             #   per-pos:  top_k ≥ total_budget + max(p1_fanout) + 2
             #   total:    top_k ≥ ceil(wire_N / (K_min+1))
             # buffer: max possible dedup loss across positions.
@@ -321,29 +321,29 @@ class Config:
             #     (long-hit + miss use full sum; short-hit uses prefix sum)
             # split mode K_max = max(K1, K2) = K1 (K2 ≤ K1 invariant).
             if _split_mode:
-                K_max = max(self.mesa_phase1_k, self.mesa_phase2_k)
-                K_min = min(self.mesa_phase1_k, self.mesa_phase2_k)
+                K_max = max(self.duet_phase1_k, self.duet_phase2_k)
+                K_min = min(self.duet_phase1_k, self.duet_phase2_k)
             else:
                 K_max = self.speculate_k
                 K_min = self.speculate_k
             K_plus_1 = K_max + 1
-            pfo = self.mesa_proxy_fan_out
-            dfo = self.mesa_draft_fan_out
+            pfo = self.duet_proxy_fan_out
+            dfo = self.duet_draft_fan_out
             total_budget = pfo * K_plus_1
 
             # List-aware Phase 1 fan-out stats — used in ALL cases when user
             # provides list, otherwise fall back to uniform [dfo]*(K1+1).
             if _split_mode and _p1_list is not None:
                 _p1_eff = list(_p1_list)
-                _K2p1 = self.mesa_phase2_k + 1
+                _K2p1 = self.duet_phase2_k + 1
                 p1_sum_full = sum(_p1_eff)
                 p1_sum_short = sum(_p1_eff[:_K2p1])
                 p1_max = max(_p1_eff) if _p1_eff else dfo
             else:
                 # uniform fallback: list = [dfo] * (K1+1) when phase1_k set,
                 # else degenerate ([dfo] * (speculate_k+1) for legacy compat).
-                _K1p1 = (self.mesa_phase1_k + 1) if self.mesa_phase1_k is not None else self.speculate_k + 1
-                _K2p1 = (self.mesa_phase2_k + 1) if self.mesa_phase2_k is not None else self.speculate_k + 1
+                _K1p1 = (self.duet_phase1_k + 1) if self.duet_phase1_k is not None else self.speculate_k + 1
+                _K2p1 = (self.duet_phase2_k + 1) if self.duet_phase2_k is not None else self.speculate_k + 1
                 p1_sum_full = dfo * _K1p1
                 p1_sum_short = dfo * _K2p1
                 p1_max = dfo
@@ -353,29 +353,29 @@ class Config:
             per_pos_min = total_budget + p1_max + 2
             total_min = -(-wire_N // (K_min + 1))                # ceil(wire_N / (K_min+1))
             required_top_k = max(per_pos_min, total_min)
-            if self.mesa_proxy_top_k < required_top_k:
-                print(f'[Config] mesa_proxy_top_k raised {self.mesa_proxy_top_k} → {required_top_k} '
+            if self.duet_proxy_top_k < required_top_k:
+                print(f'[Config] duet_proxy_top_k raised {self.duet_proxy_top_k} → {required_top_k} '
                       f'(K_max={K_max} K_min={K_min} p1_sum_full={p1_sum_full} '
                       f'p1_sum_short={p1_sum_short} p1_max={p1_max} '
                       f'per_pos={per_pos_min} total={total_min} wire_N={wire_N})',
                       flush=True)
-                self.mesa_proxy_top_k = required_top_k
-            assert self.mesa_proxy_top_k >= 1, "mesa_proxy_top_k must be >= 1"
-            assert self.mesa_policy in ("a", "b"), \
-                f"mesa_policy must be 'a' or 'b', got {self.mesa_policy!r}"
+                self.duet_proxy_top_k = required_top_k
+            assert self.duet_proxy_top_k >= 1, "duet_proxy_top_k must be >= 1"
+            assert self.duet_policy in ("a", "b"), \
+                f"duet_policy must be 'a' or 'b', got {self.duet_policy!r}"
             # Policy "b" (unified K+1) is only implemented in split-K1/K2 mode
-            # (docs/mesa/05-policy-b-fix.md). For legacy / hybrid paths the
-            # _build_tree_batch_mesa() codepath still reads mesa_proxy["fan_out_list"]
+            # (docs/duet/05-policy-b-fix.md). For legacy / hybrid paths the
+            # _build_tree_batch_duet() codepath still reads duet_proxy["fan_out_list"]
             # which Policy B's wire schema doesn't provide. Force "a" with warning.
-            if self.mesa_policy == "b" and not _split_mode:
-                print(f"[Config] mesa_policy='b' is only implemented in split-K1/K2 "
+            if self.duet_policy == "b" and not _split_mode:
+                print(f"[Config] duet_policy='b' is only implemented in split-K1/K2 "
                       f"mode (SSD_FORCE_SPLIT_K1K2=1); forcing 'a' for "
                       f"legacy/hybrid path.", flush=True)
-                self.mesa_policy = "a"
-            print(f'[Config] MESA-SSD enabled: exit_layer={self.mesa_exit_layer}, '
-                  f'proxy_top_k={self.mesa_proxy_top_k}, '
-                  f'draft_fan_out={self.mesa_draft_fan_out}, proxy_fan_out={self.mesa_proxy_fan_out}, '
-                  f'K1={self.mesa_phase1_k}, K2={self.mesa_phase2_k}',
+                self.duet_policy = "a"
+            print(f'[Config] DUET-SSD enabled: exit_layer={self.duet_exit_layer}, '
+                  f'proxy_top_k={self.duet_proxy_top_k}, '
+                  f'draft_fan_out={self.duet_draft_fan_out}, proxy_fan_out={self.duet_proxy_fan_out}, '
+                  f'K1={self.duet_phase1_k}, K2={self.duet_phase2_k}',
                   flush=True)
 
         assert self.max_num_batched_tokens >= self.max_model_len

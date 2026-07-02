@@ -1,6 +1,6 @@
 #!/bin/bash
 # Phase 9B hybrid sweep: layerskip-llama2-70B (AWQ TP=4) + TinyLlama-1.1B (TP=1).
-# Compares baseline split MESA vs Phase 9B hybrid configs.
+# Compares baseline split DUET vs Phase 9B hybrid configs.
 
 set -u
 cd "$(dirname "$0")/.."
@@ -32,7 +32,7 @@ run() {
         return
     fi
     echo "===== $label ====="
-    CUDA_VISIBLE_DEVICES=0,1,2,3,4 SSD_PROFILE_MESA=0 \
+    CUDA_VISIBLE_DEVICES=0,1,2,3,4 SSD_PROFILE_DUET=0 \
         "$PY" -O bench/bench.py $COMMON "$@" >"$outdir/run.log" 2>&1
     local rc=$?
     local tp=$(grep -oP 'Total Throughput:\s*\K[\d.]+' "$outdir/run.log" | head -1)
@@ -41,22 +41,22 @@ run() {
     echo "  rc=$rc TP=${tp:-?} accept=${ar:-?} cache_hits=${ch:-?}"
 }
 
-# Baseline split MESA (existing best from final_exp2_quant_70b: K=5 dfo=2 exit=40)
-run "split_k5_dfo2_exit40" --k 5 --f 4 --mesa --mesa_exit_layer 40 --mesa_draft_fan_out 2
+# Baseline split DUET (existing best from final_exp2_quant_70b: K=5 dfo=2 exit=40)
+run "split_k5_dfo2_exit40" --k 5 --f 4 --duet --duet_exit_layer 40 --duet_draft_fan_out 2
 
 # Phase 9B hybrid sweep (K = K1 + K2 = speculate_k)
 # K=5 odd splits
-run "hybrid_k5_K1_2_K2_3_exit40" --k 5 --f 4 --mesa --mesa_exit_layer 40 --mesa_draft_fan_out 2 --mesa_phase1_k 2 --mesa_phase2_k 3
-run "hybrid_k5_K1_3_K2_2_exit40" --k 5 --f 4 --mesa --mesa_exit_layer 40 --mesa_draft_fan_out 2 --mesa_phase1_k 3 --mesa_phase2_k 2
+run "hybrid_k5_K1_2_K2_3_exit40" --k 5 --f 4 --duet --duet_exit_layer 40 --duet_draft_fan_out 2 --duet_phase1_k 2 --duet_phase2_k 3
+run "hybrid_k5_K1_3_K2_2_exit40" --k 5 --f 4 --duet --duet_exit_layer 40 --duet_draft_fan_out 2 --duet_phase1_k 3 --duet_phase2_k 2
 # K=6 balanced
-run "hybrid_k6_K1_3_K2_3_exit40" --k 6 --f 4 --mesa --mesa_exit_layer 40 --mesa_draft_fan_out 2 --mesa_phase1_k 3 --mesa_phase2_k 3
-run "hybrid_k6_K1_3_K2_3_exit47" --k 6 --f 4 --mesa --mesa_exit_layer 47 --mesa_draft_fan_out 2 --mesa_phase1_k 3 --mesa_phase2_k 3
+run "hybrid_k6_K1_3_K2_3_exit40" --k 6 --f 4 --duet --duet_exit_layer 40 --duet_draft_fan_out 2 --duet_phase1_k 3 --duet_phase2_k 3
+run "hybrid_k6_K1_3_K2_3_exit47" --k 6 --f 4 --duet --duet_exit_layer 47 --duet_draft_fan_out 2 --duet_phase1_k 3 --duet_phase2_k 3
 # K=8 balanced (validation config from 8B smoke)
-run "hybrid_k8_K1_4_K2_4_exit40" --k 8 --f 4 --mesa --mesa_exit_layer 40 --mesa_draft_fan_out 2 --mesa_phase1_k 4 --mesa_phase2_k 4
-run "hybrid_k8_K1_4_K2_4_exit47" --k 8 --f 4 --mesa --mesa_exit_layer 47 --mesa_draft_fan_out 2 --mesa_phase1_k 4 --mesa_phase2_k 4
+run "hybrid_k8_K1_4_K2_4_exit40" --k 8 --f 4 --duet --duet_exit_layer 40 --duet_draft_fan_out 2 --duet_phase1_k 4 --duet_phase2_k 4
+run "hybrid_k8_K1_4_K2_4_exit47" --k 8 --f 4 --duet --duet_exit_layer 47 --duet_draft_fan_out 2 --duet_phase1_k 4 --duet_phase2_k 4
 # Asymmetric K=8
-run "hybrid_k8_K1_2_K2_6_exit40" --k 8 --f 4 --mesa --mesa_exit_layer 40 --mesa_draft_fan_out 2 --mesa_phase1_k 2 --mesa_phase2_k 6
-run "hybrid_k8_K1_6_K2_2_exit40" --k 8 --f 4 --mesa --mesa_exit_layer 40 --mesa_draft_fan_out 2 --mesa_phase1_k 6 --mesa_phase2_k 2
+run "hybrid_k8_K1_2_K2_6_exit40" --k 8 --f 4 --duet --duet_exit_layer 40 --duet_draft_fan_out 2 --duet_phase1_k 2 --duet_phase2_k 6
+run "hybrid_k8_K1_6_K2_2_exit40" --k 8 --f 4 --duet --duet_exit_layer 40 --duet_draft_fan_out 2 --duet_phase1_k 6 --duet_phase2_k 2
 
 echo ""
 echo "===== SUMMARY ====="

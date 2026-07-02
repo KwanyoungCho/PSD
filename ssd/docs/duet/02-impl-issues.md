@@ -1,7 +1,7 @@
-# MESA-SSD 구현 이슈 트래커
+# DUET-SSD 구현 이슈 트래커
 
-원본은 `IMPL_ISSUE.md` (v1 구현 이슈), `MESA-rev1-problems.md` (Rev1 수정
-항목), `MESA-PHASE2-HYBRID-ISSUE.md` (Phase 2 hybrid 이슈) 세 파일이다.
+원본은 `IMPL_ISSUE.md` (v1 구현 이슈), `DUET-rev1-problems.md` (Rev1 수정
+항목), `DUET-PHASE2-HYBRID-ISSUE.md` (Phase 2 hybrid 이슈) 세 파일이다.
 시간순으로 통합.
 
 > **읽는 순서**: Part 1 (v1) → Part 2 (Rev1) → Part 3 (Phase 2 Hybrid).
@@ -55,7 +55,7 @@
 **실측 결과** (비어있는 GPU 기준, 10 seqs × 256 tokens):
 
 - Baseline: 149 tok/s
-- MESA: 84 tok/s (-43%)
+- DUET: 84 tok/s (-43%)
 
 **주 원인**: 2-pass tree decode 의 구조적 비용
 
@@ -72,7 +72,7 @@ layout-independent 한 것은 `glue_hit_np` / `glue_miss_np` (~0.1 ms) 뿐.
 #### ISSUE-005: Llama2-13B/70B triton 에러
 
 SSD KV cache copy 커널에서 `tl.arange(0, D)` — `D` 가 non-power-of-2
-이면 에러. Llama2-13B (hidden=5120, heads=40) 가 TP 분할 후 해당. MESA 와
+이면 에러. Llama2-13B (hidden=5120, heads=40) 가 TP 분할 후 해당. DUET 와
 무관한 SSD 자체 이슈. Llama2-7B (hidden=4096, heads=32) 로 대체.
 
 ### 계획 대비 달라진 점
@@ -87,17 +87,17 @@ SSD KV cache copy 커널에서 `tl.arange(0, D)` — `D` 가 non-power-of-2
 
 계획: `_build_tree_batch` 내부에서 glue decode 와 fork token 사이에 irecv.
 
-실제: `_build_tree_batch_mesa` 시작 시 irecv 를 가장 먼저 post (line
+실제: `_build_tree_batch_duet` 시작 시 irecv 를 가장 먼저 post (line
 1030). Target send 와의 overlap 최대화.
 
 **결과**: `proxy_wait = 0.0 ms` (완벽한 overlap).
 
 #### 3. _build_tree_batch 리팩토링 불완전
 
-계획: glue decode 로직을 분리하여 MESA 전용 경로로 재사용.
+계획: glue decode 로직을 분리하여 DUET 전용 경로로 재사용.
 
-실제: `_build_tree_batch` 를 그대로 호출하고 `_mesa_glue_logits` /
-`_mesa_gd_for_fork` 를 tree_decode_args 에 추가하여 반환. Full layout
+실제: `_build_tree_batch` 를 그대로 호출하고 `_duet_glue_logits` /
+`_duet_gd_for_fork` 를 tree_decode_args 에 추가하여 반환. Full layout
 tree_decode_args 가 불필요하게 구축됨 (~2 ms 낭비). Rev1 에서 `_glue_decode`
 분리로 정리.
 
@@ -111,7 +111,7 @@ draft / proxy pass 간 공유. Layout 변경 시 `cache.clear()` 추가로 해�
 계획: TreeLayout 생성 후 wrapper 생성.
 
 실제: `_init_flashinfer_wrappers()` 가 `ModelRunner.__init__()` 안에서
-호출되므로, config 값 (`mesa_draft_fan_out`, `mesa_proxy_fan_out`) 으로
+호출되므로, config 값 (`duet_draft_fan_out`, `duet_proxy_fan_out`) 으로
 직접 MQ_LEN 계산하여 wrapper 생성. Layout 객체는 이후 `_init_prealloc_buffers()`
 에서 생성.
 
@@ -130,7 +130,7 @@ dispatch. 간접적이지만 동작.
 실제: sentencepiece 설치 필요 + `use_fast=False` fallback 추가 + 13B 는
 triton 에러로 7B 사용.
 
-#### 8. mesa_budget_mode 파라미터 미구현
+#### 8. duet_budget_mode 파라미터 미구현
 
 계획: `token_swap` / `h_redistribute` / `outcome_posterior` 모드.
 
@@ -146,13 +146,13 @@ Policy A 로 `h_redistribute` 만 추가.
 
 #### 10. Hot path overhead 수정
 
-`mesa_enabled=False` 일 때 `_decode_tree_step` 과 `run_model` tree decode
-분기에서 불필요한 layout 체크 코드가 매 step 실행됨. `if self.config.mesa_enabled:`
+`duet_enabled=False` 일 때 `_decode_tree_step` 과 `run_model` tree decode
+분기에서 불필요한 layout 체크 코드가 매 step 실행됨. `if self.config.duet_enabled:`
 가드를 추가하여 기존 경로 보호.
 
 #### 11. 타이밍 코드 sync overhead
 
-`_build_tree_batch_mesa` 의 `torch.cuda.synchronize()` 8 개가 GPU
+`_build_tree_batch_duet` 의 `torch.cuda.synchronize()` 8 개가 GPU
 파이프라인을 깨뜨림. 제거 완료.
 
 ---
@@ -173,7 +173,7 @@ Policy A 로 `h_redistribute` 만 추가.
 
 ---
 
-## Part 3. Rev1 수정 대상 (`MESA-rev1-problems.md`)
+## Part 3. Rev1 수정 대상 (`DUET-rev1-problems.md`)
 
 ### 작업 순서 결정
 
@@ -199,7 +199,7 @@ Policy A 로 `h_redistribute` 만 추가.
 
 **위치**:
 
-- `ssd/config.py:100` (MESA 검증 블록)
+- `ssd/config.py:100` (DUET 검증 블록)
 - `ssd/engine/verifier.py:227` (`accept_probs[0]`)
 - `ssd/engine/draft_runner.py:1171` (단일 fan_out_list 사용)
 
@@ -217,17 +217,17 @@ cumprod = torch.cumprod(accept_probs[0], dim=0)  # [K] (B=1 scope)
 **영향**:
 
 - 현재 실험 전부 B=1 → correctness 문제 발현 안 됨
-- 누군가 `--b 2` 이상으로 MESA 돌리면 silent correctness bug
+- 누군가 `--b 2` 이상으로 DUET 돌리면 silent correctness bug
 - 결과 metric 은 나오지만 proxy 가 잘못 작동 → accept rate 하락
 
 **수정**:
 
 ```python
-# config.py MESA 검증 블록
-if self.mesa_enabled:
+# config.py DUET 검증 블록
+if self.duet_enabled:
     ...
     assert self.max_num_seqs == 1, \
-        "MESA Rev1 only supports B=1 (max_num_seqs=1); " \
+        "DUET Rev1 only supports B=1 (max_num_seqs=1); " \
         "Policy A uses accept_probs[0] as a single h_i distribution for the whole batch"
 ```
 
@@ -253,7 +253,7 @@ if self.mesa_enabled:
    "target 분포에서 유의미하지만 draft 는 놓친" 토큰.
 2. **Fallback** — draft logits 자체의 top-k. dedup 후 부족하면 여기서 채움.
 
-MESA 의 철학은 **"target 이 draft 에게 유용한 correction 을 알려준다"**.
+DUET 의 철학은 **"target 이 draft 에게 유용한 correction 을 알려준다"**.
 그런데 fallback 은:
 
 - Draft 가 이미 argmax / top-k 로 뽑아둔 것과 **같은 분포** 에서 추가로
@@ -262,7 +262,7 @@ MESA 의 철학은 **"target 이 draft 에게 유용한 correction 을 알려준
 - 이런 토큰을 tree 에 넣어봤자 target 이 선호할 가능성은 proxy 보다 현저히 낮음
 - 결과: 실효 tree 유효 branch 수가 줄어듦 → accept rate 저하
 
-**근본 원인**: target 의 `mesa_proxy_top_k` (default 3) 가 너무 작아서
+**근본 원인**: target 의 `duet_proxy_top_k` (default 3) 가 너무 작아서
 draft 가 부족분을 fallback 으로 채울 수밖에 없는 구조.
 
 #### 올바른 설계
@@ -271,7 +271,7 @@ draft 가 부족분을 fallback 으로 채울 수밖에 없는 구조.
 
 | 항목 | 현재 | 제안 |
 |------|:---:|:---:|
-| `mesa_proxy_top_k` default | 3 | **15** (또는 `pfo*(K+1) + dfo + 2`) |
+| `duet_proxy_top_k` default | 3 | **15** (또는 `pfo*(K+1) + dfo + 2`) |
 | Target residual.topk compute | top-3 | top-17 (~+50-100 µs GPU) |
 | NCCL payload (K=6) | 216 B | ~720 B |
 | Draft fallback path | proxy 부족 시 draft logits 사용 | **제거** |
@@ -281,7 +281,7 @@ draft 가 부족분을 fallback 으로 채울 수밖에 없는 구조.
 
 dedup 후 각 position 에서 `fo` 개의 unique 토큰이 필요. Worst case overlap:
 
-- `draft_set` 크기 = `mesa_draft_fan_out` (보통 1)
+- `draft_set` 크기 = `duet_draft_fan_out` (보통 1)
 - 겹침 최대 = `min(draft_fan_out, proxy_top_k)`
 - 최악: draft 의 모든 토큰이 proxy top-k 안에 있음 → unique proxy =
   `proxy_top_k - draft_fan_out`
@@ -298,15 +298,15 @@ dedup 후 각 position 에서 `fo` 개의 unique 토큰이 필요. Worst case ov
 **1단계 — 자동 산정 (config.py)**
 
 ```python
-if self.mesa_enabled:
-    pfo = self.mesa_proxy_fan_out
+if self.duet_enabled:
+    pfo = self.duet_proxy_fan_out
     K_plus_1 = self.speculate_k + 1
     max_possible_fo = pfo * K_plus_1
-    required_top_k = max_possible_fo + self.mesa_draft_fan_out + 2
-    if self.mesa_proxy_top_k < required_top_k:
-        print(f'[Config] mesa_proxy_top_k raised from {self.mesa_proxy_top_k} '
+    required_top_k = max_possible_fo + self.duet_draft_fan_out + 2
+    if self.duet_proxy_top_k < required_top_k:
+        print(f'[Config] duet_proxy_top_k raised from {self.duet_proxy_top_k} '
               f'to {required_top_k} (to eliminate draft fallback)')
-        self.mesa_proxy_top_k = required_top_k
+        self.duet_proxy_top_k = required_top_k
 ```
 
 `K=6, pfo=2` → `max_possible_fo = 14`, `required_top_k = 14+1+2 = 17`.
@@ -346,7 +346,7 @@ for pos in range(K):
 ```python
 if __debug__:
     assert len(selected) >= fo, \
-        f"MESA underfill: pos={pos} fo={fo} got={len(selected)} " \
+        f"DUET underfill: pos={pos} fo={fo} got={len(selected)} " \
         f"(proxy_top_k={proxy_top_k}, needed ≥ {fo + draft_fan_out})"
 ```
 
@@ -422,7 +422,7 @@ Timeline 에서 관찰:
 #### 수정 계획
 
 **Rev1 불변식**: Target 의 `_compute_and_send_proxy` 가 `fan_out_list`
-를 `sum(fan_out_list) == mesa_proxy_fan_out × (K+1)` 로 항상 맞춰서 전송.
+를 `sum(fan_out_list) == duet_proxy_fan_out × (K+1)` 로 항상 맞춰서 전송.
 따라서:
 
 - `step_proxy_layout.MQ_LEN == self.proxy_layout.MQ_LEN` (static class
@@ -478,13 +478,13 @@ def _decode_tree(self, payload, layout=None):
 #### 예상 이득
 
 - 매 step **−0.5~0.8 ms** (gap 제거)
-- 전체 MESA step **−1~2%**
+- 전체 DUET step **−1~2%**
 
 #### 왜 이 항목이 실질 중요한가
 
 `_decode_tree` 진입 setup 은 **Phase 2-only 구조적 비용** 이 아니라
-**Phase 1 에도 동일하게 걸리는 고정 오버헤드**. 즉 MESA 뿐 아니라 baseline
-에도 있는 비용이지만, MESA 는 Phase 1/2 를 **2 번** 거치므로 오버헤드가
+**Phase 1 에도 동일하게 걸리는 고정 오버헤드**. 즉 DUET 뿐 아니라 baseline
+에도 있는 비용이지만, DUET 는 Phase 1/2 를 **2 번** 거치므로 오버헤드가
 2 배.
 
 ---
@@ -563,7 +563,7 @@ _, all_accept_topk = torch.topk(logits_k, fan_out_list[K], dim=-1)
 - 메인 구현: ~40 LoC
 - 예상 소요: 2-3 시간
 - `phase2_build` 1.4 ms → **~0.4 ms**
-- 전체 MESA step ~1 ms 단축 → throughput **+1.5%**
+- 전체 DUET step ~1 ms 단축 → throughput **+1.5%**
 
 ---
 
@@ -591,7 +591,7 @@ A selection 에서 미사용.
 
 ---
 
-### #6 `run_mesa_verify_cudagraph` padding 5× `torch.cat` — DEFER
+### #6 `run_duet_verify_cudagraph` padding 5× `torch.cat` — DEFER
 
 **위치**: `cudagraph_helpers.py:1079-1092`
 
@@ -615,23 +615,23 @@ if wrapper_bs > orig_bs:
 
 ---
 
-### #8 Dead code 제거: `get_forked_recovery_tokens_from_logits(..., mesa_proxy=...)`
+### #8 Dead code 제거: `get_forked_recovery_tokens_from_logits(..., duet_proxy=...)`
 
 **위치**:
 
 - `ssd/utils/async_helpers/async_spec_helpers.py:26` (함수 시그니처)
-- `ssd/utils/async_helpers/async_spec_helpers.py:57-90` (mesa_proxy 분기)
+- `ssd/utils/async_helpers/async_spec_helpers.py:57-90` (duet_proxy 분기)
 
 **현재 상태**:
 
-- `draft_runner.py:786` 은 MESA off / async non-MESA 경로에서
-  `mesa_proxy=None` 으로 호출
-- MESA 경로는 `_build_tree_batch_mesa` → `_select_proxy_sourced_tokens_policy_a`
+- `draft_runner.py:786` 은 DUET off / async non-DUET 경로에서
+  `duet_proxy=None` 으로 호출
+- DUET 경로는 `_build_tree_batch_duet` → `_select_proxy_sourced_tokens_policy_a`
   직접 사용
-- 따라서 `async_spec_helpers.py:57-90` 의 `if mesa_proxy is not None:`
+- 따라서 `async_spec_helpers.py:57-90` 의 `if duet_proxy is not None:`
   블록은 **dead**
 
-**수정 (Option A — 보수적)**: `mesa_proxy` 분기 및 파라미터 완전 제거.
+**수정 (Option A — 보수적)**: `duet_proxy` 분기 및 파라미터 완전 제거.
 
 **작업량**: ~35 LoC 삭제 + signature 정리.
 
@@ -652,7 +652,7 @@ if wrapper_bs > orig_bs:
 
 **총 작업량**: 약 63 LoC 추가 + 35 LoC 제거 = **순 +28 LoC**
 
-**예상 MESA throughput 개선**: **+2-4%** (주로 #D, #1)
+**예상 DUET throughput 개선**: **+2-4%** (주로 #D, #1)
 
 **Accept rate 개선 예상**: +수 %p (#4 — fallback 제거, 모든 Phase-2
 branch 가 target-informed)
@@ -673,7 +673,7 @@ branch 가 target-informed)
 
 - `fan_idx` helper vectorize — B=1 에서 comprehension iter 1 회. 영향 없음
 - Hot-path 내부 import — Python import cache 로 사실상 비용 0
-- MESA profiling flush wiring — 1 generate / process 구조에서 이미 동작
+- DUET profiling flush wiring — 1 generate / process 구조에서 이미 동작
 - `phase1_build` / `phase2_build` label 세분화 — 측정 품질 개선이지만
   Rev1 마무리엔 불필요
 
@@ -683,7 +683,7 @@ branch 가 target-informed)
 
 # Part 5. Phase 2 Hybrid 구현 이슈
 
-`MESA-PHASE2-HYBRID-ISSUE.md` 의 issue tracker + 구현 중 발견된 모든 이슈를
+`DUET-PHASE2-HYBRID-ISSUE.md` 의 issue tracker + 구현 중 발견된 모든 이슈를
 시간순으로 통합. Step 1..9D 단위.
 
 ## 5.1 Phase 3b sub-staging (2026-04-26)
@@ -746,7 +746,7 @@ Plan 의 Phase 3 ("Phase 1 K1 split + hybrid Phase 2") 가 내부적으로 6 단
 
 - Hot path 흐름: Phase 1 → proxy recv/wait → phase2_build → hybrid →
   merge.
-- 기본 = hybrid (when `mesa_phase1_k != None`), fallback `SSD_FORCE_SPLIT_PHASE2=1`.
+- 기본 = hybrid (when `duet_phase1_k != None`), fallback `SSD_FORCE_SPLIT_PHASE2=1`.
 - Parity harness `SSD_HYBRID_PARITY=1` 디버그용 보존.
 - Native hybrid eager TPS 69.07 (split 86.94 대비 -20.6%) — CG 작업이
   필수임을 확인. → Step 9B 동기.
@@ -833,7 +833,7 @@ Python int 를 읽음 (sync 없음).
 
 ```python
 # After: hit_cache_and_respond
-if self.config.mesa_phase1_k is not None and valid_k.numel() > 0:
+if self.config.duet_phase1_k is not None and valid_k.numel() > 0:
     _vk_scalar = int(valid_k[0].item())   # 1 sync, hybrid only
 else:
     _vk_scalar = None                      # split path
@@ -864,13 +864,13 @@ graph.replay() 가 1 개 event 로 합쳐졌음. split 의 `phase2_replay × 5` 
 CG 경로 (`run_phase2_hybrid_cudagraph` in `cudagraph_helpers.py`):
 ```python
 for d in range(K2):
-    _mev_php = mesa_record(f"phase2_hybrid_prep_{bucket}")
+    _mev_php = duet_record(f"phase2_hybrid_prep_{bucket}")
     # KV plan + buffer copies
-    mesa_close(f"phase2_hybrid_prep_{bucket}", _mev_php)
+    duet_close(f"phase2_hybrid_prep_{bucket}", _mev_php)
 
-    _mev_phr = mesa_record(f"phase2_hybrid_replay_{bucket}")
+    _mev_phr = duet_record(f"phase2_hybrid_replay_{bucket}")
     graph.replay()
-    mesa_close(f"phase2_hybrid_replay_{bucket}", _mev_phr)
+    duet_close(f"phase2_hybrid_replay_{bucket}", _mev_phr)
 ```
 
 eager fallback (`_decode_phase2_hybrid`): 동일 패턴 (`_eager_prep_*`,

@@ -13,7 +13,7 @@ from ssd.engine.helpers.cudagraph_helpers import flush_draft_profile
 
 PROFILE_DRAFT = os.environ.get("SSD_PROFILE_DRAFT", "0") == "1"
 
-# Split-only K1/K2 mode (per docs/mesa/04-split-k1k2-design.md):
+# Split-only K1/K2 mode (per docs/duet/04-split-k1k2-design.md):
 #   - Draft pass = K1 forwards → draft-sourced rows of depth K1
 #   - Proxy pass = K2 forwards → proxy-sourced rows of depth K2
 #   - NO continuation. valid_k space = {K1, K2}.
@@ -53,10 +53,10 @@ class DraftRunner(ModelRunner):
             self._reset_tree_cache_tensors()
             self._init_prealloc_buffers()
             self._draft_step_times = []
-            # MESA: capture draft/proxy layout CudaGraphs.
+            # DUET: capture draft/proxy layout CudaGraphs.
             # Phase 3 (K1 split): also capture phase1_layout_long (K=K1 forwards,
             # same MQ_LEN as draft so capture shape is identical).
-            if self.config.mesa_enabled and not self.enforce_eager:
+            if self.config.duet_enabled and not self.enforce_eager:
                 from ssd.engine.helpers.cudagraph_helpers import (
                     capture_fi_tree_decode_cudagraph,
                     capture_phase2_hybrid_cudagraph,
@@ -86,14 +86,14 @@ class DraftRunner(ModelRunner):
                     self.graph_pools[_layout.graph_key] = _pool
                     self.graphs[_layout.graph_key] = _graphs
                     self.graph_bs_list[_layout.graph_key] = _bs
-                print(f'[MESA] Captured FI tree decode CudaGraphs ({len(_layouts_to_capture)} layouts)', flush=True)
+                print(f'[DUET] Captured FI tree decode CudaGraphs ({len(_layouts_to_capture)} layouts)', flush=True)
 
                 # Phase 9B-1: capture phase2_hybrid CG for both buckets.
                 # Skipped in split-only K1/K2 mode (split path doesn't use them).
-                if self.config.mesa_phase1_k is not None and not SPLIT_K1K2_MODE:
+                if self.config.duet_phase1_k is not None and not SPLIT_K1K2_MODE:
                     _hybrid_cg_buckets = [
-                        ("long", self.config.mesa_phase1_k + self.config.mesa_phase2_k),
-                        ("short", self.config.mesa_phase2_k),
+                        ("long", self.config.duet_phase1_k + self.config.duet_phase2_k),
+                        ("short", self.config.duet_phase2_k),
                     ]
                     for _bk, _Kstep in _hybrid_cg_buckets:
                         _key = f"phase2_hybrid_{_bk}_cg"
@@ -105,7 +105,7 @@ class DraftRunner(ModelRunner):
                         self.graph_vars[_key] = _gv2
                         self.graph_pools[_key] = _pool2
                         self.graphs[_key] = _g2
-                    print(f'[MESA hybrid] Captured phase2_hybrid CGs '
+                    print(f'[DUET hybrid] Captured phase2_hybrid CGs '
                           f'({len(_hybrid_cg_buckets)} buckets)', flush=True)
             print(f'DraftRunner set up, starting draft_loop', flush=True)
             self.draft_loop()
@@ -170,8 +170,8 @@ class DraftRunner(ModelRunner):
         self.tree_cache_tokens = None
         self.tree_cache_logits = None
         self.tree_cache_activations = None
-        # MESA: keys[:_last_n_draft_keys] = phase 1 (draft-sourced),
-        # keys[_last_n_draft_keys:] = phase 2 (proxy-sourced). 0 = non-MESA / not yet populated.
+        # DUET: keys[:_last_n_draft_keys] = phase 1 (draft-sourced),
+        # keys[_last_n_draft_keys:] = phase 2 (proxy-sourced). 0 = non-DUET / not yet populated.
         self._last_n_draft_keys = 0
         # Per-row valid_k. Phase 1 (Phase 2 hybrid plan) Phase 4 will populate this with
         # K_long for draft-sourced rows and K_short for proxy-sourced rows. For now,
@@ -188,7 +188,7 @@ class DraftRunner(ModelRunner):
         self._arange_kp1 = torch.arange(K + 1, device=d, dtype=torch.int64)
         self._arange_2kp1 = torch.arange(2 * K + 1, device=d, dtype=torch.int64)
 
-        # full_layout: 기존 SSD용 (non-MESA + MESA 비활성)
+        # full_layout: 기존 SSD용 (non-DUET + DUET 비활성)
         self.full_layout = create_tree_layout(
             name="full",
             fan_out_list=self.config.fan_out_list,
@@ -202,14 +202,14 @@ class DraftRunner(ModelRunner):
         self._fan_idx_miss = self.full_layout.fan_idx_miss
         self._arange_mq = self.full_layout.arange_mq
 
-        # MESA: draft_layout + proxy_layout (legacy two-pass).
-        # Phase 2 hybrid (`docs/mesa/01-design.md Part 5` Phase 3b):
+        # DUET: draft_layout + proxy_layout (legacy two-pass).
+        # Phase 2 hybrid (`docs/duet/01-design.md Part 5` Phase 3b):
         # additionally creates `phase1_layout_long` / `phase1_layout_short` if
-        # `mesa_phase1_k` / `mesa_phase2_k` are set in config. These have
+        # `duet_phase1_k` / `duet_phase2_k` are set in config. These have
         # forward_depth = K1 (config) and position_count = K_long+1 / K_short+1.
-        if self.config.mesa_enabled:
-            draft_fo = self.config.mesa_draft_fan_out
-            proxy_fo = self.config.mesa_proxy_fan_out
+        if self.config.duet_enabled:
+            draft_fo = self.config.duet_draft_fan_out
+            proxy_fo = self.config.duet_proxy_fan_out
             self.draft_layout = create_tree_layout(
                 name="draft",
                 fan_out_list=[draft_fo] * (K + 1),
@@ -229,7 +229,7 @@ class DraftRunner(ModelRunner):
             # the incoming valid_k bucket; long-hit uses K_long+1.
             self.proxy_layout_short_long = None   # long-hit bucket: pos=K_long+1, K=K2
             self.proxy_layout_short_short = None  # short-hit bucket: pos=K_short+1, K=K2
-            # Split-only K1/K2 mode layouts (per docs/mesa/04-split-k1k2-design.md):
+            # Split-only K1/K2 mode layouts (per docs/duet/04-split-k1k2-design.md):
             #   - split_k1_long  : K=K1, position_count=K1+1 (draft pass, valid_k=K1 hit / miss)
             #   - split_k1_short : K=K1, position_count=K2+1 (draft pass, valid_k=K2 hit; K2<=K1 only)
             #   - split_k2       : K=K2, position_count=K2+1 (proxy pass)
@@ -237,9 +237,9 @@ class DraftRunner(ModelRunner):
             self.split_k1_long_layout = None
             self.split_k1_short_layout = None
             self.split_k2_layout = None
-            if self.config.mesa_phase1_k is not None:
-                K1 = self.config.mesa_phase1_k
-                K2 = self.config.mesa_phase2_k
+            if self.config.duet_phase1_k is not None:
+                K1 = self.config.duet_phase1_k
+                K2 = self.config.duet_phase2_k
                 K_long = K1 + K2  # = speculate_k
                 K_short = K2
                 # Hybrid phase1/proxy_short layouts — skipped in split-only
@@ -270,39 +270,39 @@ class DraftRunner(ModelRunner):
                         fan_out_list_miss=[proxy_fo] * (K_short + 1),
                         K=K2, device=d, position_count=K_short + 1,
                     )
-                    print(f'[MESA hybrid] phase1 layouts: '
+                    print(f'[DUET hybrid] phase1 layouts: '
                           f'long MQ_LEN={self.phase1_layout_long.MQ_LEN} (K1={K1}, pos={K_long + 1}), '
                           f'short MQ_LEN={self.phase1_layout_short.MQ_LEN} (K1={K1}, pos={K_short + 1})',
                           flush=True)
-                    print(f'[MESA hybrid] proxy_short layouts: '
+                    print(f'[DUET hybrid] proxy_short layouts: '
                           f'long MQ_LEN={self.proxy_layout_short_long.MQ_LEN} (K2={K2}, pos={K_long + 1}), '
                           f'short MQ_LEN={self.proxy_layout_short_short.MQ_LEN} (K2={K2}, pos={K_short + 1})',
                           flush=True)
                 # Split-only K1/K2 mode: phase1 long/short bucket dispatch
-                # (per docs/mesa/04-split-k1k2-design.md). Supports K2 <= K1 only.
+                # (per docs/duet/04-split-k1k2-design.md). Supports K2 <= K1 only.
                 if SPLIT_K1K2_MODE:
                     # Hard check (assert is stripped under python -O).
                     if K2 > K1:
                         raise ValueError(
                             f"split-K1K2 mode requires K2 <= K1, got K1={K1}, K2={K2}. "
                             f"K2>K1 is not supported (proxy_horizon tail source undefined). "
-                            f"See docs/mesa/04-split-k1k2-design.md."
+                            f"See docs/duet/04-split-k1k2-design.md."
                         )
                     # Phase 1 fan_out_list (non-uniform supported).
                     # Phase 2 always uniform proxy_fo per position (Phase 2 selection
                     # logic / target proxy compute is uniform; non-uniform Phase 2
                     # would need policy-based dynamic fan_out — separate design).
-                    _p1_fol_user = self.config.mesa_split_phase1_fan_out_list
+                    _p1_fol_user = self.config.duet_split_phase1_fan_out_list
                     if _p1_fol_user is not None:
                         if len(_p1_fol_user) != K1 + 1:
                             raise ValueError(
-                                f"mesa_split_phase1_fan_out_list len={len(_p1_fol_user)} "
+                                f"duet_split_phase1_fan_out_list len={len(_p1_fol_user)} "
                                 f"must equal K1+1={K1 + 1}, got {_p1_fol_user}"
                             )
                         _p1_fol_long = list(_p1_fol_user)
                     else:
                         _p1_fol_long = [draft_fo] * (K1 + 1)
-                    if self.config.mesa_split_phase2_fan_out_list is not None:
+                    if self.config.duet_split_phase2_fan_out_list is not None:
                         raise NotImplementedError(
                             "split-K1/K2 Phase 2 non-uniform fan_out is not supported "
                             "(Phase 2 selection is uniform; would need policy-based "
@@ -325,7 +325,7 @@ class DraftRunner(ModelRunner):
                             K=K1, device=d, position_count=K2 + 1,
                         )
                     # Phase 2 layout — capture-time placeholder for unified Policy B.
-                    # docs/mesa/05-policy-b-fix.md Section 3.7 (옵션 A-1):
+                    # docs/duet/05-policy-b-fix.md Section 3.7 (옵션 A-1):
                     #   K = K2 (forward depth, fixed)
                     #   MQ_LEN = pfo*(K_max+1) (worst-case sizing)
                     #   position_count / fan_out_list updated per-step in caller.
@@ -342,7 +342,7 @@ class DraftRunner(ModelRunner):
                         if self.split_k1_short_layout is not None else
                         'split_k1_short SKIPPED (K1==K2, long bucket reused), '
                     )
-                    print(f'[MESA split-K1K2] layouts: '
+                    print(f'[DUET split-K1K2] layouts: '
                           f'split_k1_long MQ={self.split_k1_long_layout.MQ_LEN} (K=K1={K1}, pos={K1+1}), '
                           f'{_short_str}'
                           f'split_k2 MQ={self.split_k2_layout.MQ_LEN} (K=K2={K2}, pos={K2+1})',
@@ -352,7 +352,7 @@ class DraftRunner(ModelRunner):
                 # HybridPhase2Plan / 5-region scratch / phase2_hybrid CG).
                 if SPLIT_K1K2_MODE:
                     self.hybrid_phase2_plan = None
-                    print('[MESA split-K1K2] hybrid_phase2_plan / 5-region scratch: SKIPPED', flush=True)
+                    print('[DUET split-K1K2] hybrid_phase2_plan / 5-region scratch: SKIPPED', flush=True)
                 else:
                     from ssd.engine.helpers.hybrid_phase2_plan import HybridPhase2Plan
                     _max_pages = self.config.max_blocks
@@ -368,14 +368,14 @@ class DraftRunner(ModelRunner):
                     )
                     self.hybrid_phase2_plan = HybridPhase2Plan.create(
                         K1=K1, K2=K2,
-                        mesa_draft_fan_out=draft_fo,
-                        mesa_proxy_fan_out=proxy_fo,
+                        duet_draft_fan_out=draft_fo,
+                        duet_proxy_fan_out=proxy_fo,
                         max_pages_per_row=_max_pages,
                         max_packed_mask_size=_max_mask_size,
                         max_L=_max_L,
                         device=d,
                     )
-                    print(f'[MESA hybrid] HybridPhase2Plan allocated: K_long={K_long}, '
+                    print(f'[DUET hybrid] HybridPhase2Plan allocated: K_long={K_long}, '
                           f'K_short={K2}, max_total_rows={_max_total}, '
                           f'max_pages={_max_pages}', flush=True)
 
@@ -407,26 +407,26 @@ class DraftRunner(ModelRunner):
                         f"Hybrid 5-region scratch needs {_hybrid_required_slots} slots "
                         f"but scheduler reserves only {_reserved_slots}."
                     )
-                    print(f'[MESA hybrid] 5-region scratch layout: '
+                    print(f'[DUET hybrid] 5-region scratch layout: '
                           f'glue={self.hybrid_glue_slot_count} '
                           f'phase1_kv={self.hybrid_phase1_slot_count} '
                           f'a_tail={self.hybrid_a_tail_slot_count} '
                           f'b_proxy={self.hybrid_b_proxy_slot_count} '
                           f'(required={_hybrid_required_slots}/reserved={_reserved_slots})',
                           flush=True)
-            print(f'[MESA] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
+            print(f'[DUET] TreeLayouts: full MQ_LEN={self.full_layout.MQ_LEN}, '
                   f'draft MQ_LEN={self.draft_layout.MQ_LEN}, '
                   f'proxy MQ_LEN={self.proxy_layout.MQ_LEN}', flush=True)
 
         # #D Pre-allocate spec buffers for _decode_tree (per-step 8 MB alloc/zero-fill 제거).
         # Rev1 invariant: sum(fan_out_list) 항상 고정 (proxy_fan_out × (K+1)).
         # 따라서 runtime proxy layout의 MQ_LEN ≡ self.proxy_layout.MQ_LEN (static).
-        # B=1이므로 N = max_mq. EAGLE은 MESA와 함께 안 쓰임 (config assert).
+        # B=1이므로 N = max_mq. EAGLE은 DUET와 함께 안 쓰임 (config assert).
         #
-        # MESA는 Phase 1, 2 결과를 동시에 보관해야 merge 가능 → **슬롯 2개** 준비.
+        # DUET는 Phase 1, 2 결과를 동시에 보관해야 merge 가능 → **슬롯 2개** 준비.
         # Baseline은 슬롯 1개만 사용.
         mq_list = [self.full_layout.MQ_LEN]
-        if self.config.mesa_enabled:
+        if self.config.duet_enabled:
             mq_list.extend([self.draft_layout.MQ_LEN, self.proxy_layout.MQ_LEN])
         # Include split-K1/K2 layouts — non-uniform Phase 1 list can have
         # sum(_p1_list) > uniform draft_layout.MQ_LEN, undersizing spec
@@ -442,7 +442,7 @@ class DraftRunner(ModelRunner):
         H = self.hf_config.hidden_size
         dt = self.hf_config.torch_dtype
 
-        n_slots = 2 if self.config.mesa_enabled else 1
+        n_slots = 2 if self.config.duet_enabled else 1
         self._spec_tokens_bufs = [
             torch.empty((max_N, K), dtype=torch.int64, device=d) for _ in range(n_slots)
         ]
@@ -490,9 +490,9 @@ class DraftRunner(ModelRunner):
         # init — speculator slices to valid_k+1=K_max+1 anyway, dropping them.
         # This saves K2 wasted forwards per miss step (K_max=K1, K_long=K1+K2).
         _jit_K = self.config.speculate_k
-        if SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
-            _K1c = self.config.mesa_phase1_k
-            _K2c = self.config.mesa_phase2_k
+        if SPLIT_K1K2_MODE and self.config.duet_phase1_k is not None:
+            _K1c = self.config.duet_phase1_k
+            _K2c = self.config.duet_phase2_k
             _jit_K = _K1c if _K1c >= _K2c else _K2c  # = K_max
         for i in range(_jit_K): # we're going to glue after this anyways, and by sending the spec request target has verified we have K more slots left in our last page
             set_context(
@@ -535,18 +535,18 @@ class DraftRunner(ModelRunner):
         out_logits = torch.empty((B, K, V), dtype=self.hf_config.torch_dtype, device=self.device).uniform_()
         out_tokens = out_logits.argmax(dim=-1)
         cache_hits = torch.zeros(B, dtype=torch.int64, device=self.device)
-        # Per-row valid_k: defaults to K (= K_long for MESA / speculate_k for non-MESA).
+        # Per-row valid_k: defaults to K (= K_long for DUET / speculate_k for non-DUET).
         # Phase 4 will override per-row to K_short for proxy-sourced hits.
         # Phase 5 will set miss/JIT path to K_short as well.
-        # Split-only K1/K2 mode (per docs/mesa/04-split-k1k2-design.md):
+        # Split-only K1/K2 mode (per docs/duet/04-split-k1k2-design.md):
         # default valid_k = K_max = max(K1, K2). Cache-hit overwrites with the
         # row's own valid_k (∈ {K1, K2}). NEVER use K_long here in this mode.
         if (
             SPLIT_K1K2_MODE
-            and self.config.mesa_phase1_k is not None
+            and self.config.duet_phase1_k is not None
         ):
-            K1 = self.config.mesa_phase1_k
-            K2 = self.config.mesa_phase2_k
+            K1 = self.config.duet_phase1_k
+            K2 = self.config.duet_phase2_k
             K_max = K1 if K1 >= K2 else K2
             valid_k = torch.full((B,), K_max, dtype=torch.int64, device=self.device)
         else:
@@ -569,8 +569,8 @@ class DraftRunner(ModelRunner):
                 rec_text = self.tokenizer.decode([rec_token])
                 print(f"  Req {i}: token={rec_token} ('{rec_text}')", flush=True)
         
-        # MESA-only: per-seq phase classification (0=miss, 1=phase 1 draft, 2=phase 2 proxy).
-        # All zeros for non-MESA — verifier silently accumulates 0s and reports 0 phase rates.
+        # DUET-only: per-seq phase classification (0=miss, 1=phase 1 draft, 2=phase 2 proxy).
+        # All zeros for non-DUET — verifier silently accumulates 0s and reports 0 phase rates.
         phase_source = torch.zeros(B, dtype=torch.int64, device=self.device)
         if self.tree_cache_keys.numel() > 0:
             # Vectorized membership against tensor cache
@@ -578,7 +578,7 @@ class DraftRunner(ModelRunner):
             match = torch.all(eq, dim=2)  # [B,T]
             cache_hits = match.any(dim=1)  # [B]
 
-            if self.config.mesa_enabled and self._last_n_draft_keys > 0:
+            if self.config.duet_enabled and self._last_n_draft_keys > 0:
                 _hit_idx = match.float().argmax(dim=1).to(torch.int64)
                 _is_phase1 = cache_hits & (_hit_idx < self._last_n_draft_keys)
                 phase_source = torch.where(_is_phase1, torch.full_like(phase_source, 1),
@@ -667,17 +667,17 @@ class DraftRunner(ModelRunner):
         # Step 9B-0: glue input width follows valid_k (long-hit=K_long+1,
         # short-hit=K_short+1). B=1 invariant lets us pass a scalar.
         # Sync valid_k to Python ONLY when hybrid mode actually needs the
-        # per-step bucket dispatch. Split / pure-MESA: width is always
+        # per-step bucket dispatch. Split / pure-DUET: width is always
         # K_long; pass None so make_glue_decode_input_ids defaults to it
         # without forcing a CUDA stream flush. Returned as the 8th element
         # so downstream callers (_glue_decode, _decode_speculate_async)
         # avoid re-syncing the same value.
-        if self.config.mesa_phase1_k is not None and valid_k.numel() > 0:
+        if self.config.duet_phase1_k is not None and valid_k.numel() > 0:
             _vk_scalar = int(valid_k[0].item())
         else:
             _vk_scalar = None
         _profile_cache_status = None
-        if os.environ.get("SSD_PROFILE_MESA", "0") == "1" and cache_hits is not None:
+        if os.environ.get("SSD_PROFILE_DUET", "0") == "1" and cache_hits is not None:
             if B == 1:
                 _hit = int(cache_hits[0].item())
                 if _hit == 0:
@@ -698,9 +698,9 @@ class DraftRunner(ModelRunner):
                     else "mixed"
                 )
         # ===== TRACE point 1: hit_cache_and_respond boundary =====
-        if TRACE_SPLIT_K1K2 and SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
-            K1 = self.config.mesa_phase1_k
-            K2 = self.config.mesa_phase2_k
+        if TRACE_SPLIT_K1K2 and SPLIT_K1K2_MODE and self.config.duet_phase1_k is not None:
+            K1 = self.config.duet_phase1_k
+            K2 = self.config.duet_phase2_k
             K_max = K1 if K1 >= K2 else K2
             _vk_list = valid_k.tolist() if valid_k is not None else None
             _hits_list = cache_hits.tolist()
@@ -722,10 +722,10 @@ class DraftRunner(ModelRunner):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
         # Phase B: meta wire is [B, K, F, step_id]. step_id is the per-target
         # spec request id; we set it on the profiler context so all draft
-        # spans for this request inherit it. See docs/mesa/06 §4.4.
+        # spans for this request inherit it. See docs/duet/06 §4.4.
         from ssd.engine.helpers.cudagraph_helpers import (
-            mesa_record as _mr_dr, mesa_close as _mc_dr,
-            mesa_set_context as _mctx_dr, mesa_clear_status as _mclr_dr,
+            duet_record as _mr_dr, duet_close as _mc_dr,
+            duet_set_context as _mctx_dr, duet_clear_status as _mclr_dr,
         )
         _mev_dr = _mr_dr("draft_recv_request")
         meta = self.recv_tensor((4,), torch.int64)
@@ -789,10 +789,10 @@ class DraftRunner(ModelRunner):
                 print(f"{'='*80}\n", flush=True)
 
         # Close draft_recv_request after the last payload recv (fused + EAGLE
-        # if applicable). docs/mesa/06 §4.5.
+        # if applicable). docs/duet/06 §4.5.
         _mc_dr("draft_recv_request", _mev_dr)
 
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_h, mesa_close as _mc_h
+        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_h, duet_close as _mc_h
         _mev_hc = _mr_h("hit_cache_respond")
         (
             out_tokens, out_logits, glue_decode_input_ids, cache_hits,
@@ -825,7 +825,7 @@ class DraftRunner(ModelRunner):
                                     phase_source.reshape(-1),
                                     valid_k.reshape(-1).to(torch.int64),
                                     out_tokens.reshape(-1).to(torch.int64)])
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_s, mesa_close as _mc_s
+        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_s, duet_close as _mc_s
         _mev_ds = _mr_s("draft_send_response")
         dist.send(fused_response, dst=0, group=self.async_pg)
         dist.send(out_logits[:, :K, :].contiguous(), dst=0, group=self.async_pg)
@@ -845,9 +845,9 @@ class DraftRunner(ModelRunner):
             "extend_token_ids": extend_token_ids,
             # Step 9A: per-row valid_k from previous step's matched cache row
             # (or K_long fallback for misses). Drives glue / phase1 / proxy /
-            # hybrid layout dispatch in _build_tree_batch_mesa.
+            # hybrid layout dispatch in _build_tree_batch_duet.
             "valid_k": valid_k,
-            # Pre-sync'd Python int (hybrid mode) or None (split / pure-MESA).
+            # Pre-sync'd Python int (hybrid mode) or None (split / pure-DUET).
             # Lets _glue_decode and the main hot path skip redundant .item()
             # syncs — the .item() that produced this scalar happened once
             # inside hit_cache_and_respond above.
@@ -987,7 +987,7 @@ class DraftRunner(ModelRunner):
         N = rec_flat.shape[0]
         cache_hits = partial_tree_decode_args["cache_hits"]
 
-        _layout = self.full_layout  # _construct_tree_decode_args is only used in non-MESA path
+        _layout = self.full_layout  # _construct_tree_decode_args is only used in non-DUET path
         if __debug__:
             assert N == B*_layout.MQ_LEN, f"ERROR in _construct_tree_decode_args: N should be B*MQ_LEN={B*_layout.MQ_LEN}, got {N}"
 
@@ -1028,8 +1028,8 @@ class DraftRunner(ModelRunner):
         Returns: (glue_logits [B, valid_k+1, V], gd_for_fork [B, valid_k+1],
                   cache_hits, cache_hits_list, dbt, B)
         """
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record, mesa_close
-        _mev_glue = mesa_record("glue")
+        from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
+        _mev_glue = duet_record("glue")
         dbt = partial_tree_decode_args["dbt"]
         cache_hits = partial_tree_decode_args["cache_hits"]
         cache_hits_list = cache_hits.tolist()
@@ -1040,14 +1040,14 @@ class DraftRunner(ModelRunner):
 
         # Step 9B-0: glue width follows valid_k. Read the pre-sync'd Python
         # scalar that hit_cache_and_respond stashed in partial_tree_decode_args
-        # — None means split / pure-MESA path, default to K_long. No new
+        # — None means split / pure-DUET path, default to K_long. No new
         # GPU→CPU sync here.
         _vk_glue = partial_tree_decode_args.get("valid_k_scalar")
         if _vk_glue is None:
             # Split-only K1/K2 mode: default = K_max, NOT K_long.
-            if SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
-                K1 = self.config.mesa_phase1_k
-                K2 = self.config.mesa_phase2_k
+            if SPLIT_K1K2_MODE and self.config.duet_phase1_k is not None:
+                K1 = self.config.duet_phase1_k
+                K2 = self.config.duet_phase2_k
                 _vk_glue = K1 if K1 >= K2 else K2
             else:
                 _vk_glue = self.config.speculate_k
@@ -1081,7 +1081,7 @@ class DraftRunner(ModelRunner):
         glue_decode_logits = glue_decode_logits_flat.view(B, K + 1, -1)
         gd_for_fork = glue_decode_input_ids.reshape(B, K + 1)
 
-        mesa_close("glue", _mev_glue)
+        duet_close("glue", _mev_glue)
         return glue_decode_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B
 
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
@@ -1172,7 +1172,7 @@ class DraftRunner(ModelRunner):
             )
 
         # Pre-compute tree decode args (overlap CPU with GPU)
-        # Uses full_layout for non-MESA path. MESA path uses _build_tree_batch_mesa() instead.
+        # Uses full_layout for non-DUET path. DUET path uses _build_tree_batch_duet() instead.
         _layout = self.full_layout
         _pre_b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, _layout.MQ_LEN).flatten()
         _pre_fkp1_flat = _layout.arange_mq.repeat(B)
@@ -1185,7 +1185,7 @@ class DraftRunner(ModelRunner):
         _pre_temperatures = partial_tree_decode_args["temperatures"][_pre_b_flat]
 
         # --- Run glue decode forward ---
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_g, mesa_close as _mc_g
+        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_g, duet_close as _mc_g
         _mev_gb = _mr_g("glue")
         set_context(
             is_prefill=False,
@@ -1270,10 +1270,10 @@ class DraftRunner(ModelRunner):
             "cache_hits_list": cache_hits_list,
         }
         tree_decode_args["hidden_states"] = tree_hidden_states
-        # MESA: store glue_decode_logits and gd_for_fork for proxy token swap
-        if self.config.mesa_enabled:
-            tree_decode_args["_mesa_glue_logits"] = glue_decode_logits  # [B, K+1, V]
-            tree_decode_args["_mesa_gd_for_fork"] = gd_for_fork          # [B, K+1]
+        # DUET: store glue_decode_logits and gd_for_fork for proxy token swap
+        if self.config.duet_enabled:
+            tree_decode_args["_duet_glue_logits"] = glue_decode_logits  # [B, K+1, V]
+            tree_decode_args["_duet_gd_for_fork"] = gd_for_fork          # [B, K+1]
         return tree_decode_args
 
     @torch.inference_mode()
@@ -1299,7 +1299,7 @@ class DraftRunner(ModelRunner):
 
     def _decode_tree_step(self, depth, current_input_ids, step_rope_positions, step_slot_maps, step_context_lens, dbt, payload, spec_tokens, spec_logits, spec_activations):
         """Execute a single tree decode step."""
-        if self.config.mesa_enabled:
+        if self.config.duet_enabled:
             _layout = payload.get("_active_layout")
             _active_mq = _layout.MQ_LEN if _layout and _layout.name != "full" else None
             _active_wrappers = None
@@ -1352,7 +1352,7 @@ class DraftRunner(ModelRunner):
 
         V = self.hf_config.vocab_size
         # #D: slice pre-allocated buffers (no per-step alloc / zero-fill).
-        # MESA는 Phase 1/2 결과를 merge까지 보관해야 하므로 슬롯 2개 round-robin.
+        # DUET는 Phase 1/2 결과를 merge까지 보관해야 하므로 슬롯 2개 round-robin.
         # _decode_tree_step fully overwrites spec_tokens[:, depth] and spec_logits[:, depth, :]
         # per iter over all K depths → garbage init OK.
         n_slots = len(self._spec_tokens_bufs)
@@ -1418,8 +1418,8 @@ class DraftRunner(ModelRunner):
         self.tree_cache_tokens = tokens
         self.tree_cache_logits = logits
         self.tree_cache_activations = activations
-        # Phase 1 plumbing: every row in the non-MESA / legacy populate path is
-        # treated as full-K (= K_long for MESA, speculate_k otherwise). Phase 4
+        # Phase 1 plumbing: every row in the non-DUET / legacy populate path is
+        # treated as full-K (= K_long for DUET, speculate_k otherwise). Phase 4
         # of hybrid will distinguish K_long vs K_short per row.
         self.tree_cache_valid_k = torch.full(
             (keys.shape[0],), self.config.speculate_k,
@@ -1454,41 +1454,41 @@ class DraftRunner(ModelRunner):
             print(f"{'='*80}\n", flush=True)
 
     # ============================================================
-    # MESA-SSD: 2-pass tree decode methods
+    # DUET-SSD: 2-pass tree decode methods
     # ============================================================
 
-    def _irecv_mesa_proxy(self, B, K):
+    def _irecv_duet_proxy(self, B, K):
         """Post non-blocking recv for proxy. Returns (work, buffer).
 
-        Wire schema branches by policy (docs/mesa/05-policy-b-fix.md):
+        Wire schema branches by policy (docs/duet/05-policy-b-fix.md):
           - Policy "b" (default, unified K+1): chosen_pos[wire_N] + chosen_tok[wire_N]
           - Policy "a" (legacy, dead): fan_out_list[K+1] + topk_ids[B*K*top_k] + topk_probs[B*K*top_k]
         """
         import torch.distributed as dist
-        if self.config.mesa_policy == "b":
-            wire_N = self.config.mesa_proxy_wire_N
+        if self.config.duet_policy == "b":
+            wire_N = self.config.duet_proxy_wire_N
             total_len = 2 * wire_N
         else:
-            top_k = self.config.mesa_proxy_top_k
+            top_k = self.config.duet_proxy_top_k
             total_len = (K + 1) + B * K * top_k + B * K * top_k
         buf = torch.empty(total_len, dtype=torch.int64, device=self.device)
         work = dist.irecv(buf, src=0, group=self.async_pg)
         return work, buf
 
-    def _unpack_mesa_proxy(self, buf, B, K):
+    def _unpack_duet_proxy(self, buf, B, K):
         """Unpack proxy data from irecv buffer.
 
         Returns dict whose keys depend on policy:
           - "b": {"chosen_pos": [wire_N], "chosen_tok": [wire_N]}
           - "a": {"fan_out_list", "topk_ids", "topk_probs"} (legacy)
         """
-        if self.config.mesa_policy == "b":
-            wire_N = self.config.mesa_proxy_wire_N
+        if self.config.duet_policy == "b":
+            wire_N = self.config.duet_proxy_wire_N
             chosen_pos = buf[:wire_N]
             chosen_tok = buf[wire_N:2 * wire_N]
             return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
         # Legacy path (dead — Policy A retained for emergency rollback)
-        top_k = self.config.mesa_proxy_top_k
+        top_k = self.config.duet_proxy_top_k
         off = 0
         fan_out_list = buf[off:off + (K + 1)].tolist()  # [K+1] ints
         off += K + 1
@@ -1558,7 +1558,7 @@ class DraftRunner(ModelRunner):
         step_rope_offsets, graph_key, name) stay; only fan_out-derived
         tensors and position_count update.
 
-        See docs/mesa/05-policy-b-fix.md Section 3.7 + Fix ④.
+        See docs/duet/05-policy-b-fix.md Section 3.7 + Fix ④.
 
         Args:
             fan_out_tensor: [K_rank+1] int64 GPU tensor; sum == total_budget.
@@ -1589,17 +1589,17 @@ class DraftRunner(ModelRunner):
         return layout
 
     @staticmethod
-    def _select_proxy_sourced_tokens_unified(mesa_proxy, draft_forked,
+    def _select_proxy_sourced_tokens_unified(duet_proxy, draft_forked,
                                               K_rank, total_budget,
                                               draft_forked_mask=None):
         """K+1 unified Policy B selector. Static (does not use self) so unit
         tests can call it directly via DraftRunner._select_proxy_sourced_tokens_unified
         without instance setup.
 
-        See docs/mesa/05-policy-b-fix.md Step 3.
+        See docs/duet/05-policy-b-fix.md Step 3.
 
         Args:
-            mesa_proxy: {"chosen_pos": [wire_N], "chosen_tok": [wire_N]}
+            duet_proxy: {"chosen_pos": [wire_N], "chosen_tok": [wire_N]}
                         score-sorted desc. chosen_pos ∈ [0, K_rank] by target-side
                         construction (Section 3.3 invariant).
             draft_forked: [B, P, max_fo] Phase 1 candidates per ranking position.
@@ -1620,11 +1620,11 @@ class DraftRunner(ModelRunner):
                            pos), score order preserved within each pos.
             fan_out_list:  list[int] length K_rank+1, sum == total_budget.
         """
-        chosen_pos = mesa_proxy["chosen_pos"]    # [wire_N]
-        chosen_tok = mesa_proxy["chosen_tok"]    # [wire_N]
+        chosen_pos = duet_proxy["chosen_pos"]    # [wire_N]
+        chosen_tok = duet_proxy["chosen_tok"]    # [wire_N]
         N = chosen_pos.shape[0]
         B = draft_forked.shape[0]
-        assert B == 1, "MESA invariant: B=1"
+        assert B == 1, "DUET invariant: B=1"
         # Invariant: chosen_pos ∈ [0, K_rank] by construction.
         if __debug__:
             assert (chosen_pos <= K_rank).all().item(), \
@@ -1654,8 +1654,8 @@ class DraftRunner(ModelRunner):
         _take_sum = int(take.sum().item())
         assert _take_sum == total_budget, (
             f"Policy B underfill: take.sum()={_take_sum} != total_budget={total_budget}. "
-            f"This means buffer sizing was insufficient. Check config.mesa_proxy_wire_N "
-            f"and config.mesa_proxy_top_k auto-raise; see docs/mesa/05-policy-b-fix.md "
+            f"This means buffer sizing was insufficient. Check config.duet_proxy_wire_N "
+            f"and config.duet_proxy_top_k auto-raise; see docs/duet/05-policy-b-fix.md "
             f"Section 3.5."
         )
 
@@ -1681,7 +1681,7 @@ class DraftRunner(ModelRunner):
         return result, fan_out_tensor
 
     def _select_proxy_sourced_tokens_policy_a(self, glue_logits, gd_for_fork,
-                                                mesa_proxy, draft_forked, fan_out_list,
+                                                duet_proxy, draft_forked, fan_out_list,
                                                 valid_k=None):
         """Policy A: h_i-based dynamic fan_out. Fully vectorized.
         Rev1 post-#4: pos<K uses proxy-only (no draft fallback). pos==K uses draft top-k only.
@@ -1702,7 +1702,7 @@ class DraftRunner(ModelRunner):
         # Step 9A: slice proxy_topk_ids / proxy_topk_probs to first K positions.
         # Target wire ships [B, K_long, P]; for short-hit only first K=K_short
         # positions are meaningful.
-        proxy_topk_ids = mesa_proxy["topk_ids"][:, :K, :]      # [B, K, P]  P = proxy_top_k
+        proxy_topk_ids = duet_proxy["topk_ids"][:, :K, :]      # [B, K, P]  P = proxy_top_k
         P = proxy_topk_ids.shape[-1]
         dfo = draft_forked.shape[-1]
 
@@ -1756,8 +1756,8 @@ class DraftRunner(ModelRunner):
             # safety: clip to fo (should be exactly fo post-config guarantee)
             sel = sel[:fo]
             if __debug__ and sel.numel() < fo:
-                assert False, f"MESA underfill: pos={pos} fo={fo} got={sel.numel()} " \
-                              f"(proxy_top_k={P}, dfo={dfo}; raise mesa_proxy_top_k)"
+                assert False, f"DUET underfill: pos={pos} fo={fo} got={sel.numel()} " \
+                              f"(proxy_top_k={P}, dfo={dfo}; raise duet_proxy_top_k)"
             result[0, offsets[pos]:offsets[pos]+sel.numel()] = sel
 
         # Fill pos == K
@@ -1770,8 +1770,8 @@ class DraftRunner(ModelRunner):
                                              layout, cache_hits_list, pos_offset=0):
         """Build tree_decode_args using the given layout. Used for both draft and proxy passes.
 
-        Note (Phase 2 of MESA hybrid plan): glue position offset uses
-        ``layout.position_count``, not ``K + 1``. For non-MESA / current MESA
+        Note (Phase 2 of DUET hybrid plan): glue position offset uses
+        ``layout.position_count``, not ``K + 1``. For non-DUET / current DUET
         layouts these are equal (legacy invariant); for the hybrid Phase 1
         layout they diverge (forward depth K1 vs position count valid_k+1).
         """
@@ -1804,15 +1804,15 @@ class DraftRunner(ModelRunner):
             "hidden_states": None,  # non-EAGLE
         }
 
-    def _build_tree_batch_mesa(self, partial_tree_decode_args, glue_decode_input_ids):
-        """MESA 2-pass tree decode:
+    def _build_tree_batch_duet(self, partial_tree_decode_args, glue_decode_input_ids):
+        """DUET 2-pass tree decode:
         Pass 1: draft-sourced tokens → decode with draft_layout (immediate, no proxy wait)
         Pass 2: proxy-sourced tokens → decode with proxy_layout (after proxy arrives)
         Both passes reuse same KV scratch positions (safe: results extracted to tensors).
 
         Split-only K1/K2 mode (SSD_FORCE_SPLIT_K1K2=1): branch to a separate
         path that runs Phase 1 with K1 forwards and Phase 2 with K2 forwards
-        independently. NO continuation. See docs/mesa/04-split-k1k2-design.md.
+        independently. NO continuation. See docs/duet/04-split-k1k2-design.md.
         """
         if SPLIT_K1K2_MODE and self.split_k1_long_layout is not None:
             return self._build_tree_batch_split_k1k2(
@@ -1822,13 +1822,13 @@ class DraftRunner(ModelRunner):
         K = self.config.speculate_k
 
         # Post irecv FIRST — so target send doesn't block
-        proxy_recv_work, proxy_buf = self._irecv_mesa_proxy(B, K)
+        proxy_recv_work, proxy_buf = self._irecv_duet_proxy(B, K)
 
         # Glue decode only (no full tree args waste)
         glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
             self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
 
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
 
         # === Pass 1: draft-sourced tokens (즉시 시작) ===
         # Step 9A: layout dispatch by incoming valid_k. B=1 invariant so
@@ -1837,20 +1837,20 @@ class DraftRunner(ModelRunner):
         # cache row matched) → phase1_layout_short. Miss → K_long fallback.
         _mev_p1b = _mr("phase1_build")
         # Read pre-sync'd Python scalar (set by hit_cache_and_respond). None
-        # means split / pure-MESA path → no bucket dispatch needed; use K_long.
+        # means split / pure-DUET path → no bucket dispatch needed; use K_long.
         _step_valid_k = partial_tree_decode_args.get("valid_k_scalar")
         if _step_valid_k is None:
             _step_valid_k = self.config.speculate_k
         _is_short_hit = (
-            self.config.mesa_phase1_k is not None
-            and _step_valid_k == self.config.mesa_phase2_k  # = K_short
+            self.config.duet_phase1_k is not None
+            and _step_valid_k == self.config.duet_phase2_k  # = K_short
         )
         # Step 9A optional dispatch trace.
         import os as _os_trace
         if _os_trace.environ.get("SSD_TRACE_BUCKET", "0") == "1":
             print(f"[bucket] valid_k={_step_valid_k} "
                   f"{'short' if _is_short_hit else 'long'}", flush=True)
-        if self.config.mesa_phase1_k is not None and self.phase1_layout_long is not None:
+        if self.config.duet_phase1_k is not None and self.phase1_layout_long is not None:
             _phase1_layout = (
                 self.phase1_layout_short if _is_short_hit
                 else self.phase1_layout_long
@@ -1860,7 +1860,7 @@ class DraftRunner(ModelRunner):
         else:
             _phase1_layout = self.draft_layout
         draft_forked = self._select_draft_sourced_tokens(
-            glue_logits, gd_for_fork, self.config.mesa_draft_fan_out)
+            glue_logits, gd_for_fork, self.config.duet_draft_fan_out)
         # Step 9A: slice draft_forked to the layout's position_count for
         # short-hit. glue_logits/draft_forked are computed at K_long+1
         # positions always (glue decode width is fixed); short bucket only
@@ -1879,7 +1879,7 @@ class DraftRunner(ModelRunner):
         # harness (SSD_HYBRID_PARITY=1) runs BOTH paths to compare.
         import os as _os_step8
         _hybrid_available = (
-            self.config.mesa_phase1_k is not None
+            self.config.duet_phase1_k is not None
             and getattr(self, "hybrid_phase2_plan", None) is not None
         )
         _force_split = _os_step8.environ.get("SSD_FORCE_SPLIT_PHASE2", "0") == "1"
@@ -1894,12 +1894,12 @@ class DraftRunner(ModelRunner):
         _run_split_cont_decode = (not _hybrid_default) or _parity_check
 
         if _run_split_cont_decode and (
-            self.config.mesa_phase1_k is not None
+            self.config.duet_phase1_k is not None
             and self.phase1_layout_long is not None
         ):
             import dataclasses as _dc
-            K1_cfg = self.config.mesa_phase1_k
-            K2_cfg = self.config.mesa_phase2_k
+            K1_cfg = self.config.duet_phase1_k
+            K2_cfg = self.config.duet_phase2_k
             MQ_p1 = _phase1_layout.MQ_LEN
             cont_layout = _dc.replace(
                 _phase1_layout,
@@ -1917,7 +1917,7 @@ class DraftRunner(ModelRunner):
                 draft_acts = torch.cat([draft_acts, cont_acts], dim=1)
 
         # === Pass 중간: proxy 수신 ===
-        # Phase B: parent="phase2_build" per docs/mesa/06 §4.5 so the
+        # Phase B: parent="phase2_build" per docs/duet/06 §4.5 so the
         # plotter can group proxy waits under the phase-2 build span.
         _mev_pw = _mr("proxy_wait", parent="phase2_build")
         proxy_recv_work.wait()
@@ -1925,15 +1925,15 @@ class DraftRunner(ModelRunner):
 
         # === Pass 2: Policy A — dynamic fan_out from h_i ===
         _mev_p2b = _mr("phase2_build")
-        mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
-        fan_out_list = mesa_proxy["fan_out_list"]  # [K+1] from target
+        duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
+        fan_out_list = duet_proxy["fan_out_list"]  # [K+1] from target
 
         # Step 9A: HybridPhase2Plan begin_step uses ACTUAL incoming valid_k.
         # B=1 invariant. valid_k drives proxy layout position_count and the
         # plan's internal long/short scalars. fan_out_list already covers
         # (valid_k+1) positions on the target side (per fused_response wire
         # contract); slice to the meaningful prefix.
-        if self.config.mesa_phase1_k is not None and getattr(self, "hybrid_phase2_plan", None) is not None:
+        if self.config.duet_phase1_k is not None and getattr(self, "hybrid_phase2_plan", None) is not None:
             _vk_step = _step_valid_k
             _fol_meaningful = fan_out_list[:_vk_step + 1]
             # Phase D debug gates: skip cont or proxy in plan + mask build
@@ -1951,8 +1951,8 @@ class DraftRunner(ModelRunner):
         # (proxy forward depth) for hybrid; K=K_long for legacy non-hybrid.
         # fan_out_list comes from target wire (length K_long+1); slice to
         # the meaningful prefix that matches position_count.
-        if self.config.mesa_phase1_k is not None:
-            proxy_forward_depth = self.config.mesa_phase2_k
+        if self.config.duet_phase1_k is not None:
+            proxy_forward_depth = self.config.duet_phase2_k
             proxy_position_count = _step_valid_k + 1
         else:
             proxy_forward_depth = K
@@ -1969,7 +1969,7 @@ class DraftRunner(ModelRunner):
         # the trimmed fan_out_list (length valid_k+1) and valid_k explicitly
         # so short-hit iterates only over the meaningful prefix.
         proxy_forked = self._select_proxy_sourced_tokens_policy_a(
-            glue_logits, gd_for_fork, mesa_proxy, draft_forked,
+            glue_logits, gd_for_fork, duet_proxy, draft_forked,
             proxy_fan_out_list, valid_k=_step_valid_k)
         proxy_tree_args = self._build_tree_decode_args_for_layout(
             partial_tree_decode_args, proxy_forked, step_proxy_layout, cache_hits_list)
@@ -2006,7 +2006,7 @@ class DraftRunner(ModelRunner):
         # bool-eager planning vs CG packed planning produce same proxy results.
         # Step 8: requires split path to have run (proxy_tokens not None).
         _mirror_check = (
-            self.config.mesa_phase1_k is not None
+            self.config.duet_phase1_k is not None
             and _os.environ.get("SSD_MIRROR_PROXY", "0") == "1"
             and proxy_tokens is not None
         )
@@ -2029,7 +2029,7 @@ class DraftRunner(ModelRunner):
         # pollution from CG-shared "proxy" wrapper was contaminating Phase B-2.
         # Step 8: requires split path to have run.
         _fresh_check = (
-            self.config.mesa_phase1_k is not None
+            self.config.duet_phase1_k is not None
             and _os.environ.get("SSD_FRESH_EAGER_PROXY", "0") == "1"
             and proxy_tokens is not None
         )
@@ -2071,7 +2071,7 @@ class DraftRunner(ModelRunner):
         # Phase B-2: low-level packed mirror gate. SSD_LOWLEVEL_MIRROR_PROXY=1
         # Step 8: requires split path to have run.
         _lowlevel_mirror = (
-            self.config.mesa_phase1_k is not None
+            self.config.duet_phase1_k is not None
             and _os.environ.get("SSD_LOWLEVEL_MIRROR_PROXY", "0") == "1"
             and proxy_tokens is not None
         )
@@ -2104,7 +2104,7 @@ class DraftRunner(ModelRunner):
             # proxy outputs BEFORE overwriting, so we can diff them against
             # hybrid outputs.
             if _parity_check:
-                K1_cfg_diff = self.config.mesa_phase1_k
+                K1_cfg_diff = self.config.duet_phase1_k
                 _split_cont_tokens = draft_tokens[:, K1_cfg_diff:].clone()  # [cont, K2]
                 _split_cont_logits = draft_logits[:, K1_cfg_diff:].clone()
                 _split_proxy_tokens = proxy_tokens.clone()
@@ -2137,7 +2137,7 @@ class DraftRunner(ModelRunner):
                 _oracle_cont_tokens, _oracle_cont_logits = (
                     self._decode_correct_split_cont(
                         draft_tree_args=draft_tree_args,
-                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                        draft_tokens_phase1=draft_tokens[:, :self.config.duet_phase1_k],
                     )
                 )
 
@@ -2212,7 +2212,7 @@ class DraftRunner(ModelRunner):
                         draft_tree_args=draft_tree_args,
                         proxy_tree_args=proxy_tree_args,
                         step_proxy_layout=step_proxy_layout,
-                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                        draft_tokens_phase1=draft_tokens[:, :self.config.duet_phase1_k],
                         bucket=_bucket_h,
                     )
                 )
@@ -2224,7 +2224,7 @@ class DraftRunner(ModelRunner):
                         draft_tree_args=draft_tree_args,
                         proxy_tree_args=proxy_tree_args,
                         step_proxy_layout=step_proxy_layout,
-                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                        draft_tokens_phase1=draft_tokens[:, :self.config.duet_phase1_k],
                     )
                 )
 
@@ -2242,7 +2242,7 @@ class DraftRunner(ModelRunner):
                         draft_tree_args=draft_tree_args,
                         proxy_tree_args=proxy_tree_args,
                         step_proxy_layout=step_proxy_layout,
-                        draft_tokens_phase1=draft_tokens[:, :self.config.mesa_phase1_k],
+                        draft_tokens_phase1=draft_tokens[:, :self.config.duet_phase1_k],
                     )
                 )
 
@@ -2304,10 +2304,10 @@ class DraftRunner(ModelRunner):
             _skip_proxy_replace = _os.environ.get("SSD_HYBRID_SKIP_PROXY", "0") == "1"
             if not _skip_cont_replace:
                 draft_tokens = torch.cat(
-                    [draft_tokens[:, :self.config.mesa_phase1_k], cont_tokens_h], dim=1
+                    [draft_tokens[:, :self.config.duet_phase1_k], cont_tokens_h], dim=1
                 )
                 draft_logits = torch.cat(
-                    [draft_logits[:, :self.config.mesa_phase1_k], cont_logits_h], dim=1
+                    [draft_logits[:, :self.config.duet_phase1_k], cont_logits_h], dim=1
                 )
             if not _skip_proxy_replace:
                 proxy_tokens = proxy_tokens_h
@@ -2326,7 +2326,7 @@ class DraftRunner(ModelRunner):
             draft_layout=_phase1_layout)
 
     def _build_tree_batch_split_k1k2(self, partial_tree_decode_args, glue_decode_input_ids):
-        """Split-only K1/K2 mode (per docs/mesa/04-split-k1k2-design.md).
+        """Split-only K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
 
         Two independent passes, NO continuation:
           - Phase 1 (Draft pass): K1 forwards with split_k1_layout (pos=K1+1).
@@ -2337,18 +2337,18 @@ class DraftRunner(ModelRunner):
         Cache contract: draft rows valid_k=K1, proxy rows valid_k=K2.
         valid_k space = {K1, K2}.
         """
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
 
         B = partial_tree_decode_args["num_tokens"].shape[0]
         K = self.config.speculate_k
-        K1 = self.config.mesa_phase1_k
-        K2 = self.config.mesa_phase2_k
+        K1 = self.config.duet_phase1_k
+        K2 = self.config.duet_phase2_k
         # Split-only K1/K2 mode: K2 <= K1 contract (asserted at init time).
         # No need to re-assert here, but document the invariant:
         #   K_max = K1, K_min = K2, valid_k space = {K1, K2} ⊆ [1, K1].
 
         # Post irecv FIRST so target send doesn't block.
-        proxy_recv_work, proxy_buf = self._irecv_mesa_proxy(B, K)
+        proxy_recv_work, proxy_buf = self._irecv_duet_proxy(B, K)
 
         # Glue decode (single forward returning logits at the accept-frontier).
         # Glue width follows valid_k+1 (matched row depth + 1):
@@ -2407,44 +2407,44 @@ class DraftRunner(ModelRunner):
             draft_tree_args, layout=_layout_k1)
 
         # === Wait for proxy from target ===
-        # Phase B: parent="phase2_build" per docs/mesa/06 §4.5 so the
+        # Phase B: parent="phase2_build" per docs/duet/06 §4.5 so the
         # plotter can group proxy waits under the phase-2 build span.
         _mev_pw = _mr("proxy_wait", parent="phase2_build")
         proxy_recv_work.wait()
         _mc("proxy_wait", _mev_pw)
-        mesa_proxy = self._unpack_mesa_proxy(proxy_buf, B, K)
+        duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
         # ===== TRACE point 4 (early): proxy unpack =====
         if TRACE_SPLIT_K1K2:
             K_max = K1 if K1 >= K2 else K2
             _vk_step = partial_tree_decode_args.get("valid_k_scalar")
-            if self.config.mesa_policy == "b":
+            if self.config.duet_policy == "b":
                 print(f"[TRACE-split-k1k2 #4a proxy_unpack policy=b] K1={K1} K2={K2} K_max={K_max} "
                       f"step_valid_k_scalar={_vk_step} "
-                      f"chosen_pos.shape={list(mesa_proxy['chosen_pos'].shape)} "
-                      f"chosen_tok.shape={list(mesa_proxy['chosen_tok'].shape)}",
+                      f"chosen_pos.shape={list(duet_proxy['chosen_pos'].shape)} "
+                      f"chosen_tok.shape={list(duet_proxy['chosen_tok'].shape)}",
                       flush=True)
             else:
-                _topk_ids_shape = list(mesa_proxy["topk_ids"].shape)
-                _topk_probs_shape = list(mesa_proxy["topk_probs"].shape)
+                _topk_ids_shape = list(duet_proxy["topk_ids"].shape)
+                _topk_probs_shape = list(duet_proxy["topk_probs"].shape)
                 _per_pos_sum = []
-                _src_pos = min(K2, mesa_proxy["topk_ids"].shape[1])
+                _src_pos = min(K2, duet_proxy["topk_ids"].shape[1])
                 for _p in range(_src_pos):
-                    _per_pos_sum.append(round(float(mesa_proxy["topk_probs"][0, _p].sum().item()), 4))
+                    _per_pos_sum.append(round(float(duet_proxy["topk_probs"][0, _p].sum().item()), 4))
                 print(f"[TRACE-split-k1k2 #4a proxy_unpack policy=a] K1={K1} K2={K2} K_max={K_max} "
                       f"step_valid_k_scalar={_vk_step} "
                       f"topk_ids.shape={_topk_ids_shape} topk_probs.shape={_topk_probs_shape} "
-                      f"fan_out_list={mesa_proxy['fan_out_list']} "
+                      f"fan_out_list={duet_proxy['fan_out_list']} "
                       f"topk_probs_sum_per_pos[0..min(K2,wire)-1]={_per_pos_sum}",
                       flush=True)
         # ===== END TRACE =====
 
         # === Phase 2: Proxy pass, K2 forwards (independent) ===
         _mev_p2b = _mr("phase2_build")
-        pfo = self.config.mesa_proxy_fan_out
+        pfo = self.config.duet_proxy_fan_out
 
-        if self.config.mesa_policy == "b":
+        if self.config.duet_policy == "b":
             # === Policy B unified path (default) ===
-            # docs/mesa/05-policy-b-fix.md Step 4.
+            # docs/duet/05-policy-b-fix.md Step 4.
             # Per-step:
             #   K = K2 (forward depth, captured in self.split_k2_layout, fixed)
             #   position_count = K_rank+1 (= valid_k+1, dynamic, in-place update)
@@ -2455,13 +2455,13 @@ class DraftRunner(ModelRunner):
             # GPU tensor (no .tolist() sync); _update_phase2_layout_inplace
             # rebuilds only the mutable parts.
             K_rank = _step_valid_k
-            total_budget = self.config.mesa_proxy_total_budget   # = pfo*(K_max+1)
+            total_budget = self.config.duet_proxy_total_budget   # = pfo*(K_max+1)
             # Pass padded [B, P, max_fo] + mask [P, max_fo] for Policy B dedup.
             # Uniform: padded == 3D draft_forked_k1, mask=None (all-real).
             # Non-uniform: padded zero-filled beyond fan_out_list[p], mask
             # filters to avoid false-match on chosen_tok=0.
             proxy_forked, proxy_fan_out_tensor = self._select_proxy_sourced_tokens_unified(
-                mesa_proxy, draft_forked_p1_padded,
+                duet_proxy, draft_forked_p1_padded,
                 K_rank=K_rank, total_budget=total_budget,
                 draft_forked_mask=draft_forked_p1_mask,
             )
@@ -2473,9 +2473,9 @@ class DraftRunner(ModelRunner):
                       flush=True)
         else:
             # === Legacy Policy A path (dead — config 검증으로 차단됨) ===
-            # TODO(policy-a): see docs/mesa/05-policy-b-fix.md Section 3.1
+            # TODO(policy-a): see docs/duet/05-policy-b-fix.md Section 3.1
             _layout_k2 = self.split_k2_layout  # K=K2, position_count=K2+1, fan_out=pfo
-            proxy_topk_ids = mesa_proxy["topk_ids"]
+            proxy_topk_ids = duet_proxy["topk_ids"]
             proxy_seed_3d = torch.zeros(
                 B, _layout_k2.position_count, pfo,
                 dtype=torch.int64, device=self.device,
@@ -2519,7 +2519,7 @@ class DraftRunner(ModelRunner):
                                     step_proxy_layout, fan_out_list):
         """Fill HybridPhase2Plan per-row × per-depth tensors in-place.
 
-        Called when ``mesa_phase1_k`` is configured. ``_decode_phase2_hybrid``
+        Called when ``duet_phase1_k`` is configured. ``_decode_phase2_hybrid``
         consumes these tensors (default hot path). Split-fallback path reads
         nothing from the plan.
 
@@ -2543,11 +2543,11 @@ class DraftRunner(ModelRunner):
           K1 (extending past Phase 1's K1 ancestors).
         """
         from ssd.engine.helpers.cudagraph_helpers import (
-            mesa_record as _mr_b, mesa_close as _mc_b,
+            duet_record as _mr_b, duet_close as _mc_b,
         )
         plan = self.hybrid_phase2_plan
-        K1 = self.config.mesa_phase1_k
-        K2 = self.config.mesa_phase2_k
+        K1 = self.config.duet_phase1_k
+        K2 = self.config.duet_phase2_k
         K_long = K1 + K2
         block_size = self.block_size
         device = self.device
@@ -3514,8 +3514,8 @@ class DraftRunner(ModelRunner):
               flush=True)
 
         # Hybrid bool mask visible set for this proxy row
-        K1 = self.config.mesa_phase1_k
-        K2 = self.config.mesa_phase2_k
+        K1 = self.config.duet_phase1_k
+        K2 = self.config.duet_phase2_k
         K_long = K1 + K2
         MQ_p1 = self.phase1_layout_long.MQ_LEN
         # num_tokens via cont_initial_rope[0] - K1 (j_idx_p1[0]=0 for hit case)
@@ -3630,8 +3630,8 @@ class DraftRunner(ModelRunner):
             # at cont step 0 with K=K_long) exposes cross-branch Phase 1 KV
             # because prefix_len_b = num_tokens + K1*MQ_p1 - 1 instead of num_tokens-1.
             try:
-                K1 = self.config.mesa_phase1_k
-                K2 = self.config.mesa_phase2_k
+                K1 = self.config.duet_phase1_k
+                K2 = self.config.duet_phase2_k
                 K_long = K1 + K2
                 MQ_p1 = self.phase1_layout_long.MQ_LEN
                 # Recover num_tokens from hybrid metadata
@@ -3717,7 +3717,7 @@ class DraftRunner(ModelRunner):
                 # We don't have num_tokens here directly; derive from any cont row's metadata
                 if plan.cont_row_count > 0:
                     cont_rope0 = int(plan.cont_initial_rope_positions[0].item())
-                    K1 = self.config.mesa_phase1_k
+                    K1 = self.config.duet_phase1_k
                     # cont_rope[0] = num_tokens + j_idx_p1[0] + K1, j_idx_p1[0] usually = 0
                     num_tokens_est = cont_rope0 - K1
                     j_idx_proxy_r = rope - num_tokens_est
@@ -3736,7 +3736,7 @@ class DraftRunner(ModelRunner):
             hybrid_ctx_len = int(plan.per_row_context_lens_by_depth[global_row, depth].item())
             hybrid_rope = int(plan.proxy_initial_rope_positions[row].item()) + depth
 
-            # Reconstruct split-side equivalent metadata from current MESA path:
+            # Reconstruct split-side equivalent metadata from current DUET path:
             # - split's proxy scratch position = num_tokens + K_long + d*MQ_proxy + j
             #   (overlaps Phase 1 KV; tree mask handles ancestor visibility)
             # - split's proxy ctx_len at depth d ≈ num_tokens + K_long + (d+1)*MQ_proxy
@@ -3759,8 +3759,8 @@ class DraftRunner(ModelRunner):
                 else self.phase1_layout_long.fan_idx_miss
             )[:cont_count]
             bool_mask_d = self._compute_hybrid_bool_mask_for_depth(
-                d=depth, K1=self.config.mesa_phase1_k,
-                K2=self.config.mesa_phase2_k, K_step=plan.valid_k,
+                d=depth, K1=self.config.duet_phase1_k,
+                K2=self.config.duet_phase2_k, K_step=plan.valid_k,
                 MQ_p1=self.phase1_layout_long.MQ_LEN,
                 L=L_d,
                 cont_count=cont_count, proxy_count=plan.proxy_row_count,
@@ -3885,8 +3885,8 @@ class DraftRunner(ModelRunner):
         Returns: (cont_tokens [cont_count, K2], cont_logits [cont_count, K2, V])
         """
         plan = self.hybrid_phase2_plan
-        K1 = self.config.mesa_phase1_k
-        K2 = self.config.mesa_phase2_k
+        K1 = self.config.duet_phase1_k
+        K2 = self.config.duet_phase2_k
         # Step 9B-3: K_step = plan.valid_k (long or short bucket)
         K_step = plan.valid_k
         if K_step == plan.K_long:
@@ -4046,8 +4046,8 @@ class DraftRunner(ModelRunner):
                 Last column (depth K1-1) is the input to continuation depth 0.
         """
         plan = self.hybrid_phase2_plan
-        K1 = self.config.mesa_phase1_k
-        K2 = self.config.mesa_phase2_k
+        K1 = self.config.duet_phase1_k
+        K2 = self.config.duet_phase2_k
         K_long = K1 + K2
 
         # Step 9A: eager hybrid handles BOTH long and short buckets via
@@ -4095,7 +4095,7 @@ class DraftRunner(ModelRunner):
         # Bucket for per-depth profiling labels (matches CG path naming).
         _eager_bucket = "long" if plan.valid_k == plan.K_long else "short"
         from ssd.engine.helpers.cudagraph_helpers import (
-            mesa_record as _mr_eg, mesa_close as _mc_eg,
+            duet_record as _mr_eg, duet_close as _mc_eg,
         )
 
         for d in range(K2):
@@ -4207,7 +4207,7 @@ class DraftRunner(ModelRunner):
 
             logits_flat = logits_flat.view(-1, V)  # [total, V]
 
-            # Sample greedy (current MESA test config) — temps unused
+            # Sample greedy (current DUET test config) — temps unused
             next_tokens = logits_flat.argmax(dim=-1)  # [total]
 
             # Split cont/proxy
@@ -4228,12 +4228,12 @@ class DraftRunner(ModelRunner):
         """Merge draft + proxy tree decode results into single cache.
         proxy_layout: runtime layout for dynamic fan_out (Policy A). Falls back to self.proxy_layout.
 
-        v1 hybrid path: when ``mesa_phase1_k`` is set, proxy_tokens / proxy_logits
+        v1 hybrid path: when ``duet_phase1_k`` is set, proxy_tokens / proxy_logits
         come back with depth K2 (< K_long). Cache row width is uniformly K_long;
         the K_long - K2 tail of proxy rows is zero-padded and ignored downstream
         (verify reads only the first ``valid_k`` positions).
         """
-        from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr, mesa_close as _mc
+        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
         _mev_mc = _mr("merge_cache")
         _proxy_layout = proxy_layout or self.proxy_layout
         # Step 9A: draft layout dispatch by step's valid_k (long/short bucket).
@@ -4241,9 +4241,9 @@ class DraftRunner(ModelRunner):
         _draft_layout = draft_layout or self.draft_layout
         # Cache row width: split-only K1/K2 mode pads to K_max=max(K1,K2)
         # so wire/cache layout is independent of K1+K2. Hybrid stays at K_long.
-        if SPLIT_K1K2_MODE and self.config.mesa_phase1_k is not None:
-            K1_cfg = self.config.mesa_phase1_k
-            K2_cfg = self.config.mesa_phase2_k
+        if SPLIT_K1K2_MODE and self.config.duet_phase1_k is not None:
+            K1_cfg = self.config.duet_phase1_k
+            K2_cfg = self.config.duet_phase2_k
             K_long = K1_cfg if K1_cfg >= K2_cfg else K2_cfg  # = K_max in this mode
         else:
             K_long = self.config.speculate_k
@@ -4296,7 +4296,7 @@ class DraftRunner(ModelRunner):
             self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
         else:
             self.tree_cache_activations = None
-        # Per-row valid_k. Legacy MESA: all rows = K_long. Hybrid: draft rows
+        # Per-row valid_k. Legacy DUET: all rows = K_long. Hybrid: draft rows
         # = K1 (Phase 1 only) or K_long (with continuation), proxy rows = K_short.
         n_total = self.tree_cache_keys.shape[0]
         n_draft = draft_keys.shape[0]
@@ -4316,7 +4316,7 @@ class DraftRunner(ModelRunner):
 
         while True:
             # 1) Wait for the next command (may be PREFILL, SPEC_REQUEST, or EXIT)
-            from ssd.engine.helpers.cudagraph_helpers import mesa_record as _mr_c, mesa_close as _mc_c
+            from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_c, duet_close as _mc_c
             _mev_rc = _mr_c("draft_recv_cmd")
             cmd = self.recv_cmd()
             _mc_c("draft_recv_cmd", _mev_rc)
@@ -4342,9 +4342,9 @@ class DraftRunner(ModelRunner):
 
                 self._reset_tree_cache_tensors()
 
-                if self.config.mesa_enabled:
-                    # MESA: 2-pass tree decode (draft-sourced → proxy-sourced)
-                    self._build_tree_batch_mesa(partial_tree_decode_args, glue_decode_input_ids)
+                if self.config.duet_enabled:
+                    # DUET: 2-pass tree decode (draft-sourced → proxy-sourced)
+                    self._build_tree_batch_duet(partial_tree_decode_args, glue_decode_input_ids)
                     # Set profiling vars to avoid NameError in shared print below
                     if _prof or PROFILE_DRAFT:
                         torch.cuda.synchronize()
@@ -4382,11 +4382,11 @@ class DraftRunner(ModelRunner):
                     avg_ms = sum(self._draft_step_times) * 1000 / len(self._draft_step_times)
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)
                 try:
-                    from ssd.engine.helpers.cudagraph_helpers import mesa_dump
-                    mesa_dump("draft")
+                    from ssd.engine.helpers.cudagraph_helpers import duet_dump
+                    duet_dump("draft")
                 except Exception as e:
-                    if os.environ.get("SSD_PROFILE_MESA", "0") == "1":
-                        print(f"[mesa_profile draft warning] failed to dump profile: {type(e).__name__}: {e}", flush=True)
+                    if os.environ.get("SSD_PROFILE_DUET", "0") == "1":
+                        print(f"[duet_profile draft warning] failed to dump profile: {type(e).__name__}: {e}", flush=True)
                 self.exit()
                 break
 

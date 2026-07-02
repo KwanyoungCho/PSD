@@ -1,14 +1,14 @@
 #!/bin/bash
-# MESA-SSD parameter sweep: exit_layer × fan_out × phase1/phase2 split
-# Usage: bash bench/run_mesa_sweep.sh        (uses all 8 GPUs, 4-way parallel, 2 GPUs per run)
+# DUET-SSD parameter sweep: exit_layer × fan_out × phase1/phase2 split
+# Usage: bash bench/run_duet_sweep.sh        (uses all 8 GPUs, 4-way parallel, 2 GPUs per run)
 #
 # Dimensions:
 #   1. Total draft budget: MQ_LEN = async_fan_out × (K+1). Sweep --f in {2,3,4,5} with K=4.
-#   2. Phase1/Phase2 split: --mesa_draft_fan_out (Phase1 per-position branches).
+#   2. Phase1/Phase2 split: --duet_draft_fan_out (Phase1 per-position branches).
 #      Phase2 (proxy) gets async_fan_out - draft_fan_out.
 #   3. Exit layer: at (f=3, dfo=1) sweep {10,16,21,26}/32 (2/3 of L is the default).
 #
-# Baseline SSD uses the same --f so total budget matches MESA for fair comparison.
+# Baseline SSD uses the same --f so total budget matches DUET for fair comparison.
 
 set -u
 cd "$(dirname "$0")/.."   # ssd repo root — so `import ssd.paths` resolves
@@ -27,7 +27,7 @@ NUMSEQS=300     # dataset files absent locally → --random; 300 samples for sta
 OUTLEN=256
 COMMON="--llama --size 8 --model_path $TARGET_MODEL --draft_path $DRAFT_MODEL --async --spec --k 4 --gpus 2 --b 1 --temp 0.6 --numseqs $NUMSEQS --output_len $OUTLEN --random"
 
-OUTDIR="/tmp/mesa_sweep_$(date +%Y%m%d_%H%M%S)"
+OUTDIR="/tmp/duet_sweep_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$OUTDIR"
 echo "Output dir: $OUTDIR"
 
@@ -77,35 +77,35 @@ wait_all() {
     done
 }
 
-# ---------- Phase A: baseline & MESA f/split sweep (exit=21 fixed) ----------
+# ---------- Phase A: baseline & DUET f/split sweep (exit=21 fixed) ----------
 # Baselines at matched budgets (MQ_LEN = f * (K+1) = f * 5)
 launch "baseline_f2" --f 2
 launch "baseline_f3" --f 3
 launch "baseline_f4" --f 4
 launch "baseline_f5" --f 5
 
-# MESA f=2: (1,1)
-launch "mesa_f2_dfo1" --f 2 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 1
+# DUET f=2: (1,1)
+launch "duet_f2_dfo1" --f 2 --duet --duet_exit_layer 21 --duet_draft_fan_out 1
 
-# MESA f=3: (1,2) (2,1)
-launch "mesa_f3_dfo1" --f 3 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 1
-launch "mesa_f3_dfo2" --f 3 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 2
+# DUET f=3: (1,2) (2,1)
+launch "duet_f3_dfo1" --f 3 --duet --duet_exit_layer 21 --duet_draft_fan_out 1
+launch "duet_f3_dfo2" --f 3 --duet --duet_exit_layer 21 --duet_draft_fan_out 2
 
-# MESA f=4: (1,3) (2,2) (3,1)
-launch "mesa_f4_dfo1" --f 4 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 1
-launch "mesa_f4_dfo2" --f 4 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 2
-launch "mesa_f4_dfo3" --f 4 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 3
+# DUET f=4: (1,3) (2,2) (3,1)
+launch "duet_f4_dfo1" --f 4 --duet --duet_exit_layer 21 --duet_draft_fan_out 1
+launch "duet_f4_dfo2" --f 4 --duet --duet_exit_layer 21 --duet_draft_fan_out 2
+launch "duet_f4_dfo3" --f 4 --duet --duet_exit_layer 21 --duet_draft_fan_out 3
 
-# MESA f=5: (1,4) (2,3) (3,2) (4,1)
-launch "mesa_f5_dfo1" --f 5 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 1
-launch "mesa_f5_dfo2" --f 5 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 2
-launch "mesa_f5_dfo3" --f 5 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 3
-launch "mesa_f5_dfo4" --f 5 --mesa --mesa_exit_layer 21 --mesa_draft_fan_out 4
+# DUET f=5: (1,4) (2,3) (3,2) (4,1)
+launch "duet_f5_dfo1" --f 5 --duet --duet_exit_layer 21 --duet_draft_fan_out 1
+launch "duet_f5_dfo2" --f 5 --duet --duet_exit_layer 21 --duet_draft_fan_out 2
+launch "duet_f5_dfo3" --f 5 --duet --duet_exit_layer 21 --duet_draft_fan_out 3
+launch "duet_f5_dfo4" --f 5 --duet --duet_exit_layer 21 --duet_draft_fan_out 4
 
 # ---------- Phase B: exit_layer sweep at (f=3, dfo=1) ----------
-launch "mesa_f3_dfo1_exit10" --f 3 --mesa --mesa_exit_layer 10 --mesa_draft_fan_out 1
-launch "mesa_f3_dfo1_exit16" --f 3 --mesa --mesa_exit_layer 16 --mesa_draft_fan_out 1
-launch "mesa_f3_dfo1_exit26" --f 3 --mesa --mesa_exit_layer 26 --mesa_draft_fan_out 1
+launch "duet_f3_dfo1_exit10" --f 3 --duet --duet_exit_layer 10 --duet_draft_fan_out 1
+launch "duet_f3_dfo1_exit16" --f 3 --duet --duet_exit_layer 16 --duet_draft_fan_out 1
+launch "duet_f3_dfo1_exit26" --f 3 --duet --duet_exit_layer 26 --duet_draft_fan_out 1
 
 wait_all
 echo ""

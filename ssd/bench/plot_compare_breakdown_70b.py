@@ -1,4 +1,4 @@
-"""70B-specific compare_breakdown plot — MESA exit layers 40/47/53."""
+"""70B-specific compare_breakdown plot — DUET exit layers 40/47/53."""
 import sys, os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 BASE = sys.argv[1] if len(sys.argv) > 1 else "/home/chokwans99/PSD/ssd/tmp/final_exp2_quant_70b"
 CONFIGS = [
     ("baseline_k7_geo",          "SSD (baseline)\nK=7 geo"),
-    ("mesa_k5_f4_dfo2_exit40",   "MESA K=5\nexit=40"),
-    ("mesa_k5_f4_dfo2_exit47",   "MESA K=5\nexit=47"),
-    ("mesa_k5_f4_dfo2_exit53",   "MESA K=5\nexit=53"),
+    ("duet_k5_f4_dfo2_exit40",   "DUET K=5\nexit=40"),
+    ("duet_k5_f4_dfo2_exit47",   "DUET K=5\nexit=47"),
+    ("duet_k5_f4_dfo2_exit53",   "DUET K=5\nexit=53"),
 ]
 COLORS = {
     "glue":"#17becf","phase1_build":"#a9cce3","phase1_prep":"#807dba","phase1_replay":"#3f007d",
@@ -21,7 +21,7 @@ COLORS = {
 }
 
 def _load(cfg):
-    p = f"{BASE}/{cfg}/mesa_per_step_contribution.csv"
+    p = f"{BASE}/{cfg}/duet_per_step_contribution.csv"
     return pd.read_csv(p) if os.path.isfile(p) else None
 
 fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=False)

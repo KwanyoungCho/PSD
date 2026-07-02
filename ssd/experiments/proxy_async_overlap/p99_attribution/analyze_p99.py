@@ -9,17 +9,17 @@ Consumes a Phase-B aligned JSON pair (target rank 0 + draft) and produces:
      overlapped target's `[target_send_request.start, target_response_received.start]`
      interval, with overlap duration in ms.
   4. Aligned timeline PNGs for representative p99 step per status
-     (via plot_mesa_aligned_timeline).
+     (via plot_duet_aligned_timeline).
   5. RESULTS.md with all of the above.
 
 Usage:
     python analyze_p99.py \\
-        --target-json full/mesa_profile_target_rank0_*.json \\
-        --draft-json  full/mesa_profile_draft_*.json \\
+        --target-json full/duet_profile_target_rank0_*.json \\
+        --draft-json  full/duet_profile_draft_*.json \\
         --outdir      full \\
         --top-n 5
 
-If --target-json / --draft-json are omitted, the latest mesa_profile_*.json
+If --target-json / --draft-json are omitted, the latest duet_profile_*.json / mesa_profile_*.json
 in --outdir is used.
 """
 
@@ -35,7 +35,7 @@ from pathlib import Path
 # Allow importing the plotter from bench/.
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "bench"))
-import plot_mesa_aligned_timeline as aligned  # noqa: E402
+import plot_duet_aligned_timeline as aligned  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -43,9 +43,12 @@ import plot_mesa_aligned_timeline as aligned  # noqa: E402
 # ---------------------------------------------------------------------------
 
 def _latest(outdir: Path, tag: str) -> Path:
-    paths = sorted(outdir.glob(f"mesa_profile_{tag}_*.json"))
+    # Accepts both new duet_profile_*.json and legacy mesa_profile_*.json
+    paths = sorted(outdir.glob(f"duet_profile_{tag}_*.json"))
     if not paths:
-        raise FileNotFoundError(f"no mesa_profile_{tag}_*.json under {outdir}")
+        paths = sorted(outdir.glob(f"mesa_profile_{tag}_*.json"))
+    if not paths:
+        raise FileNotFoundError(f"no duet_profile_{tag}_*.json under {outdir}")
     return paths[-1]
 
 
@@ -91,7 +94,7 @@ def stats(xs: list[float]) -> dict:
 def target_spec_wait_by_status(target_rows: list[dict]) -> dict[str, list[dict]]:
     """Return {status: [span row, ...]} for spans labeled `target_spec_wait*`.
 
-    Both raw status field (set via mesa_set_context) and the legacy label
+    Both raw status field (set via duet_set_context) and the legacy label
     suffix are honored, with status field taking precedence.
     """
     out: dict[str, list[dict]] = defaultdict(list)

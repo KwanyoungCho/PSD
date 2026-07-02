@@ -9,10 +9,10 @@ class SpeculateResult:
     speculations: torch.Tensor
     logits_q: torch.Tensor
     cache_hits: torch.Tensor | None = None
-    # MESA-only: 0=miss, 1=phase 1 (draft-sourced) hit, 2=phase 2 (proxy-sourced) hit.
-    # All zeros for non-MESA paths.
+    # DUET-only: 0=miss, 1=phase 1 (draft-sourced) hit, 2=phase 2 (proxy-sourced) hit.
+    # All zeros for non-DUET paths.
     phase_source: torch.Tensor | None = None
-    # MESA Phase 2 hybrid: per-row valid_k (suffix length) of the row served on this step.
+    # DUET Phase 2 hybrid: per-row valid_k (suffix length) of the row served on this step.
     #   - draft-sourced (or full-K) hit / miss: K_long
     #   - proxy-sourced hit: K_short = K2
     # Phase 0 plumbing — engine still sets all rows to K_long until Phase 4.
@@ -23,7 +23,7 @@ class SpeculateResult:
     profile_cache_status: str | None = None
     # Aligned-timeline (Phase B): monotonically increasing per-target-process
     # spec request id, mirrored on the draft side via spec metadata. Used
-    # to join target and draft mesa_profile rows by request, not by event
+    # to join target and draft duet_profile rows by request, not by event
     # index. None on synchronous / non-async paths.
     step_id: int | None = None
 

@@ -64,12 +64,12 @@ def _row_value(row: pd.Series, key: str) -> str | None:
 
 
 def _config_label(row: pd.Series) -> str:
-    k1 = _row_value(row, "k1") or _row_value(row, "mesa_phase1_k")
-    k2 = _row_value(row, "k2") or _row_value(row, "mesa_phase2_k")
+    k1 = _row_value(row, "k1") or _row_value(row, "duet_phase1_k")
+    k2 = _row_value(row, "k2") or _row_value(row, "duet_phase2_k")
     if k1 and k2:
-        dfo = _row_value(row, "dfo") or _row_value(row, "mesa_draft_fan_out")
-        pfo = _row_value(row, "pfo") or _row_value(row, "mesa_proxy_fan_out")
-        exit_layer = _row_value(row, "exit_layer") or _row_value(row, "mesa_exit_layer")
+        dfo = _row_value(row, "dfo") or _row_value(row, "duet_draft_fan_out")
+        pfo = _row_value(row, "pfo") or _row_value(row, "duet_proxy_fan_out")
+        exit_layer = _row_value(row, "exit_layer") or _row_value(row, "duet_exit_layer")
         parts = [f"split K1={k1}/K2={k2}"]
         fanout = []
         if dfo:

@@ -2,7 +2,7 @@
 
 ## 목적
 
-MESA-SSD의 Phase 2 (proxy) 토큰 선택 로직 재설계. **Policy B를 단독
+DUET-SSD의 Phase 2 (proxy) 토큰 선택 로직 재설계. **Policy B를 단독
 default**로 두고, all-accept 위치(pos=K)까지 통합한 단일 K+1 글로벌 ranking
 으로 일원화한다. 현재 구현의 의미적 오류 및 dead code를 제거한다.
 
@@ -80,7 +80,7 @@ Phase 2 position_count의 현재 값 (K2+1, 고정)은 **Section 3.6/3.7에서 P
 
 → **proxy forward depth는 항상 K2** — layout의 K 인자는 K2.
 
-K2 ≤ K1 invariant (`docs/mesa/04-split-k1k2-design.md` 참조).
+K2 ≤ K1 invariant (`docs/duet/04-split-k1k2-design.md` 참조).
 
 ### 1.3 코드 위치
 
@@ -89,10 +89,10 @@ K2 ≤ K1 invariant (`docs/mesa/04-split-k1k2-design.md` 참조).
 | proxy 계산 + h + Policy A/B 분기 | `ssd/engine/verifier.py::_compute_and_send_proxy` | 227-380 |
 | Policy B 예산 + 재정렬 | 동상 | 290-323 |
 | wire pack (target → draft) | 동상 | 366-380 |
-| wire unpack (draft) | `ssd/engine/draft_runner.py::_unpack_mesa_proxy` | 1399-1420 |
+| wire unpack (draft) | `ssd/engine/draft_runner.py::_unpack_duet_proxy` | 1399-1420 |
 | draft 토큰 selector | `ssd/engine/draft_runner.py::_select_proxy_sourced_tokens_policy_a` | 1462-1546 |
-| `mesa_proxy_top_k` auto-raise | `ssd/config.py::Config.__post_init__` | 177-187 |
-| Policy default | `ssd/config.py` | `mesa_policy: str = "a"` |
+| `duet_proxy_top_k` auto-raise | `ssd/config.py::Config.__post_init__` | 177-187 |
+| Policy default | `ssd/config.py` | `duet_policy: str = "a"` |
 
 ## 2. 식별된 문제
 
@@ -128,13 +128,13 @@ dedup 후 픽 결과:
 → dedup 손실 4개를 글로벌 차순위 (예: pos=2의 H, pos=3의 J)가 아닌 local
 rest로 채움. **Policy B의 글로벌 ranking 의도가 깨짐.**
 
-### Issue ② : `mesa_proxy_top_k` auto-raise가 split mode에선 over-provisioned
+### Issue ② : `duet_proxy_top_k` auto-raise가 split mode에선 over-provisioned
 
 **현재** (`config.py` 178-181):
 ```python
 K_plus_1 = self.speculate_k + 1                            # = K_long+1 = 17
-max_possible_fo = self.mesa_proxy_fan_out * K_plus_1       # = 1 × 17 = 17
-required_top_k = max_possible_fo + self.mesa_draft_fan_out + 2   # = 21
+max_possible_fo = self.duet_proxy_fan_out * K_plus_1       # = 1 × 17 = 17
+required_top_k = max_possible_fo + self.duet_draft_fan_out + 2   # = 21
 ```
 
 split mode에서 verify 깊이 K = K1 (worst case). 따라서 fan_out_list 길이는
@@ -170,7 +170,7 @@ for pos in range(K):
 
 검증:
 ```
-$ grep -n 'mesa_proxy\["topk_probs"\]' ssd/engine/draft_runner.py
+$ grep -n 'duet_proxy\["topk_probs"\]' ssd/engine/draft_runner.py
 (0건)
 ```
 
@@ -205,7 +205,7 @@ in_prev는 그것과 별개의 (그리고 죽은) 작업.
 
 ```python
 # ssd/config.py
-mesa_policy: str = "b"   # default; A path remains as dead branch (not exercised)
+duet_policy: str = "b"   # default; A path remains as dead branch (not exercised)
 ```
 
 **중요 — Policy "b"가 적용되는 범위**:
@@ -213,13 +213,13 @@ mesa_policy: str = "b"   # default; A path remains as dead branch (not exercised
 | 구성 | Policy "b" 동작 |
 |---|---|
 | split-K1/K2 mode (`SSD_FORCE_SPLIT_K1K2=1`) + uniform Phase 1 | ✓ **fully supported** |
-| split mode + **non-uniform** `mesa_split_phase1_fan_out_list` | ✗ NotImplementedError (config 검증 시 raise) |
+| split mode + **non-uniform** `duet_split_phase1_fan_out_list` | ✗ NotImplementedError (config 검증 시 raise) |
 | 비분할 (legacy / hybrid) mode | ✗ 자동으로 `"a"`로 다운그레이드 + 경고 |
 
 이유:
 - Policy B의 unified selector는 `draft_forked: [B, P, dfo]` 3D를 가정 (`draft_forked[0, chosen_pos, :]` 인덱싱).
 - non-uniform Phase 1의 `_select_draft_sourced_tokens_perpos`는 flat `[B, MQ_LEN]` 반환 → shape 불일치.
-- 비분할 path의 `_build_tree_batch_mesa()`는 `mesa_proxy["fan_out_list"]` 직접 액세스 → Policy B wire schema에 그 키가 없어 KeyError.
+- 비분할 path의 `_build_tree_batch_duet()`는 `duet_proxy["fan_out_list"]` 직접 액세스 → Policy B wire schema에 그 키가 없어 KeyError.
 
 → 이 두 케이스는 별도 작업 (selector 확장 / legacy path 호환) 필요. 현재
 fix는 split + uniform 범위만 커버하고, 외부 케이스는 fail-fast로 차단.
@@ -499,7 +499,7 @@ _layout_specs.append(("split_k2", None, None, _p2_mq))   # 같은 이름 유지
    step rebuild — fan_out_list, position_count 둘 다 동적.
 4. `cudagraph_helpers.py` 174: 변경 불필요 (bucket name 유지).
 
-CG mask는 `mesa_verify_*` capture 시 mutable buffer로 가정되므로 step별
+CG mask는 `duet_verify_*` capture 시 mutable buffer로 가정되므로 step별
 mask rebuild는 외부에서 buffer write로 처리 (CG 재캡처 없음). 검증 필요
 (Section 7).
 
@@ -510,29 +510,29 @@ mask rebuild는 외부에서 buffer write로 처리 (CG 재캡처 없음). 검�
 **파일**: `ssd/config.py`
 
 ```diff
--    mesa_policy: str = "a"
-+    mesa_policy: str = "b"
+-    duet_policy: str = "a"
++    duet_policy: str = "b"
 ```
 
 ```diff
  # __post_init__
 -K_plus_1 = self.speculate_k + 1
--max_possible_fo = self.mesa_proxy_fan_out * K_plus_1
--required_top_k = max_possible_fo + self.mesa_draft_fan_out + 2
+-max_possible_fo = self.duet_proxy_fan_out * K_plus_1
+-required_top_k = max_possible_fo + self.duet_draft_fan_out + 2
 +# Issue ②: split mode worst-case = K_max = K1.
 +# 두 제약 중 max:
 +#   per-pos:  pfo*(K_max+1) + dfo + 2     (한 position에 budget 몰빵 시)
 +#   total:    ceil(wire_N / (K_min+1))    (short-hit candidate count >= wire_N)
 +# wire_N = total_budget + buffer = pfo*(K_max+1) + (K_max+1)*dfo + 2
-+if self.mesa_phase1_k is not None and \
++if self.duet_phase1_k is not None and \
 +   os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1":
-+    K_max = max(self.mesa_phase1_k, self.mesa_phase2_k)
-+    K_min = min(self.mesa_phase1_k, self.mesa_phase2_k)
++    K_max = max(self.duet_phase1_k, self.duet_phase2_k)
++    K_min = min(self.duet_phase1_k, self.duet_phase2_k)
 +else:
 +    K_max = self.speculate_k
 +    K_min = self.speculate_k
-+pfo = self.mesa_proxy_fan_out
-+dfo = self.mesa_draft_fan_out
++pfo = self.duet_proxy_fan_out
++dfo = self.duet_draft_fan_out
 +total_budget = pfo * (K_max + 1)
 +buffer       = (K_max + 1) * dfo + 2
 +wire_N       = total_budget + buffer
@@ -544,12 +544,12 @@ mask rebuild는 외부에서 buffer write로 처리 (CG 재캡처 없음). 검�
 신규 config 필드 (옵션 A buffer):
 ```python
 @property
-def mesa_proxy_wire_N(self) -> int:
+def duet_proxy_wire_N(self) -> int:
     """Total (chosen_pos, chosen_tok) entries on wire = budget + buffer."""
-    K_plus_1 = max(self.mesa_phase1_k, self.mesa_phase2_k) + 1 \
-               if self.mesa_phase1_k is not None else self.speculate_k + 1
-    total_budget = self.mesa_proxy_fan_out * K_plus_1
-    buffer = K_plus_1 * self.mesa_draft_fan_out + 2
+    K_plus_1 = max(self.duet_phase1_k, self.duet_phase2_k) + 1 \
+               if self.duet_phase1_k is not None else self.speculate_k + 1
+    total_budget = self.duet_proxy_fan_out * K_plus_1
+    buffer = K_plus_1 * self.duet_draft_fan_out + 2
     return total_budget + buffer
 ```
 
@@ -572,7 +572,7 @@ def mesa_proxy_wire_N(self) -> int:
 -h[K]   = cumprod[-1]
 -
 -# Policy A/B 분기 (290-331)
--if config.mesa_policy == "b":
+-if config.duet_policy == "b":
 -    fo_K = round(h[K] / h.sum() * proxy_fan_out_total)
 -    ...
 -    for pos in range(K):
@@ -615,7 +615,7 @@ def mesa_proxy_wire_N(self) -> int:
 +h[K]   = cumprod[-1]
 +
 +# 글로벌 P_iv top-N (옵션 A: K_max 기준 사이즈)
-+N = config.mesa_proxy_wire_N        # = total_budget + buffer
++N = config.duet_proxy_wire_N        # = total_budget + buffer
 +P_iv = h.view(K + 1, 1) * correction_probs[0]              # [K+1, top_k]
 +_, top_idx = P_iv.flatten().topk(N)                        # [N], score desc
 +chosen_pos_global = top_idx // top_k                        # [N]
@@ -623,7 +623,7 @@ def mesa_proxy_wire_N(self) -> int:
 +
 +# K가 K_max보다 작은 경우 (K2 hit) — pos는 [0, K]에 들어있음. 옵션 A에서
 +# wire는 K_max+1 사이즈로 padding 필요 없음 (chosen_pos 값이 작음).
-+# 단 NCCL pack에서 N은 고정 (config.mesa_proxy_wire_N).
++# 단 NCCL pack에서 N은 고정 (config.duet_proxy_wire_N).
 +
 +# wire send
 +wire_send(chosen_pos_global, chosen_tok_global)
@@ -635,10 +635,10 @@ def mesa_proxy_wire_N(self) -> int:
 
 **파일**: `ssd/engine/draft_runner.py`
 
-`_unpack_mesa_proxy` 신규:
+`_unpack_duet_proxy` 신규:
 ```python
-def _unpack_mesa_proxy(self, buf, B, K):
-    N = self.config.mesa_proxy_wire_N
+def _unpack_duet_proxy(self, buf, B, K):
+    N = self.config.duet_proxy_wire_N
     chosen_pos = buf[:N]                     # [N] int64
     chosen_tok = buf[N:2*N]                  # [N] int64
     return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
@@ -646,12 +646,12 @@ def _unpack_mesa_proxy(self, buf, B, K):
 
 신규 selector `_select_proxy_sourced_tokens_unified`:
 ```python
-def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
+def _select_proxy_sourced_tokens_unified(self, duet_proxy, draft_forked,
                                           K_rank, total_budget):
     """K+1 통합 unified Policy B selector.
 
     Args:
-        mesa_proxy: {"chosen_pos": [N], "chosen_tok": [N]}  score-sorted desc.
+        duet_proxy: {"chosen_pos": [N], "chosen_tok": [N]}  score-sorted desc.
                     chosen_pos values ∈ [0, K_rank] (target-side construction
                     invariant; Section 3.3 참조).
         draft_forked: [B, K_rank+1, dfo]   Phase 1 candidates per ranking
@@ -673,11 +673,11 @@ def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
                        layout의 position_count = K_rank+1과 일치.
                        buffer 사이징(Section 3.3)으로 underfill 불가.
     """
-    chosen_pos = mesa_proxy["chosen_pos"]    # [N]
-    chosen_tok = mesa_proxy["chosen_tok"]    # [N]
+    chosen_pos = duet_proxy["chosen_pos"]    # [N]
+    chosen_tok = duet_proxy["chosen_tok"]    # [N]
     N = chosen_pos.shape[0]
     B = draft_forked.shape[0]
-    assert B == 1                            # MESA invariant
+    assert B == 1                            # DUET invariant
     # Invariant: chosen_pos ∈ [0, K_rank] by target-side construction.
     # debug-only sanity check (제거해도 안전):
     if __debug__:
@@ -723,18 +723,18 @@ def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
 
 ```diff
 -proxy_forked = self._select_proxy_sourced_tokens_policy_a(
--    glue_logits, gd_for_fork, mesa_proxy, draft_forked,
+-    glue_logits, gd_for_fork, duet_proxy, draft_forked,
 -    proxy_fan_out_list, valid_k=_step_valid_k)
 +# Policy B 단독 default. Policy A는 dead branch (config 검증으로 차단됨).
 +proxy_forked, dyn_fan_out_list = self._select_proxy_sourced_tokens_unified(
-+    mesa_proxy, draft_forked,
++    duet_proxy, draft_forked,
 +    K_rank=_step_valid_k, total_budget=total_budget)
 +proxy_fan_out_list = dyn_fan_out_list
 +# layout 매 step rebuild — 두 차원 분리 (Section 3.6 / 3.7 참조):
 +#   K = K2                       (forward depth, 불변)
 +#   position_count = K_rank+1    (ranking horizon, 동적)
 +# 옵션 A-1 채택: bucket name "split_k2" 유지, MQ_LEN은 worst-case 고정.
-+K2_cfg = self.config.mesa_phase2_k
++K2_cfg = self.config.duet_phase2_k
 +step_proxy_layout = create_tree_layout(
 +    name="split_k2",                          # 기존 bucket name 유지
 +    K=K2_cfg,                                  # forward depth
@@ -745,17 +745,17 @@ def _select_proxy_sourced_tokens_unified(self, mesa_proxy, draft_forked,
 +)
 ```
 
-`_select_proxy_sourced_tokens_policy_a` 함수와 그 진입로(`config.mesa_policy
+`_select_proxy_sourced_tokens_policy_a` 함수와 그 진입로(`config.duet_policy
 == "a"`)는 코드에 남겨두되 default 경로 아니므로 죽은 코드.
 
 ### Step 5 (wire helpers) — pack/unpack schema
 
 **파일**: `ssd/engine/verifier.py` (`wire_send`) + `ssd/engine/draft_runner.py`
-(`_unpack_mesa_proxy`).
+(`_unpack_duet_proxy`).
 
 기존 `send_int64` 사용 패턴 유지. schema 변경:
 ```
-[chosen_pos: N int64] [chosen_tok: N int64]    # N = config.mesa_proxy_wire_N
+[chosen_pos: N int64] [chosen_tok: N int64]    # N = config.duet_proxy_wire_N
 ```
 
 prealloc buf 사이즈 = 2N int64. step마다 재사용. NCCL irecv은 buf의 첫
@@ -801,13 +801,13 @@ Section 3.7 (옵션 A-1)에 따라 `split_k2` family를 worst-case로 일반화.
 **검증 (smoke)**:
 ```bash
 SSD_TRACE_BUCKET=1 SSD_FORCE_SPLIT_K1K2=1 python -O bench/bench.py \
-    --mesa_policy b ... --mesa_phase1_k 8 --mesa_phase2_k 8 \
-    --mesa_exit_layer 57
+    --duet_policy b ... --duet_phase1_k 8 --duet_phase2_k 8 \
+    --duet_exit_layer 57
 # 매 step bucket dispatch 로그 확인 → split_k2 capture가 K1=K2=8 에서
 # 정상 동작 (position_count=9 placeholder vs runtime 9 일치).
 
 # 다른 K1 != K2 케이스도 테스트:
-... --mesa_phase1_k 12 --mesa_phase2_k 4
+... --duet_phase1_k 12 --duet_phase2_k 4
 # placeholder K_rank_max+1=13, runtime: K1 hit step=13, K2 hit step=5.
 ```
 
@@ -841,7 +841,7 @@ host load < 10 시점 측정:
 
 ### 5.3 측정 지표 추가 (별도 commit)
 
-`SSD_MESA_PROXY_STATS=1` 환경변수로 per-step 수집:
+`SSD_DUET_PROXY_STATS=1` 환경변수로 per-step 수집:
 - `h` (예상 거부 분포)
 - `chosen_pos` / `chosen_tok` 히스토그램
 - in_draft drop 카운트 / step
@@ -858,7 +858,7 @@ host load < 10 시점 측정:
 | `ssd/engine/verifier.py` | +50, -50 (Policy B path 재작성) |
 | `ssd/engine/draft_runner.py` | +90, -10 (신규 unified selector + 호출 분기) |
 | `ssd/tests/test_policy_b_unified.py` | +250 (신규) |
-| `ssd/docs/mesa/05-policy-b-fix.md` | 본 문서 |
+| `ssd/docs/duet/05-policy-b-fix.md` | 본 문서 |
 
 총 신규/변경 ≈ 400 LOC.
 
@@ -870,7 +870,7 @@ host load < 10 시점 측정:
 2. **Phase 2 cache 호환성**: 동적 fan_out_list가 다음 step의 cache lookup에
    영향 없는지. cache key는 `(seq_id, fan_idx, recovery_token)`, fan_idx는
    layout-기반. 동적 layout이라도 fan_idx 매핑 일관성 있으면 OK.
-3. **CG mask in-place buffer**: `mesa_verify_k1` / `mesa_verify_k2` capture
+3. **CG mask in-place buffer**: `duet_verify_k1` / `duet_verify_k2` capture
    시 mask가 정적 가정인지 동적 가정인지 코드 검증 필요.
 4. **selector 입력 폭 contract**: split-only short-hit Phase 1이 자연스레
    `K_rank+1` 폭 candidates 생성 (`draft_runner.py` 2148, 2166). 본 fix는

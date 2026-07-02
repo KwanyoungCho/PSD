@@ -1,13 +1,13 @@
 #!/bin/bash
-# AR (no-speculation) and EAGLE comparison to accompany the MESA sweep.
+# AR (no-speculation) and EAGLE comparison to accompany the DUET sweep.
 # Usage: bash bench/run_ar_eagle.sh
 #
 # AR baselines:
-#   - ar_layerskip: autoregressive on LayerSkip-Llama3-8B (matches MESA/baseline_f* target)
+#   - ar_layerskip: autoregressive on LayerSkip-Llama3-8B (matches DUET/baseline_f* target)
 #   - ar_llama31:   autoregressive on Llama-3.1-8B-Instruct (matches EAGLE target)
 #
 # EAGLE (EAGLE-3 draft tuned for Llama-3.1-8B-Instruct):
-#   - eagle_f3_k4: matched knobs to MESA (K=4, async_fan_out=3)
+#   - eagle_f3_k4: matched knobs to DUET (K=4, async_fan_out=3)
 
 set -u
 cd "$(dirname "$0")/.."
@@ -75,7 +75,7 @@ AR_COMMON="--llama --size 8 --gpus 2 --b 1 --temp 0.6 --numseqs $NUMSEQS --outpu
 launch "ar_layerskip" $AR_COMMON --model_path "$LAYERSKIP"
 launch "ar_llama31"   $AR_COMMON --model_path "$LLAMA31"
 
-# EAGLE on Llama-3.1-8B-Instruct with the same K/f as MESA's best config for apples-to-apples.
+# EAGLE on Llama-3.1-8B-Instruct with the same K/f as DUET's best config for apples-to-apples.
 # EAGLE draft (1-layer) uses a different graph than Llama-3.2-1B; we match K=4, f=3.
 EAGLE_COMMON="--llama --size 8 --eagle --async --k 4 --f 3 --gpus 2 --b 1 --temp 0.6 --numseqs $NUMSEQS --output_len $OUTLEN --random --model_path $LLAMA31"
 launch "eagle_f3_k4" $EAGLE_COMMON

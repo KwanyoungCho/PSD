@@ -84,8 +84,8 @@ Each phase is a single small commit so a parallel session can
 revert / inspect cleanly.
 
 ### Phase 0 — design doc (this file)
-- Add `docs/mesa/07-qwama-draft-support.md`.
-- Commit: `docs(mesa): 07 qwama draft support plan`.
+- Add `docs/duet/07-qwama-draft-support.md`.
+- Commit: `docs(duet): 07 qwama draft support plan`.
 
 ### Phase 1 — add Qwen2 model file
 - New `ssd/models/qwen2.py`, copied from `qwen3.py` then:
@@ -122,13 +122,13 @@ revert / inspect cleanly.
 
 ### Phase 5 — paper-config baseline
 - Same config as `ssd_dense_7b_amd135m_split` runner but with Llama-3-8B
-  target and Qwama draft, no MESA. Compare against the existing
+  target and Qwama draft, no DUET. Compare against the existing
   Llama-3-8B + Llama-3.2-1B baseline.
 - Add a `experiments/.../async_sd_llama3_8b_qwama_smoke/` directory with
   the runner script. Commit: `feat(qwama): async SD baseline runner +
   smoke result`.
 
-### Phase 6 — MESA on top
+### Phase 6 — DUET on top
 - Reuse split-K1/K2 runner template, swap target + draft. Verify proxy
   send / receive paths work across cross-arch draft (Qwama uses
   different hidden-size; proxy payload is tokens + topk logits, both are
@@ -141,7 +141,7 @@ The user explicitly required parallel-safe execution. Rules followed:
 - Each phase is a single commit touching only the files listed above.
 - Do not stage unrelated working-tree changes
   (`scheduler.py`, `speculator_async.py`, `step.py`,
-  `async_spec_helpers.py`, `plot_mesa_aligned_timeline.py`,
+  `async_spec_helpers.py`, `plot_duet_aligned_timeline.py`,
   `_archive_20260512_cleanup/` deletions) — those are an in-flight WIP
   on the same branch.
 - This doc is updated at the end of each phase with status + commit hash.
@@ -156,7 +156,7 @@ The user explicitly required parallel-safe execution. Rules followed:
 | 3 — download | done | (no commit) | `/data2/.../models--turboderp--Qwama-0.5B-Instruct/` (1.0 GB) |
 | 4 — smoke | done | (no commit) | Llama-3.1-8B + Qwama-0.5B, --gpus 3 --async --spec --k 5 --f 2 --numseqs 2 --output_len 32 → generations OK, total 31.90 tok/s, decode 103.58 tok/s, cache hit 0.42, cross-family allowed log present. Logs at `experiments/qwama_smoke/run.log`. Smoke required --gpus 3 (target TP=2 + draft) on RTX 3090; --gpus 2 OOMs because Llama-3-8B bf16 + workspaces + KV reservation overruns a single 24 GiB card. |
 | 5 — paper-config baseline | pending | | match `ssd_dense_7b_amd135m_split` shape, swap target/draft, compare against Llama-3-8B + Llama-3.2-1B baseline |
-| 6 — MESA on top | pending | | reuse split-K1/K2 runner |
+| 6 — DUET on top | pending | | reuse split-K1/K2 runner |
 
 ## 6. Issues discovered + fixes (Phase 4)
 

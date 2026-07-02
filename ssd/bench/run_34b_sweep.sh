@@ -1,5 +1,5 @@
 #!/bin/bash
-# CodeLlama-34B + TinyLlama-1.1B — MESA vs baseline sweep
+# CodeLlama-34B + TinyLlama-1.1B — DUET vs baseline sweep
 # Target TP=4, Draft TP=1, total 5 GPUs (0..4), GPUs 5..7 unused.
 # Run serially (single 5-GPU job at a time).
 
@@ -50,15 +50,15 @@ run() {
 run "ar_34b"
 
 # === Phase 1: sync speculation baselines for f sweep ===
-# we use --async so timing matches MESA pipeline; baseline varies --f
+# we use --async so timing matches DUET pipeline; baseline varies --f
 for f in 2 3 4 5 6 8; do
     run "baseline_f${f}" --async --spec --k 4 --f ${f}
 done
 
-# === Phase 2: MESA at each f, dfo=1 (phase1=1, phase2=f-1) — matches best 8B config ===
+# === Phase 2: DUET at each f, dfo=1 (phase1=1, phase2=f-1) — matches best 8B config ===
 for f in 2 3 4 5 6 8; do
-    run "mesa_f${f}_dfo1" --async --spec --k 4 --f ${f} \
-        --mesa --mesa_exit_layer 32 --mesa_draft_fan_out 1
+    run "duet_f${f}_dfo1" --async --spec --k 4 --f ${f} \
+        --duet --duet_exit_layer 32 --duet_draft_fan_out 1
 done
 
 echo ""

@@ -35,14 +35,19 @@ import pandas as pd
 # and wall_start_ns / step_id.  Legacy JSON still falls through to the
 # existing approximate plotter below.
 try:
-    from . import plot_mesa_aligned_timeline as aligned
+    from . import plot_duet_aligned_timeline as aligned
 except ImportError:  # running as a script, not as a package
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import plot_mesa_aligned_timeline as aligned  # type: ignore[no-redef]
+    import plot_duet_aligned_timeline as aligned  # type: ignore[no-redef]
 
 
 def _latest_profile(outdir: Path, tag: str) -> Path | None:
-    paths = sorted(outdir.glob(f"mesa_profile_{tag}_*.json"))
+    # Accepts both new duet_profile_*.json and legacy mesa_profile_*.json
+    paths = sorted(outdir.glob(f"duet_profile_{tag}_*.json"))
+    if not paths:
+        paths = sorted(outdir.glob(f"duet_profile_{tag}.json"))
+    if not paths:
+        paths = sorted(outdir.glob(f"mesa_profile_{tag}_*.json"))
     if not paths:
         paths = sorted(outdir.glob(f"mesa_profile_{tag}.json"))
     return paths[-1] if paths else None
@@ -110,12 +115,12 @@ def parse_run_log(outdir: Path) -> dict:
         p1_acceptance_ratio=_metric(r"Avg Phase 1 Acceptance Ratio:\s*([\d.]+)", text),
         p2_avg_accepted_len=_metric(r"Avg Phase 2 Accepted Len:\s*([\d.]+)", text),
         p2_acceptance_ratio=_metric(r"Avg Phase 2 Acceptance Ratio:\s*([\d.]+)", text),
-        mesa_exit_layer=_metric(r"MESA-SSD enabled: exit_layer=(\d+)", text, cast=int),
-        mesa_proxy_top_k=_metric(r"proxy_top_k=(\d+)", text, cast=int),
-        mesa_draft_fan_out=_metric(r"draft_fan_out=(\d+)", text, cast=int),
-        mesa_proxy_fan_out=_metric(r"proxy_fan_out=(\d+)", text, cast=int),
-        mesa_phase1_k=_metric(r"K1=(\d+)", text, cast=int),
-        mesa_phase2_k=_metric(r"K2=(\d+)", text, cast=int),
+        duet_exit_layer=_metric(r"DUET-SSD enabled: exit_layer=(\d+)", text, cast=int),
+        duet_proxy_top_k=_metric(r"proxy_top_k=(\d+)", text, cast=int),
+        duet_draft_fan_out=_metric(r"draft_fan_out=(\d+)", text, cast=int),
+        duet_proxy_fan_out=_metric(r"proxy_fan_out=(\d+)", text, cast=int),
+        duet_phase1_k=_metric(r"K1=(\d+)", text, cast=int),
+        duet_phase2_k=_metric(r"K2=(\d+)", text, cast=int),
         tokens_per_step_on_hit=_metric(r"Avg Tokens per step on Cache Hit:\s*([\d.]+)", text),
         tokens_per_step_on_miss=_metric(r"Avg Tokens per step on Cache Miss:\s*([\d.]+)", text),
         draft_step_ms=_metric(r"Avg draft step time \(ms\):\s*([\d.]+)", text),
@@ -300,7 +305,7 @@ def _choose_pair_index(
 
 
 COLORS = {
-    # Target-side MESA events
+    # Target-side DUET events
     "verify_setup": ("#969696", ".."),
     "graph_pre": ("#8b1a1a", ""),
     "exit_logits": ("#fdae61", ""),
@@ -332,7 +337,7 @@ COLORS = {
     "hit_cache_respond_mixed": ("#bdbdbd", "//"),
     "draft_recv_cmd": ("#4d4d4d", "..."),
     "draft_send_response": ("#252525", ""),
-    # Draft-side split-K1/K2 MESA events
+    # Draft-side split-K1/K2 DUET events
     "phase1_build": ("#9ecae1", ".."),
     "phase1_prep": ("#6baed6", "//"),
     "phase1_replay": ("#08519c", ""),
@@ -643,7 +648,7 @@ def main() -> None:
     if not use_aligned:
         if not aligned.is_aligned_schema(target_raw):
             print(
-                "[WARN] legacy MESA profile detected (no _anchor / wall_start_ns); "
+                "[WARN] legacy DUET profile detected (no _anchor / wall_start_ns); "
                 "timeline plots use approximate handshake-offset alignment and should not be "
                 "used as the paper source of truth — re-run with the Phase-B aligned trace "
                 "to get step-id-joined timelines."

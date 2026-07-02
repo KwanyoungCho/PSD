@@ -13,7 +13,7 @@ class Context:
     slot_mapping: torch.Tensor | None = None
     context_lens: torch.Tensor | None = None
     block_tables: torch.Tensor | None = None
-    # MESA: layout-aware attention wrapper selection
+    # DUET: layout-aware attention wrapper selection
     active_mq_len: int | None = None
     active_wrappers: dict | None = None
     active_layout: object | None = None

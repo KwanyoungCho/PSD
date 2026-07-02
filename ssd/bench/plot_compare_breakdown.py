@@ -1,4 +1,4 @@
-"""Side-by-side per-step phase contribution: baseline vs MESA configs.
+"""Side-by-side per-step phase contribution: baseline vs DUET configs.
 
 Reads per_step_contribution.csv from each subdir and plots a stacked bar.
 """
@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 BASE = sys.argv[1] if len(sys.argv) > 1 else "/home/chokwans99/PSD/ssd/tmp/final_exp2"
 CONFIGS = [
     ("baseline_k7_geo",          "SSD (baseline)\nK=7 geo"),
-    ("mesa_k5_f4_dfo2_exit24",   "MESA K=5\nexit=24"),
-    ("mesa_k5_f4_dfo2_exit28",   "MESA K=5\nexit=28"),
-    ("mesa_k5_f4_dfo2_exit32",   "MESA K=5\nexit=32"),
+    ("duet_k5_f4_dfo2_exit24",   "DUET K=5\nexit=24"),
+    ("duet_k5_f4_dfo2_exit28",   "DUET K=5\nexit=28"),
+    ("duet_k5_f4_dfo2_exit32",   "DUET K=5\nexit=32"),
 ]
 
 COLORS = {
@@ -44,7 +44,7 @@ COLORS = {
 }
 
 def _load(cfg_name):
-    path = f"{BASE}/{cfg_name}/mesa_per_step_contribution.csv"
+    path = f"{BASE}/{cfg_name}/duet_per_step_contribution.csv"
     if not os.path.exists(path):
         return None
     return pd.read_csv(path)
