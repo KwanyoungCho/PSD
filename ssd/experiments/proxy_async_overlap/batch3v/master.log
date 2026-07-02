@@ -1,0 +1,15 @@
+[2026-07-02T07:35:17+00:00] === START off_off (ASYNC=0 STREAM=0) ===
+[2026-07-02T07:36:09+00:00] === END off_off ===
+[2026-07-02T07:36:09+00:00] === START on_off (ASYNC=1 STREAM=0) ===
+[2026-07-02T07:36:48+00:00] === END on_off ===
+[2026-07-02T07:36:48+00:00] === START on_on (ASYNC=1 STREAM=1) ===
+[2026-07-02T07:37:28+00:00] === END on_on ===
+
+=== BYTE-IDENTICAL GENERATION CHECK ===
+  off_off vs on_off:  byte-identical ✓
+  off_off vs on_on:  byte-identical ✓
+
+=== TPS COMPARISON ===
+  off_off: Final Decode Throughput: 120.51tok/s | [metrics] Avg target time per full step (ms): 65.50
+  on_off: Final Decode Throughput: 122.11tok/s | [metrics] Avg target time per full step (ms): 36.66
+  on_on: Final Decode Throughput: 120.89tok/s | [metrics] Avg target time per full step (ms): 36.36
