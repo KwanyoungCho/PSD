@@ -1305,6 +1305,9 @@ class DraftRunner(ModelRunner):
             _active_wrappers = None
             if _active_mq is not None:
                 _active_wrappers = self.prefill_wrappers_by_layout.get(_layout.name)
+            # Batch 1b: thread cache_hits_list through context so
+            # run_fi_tree_decode_cudagraph avoids re-tolist()-ing at step 0
+            # (value already known from _glue_decode).
             set_context(
                 is_prefill=False,
                 slot_mapping=step_slot_maps[depth],
@@ -1313,6 +1316,7 @@ class DraftRunner(ModelRunner):
                 active_mq_len=_active_mq,
                 active_wrappers=_active_wrappers,
                 active_layout=_layout,  # runtime layout for dynamic fan_out
+                active_cache_hits_list=payload.get("cache_hits_list"),
             )
         else:
             set_context(
@@ -1320,6 +1324,7 @@ class DraftRunner(ModelRunner):
                 slot_mapping=step_slot_maps[depth],
                 context_lens=step_context_lens[depth].to(torch.int32),
                 block_tables=dbt,
+                active_cache_hits_list=payload.get("cache_hits_list"),
             )
 
         hidden_states = payload.get("hidden_states")
@@ -1649,15 +1654,18 @@ class DraftRunner(ModelRunner):
         # take.sum() == total_budget. If it doesn't, fan_out_list.sum()
         # would silently differ from proxy_forked.shape[1] (= total_budget)
         # and downstream Phase 2 decode reads zero-padded slots as real
-        # tokens. Hard-fail with a clear message instead of silent corruption.
-        # NOTE: this is a 1 GPU sync per step; acceptable for safety.
-        _take_sum = int(take.sum().item())
-        assert _take_sum == total_budget, (
-            f"Policy B underfill: take.sum()={_take_sum} != total_budget={total_budget}. "
-            f"This means buffer sizing was insufficient. Check config.duet_proxy_wire_N "
-            f"and config.duet_proxy_top_k auto-raise; see docs/duet/05-policy-b-fix.md "
-            f"Section 3.5."
-        )
+        # tokens. This assert was found to be a per-step GPU→CPU sync on the
+        # critical path (immediately after proxy_wait). Since the invariant
+        # is guaranteed by config-time buffer sizing (see 05-policy-b-fix.md
+        # §3.3), gate under __debug__ so it's stripped under `python -O`.
+        if __debug__:
+            _take_sum = int(take.sum().item())
+            assert _take_sum == total_budget, (
+                f"Policy B underfill: take.sum()={_take_sum} != total_budget={total_budget}. "
+                f"This means buffer sizing was insufficient. Check config.duet_proxy_wire_N "
+                f"and config.duet_proxy_top_k auto-raise; see docs/duet/05-policy-b-fix.md "
+                f"Section 3.5."
+            )
 
         taken_pos = chosen_pos[take]                                  # [total_budget]
         taken_tok = chosen_tok[take]
@@ -1917,9 +1925,12 @@ class DraftRunner(ModelRunner):
                 draft_acts = torch.cat([draft_acts, cont_acts], dim=1)
 
         # === Pass 중간: proxy 수신 ===
-        # Phase B: parent="phase2_build" per docs/duet/06 §4.5 so the
-        # plotter can group proxy waits under the phase-2 build span.
-        _mev_pw = _mr("proxy_wait", parent="phase2_build")
+        # Batch 1d: proxy_wait is I/O (NCCL recv) that fires BEFORE the
+        # phase2_build span opens — the earlier parent="phase2_build" tag
+        # caused the aligned plotter to render proxy_wait to the LEFT of
+        # the translucent phase2_build parent bar (misleading). Render as
+        # a root span instead.
+        _mev_pw = _mr("proxy_wait")
         proxy_recv_work.wait()
         _mc("proxy_wait", _mev_pw)
 
@@ -2407,9 +2418,12 @@ class DraftRunner(ModelRunner):
             draft_tree_args, layout=_layout_k1)
 
         # === Wait for proxy from target ===
-        # Phase B: parent="phase2_build" per docs/duet/06 §4.5 so the
-        # plotter can group proxy waits under the phase-2 build span.
-        _mev_pw = _mr("proxy_wait", parent="phase2_build")
+        # Batch 1d: proxy_wait is I/O (NCCL recv) that fires BEFORE the
+        # phase2_build span opens — the earlier parent="phase2_build" tag
+        # caused the aligned plotter to render proxy_wait to the LEFT of
+        # the translucent phase2_build parent bar (misleading). Render as
+        # a root span instead.
+        _mev_pw = _mr("proxy_wait")
         proxy_recv_work.wait()
         _mc("proxy_wait", _mev_pw)
         duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)

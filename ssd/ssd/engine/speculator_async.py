@@ -139,8 +139,14 @@ class SpeculatorAsync(SpeculatorBase):
         # v1 hybrid: when valid_k differs from K, only extend by valid_k tokens
         # (proxy-sourced rows store K_short; rest of the K_long-shaped buffer is
         # padding from _merge_and_populate_cache and must not enter seq tokens).
+        # Batch 1c: cache first-element valid_k scalar during the loop so the
+        # slicing block below can reuse it instead of re-issuing a GPU→CPU
+        # sync for the same value.
+        _vk_scalar = None
         for i, seq in enumerate(seqs):
             vk_i = int(valid_k[i].item()) if valid_k is not None else self.K
+            if i == 0:
+                _vk_scalar = vk_i
             seq.token_ids.extend(speculations_tokens[i, :vk_i].tolist())
             seq.num_tokens = len(seq.token_ids)
             seq.last_token = seq.token_ids[-1]
@@ -155,7 +161,7 @@ class SpeculatorAsync(SpeculatorBase):
         # SpecDecodeStep.decode top-level guard; keep a defensive numel() check
         # here for any direct callers that bypass that path.
         if valid_k is not None and valid_k.numel() > 0:
-            vk = int(valid_k[0].item())
+            vk = _vk_scalar if _vk_scalar is not None else int(valid_k[0].item())
             if vk != self.K:
                 speculations = speculations[:, :vk + 1].contiguous()
                 logits_q = logits_q[:, :vk, :].contiguous()

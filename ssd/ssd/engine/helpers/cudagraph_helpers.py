@@ -319,7 +319,15 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
 
         # CPU mask precompute: build all K packed masks using numpy at step 0.
         # Eliminates per-step get_custom_mask (GPU) + segment_packbits + GPU->CPU syncs.
-        cache_hits_list = cache_hits[:B].tolist()
+        # Batch 1b: reuse cache_hits_list threaded through context (set in
+        # _decode_tree_step from payload) to avoid a duplicate .tolist() sync
+        # per step. Fall back to the tolist path when it's not pre-computed
+        # (non-DUET / non-tree paths).
+        _ctx_chl = getattr(context, "active_cache_hits_list", None)
+        if _ctx_chl is not None and len(_ctx_chl) >= B:
+            cache_hits_list = _ctx_chl[:B]
+        else:
+            cache_hits_list = cache_hits[:B].tolist()
 
         # Layout change detection: if fan_out changed, recompute glue masks
         _needs_recompute = "glue_hit_np" not in cache
@@ -1659,12 +1667,16 @@ def _ensure_duet_anchor():
         return
     if _duet_anchor_event is not None:
         return
+    # Batch 1e: capture anchor_cpu_ns BETWEEN the two syncs (matches doc
+    # 06 §4.2 canonical pattern). Previously the CPU stamp was taken after
+    # the second synchronize + event assignment + attribute lookup, adding
+    # a systematic 10-100 µs offset that biased cross-process alignment.
     torch.cuda.synchronize()
+    _duet_anchor_cpu_ns = _time_mod_for_duet.perf_counter_ns()
     ev = torch.cuda.Event(enable_timing=True)
     ev.record()
     torch.cuda.synchronize()
     _duet_anchor_event = ev
-    _duet_anchor_cpu_ns = _time_mod_for_duet.perf_counter_ns()
     _duet_anchor_device = torch.cuda.current_device()
 
 

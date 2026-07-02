@@ -123,9 +123,14 @@ class SpecDecodeStep(InferenceStep):
         # proc here pre-emptively so events on this process are tagged even
         # before the request id is known. status is learned only after
         # speculate() returns and is late-bound via duet_set_context so
-        # duet_close() picks it up at close time. Label retains the
-        # legacy `_{status}` suffix (Option (i)) for back-compat with
-        # summarize_ssd_run.py; the row also carries status as a field.
+        # duet_close() picks it up at close time.
+        # Batch 1f: label is now the stable "target_spec_wait" string (drops
+        # the `_{status}` suffix). Status lives in the row's `status` field,
+        # which is what handshake children reference as parent_label. Keeping
+        # the suffix broke exact-string parent lookup (parent_label field on
+        # target_send_request etc. was "target_spec_wait", but the parent's
+        # own label was "target_spec_wait_hit_k1"). summarize_ssd_run.py
+        # already reads via startswith() so back-compat is preserved.
         from ssd.engine.helpers.cudagraph_helpers import (
             duet_record as _mr, duet_close as _mc, duet_set_context as _mctx,
         )
@@ -135,8 +140,7 @@ class SpecDecodeStep(InferenceStep):
         _status = getattr(speculate_result, "profile_cache_status", None)
         _step_id = getattr(speculate_result, "step_id", None)
         _mctx(step_id=_step_id, status=_status)
-        _wait_label = f"target_spec_wait_{_status}" if _status else "target_spec_wait"
-        _mc(_wait_label, _mev_sw)
+        _mc("target_spec_wait", _mev_sw)
 
         if _prof:
             torch.cuda.synchronize()
