@@ -279,78 +279,38 @@ class ModelRunner:
                 )
             print(f'wrapper backend is {self.prefill_wrappers[bs]._backend}', flush=True)
 
-            # DUET: create layout-specific wrappers for draft/proxy tree decode.
-            # Phase 3 (K1 split): also create wrappers for phase1_long (forward
-            # depth K1 but same MQ_LEN as draft layout) so its CG capture has
-            # an isolated wrapper plan.
+            # DUET: create layout-specific wrappers for split-K1/K2 tree
+            # decode (split_k1_{long,short} + split_k2). The hybrid / legacy
+            # draft-proxy wrapper families were removed (2026-07).
             self.prefill_wrappers_by_layout = {"full": self.prefill_wrappers}
             if self.config.duet_enabled:
-                # MQ_LEN per layout = fan_out × position_count.
-                # phase1_long: pos=K_long+1; phase1_short: pos=K_short+1=K2+1.
-                K_long_cfg = self.config.speculate_k
-                K_short_cfg = (
-                    self.config.duet_phase2_k if self.config.duet_phase1_k is not None
-                    else K_long_cfg
-                )
-                _split_k1k2 = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-                # Legacy draft/proxy wrappers — needed for hybrid path only.
-                # Skipped in split-only mode (split uses split_k1_{long,short} + split_k2).
-                if _split_k1k2:
-                    _layout_specs = []
-                else:
-                    _layout_specs = [
-                        ("draft", self.config.duet_draft_fan_out, K_long_cfg + 1),
-                        ("proxy", self.config.duet_proxy_fan_out, K_long_cfg + 1),
-                    ]
-                if self.config.duet_phase1_k is not None:
-                    K1_cfg_split = self.config.duet_phase1_k
-                    K2_cfg_split = self.config.duet_phase2_k
-                    if _split_k1k2:
-                        # Split-only K1/K2 mode: phase1 long/short + phase2.
-                        # K2 <= K1 contract (asserted at draft init).
-                        # Phase 1 supports non-uniform fan_out_list per position
-                        # (config.duet_split_phase1_fan_out_list). Phase 2 is
-                        # uniform proxy_fo (split-K1/K2 design).
-                        _p1_list = self.config.duet_split_phase1_fan_out_list
-                        _dfo = self.config.duet_draft_fan_out
-                        _pfo = self.config.duet_proxy_fan_out
-                        _p1_mq_long = sum(_p1_list) if _p1_list else _dfo * (K1_cfg_split + 1)
-                        _layout_specs.append(
-                            ("split_k1_long", None, None, _p1_mq_long)
-                        )
-                        if K2_cfg_split < K1_cfg_split:
-                            _p1_mq_short = (
-                                sum(_p1_list[:K2_cfg_split + 1]) if _p1_list
-                                else _dfo * (K2_cfg_split + 1)
-                            )
-                            _layout_specs.append(
-                                ("split_k1_short", None, None, _p1_mq_short)
-                            )
-                        # Phase 2 worst-case sizing for unified Policy B (옵션 A-1).
-                        # docs/duet/05-policy-b-fix.md Section 3.7.
-                        # MQ_LEN = total_budget = pfo*(K_max+1). Phase 2 tree size
-                        # is uniform across hit types (option A: work uniform, no
-                        # short-hit savings). wire_N (=total_budget+buffer) is
-                        # NCCL-pack only and unrelated to layout MQ_LEN.
-                        K_rank_max = max(K1_cfg_split, K2_cfg_split)   # = K1
-                        _p2_mq = _pfo * (K_rank_max + 1)
-                        _layout_specs.append(
-                            ("split_k2", None, None, _p2_mq)
-                        )
-                    else:
-                        # Hybrid path wrappers.
-                        _layout_specs.append(
-                            ("phase1_long", self.config.duet_draft_fan_out, K_long_cfg + 1)
-                        )
-                        _layout_specs.append(
-                            ("phase1_short", self.config.duet_draft_fan_out, K_short_cfg + 1)
-                        )
-                for _spec in _layout_specs:
-                    if len(_spec) == 4:
-                        layout_name, layout_fan_out, layout_pos_count, layout_mq_len = _spec
-                    else:
-                        layout_name, layout_fan_out, layout_pos_count = _spec
-                        layout_mq_len = layout_fan_out * layout_pos_count
+                # K2 <= K1 contract (asserted at draft init).
+                # Phase 1 supports non-uniform fan_out_list per position
+                # (config.duet_split_phase1_fan_out_list). Phase 2 is
+                # uniform proxy_fo (split-K1/K2 design).
+                K1_cfg_split = self.config.duet_phase1_k
+                K2_cfg_split = self.config.duet_phase2_k
+                _p1_list = self.config.duet_split_phase1_fan_out_list
+                _dfo = self.config.duet_draft_fan_out
+                _pfo = self.config.duet_proxy_fan_out
+                _p1_mq_long = sum(_p1_list) if _p1_list else _dfo * (K1_cfg_split + 1)
+                _layout_specs = [("split_k1_long", _p1_mq_long)]
+                if K2_cfg_split < K1_cfg_split:
+                    _p1_mq_short = (
+                        sum(_p1_list[:K2_cfg_split + 1]) if _p1_list
+                        else _dfo * (K2_cfg_split + 1)
+                    )
+                    _layout_specs.append(("split_k1_short", _p1_mq_short))
+                # Phase 2 worst-case sizing for unified Policy B (옵션 A-1).
+                # docs/duet/05-policy-b-fix.md Section 3.7.
+                # MQ_LEN = total_budget = pfo*(K_max+1). Phase 2 tree size
+                # is uniform across hit types (option A: work uniform, no
+                # short-hit savings). wire_N (=total_budget+buffer) is
+                # NCCL-pack only and unrelated to layout MQ_LEN.
+                K_rank_max = max(K1_cfg_split, K2_cfg_split)   # = K1
+                _p2_mq = _pfo * (K_rank_max + 1)
+                _layout_specs.append(("split_k2", _p2_mq))
+                for layout_name, layout_mq_len in _layout_specs:
                     l_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
@@ -372,121 +332,7 @@ class ModelRunner:
                             mask_indptr_buf=l_mask_indptr[:bs_i + 1],
                         )
                     self.prefill_wrappers_by_layout[layout_name] = layout_wrappers
-                print(f'[DUET] Created FlashInfer wrappers for draft/proxy layouts', flush=True)
-
-                # Phase C-1 debug: fresh eager-only proxy wrapper. NEVER used
-                # by CG capture or main runtime. Mirror experiments use this
-                # to isolate wrapper-state pollution from CG-shared wrappers.
-                # Skipped in split-only K1/K2 mode (debug-only artifact).
-                if not _split_k1k2:
-                    _pe_proxy_fo = self.config.duet_proxy_fan_out
-                    _pe_total = _pe_proxy_fo * (self.config.speculate_k + 1)
-                    pe_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
-                    pe_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
-                    pe_kv_indices = torch.empty(max_bs * max_num_blocks, dtype=torch.int32, device=self.device)
-                    pe_kv_lpl = torch.empty(max_bs, dtype=torch.int32, device=self.device)
-                    pe_mask = torch.empty(
-                        max_bs * _pe_total * self.config.max_model_len,
-                        dtype=torch.uint8, device=self.device,
-                    )
-                    pe_mask_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
-                    pe_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-                        self.workspace_buffer, "NHD",
-                        use_cuda_graph=False,
-                        qo_indptr_buf=pe_cu,
-                        paged_kv_indptr_buf=pe_kv_indptr,
-                        paged_kv_indices_buf=pe_kv_indices,
-                        paged_kv_last_page_len_buf=pe_kv_lpl,
-                        custom_mask_buf=pe_mask,
-                        mask_indptr_buf=pe_mask_indptr,
-                    )
-                    self.prefill_wrappers_by_layout["proxy_eager_debug"] = {max_bs: pe_wrapper}
-                    print(f'[DUET debug] proxy_eager_debug wrapper created '
-                          f'(use_cuda_graph=False, MQ={_pe_total})', flush=True)
-
-                # Step 6 / Step 8 / Step 9B: phase2_hybrid wrapper families.
-                # Eager fallback (use_cuda_graph=False) keyed by name; CG
-                # variant (use_cuda_graph=True) keyed by f"{name}_cg".
-                # Runtime picks _cg by default when graph is captured;
-                # SSD_FORCE_EAGER_HYBRID_PHASE2=1 → eager fallback.
-                # Skip phase2_hybrid + correct_split_cont wrappers in split-only
-                # mode (split path uses split_k1_long/short + split_k2 only).
-                _split_k1k2_skip_hybrid = (
-                    self.config.duet_phase1_k is not None
-                    and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-                )
-                if self.config.duet_phase1_k is not None and not _split_k1k2_skip_hybrid:
-                    K1_cfg = self.config.duet_phase1_k
-                    K2_cfg = self.config.duet_phase2_k
-                    K_long_cfg = K1_cfg + K2_cfg
-                    K_short_cfg = K2_cfg
-                    dfo_cfg = self.config.duet_draft_fan_out
-                    pfo_cfg = self.config.duet_proxy_fan_out
-
-                    def _alloc_hybrid_wrapper(K_step_local, use_cg):
-                        total = (K_step_local + 1) * (dfo_cfg + pfo_cfg)
-                        cu = torch.empty(total + 1, dtype=torch.int32, device=self.device)
-                        kv_indptr = torch.empty(total + 1, dtype=torch.int32, device=self.device)
-                        kv_indices = torch.empty(total * max_num_blocks, dtype=torch.int32, device=self.device)
-                        kv_lpl = torch.empty(total, dtype=torch.int32, device=self.device)
-                        mask = torch.empty(total * self.config.max_model_len,
-                                           dtype=torch.uint8, device=self.device)
-                        mask_indptr = torch.empty(total + 1, dtype=torch.int32, device=self.device)
-                        w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-                            self.workspace_buffer, "NHD",
-                            use_cuda_graph=use_cg,
-                            qo_indptr_buf=cu,
-                            paged_kv_indptr_buf=kv_indptr,
-                            paged_kv_indices_buf=kv_indices,
-                            paged_kv_last_page_len_buf=kv_lpl,
-                            custom_mask_buf=mask,
-                            mask_indptr_buf=mask_indptr,
-                        )
-                        return total, w
-
-                    for bucket_name, K_step_b in [
-                        ("phase2_hybrid_long", K_long_cfg),
-                        ("phase2_hybrid_short", K_short_cfg),
-                    ]:
-                        # Eager fallback wrapper
-                        e_total, e_w = _alloc_hybrid_wrapper(K_step_b, use_cg=False)
-                        self.prefill_wrappers_by_layout[bucket_name] = {e_total: e_w}
-                        # CG variant wrapper (only allocate when not enforce_eager)
-                        if not self.enforce_eager:
-                            cg_total, cg_w = _alloc_hybrid_wrapper(K_step_b, use_cg=True)
-                            self.prefill_wrappers_by_layout[bucket_name + "_cg"] = {cg_total: cg_w}
-                    print(f'[DUET hybrid] phase2_hybrid wrappers created '
-                          f'(long total={(K_long_cfg+1)*(dfo_cfg+pfo_cfg)}, '
-                          f'short total={(K_short_cfg+1)*(dfo_cfg+pfo_cfg)}; '
-                          f'eager + CG{"" if not self.enforce_eager else " skipped"})',
-                          flush=True)
-
-                    # Phase D-4: correct_split_cont oracle wrapper. Cont-only,
-                    # uses split's physical layout (cont_layout slot positions
-                    # = same as hybrid's a_tail region). NEVER touched by CG
-                    # capture or main runtime — used only in parity harness.
-                    # max_total_rows = (K_long+1) * dfo (cont rows only).
-                    cs_total = (self.config.speculate_k + 1) * self.config.duet_draft_fan_out
-                    cs_cu = torch.empty(cs_total + 1, dtype=torch.int32, device=self.device)
-                    cs_kv_indptr = torch.empty(cs_total + 1, dtype=torch.int32, device=self.device)
-                    cs_kv_indices = torch.empty(cs_total * max_num_blocks, dtype=torch.int32, device=self.device)
-                    cs_kv_lpl = torch.empty(cs_total, dtype=torch.int32, device=self.device)
-                    cs_mask_size = cs_total * self.config.max_model_len
-                    cs_mask = torch.empty(cs_mask_size, dtype=torch.uint8, device=self.device)
-                    cs_mask_indptr = torch.empty(cs_total + 1, dtype=torch.int32, device=self.device)
-                    cs_wrapper = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-                        self.workspace_buffer, "NHD",
-                        use_cuda_graph=False,
-                        qo_indptr_buf=cs_cu,
-                        paged_kv_indptr_buf=cs_kv_indptr,
-                        paged_kv_indices_buf=cs_kv_indices,
-                        paged_kv_last_page_len_buf=cs_kv_lpl,
-                        custom_mask_buf=cs_mask,
-                        mask_indptr_buf=cs_mask_indptr,
-                    )
-                    self.prefill_wrappers_by_layout["correct_split_cont"] = {cs_total: cs_wrapper}
-                    print(f'[DUET hybrid] correct_split_cont wrapper created '
-                          f'(max_cont_rows={cs_total}, eager mode)', flush=True)
+                print(f'[DUET] Created FlashInfer wrappers for split-K1/K2 layouts', flush=True)
 
 
     def setup_and_warmup_model_and_cudagraphs(self, config: Config, hf_config: AutoConfig, init_q=None, is_draft=False):
@@ -747,104 +593,48 @@ class ModelRunner:
             if self.config.speculate and not (self.is_draft and self.config.use_eagle):  # verify CG: target always, non-EAGLE draft for fan-out; EAGLE draft uses glue_decode CG instead
                 if self.config.duet_enabled and not self.is_draft:
                     # DUET target: split verify CudaGraph (skip full verify → VRAM saving).
-                    # v1 hybrid (duet_phase1_k != None): capture two buckets —
-                    # duet_verify_long (lookahead=K_long) and duet_verify_short
-                    # (lookahead=K_short = K2). Run-side dispatches by lookahead
-                    # inferred from input_ids shape.
-                    if self.config.duet_phase1_k is not None:
-                        K_long = self.config.speculate_k
-                        K_short = self.config.duet_phase2_k
-                        _split_k1k2_target = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-                        # Hybrid duet_verify_long/short captures — skipped in
-                        # split-only mode (saves ~K_long+1 wide buffer × max_bs
-                        # × max_seqlen GPU memory). Split path uses
-                        # duet_verify_k1 / duet_verify_k2 only.
-                        if not _split_k1k2_target:
-                            # IMPORTANT: separate graph_pool per bucket.
-                            duet_gv_l, duet_pool_l, duet_pre_l, duet_post_l, duet_bs_l = \
-                                capture_duet_verify_cudagraph(self, lookahead=K_long)
-                            self.graph_vars["duet_verify_long"] = duet_gv_l
-                            self.graph_pools["duet_verify_long"] = duet_pool_l
-                            self.graphs["duet_verify_long_pre"] = duet_pre_l
-                            self.graphs["duet_verify_long_post"] = duet_post_l
-                            self.graph_bs_list["duet_verify_long"] = duet_bs_l
-                            duet_gv_s, duet_pool_s, duet_pre_s, duet_post_s, duet_bs_s = \
-                                capture_duet_verify_cudagraph(self, lookahead=K_short, graph_pool=None)
-                            self.graph_vars["duet_verify_short"] = duet_gv_s
-                            self.graph_pools["duet_verify_short"] = duet_pool_s
-                            self.graphs["duet_verify_short_pre"] = duet_pre_s
-                            self.graphs["duet_verify_short_post"] = duet_post_s
-                            self.graph_bs_list["duet_verify_short"] = duet_bs_s
-                        if not _split_k1k2_target:
-                            print(f'[DUET hybrid] Captured 2-bucket verify CG (separate pools): '
-                                  f'long(K={K_long}) + short(K={K_short}), '
-                                  f'exit_layer={self.config.duet_exit_layer}', flush=True)
-                        # Split-only K1/K2 mode: target verify per-bucket
-                        # captures (duet_verify_k1, duet_verify_k2). Single
-                        # bucket dispatch by valid_k. K1==K2 is fine (still
-                        # capture both for clean dispatch logic).
-                        if os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1":
-                            K1 = self.config.duet_phase1_k
-                            K2 = self.config.duet_phase2_k
-                            duet_gv_k1, duet_pool_k1, duet_pre_k1, duet_post_k1, duet_bs_k1 = \
-                                capture_duet_verify_cudagraph(self, lookahead=K1, graph_pool=None)
-                            self.graph_vars["duet_verify_k1"] = duet_gv_k1
-                            self.graph_pools["duet_verify_k1"] = duet_pool_k1
-                            self.graphs["duet_verify_k1_pre"] = duet_pre_k1
-                            self.graphs["duet_verify_k1_post"] = duet_post_k1
-                            self.graph_bs_list["duet_verify_k1"] = duet_bs_k1
-                            # Skip duet_verify_k2 capture when K1==K2 (same as k1).
-                            if K2 < K1:
-                                duet_gv_k2, duet_pool_k2, duet_pre_k2, duet_post_k2, duet_bs_k2 = \
-                                    capture_duet_verify_cudagraph(self, lookahead=K2, graph_pool=None)
-                                self.graph_vars["duet_verify_k2"] = duet_gv_k2
-                                self.graph_pools["duet_verify_k2"] = duet_pool_k2
-                                self.graphs["duet_verify_k2_pre"] = duet_pre_k2
-                                self.graphs["duet_verify_k2_post"] = duet_post_k2
-                                self.graph_bs_list["duet_verify_k2"] = duet_bs_k2
-                            print(f'[DUET split-K1K2] Captured duet_verify_k1 CG (K1={K1})'
-                                  + (f' + duet_verify_k2 CG (K2={K2})' if K2 < K1
-                                     else f' (K2==K1, k2 SKIPPED)'),
-                                  flush=True)
-                    else:
-                        duet_gv, duet_pool, duet_pre, duet_post, duet_bs = capture_duet_verify_cudagraph(self)
-                        self.graph_vars["duet_verify"] = duet_gv
-                        self.graph_pools["duet_verify"] = duet_pool
-                        self.graphs["duet_verify_pre"] = duet_pre
-                        self.graphs["duet_verify_post"] = duet_post
-                        self.graph_bs_list["duet_verify"] = duet_bs
-                        print(f'[DUET] Captured split verify CudaGraph (exit_layer={self.config.duet_exit_layer})', flush=True)
+                    # Split-only K1/K2 mode: target verify per-bucket
+                    # captures (duet_verify_k1, duet_verify_k2). Single
+                    # bucket dispatch by valid_k. K1==K2 is fine (still
+                    # capture both for clean dispatch logic).
+                    K1 = self.config.duet_phase1_k
+                    K2 = self.config.duet_phase2_k
+                    duet_gv_k1, duet_pool_k1, duet_pre_k1, duet_post_k1, duet_bs_k1 = \
+                        capture_duet_verify_cudagraph(self, lookahead=K1, graph_pool=None)
+                    self.graph_vars["duet_verify_k1"] = duet_gv_k1
+                    self.graph_pools["duet_verify_k1"] = duet_pool_k1
+                    self.graphs["duet_verify_k1_pre"] = duet_pre_k1
+                    self.graphs["duet_verify_k1_post"] = duet_post_k1
+                    self.graph_bs_list["duet_verify_k1"] = duet_bs_k1
+                    # Skip duet_verify_k2 capture when K1==K2 (same as k1).
+                    if K2 < K1:
+                        duet_gv_k2, duet_pool_k2, duet_pre_k2, duet_post_k2, duet_bs_k2 = \
+                            capture_duet_verify_cudagraph(self, lookahead=K2, graph_pool=None)
+                        self.graph_vars["duet_verify_k2"] = duet_gv_k2
+                        self.graph_pools["duet_verify_k2"] = duet_pool_k2
+                        self.graphs["duet_verify_k2_pre"] = duet_pre_k2
+                        self.graphs["duet_verify_k2_post"] = duet_post_k2
+                        self.graph_bs_list["duet_verify_k2"] = duet_bs_k2
+                    print(f'[DUET split-K1K2] Captured duet_verify_k1 CG (K1={K1})'
+                          + (f' + duet_verify_k2 CG (K2={K2})' if K2 < K1
+                             else f' (K2==K1, k2 SKIPPED)'),
+                          flush=True)
                 else:
                     _split_k1k2_draft = (
                         self.is_draft
                         and self.config.duet_phase1_k is not None
                         and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
                     )
-                    # Hybrid `verify` (K_long+1) and `verify_short` (K_short+1)
-                    # are NOT used by split-only path. Skip in split mode.
+                    # Full `verify` CG (K_long+1) is NOT used by the
+                    # split-only DUET draft path. Skip in split mode.
                     if not _split_k1k2_draft:
-                        # Non-DUET or hybrid draft: full verify CudaGraph (K_long+1 wide)
+                        # Non-DUET: full verify CudaGraph (K+1 wide)
                         verify_graph_vars, verify_graph_pool, verify_graphs, verify_graph_bs_list = capture_verify_cudagraph(self)
                         self.graph_vars["verify"] = verify_graph_vars
                         self.graph_pools["verify"] = verify_graph_pool
                         self.graphs["verify"] = verify_graphs
                         self.graph_bs_list["verify"] = verify_graph_bs_list
 
-                    # Step 9B-0: draft-side glue_short bucket (hybrid only).
-                    if (
-                        self.is_draft and self.config.duet_phase1_k is not None
-                        and not _split_k1k2_draft
-                    ):
-                        K_short = self.config.duet_phase2_k
-                        v_s_gv, v_s_pool, v_s_graphs, v_s_bs = capture_verify_cudagraph(
-                            self, k_plus_1=K_short + 1,
-                        )
-                        self.graph_vars["verify_short"] = v_s_gv
-                        self.graph_pools["verify_short"] = v_s_pool
-                        self.graphs["verify_short"] = v_s_graphs
-                        self.graph_bs_list["verify_short"] = v_s_bs
-                        print(f'[DUET] Captured draft glue_short CG '
-                              f'(K_short+1={K_short + 1})', flush=True)
                     if self.is_draft and self.config.duet_phase1_k is not None:
                         # Split-only K1/K2 mode: draft glue per-bucket captures
                         # (verify_k1, verify_k2). Dispatch by valid_k.
@@ -878,8 +668,8 @@ class ModelRunner:
                 self.graph_pools["fi_tree_decode"] = fi_tree_decode_graph_pool
                 self.graphs["fi_tree_decode"] = fi_tree_decode_graphs
                 self.graph_bs_list["fi_tree_decode"] = fi_tree_decode_graph_bs_list
-                # DUET draft/proxy layout CudaGraphs are captured after _init_prealloc_buffers()
-                # in DraftRunner.__init__, because draft_layout/proxy_layout are created there.
+                # DUET split-K1/K2 layout CudaGraphs are captured after _init_prealloc_buffers()
+                # in DraftRunner.__init__, because the split layouts are created there.
             if self.config.speculate and self.is_draft and self.config.draft_async and self.config.use_eagle:
                 glue_gv, glue_pool, glue_graphs, glue_bs_list = capture_glue_decode_cudagraph(self)
                 self.graph_vars["glue_decode"] = glue_gv
@@ -1219,15 +1009,6 @@ class ModelRunner:
                 if _ctx.active_layout is not None:
                     _tree_layout = _ctx.active_layout
                     _tree_graph_key = _tree_layout.graph_key
-                elif _ctx.active_mq_len is not None:
-                    _tree_graph_key = "fi_tree_decode"
-                    _tree_layout = None
-                    for _lname in ["draft", "proxy"]:
-                        _lkey = f"fi_tree_decode_{_lname}"
-                        if _lkey in self.graph_vars and getattr(self, f'{_lname}_layout').MQ_LEN == _ctx.active_mq_len:
-                            _tree_graph_key = _lkey
-                            _tree_layout = getattr(self, f'{_lname}_layout')
-                            break
                 else:
                     _tree_graph_key = "fi_tree_decode"
                     _tree_layout = None
@@ -1238,43 +1019,14 @@ class ModelRunner:
             # EAGLE draft glue decode with 2K+1 per seq
             return run_glue_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["glue_decode"], hidden_states)
         elif is_mq_kp1 and self.config.duet_enabled and not self.is_draft \
-                and ("duet_verify" in self.graph_vars or "duet_verify_long" in self.graph_vars
-                     or "duet_verify_k1" in self.graph_vars):
+                and "duet_verify_k1" in self.graph_vars:
             # ---- Split-only K1/K2 mode: target verify dispatch ----
-            # SSD_FORCE_SPLIT_K1K2 → buckets are {duet_verify_k1, duet_verify_k2}.
-            # Independent dispatch helper so this branch never falls back to
-            # hybrid's duet_verify_long/short.
-            if os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1":
-                return self._run_split_k1k2_target_verify(
-                    input_ids, positions, last_only,
-                )
-            # DUET target verify: split CudaGraph (pre → proxy → post).
-            # v1 hybrid: dispatch between duet_verify_long (lookahead=K_long) and
-            # duet_verify_short (lookahead=K_short=K2) by reading lookahead from
-            # the verifier-set attribute. Legacy single-bucket fallback if hybrid
-            # config is off.
-            if "duet_verify_long" in self.graph_vars:
-                # v1 hybrid verify dispatch. _duet_step_lookahead is set by
-                # run() from the step_lookahead arg passed via call() — that
-                # broadcast through SHM keeps every TP rank in sync (otherwise
-                # rank 0 picks short while rank 1 picks long → NCCL collective
-                # mismatch → deadlock). Bucket selection is now safe and
-                # always honors valid_k from cache.
-                _step_lookahead = getattr(self, "_duet_step_lookahead", self.config.speculate_k)
-                K_short = self.config.duet_phase2_k
-                bucket = "duet_verify_long" if _step_lookahead == self.config.speculate_k else "duet_verify_short"
-                assert _step_lookahead in (self.config.speculate_k, K_short), \
-                    f"unexpected lookahead {_step_lookahead}; expected K_long={self.config.speculate_k} or K_short={K_short}"
-                return run_duet_verify_cudagraph(
-                    self, input_ids, positions, last_only,
-                    self.graph_vars[bucket],
-                    duet_proxy_fn=self._duet_proxy_fn,
-                    bucket=bucket)
-            else:
-                return run_duet_verify_cudagraph(
-                    self, input_ids, positions, last_only,
-                    self.graph_vars["duet_verify"],
-                    duet_proxy_fn=self._duet_proxy_fn)
+            # Buckets are {duet_verify_k1, duet_verify_k2}. The hybrid
+            # duet_verify_long/short and legacy duet_verify buckets were
+            # removed (2026-07).
+            return self._run_split_k1k2_target_verify(
+                input_ids, positions, last_only,
+            )
         elif is_mq_kp1: # verify or non-EAGLE glue decode, "verify" ~ mq decode of len K+1
             # ---- Split-only K1/K2 mode: draft glue dispatch ----
             # SSD_FORCE_SPLIT_K1K2 → buckets are {verify_k1, verify_k2}.
@@ -1290,18 +1042,6 @@ class ModelRunner:
                 return self._run_split_k1k2_glue(
                     input_ids, positions, last_only,
                 )
-            # Step 9B-0: draft glue dispatch by valid_k. Long-hit (= K_long)
-            # uses verify (K_long+1 wide); short-hit (= K_short) uses
-            # verify_short (K_short+1 wide). Target verify is always
-            # K_long+1 (no glue_valid_k context).
-            _ctx_g = get_context()
-            _vk_glue = getattr(_ctx_g, "glue_valid_k", None)
-            if (
-                self.is_draft and _vk_glue is not None
-                and "verify_short" in self.graph_vars
-                and _vk_glue == self.config.duet_phase2_k
-            ):
-                return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify_short"], bucket="verify_short")
             return run_verify_cudagraph(self, input_ids, positions, last_only, self.graph_vars["verify"], bucket="verify")
         else: # draft decoding in sync spec or JIT single-token decode
             return run_decode_cudagraph(self, input_ids, positions, last_only, self.graph_vars["decode"], hidden_states=hidden_states)
@@ -1309,8 +1049,7 @@ class ModelRunner:
     # ============================================================
     # Split-only K1/K2 mode: independent dispatch helpers.
     # Per docs/duet/04-split-k1k2-design.md.
-    # These NEVER call into hybrid's verify_short / verify / duet_verify_long /
-    # duet_verify_short. valid_k space = {K1, K2}; K_max = max(K1, K2).
+    # valid_k space = {K1, K2}; K_max = max(K1, K2).
     # ============================================================
     def _run_split_k1k2_glue(self, input_ids, positions, last_only):
         """Draft-side glue dispatch in split-only K1/K2 mode (K2 <= K1).

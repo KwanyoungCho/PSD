@@ -59,12 +59,13 @@ class Config:
     duet_exit_layer: int | None = None      # None=auto: 2*L//3
     duet_proxy_top_k: int = 3              # proxy correction token count
     duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
-    duet_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (default).
-                                            # "a" retained as dead branch; see docs/duet/05-policy-b-fix.md.
-    # Phase 2 hybrid (per docs/duet/01-design.md Part 5).
+    duet_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (only option;
+                                            # Policy "a" was removed 2026-07 — see git history).
+    # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
-    # Constraint: K1 + K2 == speculate_k. K2 also = K_short (proxy-sourced row depth).
-    # None means "use legacy two-pass DUET path" (no hybrid).
+    # Constraint: K1 + K2 == speculate_k, K2 <= K1.
+    # REQUIRED when duet_enabled (the hybrid / legacy two-pass paths that
+    # allowed None were removed 2026-07; __post_init__ hard-errors on None).
     duet_phase1_k: int | None = None
     duet_phase2_k: int | None = None
     # Split-only K1/K2 mode: per-position fan_out list for Phase 1 / Phase 2.
@@ -284,6 +285,16 @@ class Config:
                 self.duet_phase1_k is not None
                 and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
             )
+            # Split-only K1/K2 mode is the ONLY supported DUET path since the
+            # 2026-07 dead-code removal (hybrid / legacy two-pass deleted).
+            if not _split_mode:
+                raise ValueError(
+                    "DUET-SSD requires split-K1/K2 mode: set SSD_FORCE_SPLIT_K1K2=1 "
+                    "and pass duet_phase1_k / duet_phase2_k. The hybrid / legacy "
+                    "two-pass paths were removed (2026-07); the removed "
+                    "implementation is preserved in git history "
+                    "(feat/mesa-proxy-async-overlap @ 19c8f73 and earlier)."
+                )
             # Phase 1 fan_out_list validation (split mode only). User-provided
             # list overrides uniform [draft_fo]*(K1+1). Used by buffer/top_k
             # sizing below — list-aware in ALL cases when list is provided
@@ -373,17 +384,15 @@ class Config:
                       flush=True)
                 self.duet_proxy_top_k = required_top_k
             assert self.duet_proxy_top_k >= 1, "duet_proxy_top_k must be >= 1"
-            assert self.duet_policy in ("a", "b"), \
-                f"duet_policy must be 'a' or 'b', got {self.duet_policy!r}"
-            # Policy "b" (unified K+1) is only implemented in split-K1/K2 mode
-            # (docs/duet/05-policy-b-fix.md). For legacy / hybrid paths the
-            # _build_tree_batch_duet() codepath still reads duet_proxy["fan_out_list"]
-            # which Policy B's wire schema doesn't provide. Force "a" with warning.
-            if self.duet_policy == "b" and not _split_mode:
-                print(f"[Config] duet_policy='b' is only implemented in split-K1/K2 "
-                      f"mode (SSD_FORCE_SPLIT_K1K2=1); forcing 'a' for "
-                      f"legacy/hybrid path.", flush=True)
-                self.duet_policy = "a"
+            # Policy A was removed (2026-07) along with the hybrid / legacy
+            # two-pass paths; only the unified K+1 Policy B remains
+            # (docs/duet/05-policy-b-fix.md).
+            if self.duet_policy != "b":
+                raise ValueError(
+                    f"duet_policy={self.duet_policy!r} is no longer supported; "
+                    "only 'b' (unified K+1) remains. Policy A was removed "
+                    "(2026-07); see git history."
+                )
             print(f'[Config] DUET-SSD enabled: exit_layer={self.duet_exit_layer}, '
                   f'proxy_top_k={self.duet_proxy_top_k}, '
                   f'draft_fan_out={self.duet_draft_fan_out}, proxy_fan_out={self.duet_proxy_fan_out}, '

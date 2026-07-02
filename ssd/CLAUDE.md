@@ -74,10 +74,9 @@ python -O bench.py --llama --size 8 --gpus 2 --b 1 --temp 0 --numseqs 128 --outp
 python -O bench.py --llama --size 8 --spec --k 6 --gpus 2 ...
 # Async spec decode (SSD): --async requires 1 extra GPU for the draft process
 python -O bench.py --llama --size 8 --spec --async --k 7 --f 3 --gpus 3 ...
-# DUET-SSD legacy (two-pass): layered on top of async SD
-python -O bench.py ... --spec --async --duet --duet_exit_layer 21 --duet_draft_fan_out 1
-# DUET Phase 2 hybrid (current default once --duet is set with K1/K2):
-python -O bench.py ... --spec --async --duet --k 5 --duet_phase1_k 3 --duet_phase2_k 2 --duet_exit_layer 21
+# DUET-SSD split-K1/K2 (the only DUET path since 2026-07; requires the env var
+# AND both K1/K2 flags — config hard-errors otherwise):
+SSD_FORCE_SPLIT_K1K2=1 python -O bench.py ... --spec --async --duet --k 5 --duet_phase1_k 3 --duet_phase2_k 2 --duet_exit_layer 21
 # AWQ W4A16 target (artifact loaded from SSD-native prefix):
 python -O bench.py ... --quant_awq --quant_awq_artifact /path/to/awq_artifacts/foo/autoawq_tp4 --quant_group_size 128
 # AWQ for the draft as well (Llama-family non-EAGLE, tp=1 only):
@@ -157,9 +156,10 @@ engine spawns a constellation of processes that rendezvous through
   prefix caching, admission of new sequences.
 - **CUDA graphs**: captured in `engine/helpers/cudagraph_helpers.py` for
   decode, verify, and tree-decode; replayed each step unless
-  `config.enforce_eager=True`. With Phase 2 hybrid enabled, **8 CG
-  families** are captured: `glue_long`/`short`, `phase1_long`/`short`,
-  `phase2_hybrid_long`/`short`, `verify_long`/`short`.
+  `config.enforce_eager=True`. With DUET split-K1/K2 enabled the extra CG
+  families are: draft glue `verify_k1`/`verify_k2`, draft tree-decode
+  `split_k1_long`/`split_k1_short`/`split_k2`, and target
+  `duet_verify_k1`/`duet_verify_k2`.
 
 Layers under `ssd/ssd/layers/` are TP-aware replacements for Linear,
 LayerNorm, Rope, Sampler, Attention. They are the integration boundary
@@ -184,9 +184,12 @@ re-checking at call sites:
   `duet_draft_fan_out` to `async_fan_out//2`. `duet_proxy_top_k` is
   auto-raised so the proxy can always cover the worst-case fan-out
   without fallback.
-- **DUET Phase 2 hybrid** is gated by both `duet_phase1_k` and
-  `duet_phase2_k` being set; both `None` keeps the legacy two-pass path.
-  When set, `duet_phase1_k + duet_phase2_k == speculate_k` is enforced.
+- **DUET split-K1/K2** is the ONLY DUET path (the Phase 2 hybrid and
+  legacy two-pass implementations were REMOVED in 2026-07 — see git
+  history). `duet_enabled=True` hard-requires `duet_phase1_k` /
+  `duet_phase2_k` both set, `SSD_FORCE_SPLIT_K1K2=1` exported, and
+  `duet_policy="b"`. `duet_phase1_k + duet_phase2_k == speculate_k` and
+  `K2 <= K1` are enforced.
 
 ### DUET-SSD (what this fork adds beyond upstream SSD)
 
@@ -199,25 +202,21 @@ first-reject position distribution `ĥ_i`, and residual correction
 tokens `r̂_i(v) ∝ [p_i^E - p_i^D]_+`, then fills the async tree cache
 with branches more likely to match the real recovery distribution.
 
-The **Phase 2 hybrid** loop (current default) collapses Phase 2 into a
-single batched forward of depth `K2 = K_short = K_long - K1` that
-processes both **continuation rows** (extending Phase 1 leaves) and
-**proxy-sourced rows** (independent K2-deep sequences from proxy tokens)
-in one tree decode pass. The hybrid plan object — `HybridPhase2Plan` in
-`ssd/engine/helpers/hybrid_phase2_plan.py` — is allocated once at
-engine init sized for the long-bucket worst case; per-step
-`begin_step` fills it in-place. `valid_k` per cache row picks
-long/short bucket dispatch at runtime, selecting which CG to replay.
+The live implementation is **split-K1/K2** (docs/duet/04-split-k1k2-design.md):
+Phase 1 runs `K1` draft forwards (draft-sourced rows, `valid_k=K1`),
+Phase 2 runs `K2` independent forwards seeded from the proxy
+(proxy-sourced rows, `valid_k=K2`), with NO continuation pass. Phase 2
+budget selection is unified Policy B (`docs/duet/05-policy-b-fix.md`).
+Per-row `valid_k ∈ {K1, K2}` picks the long/short CG bucket at runtime.
 
-Hybrid-related env-var gates (debug / regression):
-
-- `SSD_FORCE_SPLIT_PHASE2=1` — force the legacy split (continuation pass
-  + proxy pass) Phase 2 path.
-- `SSD_FORCE_EAGER_HYBRID_PHASE2=1` — run the hybrid loop eagerly
-  (skip CG replay).
-- `SSD_HYBRID_PARITY=1` — run BOTH hybrid and split paths, compare,
-  log first-divergence drift (debug only).
-- `SSD_TRACE_BUCKET=1` — print per-step long/short bucket selection.
+NOTE: the former **Phase 2 hybrid** loop (`HybridPhase2Plan`, 5-region
+scratch, `phase2_hybrid_*` CGs) and the legacy two-pass path — along with
+their debug env gates (`SSD_FORCE_SPLIT_PHASE2`, `SSD_HYBRID_PARITY`,
+`SSD_FORCE_EAGER_HYBRID_PHASE2`, `SSD_TRACE_BUCKET`, mirror/oracle
+harnesses) — were REMOVED in 2026-07. The implementation is preserved in
+git history (`feat/mesa-proxy-async-overlap` @ 19c8f73 and earlier);
+docs/duet/01-design.md Parts 4-5 describe it for historical reference.
+`SSD_TRACE_SPLIT_K1K2=1` remains as the live-path trace gate.
 
 ### Quantization (AWQ W4A16, current public path)
 

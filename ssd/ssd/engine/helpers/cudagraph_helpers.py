@@ -13,14 +13,12 @@ def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_va
                           bucket="verify"):
     """Replay multi-query (K+1) decode CG.
 
-    Step 9B-0: ``bucket`` selects the CG family. Default = "verify"
-    (K_long+1 wide). Draft glue short-bucket uses bucket="verify_short"
-    (K_short+1 wide). k_plus_1 is derived from graph_bs_list / input shape.
+    ``bucket`` selects the CG family. Default = "verify" (K+1 wide).
+    Split-K1/K2 draft glue uses bucket="verify_k1" / "verify_k2".
+    k_plus_1 is derived from graph_bs_list / input shape.
     """
     context = get_context()
-    if bucket == "verify_short":
-        k_plus_1 = model_runner.config.duet_phase2_k + 1
-    elif bucket == "verify_k1":
+    if bucket == "verify_k1":
         k_plus_1 = model_runner.config.duet_phase1_k + 1
     elif bucket == "verify_k2":
         k_plus_1 = model_runner.config.duet_phase2_k + 1
@@ -351,29 +349,13 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         cache["cpu_packed_indptrs"] = []
 
         # ─────────────────────────────────────────────────────────────────
-        # KNOWN BUG (separate track from hybrid landing).
-        #
-        # This generic mask formula assumes the layout
-        #     [persistent | glue (K_long+1) | diag blocks of MQ_LEN]
-        # which holds only for single-pass tree decode where K = layout.K
-        # and there is no prior spec scratch already written.
-        #
-        # Under DUET-SSD's K1-split (duet_phase1_k < speculate_k), the
-        # **continuation pass** runs separately AFTER Phase 1 has already
-        # written K1*MQ_LEN slots of Phase 1 KV. The formula treats those
-        # K1*MQ_LEN slots as fully-visible "persistent prefix" and shifts
-        # the (K_long+1)-wide glue lower-tri region forward by K1*MQ_LEN —
-        # which physically lands inside the LAST K_long+1 slots of Phase 1's
-        # last depth (not the actual glue at all). Effect: cont rows attend
-        # to ALL Phase 1 KV across branches and ALL glue without j_idx
-        # filtering. See `_compute_hybrid_bool_mask_for_depth` for the
-        # plan-correct continuation mask and `_decode_correct_split_cont`
-        # for an oracle that confirms split CG cont diverges by ~28-31%
-        # tokens vs plan-correct semantics.
-        #
-        # NOT FIXED HERE because split is retained as a fallback/reference
-        # path while hybrid-default lands. This is tracked separately from
-        # the hybrid path.
+        # NOTE: this generic mask formula assumes the layout
+        #     [persistent | glue (K+1) | diag blocks of MQ_LEN]
+        # i.e. single-pass tree decode where K = layout.K and no prior spec
+        # scratch was written. That holds for every live caller (non-DUET
+        # full layout + split-K1/K2 passes, which each start from a clean
+        # scratch region). The removed hybrid "continuation pass" violated
+        # it — see git history (2026-07 removal) for the KNOWN BUG writeup.
         # ─────────────────────────────────────────────────────────────────
         for s in range(K_loop):
             # Step 9A: ttl_added_s uses K_for_mask (= layout glue width)
@@ -910,107 +892,6 @@ def capture_glue_decode_cudagraph(model_runner):
 
 
 @torch.inference_mode()
-def low_level_packed_plan(wrapper, *, model_runner, qo_indptr_cpu, kv_indptr_cpu,
-                            kv_indices, kv_last_page_len_gpu, kv_lens_gpu,
-                            packed_mask, packed_indptr, B):
-    """Phase B-1 helper: write FlashInfer wrapper internal buffers + call
-    low-level `_cached_module.plan(...)`.
-
-    Mirrors the exact buffer-write order used by run_fi_tree_decode_cudagraph
-    (line 369-406) so that split CG path and any caller using this helper
-    produce identical wrapper plan state.
-
-    Args:
-        wrapper: FlashInfer BatchPrefillWithPagedKVCacheWrapper instance with
-            internal buffers (_custom_mask_buf, _mask_indptr_buf, etc.).
-        model_runner: source of head dims / block_size / hf_config.
-        qo_indptr_cpu: int32 CPU tensor [B+1].
-        kv_indptr_cpu: int32 CPU tensor [B+1].
-        kv_indices: int32 GPU tensor [n_indices_total].
-        kv_last_page_len_gpu: int32 GPU tensor [B].
-        kv_lens_gpu: int32 GPU tensor [B] = (num_pages-1)*block_size + last_page_len.
-        packed_mask: uint8 GPU tensor (numpy.packbits little-endian).
-        packed_indptr: int32 GPU tensor [B+1] (per-batch packed_mask byte offsets).
-        B: batch size in wrapper terms.
-    """
-    # 1. Mask buffers
-    wrapper._custom_mask_buf[:len(packed_mask)].copy_(packed_mask, non_blocking=True)
-    wrapper._mask_indptr_buf[:len(packed_indptr)].copy_(packed_indptr, non_blocking=True)
-
-    # 2. KV / qo metadata buffers (qo_indptr/kv_indptr GPU sources)
-    qo_indptr_gpu = qo_indptr_cpu.to(wrapper._qo_indptr_buf.device, non_blocking=True)
-    kv_indptr_gpu = kv_indptr_cpu.to(wrapper._paged_kv_indptr_buf.device, non_blocking=True)
-    wrapper._qo_indptr_buf[:len(qo_indptr_gpu)].copy_(qo_indptr_gpu, non_blocking=True)
-    wrapper._paged_kv_indptr_buf[:len(kv_indptr_gpu)].copy_(kv_indptr_gpu, non_blocking=True)
-    wrapper._paged_kv_last_page_len_buf[:len(kv_last_page_len_gpu)].copy_(kv_last_page_len_gpu, non_blocking=True)
-    wrapper._paged_kv_indices_buf[:len(kv_indices)].copy_(kv_indices, non_blocking=True)
-
-    total_num_rows = int(qo_indptr_cpu[-1].item())
-    wrapper._kv_lens_buffer[:len(kv_lens_gpu)].copy_(kv_lens_gpu, non_blocking=True)
-
-    # Sync event
-    ev = torch.cuda.Event()
-    ev.record()
-    ev.synchronize()
-
-    # Low-level plan call
-    plan_args = [
-        wrapper._float_workspace_buffer, wrapper._int_workspace_buffer,
-        wrapper._pin_memory_int_workspace_buffer,
-        qo_indptr_cpu, kv_indptr_cpu, kv_lens_gpu,
-        wrapper._max_total_num_rows or total_num_rows,
-        B, model_runner.hf_config.num_attention_heads,
-        model_runner.hf_config.num_key_value_heads,
-        model_runner.block_size, wrapper.is_cuda_graph_enabled,
-        model_runner.hf_config.head_dim, model_runner.hf_config.head_dim,
-        False, -1,
-    ]
-    if wrapper._backend == "fa2":
-        plan_args.extend([-1, False])
-    wrapper._plan_info = wrapper._cached_module.plan(*plan_args)
-
-
-def build_packed_mask_for_proxy_step(*, MQ_LEN, K, B, context_lens_list,
-                                       cache_hits_list, fan_out_list,
-                                       fan_out_list_miss, step, device):
-    """Build packed mask + indptr for a single step using the SAME numpy
-    construction as run_fi_tree_decode_cudagraph step 0 (lines 313-340).
-
-    Used by Phase B-2 proxy-first low-level mirror for parity.
-    """
-    import numpy as np
-    _tril = np.tril(np.ones((K + 1, K + 1), dtype=np.uint8))
-    _glue_hit = np.repeat(_tril, fan_out_list, axis=0)
-    _glue_miss = np.repeat(_tril, fan_out_list_miss, axis=0)
-    _rows_np = np.arange(MQ_LEN)
-
-    s = step
-    ttl_added_s = (s + 1) * MQ_LEN + (K + 1)
-    packed_segs = []
-    seg_packed_sizes = []
-    for b in range(B):
-        cols_b = int(context_lens_list[b]) + s * MQ_LEN
-        prefix_len_b = cols_b - ttl_added_s
-        mask_b = np.zeros((MQ_LEN, cols_b), dtype=np.uint8)
-        mask_b[:, :prefix_len_b] = 1
-        glue = _glue_hit if int(cache_hits_list[b]) == 1 else _glue_miss
-        mask_b[:, prefix_len_b:prefix_len_b + K + 1] = glue
-        diag_start = prefix_len_b + K + 1
-        for blk in range(s + 1):
-            mask_b[_rows_np, diag_start + blk * MQ_LEN + _rows_np] = 1
-        packed = np.packbits(mask_b.ravel(), bitorder='little')
-        packed_segs.append(packed)
-        seg_packed_sizes.append(len(packed))
-    full_packed = np.concatenate(packed_segs) if B > 1 else packed_segs[0]
-    indptr = np.zeros(B + 1, dtype=np.int32)
-    indptr[1:] = np.cumsum(seg_packed_sizes)
-    return (
-        torch.from_numpy(full_packed.copy()).to(device, non_blocking=True),
-        torch.from_numpy(indptr.copy()).to(device, non_blocking=True),
-    )
-
-
-@torch.inference_mode()
 def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
     config = model_runner.config
     hf_config = config.hf_config
@@ -1171,8 +1052,8 @@ def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
     Args:
         lookahead: number of speculative tokens to verify per seq (cu_seqlens
             length is lookahead+1 because of recovery slot). Default is
-            ``config.speculate_k`` (= K_long). For v1 hybrid path, called twice
-            with lookahead=K_long and lookahead=K_short.
+            ``config.speculate_k``. Split-K1/K2 mode captures per bucket with
+            lookahead=K1 and lookahead=K2.
         graph_pool: optional CUDA graph pool to share across captures.
     """
     config = model_runner.config
@@ -1276,8 +1157,7 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     Args:
         graph_vars: dict from capture; ``graph_vars["lookahead"]`` determines k_plus_1.
         bucket: name prefix for ``model_runner.graphs`` / ``graph_bs_list`` keys.
-            Default ``"duet_verify"`` (legacy single-bucket). v1 hybrid uses
-            ``"duet_verify_long"`` and ``"duet_verify_short"``.
+            Split-K1/K2 mode uses ``"duet_verify_k1"`` / ``"duet_verify_k2"``.
     """
     context = get_context()
     config = model_runner.config
@@ -1393,260 +1273,6 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     logits = model_runner.model.compute_logits(outputs, last_only)
     duet_close("final_logits", _ev_fl)
     return logits
-
-
-# ────────────────────────────────────────────────────────────────────────────
-# Phase 9B-1: hybrid Phase 2 CG capture + run.
-#
-# Captures a single-depth model forward (cont + proxy rows in flat batch)
-# per bucket. Runtime replays K2 times after writing per-depth metadata
-# to baked buffers via low_level_packed_plan.
-# ────────────────────────────────────────────────────────────────────────────
-
-@torch.inference_mode()
-def capture_phase2_hybrid_cudagraph(model_runner, *, bucket, K_step):
-    """Capture phase2_hybrid CG for one bucket (long or short).
-
-    Each bucket has a fixed total_rows = (K_step+1) * (dfo + pfo). Capture
-    is one depth's forward; runtime replays K2 times. Separate graph_pool
-    per bucket to avoid aliasing (lesson from verify_short capture).
-
-    Returns: (graph_vars, graph_pool, graph, total_rows)
-    """
-    config = model_runner.config
-    hf_config = config.hf_config
-    K1 = config.duet_phase1_k
-    K2 = config.duet_phase2_k
-    K_long = K1 + K2
-    dfo = config.duet_draft_fan_out
-    pfo = config.duet_proxy_fan_out
-    total = (K_step + 1) * (dfo + pfo)
-    max_num_blocks = (config.max_model_len + model_runner.block_size - 1) // model_runner.block_size
-
-    bucket_key = f"phase2_hybrid_{bucket}_cg"
-    wrappers = model_runner.prefill_wrappers_by_layout[bucket_key]
-    assert total in wrappers, f"phase2_hybrid CG wrapper for total={total} missing"
-    wrapper = wrappers[total]
-
-    # Pre-allocated runtime-write buffers (graph_vars).
-    input_ids = torch.zeros(total, dtype=torch.int64, device=model_runner.device)
-    rope_positions = torch.zeros(total, dtype=torch.int64, device=model_runner.device)
-    slot_mapping = torch.zeros(total, dtype=torch.int32, device=model_runner.device)
-    context_lens = torch.zeros(total, dtype=torch.int32, device=model_runner.device)
-    block_tables = torch.zeros(total, max_num_blocks, dtype=torch.int32, device=model_runner.device)
-    outputs = torch.empty(total, hf_config.hidden_size,
-                           dtype=hf_config.torch_dtype, device=model_runner.device)
-
-    # Build a self-consistent fake plan for capture (real plan written
-    # before each replay via low_level_packed_plan).
-    cu_seqlens_q = torch.arange(total + 1, dtype=torch.int32, device=model_runner.device)
-    pages_per_row = max_num_blocks
-    kv_indptr = torch.arange(total + 1, dtype=torch.int32, device=model_runner.device) * pages_per_row
-    kv_indices = torch.zeros(total * pages_per_row, dtype=torch.int32, device=model_runner.device)
-    last_page_len = config.max_model_len % model_runner.block_size
-    if last_page_len == 0:
-        last_page_len = model_runner.block_size
-    kv_last_page_len = torch.full((total,), last_page_len, dtype=torch.int32, device=model_runner.device)
-    # Fake mask: all visible (will be overwritten per-depth via packed mask)
-    fake_mask = torch.ones(total * config.max_model_len, dtype=torch.bool, device=model_runner.device)
-
-    wrapper.plan(
-        cu_seqlens_q, kv_indptr, kv_indices, kv_last_page_len,
-        hf_config.num_attention_heads, hf_config.num_key_value_heads,
-        hf_config.head_dim, model_runner.block_size,
-        custom_mask=fake_mask,
-        q_data_type=hf_config.torch_dtype,
-        kv_data_type=hf_config.torch_dtype,
-    )
-
-    set_context(
-        is_prefill=False,
-        cu_seqlens_q=None,
-        cu_seqlens_k=None,
-        max_seqlen_q=0,
-        max_seqlen_k=0,
-        slot_mapping=slot_mapping,
-        context_lens=context_lens,
-        block_tables=block_tables,
-        active_mq_len=1,
-        active_wrappers=wrappers,
-        active_layout=None,
-    )
-
-    # Warmup
-    out = model_runner.model(input_ids, rope_positions)
-    outputs.copy_(out)
-
-    # Capture
-    graph_pool = None
-    graph = torch.cuda.CUDAGraph()
-    print(f'[DUET hybrid] capturing phase2_hybrid CG bucket={bucket} '
-          f'total_rows={total}', flush=True)
-    with torch.cuda.graph(graph, graph_pool):
-        out = model_runner.model(input_ids, rope_positions)
-        outputs.copy_(out)
-    graph_pool = graph.pool()
-    torch.cuda.synchronize()
-    reset_context()
-
-    graph_vars = dict(
-        input_ids=input_ids,
-        rope_positions=rope_positions,
-        slot_mapping=slot_mapping,
-        context_lens=context_lens,
-        block_tables=block_tables,
-        outputs=outputs,
-        bucket=bucket,
-        K_step=K_step,
-        total=total,
-    )
-    return graph_vars, graph_pool, graph, total
-
-
-@torch.inference_mode()
-def run_phase2_hybrid_cudagraph(model_runner, *, plan, draft_tree_args,
-                                  proxy_tree_args, step_proxy_layout,
-                                  draft_tokens_phase1, bucket):
-    """Run captured phase2_hybrid CG for the given bucket. Replays K2
-    depth times with per-depth runtime metadata.
-
-    Phase 9C optimized hot path:
-      - Pre-built packed mask & mask_indptr on plan (no bool-mask compute,
-        no packing in the loop).
-      - Pre-built kv_indptr_cpu, kv_lens_gpu, kv_lpl_gpu on plan.
-      - Pre-cached per_depth_L / per_depth_n_pages / per_depth_bytes_per_row
-        as Python ints (no `.item()` syncs in the loop).
-      - Invariant qo_indptr_cpu cached on plan (no per-depth GPU→CPU copy).
-
-    Mirrors `_decode_phase2_hybrid` (eager path) semantics:
-      - cu_seqlens_q=None
-      - active_mq_len=1
-      - per-row B_proxy region (no overwrite of Phase 1 KV)
-      - low-level packed plan path
-
-    Returns: (cont_tokens, cont_logits, proxy_tokens, proxy_logits)
-    """
-    K1 = model_runner.config.duet_phase1_k
-    K2 = model_runner.config.duet_phase2_k
-
-    cont_count = plan.cont_row_count
-    proxy_count = plan.proxy_row_count
-    total = plan.total_row_count
-    device = model_runner.device
-    V = model_runner.hf_config.vocab_size
-    dt = model_runner.hf_config.torch_dtype
-
-    bucket_key = f"phase2_hybrid_{bucket}_cg"
-    graph_vars = model_runner.graph_vars[bucket_key]
-    graph = model_runner.graphs[bucket_key]
-    wrappers = model_runner.prefill_wrappers_by_layout[bucket_key]
-    wrapper_total = next(iter(wrappers.keys()))
-    wrapper = wrappers[wrapper_total]
-    assert total <= wrapper_total, (
-        f"hybrid CG total={total} > wrapper allocated={wrapper_total}"
-    )
-
-    # Output collectors. proxy_count varies per step (Policy A) so we keep
-    # per-call alloc; cont/proxy logits are large enough that preallocation
-    # benefits would require additional plan-level slot tracking — leave
-    # for a follow-up if profiling shows it's hot.
-    cont_tokens = torch.empty((cont_count, K2), dtype=torch.int64, device=device)
-    cont_logits = torch.empty((cont_count, K2, V), dtype=dt, device=device)
-    proxy_tokens = torch.empty((proxy_count, K2), dtype=torch.int64, device=device)
-    proxy_logits = torch.empty((proxy_count, K2, V), dtype=dt, device=device)
-
-    # Initial input ids
-    cur_cont_ids = draft_tokens_phase1[:cont_count, K1 - 1].contiguous()
-    cur_proxy_ids = proxy_tree_args["input_ids"][:proxy_count].contiguous()
-
-    # qo_indptr — invariant per bucket. Plan caches arange(max_total+1) and
-    # we pass [:wrapper_total+1]. Padding entries (>= total) saturate at
-    # total via padding-row indptr saturation (handled below in plan).
-    # We need qo_indptr to monotonically equal [0..total] then total..total
-    # (no rows for padding). Build once outside the loop.
-    qo_indptr_cpu = plan.qo_indptr_cpu[: wrapper_total + 1].clone()
-    if total < wrapper_total:
-        qo_indptr_cpu[total:].fill_(total)
-
-    for d in range(K2):
-        # Per-depth Python scalars (no .item() syncs).
-        L_d = plan.per_depth_L[d]
-        bytes_per_row = plan.per_depth_bytes_per_row[d]
-
-        # Pre-built tensors from plan.
-        slot_map_d = plan.per_row_slot_maps_by_depth[:total, d].contiguous()
-        ctx_len_d = plan.per_row_context_lens_by_depth[:total, d].contiguous().to(torch.int32)
-
-        # Pre-built kv plan inputs (no per-depth alloc).
-        # Plan stores [K2, max_total+1] CPU indptr already padded to wrapper.
-        kv_indptr_cpu_full = plan.per_depth_kv_indptr_cpu[d, : wrapper_total + 1]
-        # kv_indices: per_row_kv_indices_by_depth[d] holds total*n_pages_d
-        # entries. For wrapper padding, pass slice; padding rows have empty
-        # mask so they won't read from invalid pages.
-        n_pages_d = plan.per_depth_n_pages[d]
-        kv_indices_d = plan.per_row_kv_indices_by_depth[d, : total * n_pages_d]
-        kv_lens_gpu_d = plan.per_depth_kv_lens_gpu[d, : wrapper_total]
-        kv_lpl_gpu_d = plan.per_depth_kv_lpl_gpu[d, : wrapper_total]
-
-        # Pre-built packed mask + indptr from plan (was duplicated at runtime
-        # pre-9C — biggest hot-path win).
-        n_total_bytes = wrapper_total * bytes_per_row
-        packed_mask = plan.per_depth_packed_masks[d, :n_total_bytes]
-        packed_indptr = plan.per_depth_mask_indptr[d, : wrapper_total + 1]
-
-        # Low-level plan: writes to wrapper baked buffers.
-        low_level_packed_plan(
-            wrapper, model_runner=model_runner,
-            qo_indptr_cpu=qo_indptr_cpu,
-            kv_indptr_cpu=kv_indptr_cpu_full,
-            kv_indices=kv_indices_d,
-            kv_last_page_len_gpu=kv_lpl_gpu_d,
-            kv_lens_gpu=kv_lens_gpu_d,
-            packed_mask=packed_mask,
-            packed_indptr=packed_indptr,
-            B=wrapper_total,
-        )
-
-        # Flat input_ids and rope per depth (small allocs; can also be
-        # pre-allocated per bucket but cont_count + proxy_count varies).
-        flat_input_ids = torch.cat([cur_cont_ids, cur_proxy_ids], dim=0)
-        cont_rope = plan.cont_initial_rope_positions[:cont_count] + d
-        proxy_rope = plan.proxy_initial_rope_positions[:proxy_count] + d
-        flat_rope = torch.cat([cont_rope, proxy_rope], dim=0).contiguous()
-        block_tables_d = plan.per_row_block_tables[:total]
-
-        # Per-depth prep label (matches split's phase{1,2}_prep semantics —
-        # KV plan + buffer copies just before graph.replay).
-        _mev_php = duet_record(f"phase2_hybrid_prep_{bucket}")
-        # Write per-depth runtime metadata to graph buffers.
-        graph_vars["input_ids"][:total].copy_(flat_input_ids, non_blocking=True)
-        graph_vars["rope_positions"][:total].copy_(flat_rope, non_blocking=True)
-        graph_vars["slot_mapping"][:total].copy_(slot_map_d, non_blocking=True)
-        graph_vars["context_lens"][:total].copy_(ctx_len_d, non_blocking=True)
-        graph_vars["block_tables"][:total, :block_tables_d.shape[1]].copy_(
-            block_tables_d, non_blocking=True,
-        )
-        duet_close(f"phase2_hybrid_prep_{bucket}", _mev_php)
-
-        # Per-depth replay label (matches split's phase{1,2}_replay — fires
-        # K2 times per spec step, once per depth).
-        _mev_phr = duet_record(f"phase2_hybrid_replay_{bucket}")
-        graph.replay()
-        duet_close(f"phase2_hybrid_replay_{bucket}", _mev_phr)
-
-        outputs = graph_vars["outputs"][:total]
-        logits_flat = model_runner.model.compute_logits(outputs, last_only=False).view(-1, V)
-        next_tokens = logits_flat.argmax(dim=-1)
-
-        cont_logits[:, d, :] = logits_flat[:cont_count]
-        cont_tokens[:, d] = next_tokens[:cont_count]
-        proxy_logits[:, d, :] = logits_flat[cont_count:total]
-        proxy_tokens[:, d] = next_tokens[cont_count:total]
-
-        cur_cont_ids = next_tokens[:cont_count]
-        cur_proxy_ids = next_tokens[cont_count:total]
-
-    return cont_tokens, cont_logits, proxy_tokens, proxy_logits
 
 
 # ---------- DUET per-phase profiling (zero-sync, additions only) ----------

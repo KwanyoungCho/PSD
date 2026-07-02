@@ -1,5 +1,7 @@
 # DUET-SSD 설계 문서
 
+> **NOTE (2026-07):** Parts 4-5 (hybrid) describe a removed implementation — see git history; current code is split-K1/K2 only.
+
 이 문서는 DUET-SSD 의 전체 설계 — TreeLayout 추상화, Budget Split,
 Split CudaGraph, Rev1 (Policy A/B), Phase 2 Hybrid — 를 한 곳에 모은다.
 원본은 `DUET-IMPL-PLAN.md` (v6 구현 계획), `DUET-BREAKDOWN-PLAN.md`
