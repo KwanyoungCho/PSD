@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 # WS4 final rematch — E9_jit (DUET champion) vs C (SD best), 3 reps each,
-# interleaved per cycle to spread drift. GPU 2,3,5,6,7, PROFILE=0.
+# interleaved per cycle to spread drift. PROFILE=0.
 # Pre-registered rule (docs/duet/09): DUET mean > C mean AND no band overlap.
+#
+# CANONICAL GPU SET 0-4 (target TP4 on 0-3, draft on 4) — the neighbor's
+# vLLM on GPUs 0-1 exited at ~11:20, so the set every prior series
+# (A 81.24, C 82.72±0.41) was measured on is available again. The first
+# 1.5 reps run on 2,3,5,6,7 are archived in altset_partial/ (E9jit_rep1
+# 80.11, C_rep1 killed mid-run at the switch).
 set -euo pipefail
 ROOT="/home/chokwans99/PSD/ssd"
 PHASE_DIR="${ROOT}/experiments/proxy_async_overlap/final_rematch"
 PY="/home/chokwans99/anaconda3/envs/ssd/bin/python"
 cd "${ROOT}"
-export CUDA_VISIBLE_DEVICES=2,3,5,6,7
-export SSD_DIST_PORT=12730
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4
+export SSD_DIST_PORT=12735
 export SSD_CUDA_ARCH=8.6
 export TORCH_CUDA_ARCH_LIST=8.6
 export SSD_HF_CACHE=/home/chokwans99/.cache/huggingface/hub
