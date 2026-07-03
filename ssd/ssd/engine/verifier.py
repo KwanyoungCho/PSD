@@ -312,6 +312,40 @@ class Verifier(VerifierBase):
             if cache_hits is not None:
                 cache_hits.record_stream(_cur)
 
+        # === Raw-proxy wire (SSD_DUET_PROXY_ON_DRAFT=1, docs/duet/09 WS3) ===
+        # Send top-M exit candidates (ids + logits) + logsumexp + the exit
+        # logit at each draft token; the draft reconstructs exact p_E for
+        # those candidates and computes Policy B locally in its proxy_wait
+        # window. Removes the 2× fp32 softmax + residual + double topk +
+        # pack from the target verify critical path. Fixed worst-case
+        # (K_max) payload; short steps zero-pad the tail rows.
+        if config.duet_proxy_on_draft:
+            M = config.duet_proxy_topm
+            K_max = max(config.duet_phase1_k, config.duet_phase2_k)
+            Kp1w = K_max + 1
+            el = exit_logits[0].float()                        # [K+1, V]
+            lse = torch.logsumexp(el, dim=-1)                  # [K+1]
+            top_lg, top_ids = el.topk(M, dim=-1)               # [K+1, M]
+            y_lg = el[:K].gather(
+                1, draft_tokens[0, :K].unsqueeze(1)).squeeze(1)  # [K]
+            dev = el.device
+            ids_pad = torch.zeros(Kp1w, M, dtype=torch.int64, device=dev)
+            lg_pad = torch.zeros(Kp1w, M, dtype=torch.float64, device=dev)
+            lse_pad = torch.zeros(Kp1w, dtype=torch.float64, device=dev)
+            y_pad = torch.zeros(K_max, dtype=torch.float64, device=dev)
+            ids_pad[:K + 1] = top_ids
+            lg_pad[:K + 1] = top_lg.to(torch.float64)
+            lse_pad[:K + 1] = lse.to(torch.float64)
+            y_pad[:K] = y_lg.to(torch.float64)
+            payload = torch.cat([
+                ids_pad.view(-1),
+                lg_pad.view(-1).view(torch.int64),
+                lse_pad.view(torch.int64),
+                y_pad.view(torch.int64),
+            ])
+            send_int64(async_pg, draft_rank, payload)
+            return
+
         _ev_compute = _mr_d("proxy_compute") if _detail_profile else None
         # p_E (early-exit proxy), p_D (draft)
         p_E = torch.softmax(exit_logits[:, :K, :].float(), dim=-1)  # [B, K, V]

@@ -692,6 +692,10 @@ class DraftRunner(ModelRunner):
             # inside hit_cache_and_respond above.
             "valid_k_scalar": valid_k_scalar,
         }
+        if self.config.duet_proxy_on_draft:
+            # Raw-proxy mode needs this step's logits_q to compute Policy B
+            # locally (_policy_b_from_raw_proxy).
+            partial_tree_decode_args["out_logits"] = out_logits
 
         return glue_decode_input_ids, partial_tree_decode_args
 
@@ -1306,10 +1310,15 @@ class DraftRunner(ModelRunner):
 
         Wire schema (Policy B, unified K+1; docs/duet/05-policy-b-fix.md):
         chosen_pos[wire_N] + chosen_tok[wire_N].
+        Raw-proxy mode (SSD_DUET_PROXY_ON_DRAFT=1, docs/duet/09 WS3):
+        fixed-length fused payload, see config.duet_raw_proxy_wire_len.
         """
         import torch.distributed as dist
-        wire_N = self.config.duet_proxy_wire_N
-        total_len = 2 * wire_N
+        if self.config.duet_proxy_on_draft:
+            total_len = self.config.duet_raw_proxy_wire_len
+        else:
+            wire_N = self.config.duet_proxy_wire_N
+            total_len = 2 * wire_N
         buf = torch.empty(total_len, dtype=torch.int64, device=self.device)
         work = dist.irecv(buf, src=0, group=self.async_pg)
         return work, buf
@@ -1317,12 +1326,85 @@ class DraftRunner(ModelRunner):
     def _unpack_duet_proxy(self, buf, B, K):
         """Unpack proxy data from irecv buffer.
 
-        Returns {"chosen_pos": [wire_N], "chosen_tok": [wire_N]} (Policy B).
+        Returns {"chosen_pos": [wire_N], "chosen_tok": [wire_N]} (Policy B),
+        or the raw top-M dict in raw-proxy mode (feed to
+        _policy_b_from_raw_proxy to obtain chosen_pos/chosen_tok).
         """
+        if self.config.duet_proxy_on_draft:
+            M = self.config.duet_proxy_topm
+            K_max = max(self.config.duet_phase1_k, self.config.duet_phase2_k)
+            Kp1w = K_max + 1
+            L1 = Kp1w * M
+            return {
+                "topk_ids": buf[:L1].view(Kp1w, M),
+                "topk_logits": buf[L1:2 * L1].view(torch.float64).float().view(Kp1w, M),
+                "lse": buf[2 * L1:2 * L1 + Kp1w].view(torch.float64).float(),
+                "y_logit": buf[2 * L1 + Kp1w:].view(torch.float64).float(),
+            }
         wire_N = self.config.duet_proxy_wire_N
         chosen_pos = buf[:wire_N]
         chosen_tok = buf[wire_N:2 * wire_N]
         return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
+
+    def _policy_b_from_raw_proxy(self, raw, out_logits, out_tokens, K_step):
+        """Compute Policy B {chosen_pos, chosen_tok} draft-side from the raw
+        top-M exit proxy (SSD_DUET_PROXY_ON_DRAFT=1). Mirrors the verifier's
+        Policy B math (docs/duet/05) exactly, except the residual candidate
+        set is the target's top-M exit tokens per position instead of the
+        full vocab — residual <= p_E pointwise, so top-M(p_E) contains the
+        true residual top-k up to the p_E mass below rank M.
+
+        Args:
+            raw: dict from _unpack_duet_proxy (raw-proxy mode).
+            out_logits: [B, K_alloc, V] this step's response logits (= the
+                        logits_q the target verifies against).
+            out_tokens: [B, K_alloc] this step's response tokens.
+            K_step: the step's valid_k (verify width - 1).
+        """
+        top_k = self.config.duet_proxy_top_k
+        wire_N = self.config.duet_proxy_wire_N
+        ids = raw["topk_ids"][:K_step + 1]                    # [K+1, M]
+        pE_top = torch.exp(
+            raw["topk_logits"][:K_step + 1]
+            - raw["lse"][:K_step + 1].unsqueeze(1))           # [K+1, M]
+        pE_y = torch.exp(raw["y_logit"][:K_step] - raw["lse"][:K_step])  # [K]
+
+        # p_D from the draft's own response logits (identical tensor to the
+        # target's logits_q — no temperature, same as verifier line "p_D").
+        y_tok = out_tokens[0, :K_step]
+        p_D = torch.softmax(out_logits[0, :K_step, :].float(), dim=-1)  # [K, V]
+        pD_y = p_D.gather(1, y_tok.unsqueeze(1)).squeeze(1)             # [K]
+        accept_probs = (pE_y / (pD_y + 1e-10)).clamp(max=1.0)           # [K]
+
+        # h_i (first-reject distribution) — verbatim from the verifier.
+        h = torch.zeros(K_step + 1, device=p_D.device)
+        cumprod = torch.cumprod(accept_probs, dim=0)
+        h[0] = 1 - accept_probs[0]
+        if K_step > 1:
+            h[1:K_step] = cumprod[:-1] * (1 - accept_probs[1:])
+        h[K_step] = cumprod[-1]
+
+        # Residual [p_E - p_D]_+ on the M-candidate set, draft token excluded.
+        pD_at = p_D.gather(1, ids[:K_step])                   # [K, M]
+        resid = (pE_top[:K_step] - pD_at).clamp(min=0)
+        resid = resid.masked_fill(ids[:K_step] == y_tok.unsqueeze(1), 0.0)
+        r_probs, r_idx = resid.topk(top_k, dim=-1)            # [K, top_k]
+        r_probs = r_probs / r_probs.sum(-1, keepdim=True).clamp(min=1e-10)
+        r_ids = ids[:K_step].gather(1, r_idx)
+
+        # Position K (all-accept): target's exit distribution directly.
+        k_probs, k_idx = pE_top[K_step].topk(top_k)
+        k_probs = k_probs / k_probs.sum().clamp(min=1e-10)
+        k_ids = ids[K_step].gather(0, k_idx)
+
+        corr_probs = torch.cat([r_probs, k_probs.unsqueeze(0)], dim=0)  # [K+1, top_k]
+        corr_ids = torch.cat([r_ids, k_ids.unsqueeze(0)], dim=0)
+        P_iv = h.unsqueeze(1) * corr_probs
+        _, top_idx = P_iv.flatten().topk(wire_N)
+        return {
+            "chosen_pos": top_idx // top_k,
+            "chosen_tok": corr_ids.view(-1).gather(0, top_idx),
+        }
 
     def _select_draft_sourced_tokens(self, logits, returned_tokens, draft_fan_out):
         """Select fork tokens from draft logits (uniform top-k per position)."""
@@ -1655,6 +1737,17 @@ class DraftRunner(ModelRunner):
         proxy_recv_work.wait()
         _mc("proxy_wait", _mev_pw)
         duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
+        if self.config.duet_proxy_on_draft:
+            # Raw-proxy mode: Policy B selection runs HERE (draft side,
+            # post-proxy window) instead of on the target verify path.
+            _mev_plb = _mr("proxy_local_b")
+            duet_proxy = self._policy_b_from_raw_proxy(
+                duet_proxy,
+                partial_tree_decode_args["out_logits"],
+                partial_tree_decode_args["returned_tokens"],
+                _step_valid_k,
+            )
+            _mc("proxy_local_b", _mev_plb)
         # ===== TRACE point 4 (early): proxy unpack =====
         if TRACE_SPLIT_K1K2:
             K_max = K1 if K1 >= K2 else K2

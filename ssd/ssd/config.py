@@ -170,6 +170,34 @@ class Config:
         return total_budget + buffer
 
     @property
+    def duet_proxy_on_draft(self) -> bool:
+        """SSD_DUET_PROXY_ON_DRAFT=1 — target sends raw top-M exit proxy
+        (ids + logits + lse + draft-token logit) and the DRAFT computes
+        Policy B locally in its proxy_wait window. Removes the residual
+        softmax/topk + pack from the target verify critical path
+        (docs/duet/09 WS3)."""
+        import os as _os_cfg
+        return _os_cfg.environ.get("SSD_DUET_PROXY_ON_DRAFT", "0") == "1"
+
+    @property
+    def duet_proxy_topm(self) -> int:
+        """Top-M exit candidates per position on the raw-proxy wire.
+        Must satisfy M >= duet_proxy_top_k (residual candidate coverage)."""
+        import os as _os_cfg
+        return int(_os_cfg.environ.get("SSD_DUET_PROXY_TOPM", "16"))
+
+    @property
+    def duet_raw_proxy_wire_len(self) -> int:
+        """Fused int64 payload length for the raw-proxy wire (worst-case
+        K_max sizing; short steps pad the tail):
+        [ids (K_max+1)*M | logits-f64 (K_max+1)*M | lse-f64 (K_max+1) |
+         y_logit-f64 (K_max)]."""
+        K_max = max(self.duet_phase1_k, self.duet_phase2_k)
+        Kp1 = K_max + 1
+        M = self.duet_proxy_topm
+        return 2 * Kp1 * M + Kp1 + K_max
+
+    @property
     def duet_proxy_total_budget(self) -> int:
         """Phase 2 tree size = sum(fan_out_list) at runtime = layout MQ_LEN.
 
