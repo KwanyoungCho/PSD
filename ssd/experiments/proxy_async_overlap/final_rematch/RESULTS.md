@@ -66,5 +66,47 @@ budget), `SSD_DUET_JIT_SHORT=1`. Same-regime margin over C ≈ +3.7.
 
 ## Phase 4 — VERDICT (5-rep interleaved, pre-registered)
 
-E9K24_jit vs C, 5 cycles, alternating. Rule: DUET mean > C mean AND
-mean±2SE bands must not overlap. (results appended on completion)
+| cycle | E9K24_jit | C | paired diff |
+|---|---:|---:|---:|
+| 1 | 83.93 | 81.54 | +2.39 |
+| 2 | 83.11 | 82.52 | +0.59 |
+| 3 | 81.51 | 80.18 | +1.33 |
+| 4 | 80.31 | 80.10 | +0.21 |
+| 5 | 80.70 | 83.24 | −2.54 |
+| **mean** | **81.91 ± 1.56** | **81.52 ± 1.39** | **+0.40** (4/5 wins, paired t=0.48) |
+
+**Pre-registered rule NOT met**: DUET mean > C mean ✓ but ±2SE bands
+overlap heavily. Structural decomposition: tok 4.108 vs 4.098 (+0.24%),
+T_target 51.44 vs 51.57 (−0.26%) → true edge ≈ **+0.5%**, which at
+σ_pair 1.84 would need ~54 cycles to certify — not provable by reps.
+
+## Phase 5 — post-verdict probes: the frontier is real
+
+| probe | idea | TPS | tok | T_target | verdict |
+|---|---|---:|---:|---:|---|
+| E9K24R | champion + exit-replica (target-bound again?) | 78.99 | 3.98 | 51.61 | null AGAIN — the mid-verify block is never load-bearing |
+| E10K24_jit | K1=10 deep-narrow `[2×5,1×6]` | 81.76 | 4.25 | 53.32 | tok +3.7% eaten by time +3.4% — frontier slide |
+| E9K24P2 | pfo=2 (P2 coverage 2×, no verify-width cost) | 78.14 | 4.04 | 52.95 | p2_hit +2.6pp but p1_hit −1.7pp (substitution) + draft co-critical — net −0.5% |
+
+## Campaign conclusion
+
+**Final config: E9K24_jit** — split-K1/K2, K1=9 K2=4 (k=13), exit=56,
+dfo=2 pfo=1, phase1 fan_out_list `2,2,2,2,2,2,1,1,1,1` (sum 16),
+SSD_DUET_JIT_SHORT=1.
+
+- DUET itself improved **+6.0%** today (A_base 77.30 → 81.91 champion
+  mean): jit-short +3.85, deep-narrow depth tokens, K2=4 sweet spot.
+- vs SD-best C: from **−1.8% (morning) to +0.5% (evening)**, winning
+  4/5 interleaved cycles — but not band-clear at feasible rep counts.
+- The deep reason (user's standing question) is now measured, not
+  conjectured: on this hardware the coupled pipeline charges ~1.9 ms
+  per verify position while DUET's marginal position yields ~1.9 ms of
+  tokens at viable depths — the design frontier passes through C.
+  DUET's real, certified advantages are (a) the miss-latency tail
+  (miss share 0.15 vs 0.24, each miss ~9.5 ms JIT vs ~13 ms) and
+  (b) reaching SD-best throughput at f=3 vs f=6 — the
+  draft-compute-constrained regimes are DUET's ground.
+- Five independent null probes (pod ×2, topm, replica ×2) plus two
+  frontier probes (E10, pfo=2) bound the systems-side search space;
+  the remaining lever is algorithmic: off-policy continuation quality
+  (L_p2 ≈ 2.0 vs breakeven 2.6) — draft adaptation territory.
