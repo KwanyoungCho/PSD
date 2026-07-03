@@ -182,9 +182,10 @@ class Config:
     @property
     def duet_proxy_topm(self) -> int:
         """Top-M exit candidates per position on the raw-proxy wire.
-        Must satisfy M >= duet_proxy_top_k (residual candidate coverage)."""
+        Must satisfy M >= duet_proxy_top_k (residual candidate coverage;
+        top_k is auto-raised to ~total_budget + p1_max + 2, e.g. 12-14)."""
         import os as _os_cfg
-        return int(_os_cfg.environ.get("SSD_DUET_PROXY_TOPM", "16"))
+        return int(_os_cfg.environ.get("SSD_DUET_PROXY_TOPM", "24"))
 
     @property
     def duet_raw_proxy_wire_len(self) -> int:
@@ -412,6 +413,14 @@ class Config:
                       flush=True)
                 self.duet_proxy_top_k = required_top_k
             assert self.duet_proxy_top_k >= 1, "duet_proxy_top_k must be >= 1"
+            # Raw-proxy wire (SSD_DUET_PROXY_ON_DRAFT=1): the draft-side
+            # residual topk(top_k) runs over M wire candidates — M must
+            # cover the (auto-raised) top_k.
+            if self.duet_proxy_on_draft and self.duet_proxy_topm < self.duet_proxy_top_k:
+                raise ValueError(
+                    f"SSD_DUET_PROXY_TOPM={self.duet_proxy_topm} < auto-raised "
+                    f"duet_proxy_top_k={self.duet_proxy_top_k}; raise TOPM."
+                )
             # Policy A was removed (2026-07) along with the hybrid / legacy
             # two-pass paths; only the unified K+1 Policy B remains
             # (docs/duet/05-policy-b-fix.md).
