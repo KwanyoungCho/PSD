@@ -572,6 +572,29 @@ class ModelRunner:
             assert sum(config.fan_out_list) == sum(config.fan_out_list_miss) == config.async_fan_out * (config.speculate_k + 1), "ERROR in ModelRunner: fancy sampling only supported for constant fan out for now."
 
         self.sampler = Sampler(sampler_x=config.sampler_x, async_fan_out=config.async_fan_out)
+
+        # DUET exit-replica (SSD_DUET_EXIT_REPLICA=1, docs/duet/09 WS3c):
+        # rank 0 keeps a full-vocab lm_head replica so the mid-verify exit
+        # proxy needs NO TP collective. One-time weight gather over the TP
+        # group (all target ranks participate); built BEFORE
+        # allocate_kv_cache so KV auto-sizing accounts for the extra
+        # V×D fp16 (~512MB at 70B).
+        if (not is_draft and config.duet_enabled
+                and getattr(config, "duet_exit_replica", False)):
+            _lm = self.model.lm_head
+            _w = _lm.weight.data
+            if _lm.tp_size > 1:
+                _parts = ([torch.empty_like(_w) for _ in range(_lm.tp_size)]
+                          if _lm.tp_rank == 0 else None)
+                dist.gather(_w, _parts, 0, group=_lm.tp_group)
+                if _lm.tp_rank == 0:
+                    self._duet_lm_head_replica = torch.cat(_parts, dim=0)
+            else:
+                self._duet_lm_head_replica = _w
+            if _lm.tp_rank == 0:
+                print(f'[duet] exit-replica lm_head on rank0: '
+                      f'{list(self._duet_lm_head_replica.shape)}', flush=True)
+
         if self.verbose:
             print(f'-----WARMING UP {model_type}MODEL----', flush=True)
         self.warmup_model()

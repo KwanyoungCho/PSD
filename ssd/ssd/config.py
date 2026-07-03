@@ -200,6 +200,19 @@ class Config:
         return _os_cfg.environ.get("SSD_DUET_EXIT_TOPM_GATHER", "0") == "1"
 
     @property
+    def duet_exit_replica(self) -> bool:
+        """SSD_DUET_EXIT_REPLICA=1 — target rank 0 keeps a full-vocab
+        lm_head replica (~V×D fp16, 512MB at 70B) so the mid-verify exit
+        proxy needs NO TP collective at all: ranks 1+ go straight from
+        graph_pre to graph_post (the exit rendezvous point disappears),
+        and rank 0 runs norm + replica lm_head + Policy B + send on a
+        side stream overlapped with graph_post. Motivated by the
+        exit-topm-gather null result: the exit cost is rendezvous-
+        dominated, not volume-dominated (docs/duet/09 WS3c)."""
+        import os as _os_cfg
+        return _os_cfg.environ.get("SSD_DUET_EXIT_REPLICA", "0") == "1"
+
+    @property
     def duet_raw_proxy_wire_len(self) -> int:
         """Fused int64 payload length for the raw-proxy wire (worst-case
         K_max sizing; short steps pad the tail):
@@ -444,6 +457,13 @@ class Config:
                     "are mutually exclusive: the top-M gather keeps Policy B "
                     "on rank 0 with the standard chosen wire, while "
                     "proxy-on-draft changes the wire to raw candidates."
+                )
+            if self.duet_exit_replica and (
+                    self.duet_exit_topm_gather or self.duet_proxy_on_draft):
+                raise ValueError(
+                    "SSD_DUET_EXIT_REPLICA=1 is mutually exclusive with the "
+                    "other exit-proxy gates (it removes the exit collective "
+                    "entirely and keeps the legacy full-vocab Policy B)."
                 )
             # Policy A was removed (2026-07) along with the hybrid / legacy
             # two-pass paths; only the unified K+1 Policy B remains

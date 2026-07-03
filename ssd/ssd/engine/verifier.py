@@ -316,7 +316,8 @@ class Verifier(VerifierBase):
         # alive. `exit_logits.record_stream` is done at the dispatch boundary;
         # here we cover draft_tokens / logits_q / cache_hits which are read
         # below (docs/duet/08 §2 cross-stream lifetime checklist).
-        if os.environ.get("SSD_PROXY_STREAM", "0") == "1":
+        if (os.environ.get("SSD_PROXY_STREAM", "0") == "1"
+                or config.duet_exit_replica):
             _cur = torch.cuda.current_stream()
             if draft_tokens is not None:
                 draft_tokens.record_stream(_cur)

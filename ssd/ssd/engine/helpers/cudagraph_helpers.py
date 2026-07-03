@@ -1282,63 +1282,105 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     duet_close("verify_setup", _ev_setup)
 
     # ====== graph_pre.replay() ======
+    if getattr(config, "duet_exit_replica", False):
+        # Exit-replica: graph_pre rewrites exit_hidden/exit_residual —
+        # make sure the PREVIOUS step's side-stream read finished (it
+        # completes ~35 ms before this point in practice; the wait is a
+        # no-op guard against pathological stalls).
+        _prev_done = getattr(model_runner, "_duet_exit_done_ev", None)
+        if _prev_done is not None:
+            torch.cuda.current_stream().wait_event(_prev_done)
     _ev = duet_record("graph_pre")
     graph_pre.replay()
     duet_close("graph_pre", _ev)
 
-    # ====== Mid-forward: exit logits (norm + lm_head on exit_hidden) ======
-    _ev_el = duet_record("exit_logits")
-    flat = orig_bs * k_plus_1
-    exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
-    normed = model_runner.model.model.norm(exit_h, None)
-    if getattr(config, "duet_exit_topm_gather", False):
-        # Rank-local top-M reduction (docs/duet/09 WS3): every rank shrinks
-        # its vocab shard to top-M candidates + lse partial + draft-token
-        # logit BEFORE the gather. rank 0 gets a raw-candidate dict (same
-        # schema as the raw-proxy wire); rank 1+ get None.
-        exit_logits = _duet_exit_topm_gather(
-            model_runner, normed, input_ids[:flat], config.duet_proxy_topm)
+    if getattr(config, "duet_exit_replica", False):
+        # ====== Exit-replica overlap (docs/duet/09 WS3c) ======
+        # NO TP collective: ranks 1+ fall straight through to graph_post
+        # (the exit rendezvous point disappears). Rank 0 — the only rank
+        # with duet_proxy_fn set — runs norm + full-vocab lm_head
+        # (local replica) + Policy B + send on a side stream: the CPU
+        # dispatch below is hidden behind graph_pre's GPU execution and
+        # the side work itself overlaps graph_post. The exit_logits /
+        # proxy_compute_send spans now measure dispatch only (~0).
+        _ev_el = duet_record("exit_logits")
+        flat = orig_bs * k_plus_1
+        _replica = getattr(model_runner, "_duet_lm_head_replica", None)
+        if duet_proxy_fn is not None and _replica is not None:
+            _es = getattr(model_runner, "_duet_exit_stream", None)
+            if _es is None:
+                _es = torch.cuda.Stream(device=_replica.device)
+                model_runner._duet_exit_stream = _es
+            _ev_ready = torch.cuda.Event()
+            _ev_ready.record()  # default stream: fires when graph_pre is done
+            with torch.cuda.stream(_es):
+                _es.wait_event(_ev_ready)
+                exit_h = (graph_vars["exit_hidden"][:flat]
+                          + graph_vars["exit_residual"][:flat])
+                normed = model_runner.model.model.norm(exit_h, None)
+                _el_full = torch.nn.functional.linear(normed, _replica)
+                duet_proxy_fn(_el_full, orig_bs)
+            _done = torch.cuda.Event()
+            _done.record(_es)
+            model_runner._duet_exit_done_ev = _done
+        duet_close("exit_logits", _ev_el)
+        _ev = duet_record("proxy_compute_send")
+        duet_close("proxy_compute_send", _ev)
+        exit_logits = None
     else:
-        # ALL TP ranks call compute_logits → gather participation.
-        # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
-        exit_logits = model_runner.model.compute_logits(normed, last_only=False)
-    duet_close("exit_logits", _ev_el)
-
-    # ====== proxy compute + isend (rank 0 only does real work) ======
-    # Batch 3b (docs/duet/08 §1.2): if SSD_PROXY_STREAM=1, dispatch the
-    # Policy B compute + isend onto a dedicated proxy_stream so the default
-    # stream returns to graph_post.replay() immediately. Cross-stream
-    # tensors (exit_logits, and inside duet_proxy_fn: draft_tokens,
-    # logits_q, cache_hits — captured from Verifier closure) need
-    # record_stream so the caching allocator does not free them while
-    # proxy_stream is still reading. NEVER make default stream wait on
-    # proxy_stream (that would defeat the purpose).
-    _ev = duet_record("proxy_compute_send")
-    if duet_proxy_fn is not None:
-        _proxy_stream = getattr(model_runner, "_duet_proxy_stream", None)
-        if _proxy_stream is None and os.environ.get("SSD_PROXY_STREAM", "0") == "1":
-            _proxy_stream = torch.cuda.Stream(device=model_runner.device)
-            model_runner._duet_proxy_stream = _proxy_stream
-        if _proxy_stream is not None:
-            # Cross-stream lifetime guard for the ONE tensor visible at
-            # this boundary. draft_tokens / logits_q / cache_hits are
-            # captured in the closure of duet_proxy_fn — Verifier
-            # record_stream's them defensively inside _compute_and_send_proxy.
-            if exit_logits is not None and torch.is_tensor(exit_logits):
-                exit_logits.record_stream(_proxy_stream)
-            # Event on default stream signals "exit_logits ready"; proxy
-            # stream waits, does its work, and default stream immediately
-            # returns to graph_post below.
-            _ev_data_ready = torch.cuda.Event()
-            _ev_data_ready.record()
-            with torch.cuda.stream(_proxy_stream):
-                _proxy_stream.wait_event(_ev_data_ready)
-                duet_proxy_fn(exit_logits, orig_bs)
-            # NO default stream wait_stream(proxy_stream) here — that would
-            # re-serialize (docs/duet/08 §1.3 wrong pattern).
+        # ====== Mid-forward: exit logits (norm + lm_head on exit_hidden) ======
+        _ev_el = duet_record("exit_logits")
+        flat = orig_bs * k_plus_1
+        exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
+        normed = model_runner.model.model.norm(exit_h, None)
+        if getattr(config, "duet_exit_topm_gather", False):
+            # Rank-local top-M reduction (docs/duet/09 WS3): every rank shrinks
+            # its vocab shard to top-M candidates + lse partial + draft-token
+            # logit BEFORE the gather. rank 0 gets a raw-candidate dict (same
+            # schema as the raw-proxy wire); rank 1+ get None.
+            exit_logits = _duet_exit_topm_gather(
+                model_runner, normed, input_ids[:flat], config.duet_proxy_topm)
         else:
-            duet_proxy_fn(exit_logits, orig_bs)
-    duet_close("proxy_compute_send", _ev)
+            # ALL TP ranks call compute_logits → gather participation.
+            # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
+            exit_logits = model_runner.model.compute_logits(normed, last_only=False)
+        duet_close("exit_logits", _ev_el)
+
+        # ====== proxy compute + isend (rank 0 only does real work) ======
+        # Batch 3b (docs/duet/08 §1.2): if SSD_PROXY_STREAM=1, dispatch the
+        # Policy B compute + isend onto a dedicated proxy_stream so the default
+        # stream returns to graph_post.replay() immediately. Cross-stream
+        # tensors (exit_logits, and inside duet_proxy_fn: draft_tokens,
+        # logits_q, cache_hits — captured from Verifier closure) need
+        # record_stream so the caching allocator does not free them while
+        # proxy_stream is still reading. NEVER make default stream wait on
+        # proxy_stream (that would defeat the purpose).
+        _ev = duet_record("proxy_compute_send")
+        if duet_proxy_fn is not None:
+            _proxy_stream = getattr(model_runner, "_duet_proxy_stream", None)
+            if _proxy_stream is None and os.environ.get("SSD_PROXY_STREAM", "0") == "1":
+                _proxy_stream = torch.cuda.Stream(device=model_runner.device)
+                model_runner._duet_proxy_stream = _proxy_stream
+            if _proxy_stream is not None:
+                # Cross-stream lifetime guard for the ONE tensor visible at
+                # this boundary. draft_tokens / logits_q / cache_hits are
+                # captured in the closure of duet_proxy_fn — Verifier
+                # record_stream's them defensively inside _compute_and_send_proxy.
+                if exit_logits is not None and torch.is_tensor(exit_logits):
+                    exit_logits.record_stream(_proxy_stream)
+                # Event on default stream signals "exit_logits ready"; proxy
+                # stream waits, does its work, and default stream immediately
+                # returns to graph_post below.
+                _ev_data_ready = torch.cuda.Event()
+                _ev_data_ready.record()
+                with torch.cuda.stream(_proxy_stream):
+                    _proxy_stream.wait_event(_ev_data_ready)
+                    duet_proxy_fn(exit_logits, orig_bs)
+                # NO default stream wait_stream(proxy_stream) here — that would
+                # re-serialize (docs/duet/08 §1.3 wrong pattern).
+            else:
+                duet_proxy_fn(exit_logits, orig_bs)
+        duet_close("proxy_compute_send", _ev)
 
     # ====== graph_post.replay() ======
     _ev = duet_record("graph_post")
