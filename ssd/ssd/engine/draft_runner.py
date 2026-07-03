@@ -23,6 +23,11 @@ SPLIT_K1K2_MODE = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
 # SSD_TRACE_SPLIT_K1K2=1. Logs every step's valid_k / shapes / per-position
 # proxy fan_out so we can prove what's real data vs zero-pad.
 TRACE_SPLIT_K1K2 = os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
+# JIT-short gate (split mode only): serve cache misses with a K2-deep JIT
+# chain (valid_k=K2, short-bucket path — same shape as a phase2 hit)
+# instead of K_max=K1. Saves K1-K2 unbatched draft forwards on the miss
+# critical path; costs L_miss truncation beyond depth K2.
+DUET_JIT_SHORT = os.environ.get("SSD_DUET_JIT_SHORT", "0") == "1"
 
 class DraftRunner(ModelRunner):
     
@@ -321,7 +326,9 @@ class DraftRunner(ModelRunner):
         if SPLIT_K1K2_MODE and self.config.duet_phase1_k is not None:
             _K1c = self.config.duet_phase1_k
             _K2c = self.config.duet_phase2_k
-            _jit_K = _K1c if _K1c >= _K2c else _K2c  # = K_max
+            # SSD_DUET_JIT_SHORT=1: K2-deep JIT (miss rows become valid_k=K2
+            # short-bucket rows; hit_cache_and_respond default must match).
+            _jit_K = _K2c if DUET_JIT_SHORT else (_K1c if _K1c >= _K2c else _K2c)
         for i in range(_jit_K): # we're going to glue after this anyways, and by sending the spec request target has verified we have K more slots left in our last page
             set_context(
                 is_prefill=False,
@@ -376,7 +383,11 @@ class DraftRunner(ModelRunner):
             K1 = self.config.duet_phase1_k
             K2 = self.config.duet_phase2_k
             K_max = K1 if K1 >= K2 else K2
-            valid_k = torch.full((B,), K_max, dtype=torch.int64, device=self.device)
+            # JIT-short: miss/JIT rows default to valid_k=K2 to match the
+            # K2-deep JIT chain (jit_speculate). Hit rows are overwritten
+            # with their cached row's valid_k below either way.
+            _miss_vk = K2 if DUET_JIT_SHORT else K_max
+            valid_k = torch.full((B,), _miss_vk, dtype=torch.int64, device=self.device)
         else:
             valid_k = torch.full((B,), K, dtype=torch.int64, device=self.device)
 
