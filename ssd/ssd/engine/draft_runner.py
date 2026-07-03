@@ -1361,56 +1361,10 @@ class DraftRunner(ModelRunner):
             out_tokens: [B, K_alloc] this step's response tokens.
             K_step: the step's valid_k (verify width - 1).
         """
-        top_k = self.config.duet_proxy_top_k
-        wire_N = self.config.duet_proxy_wire_N
-        ids = raw["topk_ids"][:K_step + 1]                    # [K+1, M]
-        pE_top = torch.exp(
-            raw["topk_logits"][:K_step + 1]
-            - raw["lse"][:K_step + 1].unsqueeze(1))           # [K+1, M]
-        pE_y = torch.exp(raw["y_logit"][:K_step] - raw["lse"][:K_step])  # [K]
-
-        # p_D from the draft's own response logits (identical tensor to the
-        # target's logits_q — no temperature, same as verifier line "p_D").
-        # Gather-based form: p_D(v) = exp(lq(v) - lse_q) — same values as a
-        # full softmax without materializing the [K, V] fp32 probs (the
-        # phase2_build .tolist() sync waits on this chain; keep it short).
-        y_tok = out_tokens[0, :K_step]
-        lq = out_logits[0, :K_step, :]
-        lse_q = torch.logsumexp(lq.float(), dim=-1)                     # [K]
-        y_lq = lq.gather(1, y_tok.unsqueeze(1)).squeeze(1).float()      # [K]
-        pD_y = torch.exp(y_lq - lse_q)                                  # [K]
-        accept_probs = (pE_y / (pD_y + 1e-10)).clamp(max=1.0)           # [K]
-
-        # h_i (first-reject distribution) — verbatim from the verifier.
-        h = torch.zeros(K_step + 1, device=lse_q.device)
-        cumprod = torch.cumprod(accept_probs, dim=0)
-        h[0] = 1 - accept_probs[0]
-        if K_step > 1:
-            h[1:K_step] = cumprod[:-1] * (1 - accept_probs[1:])
-        h[K_step] = cumprod[-1]
-
-        # Residual [p_E - p_D]_+ on the M-candidate set, draft token excluded.
-        at_lq = lq.gather(1, ids[:K_step]).float()            # [K, M]
-        pD_at = torch.exp(at_lq - lse_q.unsqueeze(1))         # [K, M]
-        resid = (pE_top[:K_step] - pD_at).clamp(min=0)
-        resid = resid.masked_fill(ids[:K_step] == y_tok.unsqueeze(1), 0.0)
-        r_probs, r_idx = resid.topk(top_k, dim=-1)            # [K, top_k]
-        r_probs = r_probs / r_probs.sum(-1, keepdim=True).clamp(min=1e-10)
-        r_ids = ids[:K_step].gather(1, r_idx)
-
-        # Position K (all-accept): target's exit distribution directly.
-        k_probs, k_idx = pE_top[K_step].topk(top_k)
-        k_probs = k_probs / k_probs.sum().clamp(min=1e-10)
-        k_ids = ids[K_step].gather(0, k_idx)
-
-        corr_probs = torch.cat([r_probs, k_probs.unsqueeze(0)], dim=0)  # [K+1, top_k]
-        corr_ids = torch.cat([r_ids, k_ids.unsqueeze(0)], dim=0)
-        P_iv = h.unsqueeze(1) * corr_probs
-        _, top_idx = P_iv.flatten().topk(wire_N)
-        return {
-            "chosen_pos": top_idx // top_k,
-            "chosen_tok": corr_ids.view(-1).gather(0, top_idx),
-        }
+        from ssd.utils.async_helpers.duet_policy import policy_b_from_candidates
+        return policy_b_from_candidates(
+            raw, out_logits[0], out_tokens[0, :K_step], K_step,
+            self.config.duet_proxy_top_k, self.config.duet_proxy_wire_N)
 
     def _select_draft_sourced_tokens(self, logits, returned_tokens, draft_fan_out):
         """Select fork tokens from draft logits (uniform top-k per position)."""

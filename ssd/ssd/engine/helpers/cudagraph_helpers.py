@@ -1150,6 +1150,76 @@ def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
 
 
 @torch.inference_mode()
+def _duet_exit_topm_gather(model_runner, normed, input_ids_flat, M):
+    """Rank-local top-M exit reduction (SSD_DUET_EXIT_TOPM_GATHER=1).
+
+    Each TP rank computes its lm_head vocab-shard logits (same GEMM as the
+    full path), reduces to top-M values/ids + a logsumexp partial + the
+    shard's draft-token logit, and gathers ONE small fp32 payload
+    [flat, 2M+2] to rank 0 (vs the full [flat, V] logits). Rank 0 merges
+    the 4 partials into an EXACT global top-M candidate dict with exact
+    probabilities (p = exp(logit - lse_global)) in the raw-proxy schema
+    consumed by policy_b_from_candidates.
+
+    y (draft token at each position) is derived from the verify input ids:
+    position i's draft token = input_ids[i+1] (B=1; the all-accept slot K
+    has no draft token). Vocab ids fit fp32 exactly (V < 2^24).
+
+    Returns: raw dict on rank 0, None on other ranks.
+    """
+    import torch.distributed as dist
+    lm_head = model_runner.model.lm_head
+    flat = normed.size(0)
+    K_ = flat - 1
+    shard = torch.nn.functional.linear(normed, lm_head.weight)  # [flat, V/tp]
+    shard_f = shard.float()
+    lse_local = torch.logsumexp(shard_f, dim=-1)                # [flat]
+    vals, idx = shard_f.topk(M, dim=-1)                         # [flat, M]
+    tp_size = getattr(lm_head, "tp_size", 1)
+    vstart = getattr(lm_head, "vocab_start_idx", 0)
+    vend = getattr(lm_head, "vocab_end_idx", shard.size(1))
+    ids = (idx + vstart).to(torch.float32)
+
+    y_tok = input_ids_flat[1:flat]                              # [K_]
+    in_range = (y_tok >= vstart) & (y_tok < vend)
+    y_idx = (y_tok - vstart).clamp(0, shard.size(1) - 1)
+    y_val = shard_f[:K_].gather(1, y_idx.unsqueeze(1)).squeeze(1)
+    y_val = torch.where(in_range, y_val,
+                        torch.full_like(y_val, float("-inf")))
+
+    payload = torch.empty(flat, 2 * M + 2, dtype=torch.float32,
+                          device=normed.device)
+    payload[:, :M] = vals
+    payload[:, M:2 * M] = ids
+    payload[:, 2 * M] = lse_local
+    payload[:K_, 2 * M + 1] = y_val
+    payload[K_:, 2 * M + 1] = float("-inf")
+
+    if tp_size > 1:
+        parts = ([torch.empty_like(payload) for _ in range(tp_size)]
+                 if lm_head.tp_rank == 0 else None)
+        dist.gather(payload, parts, 0, group=lm_head.tp_group)
+        if lm_head.tp_rank != 0:
+            return None
+    else:
+        parts = [payload]
+
+    vals4 = torch.cat([p[:, :M] for p in parts], dim=1)         # [flat, tp*M]
+    ids4 = torch.cat([p[:, M:2 * M] for p in parts], dim=1)
+    lse_g = torch.logsumexp(
+        torch.stack([p[:, 2 * M] for p in parts], dim=0), dim=0)  # [flat]
+    y_g = torch.stack(
+        [p[:, 2 * M + 1] for p in parts], dim=0).max(dim=0).values  # [flat]
+    top_lg, sel = vals4.topk(M, dim=-1)                         # exact global top-M
+    top_ids = ids4.gather(1, sel).to(torch.int64)
+    return {
+        "topk_ids": top_ids,
+        "topk_logits": top_lg,
+        "lse": lse_g,
+        "y_logit": y_g[:K_],
+    }
+
+
 def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
                                graph_vars, duet_proxy_fn=None, bucket="duet_verify"):
     """Split CudaGraph verify: pre → proxy → post → logits.
@@ -1221,9 +1291,17 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     flat = orig_bs * k_plus_1
     exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
     normed = model_runner.model.model.norm(exit_h, None)
-    # ALL TP ranks call compute_logits → gather participation.
-    # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
-    exit_logits = model_runner.model.compute_logits(normed, last_only=False)
+    if getattr(config, "duet_exit_topm_gather", False):
+        # Rank-local top-M reduction (docs/duet/09 WS3): every rank shrinks
+        # its vocab shard to top-M candidates + lse partial + draft-token
+        # logit BEFORE the gather. rank 0 gets a raw-candidate dict (same
+        # schema as the raw-proxy wire); rank 1+ get None.
+        exit_logits = _duet_exit_topm_gather(
+            model_runner, normed, input_ids[:flat], config.duet_proxy_topm)
+    else:
+        # ALL TP ranks call compute_logits → gather participation.
+        # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
+        exit_logits = model_runner.model.compute_logits(normed, last_only=False)
     duet_close("exit_logits", _ev_el)
 
     # ====== proxy compute + isend (rank 0 only does real work) ======
@@ -1246,7 +1324,7 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
             # this boundary. draft_tokens / logits_q / cache_hits are
             # captured in the closure of duet_proxy_fn — Verifier
             # record_stream's them defensively inside _compute_and_send_proxy.
-            if exit_logits is not None:
+            if exit_logits is not None and torch.is_tensor(exit_logits):
                 exit_logits.record_stream(_proxy_stream)
             # Event on default stream signals "exit_logits ready"; proxy
             # stream waits, does its work, and default stream immediately

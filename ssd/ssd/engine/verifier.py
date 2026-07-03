@@ -294,6 +294,19 @@ class Verifier(VerifierBase):
         else:
             _mr_d = _mc_d = None
 
+        # === Exit top-M gather (SSD_DUET_EXIT_TOPM_GATHER=1, docs/duet/09) ===
+        # exit_logits arrives as the merged raw-candidate dict from
+        # _duet_exit_topm_gather; run Policy B on the candidate set (exact
+        # same math/wire as the full-vocab path — see duet_policy).
+        if isinstance(exit_logits, dict):
+            from ssd.utils.async_helpers.duet_policy import policy_b_from_candidates
+            chosen = policy_b_from_candidates(
+                exit_logits, logits_q[0], draft_tokens[0, :K], K,
+                config.duet_proxy_top_k, config.duet_proxy_wire_N)
+            send_int64(async_pg, draft_rank,
+                       chosen["chosen_pos"], chosen["chosen_tok"])
+            return
+
         if exit_logits.dim() == 2:
             exit_logits = exit_logits.view(B, K + 1, -1)  # [B, K+1, V]
 

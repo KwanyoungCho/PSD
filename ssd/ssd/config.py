@@ -188,6 +188,18 @@ class Config:
         return int(_os_cfg.environ.get("SSD_DUET_PROXY_TOPM", "24"))
 
     @property
+    def duet_exit_topm_gather(self) -> bool:
+        """SSD_DUET_EXIT_TOPM_GATHER=1 — each TP rank reduces its exit
+        lm_head vocab shard to top-M candidates (+ logsumexp partial +
+        draft-token logit) before the gather, and rank 0 runs Policy B on
+        the merged candidate set. Replaces the full-[flat, V] exit logits
+        gather (~640KB) with ~16KB and drops the full-vocab proxy
+        softmax/topk from the rank-0 verify path (docs/duet/09 WS3).
+        Wire to the draft is unchanged ({chosen_pos, chosen_tok})."""
+        import os as _os_cfg
+        return _os_cfg.environ.get("SSD_DUET_EXIT_TOPM_GATHER", "0") == "1"
+
+    @property
     def duet_raw_proxy_wire_len(self) -> int:
         """Fused int64 payload length for the raw-proxy wire (worst-case
         K_max sizing; short steps pad the tail):
@@ -420,6 +432,18 @@ class Config:
                 raise ValueError(
                     f"SSD_DUET_PROXY_TOPM={self.duet_proxy_topm} < auto-raised "
                     f"duet_proxy_top_k={self.duet_proxy_top_k}; raise TOPM."
+                )
+            if self.duet_exit_topm_gather and self.duet_proxy_topm < self.duet_proxy_top_k:
+                raise ValueError(
+                    f"SSD_DUET_PROXY_TOPM={self.duet_proxy_topm} < auto-raised "
+                    f"duet_proxy_top_k={self.duet_proxy_top_k}; raise TOPM."
+                )
+            if self.duet_exit_topm_gather and self.duet_proxy_on_draft:
+                raise ValueError(
+                    "SSD_DUET_EXIT_TOPM_GATHER=1 and SSD_DUET_PROXY_ON_DRAFT=1 "
+                    "are mutually exclusive: the top-M gather keeps Policy B "
+                    "on rank 0 with the standard chosen wire, while "
+                    "proxy-on-draft changes the wire to raw candidates."
                 )
             # Policy A was removed (2026-07) along with the hybrid / legacy
             # two-pass paths; only the unified K+1 Policy B remains
