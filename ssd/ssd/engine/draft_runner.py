@@ -1382,7 +1382,7 @@ class DraftRunner(ModelRunner):
         accept_probs = (pE_y / (pD_y + 1e-10)).clamp(max=1.0)           # [K]
 
         # h_i (first-reject distribution) — verbatim from the verifier.
-        h = torch.zeros(K_step + 1, device=p_D.device)
+        h = torch.zeros(K_step + 1, device=lse_q.device)
         cumprod = torch.cumprod(accept_probs, dim=0)
         h[0] = 1 - accept_probs[0]
         if K_step > 1:
