@@ -1758,8 +1758,9 @@ class DraftRunner(ModelRunner):
                 partial_tree_decode_args, glue_decode_input_ids)
             _vkp = partial_tree_decode_args["valid_k_scalar"]
             _nt0 = partial_tree_decode_args["num_tokens"][0]
+            _dbt_p = partial_tree_decode_args["dbt"]
             _dpos = _nt0 - 1 + torch.arange(_vkp + 1, device=self.device)
-            _dslot = dbt[0, _dpos // self.block_size].to(torch.int64) \
+            _dslot = _dbt_p[0, _dpos // self.block_size].to(torch.int64) \
                 * self.block_size + (_dpos % self.block_size)
             _kvf = self.kv_cache.flatten(2, 3)
             _kv_promo = _kvf[:, :, _dslot].clone()
