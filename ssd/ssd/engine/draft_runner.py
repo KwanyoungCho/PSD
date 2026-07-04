@@ -474,8 +474,12 @@ class DraftRunner(ModelRunner):
                 idx = match.float().argmax(dim=1).to(torch.int64)
                 if self.config.duet_kv_promo:
                     # matched cache row index — the promotion source
-                    # (_glue_promo). Kept on-GPU; no sync.
+                    # (_glue_promo). Kept on-GPU; no sync. Also stash the
+                    # matched row's seed position (k_idx = tree key col 1):
+                    # the scratch KV's RoPE was baked at nt_prev-1+k_idx+1+s,
+                    # so promotion is only valid where k_idx == nt-nt_prev-1.
                     self._promo_row_idx = idx
+                    self._promo_row_kidx = self.tree_cache_keys[idx, 1]
                 sel = cache_hits
                 # Cache row width may be < out_tokens K (split-only K1/K2 mode
                 # pads to K_max < K_long). Copy first cache_row_width cols, leave
@@ -994,7 +998,28 @@ class DraftRunner(ModelRunner):
         src_pos = torch.where(row < n_draft, src_draft, src_proxy)
         nt = partial_tree_decode_args["num_tokens"]
         dst_pos = nt[0] - 1 + s_ar
-        src_slot = dbt[0, src_pos // bs].to(torch.int64) * bs + (src_pos % bs)
+        # src is addressed through the BUILD-time block table (scratch
+        # blocks are recycled across steps — docs/duet/11); dst is in the
+        # committed/glue region (stable), use the current dbt.
+        src_dbt = meta["dbt"]
+        if os.environ.get("SSD_DUET_KV_PROMO_DEBUG", "0") == "1":
+            _is_px = bool((row >= n_draft).item())
+            _tag = "PROXY" if _is_px else "DRAFT"
+            if not getattr(self, f"_promo_dbg_{_tag}", False):
+                setattr(self, f"_promo_dbg_{_tag}", True)
+                _kidx = int(self._promo_row_kidx[0].item())
+                _ntp = int(meta["nt_prev"][0].item())
+                _ntc = int(nt[0].item())
+                _roff = _ntp + _kidx + 1 - _ntc  # scratch_rope - glue_rope
+                print(f'[promo-dbg {_tag}] vk={vk} row={int(row.item())} '
+                      f'n_draft={n_draft} nt={_ntc} nt_prev={_ntp} '
+                      f'k_idx={_kidx} rope_offset={_roff} '
+                      f'glue_w_prev={meta["glue_w_prev"]} gap={meta["gap"]} '
+                      f'mq_p1={meta["mq_p1"]} mq_p2={meta["mq_p2"]} '
+                      f'base={int(base.item())} '
+                      f'src_pos={src_pos.tolist()} dst_pos={dst_pos.tolist()}',
+                      flush=True)
+        src_slot = src_dbt[0, src_pos // bs].to(torch.int64) * bs + (src_pos % bs)
         dst_slot = dbt[0, dst_pos // bs].to(torch.int64) * bs + (dst_pos % bs)
         # [2, L, blocks, bs, H, D] -> [2, L, slots, H, D]; src/dst ranges
         # can overlap (dst tail reaches into the old scratch region), so
@@ -1769,7 +1794,11 @@ class DraftRunner(ModelRunner):
             _kv_leg = _kvf[:, :, _dslot]
             _kvd = (_kv_promo.float() - _kv_leg.float()).abs().amax(dim=(0, 1, 3, 4))
             _lgd = (_pl.float() - glue_logits.float()).abs().amax(dim=(0, 2))
-            print(f'[duet][promo-parity] kv_maxdiff/pos={[f"{v:.4f}" for v in _kvd.tolist()]} '
+            _kidx_p = int(self._promo_row_kidx[0].item())
+            _roff_p = int(self._promo_meta["nt_prev"][0].item()) + _kidx_p + 1 - int(_nt0.item())
+            _ispx = int((self._promo_row_idx[0] >= self._promo_meta["n_draft"]).item())
+            print(f'[duet][promo-parity] proxy={_ispx} k_idx={_kidx_p} rope_off={_roff_p} '
+                  f'kv_maxdiff/pos={[f"{v:.3f}" for v in _kvd.tolist()]} '
                   f'logit_maxdiff/pos={[f"{v:.3f}" for v in _lgd.tolist()]}', flush=True)
         elif _promo_ok:
             glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
@@ -1920,6 +1949,13 @@ class DraftRunner(ModelRunner):
                 "mq_p2": _layout_k2.MQ_LEN,
                 "gap": self.split_k2_layout.dead_gap,
                 "n_draft": self._last_n_draft_keys,
+                # Block table AS OF THIS BUILD: the scratch (lookahead)
+                # region's logical→physical mapping is recycled each step,
+                # so the src KV must be addressed through the build-time
+                # dbt, not the promo step's dbt (docs/duet/11 — the block
+                # boundary failure). Clone so a later in-place dbt update
+                # can't mutate the stash. B=1 → tiny.
+                "dbt": partial_tree_decode_args["dbt"].clone(),
             }
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
