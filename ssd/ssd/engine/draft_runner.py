@@ -243,6 +243,16 @@ class DraftRunner(ModelRunner):
                 fan_out_list_miss=[proxy_fo] * (K_rank_max + 1),
                 K=K2, device=d, position_count=K_rank_max + 1,
             )
+            # KV promotion (docs/duet/11): Phase 2 writes AFTER Phase 1's
+            # scratch extent instead of overlaying it, so Phase 1 rows' KV
+            # survives for next-step promotion. dead_gap shifts Phase 2's
+            # positions (and thus slots/context_lens, which derive from
+            # them) and opens a masked-out hole in its attention layout.
+            # _update_phase2_layout_inplace does not touch this field.
+            self.split_k2_layout.dead_gap = (
+                K1 * self.split_k1_long_layout.MQ_LEN
+                if self.config.duet_kv_promo else 0
+            )
             _short_str = (
                 f'split_k1_short MQ={self.split_k1_short_layout.MQ_LEN} '
                 f'(K=K1={K1}, pos={K2+1}), '
@@ -1572,7 +1582,11 @@ class DraftRunner(ModelRunner):
         N = _b_flat.shape[0]
 
         _pos_offset = -1 if self.config.use_eagle else 0
-        _positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + glue_offset + _fkp1_flat
+        # dead_gap (KV promotion, docs/duet/11): Phase 2's slot base sits
+        # after Phase 1's scratch extent. 0 for every other layout. RoPE
+        # positions are NOT shifted — they encode tree depth, not slots.
+        _dead_gap = getattr(layout, "dead_gap", 0)
+        _positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + glue_offset + _dead_gap + _fkp1_flat
         _rope_positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + _j_idx_flat + 1
         _temperatures = partial_tree_decode_args["temperatures"][_b_flat]
 

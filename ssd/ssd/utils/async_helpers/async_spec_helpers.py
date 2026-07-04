@@ -12,6 +12,7 @@ def compute_megaspec_lookahead(
     K2: int = 0,
     mq_p1: int = 0,
     mq_p2: int = 0,
+    kv_promo: bool = False,
 ) -> int:
     """Per-step draft KV slot reservation for the scheduler.
 
@@ -39,6 +40,11 @@ def compute_megaspec_lookahead(
         # Either pass can dominate depending on (dfo, pfo) — pfo > dfo cases
         # (e.g., dfo=1, pfo=3) push K2*mq_p2 above K1*mq_p1 even at K2 ≤ K1.
         # Reserve the worst-case footprint of the two.
+        if kv_promo:
+            # KV promotion (docs/duet/11): Phase 1 rows' KV must survive
+            # Phase 2 (next step's hit path gathers it into the glue slots),
+            # so Phase 2 gets its own region AFTER Phase 1's — no overlay.
+            return (K1 + 1) + K1 * mq_p1 + K2 * mq_p2
         return (K1 + 1) + max(K1 * mq_p1, K2 * mq_p2)
     return K + 1 + K * MQ_LEN
 

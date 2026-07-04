@@ -40,6 +40,11 @@ class TreeLayout:
 
     graph_key: str                     # CudaGraph / graph_vars lookup key
 
+    # KV promotion (docs/duet/11): slot-base shift for Phase 2 so it writes
+    # AFTER Phase 1's scratch extent instead of overlaying it. The gap
+    # region is masked out of this layout's attention. 0 everywhere else.
+    dead_gap: int = 0
+
     @property
     def forward_depth(self) -> int:
         """Alias for ``K`` — the number of model-forward steps in the depth loop."""

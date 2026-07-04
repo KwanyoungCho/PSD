@@ -200,6 +200,16 @@ class Config:
         return _os_cfg.environ.get("SSD_DUET_EXIT_TOPM_GATHER", "0") == "1"
 
     @property
+    def duet_kv_promo(self) -> bool:
+        """SSD_DUET_KV_PROMO=1 — SwiftSpec-style KV promotion (docs/duet/11):
+        on hit steps the matched cache row's scratch KV is gathered into the
+        glue slots instead of re-decoding the response chain (glue forward
+        replaced by a 1-token tip decode). Requires the non-overlay Phase-2
+        scratch reservation (Phase 1 rows' KV must survive Phase 2)."""
+        import os as _os_cfg
+        return _os_cfg.environ.get("SSD_DUET_KV_PROMO", "0") == "1"
+
+    @property
     def duet_exit_replica(self) -> bool:
         """SSD_DUET_EXIT_REPLICA=1 — target rank 0 keeps a full-vocab
         lm_head replica (~V×D fp16, 512MB at 70B) so the mid-verify exit
