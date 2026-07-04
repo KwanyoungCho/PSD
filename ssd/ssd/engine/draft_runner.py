@@ -375,6 +375,9 @@ class DraftRunner(ModelRunner):
         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
         # Draft model now returns full target vocab size logits (after d2t expansion)
         V = self.hf_config.vocab_size
+        # KV promotion (docs/duet/11): set only on the all-hit path below;
+        # None marks this step ineligible (miss / JIT / empty cache).
+        self._promo_row_idx = None
 
         # Init miss slots with valid random logits so token IDs are in-vocab (fixes B>1 crash)
         out_logits = torch.empty((B, K, V), dtype=self.hf_config.torch_dtype, device=self.device).uniform_()
@@ -469,6 +472,10 @@ class DraftRunner(ModelRunner):
                 # print(f'[hit_cache_and_respond] got all cache hits, using cached logits and tokens', flush=True)
                 # [B], arbitrary if no match but masked out
                 idx = match.float().argmax(dim=1).to(torch.int64)
+                if self.config.duet_kv_promo:
+                    # matched cache row index — the promotion source
+                    # (_glue_promo). Kept on-GPU; no sync.
+                    self._promo_row_idx = idx
                 sel = cache_hits
                 # Cache row width may be < out_tokens K (split-only K1/K2 mode
                 # pads to K_max < K_long). Copy first cache_row_width cols, leave
@@ -702,9 +709,10 @@ class DraftRunner(ModelRunner):
             # inside hit_cache_and_respond above.
             "valid_k_scalar": valid_k_scalar,
         }
-        if self.config.duet_proxy_on_draft:
+        if self.config.duet_proxy_on_draft or self.config.duet_kv_promo:
             # Raw-proxy mode needs this step's logits_q to compute Policy B
-            # locally (_policy_b_from_raw_proxy).
+            # locally (_policy_b_from_raw_proxy); KV promotion reuses them
+            # as the glue fork logits (_glue_promo).
             partial_tree_decode_args["out_logits"] = out_logits
 
         return glue_decode_input_ids, partial_tree_decode_args
@@ -936,6 +944,83 @@ class DraftRunner(ModelRunner):
 
         duet_close("glue", _mev_glue)
         return glue_decode_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B
+
+    def _glue_promo(self, partial_tree_decode_args, glue_decode_input_ids):
+        """KV-promotion glue replacement (docs/duet/11; hit steps, B=1).
+
+        Same contract as _glue_decode. Instead of re-decoding the response
+        chain [rec, c0..c_{vk-1}] (one (vk+1)-wide forward), it:
+          1. gathers the matched cache row's scratch KV (written by last
+             step's tree decode) into the glue slots — correctness proven
+             in docs/duet/11 (RoPE match, tril attention context);
+          2. runs a single 1-token decode for the tip c_{vk-1} (the only
+             chain token whose KV/after-logits were never computed);
+          3. assembles glue logits from the row's stored logits (shifted
+             by one — glue_logits[i] = dist after glue token i = the
+             row's logits[i]) + the tip forward's output.
+
+        Requires SSD_DUET_KV_PROMO=1 (non-overlay Phase-2 scratch — the
+        promotion source must survive Phase 2) and _promo_meta from the
+        previous step's build.
+        """
+        from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
+        _mev_glue = duet_record("glue")
+        dbt = partial_tree_decode_args["dbt"]
+        cache_hits = partial_tree_decode_args["cache_hits"]
+        cache_hits_list = cache_hits.tolist()
+        vk = partial_tree_decode_args["valid_k_scalar"]
+        B = glue_decode_input_ids.shape[0] // (vk + 1)
+        meta = self._promo_meta
+        bs = self.block_size
+        dev = self.device
+
+        # --- 1. KV gather: row scratch slots -> glue slots -------------
+        # Row r's chain KV (seed at depth 0, c_i at depth i+1 for
+        # i <= vk-2) sits at prev-step scratch positions:
+        #   draft rows:  base + s*mq_p1 + r
+        #   proxy rows:  base + gap + s*mq_p2 + (r - n_draft)
+        # base = (nt_prev - 1) + glue_w_prev. Block tables only append,
+        # so old positions resolve through the current dbt.
+        row = self._promo_row_idx[0]
+        n_draft = meta["n_draft"]
+        s_ar = torch.arange(vk, device=dev, dtype=torch.int64)
+        base = meta["nt_prev"][0] - 1 + meta["glue_w_prev"]
+        src_draft = base + s_ar * meta["mq_p1"] + row
+        src_proxy = base + meta["gap"] + s_ar * meta["mq_p2"] + (row - n_draft)
+        src_pos = torch.where(row < n_draft, src_draft, src_proxy)
+        nt = partial_tree_decode_args["num_tokens"]
+        dst_pos = nt[0] - 1 + s_ar
+        src_slot = dbt[0, src_pos // bs].to(torch.int64) * bs + (src_pos % bs)
+        dst_slot = dbt[0, dst_pos // bs].to(torch.int64) * bs + (dst_pos % bs)
+        # [2, L, blocks, bs, H, D] -> [2, L, slots, H, D]; src/dst ranges
+        # can overlap (dst tail reaches into the old scratch region), so
+        # gather to a temp first.
+        kvf = self.kv_cache.flatten(2, 3)
+        kvf[:, :, dst_slot] = kvf[:, :, src_slot].clone()
+
+        # --- 2. Tip mini-forward: c_{vk-1} at position nt-1+vk ----------
+        tip_tok = glue_decode_input_ids.view(B, vk + 1)[:, vk]
+        tip_pos = nt - 1 + vk
+        b_ar = torch.arange(B, device=dev)
+        tip_slot = dbt[b_ar, tip_pos // bs].to(torch.int64) * bs + (tip_pos % bs)
+        set_context(
+            is_prefill=False,
+            slot_mapping=tip_slot.to(torch.int32),
+            context_lens=(tip_pos + 1).to(torch.int32),
+            block_tables=dbt,
+            is_jit=True,
+        )
+        tip_logits = self.run_model(tip_tok, tip_pos, is_prefill=False, last_only=True)
+        reset_context()
+
+        # --- 3. Glue logits = row logits (stored) + tip ------------------
+        out_logits = partial_tree_decode_args["out_logits"]  # [B, K_alloc, V]
+        glue_logits = torch.cat(
+            [out_logits[:, :vk, :], tip_logits.view(B, 1, -1)], dim=1)
+        gd_for_fork = glue_decode_input_ids.reshape(B, vk + 1)
+
+        duet_close("glue", _mev_glue)
+        return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B
 
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         if self.config.verbose:
@@ -1649,8 +1734,23 @@ class DraftRunner(ModelRunner):
         # Glue width follows valid_k+1 (matched row depth + 1):
         #   - valid_k=K1 (or first-step K_max=K1) → glue width = K1+1
         #   - valid_k=K2                          → glue width = K2+1
-        glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
-            self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
+        # KV promotion (docs/duet/11): on clean hit steps replace the wide
+        # glue forward with row-KV gather + tip mini-forward. Falls back to
+        # the legacy glue on miss/JIT/first steps (row idx None) and until
+        # the first build has stashed _promo_meta.
+        _promo_ok = (
+            self.config.duet_kv_promo
+            and B == 1
+            and getattr(self, "_promo_row_idx", None) is not None
+            and getattr(self, "_promo_meta", None) is not None
+            and partial_tree_decode_args.get("valid_k_scalar") is not None
+        )
+        if _promo_ok:
+            glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
+                self._glue_promo(partial_tree_decode_args, glue_decode_input_ids)
+        else:
+            glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
+                self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
 
         # === Phase 1 layout dispatch by step's valid_k (long/short bucket) ===
         # valid_k=K1 → split_k1_long_layout (pos=K1+1) — glue width matches.
@@ -1780,6 +1880,21 @@ class DraftRunner(ModelRunner):
             cache_hits_list, draft_acts, proxy_acts,
             proxy_layout=_layout_k2,
             draft_layout=_layout_k1)
+
+        if self.config.duet_kv_promo:
+            # Promotion metadata for the NEXT step's _glue_promo: where this
+            # build placed each row's chain KV. mq_p1 is the STEP's phase-1
+            # layout stride (long 16 / short 10); glue_offset_p2 ==
+            # glue_offset_p1 == _step_valid_k+1 (position_count is updated
+            # in-place to K_rank+1), so one base serves both regions.
+            self._promo_meta = {
+                "nt_prev": partial_tree_decode_args["num_tokens"],
+                "glue_w_prev": _step_valid_k + 1,
+                "mq_p1": _layout_k1.MQ_LEN,
+                "mq_p2": _layout_k2.MQ_LEN,
+                "gap": self.split_k2_layout.dead_gap,
+                "n_draft": self._last_n_draft_keys,
+            }
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
                                     proxy_args, proxy_tokens, proxy_logits,
