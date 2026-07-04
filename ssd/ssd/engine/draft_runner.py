@@ -973,6 +973,10 @@ class DraftRunner(ModelRunner):
         meta = self._promo_meta
         bs = self.block_size
         dev = self.device
+        if not getattr(self, "_promo_announced", False):
+            self._promo_announced = True
+            print(f'[duet] kv-promo engaged (vk={vk}, mq_p1={meta["mq_p1"]}, '
+                  f'mq_p2={meta["mq_p2"]}, gap={meta["gap"]})', flush=True)
 
         # --- 1. KV gather: row scratch slots -> glue slots -------------
         # Row r's chain KV (seed at depth 0, c_i at depth i+1 for
@@ -1745,7 +1749,28 @@ class DraftRunner(ModelRunner):
             and getattr(self, "_promo_meta", None) is not None
             and partial_tree_decode_args.get("valid_k_scalar") is not None
         )
-        if _promo_ok:
+        if _promo_ok and os.environ.get("SSD_DUET_KV_PROMO_PARITY", "0") == "1":
+            # Parity debug: run promo, snapshot the promoted glue KV +
+            # logits, then run legacy glue (recomputes/overwrites the same
+            # slots) and report the max abs diff per depth. Legacy outputs
+            # are used downstream (ground truth). DEBUG ONLY — slow.
+            _pl, _pf, _, _, _, _ = self._glue_promo(
+                partial_tree_decode_args, glue_decode_input_ids)
+            _vkp = partial_tree_decode_args["valid_k_scalar"]
+            _nt0 = partial_tree_decode_args["num_tokens"][0]
+            _dpos = _nt0 - 1 + torch.arange(_vkp + 1, device=self.device)
+            _dslot = dbt[0, _dpos // self.block_size].to(torch.int64) \
+                * self.block_size + (_dpos % self.block_size)
+            _kvf = self.kv_cache.flatten(2, 3)
+            _kv_promo = _kvf[:, :, _dslot].clone()
+            glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
+                self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
+            _kv_leg = _kvf[:, :, _dslot]
+            _kvd = (_kv_promo.float() - _kv_leg.float()).abs().amax(dim=(0, 1, 3, 4))
+            _lgd = (_pl.float() - glue_logits.float()).abs().amax(dim=(0, 2))
+            print(f'[duet][promo-parity] kv_maxdiff/pos={[f"{v:.4f}" for v in _kvd.tolist()]} '
+                  f'logit_maxdiff/pos={[f"{v:.3f}" for v in _lgd.tolist()]}', flush=True)
+        elif _promo_ok:
             glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
                 self._glue_promo(partial_tree_decode_args, glue_decode_input_ids)
         else:
