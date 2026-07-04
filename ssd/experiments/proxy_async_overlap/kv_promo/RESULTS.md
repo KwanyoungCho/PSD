@@ -59,3 +59,28 @@ draft-bound regimes (bigger draft, B>1), where draft time is the period.
 Implemented, correct, committed, gated OFF. Kept as an enabler; not on
 the champion path. The frontier lever remains target-side (fused
 GEMM+AllReduce kernels, docs/duet/10 item 2).
+
+## PROFILE confirmation (ns=20, PROFILE_DUET=1, per hit_k1 step, ms)
+
+| draft label | OFF (legacy glue) | ON (promo) |
+|---|---:|---:|
+| `glue` span (total) | 5.44 | 5.41 |
+| └ draft_glue_replay (the forward) | 3.45 | — (none) |
+| phase1_replay | 44.3 | 45.0 |
+| phase2_replay | 19.6 | 20.3 |
+
+The `glue` span is EQUAL OFF≈ON (5.44 vs 5.41): the legacy glue forward
+(3.45 ms) + prep is replaced by promo's gather + tip forward at the SAME
+cost — a wash. Confirms the mechanism runs but saves no draft time,
+because the 10-token glue forward is already cheap (GPU batch is free /
+latency-bound), so removing it and paying a 1-token tip forward + KV
+gather nets to zero. Absolute values run high vs the cold-path champion
+profile (PROFILE=1 sync overhead; hit_k1 share differed 0.62/0.34 across
+the two runs — warmup mix), but the same-condition OFF/ON glue-span
+equality is the robust result.
+
+**Final status: KV-promo is correct and complete, gated OFF, not on the
+champion path. A wash at B=1 (draft not binding + batch-free glue). Kept
+as a draft-bound-regime enabler.** SwiftSpec's remaining kernels are
+Hopper sm_90 silicon (wgmma/TMA/clusters, NVLink IPC) — unusable on the
+RTX 3090 (sm_86) without a ground-up rewrite that loses the point.
