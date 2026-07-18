@@ -327,7 +327,14 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         else:
             cache_hits_list = cache_hits[:B].tolist()
 
-        # Layout change detection: if fan_out changed, recompute glue masks
+        # M3 (docs/duet/13 §4): split_k2's fan_out_list is a list of per-seq
+        # lists ([B][position_count]); build one glue block per seq. Flat
+        # lists (all other layouts + non-DUET) keep the shared-glue path.
+        _per_seq_fol = bool(_fan_out_list) and isinstance(_fan_out_list[0], list)
+        # Layout change detection: if fan_out changed, recompute glue masks.
+        # The _cached_fol key is the FULL per-seq structure when nested, so any
+        # per-seq distribution change (the norm at B>1) forces a rebuild; at
+        # B=1 a repeated distribution still hits the cache exactly as pre-M3.
         _needs_recompute = "glue_hit_np" not in cache
         if not _needs_recompute and cache.get("_cached_fol") != _fan_out_list:
             _needs_recompute = True
@@ -338,8 +345,14 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
             # Step 9A: glue tril dim follows the layout's position_count
             # (= K_for_mask+1). For phase1_short bucket K_for_mask=K_short<K_long.
             _tril = np.tril(np.ones((K_for_mask + 1, K_for_mask + 1), dtype=np.uint8))
-            cache["glue_hit_np"] = np.repeat(_tril, _fol, axis=0)
-            cache["glue_miss_np"] = np.repeat(_tril, _fol_miss, axis=0)
+            if _per_seq_fol:
+                cache["glue_hit_np"] = [np.repeat(_tril, f, axis=0) for f in _fol]
+                cache["glue_miss_np"] = (
+                    cache["glue_hit_np"] if _fol_miss is _fol
+                    else [np.repeat(_tril, f, axis=0) for f in _fol_miss])
+            else:
+                cache["glue_hit_np"] = np.repeat(_tril, _fol, axis=0)
+                cache["glue_miss_np"] = np.repeat(_tril, _fol_miss, axis=0)
 
         _glue_hit = cache["glue_hit_np"]
         _glue_miss = cache["glue_miss_np"]
@@ -373,6 +386,11 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
                 mask_b = np.zeros((MQ_LEN, cols_b), dtype=np.uint8)
                 mask_b[:, :prefix_len_b] = 1
                 glue = _glue_hit if int(cache_hits_list[b]) == 1 else _glue_miss
+                if _per_seq_fol:
+                    # per-seq glue block; padded rows (b >= real B when the
+                    # CG bucket pads) reuse the last real seq's block — their
+                    # outputs are discarded (slot_map -1).
+                    glue = glue[b] if b < len(glue) else glue[-1]
                 mask_b[:, prefix_len_b:prefix_len_b + K_for_mask + 1] = glue
                 diag_start = prefix_len_b + K_for_mask + 1
                 for blk in range(s + 1):

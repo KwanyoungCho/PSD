@@ -179,3 +179,66 @@ M1 tests still 9/9 OK. B=1 GPU regression smoke (champion config,
 ns=4/out=128): 71.35 tok/s, L_p1 3.49, cache 0.83, zero Tracebacks —
 matches M1's 71.50/3.46/0.80 within noise (ns=4 band 58.8–75.8). Log:
 experiments/proxy_async_overlap/b_gt1/m2_smoke/run.log.
+
+## M3 — implemented (2026-07-18)
+
+Landed per design §4 (batched selector + per-seq phase-2 fan-out;
+`ssd/engine/draft_runner.py` + `engine/helpers/cudagraph_helpers.py` +
+`engine/helpers/tree_layout.py`):
+
+1. **Batched selector**: `_select_proxy_sourced_tokens_unified` drops its
+   `assert B==1` and vectorizes over B — dedup via per-seq advanced
+   indexing `draft_forked[b_idx, chosen_pos]` ([B,N,max_fo]; the
+   [P,max_fo] mask broadcasts, shared across seqs since Phase 1
+   fan_out_list is per-seq-uniform), budget cumsum along dim 1 with
+   `take = valid & (rank <= total_budget)` per seq, boolean-index +
+   `view(B, total_budget)` (row-major order + the exactly-total_budget
+   invariant recover per-seq groups — same boolean-index op as pre-M3,
+   no new sync), `scatter_add_` dim 1 → fan_out [B, K_rank+1] (each row
+   sums to total_budget), per-seq stable argsort + gather for the
+   pos-grouped result [B, MQ_p2]. The Fix-③ underfill guard becomes
+   per-seq (`(take.sum(1) == total_budget).all()`, still `__debug__`-only).
+   Call site: M1's seq-0 collapse removed; raw-proxy mode (B==1-guarded,
+   §6) lifts its 1-D tensors to [1, wire_N].
+2. **Per-seq layout**: `_update_phase2_layout_inplace` accepts
+   fan_out [B, P]; `fan_idx = arange(P).repeat(B).repeat_interleave(
+   fan_out.reshape(-1))` — the per-seq repeat_interleaves concatenated
+   [B·MQ_p2] (bit-identical at B=1); `fan_out_list` becomes a list of
+   per-seq lists via the ONE pre-existing `.tolist()` sync (now B×(≤9)
+   elements); position_count = K_rank+1 uniform. New TreeLayout flag
+   `fan_idx_per_seq` (default False, only the runtime-mutated split_k2
+   layout sets it) tells consumers the fan_idx already spans all seqs:
+   `_build_tree_decode_args_for_layout` (j_idx/rope_positions) and
+   `_merge_and_populate_cache` (proxy_k cache keys) use it directly
+   instead of re-cat-ing per seq. metadata F stays an int (seq 0's first
+   entry — same value as pre-M3 at B=1).
+3. **Per-seq masks**: `run_fi_tree_decode_cudagraph`'s glue-mask build
+   detects the nested fan_out_list and builds one `np.repeat(_tril,
+   fol_b)` block per seq; the per-b mask loop indexes `glue[b]` (padded
+   CG-bucket rows reuse the last real seq's block — outputs discarded via
+   slot_map -1). The `_cached_fol` cache keys on the FULL per-seq
+   structure, so any distribution change forces a rebuild (the norm at
+   B>1); at B=1 a repeated distribution still hits the cache as pre-M3.
+   Flat lists (split_k1/full/non-DUET) keep the shared-glue path
+   untouched. Phase 1 stays untouched (§4 — its per-seq-uniform list
+   already batches).
+
+B=1 identity: every batched op degenerates to the pre-M3 single-seq op
+at B=1 (indexing/cumsum/scatter/argsort along the new dim over one row;
+fan_idx values identical; nested `[[...]]` glue build produces the same
+numpy block).
+
+Validation: unit tests ssd/tests/test_b_gt1_m3.py — 7/7 OK (batched
+selector vs a per-seq loop of the ORIGINAL pre-M3 selector copied into
+the test, B=1/2/3, champion shapes K_rank ∈ {4,9}, planted dedup
+collisions 0/5/12, mixed short-seq batches vk=[9,4,4] with fan_out 0
+beyond vk_i, non-uniform mask + chosen_tok==0 false-match guard; per-seq
+fan_idx formula ≡ concat of pre-M3 per-seq repeat_interleave incl.
+zero rows at padded positions — design risk (a); per-seq glue blocks ≡
+pre-M3 shared build per seq). M1 tests 9/9, M2 tests 8/8 OK
+(individually; running m1+m2 in ONE unittest process fails 5 — a
+pre-existing env-baking ordering artifact reproduced on the unmodified
+tree, not an M3 regression). B=1 GPU regression smoke (champion config,
+ns=4/out=128): 71.47 tok/s, L_p1 3.45, cache 0.81, zero Tracebacks —
+matches M2's 71.35/3.49/0.83 within noise. Log:
+experiments/proxy_async_overlap/b_gt1/m3_smoke/run.log.

@@ -40,6 +40,13 @@ class TreeLayout:
 
     graph_key: str                     # CudaGraph / graph_vars lookup key
 
+    # M3 (docs/duet/13 §4): True when fan_idx_hit/miss already span ALL seqs
+    # (per-seq repeat_interleave concatenated to [B*MQ_LEN]) and fan_out_list
+    # is a list of per-seq lists [B][position_count]. Only the runtime-mutated
+    # split_k2 layout sets this (_update_phase2_layout_inplace); consumers
+    # must then NOT re-concatenate fan_idx per seq.
+    fan_idx_per_seq: bool = False
+
     @property
     def forward_depth(self) -> int:
         """Alias for ``K`` — the number of model-forward steps in the depth loop."""

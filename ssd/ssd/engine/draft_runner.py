@@ -1462,11 +1462,13 @@ class DraftRunner(ModelRunner):
         step_rope_offsets, graph_key, name) stay; only fan_out-derived
         tensors and position_count update.
 
-        See docs/duet/05-policy-b-fix.md Section 3.7 + Fix ④.
+        See docs/duet/05-policy-b-fix.md Section 3.7 + Fix ④; batched over B
+        per docs/duet/13 §4 (M3).
 
         Args:
-            fan_out_tensor: [K_rank+1] int64 GPU tensor; sum == total_budget.
-            K_rank: int. position_count = K_rank+1.
+            fan_out_tensor: [B, K_rank+1] int64 GPU tensor; each row sums to
+                total_budget (= layout MQ_LEN).
+            K_rank: int. position_count = K_rank+1 (uniform across the batch).
 
         Returns:
             self.split_k2_layout (mutated).
@@ -1474,20 +1476,28 @@ class DraftRunner(ModelRunner):
         layout = self.split_k2_layout
         K_plus_1 = K_rank + 1
         device = fan_out_tensor.device
+        B = fan_out_tensor.shape[0]
         # Update mutable fields:
         layout.position_count = K_plus_1
-        layout.fan_out_t = fan_out_tensor
+        layout.fan_out_t = fan_out_tensor                       # [B, K_plus_1]
         layout.fan_out_t_miss = fan_out_tensor                  # same in unified path
-        # fan_idx_hit = arange(K_plus_1).repeat_interleave(fan_out_tensor)
+        # fan_idx = per-seq repeat_interleave, concatenated → [B*MQ_p2].
+        # arange(K_plus_1).repeat(B) tiles positions per seq; interleaving by
+        # the row-major flattened counts yields seq 0's fan_idx, then seq 1's,
+        # ... At B=1 this is bit-identical to the pre-M3
+        # arange(K_plus_1).repeat_interleave(fan_out_tensor).
         layout.fan_idx_hit = torch.arange(
             K_plus_1, device=device, dtype=torch.int64
-        ).repeat_interleave(fan_out_tensor)
+        ).repeat(B).repeat_interleave(fan_out_tensor.reshape(-1))
         layout.fan_idx_miss = layout.fan_idx_hit
+        # M3: fan_idx above already spans ALL seqs — consumers must not re-cat
+        # it per seq (see _build_tree_decode_args_for_layout / merge).
+        layout.fan_idx_per_seq = True
         # fan_out_list (Python list) — REQUIRED to match position_count by
         # cudagraph_helpers.run_fi_tree_decode_cudagraph (line 329:
-        # np.repeat(_tril, _fol)). For K1==K2 case, placeholder length
-        # accidentally matched K_rank+1; for K1!=K2 it didn't → ValueError.
-        # 1 GPU sync / step (≤9 elements). Cheap, but necessary for CG mask.
+        # np.repeat(_tril, _fol)). M3: list of per-seq lists [B][K_plus_1]
+        # via ONE .tolist() (the same single allowed sync as pre-M3, now
+        # B×(≤9) elements).
         layout.fan_out_list = fan_out_tensor.tolist()
         layout.fan_out_list_miss = layout.fan_out_list
         return layout
@@ -1496,61 +1506,68 @@ class DraftRunner(ModelRunner):
     def _select_proxy_sourced_tokens_unified(duet_proxy, draft_forked,
                                               K_rank, total_budget,
                                               draft_forked_mask=None):
-        """K+1 unified Policy B selector. Static (does not use self) so unit
-        tests can call it directly via DraftRunner._select_proxy_sourced_tokens_unified
-        without instance setup.
+        """K+1 unified Policy B selector, batched over B (docs/duet/13 §4, M3).
+        Static (does not use self) so unit tests can call it directly via
+        DraftRunner._select_proxy_sourced_tokens_unified without instance setup.
 
         See docs/duet/05-policy-b-fix.md Step 3.
 
         Args:
-            duet_proxy: {"chosen_pos": [wire_N], "chosen_tok": [wire_N]}
-                        score-sorted desc. chosen_pos ∈ [0, K_rank] by target-side
-                        construction (Section 3.3 invariant).
+            duet_proxy: {"chosen_pos": [B, wire_N], "chosen_tok": [B, wire_N]}
+                        score-sorted desc PER SEQ. chosen_pos ∈ [0, K_rank] by
+                        target-side construction (Section 3.3 invariant; short
+                        seqs with vk_i < K_rank never land beyond vk_i because
+                        their padded positions get h=0 — docs/duet/13 §3).
             draft_forked: [B, P, max_fo] Phase 1 candidates per ranking position.
                           - uniform Phase 1: max_fo = dfo, all slots real.
                           - non-uniform: max_fo = max(fan_out_list); padded with
                             zeros where fan_out_list[p] < max_fo.
                           P ≥ K_rank + 1.
-            K_rank: int  ranking horizon = current step's valid_k.
+            K_rank: int  ranking horizon = current step's vk_max.
                     Phase 2 forward depth (K2) is independent.
-            total_budget: int  Phase 2 tree size (= sum(fan_out_list) returned).
-            draft_forked_mask: optional [P, max_fo] bool. None for uniform Phase 1
-                               (all-real). Required for non-uniform Phase 1 to
-                               avoid false in_draft match on zero-padded slots
-                               when chosen_tok happens to be 0.
+            total_budget: int  Phase 2 tree size (= sum(fan_out_list) returned)
+                          — EXACTLY total_budget per seq by construction.
+            draft_forked_mask: optional [P, max_fo] bool, shared across seqs
+                               (Phase 1 fan_out_list is uniform per seq). None
+                               for uniform Phase 1 (all-real). Required for
+                               non-uniform Phase 1 to avoid false in_draft match
+                               on zero-padded slots when chosen_tok happens to be 0.
 
         Returns:
-            result_tokens: [B, total_budget] int64 — pos-grouped (stable sort by
-                           pos), score order preserved within each pos.
-            fan_out_list:  list[int] length K_rank+1, sum == total_budget.
+            result_tokens:  [B, total_budget] int64 — per seq pos-grouped
+                            (stable sort by pos), score order preserved within
+                            each pos.
+            fan_out_tensor: [B, K_rank+1] int64, each row sums to total_budget.
         """
-        chosen_pos = duet_proxy["chosen_pos"]    # [wire_N]
-        chosen_tok = duet_proxy["chosen_tok"]    # [wire_N]
-        N = chosen_pos.shape[0]
-        B = draft_forked.shape[0]
-        assert B == 1, "DUET invariant: B=1"
+        chosen_pos = duet_proxy["chosen_pos"]    # [B, wire_N]
+        chosen_tok = duet_proxy["chosen_tok"]    # [B, wire_N]
+        B, N = chosen_pos.shape
+        assert draft_forked.shape[0] == B, \
+            f"draft_forked B={draft_forked.shape[0]} != proxy B={B}"
         # Invariant: chosen_pos ∈ [0, K_rank] by construction.
         if __debug__:
             assert (chosen_pos <= K_rank).all().item(), \
                 f"chosen_pos out of range [0, {K_rank}]: max={chosen_pos.max().item()}"
 
-        # in_draft dedup. Uniform: all slots real. Non-uniform: mask filters
+        # in_draft dedup — per-seq membership against that seq's Phase 1
+        # candidates. Uniform: all slots real. Non-uniform: mask filters
         # zero-padded slots so chosen_tok=0 doesn't false-match on padding.
-        df_per_cand = draft_forked[0, chosen_pos, :]                # [N, max_fo]
-        eq = (df_per_cand == chosen_tok.unsqueeze(-1))                # [N, max_fo]
+        _b_idx = torch.arange(B, device=chosen_pos.device)[:, None]   # [B, 1]
+        df_per_cand = draft_forked[_b_idx, chosen_pos]                # [B, N, max_fo]
+        eq = (df_per_cand == chosen_tok.unsqueeze(-1))                # [B, N, max_fo]
         if draft_forked_mask is not None:
-            msk = draft_forked_mask[chosen_pos, :]                    # [N, max_fo]
+            msk = draft_forked_mask[chosen_pos, :]                    # [B, N, max_fo]
             eq = eq & msk
-        in_draft = eq.any(-1)                                         # [N]
-        valid = ~in_draft                                            # [N]
+        in_draft = eq.any(-1)                                         # [B, N]
+        valid = ~in_draft                                             # [B, N]
 
-        # Pick first total_budget valid (score-sorted preserved).
-        rank = valid.to(torch.int64).cumsum(0)                       # [N]
-        take = valid & (rank <= total_budget)                        # [N]
+        # Pick first total_budget valid per seq (score-sorted preserved).
+        rank = valid.to(torch.int64).cumsum(1)                        # [B, N]
+        take = valid & (rank <= total_budget)                         # [B, N]
 
         # === Fix ③ (correctness guard) ===
         # Buffer sizing (Section 3.3 / 3.5) is supposed to ensure
-        # take.sum() == total_budget. If it doesn't, fan_out_list.sum()
+        # take.sum() == total_budget PER SEQ. If it doesn't, fan_out rows
         # would silently differ from proxy_forked.shape[1] (= total_budget)
         # and downstream Phase 2 decode reads zero-padded slots as real
         # tokens. This assert was found to be a per-step GPU→CPU sync on the
@@ -1558,32 +1575,37 @@ class DraftRunner(ModelRunner):
         # is guaranteed by config-time buffer sizing (see 05-policy-b-fix.md
         # §3.3), gate under __debug__ so it's stripped under `python -O`.
         if __debug__:
-            _take_sum = int(take.sum().item())
-            assert _take_sum == total_budget, (
-                f"Policy B underfill: take.sum()={_take_sum} != total_budget={total_budget}. "
-                f"This means buffer sizing was insufficient. Check config.duet_proxy_wire_N "
-                f"and config.duet_proxy_top_k auto-raise; see docs/duet/05-policy-b-fix.md "
+            _take_sums = take.sum(dim=1)
+            assert bool((_take_sums == total_budget).all().item()), (
+                f"Policy B underfill: take.sum(per seq)={_take_sums.tolist()} != "
+                f"total_budget={total_budget}. This means buffer sizing was "
+                f"insufficient. Check config.duet_proxy_wire_N and "
+                f"config.duet_proxy_top_k auto-raise; see docs/duet/05-policy-b-fix.md "
                 f"Section 3.5."
             )
 
-        taken_pos = chosen_pos[take]                                  # [total_budget]
-        taken_tok = chosen_tok[take]
+        # Boolean indexing on [B, N] yields row-major order; each seq
+        # contributes EXACTLY total_budget elements (invariant above), so the
+        # view recovers per-seq groups. Same boolean-index op as pre-M3 — no
+        # new sync.
+        taken_pos = chosen_pos[take].view(B, total_budget)            # [B, total_budget]
+        taken_tok = chosen_tok[take].view(B, total_budget)
 
-        # fan_out_list 동적 재구성 (length = K_rank+1)
+        # fan_out 동적 재구성 — per seq (length = K_rank+1 per row)
         K_plus_1 = K_rank + 1
         fan_out_tensor = torch.zeros(
-            K_plus_1, dtype=torch.int64, device=chosen_pos.device)
+            B, K_plus_1, dtype=torch.int64, device=chosen_pos.device)
         fan_out_tensor.scatter_add_(
-            0, taken_pos, torch.ones_like(taken_pos))
+            1, taken_pos, torch.ones_like(taken_pos))
 
-        # result tensor [B, total_budget] — group by pos (stable sort preserves score)
-        result = torch.zeros(
-            B, total_budget, dtype=torch.int64, device=chosen_pos.device)
-        order = taken_pos.argsort(stable=True)
-        result[0, :taken_tok.shape[0]] = taken_tok[order]
+        # result tensor [B, total_budget] — group by pos per seq (stable sort
+        # preserves score order within each pos). Identical to the pre-M3
+        # taken_tok[order] at B=1 (take.sum()==total_budget guaranteed).
+        order = taken_pos.argsort(dim=1, stable=True)                 # [B, total_budget]
+        result = taken_tok.gather(1, order)
 
         # Return fan_out_tensor (GPU) — caller does .tolist() once (cheap
-        # for K_plus_1 ~9 elements) and updates layout in-place.
+        # for B×(K_plus_1 ~9) elements) and updates layout in-place.
         # See Fix ④ (avoid per-step create_tree_layout).
         return result, fan_out_tensor
 
@@ -1603,16 +1625,31 @@ class DraftRunner(ModelRunner):
 
         _b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, MQ_LEN).flatten()
         _fkp1_flat = layout.arange_mq.repeat(B)
-        _j_idx_flat = torch.cat([layout.fan_idx_hit if int(h) else layout.fan_idx_miss for h in cache_hits_list])
+        if layout.fan_idx_per_seq:
+            # M3 (docs/duet/13 §4): split_k2 fan_idx is already the per-seq
+            # concatenated [B*MQ_LEN] (hit == miss in the unified path) — do
+            # NOT re-cat per seq. At B=1 identical to cat of the single row.
+            _j_idx_flat = layout.fan_idx_hit
+        else:
+            _j_idx_flat = torch.cat([layout.fan_idx_hit if int(h) else layout.fan_idx_miss for h in cache_hits_list])
         N = _b_flat.shape[0]
+        if __debug__:
+            assert _j_idx_flat.shape[0] == N, \
+                f"fan_idx length {_j_idx_flat.shape[0]} != N={N} (layout {layout.name})"
 
         _pos_offset = -1 if self.config.use_eagle else 0
         _positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + glue_offset + _fkp1_flat
         _rope_positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + _j_idx_flat + 1
         _temperatures = partial_tree_decode_args["temperatures"][_b_flat]
 
+        # metadata F: first-position fan_out as an int. M3: split_k2's
+        # fan_out_list is nested per-seq ([B][P]) — take seq 0's first entry
+        # (same value as the pre-M3 flat list at B=1).
+        _f0 = layout.fan_out_list[0]
+        if isinstance(_f0, list):
+            _f0 = _f0[0]
         return {
-            "metadata_ints": (B, K, layout.fan_out_list[0], N),
+            "metadata_ints": (B, K, _f0, N),
             "input_ids": forked_tokens.view(-1),
             "positions": _positions,
             "rope_positions": _rope_positions,
@@ -1777,14 +1814,13 @@ class DraftRunner(ModelRunner):
         # Uniform: padded == 3D draft_forked_k1, mask=None (all-real).
         # Non-uniform: padded zero-filled beyond fan_out_list[p], mask
         # filters to avoid false-match on chosen_tok=0.
-        # M1 (docs/duet/13 §3): the proxy wire now carries [B, wire_N] per
-        # tensor, but the unified selector is still single-seq — pass seq 0's
-        # row in the {"chosen_pos": [wire_N], "chosen_tok": [wire_N]} shape it
-        # expects. M3 batches the selector itself. (Raw-proxy mode already
-        # yields 1-D single-seq tensors via _policy_b_from_raw_proxy.)
-        if duet_proxy["chosen_pos"].dim() == 2:
-            duet_proxy = {"chosen_pos": duet_proxy["chosen_pos"][0],
-                          "chosen_tok": duet_proxy["chosen_tok"][0]}
+        # M3 (docs/duet/13 §4): the selector is batched — feed the [B, wire_N]
+        # wire tensors directly (M1's seq-0 collapse removed). Raw-proxy mode
+        # (B==1-guarded off-champion gate, §6) yields 1-D single-seq tensors
+        # via _policy_b_from_raw_proxy — lift to [1, wire_N].
+        if duet_proxy["chosen_pos"].dim() == 1:
+            duet_proxy = {"chosen_pos": duet_proxy["chosen_pos"].unsqueeze(0),
+                          "chosen_tok": duet_proxy["chosen_tok"].unsqueeze(0)}
         proxy_forked, proxy_fan_out_tensor = self._select_proxy_sourced_tokens_unified(
             duet_proxy, draft_forked_p1_padded,
             K_rank=K_rank, total_budget=total_budget,
@@ -1851,8 +1887,13 @@ class DraftRunner(ModelRunner):
             draft_args["seq_ids_expanded"].to(torch.int64),
             draft_k, draft_args["rec_flat"].to(torch.int64)], dim=1)
 
-        proxy_k = torch.cat([_proxy_layout.fan_idx_hit if int(h) else _proxy_layout.fan_idx_miss
-                              for h in cache_hits_list])
+        if _proxy_layout.fan_idx_per_seq:
+            # M3 (docs/duet/13 §4): split_k2 fan_idx already spans all seqs
+            # ([B*MQ_p2], hit == miss) — no per-seq re-cat.
+            proxy_k = _proxy_layout.fan_idx_hit
+        else:
+            proxy_k = torch.cat([_proxy_layout.fan_idx_hit if int(h) else _proxy_layout.fan_idx_miss
+                                  for h in cache_hits_list])
         proxy_keys = torch.stack([
             proxy_args["seq_ids_expanded"].to(torch.int64),
             proxy_k, proxy_args["rec_flat"].to(torch.int64)], dim=1)
