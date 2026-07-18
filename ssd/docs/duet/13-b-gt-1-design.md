@@ -115,3 +115,67 @@ regression smoke (champion config, ns=4/out=128): 71.50 tok/s,
 L_p1 3.46, cache 0.80, no errors — within the established ns=4 noise
 band (58.8–75.8 across prior smokes). B=1 wire length 2·1·wire_N is
 unchanged; all reshapes are no-ops at B=1.
+
+## M2 — implemented (2026-07-18)
+
+Landed per design §1/§2 (draft side, `ssd/engine/draft_runner.py` +
+`utils/async_helpers/async_spec_helpers.py`):
+
+1. **vk_max dispatch** (§1): `hit_cache_and_respond`'s dispatch scalar
+   `_vk_scalar` switches from the seq-0 capture `valid_k[0].item()` to
+   `valid_k.max().item()` — a sync SWAP (still exactly one GPU→CPU sync
+   per step). The scalar remains the ONLY batch-level width: it drives
+   `make_glue_decode_input_ids` slicing, `prepare_glue_decode_ctxt` /
+   `_glue_decode` bucket dispatch, and the phase-1 long/short layout
+   pick in `_build_tree_batch_split_k1k2` — all with unchanged
+   signatures. Per-seq `valid_k [B]` rides the response wire and
+   `partial_tree_decode_args` untouched. Rows with vk_i < vk_max feed
+   filler to the vk_max-wide glue beyond vk_i (cache-padding zeros for
+   short hits, random-init in-vocab tokens for JIT-short misses) — safe
+   because phase-1 fork selection slices positions per layout and the
+   M1 verify clamp (`accept_until = min(accept_until, vk_i)`) makes
+   forks past a short row's vk_i unreachable cache rows (the v1 padding
+   cost, not a correctness issue). Mixed K1/K2 batches dispatch the
+   long bucket; only an all-short batch takes K2 (cheap max check).
+2. **Mixed hit/miss fix** (§2, the JIT-all-clobbers-hits bug): the fill
+   logic in `hit_cache_and_respond` is restructured from
+   "all-hit → cache fill ELSE JIT-all" to "JIT-all on ANY miss
+   (unchanged batched call, latency-bound so extra rows are ~free),
+   THEN overwrite hit rows from the cache". Hit rows keep their cached
+   tokens/logits/valid_k/phase_source; miss rows keep JIT output with
+   the JIT default valid_k (K2 under `SSD_DUET_JIT_SHORT`, else K_max)
+   and phase_source 0. The `.any()/.all()` __bool__ syncs replace the
+   identical syncs the old branch condition already paid — no new
+   hot-path GPU sync.
+
+**Why the mixed fix matters at B>1** (the user's hypothesis, docs/duet/12
+finding 5b): base async-SD stalls the WHOLE batch on any single miss —
+P(step degraded) = 1 − hit_rate^B, so at B=4 with hit≈0.80 that is ~59%
+of steps. Pre-M2 DUET had exactly that failure mode: one miss threw away
+every hit row's cached tree (~55% of steps at B=4 would clobber hits).
+Post-M2 a miss costs only the missing row its cache benefit; hit rows
+still verify their cached K1/K2 trees. DUET's higher hit rate (0.80 vs
+SD-best 0.76, and cheaper misses via JIT-short) therefore COMPOUNDS with
+B instead of being destroyed by it — this fix is what lets DUET realize
+its structural B>1 advantage.
+
+B=1 identity: at B=1 a batch is all-hit or all-miss, so the JIT branch
+and cache fill run exactly as pre-M2 (all-hit → fill only, all-miss →
+JIT only, no overwrite), and `max(valid_k) == valid_k[0]`.
+
+Audit leftovers (§4): `_construct_tree_decode_args` is non-DUET-only
+(left); `_build_tree_batch_split_k1k2` has no remaining B=1-scalar
+indexing in M1/M2 scope (`_step_valid_k` = vk_max by design; the
+`duet_proxy[...][0]` seq-0 collapse and the selector's `assert B == 1`
+are M3 scope; `_policy_b_from_raw_proxy`'s `out_logits[0]` sits behind
+the B==1-guarded off-champion raw-proxy gate, §6).
+
+Validation: unit tests ssd/tests/test_b_gt1_m2.py — 8/8 OK (the REAL
+`hit_cache_and_respond` on CPU via a stub DraftRunner: B=3 hit/miss/hit
+keeps cached tokens/valid_k on hit rows and JIT output + K2 on the miss
+row; JIT-long default; all-hit skips JIT; all-miss/empty-cache skip the
+overwrite; all-short dispatches vk_max=K2; B=1 hit/miss identity).
+M1 tests still 9/9 OK. B=1 GPU regression smoke (champion config,
+ns=4/out=128): 71.35 tok/s, L_p1 3.49, cache 0.83, zero Tracebacks —
+matches M1's 71.50/3.46/0.80 within noise (ns=4 band 58.8–75.8). Log:
+experiments/proxy_async_overlap/b_gt1/m2_smoke/run.log.

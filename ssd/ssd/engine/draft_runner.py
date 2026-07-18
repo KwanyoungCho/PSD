@@ -454,9 +454,40 @@ class DraftRunner(ModelRunner):
                     hit_marker = "[HIT]" if i in hit_indices else ""
                     print(f"    [{i}]: key=({seq_id}, {k_idx}, {rec_token}) -> value=('{rec_text}') {hit_marker}", flush=True)
             
-            # Fill hits
-            if (cache_hits.any() and not self.config.jit_speculate) or (cache_hits.all() and self.config.jit_speculate):
-                # print(f'[hit_cache_and_respond] got all cache hits, using cached logits and tokens', flush=True)
+            # Fill logic (M2, docs/duet/13 §2 — mixed hit/miss fix):
+            #   - no JIT: fill hit rows from cache (miss rows stay random-init).
+            #   - JIT + any miss: run the batched JIT for ALL rows (latency-
+            #     bound, extra rows ~free), THEN overwrite hit rows from the
+            #     cache below. Pre-M2 this case skipped the cache fill
+            #     entirely — one miss clobbered every hit row in the batch
+            #     with JIT output while their valid_k/phase_source still said
+            #     "hit" (the JIT-all-clobbers-hits bug; impossible at B=1).
+            #   - JIT + all hit: cache fill only (JIT skipped), unchanged.
+            # The _any_hit / cache_hits.all() __bool__ syncs replace the
+            # identical cache_hits.any()/.all() syncs the pre-M2 branch
+            # condition already paid — no new hot-path GPU sync (.all() is
+            # only evaluated on the JIT path, exactly as before).
+            _any_hit = bool(cache_hits.any())
+            if self.config.jit_speculate and not (_any_hit and bool(cache_hits.all())):
+                # print(f'[hit_cache_and_respond] found a cache miss, running jit speculate', flush=True)
+                if self.config.verbose:
+                    print(f"[hit_cache_and_respond] Running JIT speculate for cache misses", flush=True)
+                jit_acts = self.jit_speculate(
+                    request_keys,
+                    num_tokens,
+                    out_logits,
+                    out_tokens,
+                    temperatures,
+                    draft_block_tables,
+                    target_recovery_activations
+                    ) # write into out_logits, out_tokens
+                if self.config.use_eagle:
+                    out_activations = jit_acts
+            if _any_hit:
+                # Overwrite hit rows from the cache — runs AFTER the JIT so
+                # mixed batches keep cached tokens/logits on hit rows. Their
+                # valid_k was already pulled from the matched cache row above;
+                # miss rows keep the JIT default (_miss_vk) and phase_source 0.
                 # [B], arbitrary if no match but masked out
                 idx = match.float().argmax(dim=1).to(torch.int64)
                 sel = cache_hits
@@ -470,21 +501,6 @@ class DraftRunner(ModelRunner):
                 out_logits[sel, :_cache_w] = self.tree_cache_logits[idx[sel]]
                 if self.config.use_eagle:
                     out_activations[sel, :_cache_w] = self.tree_cache_activations[idx[sel]]
-            elif self.config.jit_speculate: 
-                # print(f'[hit_cache_and_respond] found a cache miss, running jit speculate', flush=True)
-                if self.config.verbose:
-                    print(f"[hit_cache_and_respond] Running JIT speculate for cache misses", flush=True)
-                jit_acts = self.jit_speculate(
-                    request_keys, 
-                    num_tokens, 
-                    out_logits, 
-                    out_tokens,
-                    temperatures,
-                    draft_block_tables,
-                    target_recovery_activations
-                    ) # write into out_logits, out_tokens
-                if self.config.use_eagle:
-                    out_activations = jit_acts
         elif self.config.jit_speculate:
             # Cache is empty (first iteration), must JIT all
             if self.config.verbose:
@@ -504,7 +520,22 @@ class DraftRunner(ModelRunner):
         rec_toks = request_keys[:, 2]
 
         # Step 9B-0: glue input width follows valid_k (long-hit=K_long+1,
-        # short-hit=K_short+1). B=1 invariant lets us pass a scalar.
+        # short-hit=K_short+1). M2 (docs/duet/13 §1): the batch dispatch
+        # scalar is vk_max = max(valid_k) — a sync SWAP of the old seq-0
+        # [0].item() capture, still exactly one GPU→CPU sync.
+        # Rows with vk_i < vk_max feed filler to the vk_max-wide glue
+        # beyond their own vk_i (cache-padding zeros for short hit rows,
+        # random-init in-vocab tokens for JIT-short miss rows). That is
+        # ACCEPTABLE:
+        # their glue logits past vk_i can never surface as accepted
+        # tokens — phase-1 fork selection slices positions per layout
+        # (uniform width), and the M1 verify clamp
+        # (accept_until = min(accept_until, vk_i)) blocks acceptance past
+        # vk_i, so forks seeded past a short row's vk_i are unreachable
+        # cache rows (v1 padding cost, not a correctness issue).
+        # Per-seq valid_k [B] rides the response wire unchanged; this
+        # scalar is ONLY the batch-level dispatch width (glue bucket /
+        # phase-1 layout / TP-broadcast scalar).
         # Sync valid_k to Python ONLY when split-K1/K2 mode actually needs
         # the per-step bucket dispatch. Non-DUET: width is always
         # K_long; pass None so make_glue_decode_input_ids defaults to it
@@ -512,7 +543,7 @@ class DraftRunner(ModelRunner):
         # so downstream callers (_glue_decode, _decode_speculate_async)
         # avoid re-syncing the same value.
         if self.config.duet_phase1_k is not None and valid_k.numel() > 0:
-            _vk_scalar = int(valid_k[0].item())
+            _vk_scalar = int(valid_k.max().item())
         else:
             _vk_scalar = None
         _profile_cache_status = None
@@ -1646,6 +1677,9 @@ class DraftRunner(ModelRunner):
         # valid_k=K1 → split_k1_long_layout (pos=K1+1) — glue width matches.
         # valid_k=K2 → split_k1_short_layout (pos=K2+1) — glue width matches.
         # Read pre-sync'd Python scalar from partial_tree_decode_args.
+        # M2 (docs/duet/13 §1): the scalar is vk_max over the batch — a
+        # mixed K1/K2 batch dispatches the long bucket; only an all-short
+        # batch takes the short bucket (cheap max, v1 padding cost).
         _step_valid_k = partial_tree_decode_args.get("valid_k_scalar")
         if _step_valid_k is None:
             _step_valid_k = K1  # K_max default for first-step / no-hit path

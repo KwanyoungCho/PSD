@@ -59,7 +59,12 @@ def make_glue_decode_input_ids(
     assert draft_tokens.shape[0] == rec_tokens.shape[0], f"Expected draft_tokens and rec_tokens to have the same number of rows, got {draft_tokens.shape[0]} and {rec_tokens.shape[0]}"
 
     if valid_k is not None:
-        # Slice to meaningful prefix (B=1 invariant: scalar valid_k).
+        # Slice to the batch dispatch width. M2 (docs/duet/13 §1): the
+        # scalar is vk_max over the batch — rows with vk_i < vk_max carry
+        # filler in columns (vk_i, vk_max] (cache-padding zeros / JIT-short
+        # random init); acceptable for glue input (see
+        # hit_cache_and_respond: fork slicing + verify clamp make those
+        # positions unreachable).
         draft_tokens = draft_tokens[:, :valid_k]
     out = torch.cat([rec_tokens.unsqueeze(1), draft_tokens], dim=1).view(-1)
     return out
