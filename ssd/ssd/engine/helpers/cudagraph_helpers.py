@@ -1295,6 +1295,8 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     duet_close("graph_pre", _ev)
 
     if getattr(config, "duet_exit_replica", False):
+        # B>1 not supported for this gate (docs/duet/13 §6).
+        assert orig_bs == 1, "duet_exit_replica: B>1 not supported (docs/duet/13 §6)"
         # ====== Exit-replica overlap (docs/duet/09 WS3c) ======
         # NO TP collective: ranks 1+ fall straight through to graph_post
         # (the exit rendezvous point disappears). Rank 0 — the only rank
@@ -1334,6 +1336,9 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
         normed = model_runner.model.model.norm(exit_h, None)
         if getattr(config, "duet_exit_topm_gather", False):
+            # B>1 not supported for this gate (docs/duet/13 §6) — the y_tok
+            # slice inside _duet_exit_topm_gather crosses seq boundaries.
+            assert orig_bs == 1, "duet_exit_topm_gather: B>1 not supported (docs/duet/13 §6)"
             # Rank-local top-M reduction (docs/duet/09 WS3): every rank shrinks
             # its vocab shard to top-M candidates + lse partial + draft-token
             # logit BEFORE the gather. rank 0 gets a raw-candidate dict (same

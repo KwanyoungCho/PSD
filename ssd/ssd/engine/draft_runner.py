@@ -1308,17 +1308,20 @@ class DraftRunner(ModelRunner):
     def _irecv_duet_proxy(self, B, K):
         """Post non-blocking recv for proxy. Returns (work, buffer).
 
-        Wire schema (Policy B, unified K+1; docs/duet/05-policy-b-fix.md):
-        chosen_pos[wire_N] + chosen_tok[wire_N].
+        Wire schema (Policy B, unified K+1; docs/duet/05-policy-b-fix.md,
+        batched M1 docs/duet/13 §3):
+        chosen_pos[B*wire_N] + chosen_tok[B*wire_N] (at B=1 identical to the
+        old 2*wire_N single-seq wire).
         Raw-proxy mode (SSD_DUET_PROXY_ON_DRAFT=1, docs/duet/09 WS3):
-        fixed-length fused payload, see config.duet_raw_proxy_wire_len.
+        fixed-length fused payload, see config.duet_raw_proxy_wire_len
+        (B=1 only — docs/duet/13 §6).
         """
         import torch.distributed as dist
         if self.config.duet_proxy_on_draft:
             total_len = self.config.duet_raw_proxy_wire_len
         else:
             wire_N = self.config.duet_proxy_wire_N
-            total_len = 2 * wire_N
+            total_len = 2 * B * wire_N
         buf = torch.empty(total_len, dtype=torch.int64, device=self.device)
         work = dist.irecv(buf, src=0, group=self.async_pg)
         return work, buf
@@ -1326,9 +1329,10 @@ class DraftRunner(ModelRunner):
     def _unpack_duet_proxy(self, buf, B, K):
         """Unpack proxy data from irecv buffer.
 
-        Returns {"chosen_pos": [wire_N], "chosen_tok": [wire_N]} (Policy B),
-        or the raw top-M dict in raw-proxy mode (feed to
-        _policy_b_from_raw_proxy to obtain chosen_pos/chosen_tok).
+        Returns {"chosen_pos": [B, wire_N], "chosen_tok": [B, wire_N]}
+        (Policy B, views into buf — no copy), or the raw top-M dict in
+        raw-proxy mode (feed to _policy_b_from_raw_proxy to obtain
+        chosen_pos/chosen_tok).
         """
         if self.config.duet_proxy_on_draft:
             M = self.config.duet_proxy_topm
@@ -1342,8 +1346,8 @@ class DraftRunner(ModelRunner):
                 "y_logit": buf[2 * L1 + Kp1w:].view(torch.float64).float(),
             }
         wire_N = self.config.duet_proxy_wire_N
-        chosen_pos = buf[:wire_N]
-        chosen_tok = buf[wire_N:2 * wire_N]
+        chosen_pos = buf[:B * wire_N].view(B, wire_N)
+        chosen_tok = buf[B * wire_N:2 * B * wire_N].view(B, wire_N)
         return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
 
     def _policy_b_from_raw_proxy(self, raw, out_logits, out_tokens, K_step):
@@ -1739,6 +1743,14 @@ class DraftRunner(ModelRunner):
         # Uniform: padded == 3D draft_forked_k1, mask=None (all-real).
         # Non-uniform: padded zero-filled beyond fan_out_list[p], mask
         # filters to avoid false-match on chosen_tok=0.
+        # M1 (docs/duet/13 §3): the proxy wire now carries [B, wire_N] per
+        # tensor, but the unified selector is still single-seq — pass seq 0's
+        # row in the {"chosen_pos": [wire_N], "chosen_tok": [wire_N]} shape it
+        # expects. M3 batches the selector itself. (Raw-proxy mode already
+        # yields 1-D single-seq tensors via _policy_b_from_raw_proxy.)
+        if duet_proxy["chosen_pos"].dim() == 2:
+            duet_proxy = {"chosen_pos": duet_proxy["chosen_pos"][0],
+                          "chosen_tok": duet_proxy["chosen_tok"][0]}
         proxy_forked, proxy_fan_out_tensor = self._select_proxy_sourced_tokens_unified(
             duet_proxy, draft_forked_p1_padded,
             K_rank=K_rank, total_budget=total_budget,

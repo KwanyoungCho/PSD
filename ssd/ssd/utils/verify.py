@@ -12,6 +12,7 @@ def verify(
     sampler_x: float | None = None,
     async_fan_out: int | None = None,
     jit_speculate: bool = False,
+    valid_k: torch.Tensor | None = None,
 ) -> tuple[list[list[int]], list[int]]:
     """
     Speculative‐decoding verification:
@@ -20,6 +21,10 @@ def verify(
      - IMPORTANT: Only apply ratio acceptance on rows where the draft proposal truly
        came from q (cache hit in async mode). On cache misses, fall back to greedy
        acceptance and sample recovery directly from p.
+     - valid_k (M1, docs/duet/13 §1): optional [B] int64 per-seq real suffix
+       width. Rows shorter than K are padded to the batch's vk_max; the clamp
+       accept_until = min(accept_until, valid_k) guarantees padded positions
+       can never be accepted. None (default) keeps every other caller unchanged.
     """
 
     device = logits_p.device
@@ -128,6 +133,12 @@ def verify(
     else:
         # No rows use ratio; all fall back to greedy accept counts
         accept_until = accept_greedy
+
+    # M1 (docs/duet/13 §1): per-seq acceptance clamp. At B>1 short seqs are
+    # padded to the batch's vk_max = K; positions beyond a seq's real valid_k
+    # must never be accepted.
+    if valid_k is not None:
+        accept_until = torch.minimum(accept_until, valid_k)
 
     # 3) Construct the recovery distribution and sample
     # For rows with temps_t>0:

@@ -139,14 +139,15 @@ class SpeculatorAsync(SpeculatorBase):
         # v1 hybrid: when valid_k differs from K, only extend by valid_k tokens
         # (proxy-sourced rows store K_short; rest of the K_long-shaped buffer is
         # padding from _merge_and_populate_cache and must not enter seq tokens).
-        # Batch 1c: cache first-element valid_k scalar during the loop so the
-        # slicing block below can reuse it instead of re-issuing a GPU→CPU
-        # sync for the same value.
-        _vk_scalar = None
+        # M1 (docs/duet/13 §5): vk_max = max over the batch's valid_k, derived
+        # from the SAME per-seq ints this loop already materializes (no new
+        # GPU→CPU sync). Replaces the former seq-0 _vk_scalar capture. Short
+        # seqs keep padded tails up to vk_max; verify() clamps via valid_k.
+        _vk_max = None
         for i, seq in enumerate(seqs):
             vk_i = int(valid_k[i].item()) if valid_k is not None else self.K
-            if i == 0:
-                _vk_scalar = vk_i
+            if _vk_max is None or vk_i > _vk_max:
+                _vk_max = vk_i
             seq.token_ids.extend(speculations_tokens[i, :vk_i].tolist())
             seq.num_tokens = len(seq.token_ids)
             seq.last_token = seq.token_ids[-1]
@@ -155,13 +156,14 @@ class SpeculatorAsync(SpeculatorBase):
                 _hit_statuses.append(int(cache_hits[i].item()))
                 _phase_statuses.append(int(phase_source[i].item()) if phase_source is not None else 0)
 
-        # Slice speculations to per-step valid_k width before returning. For B=1
-        # (Config invariant) valid_k is uniform; slice with the scalar.
+        # Slice speculations to the batch's vk_max width before returning
+        # (M1, docs/duet/13 §5). Rows shorter than vk_max keep padded tails;
+        # verify()'s per-seq accept clamp (valid_k arg) neutralizes them.
         # B==0 (empty batch from scheduler preemption) is normally filtered at
         # SpecDecodeStep.decode top-level guard; keep a defensive numel() check
         # here for any direct callers that bypass that path.
         if valid_k is not None and valid_k.numel() > 0:
-            vk = _vk_scalar if _vk_scalar is not None else int(valid_k[0].item())
+            vk = _vk_max if _vk_max is not None else int(valid_k.max().item())
             if vk != self.K:
                 speculations = speculations[:, :vk + 1].contiguous()
                 logits_q = logits_q[:, :vk, :].contiguous()

@@ -104,14 +104,14 @@ class Verifier(VerifierBase):
         if config.duet_enabled:
             async_pg = self.target_model_runner.async_pg
             draft_rank = self.target_model_runner.draft_rank
-            # v1 hybrid: per-step lookahead (= valid_k of the matched cache row).
-            # speculate_result.valid_k is uniform across the B=1 batch (Config
-            # invariant). For non-hybrid path defaults to self.lookahead = K_long.
+            # M1 (docs/duet/13 §1/§5): per-step lookahead dispatches on
+            # vk_max = max(valid_k) over the batch. Short seqs are padded to
+            # vk_max; their REAL width rides in valid_k and is enforced by the
+            # per-seq accept clamp in verify() below. The .max().item() here
+            # REPLACES the former torch.unique() GPU→CPU sync (not an extra
+            # one). For non-hybrid path defaults to self.lookahead = K_long.
             if speculate_result.valid_k is not None and config.duet_phase1_k is not None:
-                _vk_unique = torch.unique(speculate_result.valid_k)
-                assert _vk_unique.numel() == 1, \
-                    f"v1 expects uniform valid_k across batch (B=1), got {speculate_result.valid_k}"
-                _step_lookahead = int(_vk_unique.item())
+                _step_lookahead = int(speculate_result.valid_k.max().item())
             else:
                 _step_lookahead = self.lookahead
             # ===== TRACE point 2: speculator → verifier boundary =====
@@ -211,6 +211,7 @@ class Verifier(VerifierBase):
             sampler_x=self.sampler_x,
             async_fan_out=self.async_fan_out,
             jit_speculate=self.jit_speculate,
+            valid_k=speculate_result.valid_k,
         )
         _mc("verify_sample_accept", _mev_vs)
 
@@ -299,6 +300,8 @@ class Verifier(VerifierBase):
         # _duet_exit_topm_gather; run Policy B on the candidate set (exact
         # same math/wire as the full-vocab path — see duet_policy).
         if isinstance(exit_logits, dict):
+            # B>1 not supported for this gate (docs/duet/13 §6).
+            assert B == 1, "duet_exit_topm_gather: B>1 not supported (docs/duet/13 §6)"
             from ssd.utils.async_helpers.duet_policy import policy_b_from_candidates
             chosen = policy_b_from_candidates(
                 exit_logits, logits_q[0], draft_tokens[0, :K], K,
@@ -334,6 +337,8 @@ class Verifier(VerifierBase):
         # pack from the target verify critical path. Fixed worst-case
         # (K_max) payload; short steps zero-pad the tail rows.
         if config.duet_proxy_on_draft:
+            # B>1 not supported for this gate (docs/duet/13 §6).
+            assert B == 1, "duet_proxy_on_draft: B>1 not supported (docs/duet/13 §6)"
             M = config.duet_proxy_topm
             K_max = max(config.duet_phase1_k, config.duet_phase2_k)
             Kp1w = K_max + 1
@@ -391,13 +396,15 @@ class Verifier(VerifierBase):
 
         # Compute h_i (first reject position distribution) and fan_out_list on target side
         # This removes ~0.5ms from draft critical path
+        # M1 (docs/duet/13 §3): batched over B — h [B, K+1]. At B=1 this is
+        # numerically identical to the former accept_probs[0] single-seq path.
         proxy_fan_out_total = config.duet_proxy_fan_out * (K + 1)  # total proxy budget
-        cumprod = torch.cumprod(accept_probs[0], dim=0)  # [K] (B=1 scope)
-        h = torch.zeros(K + 1, device=accept_probs.device)
-        h[0] = 1 - accept_probs[0, 0]
+        cumprod = torch.cumprod(accept_probs, dim=1)     # [B, K]
+        h = torch.zeros(B, K + 1, device=accept_probs.device)
+        h[:, 0] = 1 - accept_probs[:, 0]
         if K > 1:
-            h[1:K] = cumprod[:-1] * (1 - accept_probs[0, 1:])
-        h[K] = cumprod[-1]  # all-accept
+            h[:, 1:K] = cumprod[:, :-1] * (1 - accept_probs[:, 1:])
+        h[:, K] = cumprod[:, -1]  # all-accept
         if _detail_profile:
             _mc_d("proxy_compute", _ev_compute)
 
@@ -421,11 +428,13 @@ class Verifier(VerifierBase):
 
             # Global top-N. wire_N is config-fixed (K_max+1 worst-case).
             # top_k auto-raise (config.py) ensures (K+1)*top_k ≥ wire_N for current step's K.
+            # M1 (docs/duet/13 §3): per-seq flatten+topk over the B axis. At
+            # B=1 the [1, ...] row-wise topk is identical to the old flat topk.
             wire_N = config.duet_proxy_wire_N
-            P_iv = h.view(K + 1, 1) * correction_topk_probs[0]                # [K+1, top_k]
-            _, top_idx = P_iv.flatten().topk(wire_N)                          # [wire_N]
-            chosen_pos = top_idx // top_k                                     # [wire_N], ∈ [0, K]
-            chosen_tok = correction_topk_ids[0].view(-1).gather(0, top_idx)   # [wire_N]
+            P_iv = h.unsqueeze(-1) * correction_topk_probs                    # [B, K+1, top_k]
+            _, top_idx = P_iv.flatten(1).topk(wire_N, dim=-1)                 # [B, wire_N]
+            chosen_pos = top_idx // top_k                                     # [B, wire_N], ∈ [0, K]
+            chosen_tok = correction_topk_ids.flatten(1).gather(1, top_idx)    # [B, wire_N]
             if _detail_profile:
                 _mc_d("proxy_pack", _ev_pack)
 
@@ -441,7 +450,9 @@ class Verifier(VerifierBase):
                       f"K(=valid_k)={K} wire_N={wire_N} top_k={top_k} "
                       f"chosen_pos.shape={list(chosen_pos.shape)}",
                       flush=True)
-            # NCCL send: chosen_pos [wire_N int64] + chosen_tok [wire_N int64]
+            # NCCL send: chosen_pos [B*wire_N int64] + chosen_tok [B*wire_N int64]
+            # (M1, docs/duet/13 §3 — flattened batched wire; at B=1 the length
+            # is 2*wire_N, byte-identical to the old single-seq wire).
             # Batch 3a (docs/duet/08 §3): env-gated non-blocking send via ring
             # buffer. SSD_ASYNC_PROXY_SEND=1 → dist.isend + persistent buf;
             # else keep the legacy blocking send. Ring is lazy-inited on first
@@ -451,19 +462,23 @@ class Verifier(VerifierBase):
             if os.environ.get("SSD_ASYNC_PROXY_SEND", "0") == "1":
                 if self._proxy_send_ring is None:
                     from ssd.utils.async_helpers.nccl_pack import AsyncSendRing
-                    # Buf = 2 × wire_N int64 (chosen_pos + chosen_tok packed).
+                    # Buf = 2 × B_max × wire_N int64 (chosen_pos + chosen_tok
+                    # packed; B_max = config.max_num_seqs, actual send length
+                    # is 2·B·wire_N for the step's B).
                     # 2 slots is enough at hit-dominated rates (docs/duet/08 §3.2);
                     # if slot_wait_rate > 1% in Phase 4, bump to 4.
                     self._proxy_send_ring = AsyncSendRing(
                         n_slots=2,
-                        buf_size=2 * config.duet_proxy_wire_N,
+                        buf_size=2 * config.max_num_seqs * config.duet_proxy_wire_N,
                         device=chosen_pos.device,
                         pg=async_pg,
                     )
-                self._proxy_send_ring.send(draft_rank, chosen_pos, chosen_tok)
+                self._proxy_send_ring.send(
+                    draft_rank, chosen_pos.reshape(-1), chosen_tok.reshape(-1))
                 self._proxy_send_call_count += 1
             else:
-                send_int64(async_pg, draft_rank, chosen_pos, chosen_tok)
+                send_int64(async_pg, draft_rank,
+                           chosen_pos.reshape(-1), chosen_tok.reshape(-1))
             if _detail_profile:
                 _mc_d("proxy_send", _ev_send)
             return

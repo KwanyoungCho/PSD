@@ -96,3 +96,22 @@ sync relies on vk_max being derived identically on rank 0 and draft —
 it travels on the existing valid_k wire, computed once draft-side;
 (c) scheduler admission at B>1 multiplies lookahead reservations —
 watch preemption (the B=0 guard already exists).
+
+## M1 — implemented (2026-07-19)
+
+Landed per design §1/§5: batched Policy B in `_compute_and_send_proxy`
+(h/cumprod/P_iv with a B axis, per-seq topk(wire_N) → chosen [B,wire_N],
+wire flattened to 2·B·wire_N; ring sized with max_num_seqs), draft
+`_irecv_duet_proxy`/`_unpack_duet_proxy` B-axis ([B,wire_N] views;
+selector consumes seq 0 until M3), speculator seq-0 `_vk_scalar` →
+vk_max, verifier `torch.unique` assert → `valid_k.max()` (sync swap,
+not an addition), `verify(valid_k=...)` per-seq accept clamp
+(`accept_until = min(accept_until, valid_k)`), B==1 guards on the
+off-champion gates (topm/replica/proxy-on-draft, §6).
+
+Validation: unit tests ssd/tests/test_b_gt1_m1.py — 9/9 OK (batched
+math ≡ single-seq reference at B=1/2/3; clamp semantics). B=1 GPU
+regression smoke (champion config, ns=4/out=128): 71.50 tok/s,
+L_p1 3.46, cache 0.80, no errors — within the established ns=4 noise
+band (58.8–75.8 across prior smokes). B=1 wire length 2·1·wire_N is
+unchanged; all reshapes are no-ops at B=1.
