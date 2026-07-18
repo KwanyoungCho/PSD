@@ -242,3 +242,65 @@ tree, not an M3 regression). B=1 GPU regression smoke (champion config,
 ns=4/out=128): 71.47 tok/s, L_p1 3.45, cache 0.81, zero Tracebacks —
 matches M2's 71.35/3.49/0.83 within noise. Log:
 experiments/proxy_async_overlap/b_gt1/m3_smoke/run.log.
+
+## M4 — implemented (2026-07-18)
+
+Landed per design §7 (`ssd/ssd/config.py` + `ssd/CLAUDE.md` invariant
+line):
+
+1. **Gate lift**: the DUET `max_num_seqs == 1` assert becomes `<= 8`
+   (v1 cap — existing bs-bucket axis only, no new CG families). The
+   stale comment blaming "Policy A accept_probs[0]" is replaced with the
+   real history: the constraint was the single-seq Policy B pipeline
+   (proxy wire / selector / phase-2 layout), batched in M1-M3.
+2. **B==1-only gate guard** (§6): `duet_enabled` + `max_num_seqs > 1`
+   now hard-errors (ValueError) at config time when any of
+   `SSD_DUET_EXIT_TOPM_GATHER` / `SSD_DUET_EXIT_REPLICA` /
+   `SSD_DUET_PROXY_ON_DRAFT` is set — fail fast instead of tripping the
+   M1 runtime `assert B == 1` mid-run.
+
+No engine-side fixes were needed: the two anticipated landmines did not
+fire. bs=2 CG buckets captured cleanly for every family
+(`fi_tree_decode`, `split_k1_long/short`, `split_k2`,
+`duet_verify_k1/k2` — bucket axis {1,2} at max_num_seqs=2), and no
+scheduler preemption appeared with the doubled lookahead reservations
+(2048-token seqs, 517-block KV pool).
+
+Validation: unit tests ssd/tests/test_b_gt1_m4.py — 6/6 OK (real
+Config.__post_init__ on CPU, champion shapes: B ∈ {1,2,8} construct,
+B=9 rejected, each gate raises at B=2 with all three still constructible
+at B=1). M1 9/9, M2 8/8, M3 7/7 still OK individually.
+
+GPU smokes (champion E9K24_jit, out=128, temp 0.7, GPUs 0-4):
+B=2 `--b 2 --numseqs 8` (m4_smoke_b2/run.log), B=1 regression
+`--b 1 --numseqs 4` (m4_smoke_b1/run.log). Both exit 0, zero
+Tracebacks.
+
+| metric | B=1 (ns=4) | B=2 (ns=8) |
+|---|---|---|
+| Decode TPS (aggregate) | 70.92 | 75.40 |
+| Avg Cache Hits | 0.82 | 0.80 |
+| Avg Phase 1 Accepted Len | 3.33 | 3.12 |
+| Avg Tokens/step (incl recovery) | 3.61 | 2.75 |
+| Phase 1 (draft) hit rate | 0.535 | 0.376 |
+| Phase 2 (proxy) hit rate | 0.285 | 0.419 |
+| Avg Phase 2 Accepted Len | 1.69 | 0.92 |
+| Avg target full step (ms) | 55.95 | 80.54 |
+| Avg draft step (ms) | 44.83 | 66.46 |
+
+(P1 + P2 hit rates partition the cache-hit rate: 0.535+0.285=0.82 at
+B=1, 0.376+0.419=0.80 at B=2.)
+
+B=1 bar (TPS ≥ 68, L_p1 ≥ 3.0): PASS — 70.92/3.33/0.82 matches M3's
+71.47/3.45/0.81 within the ns=4 noise band. B=2 bar (zero Tracebacks,
+hits ≥ 0.70, L_p1 ≥ 3.0): PASS — 0.80/3.12, decode 75.40 aggregate.
+
+Correctness read vs the design's "tok/step ≈ B=1" hope: hit rate does
+NOT collapse (0.80 vs 0.82) and L_p1 holds (3.12 vs 3.33), but
+tok/step drops 3.61 → 2.75 (−24%), concentrated in proxy-sourced rows:
+the hit composition shifts from draft-sourced (0.535 → 0.376) toward
+proxy-sourced (0.285 → 0.419) and P2 accepted len halves (1.69 → 0.92).
+Aggregate decode TPS still rises +6.3% because two seqs verify per
+step. Whether the P2 shift is a real B=2 effect or ns=8 prompt-mix
+noise — and the per-seq perf story — is M5's sweep (B ∈ {1,2,4} vs
+SD-best, interleaved).

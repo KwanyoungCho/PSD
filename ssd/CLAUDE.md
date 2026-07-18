@@ -179,8 +179,9 @@ re-checking at call sites:
   to match target — do not re-override at the model level.
 - **DUET-SSD** requires: `draft_async=True`, `speculate=True`, Llama model,
   `jit_speculate=True`, CUDA graphs on (`enforce_eager=False`),
-  `max_num_seqs=1` (Policy A uses `accept_probs[0]` as a single `h_i`
-  for the whole batch). `duet_exit_layer` defaults to `2*L//3`,
+  `max_num_seqs<=8` (B>1 v1, docs/duet/13; the B==1-only env gates
+  `SSD_DUET_EXIT_TOPM_GATHER`/`SSD_DUET_EXIT_REPLICA`/`SSD_DUET_PROXY_ON_DRAFT`
+  hard-error at `max_num_seqs>1`). `duet_exit_layer` defaults to `2*L//3`,
   `duet_draft_fan_out` to `async_fan_out//2`. `duet_proxy_top_k` is
   auto-raised so the proxy can always cover the worst-case fan-out
   without fallback.

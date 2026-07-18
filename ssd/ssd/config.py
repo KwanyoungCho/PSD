@@ -304,10 +304,26 @@ class Config:
                     "Policy B compute on proxy_stream is meaningless without "
                     "non-blocking send (the blocking send would re-serialize)."
                 )
-            # #3 B=1 only: Policy A uses accept_probs[0] as single h_i for whole batch.
-            assert self.max_num_seqs == 1, \
-                "DUET-SSD Rev1 only supports B=1 (max_num_seqs=1); " \
-                "Policy A uses accept_probs[0] as a single h_i distribution for the whole batch"
+            # B>1 (docs/duet/13): the historical B=1 constraint was the
+            # single-seq Policy B pipeline (proxy wire / selector / phase-2
+            # layout), batched in stages M1-M3 — not the long-removed
+            # Policy A this comment used to blame. v1 design cap is <=8
+            # (existing bs-bucket axis only, no new CG families).
+            assert self.max_num_seqs <= 8, \
+                "DUET-SSD supports max_num_seqs <= 8 (docs/duet/13 B>1 v1 cap); " \
+                f"got {self.max_num_seqs}"
+            # B==1-only gates (docs/duet/13 §6, out of scope v1): fail fast
+            # at config time instead of hitting the runtime B==1 asserts
+            # mid-run.
+            if self.max_num_seqs > 1 and (
+                    self.duet_exit_topm_gather or self.duet_exit_replica
+                    or self.duet_proxy_on_draft):
+                raise ValueError(
+                    "SSD_DUET_EXIT_TOPM_GATHER / SSD_DUET_EXIT_REPLICA / "
+                    "SSD_DUET_PROXY_ON_DRAFT are B==1-only gates "
+                    "(docs/duet/13 §6, out of scope v1); unset them or run "
+                    f"with max_num_seqs=1 (got max_num_seqs={self.max_num_seqs})."
+                )
             if self.duet_exit_layer is None:
                 L = self.hf_config.num_hidden_layers
                 self.duet_exit_layer = (2 * L) // 3
