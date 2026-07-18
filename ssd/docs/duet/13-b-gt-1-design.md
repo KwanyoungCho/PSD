@@ -333,3 +333,113 @@ and 13 serial draft forwards crossing the tile cliff at B×16 rows;
 hit-rate advantage had nothing to amplify; JIT-short misses cap DUET's
 miss rows at 1.48 tok (a token liability at B>1). Future-work levers
 ranked in RESULTS.md §4.
+
+**⚠ 2026-07-18 (M6): the M5 DUET numbers above were BUGGED.** The "P2
+dilution" and miss-row collapse in this table were caused by a B>1
+correctness bug (below), not by DUET's algorithm. Corrected sweep + the
+revised verdict: §M6 below and `m5_sweep/RESULTS.md` (corrected table).
+
+## M6 — B>1 short-row verify-window bug: root cause + fix (2026-07-18)
+
+**Symptom** (M4/M5): L_p2 collapsed monotonically with B
+(1.64 → 0.85 → 0.49) and miss-row tokens likewise (2.57 → 1.98 → 1.48),
+while the P2 hit RATE went UP (0.28 → 0.445) — "keys match, chains
+garbage". Physically impossible for per-seq-independent rollouts unless
+something batched feeds wrong data.
+
+**Root cause** (suspect #6 of the audit — NOT the M1/M3 batching math,
+which a full-chain CPU test exonerated row-by-row): the target verify
+input window. `prepare_decode_tensors_from_seqs` (runner_helpers.py)
+builds each seq's verify rows as
+
+    pos0 = seq.num_tokens - (k + 1)        # k = _duet_step_lookahead = vk_max
+
+with the UNIFORM batch-level `vk_max`, but the speculator extended each
+`seq.token_ids` by its PER-SEQ `vk_i`. For a short row (vk_i = K2 = 4)
+in a mixed batch (vk_max = K1 = 9), pos0 lands `vk_max − vk_i = 5`
+tokens too early: the 10-row window is `[5 stale context tokens | rec |
+t1..t4]` instead of `[rec | t1..t9]`. Every `logits_p` row of that seq
+is shifted by 5 positions, so the ratio test compares the P2/JIT chain
+against the model's predictions of ALREADY-KNOWN context — near-certain
+rejection at position 0 — and the recovery token is sampled from a
+stale position (the model re-emitting an old context token, i.e. output
+corruption, not just a perf loss). The guarding assert
+(`num_cached_tokens == pos0`, runner_helpers.py L88) is stripped under
+`python -O`, which every bench run uses.
+
+**Why B=1 was immune**: a single-seq batch is always uniform —
+vk_max = vk_i — so the window aligns. All M1-M3 B=1 regression smokes
+passed for exactly this reason.
+
+**Why the signature looked like "only seq 0 correct"**: it is actually
+"short rows in MIXED batches are corrupted". Long rows (P1 hits,
+vk_i = K1 = vk_max) are never shifted → L_p1 held/rose. Short rows
+(every P2 hit AND every JIT-short miss row) are corrupted whenever the
+batch also contains a long row — probability rising with B. The
+dynamics are an attractor: a corrupted short row gets accept≈0 and a
+degenerate recovery, its next-step request key (seq, 0, rec) lands in
+the P2 pos-0 candidate fan → ANOTHER P2 hit (rate UP) whose chain is
+again corrupted (L_p2 ≈ 0.1) — the seq churns short until a P1 hit
+rescues it. This also explains M5's "curious" L_p1 rise (3.54 → 5.07
+while P1 hit rate fell): degenerate repetitive text from corrupted rows
+is easy to speculate deeply, and P1 hits self-select for the healthy
+long-state seqs.
+
+**Fix** (3 parts, all no-ops at B=1 / uniform batches):
+
+1. `speculator_async.py` — `extend_seqs_for_verify` (extracted, unit
+   tested): extend EVERY seq's token_ids by vk_max (short rows carry
+   their padded tail) so pos0 = num_cached_tokens for every seq. Padded
+   tails can never be accepted (M1 clamp) and the whole extension is
+   rolled back by SpecDecodeStep's state restore.
+   `num_draft_cached_tokens` keeps the per-seq vk_i + 1 advance.
+2. `verifier.py _compute_and_send_proxy(valid_k=...)`: zero α̂ at a
+   short seq's padded columns — h[b, vk_i] then carries the full
+   all-real-accept mass and h beyond vk_i is 0, so chosen never lands
+   at unreachable positions (the M1 design §3 claim, previously
+   UNIMPLEMENTED — short seqs leaked P2 budget past vk_i).
+3. `utils/verify.py`: residual (p−q)+ recovery adjustment now applies
+   only below `min(K, valid_k)` — a clamped full-accept short row
+   samples plain p at position vk_i (as the same event does at B=1)
+   instead of subtracting a bogus uniform q from zero-padded logits.
+
+**Validation**: unit tests `ssd/tests/test_b_gt1_m6_verify_window.py`
+8/8 OK — (a) full draft-side chain (wire unpack → batched selector →
+layout update → build args → merge keys) at B=3 with distinct per-seq
+data: every row's (seq, k_idx, position, rope, seed) tuple ≡ the B=1
+run of the same seq (suspects 1-5 clean); (b) the REAL
+extend_seqs_for_verify + prepare_decode_tensors_from_seqs on a mixed
+batch: window ≡ [rec]+spec[:vk_max] per seq, and the pre-M6 per-seq
+extension provably slides the short row's window (prepare's own assert
+fires); (c) verify(): padded columns that would ratio-accept are capped
+by the clamp at vk_i and recovery comes from logits_p[b, vk_i]; (d)
+proxy h-padding: a short seq's chosen_pos never exceeds vk_i (leaks to
+6+ pre-fix). M1 9/9, M2 8/8, M3 7/7, M4 6/6 still OK.
+
+GPU B=2 smoke (m4-smoke args, port 12910,
+`experiments/proxy_async_overlap/b_gt1/m6_fix/b2_smoke/`): every
+element of the signature reversed — L_p2 **1.75** (bugged 0.92; B=1
+1.69), tok-on-miss **2.56** (bugged 1.98; B=1 2.57), P2 hit rate 0.286
+(bugged inflation 0.419 gone), P1 hit 0.529 / L_p1 3.81, tok/step 3.80,
+hits 0.82, decode TPS 101.5 (bugged 75.4 at the same cell), zero
+Tracebacks.
+
+**Corrected M5** (DUET cells re-run, same args/GPUs, ports 12911-13,
+`experiments/proxy_async_overlap/b_gt1/m6_fix/duet_b{1,2,4}/`; C cells
+unchanged — no DUET gates in them):
+
+| B | DUET TPS | C TPS | gap (bugged) | L_p2 | miss-tok | P2 hit |
+|---|---|---|---|---|---|---|
+| 1 | 74.69 | 77.90 | −4.1% (−7.8%) | 1.73 | 2.59 | 0.269 |
+| 2 | 104.59 | 109.86 | −4.8% (−18.8%) | 1.81 | 2.71 | 0.269 |
+| 4 | 118.00 | 150.31 | −21.5% (−27.6%) | 1.63 | 2.68 | 0.274 |
+
+L_p2 / miss-tok / P2-hit are now B-INVARIANT — the "monotone P2
+dilution" of the original M5 was 100% bug artifact. B=2 is near-parity
+with tok/step parity (3.89 vs 3.90). The surviving B=4 gap is ~85%
+TIME-side (T_draft ×2.32 vs C ×1.93; T_verify ×2.46 vs ×2.01):
+finding 5b stays unconfirmed, but for step-time-shape reasons
+(draft forward count/width per B, vk_max-padded verify, mid-verify
+block), not token/hit reasons. Full corrected tables + revised verdict:
+`m5_sweep/RESULTS.md` correction section; docs/duet/12 B>1 section
+rewritten accordingly.

@@ -10,6 +10,43 @@ from ssd.utils.misc import decode_tokens
 from ssd.utils.async_helpers.nccl_pack import send_int64
 
 
+def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K):
+    """Extend seq token state for the target verify forward (speculate step).
+
+    M6 fix (docs/duet/13): every seq's token_ids is extended by the BATCH
+    width vk_max — short rows carry their padded speculation tail — because
+    the target verify input window is built uniformly as
+    ``pos0 = seq.num_tokens - (vk_max + 1)``
+    (runner_helpers.prepare_decode_tensors_from_seqs with the batch-level
+    ``_duet_step_lookahead``). Pre-M6 each seq extended by its OWN vk_i, so
+    a short row (vk_i < vk_max) in a mixed batch had pos0 slide back by
+    (vk_max - vk_i) tokens into already-known context: every logits_p row of
+    that seq was misaligned by that shift, collapsing its accepted length
+    and sampling recovery from a stale position (the B>1 short-row collapse,
+    docs/duet/13 M6; the guarding ``num_cached_tokens == pos0`` assert in
+    runner_helpers is stripped under ``python -O``). Impossible at B=1,
+    where the single seq's vk_i IS vk_max.
+
+    Padded tails past vk_i can never be accepted (verify()'s per-seq clamp)
+    and the whole extension is rolled back by SpecDecodeStep.decode's state
+    restore. ``num_draft_cached_tokens`` still advances by the PER-SEQ
+    vk_i + 1 (the draft's real row width; also restored).
+
+    Returns vk_max (None when valid_k is None → non-DUET, extends by K).
+    """
+    vk_list = valid_k.tolist() if valid_k is not None else None
+    vk_max = max(vk_list) if vk_list else None
+    ext_w = vk_max if vk_max is not None else K
+    spec_ext = speculations_tokens[:, :ext_w].tolist()
+    for i, seq in enumerate(seqs):
+        vk_i = vk_list[i] if vk_list is not None else K
+        seq.token_ids.extend(spec_ext[i])
+        seq.num_tokens = len(seq.token_ids)
+        seq.last_token = seq.token_ids[-1]
+        seq.num_draft_cached_tokens += vk_i + 1
+    return vk_max
+
+
 class SpeculatorAsync(SpeculatorBase):
 
     def __init__(
@@ -136,25 +173,16 @@ class SpeculatorAsync(SpeculatorBase):
         _hit_statuses: list[int] = []
         _phase_statuses: list[int] = []
 
-        # v1 hybrid: when valid_k differs from K, only extend by valid_k tokens
-        # (proxy-sourced rows store K_short; rest of the K_long-shaped buffer is
-        # padding from _merge_and_populate_cache and must not enter seq tokens).
-        # M1 (docs/duet/13 §5): vk_max = max over the batch's valid_k, derived
-        # from the SAME per-seq ints this loop already materializes (no new
-        # GPU→CPU sync). Replaces the former seq-0 _vk_scalar capture. Short
-        # seqs keep padded tails up to vk_max; verify() clamps via valid_k.
-        _vk_max = None
-        for i, seq in enumerate(seqs):
-            vk_i = int(valid_k[i].item()) if valid_k is not None else self.K
-            if _vk_max is None or vk_i > _vk_max:
-                _vk_max = vk_i
-            seq.token_ids.extend(speculations_tokens[i, :vk_i].tolist())
-            seq.num_tokens = len(seq.token_ids)
-            seq.last_token = seq.token_ids[-1]
-            seq.num_draft_cached_tokens += vk_i + 1
-            if _profile_duet and cache_hits is not None:
-                _hit_statuses.append(int(cache_hits[i].item()))
-                _phase_statuses.append(int(phase_source[i].item()) if phase_source is not None else 0)
+        # M6 fix (docs/duet/13): extend EVERY seq by the batch's vk_max — see
+        # extend_seqs_for_verify. Pre-M6 short rows extended by their own
+        # vk_i, sliding the target verify window pos0 = num_tokens-(vk_max+1)
+        # back by (vk_max - vk_i) tokens (the B>1 short-row collapse).
+        _vk_max = extend_seqs_for_verify(
+            seqs, speculations_tokens, valid_k, self.K)
+        if _profile_duet and cache_hits is not None:
+            _hit_statuses = cache_hits.tolist()
+            _phase_statuses = (phase_source.tolist()
+                               if phase_source is not None else [0] * B)
 
         # Slice speculations to the batch's vk_max width before returning
         # (M1, docs/duet/13 §5). Rows shorter than vk_max keep padded tails;

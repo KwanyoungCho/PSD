@@ -160,7 +160,16 @@ def verify(
             # Build q_all for adjusted rows only; reuse previous q_all if available
             # We already have q_all if do_any_ratio=True (and it's already rescaled if sampler_x was provided)
             q_slice = q_all[batch_idx, q_idx_safe]  # [B, V]
-            mask_adjust = (temps_t > 0) & (accept_until < K) & ratio_rows
+            # M6 (docs/duet/13): the residual (p - q)+ adjustment applies only
+            # when a REAL rejection happened. For a short row (valid_k < K)
+            # accepted through all its real tokens, accept_until == valid_k is
+            # a clamp, not a rejection — sample plain p at that position, as
+            # the same event does at B=1 (where accept_until == K). Columns at
+            # or past valid_k hold padded q (zero logits → uniform), so the
+            # old K-only test subtracted a bogus uniform q there.
+            _k_real = (torch.full_like(accept_until, K) if valid_k is None
+                       else valid_k.clamp(max=K))
+            mask_adjust = (temps_t > 0) & (accept_until < _k_real) & ratio_rows
 
             adj = (p_fallback - q_slice).clamp(min=0.0)
             sums = adj.sum(dim=1, keepdim=True)

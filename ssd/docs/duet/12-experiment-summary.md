@@ -45,7 +45,7 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
 | 14 | `final_rematch` | 07-03 | K2 sweep + pre-registered verdict + 7 probes | **champion E9K24_jit; +0.5% vs C (4/5)**; 5 target-side null probes + E10/pfo2 frontier probes |
 | 15 | `champion_profile` | 07-04 | champion aligned timeline | per-status step anatomy; draft 45.6 vs target 51.4 (target-bound); PNGs kept |
 | 16 | `kv_promo` | 07-04 | SwiftSpec-style glue removal (KV promotion) | **correct but a WASH** (glue span 5.44 = gather+tip 5.41 — batch-free forward); code REMOVED |
-| 17 | `b_gt1` | 07-18 | B>1 support (M1-M4) + B ∈ {1,2,4} sweep vs C (M5) | engine works to B=8 (v1), but **finding 5b REJECTED**: C scales better, gap −7.8% → −27.6% |
+| 17 | `b_gt1` | 07-18 | B>1 support (M1-M4) + B ∈ {1,2,4} sweep vs C (M5) + verify-window bugfix (M6) | first M5 was bugged (short-row verify window); corrected: **B=2 near-parity (−4.8%)**, B=4 −21.5% and TIME-side only — finding 5b still unconfirmed but no longer token-broken |
 
 ## The five load-bearing findings
 
@@ -71,8 +71,10 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
    (b) regime — DUET wins the draft-compute-bound settings (same-budget
    D loses; bigger draft / B>1 is DUET's ground). Target-side kernels
    (SwiftSpec) are Hopper sm_90 silicon — not portable to RTX 3090.
-   **[Update 07-18: the B>1 half of (b) was MEASURED and REJECTED at
-   v1 — see the "B>1 (2026-07-18)" section below.]**
+   **[Update 07-18: the B>1 half of (b) was measured (twice — the first
+   sweep was invalidated by the M6 verify-window bug): not a WIN at any
+   B, but B=2 is near-parity and the B=4 gap is time-side structural,
+   not token-side — see the "B>1 (2026-07-18)" section below.]**
 
 ## B>1 (2026-07-18)
 
@@ -80,38 +82,52 @@ Design + staged implementation: docs/duet/13. Commits: design 7f30f36,
 M1 baa011c (batched Policy B + B-axis wire + accept clamp), M2 af93cde
 (vk_max dispatch + mixed hit/miss JIT-then-overwrite), M3 73fe75a
 (batched selector + per-seq phase-2 fan-out/masks), M4 2cd2176 (gate
-lift ≤8 + B=2 smoke). M5 sweep (one run/cell, interleaved, ns=20
-out=256, GPUs 0-4): `experiments/proxy_async_overlap/b_gt1/m5_sweep/`.
+lift ≤8 + B=2 smoke), M6 = the verify-window bugfix (docs/duet/13 §M6).
+Sweeps: `experiments/proxy_async_overlap/b_gt1/m5_sweep/` (first run —
+DUET cells INVALID, kept as record) and `.../b_gt1/m6_fix/` (corrected
+DUET cells, same args/GPUs).
 
-**Key numbers** (aggregate decode TPS, DUET champion vs C):
-B=1 71.86 vs 77.90 (−7.8%), B=2 89.22 vs 109.86 (−18.8%),
-B=4 108.87 vs 150.31 (−27.6%). C scales ×1.93 B1→B4, DUET ×1.52.
+**The M6 bug (found by auditing the M5 anomaly)**: the target verify
+window `pos0 = num_tokens − (vk_max+1)` uses the batch-uniform vk_max,
+but pre-M6 each seq's tokens were extended by its per-seq vk_i — every
+SHORT row (P2 hit / JIT-short miss) in a MIXED batch verified against a
+window slid (vk_max−vk_i)=5 tokens into known context. Its chain was
+rejected against stale predictions (L_p2 → ~0.1 for affected rows) and
+its recovery re-emitted old context tokens (silent output corruption —
+the guard assert is stripped under `python -O`). Hit rate stayed HIGH
+because keys are matched draft-side and corrupted rows churned bogus
+P2 hits at position 0 (an attractor), which is why the bugged sweep
+showed P2 hit 0.28→0.445 while L_p2 collapsed 1.64→0.49. Impossible at
+B=1 (vk_i = vk_max), so all B=1 smokes had passed.
 
-**The amplification finding — finding 5b is REJECTED at v1.** DUET's
-hit-rate advantage materialized and widened (0.84 vs 0.74 at B=4;
-theoretical any-miss burden 1−h^B 0.50 vs 0.70) but did not pay:
-any-miss JIT stalls are NOT the growing per-step term at B ≤ 4 — C
-absorbs a 0.70 any-miss burden with flat tok/step (3.96 → 3.99) and
-slower step-time growth (T_target ×2.13 vs DUET ×2.40). The gap is
-instead (token side) the M4 P2 flag, confirmed as a real monotone
-B-effect — L_p2 1.64 → 0.85 → 0.49, P2 share of hits 35% → 53%, ~−10%
-tok/step — and (time side) DUET's verify/draft growing faster than C's
-(×2.39/×2.26 vs ×2.01/×1.93) despite 26 rows/seq vs 48: v1 vk_max
-padding, the mid-verify DUET block (its B=1 null probes do not
-transfer), and 13 serial draft forwards crossing the tile cliff at
-B×16 rows. JIT-short misses (finding 3's B=1 lever) invert into a
-token liability at B>1 (miss rows 1.48 tok at B=4 vs C's 3.12).
+**Corrected key numbers** (aggregate decode TPS, DUET champion vs C):
+B=1 74.69 vs 77.90 (−4.1%), B=2 104.59 vs 109.86 (**−4.8%,
+near-parity**, tok/step 3.89 vs 3.90), B=4 118.00 vs 150.31 (−21.5%).
+C scales ×1.93 B1→B4, DUET ×1.58. L_p2 (1.73/1.81/1.63), miss tokens
+(2.59/2.71/2.68) and P2 hit rate (0.269/0.269/0.274) are B-invariant —
+the "P2 dilution B-effect" and the "JIT-short token liability" of the
+first sweep were bug artifacts, as was the curious L_p1-rise flag.
 
-**For DUET to win at B>1** (ranked, RESULTS.md §4): fix P2 dilution
-(per-B retune of K2 / P1-P2 budget split; mechanism of the composition
-shift unresolved — L_p1 rises to 5.07 while P1 hit rate falls);
-fewer/fatter draft forwards at B>1 (the deep-narrow 13-forward shape
-is a B=1 tile-cliff artifact); per-B verify dispatch (stop paying
-K1-width for short rows in mixed batches); move the mid-verify block
-off the critical path. Caveats: single run per cell; out=256/ns=20
-shifts the B=1 baseline in C's favor vs the out=512/ns=50 headline
-(+0.5% there, −7.8% here); unrelated vLLM idle on GPUs 6-7, unchanged
-across all cells.
+**Finding 5b re-evaluated — still not confirmed, but re-scoped.** DUET
+does not WIN at any B, and the hit-rate-amplification mechanism still
+has nothing to bite on at B ≤ 4 (C absorbs its 0.70 any-miss burden
+with flat tok/step). But post-fix the ENTIRE surviving B=4 gap is
+TIME-side (~85% of the B1→B4 log-gap widening: t_C/t_D 1.023 → 0.863
+while tok ratio only 0.937 → 0.910): T_draft ×2.32 vs C ×1.93 (103.7
+vs 75.3 ms at B=4 — 13 serial forwards at B×16 rows over the tile
+cliff) and T_verify ×2.46 vs ×2.01 (vk_max padding + mid-verify
+block). Token/hit machinery scales cleanly (hit flat 0.80-0.81; DUET
+loses fewer miss tokens than C at B=4, 0.24 vs 0.30 tok/step).
+
+**For DUET to win at B>1** (re-ranked): fewer/fatter draft forwards at
+B>1 (the deep-narrow 13-forward shape is a B=1 tile-cliff artifact —
+now clearly the #1 lever); per-B verify dispatch (stop paying K1-width
+for short rows in mixed batches); move the mid-verify block off the
+critical path. The former #1 ("fix P2 dilution") is GONE — it was the
+bug. Caveats: single run per cell; out=256/ns=20 shifts the B=1
+baseline in C's favor vs the out=512/ns=50 headline (+0.5% there,
+−4.1% here); unrelated vLLM idle on GPUs 6-7, unchanged across all
+cells; C cells were not re-run (no DUET code in them).
 
 ## Removed implementations (git history registry)
 

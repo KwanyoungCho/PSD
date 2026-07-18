@@ -145,7 +145,8 @@ class Verifier(VerifierBase):
             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead):
                 self._compute_and_send_proxy(
                     exit_logits, draft_tokens, logits_q, orig_bs,
-                    _vk, async_pg, draft_rank, cache_hits=cache_hits)
+                    _vk, async_pg, draft_rank, cache_hits=cache_hits,
+                    valid_k=speculate_result.valid_k)
 
             self.target_model_runner._duet_proxy_fn = _proxy_fn
 
@@ -276,7 +277,8 @@ class Verifier(VerifierBase):
         )
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
-                                 B, K, async_pg, draft_rank, cache_hits=None):
+                                 B, K, async_pg, draft_rank, cache_hits=None,
+                                 valid_k=None):
         """Compute DUET proxy from early-exit logits and send to draft.
 
         Args:
@@ -284,6 +286,10 @@ class Verifier(VerifierBase):
             draft_tokens: [B, K] — draft's speculated tokens
             logits_q: [B, K, V] — draft model logits
             cache_hits: [B] or None
+            valid_k: [B] or None — per-seq real suffix width (M6,
+                docs/duet/13). K is the batch's vk_max; a short seq's
+                columns >= vk_i are padding and get α̂ = 0 so its h mass
+                past vk_i is 0 (the design §3 claim, implemented in M6).
         """
         import torch.distributed as dist
         from ssd.utils.async_helpers.nccl_pack import send_int64
@@ -328,6 +334,8 @@ class Verifier(VerifierBase):
                 logits_q.record_stream(_cur)
             if cache_hits is not None:
                 cache_hits.record_stream(_cur)
+            if valid_k is not None:
+                valid_k.record_stream(_cur)
 
         # === Raw-proxy wire (SSD_DUET_PROXY_ON_DRAFT=1, docs/duet/09 WS3) ===
         # Send top-M exit candidates (ids + logits) + logsumexp + the exit
@@ -382,6 +390,18 @@ class Verifier(VerifierBase):
         topk_probs, topk_ids = residual.topk(top_k, dim=-1)  # [B, K, top_k]
         topk_sum = topk_probs.sum(dim=-1, keepdim=True).clamp(min=1e-10)
         topk_probs = topk_probs / topk_sum
+
+        # M6 (docs/duet/13): zero α̂ at a short seq's padded columns
+        # (j >= vk_i). Then cumprod stalls at the real prefix, h[b, vk_i]
+        # carries the FULL all-real-accept mass ( = cumprod[vk_i-1]·(1-0) )
+        # and h[b, j > vk_i] = 0 → P_iv mass 0 → chosen never lands beyond
+        # vk_i (the M1 design §3 claim; previously unimplemented, so short
+        # seqs leaked budget to unreachable positions). No-op when valid_k
+        # is uniform == K (B=1 / all-long batches).
+        if valid_k is not None:
+            _pad_cols = (torch.arange(K, device=accept_probs.device)[None, :]
+                         >= valid_k[:, None])                       # [B, K]
+            accept_probs = accept_probs.masked_fill(_pad_cols, 0.0)
 
         # Cache miss handling: if jit_speculate=False, miss rows have random logits_q
         if cache_hits is not None and not config.jit_speculate:

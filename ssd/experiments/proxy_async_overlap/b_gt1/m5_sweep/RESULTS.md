@@ -1,5 +1,92 @@
 # M5 — B ∈ {1,2,4} sweep: DUET champion vs SD-best C (interleaved)
 
+## ⚠ CORRECTION (2026-07-18, M6) — the DUET numbers below were BUGGED
+
+The original DUET cells in this sweep ran with a B>1 correctness bug
+(docs/duet/13 §M6): the target verify input window used the uniform
+batch `vk_max` while each seq's tokens were extended by its per-seq
+`vk_i`, so every SHORT row (P2 hit / JIT-short miss, vk=K2=4) in a
+MIXED batch had its verify window slid back 5 tokens into known context
+— its chain was rejected against stale predictions and its recovery
+token re-emitted old context (an output-correctness bug, silent under
+`python -O`). That is what produced the "L_p2 collapse" (1.64→0.49),
+the miss-token collapse (2.57→1.48), and the inflated P2 hit rate
+(0.28→0.445) — NOT DUET's algorithm. C cells were unaffected (no DUET
+gates). The DUET cells were re-run post-fix with identical args/GPUs
+(ports 12911-13, `../m6_fix/duet_b{1,2,4}/`); C numbers are the
+originals below.
+
+**Corrected raw metrics** (all cells rc=0, zero Tracebacks):
+
+| metric | duet_b1 | duet_b2 | duet_b4 | (bugged b1/b2/b4) |
+|---|---|---|---|---|
+| Decode TPS (aggregate) | 74.69 | 104.59 | 118.00 | 71.86 / 89.22 / 108.87 |
+| Tokens/step (incl recovery) | 3.71 | 3.89 | 3.63 | 3.62 / 3.24 / 3.27 |
+| Cache hit rate | 0.81 | 0.81 | 0.80 | 0.80 / 0.82 / 0.84 |
+| P1 (draft) hit rate | 0.537 | 0.544 | 0.529 | 0.523 / 0.428 / 0.392 |
+| P2 (proxy) hit rate | 0.269 | 0.269 | 0.274 | 0.280 / 0.390 / 0.445 |
+| L_p1 | 3.61 | 3.83 | 3.50 | 3.54 / 4.05 / 5.07 |
+| L_p2 | 1.73 | 1.81 | 1.63 | 1.64 / 0.85 / 0.49 |
+| Tok/step on hit | 3.98 | 4.16 | 3.86 | 3.88 / 3.52 / 3.62 |
+| Tok/step on miss | 2.59 | 2.71 | 2.68 | 2.57 / 1.98 / 1.48 |
+| T_target full step (ms) | 52.06 | 79.28 | 129.82 | 52.70 / 76.71 / 126.44 |
+| T_verify (ms) | 45.88 | 68.27 | 112.88 | 46.41 / 66.39 / 110.86 |
+| T_draft step (ms) | 44.67 | 66.40 | 103.70 | 45.09 / 65.29 / 102.06 |
+
+Every "monotone B-effect" of the original run is gone: L_p2, miss
+tokens, and P2 hit rate are now B-INVARIANT (1.73/1.81/1.63,
+2.59/2.71/2.68, 0.269/0.269/0.274) — exactly what per-seq-independent
+rollouts must produce. B=1 is unchanged within run-to-run noise (the
+fix is a no-op at B=1).
+
+**Corrected scaling vs C** (C rows unchanged from §below):
+
+| B | DUET TPS | C TPS | gap | DUET ×B1 | C ×B1 | DUET /seq | C /seq |
+|---|---|---|---|---|---|---|---|
+| 1 | 74.69 | 77.90 | −4.1% | 1.00 | 1.00 | 74.7 | 77.9 |
+| 2 | 104.59 | 109.86 | −4.8% | ×1.400 | ×1.410 | 52.3 | 54.9 |
+| 4 | 118.00 | 150.31 | −21.5% | ×1.580 | ×1.930 | 29.5 | 37.6 |
+
+**Corrected gap decomposition** (R = token ratio × step-time ratio,
+t = B·tok_step/TPS; R reproduces the measured TPS ratio in each row):
+
+| B | tok_D/tok_C | t_C/t_D | R = D/C | (bugged R) |
+|---|---|---|---|---|
+| 1 | 0.937 | 1.023 | 0.959 | 0.921 |
+| 2 | 0.997 | 0.954 | 0.952 | 0.813 |
+| 4 | 0.910 | 0.863 | 0.785 | 0.725 |
+
+**Revised verdict**: at B=2 DUET is at NEAR-PARITY (−4.8%) with
+tok/step parity (3.89 vs 3.90) — the bugged run's −18.8% was almost
+entirely the bug. The B=4 gap (−21.5%) survives, but its composition
+changed: of the B1→B4 log-gap widening (−0.200), ~85% is TIME-side
+(t_C/t_D 1.023 → 0.863) and only ~15% token-side (0.937 → 0.910, a
+tok/step dip 3.89→3.63 at B=4 — single run, possibly noise). The
+surviving explanation is §2(a)'s batched-GEMM physics, now measured
+clean of the bug: T_draft grows ×2.32 vs C ×1.93 (103.7 vs 75.3 ms at
+B=4, +37.8% — 13 serial forwards at B×16 rows crossing the Marlin tile
+cliff) and T_verify ×2.46 vs ×2.01 (112.9 vs 91.4 ms, +23.5% — vk_max
+padding + the mid-verify DUET block). The token/hit machinery is NOT
+the problem: hit rate flat at 0.80-0.81, DUET now loses FEWER tokens
+to misses than C at B=4 (deficit 0.24 vs 0.30 tok/step).
+
+On finding 5b (the amplification hypothesis): still NOT confirmed —
+DUET does not win at any B and C's scaling stays superior (×1.93 vs
+×1.58) because any-miss JIT stalls remain a non-binding term for C at
+B ≤ 4. But the REJECTION rationale changes: DUET's B>1 problem is not
+token dilution (that was the bug) — it is the draft/verify step-time
+SHAPE, addressable by the previously-ranked levers (fewer/fatter draft
+forwards per B, per-B verify dispatch, mid-verify block off the
+critical path). §3's "P2 composition shift" and the "curious L_p1
+rise" are fully explained as bug artifacts (corrupted short rows
+churned bogus P2 hits; degenerate repetitive text inflated the
+surviving P1 chains).
+
+Everything below this line is the ORIGINAL (bugged-DUET) writeup, kept
+as the historical record of what was measured and why it misled.
+
+---
+
 **Date**: 2026-07-18. Stage M5 of docs/duet/13. GPUs 0-4, ports
 12900-12905, one run per cell, INTERLEAVED per B (duet_bB then c_bB).
 All cells: ns=20 (×4 datasets = 80 prompts), out=256, in=512, temp 0.7,
