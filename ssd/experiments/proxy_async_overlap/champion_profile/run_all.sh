@@ -17,7 +17,7 @@ label="e9k24_jit_profile"
 outdir="${PHASE_DIR}/${label}"
 mkdir -p "${outdir}"
 echo "[$(date -Is)] === START ${label} ==="
-pkill -9 -u chokwans99 -f "python -O bench/bench.py" 2>/dev/null || true
+pkill -9 -u chokwans99 -f "bench/bench.py" 2>/dev/null || true; pkill -9 -u chokwans99 -f "multiprocessing.spawn" 2>/dev/null || true
 sleep 5
 SSD_FORCE_SPLIT_K1K2=1 SSD_DUET_JIT_SHORT=1 SSD_PROFILE_DUET=1 SSD_PROFILE_DIR="${outdir}" \
   "${PY}" -O bench/bench.py \
