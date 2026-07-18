@@ -443,3 +443,54 @@ finding 5b stays unconfirmed, but for step-time-shape reasons
 block), not token/hit reasons. Full corrected tables + revised verdict:
 `m5_sweep/RESULTS.md` correction section; docs/duet/12 B>1 section
 rewritten accordingly.
+
+## Verdict experiments — bug or physics? (2026-07-18)
+
+Full writeup: `experiments/proxy_async_overlap/b_gt1/verdict/RESULTS.md`.
+Two decisive experiments against the M6-corrected B=4 gap (−21.5%):
+
+**Exp1 — B=4 PROFILE forensics** (champion args + SSD_PROFILE_DUET=1,
+port 12920, 126.69 tok/s): every profile label checked against its
+structural B×rows model. ALL match: phase1_replay 9 × 5.26 ms (64 rows
+= 4 Marlin m-tiles; ×2.13 vs the 16-row 2.47 ms, BELOW the tile-linear
+bound 5.79), phase2_replay 4 × 4.45 (40 rows), glue replay ×2.0,
+preps/builds/merge flat (per-seq nested-mask build +0.2 ms — the M3
+machinery is not a hidden cost), all-hit cache fill 0.89 ms ≡ B=1,
+batched any-miss JIT 8.64 vs B=1's 8.00 ms (M2's latency-bound claim
+confirmed at B×rows), walls label-accounted on both procs (no sync
+storms). **Bug verdict: no remaining B>1 bug.**
+
+Structural findings: (1) the TARGET binds — draft idle grew 6.0 → 34.5
+ms/step (work 46.1 → 87.6 vs target wall 122.6), so the 13 serial
+draft forwards never sit on the hit-step critical path (hit-step
+spec_wait 3.0 ≈ B=1's 2.7); (2) width distribution: 93.3% of steps
+dispatch K1-width verify (5.8% all-short K2, matching 0.447^4 theory)
+while only 55% of rows are long → **vk_max padding = 17-21 ms/step**
+(8.3 wasted rows × 2.23 ms/row marginal verify cost) — the dominant
+time-side term; (3) the finding-5b miss-stall amplification term IS
+present and grows with B (any-miss burden 0.57 vs C 0.70; 13-pt
+frequency advantage, up from 6 pts at B=1; 7.8 ms/stall measured) but
+is worth only +1..+5 ms/step. Decomposition sum (+12..+16 ms) closes
+against the measured ΔT_target = +16.1 ms vs C.
+
+**Exp2 — fat-shape retune probes** (B=4, PROFILE=0, ports 12921-2):
+
+| cell | shape | serial fwds | verify rows | TPS | vs C | tok/step | t_step (ms) |
+|---|---|---|---|---|---|---|---|
+| champion | K1=9 K2=4 list [2×6,1×4] | 13 | 40 | 118.00 | −21.5% | 3.63 | 123.1 |
+| fat7 | K1=7 K2=4 dfo=2 uniform | 11 | 32 | 144.72 | −3.7% | 3.71 | 102.5 |
+| fat5 | K1=5 K2=4 dfo=3 uniform (--f 4) | 9 | 24 | **155.12** | **+3.2%** | 3.41 | 87.9 |
+| C | k=7 f=6 | 7 | 32 | 150.31 | — | 3.99 | 106.2 |
+
+fat7 lands T_verify at exact C parity (91.97 vs 91.42 — same 32-row
+width) and its step is already faster than C's; fat5 — DUET's first
+measured B>1 WIN — trades tokens (0.855 of C) for step time (0.827 of
+C). The B=1 champion's deep-narrow shape was a tile-cliff artifact
+that at B=4 paid K1-width verify padding on 93% of steps; the tile
+cliff itself is amortized over seqs at B=4 (fat5's 72-row phase-1
+forwards win anyway). Finding 5b: PARTIALLY CONFIRMED at v1 — B>1 is
+DUET's winning regime once the shape is retuned per B. Caveats:
+single run/cell (±4% token noise; +3.2% not band-clear alone — the
+robust result is fat-beats-deep by +10..+31%), fat5 needs --f 4
+(wider miss JIT), fat5 unmeasured at B ∈ {1,2}; B=1 champion remains
+E9K24_jit.

@@ -46,6 +46,7 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
 | 15 | `champion_profile` | 07-04 | champion aligned timeline | per-status step anatomy; draft 45.6 vs target 51.4 (target-bound); PNGs kept |
 | 16 | `kv_promo` | 07-04 | SwiftSpec-style glue removal (KV promotion) | **correct but a WASH** (glue span 5.44 = gather+tip 5.41 — batch-free forward); code REMOVED |
 | 17 | `b_gt1` | 07-18 | B>1 support (M1-M4) + B ∈ {1,2,4} sweep vs C (M5) + verify-window bugfix (M6) | first M5 was bugged (short-row verify window); corrected: **B=2 near-parity (−4.8%)**, B=4 −21.5% and TIME-side only — finding 5b still unconfirmed but no longer token-broken |
+| 18 | `b_gt1/verdict` | 07-18 | B=4 PROFILE forensics (bug or physics?) + fat-shape retune probes | **no remaining B>1 bug** (all labels match B×rows models); gap = vk_max padding 17-21 ms/step; **fat5 (K1=5 dfo=3) BEATS C at B=4: 155.12 vs 150.31 (+3.2%)** — first B>1 win, via shape retune |
 
 ## The five load-bearing findings
 
@@ -72,9 +73,12 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
    D loses; bigger draft / B>1 is DUET's ground). Target-side kernels
    (SwiftSpec) are Hopper sm_90 silicon — not portable to RTX 3090.
    **[Update 07-18: the B>1 half of (b) was measured (twice — the first
-   sweep was invalidated by the M6 verify-window bug): not a WIN at any
-   B, but B=2 is near-parity and the B=4 gap is time-side structural,
-   not token-side — see the "B>1 (2026-07-18)" section below.]**
+   sweep was invalidated by the M6 verify-window bug): with the B=1
+   champion SHAPE, not a win at any B (B=2 near-parity, B=4 −21.5%,
+   time-side). The verdict experiments then showed the shape was the
+   whole story: with a B=4-appropriate fat shape (fat5: K1=5 dfo=3)
+   DUET BEATS C 155.12 vs 150.31 (+3.2%, single run) — see the "B>1
+   (2026-07-18)" section below.]**
 
 ## B>1 (2026-07-18)
 
@@ -108,26 +112,48 @@ C scales ×1.93 B1→B4, DUET ×1.58. L_p2 (1.73/1.81/1.63), miss tokens
 the "P2 dilution B-effect" and the "JIT-short token liability" of the
 first sweep were bug artifacts, as was the curious L_p1-rise flag.
 
-**Finding 5b re-evaluated — still not confirmed, but re-scoped.** DUET
-does not WIN at any B, and the hit-rate-amplification mechanism still
-has nothing to bite on at B ≤ 4 (C absorbs its 0.70 any-miss burden
-with flat tok/step). But post-fix the ENTIRE surviving B=4 gap is
-TIME-side (~85% of the B1→B4 log-gap widening: t_C/t_D 1.023 → 0.863
-while tok ratio only 0.937 → 0.910): T_draft ×2.32 vs C ×1.93 (103.7
-vs 75.3 ms at B=4 — 13 serial forwards at B×16 rows over the tile
-cliff) and T_verify ×2.46 vs ×2.01 (vk_max padding + mid-verify
-block). Token/hit machinery scales cleanly (hit flat 0.80-0.81; DUET
-loses fewer miss tokens than C at B=4, 0.24 vs 0.30 tok/step).
+**Verdict experiments (2026-07-18, `b_gt1/verdict/RESULTS.md`) — no
+remaining B>1 bug; the B=4 gap was the SHAPE, and a fat shape WINS.**
+A B=4 profile run (champion args + SSD_PROFILE_DUET=1) checked every
+label against its structural B×rows model: all 26 match (phase-1
+per-forward 2.47→5.26 ms for 16→64 rows = 4 Marlin tiles, below the
+tile-linear bound; batched JIT 8.6 vs 8.0 ms; per-seq mask builds
+flat; walls fully label-accounted on both procs). Two structural
+facts emerged: (i) the TARGET binds at B=4 — the draft's idle grew
+6.0→34.5 ms/step, so the "13 serial forwards over the tile cliff"
+never sit on the hit-step critical path; (ii) 93.3% of steps dispatch
+K1-width verify while only 55% of rows are long → the v1 vk_max
+padding costs **17-21 ms/step** (≈8.3 wasted rows × 2.23 ms/row),
+the dominant time-side term. The miss-stall amplification term of
+finding 5b IS present — any-miss burden 0.57 vs C's 0.70 (13-pt
+frequency advantage, up from 6 pts at B=1) at 7.8 ms/stall — but
+worth only +1..+5 ms/step, an order below the padding tax. Full
+decomposition closes against the measured ΔT_target = +16.1 ms.
 
-**For DUET to win at B>1** (re-ranked): fewer/fatter draft forwards at
-B>1 (the deep-narrow 13-forward shape is a B=1 tile-cliff artifact —
-now clearly the #1 lever); per-B verify dispatch (stop paying K1-width
-for short rows in mixed batches); move the mid-verify block off the
-critical path. The former #1 ("fix P2 dilution") is GONE — it was the
-bug. Caveats: single run per cell; out=256/ns=20 shifts the B=1
-baseline in C's favor vs the out=512/ns=50 headline (+0.5% there,
-−4.1% here); unrelated vLLM idle on GPUs 6-7, unchanged across all
-cells; C cells were not re-run (no DUET code in them).
+Retune probes (B=4, ns=20 out=256): **fat7** (K1=7 K2=4 uniform
+dfo=2, k=11 — verify 32 rows = C's width, 11 forwards) 144.72 tok/s,
+−3.7%, T_verify parity (91.97 vs 91.42), step FASTER than C;
+**fat5** (K1=5 K2=4 dfo=3, k=9, --f 4 — verify 24 rows, 9 forwards)
+**155.12 tok/s vs C 150.31 (+3.2%) — DUET's first measured B>1 win**,
+trading tok/step 3.41 (0.855 of C) for step time 87.9 vs 106.2 ms
+(hit 0.84, T_draft 75.5 ≈ C's 75.3). Finding 5b is thereby PARTIALLY
+CONFIRMED at v1: B>1 is DUET's winning regime once the speculation
+shape is retuned per B (fat, shallow) instead of inheriting the B=1
+deep-narrow tile-cliff artifact.
+
+**Remaining levers at B>1**: token side (tok/step 0.86-0.93 of C,
+B-invariant — the L_p2 ≈ 1.7 off-policy continuation quality,
+finding 5a); per-seq verify dispatch to reclaim residual padding in
+mixed batches; a real per-B shape sweep (fat5 was the first guess;
+fat5 at B ∈ {1,2} and K1 ∈ {4,5,6} × dfo grids are unmeasured — the
+B=1 champion stays E9K24_jit). Caveats: single run per cell (champion
+B=4 tok/step spans 3.63-3.91 across identical-args runs, ±4% token
+noise; +3.2% is not band-clear on its own — the robust result is
+fat-beats-deep by +10..+31%); out=256/ns=20 shifts the B=1 baseline
+in C's favor vs the out=512/ns=50 headline (+0.5% there, −4.1% here);
+fat5 uses --f 4 (wider miss JIT); unrelated vLLM idle on GPUs 6-7,
+unchanged across all cells; C cells were not re-run (no DUET code in
+them).
 
 ## Removed implementations (git history registry)
 
