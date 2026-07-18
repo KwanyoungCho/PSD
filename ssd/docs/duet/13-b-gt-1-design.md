@@ -304,3 +304,32 @@ Aggregate decode TPS still rises +6.3% because two seqs verify per
 step. Whether the P2 shift is a real B=2 effect or ns=8 prompt-mix
 noise — and the per-seq perf story — is M5's sweep (B ∈ {1,2,4} vs
 SD-best, interleaved).
+
+## M5 — measured (2026-07-18)
+
+Sweep: B ∈ {1,2,4}, DUET champion vs SD-best C (k7 f6), interleaved per
+B, one run/cell, ns=20 out=256 seed 42, GPUs 0-4, ports 12900-12905.
+Full tables + decomposition:
+`experiments/proxy_async_overlap/b_gt1/m5_sweep/RESULTS.md`.
+
+**The finding 5b hypothesis is REJECTED at v1.** Aggregate decode TPS:
+
+| B | DUET | C | gap |
+|---|---|---|---|
+| 1 | 71.86 | 77.90 | −7.8% |
+| 2 | 89.22 | 109.86 | −18.8% |
+| 4 | 108.87 | 150.31 | −27.6% |
+
+C scales ×1.93 B1→B4 vs DUET ×1.52. DUET's ingredients all landed —
+hit 0.84 vs 0.74 at B=4, any-miss burden 0.50 vs 0.70 — and still
+lost: (i) the M4 P2 flag is a REAL monotone B-effect (L_p2
+1.64 → 0.85 → 0.49; P2 share of hits 35% → 53%), worth ~−10% tok/step
+while C's tok/step is flat; (ii) DUET's step time grows faster than
+C's on every axis (T_verify ×2.39 vs ×2.01, T_draft ×2.26 vs ×1.93)
+despite 26 rows/seq vs 48 — vk_max padding, the mid-verify DUET block,
+and 13 serial draft forwards crossing the tile cliff at B×16 rows;
+(iii) any-miss JIT stalls are NOT the growing per-step term at B ≤ 4
+(C absorbs a 0.70 any-miss burden with flat tok/step), so the
+hit-rate advantage had nothing to amplify; JIT-short misses cap DUET's
+miss rows at 1.48 tok (a token liability at B>1). Future-work levers
+ranked in RESULTS.md §4.
