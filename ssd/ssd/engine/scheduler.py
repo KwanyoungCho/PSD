@@ -56,8 +56,6 @@ class Scheduler:
                 self._sk_mq_p1 = int(config.duet_draft_fan_out) * (self._sk_K1 + 1)
             _K_rank_max = self._sk_K1 if self._sk_K1 >= self._sk_K2 else self._sk_K2
             self._sk_mq_p2 = int(config.duet_proxy_fan_out) * (_K_rank_max + 1)
-            # KV promotion (docs/duet/11): non-overlay Phase-2 reservation.
-            self._sk_kv_promo = bool(getattr(config, "duet_kv_promo", False))
         else:
             self._sk_K1 = 0
             self._sk_K2 = 0
@@ -131,7 +129,6 @@ class Scheduler:
                     split_k1k2=True,
                     K1=self._sk_K1, K2=self._sk_K2,
                     mq_p1=self._sk_mq_p1, mq_p2=self._sk_mq_p2,
-                    kv_promo=getattr(self, "_sk_kv_promo", False),
                 )
             else:
                 draft_lookahead_len = compute_megaspec_lookahead(self.MQ_LEN, self.K)

@@ -1,6 +1,15 @@
-# 11 — KV promotion (glue removal), SwiftSpec-style: design
+# 11 — KV promotion (glue removal), SwiftSpec-style: design [REMOVED]
 
-**Date**: 2026-07-04. Gate: `SSD_DUET_KV_PROMO=1` (default OFF).
+**Status (2026-07-04): implemented, verified correct, measured as a
+performance WASH at B=1, and REMOVED from the codebase** (user decision —
+the 10-token glue forward is already batch-free on GPU, so replacing it
+with a 1-token tip forward + KV gather nets zero; the code only added
+complexity). Full implementation preserved in git history
+(commits 43d5b51 → ad0b0ad, removal commit follows ad0b0ad).
+Measured results: experiments/proxy_async_overlap/kv_promo/RESULTS.md.
+This document is kept as the design/correctness record.
+
+**Original design below** — Gate: `SSD_DUET_KV_PROMO=1` (default OFF).
 Motivation: docs/duet/10 §import-list item 1.
 
 ## What glue does today (hit steps, 82%)

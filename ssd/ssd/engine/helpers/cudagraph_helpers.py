@@ -357,17 +357,12 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         # scratch region). The removed hybrid "continuation pass" violated
         # it — see git history (2026-07 removal) for the KNOWN BUG writeup.
         # ─────────────────────────────────────────────────────────────────
-        # dead_gap (KV promotion, docs/duet/11): Phase 2's layout is
-        # [prefix | glue | DEAD (Phase-1 scratch, must NOT be attended) |
-        # own diag blocks]. gap = 0 for every other layout, which reduces
-        # this to the original [prefix | glue | diag] formula.
-        _gap = getattr(layout, "dead_gap", 0) if layout is not None else 0
         for s in range(K_loop):
             # Step 9A: ttl_added_s uses K_for_mask (= layout glue width)
             # not the outer K (config.speculate_k). For phase1_short the
             # glue width is K_short+1; for phase1_long / non-DUET it's
             # K_long+1.
-            ttl_added_s = (s + 1) * MQ_LEN + (K_for_mask + 1) + _gap
+            ttl_added_s = (s + 1) * MQ_LEN + (K_for_mask + 1)
             packed_segs = []
             seg_packed_sizes = []
 
@@ -379,8 +374,7 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
                 mask_b[:, :prefix_len_b] = 1
                 glue = _glue_hit if int(cache_hits_list[b]) == 1 else _glue_miss
                 mask_b[:, prefix_len_b:prefix_len_b + K_for_mask + 1] = glue
-                # columns [glue end, glue end + _gap) stay 0 (dead region)
-                diag_start = prefix_len_b + K_for_mask + 1 + _gap
+                diag_start = prefix_len_b + K_for_mask + 1
                 for blk in range(s + 1):
                     mask_b[_rows_np, diag_start + blk * MQ_LEN + _rows_np] = 1
 
