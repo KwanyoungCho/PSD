@@ -1,6 +1,6 @@
 # 12 — DUET experiment summary (canonical index)
 
-**Last updated**: 2026-07-19 (B>1 per-B shape sweep + confirmed wins added). One-page map of every experiment under
+**Last updated**: 2026-07-19 (B-scaling campaign completed through B=8; figures added). One-page map of every experiment under
 `ssd/experiments/proxy_async_overlap/`, the verdict each one produced,
 and where the details live. Raw profile JSONs (~3.9 GB) were pruned
 2026-07-18; every distilled result survives in the per-directory
@@ -48,6 +48,7 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
 | 17 | `b_gt1` | 07-18 | B>1 support (M1-M4) + B ∈ {1,2,4} sweep vs C (M5) + verify-window bugfix (M6) | first M5 was bugged (short-row verify window); corrected: **B=2 near-parity (−4.8%)**, B=4 −21.5% and TIME-side only — finding 5b still unconfirmed but no longer token-broken |
 | 18 | `b_gt1/verdict` | 07-18 | B=4 PROFILE forensics (bug or physics?) + fat-shape retune probes | **no remaining B>1 bug** (all labels match B×rows models); gap = vk_max padding 17-21 ms/step; **fat5 (K1=5 dfo=3) BEATS C at B=4: 155.12 vs 150.31 (+3.2%)** — first B>1 win, via shape retune |
 | 19 | `b_gt1/pb_sweep` | 07-18/19 | per-B K1/K2/dfo/pfo grid (B∈{2,4}, 14 cells) + 3-rep confirm of each winner vs C | fat5 was NOT optimal; K1 (verify width) is the dominant knob; **B=4 k3x3_d4p1 +14.8% and B=2 k6x5_d3p1 +6.9% vs C, both BAND-CLEAR (3-rep interleaved)** — finding 5b CONFIRMED, win amplifies with B |
+| 20 | `b_gt1/bscale` | 07-19 | B-scaling gap-fill: B=8 grid + B=4 K1=2 edge cells + B=1 same-regime anchors, then B=8 confirm | **B=8 k2x2_d5p1 (K1=K2=2 dfo=5) +26.9% vs C, BAND-CLEAR** (210.39 vs 165.85; worst rep beats best C by +23.7%); K1=3 is a real INTERIOR optimum at B=4 (K1=2 loses −5%); amplification curve complete +0.6/+6.9/+14.8/+26.9, shape law K1 9→6→3→2; REPORT.md + 5 figures in `bscale/figs/` |
 
 ## The five load-bearing findings
 
@@ -84,6 +85,10 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
    better shapes (fat5 was not optimal), and 3-rep interleaved
    confirms are band-clear at both B: +6.9% (B=2) and +14.8% (B=4)
    over C — see "B>1 recommended configs" below.]**
+   **[Update 07-19b: extended to B=8 — k2x2_d5p1 +26.9% band-clear.
+   The complete amplification curve +0.6% → +6.9% → +14.8% → +26.9%
+   (B = 1,2,4,8) and the shape law K1 9 → 6 → 3 → 2:
+   `b_gt1/bscale/REPORT.md` + figures.]**
 
 ## B>1 (2026-07-18)
 
@@ -161,32 +166,44 @@ fat5 uses --f 4 (wider miss JIT); unrelated vLLM idle on GPUs 6-7,
 unchanged across all cells; C cells were not re-run (no DUET code in
 them).
 
-### B>1 recommended configs — per-B shape sweep, confirmed (2026-07-19)
+### B>1 recommended configs — per-B shape sweep + B-scaling, confirmed (2026-07-19)
 
-Full sweep: `experiments/proxy_async_overlap/b_gt1/pb_sweep/RESULTS.md`
-(14-cell K1/K2/dfo/pfo grid per B at ns=12, then 3-rep interleaved
-confirm of each winner vs C at ns=20 out=256). **Recommended configs:**
+Full sweeps: `experiments/proxy_async_overlap/b_gt1/pb_sweep/RESULTS.md`
+(14-cell K1/K2/dfo/pfo grid, B∈{2,4}, + 3-rep confirms) and
+`.../b_gt1/bscale/REPORT.md` (B=8 grid + B=4 edge cells + B=1
+same-regime anchors + B=8 confirm; the five campaign figures live in
+`bscale/figs/` — fig1 TPS-vs-B, fig2 amplification curve, fig3 shape
+law, fig4 B=4 response surface, fig5 per-seq latency).
+**Recommended configs:**
 
 | B | config | CLI shape | vs C (k7 f6) | confidence |
 |---|---|---|---|---|
-| 1 | E9K24_jit (champion, unchanged) | `--k 13 --f 3 --duet_phase1_k 9 --duet_phase2_k 4 --duet_draft_fan_out 2` + list `2,2,2,2,2,2,1,1,1,1` | +0.5% | 5-rep, 4/5 cycles, not band-clear (out=512 ns=50; −4.1% in the out=256 regime) |
+| 1 | E9K24_jit (champion, unchanged) | `--k 13 --f 3 --duet_phase1_k 9 --duet_phase2_k 4 --duet_draft_fan_out 2` + list `2,2,2,2,2,2,1,1,1,1` | +0.5% | 5-rep, 4/5 cycles, not band-clear (out=512 ns=50; +0.6% single-run bscale anchor, −4.1% m6_fix, in the out=256 regime) |
 | 2 | k6x5_d3p1 | `--k 11 --f 4 --duet_phase1_k 6 --duet_phase2_k 5 --duet_draft_fan_out 3` | **+6.9%** (114.09 vs 106.73) | **band-clear**, 3-rep interleaved: worst DUET 112.82 > best C 108.36 |
 | 4 | k3x3_d4p1 | `--k 6 --f 5 --duet_phase1_k 3 --duet_phase2_k 3 --duet_draft_fan_out 4` | **+14.8%** (169.42 vs 147.53) | **band-clear**, 3-rep interleaved: worst DUET 167.24 > best C 151.28 |
+| 8 | k2x2_d5p1 | `--k 4 --f 6 --duet_phase1_k 2 --duet_phase2_k 2 --duet_draft_fan_out 5` | **+26.9%** (210.39 vs 165.85) | **band-clear**, 3-rep interleaved: worst DUET 209.74 > best C 169.61 |
 
 (All with exit=56, policy b, jit-short, uniform phase-1 fan-out.)
-The optimum gets shallower/fatter with B (K1 9 → 6 → 3, f 3 → 4 → 5):
-verify-width cost scales with B (measured B×2.25 ms per K1 step) while
-draft forwards stay latency-bound. Surface: K1 is the dominant knob at
-B=4 (pure time effect; T_verify 60 → 87 ms for K1 3 → 6); K2=K1 adds
-phase-2 tokens at zero verify cost (zero vk_max gap); pfo=2 is +2.7%
-mid-grid and neutral at the winner; dfo is flat at B=4 but the main
-B=2 knob (+3.6%). B=2 alternative k5x4_d3p1 (114.22 at scan) is
-statistically indistinguishable from the confirmed winner.
+The optimum gets shallower/fatter with B — **K1 9 → 6 → 3 → 2,
+f 3 → 4 → 5 → 6, verify rows/seq 10 → 7 → 4 → 3** — one K1 grid step
+per doubling of B: verify-width cost scales with B (measured
+B×2.25 ms per K1 step) while draft forwards stay latency-bound.
+Surface: K1 is the dominant knob at B≥4 (pure time effect; T_verify
+60 → 87 ms for K1 3 → 6 at B=4, 79.5 → 111.7 ms for K1 2 → 4 at B=8);
+K2=K1 adds phase-2 tokens at zero verify cost (zero vk_max gap — every
+winning B≥2 shape is uniform-width); pfo/dfo are ≤~1-3% trim near each
+optimum. The bscale edge cells prove the law is not monotone: K1=2
+LOSES at B=4 (157.3 vs 165.5), so K1=3 is a real interior optimum
+there. B=2 alternative k5x4_d3p1 (114.22 at scan) and B=8 alternative
+k2x2_d4p1 (211.61 at scan) are statistically indistinguishable from
+the confirmed winners.
 **Finding 5b confidence statement**: the DUET-over-C win amplifies
-with B (+0.5% → +6.9% → +14.8%), band-clear at B ∈ {2,4} — confirmed,
-conditional on per-B shape retuning and the out=256/ns=20 regime;
-K1=3 sits on the grid edge (K1=2 and B=8 unmeasured) and the B=4 win
-is 100% step-time (tok/step 2.85 vs C 3.94).
+with B (+0.5% → +6.9% → +14.8% → +26.9%), band-clear at B ∈ {2,4,8} —
+confirmed through the v1 batch cap (max_num_seqs ≤ 8), conditional on
+per-B shape retuning and the out=256 regime. The B≥4 wins are 100%
+step-time (B=8: tok/step 2.38 vs C 3.83, t_step 90 vs 185 ms; C's
+any-miss burden 0.92 vs DUET 0.62); K1=1 and B>8 remain unmeasured
+(the new grid edges).
 
 ## Removed implementations (git history registry)
 

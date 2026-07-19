@@ -541,4 +541,51 @@ confirm is internally interleaved, so the verdicts are drift-safe);
 K1=3 is the grid edge (K1=2, K2>K1, B=8 unmeasured); the B=4 win is
 100% step-time — regimes with costlier tokens shift the optimum back
 toward depth. Recommended per-B configs: docs/duet/12 "B>1
-recommended configs".
+recommended configs". **[07-19: the grid-edge caveat was closed by the
+bscale campaign — next section.]**
+
+## B-scaling campaign complete: B=8 + edges + figures (bscale, 2026-07-19)
+
+The final gap-fill (`experiments/proxy_async_overlap/b_gt1/bscale/REPORT.md`):
+a B=8 grid around the extrapolated optimum (K1 ∈ {2,3,4}, K1=K2), the
+B=4 K1=2 edge cells the pb_sweep grid was missing, B=1 same-regime
+anchors, and a 3-rep interleaved B=8 confirm. 11 scan cells + 6
+confirm cells, all rc=0, zero Tracebacks — B=8 (the M4 gate cap) runs
+the full DUET pipeline cleanly, CG bucket axis {1,2,4,8}.
+
+**B=8 verdict: k2x2_d5p1 (K1=K2=2, dfo=5 pfo=1, k=4 f=6) beats C
+band-clear — 210.39 vs 165.85 (+26.9%)**, spreads 209.74-211.11 vs
+162.64-169.61 (worst DUET rep > best C rep by +23.7%). Mechanism:
+tok/step 2.38 vs 3.83 (0.621) × t_step 90.4 vs 184.7 ms (2.044) →
+R = 1.269. DUET verifies B×(K1+1) = 24 rows vs C's 64 (T_verify 80.7
+vs 160.1 ms); hit 0.89 vs 0.73 → any-miss burden 0.62 vs 0.92 — at
+B=8, C runs a JIT-degraded step 92% of the time (the M2 mixed
+hit/miss fix is what lets DUET escape this). C saturates on the width
+axis (B=4→8 only +12.4%, step time 107 → 185 ms) while DUET keeps
+scaling (+24.2%).
+
+**The complete amplification curve (finding 5b, final):**
+
+| B | winner shape | vs C | status |
+|---|---|---|---|
+| 1 | E9K24_jit (K1=9 K2=4) | +0.5% (headline) / +0.6% (same-regime anchor) | parity |
+| 2 | k6x5_d3p1 | +6.9% | band-clear |
+| 4 | k3x3_d4p1 | +14.8% | band-clear |
+| 8 | k2x2_d5p1 | +26.9% | band-clear |
+
+**The shape law**: K1 9 → 6 → 3 → 2 (one grid step per B doubling),
+K2 → K1 (uniform width, zero vk_max padding), f 3 → 4 → 5 → 6,
+verify rows/seq 10 → 7 → 4 → 3. The bscale B=4 edge cells prove it is
+a moving INTERIOR optimum, not "smaller is always better": K1=2 loses
+at B=4 (157.3 vs 165.5 — the 7 ms step-time saving does not cover the
+0.41 tok/step loss) and wins at B=8 (where the same step saves 19 ms).
+Depth's token value is B-invariant; width's time cost is linear in B.
+
+Deliverables: `bscale/REPORT.md` (full tables, mechanism, caveats) and
+five figures (`bscale/figs/fig1..5`): TPS-vs-B, the amplification
+curve, the shape law, the B=4 response surface with both edges, and
+the per-seq throughput/latency tradeoff. Caveats worth remembering:
+ns not a multiple of 8 at B=8 (tail steps below full width, identical
+both sides); K1=1 and B>8 unmeasured (v1 cap); the B≥4 wins are 100%
+step-time, so costlier-token regimes shift the optimum back toward
+depth.
