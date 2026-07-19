@@ -1,6 +1,6 @@
 # 12 — DUET experiment summary (canonical index)
 
-**Last updated**: 2026-07-18 (B>1 M1-M5 added). One-page map of every experiment under
+**Last updated**: 2026-07-19 (B>1 per-B shape sweep + confirmed wins added). One-page map of every experiment under
 `ssd/experiments/proxy_async_overlap/`, the verdict each one produced,
 and where the details live. Raw profile JSONs (~3.9 GB) were pruned
 2026-07-18; every distilled result survives in the per-directory
@@ -47,6 +47,7 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
 | 16 | `kv_promo` | 07-04 | SwiftSpec-style glue removal (KV promotion) | **correct but a WASH** (glue span 5.44 = gather+tip 5.41 — batch-free forward); code REMOVED |
 | 17 | `b_gt1` | 07-18 | B>1 support (M1-M4) + B ∈ {1,2,4} sweep vs C (M5) + verify-window bugfix (M6) | first M5 was bugged (short-row verify window); corrected: **B=2 near-parity (−4.8%)**, B=4 −21.5% and TIME-side only — finding 5b still unconfirmed but no longer token-broken |
 | 18 | `b_gt1/verdict` | 07-18 | B=4 PROFILE forensics (bug or physics?) + fat-shape retune probes | **no remaining B>1 bug** (all labels match B×rows models); gap = vk_max padding 17-21 ms/step; **fat5 (K1=5 dfo=3) BEATS C at B=4: 155.12 vs 150.31 (+3.2%)** — first B>1 win, via shape retune |
+| 19 | `b_gt1/pb_sweep` | 07-18/19 | per-B K1/K2/dfo/pfo grid (B∈{2,4}, 14 cells) + 3-rep confirm of each winner vs C | fat5 was NOT optimal; K1 (verify width) is the dominant knob; **B=4 k3x3_d4p1 +14.8% and B=2 k6x5_d3p1 +6.9% vs C, both BAND-CLEAR (3-rep interleaved)** — finding 5b CONFIRMED, win amplifies with B |
 
 ## The five load-bearing findings
 
@@ -79,6 +80,10 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
    whole story: with a B=4-appropriate fat shape (fat5: K1=5 dfo=3)
    DUET BEATS C 155.12 vs 150.31 (+3.2%, single run) — see the "B>1
    (2026-07-18)" section below.]**
+   **[Update 07-19: CONFIRMED. The pb_sweep per-B grid found even
+   better shapes (fat5 was not optimal), and 3-rep interleaved
+   confirms are band-clear at both B: +6.9% (B=2) and +14.8% (B=4)
+   over C — see "B>1 recommended configs" below.]**
 
 ## B>1 (2026-07-18)
 
@@ -146,7 +151,8 @@ B-invariant — the L_p2 ≈ 1.7 off-policy continuation quality,
 finding 5a); per-seq verify dispatch to reclaim residual padding in
 mixed batches; a real per-B shape sweep (fat5 was the first guess;
 fat5 at B ∈ {1,2} and K1 ∈ {4,5,6} × dfo grids are unmeasured — the
-B=1 champion stays E9K24_jit). Caveats: single run per cell (champion
+B=1 champion stays E9K24_jit). **[07-19: the per-B sweep was run —
+next subsection. fat5 was indeed not optimal.]** Caveats: single run per cell (champion
 B=4 tok/step spans 3.63-3.91 across identical-args runs, ±4% token
 noise; +3.2% is not band-clear on its own — the robust result is
 fat-beats-deep by +10..+31%); out=256/ns=20 shifts the B=1 baseline
@@ -154,6 +160,33 @@ in C's favor vs the out=512/ns=50 headline (+0.5% there, −4.1% here);
 fat5 uses --f 4 (wider miss JIT); unrelated vLLM idle on GPUs 6-7,
 unchanged across all cells; C cells were not re-run (no DUET code in
 them).
+
+### B>1 recommended configs — per-B shape sweep, confirmed (2026-07-19)
+
+Full sweep: `experiments/proxy_async_overlap/b_gt1/pb_sweep/RESULTS.md`
+(14-cell K1/K2/dfo/pfo grid per B at ns=12, then 3-rep interleaved
+confirm of each winner vs C at ns=20 out=256). **Recommended configs:**
+
+| B | config | CLI shape | vs C (k7 f6) | confidence |
+|---|---|---|---|---|
+| 1 | E9K24_jit (champion, unchanged) | `--k 13 --f 3 --duet_phase1_k 9 --duet_phase2_k 4 --duet_draft_fan_out 2` + list `2,2,2,2,2,2,1,1,1,1` | +0.5% | 5-rep, 4/5 cycles, not band-clear (out=512 ns=50; −4.1% in the out=256 regime) |
+| 2 | k6x5_d3p1 | `--k 11 --f 4 --duet_phase1_k 6 --duet_phase2_k 5 --duet_draft_fan_out 3` | **+6.9%** (114.09 vs 106.73) | **band-clear**, 3-rep interleaved: worst DUET 112.82 > best C 108.36 |
+| 4 | k3x3_d4p1 | `--k 6 --f 5 --duet_phase1_k 3 --duet_phase2_k 3 --duet_draft_fan_out 4` | **+14.8%** (169.42 vs 147.53) | **band-clear**, 3-rep interleaved: worst DUET 167.24 > best C 151.28 |
+
+(All with exit=56, policy b, jit-short, uniform phase-1 fan-out.)
+The optimum gets shallower/fatter with B (K1 9 → 6 → 3, f 3 → 4 → 5):
+verify-width cost scales with B (measured B×2.25 ms per K1 step) while
+draft forwards stay latency-bound. Surface: K1 is the dominant knob at
+B=4 (pure time effect; T_verify 60 → 87 ms for K1 3 → 6); K2=K1 adds
+phase-2 tokens at zero verify cost (zero vk_max gap); pfo=2 is +2.7%
+mid-grid and neutral at the winner; dfo is flat at B=4 but the main
+B=2 knob (+3.6%). B=2 alternative k5x4_d3p1 (114.22 at scan) is
+statistically indistinguishable from the confirmed winner.
+**Finding 5b confidence statement**: the DUET-over-C win amplifies
+with B (+0.5% → +6.9% → +14.8%), band-clear at B ∈ {2,4} — confirmed,
+conditional on per-B shape retuning and the out=256/ns=20 regime;
+K1=3 sits on the grid edge (K1=2 and B=8 unmeasured) and the B=4 win
+is 100% step-time (tok/step 2.85 vs C 3.94).
 
 ## Removed implementations (git history registry)
 

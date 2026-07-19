@@ -494,3 +494,51 @@ single run/cell (±4% token noise; +3.2% not band-clear alone — the
 robust result is fat-beats-deep by +10..+31%), fat5 needs --f 4
 (wider miss JIT), fat5 unmeasured at B ∈ {1,2}; B=1 champion remains
 E9K24_jit.
+
+## Per-B shape sweep + confirmed wins (pb_sweep, 2026-07-18/19)
+
+Question: were fat5/fat7 (first guesses) actually optimal per B?
+Full writeup: `experiments/proxy_async_overlap/b_gt1/pb_sweep/RESULTS.md`.
+Grid per B (constraint K2≤K1, uniform dfo, f=dfo+pfo, ns=12 one
+run/cell, C anchors rerun): B=4 9 shapes, B=2 5 shapes. All cells
+rc=0 — the whole grid is inside the v1 constraint set.
+
+**Answer: no.** At B=4 the surface keeps rising as K1 drops to the
+grid edge: k3x3_d4p1 (K1=K2=3, dfo=4, k=6 f=5) 165.50 vs fat5's
+149.72 (+10.6%). The response surface (scan):
+
+- **K1 = verify width is the dominant knob, a pure time effect** —
+  T_verify is a near-pure function of K1 (60.1/71.5/79/87 ms for
+  K1=3/4/5/6 = B×2.25 ms/row, the verdict's marginal-row physics),
+  while each K1 step buys only ~0.3 tok/step.
+- **K2=K1 is free tokens** (zero vk_max gap → zero padding): k4x4 >
+  k4x3, k7x6 > k7x4 at fixed K1, T_verify unchanged.
+- **pfo=2** +2.7% mid-grid (draft idle funds it), neutral at the
+  winner (k3x3_d4p2 166.27 ≈ 165.50).
+- **dfo** flat at B=4; the main B=2 knob (dfo 2→3: +3.6%, hit
+  0.81→0.84). B=2's surface is a flat ridge (±1.8%, every DUET cell
+  beats C_b2): winner k6x5_d3p1 114.35 over k5x4_d3p1 114.22 is a
+  coin-flip; k6x5_d3p1 is the one that got confirmed.
+
+**Confirm phase (ns=20 out=256, 3-rep interleaved DUET/C per B) —
+both winners band-clear:**
+
+| B | shape | DUET mean (spread) | C mean (spread) | verdict |
+|---|---|---|---|---|
+| 4 | k3x3_d4p1 (k=6 f=5) | **169.42** (167.24-171.89) | 147.53 (142.48-151.28) | **+14.8%, band-clear** |
+| 2 | k6x5_d3p1 (k=11 f=4) | **114.09** (112.82-115.77) | 106.73 (105.45-108.36) | **+6.9%, band-clear** |
+
+B=4 mechanism: tok/step 2.85 vs 3.94 (0.723) × step time 67.4 vs
+106.9 ms (1.586) — verify 16 rows vs C's 32, hit 0.87 vs 0.73. The
+per-B optimum trend across the campaign: K1 9 → 6 → 3 and f 3 → 4 → 5
+as B goes 1 → 2 → 4. **Finding 5b: CONFIRMED — the DUET win amplifies
+with B (+0.5% → +6.9% → +14.8%) once the shape is retuned per B.**
+
+Caveats: scan is single-run ns=12 (mid-grid orderings unresolved);
+the C anchors + confirm ran a day after the DUET scan cells (a
+run-script argparse bug crashed the original C cells pre-model-load;
+confirm is internally interleaved, so the verdicts are drift-safe);
+K1=3 is the grid edge (K1=2, K2>K1, B=8 unmeasured); the B=4 win is
+100% step-time — regimes with costlier tokens shift the optimum back
+toward depth. Recommended per-B configs: docs/duet/12 "B>1
+recommended configs".
