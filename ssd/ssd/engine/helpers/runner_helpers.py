@@ -85,7 +85,17 @@ def prepare_decode_tensors_from_seqs(
             pos0 = seq.num_tokens - (k+1)
             input_ids.extend(seq[pos0:])
             positions.extend(list(range(pos0, pos0 + k + 1)))
-            assert seq.num_cached_tokens == pos0, f"num_cached_tokens={seq.num_cached_tokens} != pos0={pos0} (num_tokens={seq.num_tokens}, k={k})"
+            # HARD check, survives `python -O` (docs/duet/14 R1). A misaligned
+            # window is SILENT output corruption: every logits_p row of the seq
+            # shifts and recovery samples from a stale position. Exactly this
+            # fired as a stripped assert during the B>1 M6 bug (short rows in
+            # mixed batches, docs/duet/13 M6) and hid it for a full sweep.
+            # Cost: one Python int compare per seq per verify step.
+            if seq.num_cached_tokens != pos0:
+                raise AssertionError(
+                    f"verify window misaligned: num_cached_tokens="
+                    f"{seq.num_cached_tokens} != pos0={pos0} "
+                    f"(num_tokens={seq.num_tokens}, k={k}, seq_id={seq.seq_id})")
             context_lens.append(len(seq))  
 
             for j in range(k + 1):
