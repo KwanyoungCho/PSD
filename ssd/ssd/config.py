@@ -307,10 +307,11 @@ class Config:
             # B>1 (docs/duet/13): the historical B=1 constraint was the
             # single-seq Policy B pipeline (proxy wire / selector / phase-2
             # layout), batched in stages M1-M3 — not the long-removed
-            # Policy A this comment used to blame. v1 design cap is <=8
-            # (existing bs-bucket axis only, no new CG families).
-            assert self.max_num_seqs <= 8, \
-                "DUET-SSD supports max_num_seqs <= 8 (docs/duet/13 B>1 v1 cap); " \
+            # Policy A this comment used to blame. Cap raised 8 -> 32 for
+            # the bscale32 campaign (CG bucket axis already derives
+            # {1,2,4,8,16,32} from max_bs; no new CG families).
+            assert self.max_num_seqs <= 32, \
+                "DUET-SSD supports max_num_seqs <= 32 (docs/duet/13 B>1); " \
                 f"got {self.max_num_seqs}"
             # B==1-only gates (docs/duet/13 §6, out of scope v1): fail fast
             # at config time instead of hitting the runtime B==1 asserts

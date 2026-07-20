@@ -3,7 +3,7 @@
 Tests the REAL Config.__post_init__ (CPU-only: AutoConfig reads local
 config.json, no weights) with the champion DUET args:
 
-(a) Gate lift (design §7): max_num_seqs ∈ {1, 2, 8} construct fine;
+(a) Gate lift (design §7, cap 32 since bscale32): max_num_seqs ∈ {1, 2, 8, 32} construct fine;
     9 fails the new <=8 assert.
 (b) B==1-only gate guard (design §6): each of SSD_DUET_EXIT_TOPM_GATHER /
     SSD_DUET_EXIT_REPLICA / SSD_DUET_PROXY_ON_DRAFT raises ValueError at
@@ -81,9 +81,13 @@ class TestM4GateLift(GateEnvMixin, unittest.TestCase):
         cfg = _champion_config(8)
         self.assertEqual(cfg.max_num_seqs, 8)
 
-    def test_b9_rejected(self):
+    def test_b32_boundary_constructs(self):
+        cfg = _champion_config(32)
+        self.assertEqual(cfg.max_num_seqs, 32)
+
+    def test_b33_rejected(self):
         with self.assertRaises(AssertionError):
-            _champion_config(9)
+            _champion_config(33)
 
 
 class TestM4B1OnlyGateGuard(GateEnvMixin, unittest.TestCase):
