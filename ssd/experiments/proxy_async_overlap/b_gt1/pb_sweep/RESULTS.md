@@ -5,7 +5,7 @@ the FIRST fat-shape guesses. Are K1/K2/dfo/pfo actually optimal per B?
 Run a real grid per B ∈ {2,4}, then multi-rep-confirm the winner vs
 SD-best C (k=7 f=6).
 
-**Setup**: HEAD c17b200, GPUs 0-4 (target TP4 on 0-3, draft on 4),
+**Setup**: HEAD f543c24, GPUs 0-4 (target TP4 on 0-3, draft on 4),
 in=512 out=256 temp 0.7 seed 42 `--all`, jit-short on, exit=56,
 `SSD_FORCE_SPLIT_K1K2=1`, PROFILE=0. Scan: ns=12, one run/cell, ports
 12930-12948 (`run_scan.sh` + `run_fixup.sh`). Confirm: ns=20, 3-rep

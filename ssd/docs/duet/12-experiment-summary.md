@@ -210,7 +210,7 @@ any-miss burden 0.92 vs DUET 0.62); K1=1 and B>8 remain unmeasured
 | feature | gate | commits | why removed |
 |---|---|---|---|
 | Phase-2 hybrid / legacy two-pass | — | ≤ 19c8f73 | replaced by split-K1/K2 (2026-07) |
-| KV promotion (glue removal) | `SSD_DUET_KV_PROMO` | 43d5b51..ad0b0ad, removed 10952bf | verified correct, but a wash at B=1 (docs/duet/11, kv_promo/RESULTS.md) |
+| KV promotion (glue removal) | `SSD_DUET_KV_PROMO` | 80eb896..41bee95, removed c427a72 | verified correct, but a wash at B=1 (docs/duet/11, kv_promo/RESULTS.md) |
 
 Live optional gates (default OFF, kept): `SSD_DUET_JIT_SHORT`
 (**champion uses it**), `SSD_DUET_PROXY_ON_DRAFT` (+`SSD_DUET_PROXY_TOPM`),

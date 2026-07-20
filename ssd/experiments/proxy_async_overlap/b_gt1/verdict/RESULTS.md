@@ -6,7 +6,7 @@ loses −21.5% to SD-best C (118.00 vs 150.31). Prove or refute: "there is
 no remaining B>1 bug — the gap is draft-shape + vk_max-padding time
 costs", and produce a causal decomposition.
 
-**Setup**: HEAD e5b586a, GPUs 0-4 (target TP4 on 0-3, draft on 4),
+**Setup**: HEAD 9528366, GPUs 0-4 (target TP4 on 0-3, draft on 4),
 ns=20 out=256 in=512 temp 0.7 seed 42, `--all`, B=4. Unrelated vLLM
 idle on GPUs 6-7 throughout (same regime as m5/m6).
 

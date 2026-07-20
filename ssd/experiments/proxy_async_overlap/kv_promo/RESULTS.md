@@ -17,7 +17,7 @@ are re-mapped to fresh physical blocks each step, so old scratch
 positions resolve to the WRONG physical block under the promo step's
 dbt. Fix: address the gather source through the BUILD-time dbt (stashed
 in `_promo_meta`); the old physical blocks still hold the build KV (B=1,
-no draft write between build and promo). Commit 16d26da.
+no draft write between build and promo). Commit 4ea74e8.
 
 ## A/B (ns=20, out=256, same seed, champion E9K24_jit)
 

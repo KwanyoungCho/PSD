@@ -1,12 +1,12 @@
 # 14 — B>1 implementation code review (M1-M6)
 
 **Date**: 2026-07-19. Scope: the engine changes of commits baa011c (M1),
-af93cde (M2), 73fe75a (M3), 2cd2176 (M4), e5b586a (M6) reviewed against
+af93cde (M2), 73fe75a (M3), 2cd2176 (M4), 9528366 (M6) reviewed against
 docs/duet/13 (design + staged plan + verdict). Files:
 `ssd/engine/{verifier,draft_runner,speculator_async,scheduler}.py`,
 `ssd/engine/helpers/{cudagraph_helpers,tree_layout,runner_helpers}.py`,
 `utils/verify.py`, `config.py`. Line numbers are HEAD@review-time
-(b389476 parent c17b200).
+(cd460d9 parent f543c24).
 
 **Headline**: no new high-severity correctness bug found. One
 robustness fix applied (R1 — the exact `-O`-stripped assert class that
@@ -21,7 +21,7 @@ after the applied fix; the hardened guard additionally verified under
 
 | # | Axis | Sev | Location | Finding | Action |
 |---|---|---|---|---|---|
-| R1 | robust | **MED** | runner_helpers.py:88 | `num_cached_tokens == pos0` assert stripped under `python -O` — guards silent output corruption (the M6 bug hid exactly here) | **APPLIED** (b389476): explicit `raise AssertionError`, ~B int compares/step |
+| R1 | robust | **MED** | runner_helpers.py:88 | `num_cached_tokens == pos0` assert stripped under `python -O` — guards silent output corruption (the M6 bug hid exactly here) | **APPLIED** (cd460d9): explicit `raise AssertionError`, ~B int compares/step |
 | C1 | correct | OK | all reviewed files | No remaining B=1 / seq-0 indexing reachable at B>1 (full sweep below) | none |
 | C2 | correct | LOW | verifier.py:454-456 + draft_runner.py:1564-1610 | Zero-score topk tie-break can put `chosen_pos > vk_i` entries on a short seq's wire; if that seq also has < total_budget positive-score entries, the selector takes them → phase-2 budget leaks to unreachable positions. Perf-only (keys `k_idx > vk_i` are never requested), B>1-mixed only | document; revisit only if L_p2 regresses at B>1 |
 | C3 | correct | INFO | verifier.py:388-392, 444-447 | Short seq's all-real-accept event (h mass at col `vk_i < K`) draws candidates from the residual at the PADDED col `vk_i` (p_D = uniform from zero logits; token id 0 excluded) instead of the `pE_K`-style full-distribution treatment position K gets. Numerically ≈ top-k of p_E (uniform ≈ 1/V); v1-acceptable | document; v2 could gather pE at per-seq vk_i |
@@ -47,7 +47,7 @@ after the applied fix; the hardened guard additionally verified under
 
 ## Applied fix
 
-**R1 — commit b389476** `fix(duet): harden verify-window pos0 guard`.
+**R1 — commit cd460d9** `fix(duet): harden verify-window pos0 guard`.
 `prepare_decode_tensors_from_seqs` (verify path) now raises
 `AssertionError` explicitly when `seq.num_cached_tokens != pos0`, so the
 guard survives `python -O` (every bench run). This is the precise class

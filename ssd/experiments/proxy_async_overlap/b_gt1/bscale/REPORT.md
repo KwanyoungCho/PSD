@@ -6,7 +6,7 @@ K1 9 → 6 → 3 extrapolating to K1 ≈ 2-3 at B=8. Does the DUET-over-C
 amplification continue at B=8, is K1=3 a real interior optimum at B=4,
 and what is the complete per-B shape law?
 
-**Setup**: HEAD d0be348, GPUs 0-4 (target TP4 on 0-3, draft on 4),
+**Setup**: HEAD 4044090, GPUs 0-4 (target TP4 on 0-3, draft on 4),
 in=512 out=256 temp 0.7 seed 42 `--all`, jit-short on, exit=56,
 `SSD_FORCE_SPLIT_K1K2=1`, PROFILE=0, uniform phase-1 fan-out
 (`[dfo]×(K1+1)`), C = async-SD best (k=7 f=6). Scan: ns=12, one
