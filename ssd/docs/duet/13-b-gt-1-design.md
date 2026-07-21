@@ -662,11 +662,24 @@ band-clear 승리 +6.9/+14.8/+26.9% — 은 살아남지 못했다.** 그 수치
    체인 위치 가치). hit 우위(0.90 vs 0.71)는 any-miss 부담
    1-hit^B가 양쪽 모두 포화하는 B≥16에서 화폐 가치를 잃는다
    (finding 1의 wrong-currency 그대로).
+   **⚠ [정정 2026-07-21]** 위 "토큰에서 진다"는 서로 다른 형상의
+   confirm을 비교한 서술이다. 같은 깊이끼리(matched shape: db32_
+   k2x2_d4p1 vs cb32_k2f2, 둘 다 체인 깊이 2·verify 96행) 검증하면
+   **accepted length 불변량이 성립한다**: tok/step 2.38 vs 2.40
+   (B=16 짝도 2.36 vs 2.39). 같은 형상의 진짜 격차는 전부 verify
+   내부 시간 — 같은 96행에서 T_verify 248.6 vs 221.1 ms (+12.4%),
+   t_step 격차와 정확히 일치. 즉 **mid-verify DUET 블록(exit 수집
+   + proxy 계산 + 송신)이 B×rows에 비례해 커진 시간 비용**이
+   원인이고 (B=1의 "rendezvous mirage" 판정이 큰 B에서 뒤집힘),
+   k1x1 슬라이드는 그 비용을 토큰으로 갚는 내부 최적화였다.
+   상세: REPORT.md §5.2 정정 블록.
 5. **살아남는 것**: B=1 champion 동률(+0.5%), B=2 미세 우위(+1.3%,
    겹침), 형상 법칙의 일반화, DUET 수치의 캠페인 간 재현성 (B=8
    210.21 vs bscale 210.39). **B>1 처리량 축은 이제 DUET의 승리
-   레짐 목록에서 제외된다** — 남은 문은 draft-compute-bound 설정,
-   토큰이 더 비싼 레짐, off-policy 연속 품질(L_p2) 개선이다.
+   레짐 목록에서 제외된다** — 남은 문은 (정정 반영 우선순위로)
+   mid-verify proxy 블록의 시간 제거(B>1 배치화된 exit_topm_gather
+   / proxy_on_draft — 정확히 위 +27 ms를 겨냥), 토큰이 더 비싼
+   레짐, draft-compute-bound 설정, off-policy 연속 품질(L_p2)이다.
 
 운영 기록: Phase A 러너 1회 사망(cb16_k3f3 일시 크래시, 재시도
 성공) 후 재개 완주; K1=1 포함 전 셀 rc=0, Traceback 0건. confirm은

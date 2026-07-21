@@ -140,6 +140,32 @@ confirm run.log 3-rep 평균 (DUET / C-opt):
    가치가 낮고, phase-1은 K1=1로 잘려 L_p1 0.81이 상한이다. 이
    토큰-품질 격차 (finding 5a의 off-policy 연속 품질 문제)가 시간
    이득 1.28배를 0.96으로 끌어내린다.
+
+   **⚠ [정정 2026-07-21 — matched-shape 검증]** 위 서술은 서로 다른
+   형상(k1x1 vs k2)의 confirm을 비교한 것이라 "토큰 열위"를 격차의
+   원인처럼 읽히게 하지만, 사용자의 불변량 논증("같은 draft가 토큰을
+   만드니 같은 깊이면 accepted length는 같아야 한다")을 같은 깊이
+   스캔 셀로 검증한 결과 **불변량이 성립한다**:
+   db32_k2x2_d4p1 vs cb32_k2f2 (둘 다 체인 깊이 2, verify 3행/seq =
+   96행) — tok/step **2.38 vs 2.40** (동일), hit-시 2.41 vs 2.52 ×
+   hit율 0.88 vs 0.70 (조성만 다르고 합계 동일); B=16 짝
+   (db16_k2x2_d4p1 vs cb16_k2f3)도 **2.36 vs 2.39** (동일). 즉 구현
+   결함도, 총량 수준의 토큰-품질 격차도 없다. 같은 형상에서의 진짜
+   격차는 전부 **verify 내부 시간**이다: 같은 96행에서 T_verify
+   248.6 vs 221.1 ms (+27.5 ms, +12.4%), t_step 격차 +27.0 ms와
+   정확히 일치 (B=16: T_verify +10.4 ms ≈ t_step 격차 +10.9 ms).
+   이 +12%는 mid-verify DUET 블록(early-exit hidden 수집 + proxy
+   α̂/ĥ/P_iv 계산 + wire 송신)이 B×rows에 비례해 커진 비용으로, B=1
+   에서 "rendezvous mirage"(비병목)로 판정됐던 그 블록이 큰 B에서
+   임계 경로가 된 것이다. DUET이 k1x1로 미끄러진 것은 이 오버헤드를
+   토큰을 팔아 시간으로 상쇄하려는 합리적 내부 최적화다(t_step
+   305.8→220.3 ms). 따라서 처방의 1순위는 L_p2(토큰 축)가 아니라
+   **mid-verify proxy 블록의 시간 제거**다 — B==1 전용으로 게이트된
+   exit_topm_gather(수집량 축소)/proxy_on_draft(임계 경로 이탈)를
+   B>1로 배치화하는 것이 정확히 이 27 ms를 겨냥한다. 단, 오버헤드를
+   전부 회수해도 matched-shape은 동률(≈304)이지 역전이 아니다 —
+   역전하려면 회수 후 hit 우위(0.88 vs 0.70)가 화폐가 되는 더 깊은
+   형상/비싼-miss 레짐으로 이동해야 한다.
 3. **hit 우위는 큰 B에서 화폐 가치를 잃는다.** DUET hit 0.90 vs C
    0.71-0.78은 여전하지만, any-miss 부담 1-hit^B는 B=16에서 0.82 vs
    0.99, B=32에서 0.97 vs ~1.00 — **양쪽 모두 사실상 매 step 어딘가는
@@ -179,7 +205,10 @@ confirm run.log 3-rep 평균 (DUET / C-opt):
    분할이 유리해지는 지점), 그리고 off-policy 연속 품질 (L_p2 0.62 —
    draft adaptation으로 올릴 수 있다면 위 2번의 토큰 격차가 직접
    줄어든다). 모두 finding 5의 기존 목록과 일치하며, B>1 처리량 축은
-   이제 그 목록에서 제외된다.
+   이제 그 목록에서 제외된다. **[정정 2026-07-21: §5.2 정정 블록에
+   따라 레버 우선순위가 바뀐다 — 1순위는 mid-verify proxy 블록의
+   시간 제거(B>1 배치화된 exit_topm_gather/proxy_on_draft), L_p2는
+   그 다음이다.]**
 
 ## 7. Figures
 
