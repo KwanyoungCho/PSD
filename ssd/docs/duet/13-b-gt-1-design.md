@@ -673,6 +673,11 @@ band-clear 승리 +6.9/+14.8/+26.9% — 은 살아남지 못했다.** 그 수치
    원인이고 (B=1의 "rendezvous mirage" 판정이 큰 B에서 뒤집힘),
    k1x1 슬라이드는 그 비용을 토큰으로 갚는 내부 최적화였다.
    상세: REPORT.md §5.2 정정 블록.
+   **[재정정: B=32 PROFILE(overlap_profile/)로 세부 귀속이 다시
+   바뀜 — proxy_compute_send는 0.81 ms로 무죄, +27 ms는 exit-이전
+   CG 세그먼트(graph_pre 3.31 vs C 2.79 ms/layer)에 있다. overlap
+   자체는 타임라인으로 확인(draft 실작업의 99%가 target 아래 숨음,
+   spec_wait 양쪽 동일 ~14 ms). REPORT §5.2 재정정 블록 참조.]**
 5. **살아남는 것**: B=1 champion 동률(+0.5%), B=2 미세 우위(+1.3%,
    겹침), 형상 법칙의 일반화, DUET 수치의 캠페인 간 재현성 (B=8
    210.21 vs bscale 210.39). **B>1 처리량 축은 이제 DUET의 승리

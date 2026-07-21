@@ -166,6 +166,21 @@ confirm run.log 3-rep 평균 (DUET / C-opt):
    전부 회수해도 matched-shape은 동률(≈304)이지 역전이 아니다 —
    역전하려면 회수 후 hit 우위(0.88 vs 0.70)가 화폐가 되는 더 깊은
    형상/비싼-miss 레짐으로 이동해야 한다.
+
+   **⚠ [재정정 2026-07-21 — B=32 PROFILE 검증, overlap_profile/]**
+   위 문단의 "+27ms = proxy 블록" 귀속은 프로파일로 반증됐다:
+   `proxy_compute_send`는 **0.81 ms/step**, exit_logits 1.30 ms —
+   proxy 기계장치는 무죄다. 실제 거처는 **exit-이전 CG 세그먼트
+   (graph_pre)**: DUET 3.31 ms/layer vs C 2.79 (exit-이후는 2.63으로
+   C보다 빠름) — 같은 GEMM이 exit 앞에서만 +19% 느리고, C-속도 환산
+   초과분 +29.1 ms가 격차 전부를 설명한다 (후보: TP rank 진입 시차의
+   첫 collective 흡수, duet_verify CG capture 품질; rank1-3 프로파일
+   필요 — 미해결). 또한 타임라인 검증으로 **overlap 자체는 확인**:
+   draft 실작업(68 ms/step, bench의 204 ms는 대기 포함)의 98.8%가
+   target-busy 아래 숨고(C도 98.7%), spec_wait는 양쪽 동일 ~14
+   ms/step. 따라서 exit_topm_gather/proxy_on_draft 배치화의 기대
+   회수는 ~2 ms로 하향; 27 ms 표적은 graph_pre 자체다. 상세:
+   overlap_profile/RESULTS.md + 타임라인 그림 2종.
 3. **hit 우위는 큰 B에서 화폐 가치를 잃는다.** DUET hit 0.90 vs C
    0.71-0.78은 여전하지만, any-miss 부담 1-hit^B는 B=16에서 0.82 vs
    0.99, B=32에서 0.97 vs ~1.00 — **양쪽 모두 사실상 매 step 어딘가는
