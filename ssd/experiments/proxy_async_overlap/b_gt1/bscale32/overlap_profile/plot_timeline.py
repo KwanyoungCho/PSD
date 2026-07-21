@@ -26,7 +26,8 @@ CAT = {
     "t_layers": ("#0072B2", "target: verify layers (GEMM)"),
     "t_proxy":  ("#D55E00", "target: proxy block (exit+policy+send)"),
     "t_misc":   ("#56B4E9", "target: setup/sample/post"),
-    "d_wait":   ("#BBBBBB", "draft: wait (recv/proxy_wait)"),
+    "d_idle":   ("#DDDDDD", "draft: idle (between requests)"),
+    "d_pwait":  ("#BBBBBB", "draft: proxy_wait (BLOCKED on target exit layer)"),
     "d_glue":   ("#009E73", "draft: glue decode"),
     "d_p1":     ("#CC79A7", "draft: phase-1 fwd/build"),
     "d_p2":     ("#F0E442", "draft: phase-2 fwd/build"),
@@ -44,7 +45,7 @@ T_MAP = {
     "target_postprocess": "t_misc",
 }
 D_PREFIX = [  # (prefix, category) — first match wins
-    ("draft_recv", "d_wait"), ("proxy_wait", "d_wait"),
+    ("draft_recv", "d_idle"), ("proxy_wait", "d_pwait"),
     ("glue", "d_glue"), ("draft_glue", "d_glue"),
     ("phase1", "d_p1"), ("phase2", "d_p2"),
     ("hit_cache_respond", "d_cache"), ("merge_cache", "d_cache"),
@@ -52,7 +53,7 @@ D_PREFIX = [  # (prefix, category) — first match wins
     # non-DUET async-SD draft labels (best effort; unknown -> other)
     ("tree", "d_p1"), ("jit", "d_cache"), ("spec", "d_p1"),
 ]
-D_WAIT = {"d_wait"}
+D_WAIT = {"d_idle", "d_pwait"}
 
 
 def load(path):
@@ -125,7 +126,8 @@ def main():
         ax.broken_barh([(ms(e["wall_start_ns"]),
                          ms(e["wall_end_ns"]) - ms(e["wall_start_ns"]))],
                        (0.12, 0.76), facecolors=CAT[c][0],
-                       edgecolors="#666666", linewidth=0.3)
+                       edgecolors="#666666", linewidth=0.3,
+                       hatch="//" if c == "d_pwait" else None)
 
     # step boundaries = start of each step's first top-level target event
     for s in win_steps:

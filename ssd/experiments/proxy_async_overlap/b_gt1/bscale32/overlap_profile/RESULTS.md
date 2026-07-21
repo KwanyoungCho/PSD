@@ -57,3 +57,34 @@ DUET 전용 준비/언팩으로 인한 TP rank 진입 시차가 첫 collective�
 **레버 함의**: exit_topm_gather/proxy_on_draft의 B>1 배치화는 ~2 ms
 짜리 표적이므로 기대 회수가 작다. 27 ms를 노리려면 graph_pre 자체
 (rank 진입 동기화 / capture 방식)를 파야 한다.
+
+## 추가 (같은 날, 사용자 지적 반영) — 정식 도구 재렌더 + "여유"의 정체
+
+지적 두 가지가 모두 옳았다: (1) 타임라인 정식 도구가 이미 있었다
+(`bench/plot_duet_aligned_timeline.py` — step 단위 상세 뷰, 자식 span
++ 응답 인과 화살표 + clock-drift 보정). 본 실험의 프로파일 dump 자체는
+기존 `SSD_PROFILE_DUET` 그대로이며, 새로 만든 것은 매크로(다중 step)
+플롯 스크립트뿐이다. 정식 도구 렌더:
+`duet_k2x2_prof/timeline_step121_mixed.png` (+ hit_k1/miss 대표),
+`c_k2f2_prof/timeline_step121_mixed.png`.
+
+(2) 첫 매크로 그림의 "draft 여유"는 과장이었다 — proxy_wait를 idle과
+같은 회색으로 뭉뚱그렸기 때문. 실측 분해 (DUET k2x2 @B=32, ms/step):
+
+| draft 레인 구성 | ms/step | 성격 |
+|---|---|---|
+| 실작업 (P1 29.7 + P2 14.5 + glue 17.1 + fill/prep ~12) | ~75 | target 아래 은닉 (99%) |
+| **proxy_wait** | **136.7** | **구조적 블로킹** — P2는 target이 exit layer(56/80, graph_pre 185ms)에 도달해야 시작 가능. 자유 슬랙이 아님 |
+| 진짜 idle (요청 사이) | ~95 | 자유 슬랙 |
+
+step 상세(정식 도구, step 121 mixed): P1은 step 초반에 끝나고, draft는
+proxy_wait로 ~140ms 블로킹, proxy 도착 후 P2(~17ms)가 graph_post와
+겹쳐 돌고, 응답은 target이 다음 요청을 내기 전에 준비된다(spec_wait
+14.6ms만 노출 — mixed status의 부분-JIT respond 비용; hit_k1 step은
+3.0ms, miss는 54.4ms).
+
+**함의**: (a) phase1_replay가 forward당 ~15ms (384 rows) — "draft
+forward는 latency-bound라 공짜" 가정은 B=32에서 무효; (b) proxy_wait
+137ms는 exit를 앞당기면(56→더 얕게) 풀리는 예산이다 — 2026-07 초의
+"early-exit을 당겨 overlap을 만든다" 아이디어가 B=32에서 정량적
+표적(137ms)을 얻었다. 단 proxy 품질(α̂ 정확도) 하락과의 트레이드오프.
