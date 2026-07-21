@@ -528,6 +528,10 @@ champion은 여전히 E9K24_jit.
 
 ## B별 shape 스윕 + 확정 승리 (pb_sweep, 2026-07-18/19)
 
+**[07-21 주석: 이 절과 다음 절(bscale)의 모든 vs-C 판정은 C를 B=1
+최적 k7f6에 고정한 비교다 — bscale32 공정화 재판정(맨 아래 절)으로
+대체(supersede)되었다. M5/M6 전례처럼 기록은 남긴다.]**
+
 질문: fat5/fat7(첫 감)은 정말 B별 최적이었나?
 전체 기록: `experiments/proxy_async_overlap/b_gt1/pb_sweep/RESULTS.md`.
 B별 그리드(제약 K2≤K1, 균일 dfo, f=dfo+pfo, ns=12 셀당 1회, C 앵커
@@ -614,3 +618,57 @@ B-불변인데, 폭의 시간 비용은 B에 선형이기 때문이다.
 기억할 주의사항: B=8에서 ns가 8의 배수가 아님(꼬리 step은 전체 폭
 미만 — 양쪽 동일 조건); K1=1과 B>8 미측정(v1 상한); B≥4 승리는 100%
 step-시간이므로 토큰이 더 비싼 레짐에선 최적점이 깊이 쪽으로 회귀.
+
+## bscale32 — B=16/32 확장 + C 공정화 (2026-07-21)
+
+전체 기록: `experiments/proxy_async_overlap/b_gt1/bscale32/REPORT.md`
+(+ RESULTS_scan.md / RESULTS_confirm.md / figs 5종). 커밋 cc169e5
+(`max_num_seqs` 8→32 해제) 위에서, 두 가지를 동시에 수행했다:
+곡선을 B=16/32까지 연장하고, **공정성 갭을 제거했다 — 위 두 절의
+모든 비교에서 DUET은 B별 shape 재튜닝을 받았지만 C는 B=1 최적
+k7f6에 고정되어 있었다.** C에게도 per-B 그리드(31셀)를 돌려 주고,
+optimum-vs-optimum으로 3-rep interleaved confirm을 다시 했다.
+
+**재판정 (반전): 위 절들의 finding 5b "CONFIRMED" 결론 — B>1
+band-clear 승리 +6.9/+14.8/+26.9% — 은 살아남지 못했다.** 그 수치는
+튜닝되지 않은 베이스라인의 산물이었다:
+
+| B | DUET-opt | C-opt | DUET vs C-opt | 판정 |
+|---|---|---|---|---|
+| 2 | k6x5_d3p1 115.73 | k5f6 114.24 | +1.3% | 겹침 — 동률 |
+| 4 | k3x3_d4p1 168.09 | k3f6 169.43 | -0.8% | 겹침 — 동률 |
+| 8 | k2x2_d5p1 210.21 | k3f6 218.30 | **-3.7%** | **C band-clear** |
+| 16 | k1x1_d5p1 260.72 | k2f3 267.51 | **-2.5%** | **C band-clear** |
+| 32 | k1x1_d4p1 288.95 | k2f2 301.19 | **-4.1%** | **C band-clear** |
+
+핵심 발견:
+
+1. **C도 같은 형상 법칙을 탄다**: k* 7→5→3→3→2→2 (DUET K1*
+   9→6→3→2→1→1과 같은 모양) — verify-폭 비용(B에 선형) 대 깊이
+   토큰 가치(B-불변)의 frontier는 시스템-불변이다. per-B 최적화
+   이득은 k7f6 대비 +9.7/+13.3/+35.8/+36.0% (B=2/4/8/16).
+2. **k7f6은 B=32에서 DNF**: 비동기 C의 draft CG capture rows =
+   (k+1)×f×B = 1536이 24GB 벽을 넘는다 (1152는 fit — cb32_k5f6로
+   경계 측정). 고정-형상 SD 배포는 성능 이전에 실행 가능성부터
+   잃는다. C-opt의 f*가 B≥16에서 6→3→2로 수축하는 것도 같은 벽의
+   그림자다.
+3. **K1=1 첫 실행/첫 우승**: 구조적 문제 없이 동작 (전 셀 rc=0,
+   B=32 confirm spread ±0.02%), B=16/32 DUET 내부 우승. 전환점은
+   B=16 (B=8 프로브 209.07 < k2x2 213.51). 형상 법칙 연장: K1
+   9→6→3→2→1→1.
+4. **잔여 격차의 메커니즘**: DUET은 시간에서 이기고 (B=32 t_step
+   197 vs 253 ms, verify 64 vs 96 rows) 토큰에서 진다 (tok/step
+   1.78 vs 2.38 — phase-2 off-policy 연속 L_p2 0.62 < on-policy
+   체인 위치 가치). hit 우위(0.90 vs 0.71)는 any-miss 부담
+   1-hit^B가 양쪽 모두 포화하는 B≥16에서 화폐 가치를 잃는다
+   (finding 1의 wrong-currency 그대로).
+5. **살아남는 것**: B=1 champion 동률(+0.5%), B=2 미세 우위(+1.3%,
+   겹침), 형상 법칙의 일반화, DUET 수치의 캠페인 간 재현성 (B=8
+   210.21 vs bscale 210.39). **B>1 처리량 축은 이제 DUET의 승리
+   레짐 목록에서 제외된다** — 남은 문은 draft-compute-bound 설정,
+   토큰이 더 비싼 레짐, off-policy 연속 품질(L_p2) 개선이다.
+
+운영 기록: Phase A 러너 1회 사망(cb16_k3f3 일시 크래시, 재시도
+성공) 후 재개 완주; K1=1 포함 전 셀 rc=0, Traceback 0건. confirm은
+프로브(B=8 K1=1) 결과로 B=8 형상을 분기하는 단일 스크립트
+(`run_confirm32.sh`, ports 13500+).

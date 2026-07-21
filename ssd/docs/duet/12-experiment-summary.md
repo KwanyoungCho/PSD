@@ -1,6 +1,6 @@
 # 12 — DUET experiment summary (canonical index)
 
-**Last updated**: 2026-07-19 (B-scaling campaign completed through B=8; figures added). One-page map of every experiment under
+**Last updated**: 2026-07-21 (bscale32: B=16/32 extension + C-fairness re-verdict — the B>1 wins REVERSED against a per-B-optimized C). One-page map of every experiment under
 `ssd/experiments/proxy_async_overlap/`, the verdict each one produced,
 and where the details live. Raw profile JSONs (~3.9 GB) were pruned
 2026-07-18; every distilled result survives in the per-directory
@@ -48,7 +48,8 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
 | 17 | `b_gt1` | 07-18 | B>1 support (M1-M4) + B ∈ {1,2,4} sweep vs C (M5) + verify-window bugfix (M6) | first M5 was bugged (short-row verify window); corrected: **B=2 near-parity (−4.8%)**, B=4 −21.5% and TIME-side only — finding 5b still unconfirmed but no longer token-broken |
 | 18 | `b_gt1/verdict` | 07-18 | B=4 PROFILE forensics (bug or physics?) + fat-shape retune probes | **no remaining B>1 bug** (all labels match B×rows models); gap = vk_max padding 17-21 ms/step; **fat5 (K1=5 dfo=3) BEATS C at B=4: 155.12 vs 150.31 (+3.2%)** — first B>1 win, via shape retune |
 | 19 | `b_gt1/pb_sweep` | 07-18/19 | per-B K1/K2/dfo/pfo grid (B∈{2,4}, 14 cells) + 3-rep confirm of each winner vs C | fat5 was NOT optimal; K1 (verify width) is the dominant knob; **B=4 k3x3_d4p1 +14.8% and B=2 k6x5_d3p1 +6.9% vs C, both BAND-CLEAR (3-rep interleaved)** — finding 5b CONFIRMED, win amplifies with B |
-| 20 | `b_gt1/bscale` | 07-19 | B-scaling gap-fill: B=8 grid + B=4 K1=2 edge cells + B=1 same-regime anchors, then B=8 confirm | **B=8 k2x2_d5p1 (K1=K2=2 dfo=5) +26.9% vs C, BAND-CLEAR** (210.39 vs 165.85; worst rep beats best C by +23.7%); K1=3 is a real INTERIOR optimum at B=4 (K1=2 loses −5%); amplification curve complete +0.6/+6.9/+14.8/+26.9, shape law K1 9→6→3→2; REPORT.md + 5 figures in `bscale/figs/` |
+| 20 | `b_gt1/bscale` | 07-19 | B-scaling gap-fill: B=8 grid + B=4 K1=2 edge cells + B=1 same-regime anchors, then B=8 confirm | **B=8 k2x2_d5p1 (K1=K2=2 dfo=5) +26.9% vs C, BAND-CLEAR** (210.39 vs 165.85; worst rep beats best C by +23.7%); K1=3 is a real INTERIOR optimum at B=4 (K1=2 loses −5%); amplification curve complete +0.6/+6.9/+14.8/+26.9, shape law K1 9→6→3→2; REPORT.md + 5 figures in `bscale/figs/` **[SUPERSEDED by row 21: all vs-C numbers in this row used C fixed at k7f6]** |
+| 21 | `b_gt1/bscale32` | 07-20/21 | B=16/32 extension + **C-fairness fix**: per-B optimize C too (31-cell C scan + 10-cell DUET scan + K1=1 probe + 5×3-rep interleaved confirms) | **REVERSAL — the B>1 band-clear wins were an artifact of the untuned k7f6 baseline.** Optimum-vs-optimum: DUET TIES at B∈{2,4} (+1.3%/−0.8%, overlap) and **LOSES band-clear at B∈{8,16,32}** (−3.7%/−2.5%/−4.1%); C's own shape law k 7→5→3→3→2→2 mirrors DUET's (same verify-width physics); per-B C gains vs k7f6 +9.7/+13.3/+35.8/+36.0%, and k7f6 is **DNF at B=32** (draft CG capture OOM, wall between 1152 and 1536 rows); K1=1 runs clean and wins DUET-internal at B=16/32 (law K1 9→6→3→2→1→1, 2→1 transition at B=16); `bscale32/REPORT.md` + 5 figures |
 
 ## The five load-bearing findings
 
@@ -89,6 +90,16 @@ loses to DUET: 80.32 ± 1.67 vs 81.24 ± 0.67 (2026-07-02, 3-rep).
    The complete amplification curve +0.6% → +6.9% → +14.8% → +26.9%
    (B = 1,2,4,8) and the shape law K1 9 → 6 → 3 → 2:
    `b_gt1/bscale/REPORT.md` + figures.]**
+   **[Update 07-21 — REVERSED by the bscale32 fairness re-verdict.
+   Every vs-C number above compared a per-B-retuned DUET against C
+   FIXED at its B=1 optimum (k7f6). Giving C the same per-B shape
+   optimization (its own law: k 7→5→3→3→2→2) erases the curve:
+   DUET ties at B∈{2,4} (+1.3%/−0.8%, bands overlap) and loses
+   band-clear at B∈{8,16,32} (−3.7%/−2.5%/−4.1%). B>1 throughput is
+   therefore NOT DUET's winning regime on this hardware/regime; what
+   remains of (b) is the untested draft-compute-bound and
+   costlier-token settings, plus (a) unchanged. See
+   `b_gt1/bscale32/REPORT.md`.]**
 
 ## B>1 (2026-07-18)
 
@@ -166,7 +177,7 @@ fat5 uses --f 4 (wider miss JIT); unrelated vLLM idle on GPUs 6-7,
 unchanged across all cells; C cells were not re-run (no DUET code in
 them).
 
-### B>1 recommended configs — per-B shape sweep + B-scaling, confirmed (2026-07-19)
+### B>1 recommended configs — per-B shape sweep + B-scaling, confirmed (2026-07-19) **[SUPERSEDED 07-21 — see fairness re-verdict below]**
 
 Full sweeps: `experiments/proxy_async_overlap/b_gt1/pb_sweep/RESULTS.md`
 (14-cell K1/K2/dfo/pfo grid, B∈{2,4}, + 3-rep confirms) and
@@ -174,7 +185,8 @@ Full sweeps: `experiments/proxy_async_overlap/b_gt1/pb_sweep/RESULTS.md`
 same-regime anchors + B=8 confirm; the five campaign figures live in
 `bscale/figs/` — fig1 TPS-vs-B, fig2 amplification curve, fig3 shape
 law, fig4 B=4 response surface, fig5 per-seq latency).
-**Recommended configs:**
+**Recommended configs (historical — every vs-C column below compares
+against C FIXED at k7f6):**
 
 | B | config | CLI shape | vs C (k7 f6) | confidence |
 |---|---|---|---|---|
@@ -197,13 +209,50 @@ LOSES at B=4 (157.3 vs 165.5), so K1=3 is a real interior optimum
 there. B=2 alternative k5x4_d3p1 (114.22 at scan) and B=8 alternative
 k2x2_d4p1 (211.61 at scan) are statistically indistinguishable from
 the confirmed winners.
-**Finding 5b confidence statement**: the DUET-over-C win amplifies
-with B (+0.5% → +6.9% → +14.8% → +26.9%), band-clear at B ∈ {2,4,8} —
-confirmed through the v1 batch cap (max_num_seqs ≤ 8), conditional on
-per-B shape retuning and the out=256 regime. The B≥4 wins are 100%
+**Finding 5b confidence statement**: ~~the DUET-over-C win amplifies
+with B (+0.5% → +6.9% → +14.8% → +26.9%), band-clear at B ∈ {2,4,8}~~
+**[07-21: this statement did not survive the C-fairness re-verdict —
+kept for history, see below]**. The B≥4 wins are 100%
 step-time (B=8: tok/step 2.38 vs C 3.83, t_step 90 vs 185 ms; C's
-any-miss burden 0.92 vs DUET 0.62); K1=1 and B>8 remain unmeasured
-(the new grid edges).
+any-miss burden 0.92 vs DUET 0.62); K1=1 and B>8 were the grid edges
+closed by bscale32.
+
+### B=1..32 fairness re-verdict + recommended configs, both systems (bscale32, 2026-07-21)
+
+`experiments/proxy_async_overlap/b_gt1/bscale32/REPORT.md` (Korean;
+RESULTS_scan.md + RESULTS_confirm.md + 5 figures in `bscale32/figs/`).
+The campaign extended the curve to B=16/32 AND removed the fairness
+gap: C was per-B optimized too (31-cell scan over k ∈ {2,3,5,7} ×
+f ∈ {1,2,3,6}). **Optimum-vs-optimum, 3-rep interleaved confirms:**
+
+| B | DUET-opt (shape) | C-opt (shape) | DUET TPS | C TPS | DUET vs C-opt | verdict |
+|---|---|---|---|---|---|---|
+| 1 | E9K24_jit | k7f6 | 72.24 | 71.80 | +0.6% | tie (single-run anchors) |
+| 2 | k6x5_d3p1 | k5f6 | 115.73 | 114.24 | **+1.3%** | overlap — tie |
+| 4 | k3x3_d4p1 | k3f6 | 168.09 | 169.43 | **−0.8%** | overlap — tie |
+| 8 | k2x2_d5p1 | k3f6 | 210.21 | 218.30 | **−3.7%** | **C band-clear** |
+| 16 | k1x1_d5p1 | k2f3 | 260.72 | 267.51 | **−2.5%** | **C band-clear** |
+| 32 | k1x1_d4p1 | k2f2 | 288.95 | 301.19 | **−4.1%** | **C band-clear** |
+
+**For B>1 throughput on this hardware/regime, the SD-best system is
+per-B-optimized plain async-SD (C-opt), not DUET.** C obeys the same
+shape law DUET does (k* 7→5→3→3→2→2 vs K1* 9→6→3→2→1→1 — both ride
+the verify-width frontier; C's f* also collapses 6→3→2 at B≥16 under
+the draft-CG memory pressure). Per-B optimizing C gains +9.7/+13.3/
++35.8/+36.0% over fixed k7f6 at B=2/4/8/16, and at B=32 fixed k7f6 is
+**DNF** (draft CG capture OOM at 1536 rows; the 24 GB wall is between
+1152 and 1536 rows — `(k+1)×f×B`). What survives for DUET: B=1
+champion parity, the K1=1 discovery (first run ever; wins
+DUET-internal at B=16/32; the K1 2→1 transition is at B=16 — the B=8
+probe lost 209.07 vs 213.51), cross-campaign reproducibility (B=8
+DUET 210.21 vs 210.39), and the untested draft-compute-bound /
+costlier-token regimes. Mechanism of the residual B≥8 gap: DUET still
+wins step time (B=32 t_step 197 vs 253 ms; verify rows 64 vs 96) but
+loses tokens (tok/step 1.78 vs 2.38 — the phase-2 off-policy
+continuation L_p2 0.62 is worth less than C's on-policy chain
+position), and the hit-rate edge (0.90 vs 0.71) stops paying at large
+B because the any-miss burden saturates for both (1−hit^B ≈ 0.97 vs
+1.00 at B=32).
 
 ## Removed implementations (git history registry)
 
