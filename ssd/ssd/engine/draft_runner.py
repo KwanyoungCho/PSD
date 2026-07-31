@@ -28,6 +28,15 @@ TRACE_SPLIT_K1K2 = os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
 # instead of K_max=K1. Saves K1-K2 unbatched draft forwards on the miss
 # critical path; costs L_miss truncation beyond depth K2.
 DUET_JIT_SHORT = os.environ.get("SSD_DUET_JIT_SHORT", "0") == "1"
+# Subset-JIT A/B gate: on a MIXED batch, run the JIT only over the miss
+# rows (gather -> compact JIT -> scatter) instead of all B rows. The
+# response CONTENT is identical either way (hit rows are overwritten from
+# the cache after the JIT regardless); this changes only the JIT compute
+# width. Default OFF — the JIT forward is a 1-token/seq decode (width-
+# latency-bound), so the expected gain is small; this gate exists to
+# measure it (b_gt1/bscale32 jit_subset experiment). Not applied on the
+# EAGLE path (activation gather/scatter not wired).
+DUET_JIT_SUBSET = os.environ.get("SSD_DUET_JIT_SUBSET", "0") == "1"
 
 class DraftRunner(ModelRunner):
     
@@ -472,17 +481,39 @@ class DraftRunner(ModelRunner):
                 # print(f'[hit_cache_and_respond] found a cache miss, running jit speculate', flush=True)
                 if self.config.verbose:
                     print(f"[hit_cache_and_respond] Running JIT speculate for cache misses", flush=True)
-                jit_acts = self.jit_speculate(
-                    request_keys,
-                    num_tokens,
-                    out_logits,
-                    out_tokens,
-                    temperatures,
-                    draft_block_tables,
-                    target_recovery_activations
-                    ) # write into out_logits, out_tokens
-                if self.config.use_eagle:
-                    out_activations = jit_acts
+                if DUET_JIT_SUBSET and _any_hit and not self.config.use_eagle:
+                    # Mixed batch, subset gate on: JIT only the miss rows.
+                    # nonzero() syncs on the data-dependent shape — this
+                    # replaces the .all() sync of the branch condition class,
+                    # not an extra hot-path sync category. Hit rows are never
+                    # touched by the JIT here; the cache overwrite below is
+                    # then a pure fill (nothing of theirs to restore).
+                    miss_idx = (~cache_hits).nonzero(as_tuple=False).squeeze(1)
+                    sub_logits = out_logits[miss_idx]
+                    sub_tokens = out_tokens[miss_idx]
+                    self.jit_speculate(
+                        request_keys[miss_idx],
+                        num_tokens[miss_idx],
+                        sub_logits,
+                        sub_tokens,
+                        temperatures[miss_idx],
+                        draft_block_tables[miss_idx],
+                        None,
+                        )  # write into sub_logits, sub_tokens (compact [n])
+                    out_logits[miss_idx] = sub_logits
+                    out_tokens[miss_idx] = sub_tokens
+                else:
+                    jit_acts = self.jit_speculate(
+                        request_keys,
+                        num_tokens,
+                        out_logits,
+                        out_tokens,
+                        temperatures,
+                        draft_block_tables,
+                        target_recovery_activations
+                        ) # write into out_logits, out_tokens
+                    if self.config.use_eagle:
+                        out_activations = jit_acts
             if _any_hit:
                 # Overwrite hit rows from the cache — runs AFTER the JIT so
                 # mixed batches keep cached tokens/logits on hit rows. Their
