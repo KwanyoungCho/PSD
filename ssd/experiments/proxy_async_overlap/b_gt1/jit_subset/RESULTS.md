@@ -75,3 +75,17 @@ TPS도 sub가 +1.3%로 반대 방향; 앞서 추정한 "bucket/eager 발사 비�
 0.87에서 이항 근사: **평균 ≈ 2.1개/step**, P(0)≈11% (실측 all-hit
 10.7%와 일치 — 독립 근사 유효), P(1)≈25%, P(2)≈28%, P(3)≈20%,
 P(≥4)≈16%.
+
+## 부록 2 — spec_wait 정의와 all-miss 행 해석 주의
+
+`target_spec_wait` = send_request(0.38ms) + recv_response_wait(~5.9ms)
++ received(0)의 합성 지표 — **wire 왕복 + draft respond(조회/JIT/패킹)
++ 큐잉 지연**이지 JIT만의 시간이 아니다 (JIT 격리는 draft 쪽
+hit_cache_respond span으로).
+
+위 표의 all-miss 37~78ms는 JIT 비용이 아니다: miss step 3건 전부
+구조적 경계였다 — step 1(양 arm, prefill 직후 첫 spec step: 캐시가
+비어 정의상 all-miss, respond 56-57ms는 JIT 경로 최초-호출 웜업 +
+draft의 prefill 뒤처리)과 step 242(ramp-down 경계, 18ms). 정상
+상태에서 all-miss는 확률적으로 불가능하다 (0.13^16 ≈ 1e-14). 정상
+상태 JIT 비용 = mixed respond 안의 ~5ms.
