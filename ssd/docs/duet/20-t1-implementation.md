@@ -318,3 +318,27 @@ scatter + ack — commit_copy_plan 실행부).
 보행→commit→다음 요청 키→재실체화→노드-fork 캐시빌드의 라이브
 루프가 코드 상 폐합** — 남은 것은 E2E 검증 (OFF 회귀 → 퇴화 ON →
 실런).
+
+## E2E 검증 (T3.4-b 이후)
+
+측정 환경 유의: 박스 CPU load ~82 (타 사용자 작업) — 19번 이슈
+방침대로 **correctness 검증만 진행**, 이 구간의 TPS는 해석 금지.
+T4 sweep은 하네스의 wait_clean_box 가드 (load<24)로 한산 시 실행.
+
+**이슈 #8 (E2E-1 1차에서 발견)**: b2의 tree wire 게이트가
+`SpeculatorAsync.self.config`를 참조하나 그 클래스는 config를 보유하지
+않음 (개별 필드만 복사) → 첫 spec 요청에서 AttributeError. 유닛
+스텁은 SimpleNamespace 기반이라 은폐 (이슈 #6과 동류 — 실엔진 생성자
+경계는 스텁이 못 잡는다). 수정: 생성자 keyword `config=None` 주입
+(스텁은 getattr 기본값 "off"로 안전) + llm_engine 전달. 부수 발견:
+백그라운드 셸에서 `pkill -f "bench.py"`가 자기 래퍼 명령줄에 매치되어
+자살하는 함정 — E2E 스크립트에서 pkill 분리.
+
+**v1 근사/후속 목록 (T4 전 확정 사항)**:
+- P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
+- 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
+  사다리 DP 일반화 후속).
+- 보행 CPU 실행 (p/q ~2.3MB 복사/step; GPU화 후속).
+- 트리 verify eager (CG capture 후속 — bucket shape은 이미 고정).
+- parent_q wire fp16 반올림 → 수락식 q가 샘플측과 ~1e-3 상대 오차
+  (기존 체인 logits_q wire와 동일한 관례 — 신규 gap 아님).
