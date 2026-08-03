@@ -334,6 +334,16 @@ T4 sweep은 하네스의 wait_clean_box 가드 (load<24)로 한산 시 실행.
 백그라운드 셸에서 `pkill -f "bench.py"`가 자기 래퍼 명령줄에 매치되어
 자살하는 함정 — E2E 스크립트에서 pkill 분리.
 
+**이슈 #9 (E2E-1 2차)**: b2의 `_tree_ints`가 recv 헬퍼 로컬 변수인데
+speculate()의 SpeculateResult 조립이 참조 (NameError — #8과 동류의
+함수-스코프 단절). self._tree_ints_step 스태시로 수정.
+
+**E2E-1 통과 (r3)**: tree_policy=off 라이브 런 완주 — Decode 52.13
+tok/s (CPU load ~82 오염 하; 절대값 해석 금지), AL 3.53, cache hit
+0.78, hit-AL 3.80 — champion-류 정상 지표. OFF 경로 무결 확인.
+같은 시각, 트리-ON 경로의 #8/#9 동류 결함을 실행 전 정적으로 걷어내는
+5-finder + 적대검증 감사 병행 (아래).
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
