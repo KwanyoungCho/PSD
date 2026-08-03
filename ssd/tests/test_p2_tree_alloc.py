@@ -605,3 +605,31 @@ class TestTreeWire(unittest.TestCase):
         z = pack_tree_ints(v, -1, NV)
         self.assertEqual(int(z.abs().sum()), 0)
         self.assertEqual(z.numel(), tree_wire_ints_len(NV))
+
+
+class TestVerifyRows(unittest.TestCase):
+    def test_rows_and_mask(self):
+        from ssd.engine.helpers.p2_tree import (build_verify_mask_packed,
+                                                build_verify_rows)
+        import numpy as np
+        # 트리: n0(root직결) ← n1, n0 ← n2, n1 ← n3
+        ti = {"valid": 4,
+              "tok": torch.tensor([11, 12, 13, 14]),
+              "parent_local": torch.tensor([-1, 0, 0, 1])}
+        bt = torch.arange(10, dtype=torch.int64) + 100   # block ids
+        out = build_verify_rows(ti, nv=8, pos0=50, block_table=bt,
+                                block_size=16)
+        self.assertEqual(out["depth"].tolist(), [0, 1, 1, 2])
+        self.assertEqual(out["rope"].tolist(), [51, 52, 52, 53])
+        # scratch: pos 51..54 → block 100+3=103 (51//16=3), offset 51%16
+        self.assertEqual(int(out["slot"][0]), 103 * 16 + 3)
+        self.assertEqual(out["ancestors"][3], [0, 1])
+        packed = build_verify_mask_packed(4, out["ancestors"], kv_len=55)
+        m = np.unpackbits(packed.numpy(), bitorder="little")[:4 * 55]
+        m = m.reshape(4, 55)
+        pre = 55 - 4
+        self.assertTrue((m[:, :pre] == 1).all())          # 프리픽스
+        self.assertEqual(m[3, pre + 0], 1)                # 조상 n0
+        self.assertEqual(m[3, pre + 1], 1)                # 조상 n1
+        self.assertEqual(m[3, pre + 2], 0)                # 형제 아님-조상
+        self.assertEqual(m[3, pre + 3], 1)                # 자기

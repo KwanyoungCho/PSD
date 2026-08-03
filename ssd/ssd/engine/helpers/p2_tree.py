@@ -539,3 +539,50 @@ def parse_tree_ints(buf: torch.Tensor, nv: int):
         "sib_order": buf[o + 2 * nv:o + 3 * nv],
         "parent_q_ref": buf[o + 3 * nv:o + 4 * nv],
     }
+
+
+# --- T3.2: target-측 verify 행 조립 (pure — 엔진 배선은 T3.4) ---
+
+def build_verify_rows(tree_ints, nv: int, pos0: int, block_table,
+                      block_size: int):
+    """트리 응답 블록 → target verify 행 텐서들 (v6 §7.5/리뷰4 row 계약).
+
+    row 0..valid-1 = 뷰 노드 (scratch 셀: pos0+1+j — 리뷰4 계약),
+    rope = pos0 + 1 + depth(노드) (depth는 parent_local 사슬로 복원).
+    반환 dict: input_ids[valid], rope[valid], slot[valid], depth[valid],
+    kids(보행용 인접), ancestors(행별 조상 행 목록 — mask용).
+    """
+    valid = tree_ints["valid"]
+    tok = tree_ints["tok"][:valid]
+    par = tree_ints["parent_local"][:valid]
+    depth = torch.zeros(valid, dtype=torch.int64)
+    ancestors = [[] for _ in range(valid)]
+    for j in range(valid):
+        p = int(par[j])
+        if p >= 0:
+            depth[j] = depth[p] + 1
+            ancestors[j] = ancestors[p] + [p]
+    rope = pos0 + 1 + depth
+    scratch_pos = pos0 + 1 + torch.arange(valid)
+    blk = block_table[(scratch_pos // block_size).long()]
+    slot = blk * block_size + (scratch_pos % block_size)
+    return {"input_ids": tok, "rope": rope, "slot": slot.to(torch.int64),
+            "depth": depth, "ancestors": ancestors,
+            "parent_local": par}
+
+
+def build_verify_mask_packed(valid: int, ancestors, kv_len: int):
+    """target tree-verify custom mask (FlashInfer packed, qo=valid 행).
+
+    행 j 가시성: [프리픽스(0..pos0 포함 = kv_len−valid 이전 전부) |
+    조상 행들의 scratch 셀 | 자기 셀]. kv_len = 프리픽스+valid.
+    """
+    prefix = kv_len - valid
+    m = np.zeros((valid, kv_len), dtype=np.uint8)
+    m[:, :prefix] = 1
+    for j in range(valid):
+        for a in ancestors[j]:
+            m[j, prefix + a] = 1
+        m[j, prefix + j] = 1
+    packed = np.packbits(m.ravel(), bitorder="little")
+    return torch.from_numpy(packed)
