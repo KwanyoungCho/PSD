@@ -162,8 +162,18 @@ class Verifier(VerifierBase):
         # SHM, keeping verify CG bucket dispatch in sync.
         _step_lh_arg = getattr(self.target_model_runner, "_duet_step_lookahead", None) \
             if config.duet_enabled and config.duet_phase1_k is not None else None
+        # T3.4-b4: 트리 응답이면 tree_ints를 SHM으로 전 rank에 전달 —
+        # target이 eager 트리 verify 분기를 탄다. (B=1; valid>0일 때만)
+        _tree_meta_arg = None
+        if (config.duet_enabled
+                and getattr(config, "duet_tree_policy", "off") != "off"
+                and getattr(speculate_result, "tree_ints", None) is not None):
+            _ti_row = speculate_result.tree_ints[0]
+            if int(_ti_row[0]) > 0:
+                _tree_meta_arg = _ti_row.tolist()
         result = self.target_model_runner.call(
-            "run", seqs, False, False, True, None, _step_lh_arg)
+            "run", seqs, False, False, True, None, _step_lh_arg,
+            _tree_meta_arg)
 
         # DUET: clear proxy function
         if config.duet_enabled:

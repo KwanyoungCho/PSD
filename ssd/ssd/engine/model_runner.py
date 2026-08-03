@@ -1091,6 +1091,10 @@ class ModelRunner:
             # Buckets are {duet_verify_k1, duet_verify_k2}. The hybrid
             # duet_verify_long/short and legacy duet_verify buckets were
             # removed (2026-07).
+            # T3.4-b4: 트리 verify — 메타가 오면 CG 버킷 대신 eager
+            # 분할 forward + FlashInfer tree wrapper.
+            if getattr(self, "_duet_tree_meta", None) is not None:
+                return self._run_tree_verify(input_ids, positions, last_only)
             return self._run_split_k1k2_target_verify(
                 input_ids, positions, last_only,
             )
@@ -1164,6 +1168,151 @@ class ModelRunner:
             bucket=bucket,
         )
 
+    def _run_tree_verify(self, input_ids, positions, last_only):
+        """P2-tree verify (T3.4-b4). B=1 전용, v1은 eager 분할 forward.
+
+        창 = [rec | 뷰 노드(생성 순서)] — extend/prepare가 만든 선형
+        scratch 셀·slot은 그대로 쓰고 (리뷰4 row 계약), rope만
+        pos0+1+depth(노드)로 덮어쓴다. attention은 FlashInfer tree
+        wrapper (조상 custom mask; T3.1b의 명시 TREE_VERIFY 분기).
+        exit-proxy는 CG 경로의 mid-block 게이트(replica/topm/plain)를
+        eager로 미러 — 행 축이 곧 노드 축이라 proxy가 자연히 노드별
+        p^E가 된다. 행 수는 N_v bucket으로 패딩 (slot -1, prefix-only
+        mask) — 이후 CG capture와 동일 shape 유지.
+        """
+        from ssd.engine.helpers.p2_tree import parse_tree_ints
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record, duet_close, _duet_exit_topm_gather)
+        cfg = self.config
+        nv = int(cfg.duet_tree_nv)
+        ti = parse_tree_ints(
+            torch.tensor(self._duet_tree_meta, dtype=torch.int64), nv)
+        valid = int(ti["valid"])
+        n_rows = valid + 1
+        assert input_ids.shape[0] == n_rows, (
+            f"tree verify rows {input_ids.shape[0]} != valid+1 {n_rows}")
+        par = ti["parent_local"]
+
+        # depth/조상 복원 (parent_local < 자기 인덱스 — 뷰 invariant)
+        depths = [0] * valid
+        anc = [[] for _ in range(valid)]
+        for j in range(valid):
+            p = int(par[j])
+            if p >= 0:
+                depths[j] = depths[p] + 1
+                anc[j] = anc[p] + [p]
+
+        pos0 = int(positions[0])
+        context = get_context()
+        kv_len = int(context.context_lens[0])
+        assert kv_len == pos0 + 1 + valid, (
+            f"tree verify kv_len {kv_len} != pos0+1+valid {pos0 + 1 + valid}")
+
+        # bucket 선택 + 행 패딩 (고정 shape — 추후 CG capture 대비)
+        _buckets = sorted(self.tree_verify_wrappers.keys())
+        nv_b = next(b for b in _buckets if b + 1 >= n_rows)
+        r_b = nv_b + 1
+        if r_b > n_rows:
+            pad = r_b - n_rows
+            input_ids = torch.cat([input_ids, torch.zeros(
+                pad, dtype=input_ids.dtype, device=input_ids.device)])
+            slot_mapping = torch.cat([context.slot_mapping, torch.full(
+                (pad,), -1, dtype=context.slot_mapping.dtype,
+                device=context.slot_mapping.device)])
+        else:
+            slot_mapping = context.slot_mapping
+
+        # rope 덮어쓰기: rec=pos0, 노드 j=pos0+1+depth_j, pad=pos0
+        rope = torch.full((r_b,), pos0, dtype=positions.dtype,
+                          device=positions.device)
+        if valid:
+            rope[1:n_rows] = pos0 + 1 + torch.tensor(
+                depths, dtype=positions.dtype, device=positions.device)
+
+        # custom mask [r_b, kv_len]: prefix+rec 공통, 노드 행 += 조상+self
+        m = torch.zeros(r_b, kv_len, dtype=torch.bool)
+        m[:, :pos0 + 1] = True
+        for j in range(valid):
+            r = 1 + j
+            for a in anc[j]:
+                m[r, pos0 + 1 + a] = True
+            m[r, pos0 + 1 + j] = True
+
+        # FlashInfer plan (rank-로컬 head 수)
+        w = self.tree_verify_wrappers[nv_b]
+        bs = self.block_size
+        n_blocks = (kv_len + bs - 1) // bs
+        kv_indices = context.block_tables[0, :n_blocks].to(torch.int32)
+        kv_indptr = torch.tensor([0, n_blocks], dtype=torch.int32,
+                                 device=self.device)
+        last_len = kv_len % bs
+        last_len = bs if last_len == 0 else last_len
+        kv_last_page_len = torch.tensor([last_len], dtype=torch.int32,
+                                        device=self.device)
+        qo_indptr = torch.tensor([0, r_b], dtype=torch.int32,
+                                 device=self.device)
+        _tp = max(1, self.num_tp_gpus)     # KV 할당(:896)과 동일한 분모
+        w.plan(
+            qo_indptr, kv_indptr, kv_indices, kv_last_page_len,
+            max(1, self.hf_config.num_attention_heads // _tp),
+            max(1, self.hf_config.num_key_value_heads // _tp),
+            self.hf_config.head_dim, bs,
+            custom_mask=m.flatten().to(self.device),
+            q_data_type=self.hf_config.torch_dtype,
+            kv_data_type=self.hf_config.torch_dtype,
+        )
+
+        set_context(
+            is_prefill=False,
+            slot_mapping=slot_mapping,
+            context_lens=context.context_lens,
+            block_tables=context.block_tables,
+            tree_verify_wrapper=w,
+        )
+
+        # === eager 분할 forward: pre → exit-proxy → post (CG mid 미러) ===
+        exit_layer = cfg.duet_exit_layer
+        _ev = duet_record("graph_pre")
+        hs, res = self.model(input_ids, rope, end_layer=exit_layer + 1)
+        duet_close("graph_pre", _ev)
+
+        _ev_el = duet_record("exit_logits")
+        duet_proxy_fn = self._duet_proxy_fn
+        _replica = getattr(self, "_duet_lm_head_replica", None)
+        if getattr(cfg, "duet_exit_replica", False):
+            # rank0 전용 replica — rank1+는 exit 계산 없이 post로 (CG와 동일)
+            if duet_proxy_fn is not None and _replica is not None:
+                normed = self.model.model.norm(hs + res, None)
+                exit_logits = torch.nn.functional.linear(normed, _replica)
+                duet_proxy_fn(exit_logits, 1)
+        else:
+            normed = self.model.model.norm(hs + res, None)
+            if getattr(cfg, "duet_exit_topm_gather", False):
+                exit_logits = _duet_exit_topm_gather(
+                    self, normed, input_ids, cfg.duet_proxy_topm)
+            else:
+                # 전 rank compute_logits (gather 참여) — rank0만 실값
+                exit_logits = self.model.compute_logits(
+                    normed, last_only=False)
+            if duet_proxy_fn is not None:
+                duet_proxy_fn(exit_logits, 1)
+        duet_close("exit_logits", _ev_el)
+
+        _ev = duet_record("graph_post")
+        out = self.model(input_ids, rope, start_layer=exit_layer + 1,
+                         init_hidden_states=hs, init_residual=res)
+        if isinstance(out, tuple):
+            out = out[0]
+        duet_close("graph_post", _ev)
+
+        _ev_fl = duet_record("final_logits")
+        logits = self.model.compute_logits(out, last_only)
+        duet_close("final_logits", _ev_fl)
+        # pad 행 절단 — 소비자는 [n_rows, V]만 본다
+        if logits is not None and not last_only and logits.shape[0] == r_b:
+            logits = logits[:n_rows]
+        return logits
+
 
     # should add spec_k that just loops this k times
     def run(
@@ -1174,6 +1323,7 @@ class ModelRunner:
         draft_return_logits: bool = False,
         hidden_states: torch.Tensor | None = None,
         step_lookahead: int | None = None,
+        tree_meta: list | None = None,
     ) -> list[int] | tuple[list[int], torch.Tensor]:
         # v1 hybrid: step_lookahead must be the same on every TP rank for the
         # CG bucket dispatch to stay in sync (otherwise rank 0 picks
@@ -1182,6 +1332,10 @@ class ModelRunner:
         # see it.
         if step_lookahead is not None:
             self._duet_step_lookahead = int(step_lookahead)
+        # T3.4-b4: 트리 verify 메타 (tree_ints 리스트) — SHM으로 전 rank
+        # 동일 수신. None이면 리셋 (체인 step이 트리 분기를 타지 않도록
+        # 매 호출 무조건 대입).
+        self._duet_tree_meta = tree_meta
         _pt = os.environ.get("SSD_PROFILE_TARGET", "0") == "1" and not is_prefill and not last_only
         if _pt:
             torch.cuda.synchronize()
