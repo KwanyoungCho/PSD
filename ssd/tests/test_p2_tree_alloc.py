@@ -175,3 +175,89 @@ class TestPivPack(unittest.TestCase):
         self.assertAlmostEqual(piv2[0, 0].item(), 1.0, places=3)
         self.assertAlmostEqual(piv2[0, 1].item(), 1e-6, places=8)  # 하한 clamp
         self.assertAlmostEqual(piv2[0, 2].item(), 1e-6, places=8)
+
+
+class TestRolloutReference(unittest.TestCase):
+    def _sample_fn(self, seed=3):
+        g = torch.Generator().manual_seed(seed)
+        def fn(sel, fan):
+            n = len(sel)
+            C = 3
+            toks = torch.randint(100, 200, (n, C), generator=g)
+            raws = torch.rand(n, C, generator=g) * 0.3
+            return toks, raws
+        return fn
+
+    def _run(self, policy, R=4, W=4, F=3):
+        from ssd.engine.helpers.p2_tree import rollout_reference
+        piv = torch.tensor([0.5 / (1.6 ** r) for r in range(R)])
+        return rollout_reference(
+            list(range(10, 10 + R)), piv, root_pos=None, policy=policy,
+            W=W, F_total=F, c_tensor=3, nv=6, beta=0.5, depth_cap=4,
+            sample_fn=self._sample_fn())
+
+    def test_level_depth_sync(self):
+        pool, log = self._run("level")
+        # level: forward f에서 평가된 노드는 전부 depth == f
+        for f, (sel, fan) in enumerate(log):
+            for i in sel:
+                self.assertEqual(int(pool.depth[i]), f)
+
+    def test_frontier_mixes_depths_level_cannot(self):
+        # frontier의 본질: 한 forward에서 서로 다른 depth가 경쟁 가능
+        # (보류된 얕은 root vs 새 자식). R>W로 보류를 강제.
+        pool, log = self._run("frontier", R=6, W=3, F=3)
+        depth_sets = [set(int(pool.depth[i]) for i in sel)
+                      for sel, _ in log if sel]
+        self.assertTrue(any(len(ds) > 1 for ds in depth_sets),
+                        f"frontier가 depth 혼합 선택을 못함: {depth_sets}")
+        # 같은 설정의 level은 항상 단일 depth (== f)
+        pool2, log2 = self._run("level", R=6, W=3, F=3)
+        for f, (sel, _) in enumerate(log2):
+            for i in sel:
+                self.assertEqual(int(pool2.depth[i]), f)
+
+    def test_d11_single_shot(self):
+        pool, log = self._run("frontier")
+        seen = set()
+        for sel, _ in log:
+            for i in sel:
+                self.assertNotIn(i, seen)   # 재평가 없음
+                seen.add(i)
+                self.assertEqual(int(pool.state[i]), 1)
+
+    def test_budget_conserved(self):
+        from ssd.engine.helpers.p2_tree import alloc_root_budgets
+        pool, log = self._run("frontier")
+        piv = torch.tensor([0.5 / (1.6 ** r) for r in range(4)])  # _run과 동일
+        budgets = alloc_root_budgets(piv, total=12, beta=0.5, cap=6)
+        # root별 생성된 자식 수 ≤ 배정 예산
+        for r in range(4):
+            kids = sum(1 for i in range(pool.n)
+                       if int(pool.root[i]) == r and int(pool.parent_idx[i]) >= 0)
+            self.assertLessEqual(kids, int(budgets[r]))
+
+    def test_priority_is_logpiv_plus_lograwq(self):
+        pool, _ = self._run("level")
+        import math
+        for i in range(pool.n):
+            p = int(pool.parent_idx[i])
+            if p < 0:
+                continue
+            expect = float(pool.logpri[p]) + math.log(max(float(pool.raw_q[i]), 1e-9))
+            self.assertAlmostEqual(float(pool.logpri[i]), expect, places=5)
+
+    def test_ancestor_cells_chain(self):
+        pool, _ = self._run("level")
+        # depth 2 노드의 조상 셀 수 == 2 (부모, 조부모 — root는 cell 보유 시)
+        for i in range(pool.n):
+            if int(pool.depth[i]) == 2 and int(pool.state[i]) == 1:
+                cells = pool.ancestors_cells(i)
+                self.assertEqual(len(cells), 2)
+                break
+
+    def test_cell_addressing(self):
+        pool, log = self._run("level")
+        for f, (sel, _) in enumerate(log):
+            for k, i in enumerate(sel):
+                self.assertEqual(int(pool.cell[i]), f * 4 + k)

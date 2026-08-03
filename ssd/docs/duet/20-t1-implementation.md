@@ -73,3 +73,14 @@ OFF wire 바이트 보존. config에 vocab≤32768 -O 생존 raise. 유닛 4종
 **이슈 #6**: 신설 config 필드 참조가 기존 테스트 스텁(SimpleNamespace)
 을 깨는 패턴 반복 (이슈 #2와 동형) — 스텁에 필드 추가로 해결. 신규
 config 필드 도입 시 스텁 갱신을 체크리스트화.
+
+**T1.4a 완료**: rollout 알고리즘 골격 pure 구현 — `TreePool`(고정 용량
+장부: tok/parent/depth/root/형제순서/logpri/raw_q/state/cell),
+`select_nodes`(D1 정책 스위치 — level=depth==f, frontier=priority
+상위 W; depth_cap 제외), `rollout_reference`(예산·선택 확정 → 그 후
+정체 관측 — D10 순서를 코드 구조로 강제; 셀 주소 = f·W+k; D11
+single-shot; priority = log π̂ + Σ log c_raw). 유닛 26/26: level
+depth-동기 / **frontier의 depth 혼합 선택 (level은 불가능함을 동일
+설정에서 대조)** / D11 재평가 없음 / root별 예산 보존 / priority
+누적식 / 조상 셀 체인 / 셀 주소. 이 참조 구현이 T1.4b(엔진 배선)의
+정답지가 된다.

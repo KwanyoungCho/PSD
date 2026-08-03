@@ -142,3 +142,117 @@ def unpack_piv(packed: torch.Tensor):
     q = (packed >> PIV_SHIFT) & _PIV_QMAX
     piv = torch.pow(10.0, q.float() / _PIV_QMAX * (-_LOG_MIN) + _LOG_MIN)
     return tok, piv
+
+
+# --- T1.4a: rollout 알고리즘 골격 (pure — 엔진 배선은 T1.4b) ---
+
+class TreePool:
+    """고정 용량 pool (설계 v6 §6 실행 모델). CPU/GPU 텐서 필드.
+
+    상태: 0=미평가(candidate, 확장 가능), 1=평가완료(D11 — 재방문 없음).
+    모든 노드는 생성 즉시 candidate tree의 일원 (D10 — 잎 포함).
+    """
+
+    def __init__(self, capacity: int, device="cpu"):
+        d = device
+        self.tok = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.parent_cell = torch.full((capacity,), -1, dtype=torch.int64,
+                                      device=d)   # -1 = root (부모=글루)
+        self.parent_idx = torch.full((capacity,), -1, dtype=torch.int64,
+                                     device=d)    # pool 인덱스 (조상 복원)
+        self.depth = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.root = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.sib_order = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.logpri = torch.full((capacity,), float("-inf"), device=d)
+        self.raw_q = torch.ones(capacity, device=d)   # c_raw (원본 확률)
+        self.state = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.cell = torch.full((capacity,), -1, dtype=torch.int64, device=d)
+        self.n = 0
+
+    def add(self, tok, parent_idx, parent_cell, depth, root, sib, logpri,
+            raw_q):
+        i = self.n
+        self.tok[i] = tok
+        self.parent_idx[i] = parent_idx
+        self.parent_cell[i] = parent_cell
+        self.depth[i] = depth
+        self.root[i] = root
+        self.sib_order[i] = sib
+        self.logpri[i] = logpri
+        self.raw_q[i] = raw_q
+        self.n += 1
+        return i
+
+    def ancestors_cells(self, i):
+        """노드 i의 조상 셀 목록 (mask 비트용; root 자신 제외 글루까지)."""
+        cells = []
+        j = int(self.parent_idx[i])
+        while j >= 0:
+            if int(self.cell[j]) >= 0:
+                cells.append(int(self.cell[j]))
+            j = int(self.parent_idx[j])
+        return cells
+
+
+def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
+                 depth_cap: int):
+    """이번 forward에서 평가할 노드 선택 (D1 정책 스위치).
+
+    level    : depth == fwd 인 미평가 노드만 (level-synchronous).
+    frontier : 미평가 전체에서 priority 상위 W.
+    공통: depth ≥ depth_cap 노드는 제외 (자식이 캡 초과라 확장 무의미).
+    반환: pool 인덱스 리스트 (≤ W; 부족하면 그만큼 — pad는 호출자).
+    """
+    n = pool.n
+    elig = (pool.state[:n] == 0) & (pool.depth[:n] < depth_cap)
+    if policy == "level":
+        elig = elig & (pool.depth[:n] == fwd)
+    idx = torch.nonzero(elig).flatten()
+    if idx.numel() == 0:
+        return []
+    pri = pool.logpri[idx]
+    order = torch.argsort(pri, descending=True, stable=True)
+    return idx[order][:W].tolist()
+
+
+def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
+                      c_tensor, nv, beta, depth_cap, sample_fn):
+    """rollout 참조 구현 (T1.4a — 엔진 배선(T1.4b)의 정답지이자
+    CPU 테스트 대상). sample_fn(node_indices, fanouts) -> (tokens [n, C],
+    raw_q [n, C]) — 정체는 여기서만 관측 (D10: 예산·선택은 그 전에 확정).
+
+    반환: (pool, eval_log) — eval_log[f] = (선택 인덱스, fanout) 기록.
+    """
+    R = len(root_toks)
+    pool = TreePool(capacity=R + F_total * W * c_tensor)
+    budgets = alloc_root_budgets(root_piv, total=F_total * W, beta=beta,
+                                 cap=nv)
+    remaining = budgets.clone()
+    logpiv = root_piv.clamp_min(1e-9).log()
+    for r in range(R):
+        pool.add(root_toks[r], -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
+    eval_log = []
+    for f in range(F_total):
+        sel = select_nodes(pool, policy, W, f, depth_cap)
+        if not sel:
+            eval_log.append(([], None))
+            continue
+        pri = pool.logpri[torch.tensor(sel)]
+        roots = pool.root[torch.tensor(sel)]
+        fan = alloc_fanouts(pri, roots, remaining, c_tensor)
+        # 예산 소진 반영 (draw 전 확정 — D10)
+        for k, i in enumerate(sel):
+            remaining[int(roots[k])] -= int(fan[k])
+        toks, raws = sample_fn(sel, fan)          # 정체 관측은 여기부터
+        for k, i in enumerate(sel):
+            cell = f * W + k                      # 셀 주소 규칙 (§6 v6)
+            pool.cell[i] = cell
+            pool.state[i] = 1                     # D11: single-shot
+            for c in range(int(fan[k])):
+                pool.add(int(toks[k][c]), i, cell,
+                         int(pool.depth[i]) + 1, int(pool.root[i]), c,
+                         float(pool.logpri[i])
+                         + float(torch.log(torch.clamp(raws[k][c], min=1e-9))),
+                         float(raws[k][c]))
+        eval_log.append((sel, fan))
+    return pool, eval_log
