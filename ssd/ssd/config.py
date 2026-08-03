@@ -61,6 +61,12 @@ class Config:
     duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
     duet_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (only option;
                                             # Policy "a" was removed 2026-07 — see git history).
+    # JIT-short (docs/duet/12): on miss, JIT builds a K2-deep chain instead
+    # of K_max — champion standard. Promoted from the SSD_DUET_JIT_SHORT env
+    # (docs/duet/16 Tier-2, default ON); an explicitly-set env still wins
+    # for old-script compat and the resolved value is re-exported for the
+    # draft process import-time read.
+    duet_jit_short: bool = True
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k, K2 <= K1.
@@ -352,20 +358,31 @@ class Config:
                 )
 
             import os as _os_cfg
-            _split_mode = (
-                self.duet_phase1_k is not None
-                and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-            )
-            # Split-only K1/K2 mode is the ONLY supported DUET path since the
-            # 2026-07 dead-code removal (hybrid / legacy two-pass deleted).
+            # Tier-2 (docs/duet/16): split-K1/K2 is the ONLY DUET path, so
+            # `--duet` implies it — the historical SSD_FORCE_SPLIT_K1K2=1
+            # export is auto-set here. Spawned child processes inherit
+            # environ, and the remaining runtime readers keep working
+            # unchanged during the transition (read-site consolidation is
+            # deferred; see docs/duet/17).
+            if _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") != "1":
+                _os_cfg.environ["SSD_FORCE_SPLIT_K1K2"] = "1"
+            _split_mode = self.duet_phase1_k is not None
             if not _split_mode:
                 raise ValueError(
-                    "DUET-SSD requires split-K1/K2 mode: set SSD_FORCE_SPLIT_K1K2=1 "
-                    "and pass duet_phase1_k / duet_phase2_k. The hybrid / legacy "
-                    "two-pass paths were removed (2026-07); the removed "
-                    "implementation is preserved in git history "
-                    "(feat/mesa-proxy-async-overlap @ 19c8f73 and earlier)."
+                    "DUET-SSD requires duet_phase1_k / duet_phase2_k "
+                    "(split-K1/K2 is the only path; the hybrid / legacy "
+                    "two-pass implementations were removed 2026-07 — "
+                    "preserved in git history at 19c8f73 and earlier)."
                 )
+            # Tier-2: SSD_DUET_JIT_SHORT promoted to config.duet_jit_short.
+            _env_js = _os_cfg.environ.get("SSD_DUET_JIT_SHORT")
+            if _env_js is not None and (_env_js == "1") != self.duet_jit_short:
+                print(f"[Config][deprecated] SSD_DUET_JIT_SHORT={_env_js} env "
+                      f"overrides duet_jit_short={self.duet_jit_short} "
+                      f"(prefer --duet_no_jit_short)", flush=True)
+                self.duet_jit_short = (_env_js == "1")
+            _os_cfg.environ["SSD_DUET_JIT_SHORT"] = \
+                "1" if self.duet_jit_short else "0"
             # Phase 1 fan_out_list validation (split mode only). User-provided
             # list overrides uniform [draft_fo]*(K1+1). Used by buffer/top_k
             # sizing below — list-aware in ALL cases when list is provided

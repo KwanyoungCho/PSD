@@ -110,6 +110,9 @@ def parse_arguments():
     parser.add_argument("--duet_p1_fanout_list", type=str, default=None,
                         help="Canonical alias for --duet_split_phase1_fan_out_list "
                              "(comma list, length K1+1).")
+    parser.add_argument("--duet_no_jit_short", action="store_true",
+                        help="Disable JIT-short (miss JIT at K2 depth). Default is ON "
+                             "(champion standard; replaces SSD_DUET_JIT_SHORT=1).")
 
     # Weight-only quantization (target only) — AWQ Marlin is the supported path.
     # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
@@ -280,6 +283,7 @@ def create_llm_kwargs(args, draft_path):
         if args.duet_draft_fan_out is not None:
             llm_kwargs["duet_draft_fan_out"] = args.duet_draft_fan_out
         llm_kwargs["duet_policy"] = args.duet_policy
+        llm_kwargs["duet_jit_short"] = not args.duet_no_jit_short
         if args.duet_phase1_k is not None:
             llm_kwargs["duet_phase1_k"] = args.duet_phase1_k
         if args.duet_phase2_k is not None:
