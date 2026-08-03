@@ -150,6 +150,13 @@ class Verifier(VerifierBase):
                 _ti_row = speculate_result.tree_ints[0]
                 if int(_ti_row[0]) > 0:
                     _tree_meta_arg = _ti_row.tolist()
+                    if _tree_meta_arg[0] != _step_lookahead:
+                        raise RuntimeError(
+                            f"tree wire invariant: meta valid="
+                            f"{_tree_meta_arg[0]} != step vk="
+                            f"{_step_lookahead} "
+                            f"(valid_k={speculate_result.valid_k.tolist()}, "
+                            f"ints={_tree_meta_arg})")
 
             # Slice draft_tokens / logits_q to step_lookahead since target ran
             # only K_short+1 positions on a short-hit step.

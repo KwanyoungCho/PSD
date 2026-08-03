@@ -563,6 +563,11 @@ class DraftRunner(ModelRunner):
                             _tviews["tok"][_root].to(self.device)
                         valid_k[0] = _n_valid
                         _packed_ints = pack_tree_ints(_tviews, _root, _nv)
+                        if int(_packed_ints[0]) != _n_valid:
+                            raise RuntimeError(
+                                f"tree serve invariant: pack valid="
+                                f"{int(_packed_ints[0])} != _n_valid="
+                                f"{_n_valid} root={_root}")
                         self._tree_wire_ints = _packed_ints.to(self.device)
                         self._tree_wire_parent_q = \
                             _tviews["parent_q_logits"][_root].to(
