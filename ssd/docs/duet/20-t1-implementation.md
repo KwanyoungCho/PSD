@@ -261,3 +261,35 @@ step은 override 경로라 무영향.
 **ⓒ 정확성 유의 (v6 §7.5ⓒ 그대로)**: 트리-step Policy B의 α̂/corr은
 맏이 형제에만 정확 — 사다리(R̂,D̂) 반영 ĥ-DP 일반화는 verifier 트리
 분기(b5)에서 다룸. E1의 체인-ĥ 예측력 검증은 그 시점에 재확인.
+
+**T3.4-b4 완료 (target 트리 verify)**: ① run()에 `tree_meta` 인자 —
+SHM pickle로 전 rank 동기 (step_lookahead와 동일 패턴), 매 호출
+무조건 대입(리셋). ② verifier가 tree_ints valid>0이면 리스트로 전달.
+③ `_run_tree_verify`: 창 = [rec|뷰 노드] (extend/prepare의 선형
+slot 그대로), N_v bucket으로 행 패딩 (slot -1, prefix-only mask —
+이후 CG capture와 shape 동일), rope = pos0+1+depth 덮어쓰기,
+FlashInfer plan (조상 custom mask, head 수는 num_tp_gpus 분모 —
+world_size는 draft GPU 포함이라 부적합), eager 분할 forward
+pre(end_layer)→exit-proxy(mid 게이트 replica/topm/plain 3종 미러 —
+행 축=노드 축이라 proxy가 자연히 노드별 p^E)→post(start_layer+
+init_hidden/residual)→compute_logits, pad 행 절단.
+
+**T3.4-b5 완료 (verifier 트리 보행)**: ① `q_probs_from_logits` 공유
+헬퍼 추출 — 샘플측(tree_sample_wor)과 verify측이 동일 함수로 q 빌드
+(수락 보존 전제; c=1 RNG bit-parity 테스트가 op-동일성 고정). ②
+proxy용 q 교체: 트리 step은 logits_q = parent_q_logits를
+parent_q_ref로 gather (backbone 캐시 행은 노드의 q가 아님 — α̂ =
+p^E/q_parent). 위치축 정렬 확인: 체인 chosen_pos=p ↔ 트리 종단 노드
+id p (rec=0, 노드 j=1+j) — 수치 axes가 정확히 일치, ĥ 수식은 맏이-
+정확 v1 (DP 일반화 후속). ③ `_tree_verify_walk`:
+tree_verify_walk_tensor (동일-코인 동등성으로 고정된 프로덕션 보행)
+호출, suffix = [rec]+경로 토큰 / recovery 별도 — postprocess가
+내용-무관 append라 **seq 롤백이 자동으로 트리-정확** (step.py는 전체
+복원 후 suffix append). 종단 노드 id는 `self._tree_terminal_node`에
+스태시 (b6 wire). v1 비용: 보행 CPU 사다리 (~2.3MB p/q 복사) —
+GPU화 후속. 유닛 40/40 + 회귀 44/44.
+
+**b6 남은 것**: outcome wire에 종단 노드 id 동승 → speculator 다음
+요청 키 k_idx = 종단 노드 id, D14 수락경로 재실체화 (draft, 다음
+step 글루 앞 aux forward), target TP4 commit (path cells gather→
+scatter + ack — commit_copy_plan 실행부).

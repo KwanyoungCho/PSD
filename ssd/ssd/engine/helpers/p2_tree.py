@@ -76,6 +76,21 @@ def alloc_fanouts(parent_priority: torch.Tensor,
     return out
 
 
+def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
+                        sampler_x=None, F=None):
+    """draft 제안분포 q 빌드 — 샘플측(tree_sample_wor)과 verify측
+    (T3.4-b5 보행의 q_parent_probs)이 **동일 함수**를 쓴다 (수락 보존의
+    전제: 같은 logits → 같은 q). op 시퀀스는 기존 tree_sample_wor
+    인라인과 bit-identical (c=1 RNG-parity 테스트가 고정).
+    """
+    logits_cpy = logits.to(torch.float)
+    logits_cpy.div_(temperatures.unsqueeze(dim=1))
+    probs = torch.softmax(logits_cpy, dim=-1, dtype=torch.float)
+    if sampler_x is not None:
+        probs = apply_sampler_x_rescaling(probs, sampler_x, F)
+    return probs
+
+
 def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
                     c_tensor: int, sampler_x=None, F=None):
     """비복원(WOR) C_tensor개 샘플 — 순서 보존 (T1.3; D8/D11).
@@ -99,11 +114,7 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
             "tree_sample_wor: temperature==0 is gated (v6 §7.2 — "
             "support-exhaustion fallback intentionally not implemented; "
             "caller must fall back to the chain path)")
-    logits_cpy = logits.to(torch.float)
-    logits_cpy.div_(temperatures.unsqueeze(dim=1))
-    probs = torch.softmax(logits_cpy, dim=-1, dtype=torch.float)
-    if sampler_x is not None:
-        probs = apply_sampler_x_rescaling(probs, sampler_x, F)
+    probs = q_probs_from_logits(logits, temperatures, sampler_x, F)
     raw_q = probs.clone()                      # 원본 보존 (c_raw)
     epsilon = 1e-10
     scores = probs.div_(torch.empty_like(probs).exponential_(1) + epsilon)

@@ -102,6 +102,9 @@ class Verifier(VerifierBase):
             status=getattr(speculate_result, "profile_cache_status", None),
         )
 
+        # T3.4-b5: 트리 step 감지 플래그 — 비-DUET 경로에서도 정의돼야
+        # 아래 verify 분기가 안전하다.
+        _tree_meta_arg = None
         # DUET: set proxy function on target model runner (rank 0 only)
         if config.duet_enabled:
             async_pg = self.target_model_runner.async_pg
@@ -138,10 +141,31 @@ class Verifier(VerifierBase):
             # below so all TP ranks see the same value via SHM.
             self.target_model_runner._duet_step_lookahead = _step_lookahead
 
+            # T3.4-b4/b5: 트리 응답 감지 (valid>0) — proxy q와 run() 메타
+            # 양쪽에서 쓰므로 여기서 한 번 계산.
+            _tree_meta_arg = None
+            if (getattr(config, "duet_tree_policy", "off") != "off"
+                    and getattr(speculate_result, "tree_ints", None)
+                    is not None):
+                _ti_row = speculate_result.tree_ints[0]
+                if int(_ti_row[0]) > 0:
+                    _tree_meta_arg = _ti_row.tolist()
+
             # Slice draft_tokens / logits_q to step_lookahead since target ran
             # only K_short+1 positions on a short-hit step.
             draft_tokens = speculate_result.speculations[:, 1:_step_lookahead + 1]  # [B, vk]
-            logits_q = speculate_result.logits_q[:, :_step_lookahead, :]            # [B, vk, V]
+            if _tree_meta_arg is not None:
+                # 트리 step: 노드 j의 제안분포 q = 부모 셀 logits —
+                # parent_q_ref로 gather (backbone 캐시 행 logits_q는
+                # 트리 노드의 q가 아니다). α̂ = min(1, p^E/q_parent).
+                _nv_t = int(config.duet_tree_nv)
+                _pq_ref = speculate_result.tree_ints[
+                    0, 3 + 3 * _nv_t:3 + 4 * _nv_t][:_step_lookahead]
+                logits_q = speculate_result.parent_q_logits[
+                    0, _pq_ref.to(speculate_result.parent_q_logits.device)
+                ].unsqueeze(0)                                          # [1, vk, V]
+            else:
+                logits_q = speculate_result.logits_q[:, :_step_lookahead, :]        # [B, vk, V]
             cache_hits = speculate_result.cache_hits                                  # [B] or None
 
             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead):
@@ -163,14 +187,7 @@ class Verifier(VerifierBase):
         _step_lh_arg = getattr(self.target_model_runner, "_duet_step_lookahead", None) \
             if config.duet_enabled and config.duet_phase1_k is not None else None
         # T3.4-b4: 트리 응답이면 tree_ints를 SHM으로 전 rank에 전달 —
-        # target이 eager 트리 verify 분기를 탄다. (B=1; valid>0일 때만)
-        _tree_meta_arg = None
-        if (config.duet_enabled
-                and getattr(config, "duet_tree_policy", "off") != "off"
-                and getattr(speculate_result, "tree_ints", None) is not None):
-            _ti_row = speculate_result.tree_ints[0]
-            if int(_ti_row[0]) > 0:
-                _tree_meta_arg = _ti_row.tolist()
+        # target이 eager 트리 verify 분기를 탄다. (위 duet 블록에서 계산)
         result = self.target_model_runner.call(
             "run", seqs, False, False, True, None, _step_lh_arg,
             _tree_meta_arg)
@@ -218,18 +235,29 @@ class Verifier(VerifierBase):
 
         from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
         _mev_vs = _mr("verify_sample_accept")
-        new_suffixes, recovery_tokens = verify(
-            logits_p=logits_p,
-            logits_q=speculate_result.logits_q,
-            speculations=speculate_result.speculations,
-            temperatures_target=temperatures_target,
-            temperatures_draft=temperatures_draft,
-            cache_hits=speculate_result.cache_hits,
-            sampler_x=self.sampler_x,
-            async_fan_out=self.async_fan_out,
-            jit_speculate=self.jit_speculate,
-            valid_k=speculate_result.valid_k,
-        )
+        if _tree_meta_arg is not None:
+            # T3.4-b5: 트리 보행 (잔차 사다리 — tree_verify_walk_tensor,
+            # 참조 보행과 동일-코인 동등성으로 고정된 프로덕션 경로).
+            new_suffixes, recovery_tokens, _term_node = \
+                self._tree_verify_walk(
+                    speculate_result, logits_p,
+                    temperatures_target, temperatures_draft)
+            # b6: outcome wire에 실릴 종단 노드 id (0=root-종단, 1+j=노드 j)
+            self._tree_terminal_node = _term_node
+        else:
+            self._tree_terminal_node = None
+            new_suffixes, recovery_tokens = verify(
+                logits_p=logits_p,
+                logits_q=speculate_result.logits_q,
+                speculations=speculate_result.speculations,
+                temperatures_target=temperatures_target,
+                temperatures_draft=temperatures_draft,
+                cache_hits=speculate_result.cache_hits,
+                sampler_x=self.sampler_x,
+                async_fan_out=self.async_fan_out,
+                jit_speculate=self.jit_speculate,
+                valid_k=speculate_result.valid_k,
+            )
         _mc("verify_sample_accept", _mev_vs)
 
         self.metrics["target_verify_times"].append(perf_counter() - _tv0)
@@ -291,6 +319,42 @@ class Verifier(VerifierBase):
             recovery_tokens=recovery_tokens,
             eagle_acts=eagle_acts,
         )
+
+    def _tree_verify_walk(self, speculate_result, logits_p,
+                          temperatures_target, temperatures_draft):
+        """P2-tree 잔차-사다리 보행 (T3.4-b5). B=1 전용.
+
+        q_parent_probs는 draft 샘플측과 **동일 함수**
+        (q_probs_from_logits — temp/sampler_x 동일 처리)로 빌드 — 수락
+        보존의 전제. 반환 관례는 체인 verify()와 동일: suffix =
+        [rec] + 수락 경로 토큰, recovery 별도 (postprocess가 내용-무관
+        append — 트리 경로가 그대로 실린다).
+        """
+        from ssd.engine.helpers.p2_tree import (
+            parse_tree_ints, tree_verify_walk_tensor, q_probs_from_logits)
+        cfg = self.target_model_runner.config
+        nv = int(cfg.duet_tree_nv)
+        ti = parse_tree_ints(speculate_result.tree_ints[0].cpu(), nv)
+        pq = speculate_result.parent_q_logits[0].float().cpu()   # [nv, V]
+        td = float(temperatures_draft[0])
+        tt = float(temperatures_target[0])
+        q_probs = q_probs_from_logits(
+            pq, torch.full((pq.shape[0],), max(td, 1e-8)),
+            self.sampler_x, self.async_fan_out)
+        p_rows = logits_p[0].float().cpu()                       # [valid+1, V]
+
+        def _coin():
+            return float(torch.rand(1).item())
+
+        def _mult(probs):
+            return int(torch.multinomial(probs, 1).item())
+
+        path, terminal = tree_verify_walk_tensor(
+            ti, p_rows, q_probs, tt, _coin, _mult)
+        rec0 = int(speculate_result.speculations[0, 0])
+        suffix = [rec0] + [int(ti["tok"][j]) for j in path]
+        term_node = (1 + path[-1]) if path else 0
+        return [suffix], [terminal], term_node
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,
