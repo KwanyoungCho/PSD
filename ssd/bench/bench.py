@@ -38,7 +38,6 @@ def parse_arguments():
     parser.add_argument("--k", type=int, default=6, help="Speculative decoding k value")
     parser.add_argument("--async", action="store_true", help="Enable async speculative decoding")
     parser.add_argument("--f", type=int, default=3, help="Async fan out value")
-    parser.add_argument("--fl", type=int, nargs='+', default=None, help="Fan out list (e.g., --fl 1 3 4 becomes [1, 3, 4])")
     parser.add_argument("--flh", type=int, nargs='+', default=None, help="Fan out list (e.g., --flh 1 3 4 becomes [1, 3, 4])")
     parser.add_argument("--flm", type=int, nargs='+', default=None, help="Fan out list miss (e.g., --flm 1 3 4 becomes [1, 3, 4])")
     parser.add_argument("--backup", type=str, choices=["jit", "fast"], default="jit", help="Backup strategy (jit or fast)")
@@ -100,9 +99,17 @@ def parse_arguments():
                         help="Split-only K1/K2: comma-separated per-position fan_out list "
                              "for Phase 1 (length must be K1+1). E.g. '4,4,3,3,2,2,1,1,1' "
                              "for K1=8. Default = uniform [draft_fo]*(K1+1).")
-    parser.add_argument("--duet_split_phase2_fan_out_list", type=str, default=None,
-                        help="Split-only K1/K2: comma-separated per-position fan_out list "
-                             "for Phase 2 (length must be K2+1). Default = uniform [proxy_fo]*(K2+1).")
+    # Tier-1 canonical names (docs/duet/16). Old flags above still work and
+    # print a deprecation note; passing both with different values is an error.
+    parser.add_argument("--duet_k1", type=int, default=None,
+                        help="Canonical alias for --duet_phase1_k (Phase 1 depth K1).")
+    parser.add_argument("--duet_k2", type=int, default=None,
+                        help="Canonical alias for --duet_phase2_k (Phase 2 depth K2).")
+    parser.add_argument("--duet_p1_fanout", type=int, default=None,
+                        help="Canonical alias for --duet_draft_fan_out.")
+    parser.add_argument("--duet_p1_fanout_list", type=str, default=None,
+                        help="Canonical alias for --duet_split_phase1_fan_out_list "
+                             "(comma list, length K1+1).")
 
     # Weight-only quantization (target only) — AWQ Marlin is the supported path.
     # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
@@ -144,6 +151,32 @@ def parse_arguments():
         assert args.llama, "Eagle currently only supports llama models"
         assert args.temp == 0.0 and args.dtemp is None, "Eagle currently only supports greedy decoding (temp=0)"
         assert getattr(args, 'async', False), "Eagle currently only supports async speculative decoding"
+
+    # DUET Tier-1 alias normalization (docs/duet/16).
+    if getattr(args, 'duet', False):
+        def _merge_alias(new_name, old_name):
+            new_v = getattr(args, new_name)
+            old_v = getattr(args, old_name)
+            if new_v is not None and old_v is not None and new_v != old_v:
+                raise SystemExit(
+                    f"[bench] --{new_name}={new_v} and --{old_name}={old_v} "
+                    f"disagree; pass only one.")
+            if new_v is not None:
+                setattr(args, old_name, new_v)
+            elif old_v is not None:
+                print(f"[bench][deprecated] --{old_name} -> use --{new_name}",
+                      flush=True)
+        _merge_alias("duet_k1", "duet_phase1_k")
+        _merge_alias("duet_k2", "duet_phase2_k")
+        _merge_alias("duet_p1_fanout", "duet_draft_fan_out")
+        _merge_alias("duet_p1_fanout_list", "duet_split_phase1_fan_out_list")
+        # --k omission: derive k = K1 + K2 (Config asserts equality when
+        # --k is passed explicitly).
+        if (args.duet_phase1_k is not None and args.duet_phase2_k is not None
+                and '--k' not in sys.argv):
+            args.k = args.duet_phase1_k + args.duet_phase2_k
+            print(f"[bench] --k omitted -> derived k = K1+K2 = {args.k}",
+                  flush=True)
     return args
 
 
@@ -254,10 +287,6 @@ def create_llm_kwargs(args, draft_path):
         if args.duet_split_phase1_fan_out_list is not None:
             llm_kwargs["duet_split_phase1_fan_out_list"] = [
                 int(x) for x in args.duet_split_phase1_fan_out_list.split(",")
-            ]
-        if args.duet_split_phase2_fan_out_list is not None:
-            llm_kwargs["duet_split_phase2_fan_out_list"] = [
-                int(x) for x in args.duet_split_phase2_fan_out_list.split(",")
             ]
 
     # AWQ W4A16 (Marlin) — plan v2 primary direction (TARGET)
