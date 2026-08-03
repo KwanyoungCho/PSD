@@ -7,6 +7,7 @@ T1.2: 사전 예산 배분 (결정 ⑤v2 + 외부 리뷰 4차 규약).
 
 전부 pure 함수 (텐서 in → 텐서 out, 상태 없음) — CPU 유닛테스트 대상.
 """
+import numpy as np
 import torch
 
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
@@ -256,3 +257,39 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
                          float(raws[k][c]))
         eval_log.append((sel, fan))
     return pool, eval_log
+
+
+def build_tree_mask_packed(fwd, W, K_glue, context_len, prefix_glue_rows,
+                           ancestor_cells, self_cols):
+    """forward `fwd`의 packed attention mask (T1.4b; 기존 chain 빌더의
+    기하를 정확히 복제 — cudagraph_helpers cpu_packed_masks와 동일 규약:
+    [prefix 1s | glue (K_glue+1) | spec 블록 (fwd+1)개 × W], packbits
+    little, B=1 세그먼트).
+
+    Args:
+        fwd:          현재 forward 인덱스 (0-base).
+        W:            행 수 (= MQ_LEN).
+        K_glue:       글루 폭-1 (= K_for_mask; split_k2는 K2).
+        context_len:  이 seq의 context_lens (chain 빌더의 cols 산식 입력).
+        prefix_glue_rows: [W, K_glue+1] uint8 — 행별 글루 가시성 (root의
+            원 seed-행 글루 패턴을 선택 순서로 재배열한 것).
+        ancestor_cells: 행별 조상 셀 목록 (cell = f'·W + k').
+        self_cols:    [W] 각 행의 자기 셀 열 (보통 fwd·W + k; pad 행 -1).
+
+    Returns: (packed uint8 np.ndarray, indptr int32 np.ndarray)
+    """
+    cols = int(context_len) + fwd * W
+    ttl_added = (fwd + 1) * W + (K_glue + 1)
+    prefix_len = cols - ttl_added
+    m = np.zeros((W, cols), dtype=np.uint8)
+    m[:, :prefix_len] = 1
+    m[:, prefix_len:prefix_len + K_glue + 1] = prefix_glue_rows
+    spec0 = prefix_len + K_glue + 1
+    for k in range(W):
+        for c in ancestor_cells[k]:
+            m[k, spec0 + c] = 1
+        if self_cols[k] >= 0:
+            m[k, spec0 + int(self_cols[k])] = 1
+    packed = np.packbits(m.ravel(), bitorder="little")
+    indptr = np.array([0, len(packed)], dtype=np.int32)
+    return packed, indptr

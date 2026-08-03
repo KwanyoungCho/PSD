@@ -261,3 +261,55 @@ class TestRolloutReference(unittest.TestCase):
         for f, (sel, _) in enumerate(log):
             for k, i in enumerate(sel):
                 self.assertEqual(int(pool.cell[i]), f * 4 + k)
+
+
+class TestTreeMask(unittest.TestCase):
+    def _chain_reference(self, s, MQ, Kg, ctx, glue_rows):
+        # cudagraph_helpers의 chain 빌더 재현 (대각 spec 블록)
+        import numpy as np
+        cols = ctx + s * MQ
+        prefix = cols - ((s + 1) * MQ + (Kg + 1))
+        m = np.zeros((MQ, cols), dtype=np.uint8)
+        m[:, :prefix] = 1
+        m[:, prefix:prefix + Kg + 1] = glue_rows
+        d0 = prefix + Kg + 1
+        rows = np.arange(MQ)
+        for blk in range(s + 1):
+            m[rows, d0 + blk * MQ + rows] = 1
+        return np.packbits(m.ravel(), bitorder="little")
+
+    def test_chain_degenerate_bit_identical(self):
+        # fanout=1 퇴화: 행 k의 조상 = 자기 열의 이전 블록들 → 체인
+        # 대각과 비트 단위 일치해야 한다 (fast-path mask 게이트).
+        import numpy as np
+        from ssd.engine.helpers.p2_tree import build_tree_mask_packed
+        MQ, Kg, ctx = 10, 4, 700
+        glue = np.tile(np.tril(np.ones((Kg + 1, Kg + 1), np.uint8))[0:1],
+                       (MQ, 1))
+        glue = np.tril(np.ones((Kg + 1, Kg + 1), np.uint8))
+        glue_rows = np.repeat(glue, [2, 2, 2, 2, 2], axis=0)  # fan합=10
+        for s in range(3):
+            anc = [[b * MQ + k for b in range(s)] for k in range(MQ)]
+            selfc = [s * MQ + k for k in range(MQ)]
+            packed, _ = build_tree_mask_packed(
+                s, MQ, Kg, ctx, glue_rows, anc, selfc)
+            ref = self._chain_reference(s, MQ, Kg, ctx, glue_rows)
+            self.assertTrue((packed == ref).all(), f"step {s} mismatch")
+
+    def test_tree_cross_row_bits(self):
+        # 트리: 행 1의 부모가 (fwd0, 행 0) 셀 → 그 비트가 켜져야 함
+        import numpy as np
+        from ssd.engine.helpers.p2_tree import build_tree_mask_packed
+        MQ, Kg, ctx = 4, 2, 100
+        glue_rows = np.ones((MQ, Kg + 1), np.uint8)
+        anc = [[], [0], [], []]                # 행1 ← 셀0 (행0@fwd0)
+        selfc = [MQ + k for k in range(MQ)]    # fwd=1
+        packed, _ = build_tree_mask_packed(
+            1, MQ, Kg, ctx, glue_rows, anc, selfc)
+        m = np.unpackbits(packed, bitorder="little")
+        cols = ctx + MQ
+        m = m[:MQ * cols].reshape(MQ, cols)
+        spec0 = cols - ((1 + 1) * MQ + (Kg + 1)) + Kg + 1
+        self.assertEqual(m[1, spec0 + 0], 1)   # 조상 셀
+        self.assertEqual(m[0, spec0 + 0], 0)   # 행0은 셀0 안 봄 (자기 과거 아님)
+        self.assertEqual(m[1, spec0 + MQ + 1], 1)  # 자기 셀

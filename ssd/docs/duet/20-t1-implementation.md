@@ -84,3 +84,9 @@ depth-동기 / **frontier의 depth 혼합 선택 (level은 불가능함을 동�
 설정에서 대조)** / D11 재평가 없음 / root별 예산 보존 / priority
 누적식 / 조상 셀 체인 / 셀 주소. 이 참조 구현이 T1.4b(엔진 배선)의
 정답지가 된다.
+
+**T1.4b-1 완료**: `build_tree_mask_packed` — 기존 chain 빌더의 packed
+mask 기하([prefix|glue|spec 블록], packbits little)를 정확 복제한 트리
+버전 (조상 셀 비트 + 자기 셀). **핵심 게이트 통과: fanout=1 퇴화에서
+기존 체인 대각 mask와 비트 단위 일치** (step 0-2 전수) + 교차-행
+조상 비트 정합 테스트. 유닛 누적 28/28.
