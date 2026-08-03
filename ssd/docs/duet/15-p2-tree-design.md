@@ -3,7 +3,8 @@
 **작성**: 2026-08-02 v3 → 2026-08-03 v4 (외부 리뷰 1차) →
 **2026-08-04 v5** (외부 리뷰 2차 + 사용자 결정 ①②③: 정책 스위치·
 D11 single-shot·priority 확정·π̂=라이브 P_iv·pack 필수화·G0/G1 게이트·
-E1 비교군 5종·5-rep·그래프 분리·§12 TODO). **상태: 설계 단계 — 구현 착수 금지.**
+E1 비교군 5종·5-rep·그래프 분리·§12 TODO; 3-에이전트 전수 검증 패스
+반영 — 일치성/코드-대조/구현-충분성, §6 실행모델·§7.5 신설). **상태: 설계 단계 — 구현 착수 금지.**
 사용자 지시: "모든 건 완벽하게 설계가 이루어진 이후에 시작." §9의 관문
 실험(E0-E2)이 전부 green이고 설계가 승인되기 전에는 엔진 코드를
 수정하지 않는다. **단 하나의 예외**: E0가 요구하는 계측 덤프
@@ -13,8 +14,8 @@ E1 비교군 5종·5-rep·그래프 분리·§12 TODO). **상태: 설계 단계 
 **v4 변경 요약** (v3 대비): ① D1을 "고정폭 W forest + frontier(보류)
 확장 + parent_idx/동적 조상 mask"로 재서술하고 "새 CG 0개" 주장 폐기,
 ② 자식 생성은 결정론 top-c가 아니라 **q_eff에서 WOR 샘플** (무손실
-조건) + 장부 4규칙, ③ proxy score는 chosen_tok int64 상위 비트에
-pack (wire 항목 수 불변 확인), ④ 채산 상수를 final_rematch 공인
+조건) + 장부 규칙 (규칙 4는 v5 D11로 소멸), ③ proxy score는
+chosen_tok int64에 pack — v5에서 비트 15~30로 확정, ④ 채산 상수를 final_rematch 공인
 수치로 교체 (계수 0.12→0.156) + N_v별 breakeven 표, ⑤ verify는
 SGLang-참조 설계 (custom tree mask + N_v bucket + slot 전략) — 이
 엔진의 EAGLE은 체인이라 tree verify가 전면 신규임을 확인.
@@ -69,7 +70,7 @@ logits로 "이번 검증이 어떻게 끝날지"를 target 스스로 예측해 d
 | wire | target rank0 → draft NCCL 페이로드: `(chosen_pos, chosen_tok)` 점수 내림차순 `wire_N`개 — **wire_N은 config 상수, step/valid_k와 무관** [config.py:131-170] |
 | Policy B | P2 seed 선택 정책 (아래 수식) |
 | **CG** | **CUDA Graph** — 커널 시퀀스를 고정 shape으로 capture해 replay하는 최적화. replay는 텐서 **shape이 상수**여야 하므로 모든 동적성은 "shape 고정, 내용(mask/index 값)만 변동"으로 구현 |
-| band-clear | A/B 판정: 3-rep 인터리브에서 한쪽의 최악 rep > 상대의 최고 rep (분산 구간 비겹침). 겹치면 동률 |
+| band-clear | A/B 판정: N-rep 인터리브에서 한쪽의 최악 rep > 상대의 최고 rep (분산 구간 비겹침). 겹치면 동률. 과거 성적은 3-rep, 본 설계 T4는 **5-rep** |
 | spec_wait | target이 검증 결과 송신 후 다음 추측 응답을 받을 때까지의 블로킹 |
 | proxy_wait | draft가 P1을 끝내고 exit proxy 도착을 기다리는 블로킹 |
 | q_eff | draft의 **실제 제안 분포** — temperature 등 sampler 처리가 적용된 뒤의 분포. 무손실 검증의 기준 분포 |
@@ -148,8 +149,8 @@ draft (GPU4)  : [respond(조회/JIT)]→[glue]→[P1 rollout]→[proxy_wait...]�
   동률(+0.5%)을 band-clear 우위로 전환.
 - **채산 부등식** (v4 — final_rematch 공인 상수: TPS 81.91 =
   0.0819 tok/ms, tok/step 4.108, T_target 51.44ms [final_rematch
-  RESULTS.md:76-78]; verify 행당 한계비용 c_row — 체인 스윕 실측
-  1.9ms/행 [E10 프로브: K1 9→10 = +1행 → +1.7ms], **트리 행에도
+  RESULTS.md:76-80]; verify 행당 한계비용 c_row — 체인 스윕 실측
+  1.9ms/행 [E10 프로브: K1 9→10 = +1행 → +1.9ms (T_target 53.32 vs 51.44)], **트리 행에도
   동일하다는 것은 가정이므로 E2①에서 T_verify(N_v)로 직접 재실측**):
 
   `breakeven ΔL_p2 = TPS × c_row × Δrows ≈ 0.156 × Δrows`
@@ -186,6 +187,9 @@ draft (GPU4)  : [respond(조회/JIT)]→[glue]→[P1 rollout]→[proxy_wait...]�
           root₃ ── (확장 0)       보류: 다음 forward에서 선택될 수 있음
 ```
 
+(그림은 **frontier 모드 예시** — D1: level/frontier 정책 스위치,
+기본값은 E1+실측이 결정)
+
 **관련 연구 좌표** (검증 완료): **DFVG** (ASPLOS'26 — confidence 임계
 sparse 동적 트리 + 오버랩; FPGA라 shape 자유 — 아이디어만), **EAGLE-2**
 (arXiv:2406.16858 — 노드 가치 V=∏confidence로 위상 선택, 레벨당 top-k
@@ -196,7 +200,7 @@ draft 확률-수락률 상관), **Sequoia** (WOR 다후보 검증의 무손실 �
 **우리의 차별점**: ① 루트가 proxy가 고른 **root 숲**, ② root에 draft
 confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가설),
 ③ frontier 확장은 EAGLE-2의 레벨-단위보다 일반적 (얕은 보류 노드가
-나중에 역전 선택 가능).
+나중에 역전 선택 가능) — 단 채택 여부는 정책 스위치 실측으로 결정 (D1).
 
 ---
 
@@ -219,12 +223,24 @@ confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가
 - **D2(v5) — π̂ = 라이브 P_iv, score 비트-pack 필수** (결정 ③으로
   조건부→필수 승격): log P_iv를 16비트 고정소수점(범위 log₁₀P ∈
   [−6,0])으로 양자화해 **chosen_tok int64의 비트 15~30에 pack** —
-  V=32,000이라 토큰은 15비트만 사용(vocab ≤ 32768 assert + 버전 비트
-  1개), 부호 비트 불사용. wire 항목 수는 valid_k와 무관한 config
-  상수라 장애 없음 (config.py:131-170; 고정 ring 송신 verifier.py:
-  497-501). NCCL 호출 수·통신량 증가 0. rank prior/경험 테이블은
-  폐기 — E0의 역할은 P_iv의 **calibration 검증**(위치별 신뢰도
-  곡선)으로 전환.
+  champion V=32,000이라 토큰은 15비트만 사용, 부호 비트 불사용 +
+  버전 비트 1개. **가드는 `Config.__post_init__`의 명시 raise**
+  (`vocab_size > 32768 → ValueError`) — 벤치는 `python -O`라 assert는
+  방어가 아니다 (R1 관례; 기존 vocab 동일성 검사 [model_runner.py:
+  102]도 assert라 -O에서 소멸). wire 항목 수는 valid_k와 무관한
+  config 상수라 장애 없음 (config.py:131-170); 송신은 고정 크기
+  int64 — 기본 blocking `send_int64` [verifier.py:500-501],
+  `SSD_ASYNC_PROXY_SEND=1` 시 ring isend [:496-497], 어느 쪽이든
+  2·B·wire_N 상수. NCCL 호출 수·통신량 증가 0. **unpack 규약 (정확성
+  함정)**: draft의 P1 dedup은 chosen_tok **원시 int64 동등비교**이므로
+  [draft_runner.py:1588] 수신 직후 `_unpack_duet_proxy` [:1391-1413]
+  에서 1회 mask/shift로 (tok 15bit, score 16bit)를 분리하고 selector·
+  캐시·rollout에는 **순수 tok만** 흘린다 — pack된 값으로 dedup하면
+  매칭 전멸+캐시 오염 (T2 회귀 케이스로 명시). B=1 전용 대체 생산자
+  `policy_b_from_candidates` [duet_policy.py:73-75, gather 게이트
+  verifier.py:315-316]에도 pack 병행. rank prior/경험 테이블은 폐기 —
+  E0의 역할은 P_iv의 **calibration 검증**(위치별 신뢰도 곡선)으로
+  전환.
 - **D3 — log 공간 유지**: value 비교는 log-합 (top-k 선택에 raw 곱과
   동치, 수치 안전).
 - **D4 — 동적 선택 오버헤드 최소**: forward당 frontier topk 1회, 신규
@@ -234,6 +250,15 @@ confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가
   재정규화해 이어 뽑기) — 결정론 top-c 금지. 몇 개를 어느 부모에게
   줄지(fanout 배분)는 value로 결정론적으로 정해도 됨 (자식 정체와
   무관하므로 분포 보존과 무관).
+- **D10(신규) — 정체-비조건 원칙** (무손실의 핵심 규약): fanout·
+  candidate 포함·예산 등 **위상 결정은 전부 "그 샘플의 정체(어떤
+  토큰이 뽑혔는지)를 관측하기 전에"** 확정한다. 관측 후 변경은 분포를
+  편향시킨다 — 반례: P(a)=0.5인 토큰을 "a가 뽑혔을 때만 포함"하는
+  규칙은 candidate tree 안 a의 실효 확률을 0.55로 왜곡 (외부 리뷰
+  P0-1 손검산; v3의 "value 상위 절단"이 이 위반으로 폐기된 이력).
+  샘플된 노드는 확장하지 않아도 candidate tree에 잎으로 남는다.
+  root별 노드 총량 캡도 **생성 시점**(샘플 전)에 적용. fanout 개수의
+  산정식 자체는 미결 — D12 (§8).
 - **D11(신규, 2026-08-04) — single-shot fanout**: 노드가 평가(forward)
   되는 순간 그 노드의 fanout을 확정하고 형제들을 **그 자리에서 한
   번에** 비복원 샘플한다. **평가 완료된 노드에는 이후 형제를 추가하지
@@ -271,10 +296,10 @@ confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가
 
 ## 6. 트리 구성 알고리즘 (draft 쪽, v4)
 
-**frontier 확장 루프** (forward F_total = K2회, 행수 W = B_s 고정):
+**확장 루프 (정책 스위치 D1 — 아래 의사코드가 두 정책 공통)** (forward F_total = K2회, 행수 W = B_s 고정):
 
 ```
-pool ← proxy가 고른 B_s개 root (미평가; prior = rank/packed-score 기반 π̂)
+pool ← proxy가 고른 B_s개 root (미평가; π̂ = wire 비트-pack으로 수신한 라이브 P_iv — 결정 ③)
 for f in 1..F_total:
     expand_set ← 선택 정책(D1)에 따라 pool에서 W개    # GPU topk 1회
         level:    최신 depth의 미평가 노드만
@@ -321,15 +346,46 @@ priority(n) = log π̂(root(n)) + Σ_경로 log c_raw
 - E1 검증 항목: (a) 이 priority가 oracle(사후 최적 배분) 대비 남기는
   격차, (b) "c_raw ≈ 실제 기여 확률" calibration.
 
-**장부 4규칙 (무손실 조건 — Sequoia/SpecInfer 계열)**:
+**장부 3규칙 (무손실 조건 — Sequoia/SpecInfer 계열)**:
 
-1. 같은 부모의 형제들은 **q_eff에서 WOR로 이어 샘플** (독립 재샘플
-   금지 — 중복·보정식 불일치).
+1. 같은 부모의 형제들은 **q_eff에서 비복원으로 이어 샘플** (독립
+   재샘플 금지 — 중복·보정식 불일치). D11에 따라 이 샘플은 평가
+   시점에 한 번에 끝난다.
 2. **형제 뽑은 순서 기록** — verify가 같은 순서로 보정 재적용.
 3. **폐기/절단은 형제 그룹의 뒤에서부터만** (형제 3을 남기고 1을 빼면
    보정 재구성 불가). 확장 안 하는 것(위상 선택)은 자유.
-4. 보류-재확장으로 형제가 여러 forward에 걸쳐 생기면 **부모별 WOR
-   체인(뽑힌 집합+순서)을 이어간다.**
+
+~~규칙 4 (v4): 보류-재확장 시 부모별 비복원 커서 체인 유지~~ —
+**D11(single-shot fanout)로 도달 불가 시나리오가 되어 삭제** (§11
+위험 6과 동일 근거). 구현에는 "평가 완료 노드에 형제 추가 시도 시
+명시 raise" 방어만 남긴다.
+
+**rollout 실행 모델과 텐서 구성 (v5 — 구현 사양)**:
+
+- **실행 위치**: 선택(topk)·fanout 확정·비복원 샘플·pool 갱신은 CG
+  replay **사이의 eager GPU 연산** (CG-safety 불요 — rollout 루프는
+  원래 Python). D4의 "sync 0회"는 이 구간에 `.item()`류 GPU→CPU
+  동기화를 새로 넣지 않는다는 뜻 — 가변 개수 샘플은 "선택된 W개 노드
+  전부에 c_max개 일괄 비복원 샘플 후 fanout 유효 mask" 고정-shape
+  패턴으로 구현.
+- **pool 자료구조**: 고정 용량 텐서 필드 (tok, parent_cell, depth,
+  root_id, priority, 상태) — 용량 상한 = B_s×(1+F_total×c_max).
+- **셀 주소 규칙**: forward f의 행 j는 draft 스크래치 셀
+  `glue_offset + f·W + j`에 KV append — 조상 mask 비트는 트리 depth가
+  아니라 **조상이 평가된 (forward, 행) 셀 번호**를 가리킨다. rope
+  position = root_pos + depth (셀 번호와 무관).
+- **mask 증분 생성**: 자식 mask 행 = 부모 mask 행 OR (부모 셀 비트).
+  현행의 step-초 일괄 선계산 [draft_runner.py:1185-1203; cudagraph_
+  helpers.py:318-410]은 불가능 (forward f의 topology가 f−1 샘플에
+  의존) — 매 forward 재구성이 임계경로에 들어가므로 **GPU 비트연산**
+  구현 우선 (CPU numpy 경유는 parent 정보 GPU→CPU 전송 = D4 위반),
+  비용은 E2⑤ 실측.
+- **스크래치 생애주기**: 현행 체인과 동일 불변식 — **명시적 rewind
+  없음**. 매 step 스크래치를 새 num_tokens 기준으로 전면 재배치·
+  덮어쓰고, mask prefix_len이 이전 step 잔여(기각 가지 포함)를 차폐
+  [cudagraph_helpers.py:386-397 패턴]. 신규 검사 하나: 트리 extent
+  (glue + F_total·W) ≤ draft 블록 예약 — F7/scheduler 예약 재검토
+  (T2)에 포함.
 
 **체인 퇴화(fast path, 핵심 회귀 기준)**: fanout=1/root, R=B_s로 두면
 현행 무분기 체인과 동일해야 한다 — 기존 sampler 호출을 그대로 쓰는
@@ -338,6 +394,11 @@ go/no-go ②).
 
 **B>1 호환**: per-seq (B_s, W, F_total) 동일 상수 — budget-합-상수
 불변량의 일반화. seq별 선택은 dim-1 topk (docs/duet/13 M3 패턴).
+**verify dispatch (v1)**: 현행 verify는 배치 단일 vk_max로 bucket을
+고르므로 [verifier.py:113-116; draft_runner.py:576-579] tree-hit 행과
+체인 행이 섞인 배치는 단일-bucket dispatch가 안 된다 — **v1은 B>1에서
+트리 응답 게이트 OFF** (본 설계 타겟 B=1 결정과 정합). 혼합 dispatch
+(체인 행을 퇴화 topology로 tree bucket 승격)는 §12 TODO 5에서 설계.
 
 ## 7. verify 측 설계 (v4 — SGLang 참조)
 
@@ -369,6 +430,12 @@ parent_q_logits[U, V]  (고유 부모 분포 U개 — 중복 전송 회피)
 - verify rows = N_v+1 (+1은 recovery). mask 값은 parent_idx에서 매
   step 계산해 packed bitmask 버퍼에 주입 — capture는 **N_v bucket별**
   (§7.4).
+- **캐시 확장** (현행 keys[T,3] + tokens[T,K] + logits[T,K+1,V] +
+  valid_k[T] [draft_runner.py:1324-1337]): root별 (서브트리 뷰 +
+  parent_q_logits) 추가. **U_max = N_v 고정 pad** (캐시·응답 wire
+  모두 고정 shape — NCCL 고정 크기 유지). 메모리 상한 ≈ B_s×N_v×V×2B
+  ≈ 10×8×32000×2 ≈ 5.1MB/step (fp16) — T2에서 실측. SpeculateResult/
+  speculator 경유 신규 필드는 T2 스키마 확정 시 나열.
 
 ### 7.2 무손실 트리 수락
 깊이별·형제-순서 순차 기각 샘플링:
@@ -382,6 +449,16 @@ pos p의 형제 x₁..x_m (기록된 순서; q = q_eff, p = target 분포):
 ```
 검증: 작은 vocab 전수(exhaustive) 테스트로 출력 분포 = target 분포
 정확 일치 (§10 go/no-go ①) + 체인 퇴화에서 현행 verify()와 동일.
+
+**실행 설계 (v5)**: 보행은 데이터-의존(경로 선택이 앞 검정 결과에
+의존)이라 소박한 구현은 노드당 sync가 난다. 사양: ① 전 노드의
+p(x)/q(x)·U(0,1)을 **1회 일괄 gather** 후 보행 자체는 CPU (노드 ≤
+N_v+1 = 최대 9라 CPU 루프가 더 쌈 — 현행 verify()도 말미 sync 1회
+[utils/verify.py:191-201]), ② 전원-기각 지점의 보정 recovery 샘플만
+GPU multinomial 1회 — **신규 sync 상한 2회/step**, ③ scratch→
+canonical KV 복사는 수락 확정 직후 default stream, 다음 step verify
+진입 전 완료 보장 (비용 E2③), ④ `num_cached_tokens` 회계
+[verifier.py:188-189]는 "vk+1"이 아니라 **수락 경로 길이+1**로 재정의.
 
 ### 7.3 KV (D5 — v4 잠정 확정: scratch + 복사)
 SGLang식 토큰-단위 slot 유지는 우리 블록-단위 pool과 안 맞으므로,
@@ -406,9 +483,38 @@ OFF에서 기존과 bit-identical + gate ON에서 체인-퇴화 topology를 넣�
 트리 그래프가 체인 fast path와 RNG·출력 동일. custom mask × CG 패딩
 조합의 OOB 사례가 보고된 바 있으므로 wrapper batch ≠ real batch인
 bucket 경계 검사를 T3 테스트에 포함.
+**bucket pad 규칙**: |서브트리| < N_v면 pad 행은 parent_idx=−1,
+mask는 prefix만, **valid_node_mask[N_v]로 수락 검정에서 제외** (현행
+체인의 valid_k clamp [utils/verify.py:140-141]의 per-node 대응).
+유효 노드 수는 응답 wire에 동승. bucket 선택 = |서브트리|를 덮는
+최소 N_v; 최대 bucket 초과분은 규칙 ③(형제-suffix 절단)으로 저장
+시점에 잘라 확정 (응답 view 선계산에 포함).
 기존 valid_k 기반 k1/k2 이중 bucket dispatch의 축을 늘리는 구조.
 캐시 생성 시 root별 응답 view(절단 결과)를 미리 계산해 hit 임계
 경로에서 트리 정렬을 하지 않는다. capture 메모리 증가는 E2④ 실측.
+
+### 7.5 hit-step 후속 파이프라인 (트리 응답의 "다음 step" 연쇄 — D13, 확정 대기)
+
+트리 응답이 검증되는 step에는 체인 전제가 깔린 후속 3계가 연쇄로
+영향받는다: ⓐ glue decode는 응답 **체인**을 tril repeat mask로
+실체화 [cudagraph_helpers.py:347-355], ⓑ P1 fork는 응답 체인 위치
+0..K 기준 [draft_runner.py:1435-1449], ⓒ Policy B proxy는 체인
+위치축 [B,K] 전제 [verifier.py:378-457] + 캐시 키 (seq, fan_idx,
+recovery)의 좌표계.
+
+**v1 축소 규칙 (제안 — 사용자 확정 필요)**: 3계의 기준을 응답 트리의
+**backbone**(각 분기에서 맏이만 따라가는 최상위-priority 체인, 길이
+= 트리 최장 경로)에 국한한다 — ⓐ glue는 backbone만 draft KV에 실체화
+(기각-가지 미실체화 → 기존 체인 glue 재사용), ⓑ P1 fork도 backbone
+위치 기준 (fan_idx 좌표계 불변), ⓒ proxy α̂/ĥ도 backbone 위치축
+위에서 현행 [B,K] 기계 그대로. 즉 **트리는 verify 입력과 target-측
+수락 보행에서만 존재**하고, 다음 step의 좌표계는 현행 체인과 동일 —
+캐시 키/fan_idx 스키마 변경을 회피한다. 대가: 실제 수락이 backbone을
+이탈한 step(비-맏이 형제 수락)은 후속 예측 품질이 낮아진다 — E1이
+**backbone-이탈률과 그 비용**을 정량화하고, 트리 일반화(기각 가지
+위의 proxy 등)는 §12 TODO로 미룬다. 유의: exit 시점(층 56)에는 수락
+결과를 모르므로 ⓒ는 현행처럼 "예정된 체인(backbone)" 위의 예측이다
+— 순서 제약 추가 없음.
 
 ## 8. 미결 설계 결정
 
@@ -416,8 +522,10 @@ bucket 경계 검사를 T3 테스트에 포함.
 |---|---|---|
 | D5 | KV 처리 | **잠정 (a) scratch+복사** (§7.3, SGLang 대비 근거) — E2③ 실측으로 확정 |
 | D6 | 응답 절단 | value 우선 + **조상 폐포·형제-prefix 보존** (규칙 ③) — bucket {4,6,8} 중 선택 |
-| D7 | 탐색 공간 초기값 | W=10 고정, F_total=D=4 우선(D=5 후속), R ∈ {4,6,8,10}, N_v ∈ {4,6,8} — E1이 결정 |
+| D7 | 탐색 공간 초기값 | W=10 고정, F_total=D=4 우선(D=5 후속), R ∈ {4,6,8,10}, N_v ∈ {4,6,8} — E1이 결정. **R < B_s 선택 시 W=R로 연동 축소** (pad 행 낭비 방지; F7 산식 연쇄는 T2 재검토). 미평가 pool이 W 미만이면 유효 행만 채우고, 유효 pool 0이면 잔여 forward 생략 |
 | ~~D9~~ | ~~value의 π̂/â 형태~~ | **해소 (결정 ③)**: π̂ = 라이브 P_iv (위치별 calibration은 E0 검증, 필요시 라이브 보정계수) |
+| D12 | 평가 노드별 **fanout 산정식** | 미결 — 후보: ⓐ 선택된 W개 노드의 priority-비례 배분 + 노드당 상한(c_max) 클램프, ⓑ 균등 배분. 어느 쪽이든 D10(정체 관측 전 확정) 전제. E1이 두 후보를 비교해 결정 |
+| D13 | **hit-step 후속 파이프라인** (§7.5) | v1 축소 규칙(backbone 국한) 제안 — **사용자 확정 대기** |
 
 ## 9. 관문 실험 — 2단 게이트 (G0 연구 타당성 / G1 채택)
 
@@ -436,9 +544,12 @@ torch 직접 사용)로 만들어 "엔진 코드 금지" 원칙과 충돌하지 
   - draft: dedup 후 retained roots + 원 wire rank + P1 중복 여부;
     다음 응답의 phase_source·accepted length·명중 root rank
   - offline 재생용 prompt ID/토큰 prefix
-  **판정 지표**: root coverage Recall@R (R∈{4,6,8,10}), rank별 hit
-  확률, score/rank 캘리브레이션 (ECE·Brier), rank별 L_p2, {proxy
-  prior, rank prior, uniform, confidence-only}의 기대-TPS 직접 비교.
+  **판정 지표** (결정 ③ 이후 — π̂=라이브 P_iv 확정): ① **위치(pos)별
+  P_iv 신뢰도 곡선** — P_iv 구간별 실측 hit 빈도 (ECE·Brier). 균일
+  편향은 배분에 무해하므로(§6) **위치 간 편향 차이**가 판정 대상 —
+  비균일이 크면 §12 TODO 2(보정계수) 발동. ② root coverage Recall@R
+  (R∈{4,6,8,10}) — R 선택용. ③ rank별 L_p2·hit 확률 — 보조 분석
+  (prior 선택은 결정 ③으로 닫혔으므로 sanity-check 용도).
 - **E1 — offline 트리 시뮬레이션** (엔진 무수정): E0 덤프 + HF 재생.
   objective는 L_p2가 아니라 **predicted TPS** = `기대 출력 토큰 /
   파이프라인 주기(target·draft·NCCL 임계경로 max)` (draft 시간 모델
@@ -450,12 +561,14 @@ torch 직접 사용)로 만들어 "엔진 코드 금지" 원칙과 충돌하지 
   계산하지 않는다. 컨트롤러 전체(위상 할당·절단 포함)를 작은 vocab
   전수 열거로 무손실 검증 (D10류 편향은 verifier 단독 테스트로는
   안 잡힘).
-- **E2 — 마이크로벤치** (6항목): ① T_verify(N_v), N_v∈{4,6,8,10}
+- **E2 — 마이크로벤치** (7항목): ① T_verify(N_v), N_v∈{4,6,8,10}
   직접 실측 (§2의 c_row 가정 재확정), ② packed-mask verify capture
   프로토타입 replay 시간 + tree sample/accept 단계의 GPU·CPU sync
   비용, ③ scratch→canonical KV 복사 비용 (TP rank별), ④ bucket 추가
   CG capture 메모리, ⑤ 동적 조상 mask 생성 비용 (W=10), ⑥ score
-  비트-pack 시 wire 변화 확인 (기준선 832KB — F4), ⑦ q_eff parity —
+  비트-pack: wire 변화 확인 (기준선 832KB — F4) + unpack(mask/shift+
+  역양자화) 소요 + **양자화 전후 priority 순위 스왑률** (E1 연동 —
+  16비트 양자화가 동률·tie-break 편향을 만드는지), ⑦ q_eff parity —
   draft 샘플측과 verifier 재구성측의 분포 일치 (temperature별,
   sampler_x on/off, 비복원 첫 샘플 = 기존 단일 샘플 경로; §7.1의
   공유-함수 원칙 검증). **판정**: 합계 오버헤드 < E1 기대 이득의 1/2
@@ -464,7 +577,10 @@ torch 직접 사용)로 만들어 "엔진 코드 금지" 원칙과 충돌하지 
 ## 10. 마일스톤과 go/no-go
 
 **P0 (관문 전, 별도 승인 대상)**: E0 이중 trace 게이트 — 덤프 스키마
-유닛테스트, OFF 시 TPS 무영향. **이것만이 관문 전 허용 코드.**
+유닛테스트, OFF 시 TPS 무영향. **ON일 때도 측정 레짐을 왜곡하지 않는
+사양 포함**: pinned-host ring 복사 + 별도 스레드 flush + step 서브샘플
+옵션 (임계경로 동기 기록 금지 — calibration 데이터가 왜곡된 레짐에서
+나오면 무의미). **이것만이 관문 전 허용 코드.**
 
 **T1-T5 (관문 green + 설계 승인 후)**: 방식은 docs/duet/13 M1-M6 관례
 (단계별 유닛테스트 + B=1 회귀 스모크 + 상세 커밋; 가드는 `python -O`
@@ -472,7 +588,7 @@ torch 직접 사용)로 만들어 "엔진 코드 금지" 원칙과 충돌하지 
 
 | 단계 | 내용 | 검증 |
 |---|---|---|
-| T1 | frontier rollout + WOR 샘플 + 장부 + 캐시 구조 | CPU 참조 대비 동일성; **fast path(fanout=1/root, R=B_s) RNG까지 bit-identical** |
+| T1 | rollout (정책 스위치) + 비복원 샘플 + 형제 순서 기록 + 캐시 구조 | CPU 참조 대비 동일성; **fast path(fanout=1/root, R=B_s) RNG까지 bit-identical** |
 | T2 | 응답 view/wire (tok+parent+순서+logits, score pack) + F7 산식 재검토 | wire 왕복 테스트; payload 실측 |
 | T3 | verify: packed-mask bucket capture + 트리 수락 + scratch KV | **작은 vocab 전수 분포-일치 테스트**; 체인 퇴화 동일성 |
 | T4 | B=1 E2E + champion A/B (**5-rep 인터리브** — final_rematch 관례; ±1.5 tok/s 노이즈에서 +3% 판정에 3-rep band-clear는 불안정) | §2 목표 판정 |
