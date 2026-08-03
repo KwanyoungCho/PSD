@@ -234,3 +234,30 @@ id가 됨). CG 불변 유지를 위해 P1 폭은 기존 레이아웃(MQ 16) 유�
 컨텍스트별 fanout은 (2,2,2,2,2,2,1,1,1)+filler 재배분 (F7 예산
 재검토 전 v1 — report 명시). fork 행 mask = 조상 비트맵 (split_k1
 CG 전 step mask override), rope = depth 기반.
+
+**T3.4-b3-4/-5 완료 (트리 step P1/P2 — 결정④ ⓑⓒ v1)**:
+`_tree_step_p1p2` — 트리-hit step의 전용 경로 (TREE_GLUE 후 진입,
+체인 경로와 완전 분리). P1(ⓑ): `_select_tree_fork_tokens` (컨텍스트
+c의 제외 집합 = 뷰-내 c의 자식 토큰 — 체인 '다음 토큰 제외'의 일반화;
+컨텍스트별 fanout = MQ 16의 균등-우선 배분), fork 행 rope = pos0+1+
+depth(컨텍스트), 전 K1 step packed mask 직접 구성 ([prefix+rec | 조상
+노드 셀 | 자기 행 체인 셀] — gap 셀 자동 배제), populate에
+`draft_fan_idx_override` = 컨텍스트 id (= 종단 노드 id 키). P2(ⓒ v1):
+선택기 위치축 = 노드 id 축 (chosen_pos = 노드 id — wire 형식 불변),
+K_rank = n_valid로 in-place 레이아웃 갱신 (proxy fan_idx = 노드 id
+자동), seed rope = 컨텍스트 depth, 롤아웃 어댑터에
+`glue_rows_override`/`K_glue_override` (조상 비트맵) 추가, 새 뷰/
+backbone populate은 체인 branch와 공용 헬퍼 `_tree_backbone_project`.
+유닛 40/40 + 회귀 44/44 (OFF 불변).
+
+**이슈 #7 (b3-5 중 발견, 프리-존재)**: 롤아웃 어댑터의 체인-step 글루
+가시성이 `min(p, K2)+1` — vk=K1 step에서는 글루 블록이 K_rank+1 폭
+이어야 하는데 K2+1로 고정되어 (a) prefix 1s가 초반 spec 셀을 전 행
+공개 (seed p=2가 s3·s4를 봄 — 미래 누출), (b) 글루 비트가 마지막
+K2+1 셀로 오정렬. stub 테스트가 vk=K2 구성이라 통과했던 것. 수정:
+글루 폭 = 위치축 길이(len(fan_out)), `:p+1` (클램프 제거). 트리
+step은 override 경로라 무영향.
+
+**ⓒ 정확성 유의 (v6 §7.5ⓒ 그대로)**: 트리-step Policy B의 α̂/corr은
+맏이 형제에만 정확 — 사다리(R̂,D̂) 반영 ĥ-DP 일반화는 verifier 트리
+분기(b5)에서 다룸. E1의 체인-ĥ 예측력 검증은 그 시점에 재확인.

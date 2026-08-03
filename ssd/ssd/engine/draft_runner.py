@@ -1151,6 +1151,32 @@ class DraftRunner(ModelRunner):
         duet_close("glue", _mev_glue)
         return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, 1
 
+    def _tree_backbone_project(self, pool, R, K2, cell_logits):
+        """rollout pool → 체인-호환 populate 입력 [R, K2] (backbone=맏이 사슬).
+
+        키/valid_k/serving 형식을 체인과 동일하게 유지하기 위한 투영 —
+        실제 응답 내용은 뷰(self._tree_views)가 담당한다.
+        """
+        V = self.hf_config.vocab_size
+        _bt = torch.zeros(R, K2, dtype=torch.int64)
+        _bl = torch.zeros(R, K2, V)
+        _first_child = {}
+        for i in range(pool.n):
+            _pi = int(pool.parent_idx[i])
+            if _pi >= 0 and int(pool.sib_order[i]) == 0 \
+                    and _pi not in _first_child:
+                _first_child[_pi] = i
+        for r in range(R):
+            cur, d = r, 0
+            while cur in _first_child and d < K2:
+                nx = _first_child[cur]
+                _bt[r, d] = pool.tok[nx]
+                _pc = int(pool.parent_cell[nx])
+                if cell_logits is not None and _pc >= 0:
+                    _bl[r, d] = cell_logits[_pc]
+                cur, d = nx, d + 1
+        return _bt.to(self.device), _bl.to(self.device)
+
     def _select_tree_fork_tokens(self, glue_logits, fan_counts, child_toks):
         """트리 step P1 fork 선택 (T3.4-b3-4, 결정④ ⓑ). B=1 전용.
 
@@ -1270,9 +1296,73 @@ class DraftRunner(ModelRunner):
         K = self.config.speculate_k
         duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
 
-        raise NotImplementedError(
-            "T3.4-b3-5: tree-step P2 (node-seed rollout) — 다음 조각 "
-            "(P1 node-fork까지 구현됨)")
+        # === P2: node-seed rollout (결정④ ⓒ v1) ===
+        # 선택기의 위치축이 노드 id 축이 된다 (chosen_pos = 노드 id —
+        # 형식 불변, v6 §7.5ⓒ). K_rank = n_valid → position_count = n_rows.
+        _mev_p2b = _mr("phase2_build")
+        from ssd.engine.helpers.p2_tree import build_root_views
+        K2 = self.config.duet_phase2_k
+        K_rank = n_valid
+        total_budget = self.config.duet_proxy_total_budget
+        _sel_out = self._select_proxy_sourced_tokens_unified(
+            duet_proxy, draft_forked_p1_padded,
+            K_rank=K_rank, total_budget=total_budget,
+            draft_forked_mask=draft_forked_p1_mask,
+        )
+        if len(_sel_out) == 3:
+            proxy_forked, proxy_fan_out_tensor, proxy_piv = _sel_out
+        else:
+            proxy_forked, proxy_fan_out_tensor = _sel_out
+            proxy_piv = None
+        _layout_k2 = self._update_phase2_layout_inplace(
+            proxy_fan_out_tensor, K_rank)
+        proxy_tree_args = self._build_tree_decode_args_for_layout(
+            partial_tree_decode_args, proxy_forked, _layout_k2,
+            cache_hits_list)
+
+        # seed(노드-fork)별 rope/글루 가시성: 컨텍스트 depth·조상 비트맵
+        _seed_ctx = torch.repeat_interleave(
+            torch.arange(n_rows, dtype=torch.int64),
+            proxy_fan_out_tensor[0].cpu())
+        proxy_tree_args["rope_positions"] = torch.tensor(
+            [pos0 + 1 + depth_ctx[int(c)] for c in _seed_ctx],
+            dtype=torch.int64, device=self.device)
+        _gro = _np.zeros((len(_seed_ctx), n_rows), dtype=_np.uint8)
+        for r, c in enumerate(_seed_ctx.tolist()):
+            _gro[r, 0] = 1                        # rec
+            if c > 0:
+                for a in anc[c - 1]:
+                    _gro[r, 1 + a] = 1
+                _gro[r, 1 + (c - 1)] = 1
+        proxy_tree_args["glue_rows_override"] = _gro
+        proxy_tree_args["K_glue_override"] = n_valid
+        proxy_tree_args["proxy_piv"] = proxy_piv
+
+        _temps_p2 = proxy_tree_args["temps"]
+        _mB, _mK, _mF, _mN = proxy_tree_args["metadata_ints"]
+        _, _srp, _scl, _ssm = self._compute_step_positions_and_slot_maps(
+            proxy_tree_args["positions"],
+            proxy_tree_args["rope_positions"],
+            proxy_tree_args["block_tables"],
+            _mB, _mK, _mF, _mN, _layout_k2.MQ_LEN, layout=_layout_k2)
+        _mc("phase2_build", _mev_p2b)
+        pool, _elog, _cell_logits = self._p2tree_rollout(
+            duet_proxy, proxy_forked, proxy_fan_out_tensor,
+            proxy_tree_args, _layout_k2, _ssm, _scl, _temps_p2)
+        _R = _layout_k2.MQ_LEN
+        _nv = self.config.duet_tree_nv
+        self._tree_views = build_root_views(
+            pool, _R, _nv, cell_logits=_cell_logits)
+        proxy_tokens, proxy_logits = self._tree_backbone_project(
+            pool, _R, K2, _cell_logits)
+
+        self._merge_and_populate_cache(
+            draft_tree_args, draft_tokens, draft_logits,
+            proxy_tree_args, proxy_tokens, proxy_logits,
+            cache_hits_list, draft_acts, None,
+            proxy_layout=_layout_k2,
+            draft_layout=_layout_k1,
+            draft_fan_idx_override=_ctx_of_row.to(self.device))
 
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         if self.config.verbose:
@@ -1735,10 +1825,20 @@ class DraftRunner(ModelRunner):
         seed_piv = tree_args.get("proxy_piv")
         root_piv = (seed_piv[0].cpu().float() if seed_piv is not None
                     else torch.full((len(seeds),), 1e-6))
-        # 글루 가시성/rope base: seed 행의 것 (위치 p 기반)
-        glue_rows = _np.zeros((len(seeds), K2 + 1), dtype=_np.uint8)
-        for r, (p, _t) in enumerate(seeds):
-            glue_rows[r, :min(p, K2) + 1] = 1
+        # 글루 가시성/rope base: seed 행의 것 — 체인 step은 위치-prefix,
+        # 트리 step은 조상 비트맵 override (T3.4-b3-5)
+        _gro = tree_args.get("glue_rows_override")
+        if _gro is not None:
+            glue_rows = _gro
+            K_glue_used = int(tree_args["K_glue_override"])
+        else:
+            # 이슈 #7 수정: 글루 폭 = 위치축 길이 (vk+1) — K2+1로 자르면
+            # vk=K1 step에서 미래 토큰 누출/조기 절단 (stub은 vk=K2라 통과)
+            _n_pos = len(fo)
+            glue_rows = _np.zeros((len(seeds), _n_pos), dtype=_np.uint8)
+            for r, (p, _t) in enumerate(seeds):
+                glue_rows[r, :p + 1] = 1
+            K_glue_used = _n_pos - 1
         rope0 = tree_args["rope_positions"]
         rope_base = [int(rope0[r]) for r in range(len(seeds))]
         ctx_len = int(step_context_lens[0][0]) - 0  # chain 빌더 입력과 동일
@@ -1777,7 +1877,7 @@ class DraftRunner(ModelRunner):
                 beta=cfg.duet_tree_beta, depth_cap=K2,
                 temps=temps[:1].expand(W).cpu().float(),
                 forward_fn=forward_fn, glue_rows_by_root=glue_rows,
-                rope_base_by_root=rope_base, K_glue=K2,
+                rope_base_by_root=rope_base, K_glue=K_glue_used,
                 context_len=ctx_len,
                 sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
         finally:
@@ -2287,28 +2387,9 @@ class DraftRunner(ModelRunner):
             _nv = self.config.duet_tree_nv
             self._tree_views = build_root_views(
                 pool, _R, _nv, cell_logits=_cell_logits)
-            # 체인-호환 populate 입력: root별 backbone(맏이 사슬)을 [R, K2]로
-            # 투영 — 키/valid_k/serving 형식 유지, 실제 응답 내용은 뷰가 담당
-            _V = self.hf_config.vocab_size
-            _bt = torch.zeros(_R, K2, dtype=torch.int64)
-            _bl = torch.zeros(_R, K2, _V)
-            _first_child = {}
-            for i in range(pool.n):
-                _pi = int(pool.parent_idx[i])
-                if _pi >= 0 and int(pool.sib_order[i]) == 0 \
-                        and _pi not in _first_child:
-                    _first_child[_pi] = i
-            for r in range(_R):
-                cur, d = r, 0
-                while cur in _first_child and d < K2:
-                    nx = _first_child[cur]
-                    _bt[r, d] = pool.tok[nx]
-                    _pc = int(pool.parent_cell[nx])
-                    if _cell_logits is not None and _pc >= 0:
-                        _bl[r, d] = _cell_logits[_pc]
-                    cur, d = nx, d + 1
-            proxy_tokens = _bt.to(self.device)
-            proxy_logits = _bl.to(self.device)
+            # 체인-호환 populate 입력: backbone(맏이 사슬) [R, K2] 투영
+            proxy_tokens, proxy_logits = self._tree_backbone_project(
+                pool, _R, K2, _cell_logits)
             proxy_acts = None
         else:
             self._tree_views = None
