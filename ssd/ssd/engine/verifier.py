@@ -202,6 +202,10 @@ class Verifier(VerifierBase):
         temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
         temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
 
+        # ===== E0: 최종층 분포 기록 (P0 확장 — 기본 OFF, 전용 런 전용) =====
+        if _E0_TRACE:
+            _e0.record_target_final(logits_p, temperatures_target)
+
         from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
         _mev_vs = _mr("verify_sample_accept")
         new_suffixes, recovery_tokens = verify(

@@ -196,6 +196,24 @@ def record_target_wire(config, exit_logits, logits_q, draft_tokens,
         K=int(K), B=int(B))
 
 
+def record_target_final(logits_p, temperatures):
+    """Target rank-0, verify forward 직후: **최종층** 분포의 top-M + 정확
+    lse. 형제-수락(λ) 계산은 exit 근사가 아니라 이 분포로 해야 한다는
+    사용자 지적(2026-08-04) 반영 — k번째 "final" 레코드는 같은 step의
+    k번째 "wire" 레코드와 짝 (둘 다 spec step당 1회; K로 교차 확인)."""
+    tr = get("target")
+    lp = logits_p.float()
+    topm = min(_TOPM, lp.shape[-1])
+    t = lp.topk(topm, dim=-1)
+    lse = torch.logsumexp(lp, dim=-1)
+    tr._record(
+        "final",
+        gpu_tensors=dict(final_top_ids=t.indices,
+                         final_top_logits=t.values,
+                         lse1_P=lse, temps=temperatures),
+        K=int(lp.shape[1] - 1), B=int(lp.shape[0]))
+
+
 def record_draft_request(step_id, cache_keys, temps):
     """Draft, once per spec request: the previous step's ACTUAL outcome —
     cache key (seq_id, accepted_len-1, recovery_token) + temperature."""
