@@ -20,6 +20,9 @@ class SpeculateResult:
     # Profile-only cache status. Values: "miss", "hit", "hit_k1", "hit_k2",
     # or "mixed". This is computed where cache metadata is already consumed, so
     # timeline labeling does not introduce extra hot-path synchronization.
+    # P2-tree (T3.4-b2): 트리 응답 블록 (policy off면 None)
+    tree_ints: torch.Tensor | None = None        # [B, 3+4*nv] int64
+    parent_q_logits: torch.Tensor | None = None  # [B, nv, V] draft dtype
     profile_cache_status: str | None = None
     # Aligned-timeline (Phase B): monotonically increasing per-target-process
     # spec request id, mirrored on the draft side via spec metadata. Used

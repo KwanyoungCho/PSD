@@ -738,14 +738,32 @@ class DraftRunner(ModelRunner):
                 getattr(self, "_e0_step_id", -1), phase_source, valid_k,
                 out_tokens[:, :K])
         # Wire layout matches speculator_async._fused_response: [cache_hits, phase_source, valid_k, out_tokens].
-        fused_response = torch.cat([cache_hits.reshape(-1).to(torch.int64),
-                                    phase_source.reshape(-1),
-                                    valid_k.reshape(-1).to(torch.int64),
-                                    out_tokens.reshape(-1).to(torch.int64)])
+        _fused_parts = [cache_hits.reshape(-1).to(torch.int64),
+                        phase_source.reshape(-1),
+                        valid_k.reshape(-1).to(torch.int64),
+                        out_tokens.reshape(-1).to(torch.int64)]
+        if self.config.duet_tree_policy != "off":
+            # T3.4-b2: 트리 블록 동승 (max-padded — hit 없으면 zero 블록,
+            # 크기·호출 순서 불변). 뷰 내용 채움은 respond 경로(b3).
+            _tb = getattr(self, "_tree_wire_ints", None)
+            _nv = self.config.duet_tree_nv
+            from ssd.engine.helpers.p2_tree import tree_wire_ints_len
+            if _tb is None:
+                _tb = torch.zeros(B * tree_wire_ints_len(_nv),
+                                  dtype=torch.int64, device=self.device)
+            _fused_parts.append(_tb.reshape(-1))
+        fused_response = torch.cat(_fused_parts)
         from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_s, duet_close as _mc_s
         _mev_ds = _mr_s("draft_send_response")
         dist.send(fused_response, dst=0, group=self.async_pg)
         dist.send(out_logits[:, :K, :].contiguous(), dst=0, group=self.async_pg)
+        if self.config.duet_tree_policy != "off":
+            _pq = getattr(self, "_tree_wire_parent_q", None)
+            if _pq is None:
+                _pq = torch.zeros(B, self.config.duet_tree_nv,
+                                  self.hf_config.vocab_size,
+                                  dtype=out_logits.dtype, device=self.device)
+            dist.send(_pq.contiguous(), dst=0, group=self.async_pg)
         _mc_s("draft_send_response", _mev_ds)
 
         partial_tree_decode_args = {

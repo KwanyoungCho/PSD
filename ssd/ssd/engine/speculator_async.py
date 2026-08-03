@@ -105,8 +105,16 @@ class SpeculatorAsync(SpeculatorBase):
         # phase_source: 0=miss, 1=phase 1 (draft) hit, 2=phase 2 (proxy) hit. All zeros for non-DUET.
         # valid_k: per-row suffix length (K_long for draft-sourced/miss, K_short for proxy-sourced
         #   in DUET hybrid; uniform K for non-DUET / pre-Phase-4 DUET).
-        self._fused_response = torch.empty(3 * B + B * self.K, dtype=torch.int64, device=d)
+        _tree_extra = 0
+        if getattr(self.config, "duet_tree_policy", "off") != "off":
+            from ssd.engine.helpers.p2_tree import tree_wire_ints_len
+            _tree_extra = B * tree_wire_ints_len(self.config.duet_tree_nv)
+        self._tree_wire_extra = _tree_extra
+        self._fused_response = torch.empty(3 * B + B * self.K + _tree_extra, dtype=torch.int64, device=d)
         self._logits_q = torch.empty(B, self.K, self.vocab_size, dtype=self.draft_dtype, device=d)
+        self._tree_parent_q = (torch.empty(B, self.config.duet_tree_nv,
+                                           self.vocab_size, dtype=self.draft_dtype, device=d)
+                               if _tree_extra else None)
         self._extend_counts = torch.zeros(B, dtype=torch.int64, device=d)
 
     def prefill(self, seqs: list[Sequence], verify_result: VerifyResult) -> SpeculateResult:
@@ -221,6 +229,8 @@ class SpeculatorAsync(SpeculatorBase):
 
         return SpeculateResult(
             speculations, logits_q, cache_hits, phase_source, valid_k,
+            tree_ints=_tree_ints,
+            parent_q_logits=self._tree_parent_q,
             profile_cache_status=profile_cache_status,
             step_id=self._request_step_id,
         )
@@ -303,8 +313,14 @@ class SpeculatorAsync(SpeculatorBase):
         cache_hits = self._fused_response[:B]
         phase_source = self._fused_response[B:2 * B]
         valid_k = self._fused_response[2 * B:3 * B]
-        speculations = self._fused_response[3 * B:].view(B, self.K)
+        _spec_end = 3 * B + B * self.K
+        speculations = self._fused_response[3 * B:_spec_end].view(B, self.K)
+        _tree_ints = (self._fused_response[_spec_end:].view(B, -1)
+                      if self._tree_wire_extra else None)
         dist.recv(self._logits_q, src=self.draft_runner_rank, group=self.async_pg)
+        if self._tree_parent_q is not None:
+            dist.recv(self._tree_parent_q, src=self.draft_runner_rank,
+                      group=self.async_pg)
         _mc("target_recv_response_wait", _mev_recv)
 
         # Point marker: target_response_received (zero-duration timestamp

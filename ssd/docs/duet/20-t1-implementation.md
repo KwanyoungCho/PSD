@@ -184,3 +184,12 @@ attention.py의 명시 TREE_VERIFY mode 배선 (context 플래그 → wrapper
 트리 메타 전달) + verify() 트리 분기(행 조립→wrapper plan→eager
 forward→보행) + respond/wire 스플라이스 + glue 수락경로 재실체화 +
 commit 실행부. 이 한 방이 live E2E 스위치.
+
+**T3.4-b1/b2 완료 (통합 맵 기반)**: Context에 `tree_verify_wrapper`
+정식 필드 + set_context 인자 / **wire 4곳 대칭 스플라이스** —
+SpeculateResult에 tree_ints·parent_q_logits 필드, draft 송신에 트리
+블록 concat + parent_q logits 추가 send (hit 없으면 zero 블록 —
+max-padded로 크기·호출순서 불변), target 수신 버퍼/파싱/조립. 전부
+tree policy 게이트 (off는 wire 바이트 불변). 구성자 위치인자 호출
+전수 확인 (valid_k 이후는 전부 keyword ✓). 회귀 44/44 + 유닛 40/40.
+다음: b3 draft 라이브 경로 (rollout→뷰 저장→respond 채움).
