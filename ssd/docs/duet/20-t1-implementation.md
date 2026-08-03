@@ -367,6 +367,26 @@ finder 18건 → 검증 17건 확정 → 근본 결함 7개로 수렴, 전부 �
 - **이슈 #16**: 트리 valid 하한이 1이라 P_iv 후보가 wire_N을 못 덮는
   구성 가능 — proxy_top_k 자동 상향에 트리 바닥 ceil(wire_N/2) 추가.
 
+**PROFILE 스팬 분해 (prof_level, load~82 하 — 상대 비교용)**: 트리
+스텝(hit_k2) target graph_pre 693ms / graph_post 194ms (체인 33/13ms
+— eager 80층의 ~21×), 보행 96ms; draft 측 proxy_wait 619ms는 그
+거울상. → **eager 트리 verify가 지배 항 확정**, sweep 전 CG capture
+필수 (아니면 sweep이 트리에 구조적 불리 편향).
+
+**최적화 적용 (274877b)**: ① 롤아웃 logits GPU 상주 (per-forward
+1.3MB CPU 왕복 제거 — frontier 런에서 level 대비 4× 관측), ② 보행
+p/q GPU 상주 (2.3MB/step 제거), ③ **T3.2 트리 verify CG capture** —
+N_v bucket별 pre/post 분할 CG (duet_verify 구조 + tree wrapper +
+rope 입력 버퍼, duet_pool 공유), replay 전 매 step public plan
+(shape 고정 계약), SSD_TREE_VERIFY_EAGER=1 폴백 유지.
+
+**이슈 #17 (CG 검증 1차)**: capture 함수를 `def capture_duet_verify`
+앵커 앞에 삽입하면서 그 함수의 `@torch.inference_mode()` 데코레이터를
+가로챔 — capture_duet_verify가 grad-모드로 워밍업되어 dynamo가
+autograd 경로 컴파일 → inplace-op RuntimeError로 전 rank 사망.
+데코레이터 양쪽 명시로 수정. 교훈: 함수-단위 삽입 앵커는 데코레이터
+포함 여부를 반드시 확인.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
