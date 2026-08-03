@@ -76,3 +76,23 @@ nsys 커널-diff는 GPU 확보 시.
 되지 않는다 (음수 marginal은 물리적 비용일 수 없음 — 동기화 잡음이
 지배한다는 방증). **span 계측의 한계 확인 → 커널-수준(nsys) 계측이
 필수** (진행 중, GPU 확보됨).
+
+**A6 — nsys 커널-diff (70B TP4, --cuda-graph-trace=node): 범인 확정.**
+10행/5행 버킷(분류: silu grid 280 vs 560 = M 5 vs 10; 창 26/13)의
+커널별 diff — **`ncclDevKernel_AllReduce_Sum_bf16_TREE_LL` 가 차이의
+사실상 전부** (+239ms/replay vs 2위 Marlin +2.0ms; nsys 노드-추적
+왜곡으로 절대값은 5-8× 부풀려짐 — 구조 판정용). NCCL 커널 시간 =
+rank 대기이므로: **행당 22µs/layer의 정체 = 층당 2회×80층 = 160개
+동기화 지점에서의 rank-대기가 M과 함께 증가** (PCIe TP4, TREE_LL
+프로토콜 선택 관측). 8B TP1 2.1µs(대기 없음)·표준성분 무혐의와 완전
+정합. graph_pre +19% 이상도 같은 기전(pre/post 분할 = 랑데부 추가)일
+개연성.
+
+## Phase B — 개선 후보 (우선순위)
+
+1. **NCCL env 튜닝 (코드 무수정, 즉시 A/B 가능)**: NCCL_ALGO
+   (Tree→Ring), NCCL_PROTO (LL→LL128/Simple), NCHANNELS — 대기 구조가
+   프로토콜 의존이므로 1순위 시험. (진행)
+2. proxy 경로 0.60ms/행 (전체의 25%): Policy B 연산 융합 — 엔진 코드
+   최적화 (승인 후).
+3. 구조적: 동기화 지점 축소/통신-계산 겹침 — 대공사, 1·2 결과 후 판단.
