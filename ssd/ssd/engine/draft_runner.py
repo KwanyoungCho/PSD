@@ -1209,7 +1209,9 @@ class DraftRunner(ModelRunner):
         V = self.hf_config.vocab_size
         _bt = torch.zeros(R, K2, dtype=torch.int64)
         # 이슈 #13: fp32면 fp16 draft_logits와 cat에서 dtype 크래시
-        _bl = torch.zeros(R, K2, V, dtype=self.hf_config.torch_dtype)
+        _dev = cell_logits.device if cell_logits is not None else "cpu"
+        _bl = torch.zeros(R, K2, V, dtype=self.hf_config.torch_dtype,
+                          device=_dev)
         _first_child = {}
         for i in range(pool.n):
             _pi = int(pool.parent_idx[i])
@@ -1918,7 +1920,7 @@ class DraftRunner(ModelRunner):
                 is_prefill=False, last_only=False, tree_decode_step=f,
                 cache_hits=tree_args.get("cache_hits"))
             reset_context()
-            return logits.view(-1, V)[:W].float().cpu()
+            return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
 
         try:
             pool, eval_log, cell_logits = _PT.run_rollout(
@@ -1926,7 +1928,7 @@ class DraftRunner(ModelRunner):
                 policy=cfg.duet_tree_policy, W=W, F_total=K2,
                 c_tensor=cfg.duet_tree_c_tensor, nv=cfg.duet_tree_nv,
                 beta=cfg.duet_tree_beta, depth_cap=K2,
-                temps=temps[:1].expand(W).cpu().float(),
+                temps=temps[:1].expand(W).float(),
                 forward_fn=forward_fn, glue_rows_by_root=glue_rows,
                 rope_base_by_root=rope_base, K_glue=K_glue_used,
                 context_len=ctx_len,

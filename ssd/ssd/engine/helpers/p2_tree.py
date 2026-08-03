@@ -357,11 +357,15 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
             f, W, K_glue, context_len, glue, anc, selfc)
         logits = forward_fn(f, input_ids, rope, packed, indptr)
         if cell_logits is None:
+            # forward_fn 디바이스 상주 (엔진=GPU — [W,V] CPU 왕복 제거;
+            # stub 테스트는 CPU 그대로)
             cell_logits = torch.zeros(F_total * W, logits.shape[-1],
-                                      dtype=logits.dtype)
+                                      dtype=logits.dtype,
+                                      device=logits.device)
         cell_logits[f * W:(f + 1) * W] = logits[:W]
-        toks, raws = tree_sample_wor(logits, temps, c_tensor,
-                                     sampler_x=sampler_x, F=F_x)
+        toks, raws = tree_sample_wor(logits, temps.to(logits.device),
+                                     c_tensor, sampler_x=sampler_x, F=F_x)
+        toks, raws = toks.cpu(), raws.cpu()   # pool 장부는 CPU (소량 1회)
         for k, i in enumerate(sel):
             cell = f * W + k
             pool.cell[i] = cell
@@ -414,7 +418,8 @@ def build_root_views(pool: TreePool, R: int, nv: int, cell_logits=None):
         # T2.2: parent_q 참조 — root별 고유 부모 셀 (첫 등장 순), U ≤ nv.
         V = cell_logits.shape[-1]
         pq_ref = torch.full((R, nv), -1, dtype=torch.int64)
-        pq_logits = torch.zeros(R, nv, V, dtype=cell_logits.dtype)
+        pq_logits = torch.zeros(R, nv, V, dtype=cell_logits.dtype,
+                                device=cell_logits.device)
         u_valid = torch.zeros(R, dtype=torch.int64)
         uniq = [dict() for _ in range(R)]
         # 다시 순회하며 노드별 부모 셀 → 로컬 U 인덱스
