@@ -70,3 +70,9 @@ graph_pre Δ+0.22ms / graph_post Δ+0.10ms → **행당 0.065ms =
 (DUET의 pre/post 그래프 분할 = 동기화 지점 증가)과 같은 계열로 보임.
 확증: A5(8B TP2 — TP를 켜는 순간 행당 비용이 뛰는지) 진행 중; 70B
 nsys 커널-diff는 GPU 확보 시.
+
+**A5 — 8B TP2 (GPU 0,1,4)**: graph_pre Δ+1.15ms / graph_post Δ**−1.87ms**
+(음수!) — TP≥2에서는 span에 **rank 간 대기가 혼입**되어 폭 효과가 분리
+되지 않는다 (음수 marginal은 물리적 비용일 수 없음 — 동기화 잡음이
+지배한다는 방증). **span 계측의 한계 확인 → 커널-수준(nsys) 계측이
+필수** (진행 중, GPU 확보됨).
