@@ -201,12 +201,16 @@ confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가
 
 ## 4. 확정 설계 결정 (v4 — 사용자 문답 2026-08-02/03 반영)
 
-- **D1(v4) — 고정폭 W forest + frontier 확장**: 매 forward 입력 행수
-  **W = B_s = 10 완전 고정** (depth별 축소 없음 — v3의 W=[10,8,6,4]는
-  같은 그래프 반복 replay 구조[draft_runner.py:1255-1300]와 모순이라
-  폐기). depth는 forward 횟수와 분리: 각 forward는 **frontier(확장
-  가능한 전체 노드 풀)에서 value 상위 W개**를 뽑아 디코드한다 — 안
-  뽑힌 노드는 **보류**되어 다음 forward에서 경쟁 (사용자 결정).
+- **D1(v5) — 고정폭 W forest + 확장 정책 스위치** (결정 2026-08-04):
+  매 forward 입력 행수 **W = B_s = 10 완전 고정** (depth별 축소 없음 —
+  v3의 W=[10,8,6,4]는 같은 그래프 반복 replay 구조[draft_runner.py:
+  1255-1300]와 모순이라 폐기). 확장 대상 선택은 **하나의 구현에 정책
+  스위치** (`--duet_tree_policy`): `level` = 최신 depth 노드만 선택
+  (level-synchronous — frontier의 퇴화 경로), `frontier` = 미평가 노드
+  풀 전체에서 priority 상위 선택 (안 뽑힌 노드는 **보류**되어 다음
+  forward에서 경쟁). level-sync는 frontier의 특수한 경우이므로 코드는
+  하나다. **기본값은 미정** — E1(두 정책 모두 시뮬레이션) + 실측
+  (L_p2 증가폭, frontier 고유 오버헤드)으로 최종 결정한다.
   행별 depth/rope/조상 mask/slot은 전부 per-행 데이터라 shape 동일.
   신규 필요물: parent_idx 관리 + **동적 조상 mask 생성기** (draft CG
   family 추가는 없으나 mask 내용 생성기는 신규). target에는 tree-verify
@@ -224,9 +228,17 @@ confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가
 - **D4 — 동적 선택 오버헤드 최소**: forward당 frontier topk 1회, 신규
   GPU→CPU 동기화 0회 원칙.
 - **D8(신규) — 자식 생성은 샘플링** (무손실 조건, §6): 자식 토큰의
-  정체는 **q_eff에서 WOR로 샘플** — 결정론 top-c 금지. 몇 개를 어느
-  부모에게 줄지(fanout 배분)는 value로 결정론적으로 정해도 됨 (자식
-  정체와 무관하므로 분포 보존과 무관).
+  정체는 **q_eff에서 비복원 샘플** (WOR — 이미 뽑힌 토큰을 제외하고
+  재정규화해 이어 뽑기) — 결정론 top-c 금지. 몇 개를 어느 부모에게
+  줄지(fanout 배분)는 value로 결정론적으로 정해도 됨 (자식 정체와
+  무관하므로 분포 보존과 무관).
+- **D11(신규, 2026-08-04) — single-shot fanout**: 노드가 평가(forward)
+  되는 순간 그 노드의 fanout을 확정하고 형제들을 **그 자리에서 한
+  번에** 비복원 샘플한다. **평가 완료된 노드에는 이후 형제를 추가하지
+  않는다** (재확장 금지 — 사용자 결정). 효과: 비복원 커서(부모 분포
+  보관·뽑은 집합·순서)가 forward를 넘어 생존할 필요가 없어져 frontier
+  모드의 장부 비용이 소멸. 대가: 유망해진 부모의 폭을 나중에 넓힐 수
+  없고 깊이로만 투자 가능.
 
 ## 5. 사실 확인 (코드/논문/프레임워크 검증; 라인은 2026-08-02 HEAD)
 
@@ -260,15 +272,18 @@ confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가
 **frontier 확장 루프** (forward F_total = K2회, 행수 W = B_s 고정):
 
 ```
-frontier ← proxy가 고른 B_s개 root (prior = rank/packed-score 기반 π̂)
+pool ← proxy가 고른 B_s개 root (미평가; prior = rank/packed-score 기반 π̂)
 for f in 1..F_total:
-    expand_set ← frontier에서 value 상위 W개   # GPU topk 1회
-    (부족하면 이미 확장한 노드 재확장 = 형제 추가 — WOR 이어 샘플)
-    forward(expand_set)                        # W행, 항상 같은 CG
-    각 확장 노드 x에서: fanout_x개 자식을 q_eff에서 WOR 샘플
-        (Σ fanout = W; 배분은 value로 결정론 — D8)
-    자식들 frontier에 추가 (value = log π̂(root) + Σ_path log conf)
-    depth = K2 도달 노드는 frontier에서 제외 (버퍼 [N,K] 캡)
+    expand_set ← 선택 정책(D1)에 따라 pool에서 W개    # GPU topk 1회
+        level:    최신 depth의 미평가 노드만
+        frontier: 미평가 노드 전체에서 priority 상위
+    forward(expand_set)                                # W행, 항상 같은 CG
+    각 평가 노드 x에서 (D11 — 이 순간 1회뿐):
+        fanout_x 확정 (자식 정체 관측 전 — D10)
+        fanout_x개 자식을 q_eff에서 비복원 샘플, 순서 기록
+    자식들 pool에 추가; x는 평가 완료로 전환 (재방문 없음)
+    depth = K2 도달 노드는 pool에서 제외 (버퍼 [N,K] 캡)
+샘플된 모든 노드는 candidate tree에 남는다 (확장 안 해도 잎 — D10)
 ```
 
 **장부 4규칙 (무손실 조건 — Sequoia/SpecInfer 계열)**:
@@ -410,7 +425,7 @@ proxy-conditioned draft adapter로 전환 검토 — 단 이는 **training이
 4. **graph_pre 이상(+19%/layer) 간섭** — c_row 가정은 E2①의
    T_verify(N_v) 직접 실측으로 대체.
 5. **체인 퇴화 동일성** — fast path가 T1/T3의 핵심 회귀 기준.
-6. **WOR 장부 복잡도** (보류-재확장 시 부모별 체인 유지) — T1 CPU
-   참조 구현으로 선검증.
+6. ~~WOR 장부 복잡도~~ — **D11(single-shot fanout)로 해소** (2026-08-04):
+   비복원 커서가 forward를 넘지 않으므로 부모별 체인 유지 불필요.
 7. **트리 행 한계비용 미확정** — 1.9ms/행은 체인 스윕에서 온 값.
    E2①이 트리 행에서 재실측 (더 싸면 채산 문턱 하락 — 유리).
