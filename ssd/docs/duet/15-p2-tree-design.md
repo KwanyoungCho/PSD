@@ -1,8 +1,9 @@
 # 15 — P2 동적 트리 (P2-Tree) 설계 문서
 
-**작성**: 2026-08-02 v3 → **2026-08-03 v4** (외부 리뷰 검증 + 사용자
-문답 반영: frontier 확장, 샘플링 규칙, score 비트-pack, 채산 상수 교체,
-SGLang-참조 verify/KV 설계). **상태: 설계 단계 — 구현 착수 금지.**
+**작성**: 2026-08-02 v3 → 2026-08-03 v4 (외부 리뷰 1차) →
+**2026-08-04 v5** (외부 리뷰 2차 + 사용자 결정 ①②③: 정책 스위치·
+D11 single-shot·priority 확정·π̂=라이브 P_iv·pack 필수화·G0/G1 게이트·
+E1 비교군 5종·5-rep·그래프 분리·§12 TODO). **상태: 설계 단계 — 구현 착수 금지.**
 사용자 지시: "모든 건 완벽하게 설계가 이루어진 이후에 시작." §9의 관문
 실험(E0-E2)이 전부 green이고 설계가 승인되기 전에는 엔진 코드를
 수정하지 않는다. **단 하나의 예외**: E0가 요구하는 계측 덤프
@@ -131,7 +132,7 @@ draft (GPU4)  : [respond(조회/JIT)]→[glue]→[P1 rollout]→[proxy_wait...]�
 |---|---|---|
 | L_p2 | **1.76** (champion, final_rematch; m6_fix 계열 1.63~1.81) | 상한 K2=4의 절반 이하 |
 | P2 위치당 수락률 | ≈0.6~0.7 (K2=1 실측 0.61~0.68; 역산 ≈0.70. E0에서 정밀 실측) | P1(≈0.7~0.8)보다 낮음 |
-| P2 hit rate | 0.269 (B≤4, B-불변) | **hit은 충분히 높다 — 낮은 것은 hit 시 길이** |
+| P2 hit rate | 0.269 (m6_fix, B≤4) / **0.24~0.25 (final_rematch champion 레짐)** — 채산표(§2)는 0.25 기준 | **hit은 충분히 높다 — 낮은 것은 hit 시 길이** |
 | finding 1 | hit↑ ≠ tok↑ | hit 자체는 토큰을 나르지 않음 |
 
 **원인**: 1) **무분기 체인** (구조적 — 공략 대상): P2 rollout은 seed
@@ -299,8 +300,10 @@ priority(n) = log π̂(root(n)) + Σ_경로 log c_raw
   폐기하고 step별 라이브 값을 wire 비트-pack으로 수신해 사용 (사용자
   결정: 문맥-평균 테이블은 step별 신호를 버림). 상대 배분에는 균일
   편향이 상쇄되므로(모든 root에 같은 log-상수) 무해하고, **비균일
-  (위치별) 편향만** E0의 calibration 곡선으로 검증 — 발견 시 위치별
-  보정계수를 라이브 값에 곱해 교정 (테이블 회귀 아님). budget 사전
+  (위치별) 편향만** E0의 calibration 곡선으로 **측정**한다. 보정계수는
+  **선제 구현하지 않는다** (사용자 결정 2026-08-04) — 먼저 라이브
+  P_iv 그대로 구현·측정하고, 실측이 "P_iv가 hit 빈도를 잘 대변하지
+  못하는 비균일 편향"을 보일 때만 후속 도입 (§12 TODO). budget 사전
   분배는 보류 (동적 배분 확정; E1 비교군에 참고용으로만 유지).
 - **c_raw = 그 토큰의 "부모 원본 q_eff에서의" 확률.** 비복원 샘플링은
   재정규화된 나머지 분포로 뽑지만, value 기록은 반드시 **원본 확률**로
@@ -347,11 +350,25 @@ speculative_decoding, sglang-jax 문서):
 | tree verify = 평탄화 토큰 + **custom tree mask** | 트리를 1차원으로 펴고 조상 관계를 mask로 전달; **dense 명시 mask는 느리므로** packed/bitmask 커널 필요 | draft가 이미 쓰는 FlashInfer packed bitmask 경로를 verify capture에 이식 (F1) — sm_86에서 검증된 동일 커널 패밀리. 외부 전용 커널(DeFT 등)은 SwiftSpec 전례(sm_90 전용) 있어 2차 옵션 |
 | KV: 추측 토큰마다 **slot 선할당**, 기각 토큰은 PADDING_SLOT_ID(-1)로 쓰기 억제, 수락 경로만 유지 | 토큰-단위 paged pool이라 가능 | 우리 pool은 **블록(32토큰)-단위**라 토큰-단위 유지 불가 → **scratch slot 검증 후 accepted path만 canonical 위치로 복사** (D5-a). 복사량 ≈ 수락경로 ≤5토큰 × 80층 × rank당 1KB/층 ≈ 400KB/rank — 수십 µs (E2③ 실측) |
 
-### 7.1 트리 어텐션
-hit 응답 = 명중 root의 서브트리 (토큰 [N_v] + parent_idx [N_v] +
-q_eff logits [N_v, V] + 형제 순서). verify rows = N_v+1 (+1은
-recovery). mask 값은 parent_idx에서 매 step 계산해 packed bitmask
-버퍼에 주입 — capture는 **N_v bucket별** (아래).
+### 7.1 트리 어텐션과 응답 스키마
+hit 응답 = 명중 root의 서브트리:
+
+```
+tok[N_v], parent_idx[N_v], sibling_order[N_v],
+parent_q_ref[N_v]  (각 노드가 어느 부모 분포에서 샘플됐는지의 색인),
+parent_q_logits[U, V]  (고유 부모 분포 U개 — 중복 전송 회피)
+```
+
+- **q_eff 재구성 공유-함수 원칙**: verifier가 수락 검정에 쓰는 q_eff는
+  draft가 샘플에 쓴 것과 동일해야 하며, temperature·sampler_x 처리를
+  **production sampler와 같은 함수로** 재구성한다 (현행 체인 verify가
+  apply_sampler_x_rescaling을 공유하는 것과 동일 원칙 — sampler_x
+  구현의 F+1 처리 [async_spec_helpers.py:131]까지 함수 공유로 자동
+  일치). E2⑦ parity 검사로 확인 (temperature별, sampler_x on/off,
+  비복원 첫 샘플 = 기존 단일 샘플 경로 일치).
+- verify rows = N_v+1 (+1은 recovery). mask 값은 parent_idx에서 매
+  step 계산해 packed bitmask 버퍼에 주입 — capture는 **N_v bucket별**
+  (§7.4).
 
 ### 7.2 무손실 트리 수락
 깊이별·형제-순서 순차 기각 샘플링:
@@ -377,11 +394,18 @@ SGLang식 토큰-단위 slot 유지는 우리 블록-단위 pool과 안 맞으�
 N_v 패딩은 작은 hit에 행당 1.9ms 낭비 → **bucket capture**:
 
 ```
-P1 체인:      K1+1 행  (기존 duet_verify_k1)
-P2 소형/체인: N_v=4    (기존 duet_verify_k2 대체·확장)
-P2 트리 중형: N_v=6
-P2 트리 대형: N_v=8    (N_v=10은 E1/E2가 명확히 지지할 때만)
+P1 체인:      K1+1 행  (기존 duet_verify_k1 — 불변)
+P2 체인:      K2+1 행  (기존 duet_verify_k2 — **그대로 보존, fast path**)
+P2 트리:      duet_verify_tree_n4 / n6 / n8  (신규 family)
+              (N_v=10은 E1/E2가 명확히 지지할 때만)
 ```
+
+**기존 체인 그래프를 트리 그래프로 대체하지 않는다** — 같은 행수라도
+트리(branch mask)와 체인(causal)은 다른 그래프다. 검사 두 겹: gate
+OFF에서 기존과 bit-identical + gate ON에서 체인-퇴화 topology를 넣은
+트리 그래프가 체인 fast path와 RNG·출력 동일. custom mask × CG 패딩
+조합의 OOB 사례가 보고된 바 있으므로 wrapper batch ≠ real batch인
+bucket 경계 검사를 T3 테스트에 포함.
 기존 valid_k 기반 k1/k2 이중 bucket dispatch의 축을 늘리는 구조.
 캐시 생성 시 root별 응답 view(절단 결과)를 미리 계산해 hit 임계
 경로에서 트리 정렬을 하지 않는다. capture 메모리 증가는 E2④ 실측.
@@ -395,7 +419,13 @@ P2 트리 대형: N_v=8    (N_v=10은 E1/E2가 명확히 지지할 때만)
 | D7 | 탐색 공간 초기값 | W=10 고정, F_total=D=4 우선(D=5 후속), R ∈ {4,6,8,10}, N_v ∈ {4,6,8} — E1이 결정 |
 | ~~D9~~ | ~~value의 π̂/â 형태~~ | **해소 (결정 ③)**: π̂ = 라이브 P_iv (위치별 calibration은 E0 검증, 필요시 라이브 보정계수) |
 
-## 9. 관문 실험 (구현 전 — 전부 green이어야 착수)
+## 9. 관문 실험 — 2단 게이트 (G0 연구 타당성 / G1 채택)
+
+**G0 (구현 전, 전부 green이어야 T1 착수)**: E0 계측(유일한 엔진 예외
+P0) + E1 standalone 시뮬레이터 + E2 **standalone** 마이크로벤치 —
+E2의 mask/KV/수락 프로토타입은 **엔진 밖 별도 하네스**(FlashInfer·
+torch 직접 사용)로 만들어 "엔진 코드 금지" 원칙과 충돌하지 않는다.
+**G1 (T1-T3 구현 후, 채택 판정)**: §10 go/no-go 4조건.
 
 - **E0 — calibration (이중 trace)** (유일 예외 — 별도 승인 후 선행
   구현, §10 P0): target 30줄만으로는 부족 — **hit 판정은 dedup 후
@@ -409,17 +439,27 @@ P2 트리 대형: N_v=8    (N_v=10은 E1/E2가 명확히 지지할 때만)
   **판정 지표**: root coverage Recall@R (R∈{4,6,8,10}), rank별 hit
   확률, score/rank 캘리브레이션 (ECE·Brier), rank별 L_p2, {proxy
   prior, rank prior, uniform, confidence-only}의 기대-TPS 직접 비교.
-- **E1 — offline 트리 시뮬레이션** (엔진 무수정): E0 덤프 + HF 재생
-  으로 형상 후보별 **predicted TPS** 최대화 — objective는 L_p2가
-  아니라 `기대 출력 토큰 / 파이프라인 주기(target·draft·NCCL 임계
-  경로 max)` (draft 시간 모델 포함 — 균형조건 ①②).
+- **E1 — offline 트리 시뮬레이션** (엔진 무수정): E0 덤프 + HF 재생.
+  objective는 L_p2가 아니라 **predicted TPS** = `기대 출력 토큰 /
+  파이프라인 주기(target·draft·NCCL 임계경로 max)` (draft 시간 모델
+  포함 — 균형조건 ①②). **비교군 5종 필수**: ⓐ 현행 체인, ⓑ 사전
+  고정 π̂-비례 배분(정적), ⓒ 동적+level, ⓓ 동적+frontier, ⓔ oracle
+  상한(사후 최적 배분). 판정 규칙: ⓓ−ⓒ < 1%p면 level을 기본값으로
+  (결정 ①). **full step-status trace replay** — R(root 수) 변경은
+  P2 hit뿐 아니라 P1/miss/JIT 전이 전체를 바꾸므로 조건부-P2만
+  계산하지 않는다. 컨트롤러 전체(위상 할당·절단 포함)를 작은 vocab
+  전수 열거로 무손실 검증 (D10류 편향은 verifier 단독 테스트로는
+  안 잡힘).
 - **E2 — 마이크로벤치** (6항목): ① T_verify(N_v), N_v∈{4,6,8,10}
   직접 실측 (§2의 c_row 가정 재확정), ② packed-mask verify capture
   프로토타입 replay 시간 + tree sample/accept 단계의 GPU·CPU sync
   비용, ③ scratch→canonical KV 복사 비용 (TP rank별), ④ bucket 추가
   CG capture 메모리, ⑤ 동적 조상 mask 생성 비용 (W=10), ⑥ score
-  비트-pack 시 wire 변화 확인 (기준선 832KB — F4). **판정**: 합계
-  오버헤드 < E1 기대 이득의 1/2 (안전계수 2 — 노이즈·모델 오차 흡수).
+  비트-pack 시 wire 변화 확인 (기준선 832KB — F4), ⑦ q_eff parity —
+  draft 샘플측과 verifier 재구성측의 분포 일치 (temperature별,
+  sampler_x on/off, 비복원 첫 샘플 = 기존 단일 샘플 경로; §7.1의
+  공유-함수 원칙 검증). **판정**: 합계 오버헤드 < E1 기대 이득의 1/2
+  (안전계수 2 — 노이즈·모델 오차 흡수). 전 항목 standalone (G0).
 
 ## 10. 마일스톤과 go/no-go
 
@@ -435,7 +475,7 @@ P2 트리 대형: N_v=8    (N_v=10은 E1/E2가 명확히 지지할 때만)
 | T1 | frontier rollout + WOR 샘플 + 장부 + 캐시 구조 | CPU 참조 대비 동일성; **fast path(fanout=1/root, R=B_s) RNG까지 bit-identical** |
 | T2 | 응답 view/wire (tok+parent+순서+logits, score pack) + F7 산식 재검토 | wire 왕복 테스트; payload 실측 |
 | T3 | verify: packed-mask bucket capture + 트리 수락 + scratch KV | **작은 vocab 전수 분포-일치 테스트**; 체인 퇴화 동일성 |
-| T4 | B=1 E2E + champion A/B (3-rep 인터리브) | §2 목표 판정 |
+| T4 | B=1 E2E + champion A/B (**5-rep 인터리브** — final_rematch 관례; ±1.5 tok/s 노이즈에서 +3% 판정에 3-rep band-clear는 불안정) | §2 목표 판정 |
 | T5 | B>1 호환 | B=2 스모크; 기존 테스트(M1-M6 38 + jit_subset 5) 회귀 |
 
 **go/no-go (엔진 구현 착수 아닌 **채택** 기준 — 외부 리뷰 수용)**:
@@ -461,3 +501,20 @@ proxy-conditioned draft adapter로 전환 검토 — 단 이는 **training이
    비복원 커서가 forward를 넘지 않으므로 부모별 체인 유지 불필요.
 7. **트리 행 한계비용 미확정** — 1.9ms/행은 체인 스윕에서 온 값.
    E2①이 트리 행에서 재실측 (더 싸면 채산 문턱 하락 — 유리).
+
+## 12. 후속 과제 (TODO — 본 설계 범위 밖, 잊지 않기 위해 기록)
+
+1. **P1 트리화** (사용자 지정, 2026-08-04): P1도 현재 "위치별 seed
+   fan-out 후 무분기 연속" 구조라 P2와 같은 한계를 가진다. P2-tree의
+   기계(priority·비복원 샘플·tree verify·bucket)가 검증되면 P1에
+   일반화한다 — P1은 hit의 2/3를 담당하므로 (P1 hit 0.53 vs P2 0.27)
+   기대 효과가 P2보다 클 수 있다. 착수 조건: P2-tree G1 통과 후.
+2. **위치별 calibration 보정계수**: 라이브 P_iv 구현·실측 후, E0/실측
+   calibration 곡선이 비균일 편향을 보일 때만 (결정 ③의 유보 사항).
+3. **확장 priority의 한계비용 항** (bucket 경계 비용): acceptance
+   rate 우선 방침(결정 ②)에 따라 보류 — E1 oracle 대비 격차가 크면
+   재검토.
+4. **budget 사전 고정 배분**: E1 비교군 ⓑ의 성적이 동적 배분과
+   대등하면 단순성을 위해 재고할 수 있음.
+5. **B>1 일반화**: per-seq 상수 (B_s, W, F_total, N_v bucket)로
+   불변량 일반화 — T5의 호환 확인 후, 최적화는 별도 캠페인.
