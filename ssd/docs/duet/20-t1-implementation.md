@@ -110,3 +110,11 @@ mask 기하([prefix|glue|spec 블록], packbits little)를 정확 복제한 트�
 - 검증(T1.4b-3): m2-패턴 stub 하네스 (run_model/sampler stub) —
   rollout_reference와 topology/장부 완전 일치 + fanout=1 퇴화에서
   기존 체인 경로와 spec_tokens 동일.
+
+**T1.4b-a 완료**: `run_rollout` — forward_fn 주입형 rollout 코어
+(per-forward 동적 3요소 [input_ids/rope=base+depth/packed mask] 구성 →
+forward → 비복원 샘플 → pool 갱신; pad 행은 fanout 0 + RNG 소비 유지
+로 고정 shape). **stub forward에서 rollout_reference와 topology 장부
+전 필드 일치** + rope가 forward 인덱스가 아닌 depth 기반임을 검증.
+유닛 누적 30/30. 남은 배선: 실엔진 어댑터(forward_fn = _decode_tree_
+step + mask 캐시 주입) — T1.4b-b.

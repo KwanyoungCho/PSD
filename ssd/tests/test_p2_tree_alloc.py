@@ -313,3 +313,66 @@ class TestTreeMask(unittest.TestCase):
         self.assertEqual(m[1, spec0 + 0], 1)   # 조상 셀
         self.assertEqual(m[0, spec0 + 0], 0)   # 행0은 셀0 안 봄 (자기 과거 아님)
         self.assertEqual(m[1, spec0 + MQ + 1], 1)  # 자기 셀
+
+
+class TestRunRollout(unittest.TestCase):
+    def test_topology_matches_reference(self):
+        # 같은 RNG로 run_rollout(stub forward)과 rollout_reference의
+        # topology 장부가 완전히 일치해야 한다.
+        import numpy as np
+        from ssd.engine.helpers.p2_tree import (rollout_reference,
+                                                run_rollout,
+                                                tree_sample_wor)
+        R, W, F, C, V = 4, 4, 3, 3, 64
+        piv = torch.tensor([0.5 / (1.6 ** r) for r in range(R)])
+        temps = torch.full((W,), 0.7)
+        g = torch.Generator().manual_seed(42)
+        fixed_logits = torch.randn(F, W, V, generator=g)
+
+        def fwd(f, ids, rope, packed, indptr):
+            return fixed_logits[f].clone()
+
+        torch.manual_seed(7)
+        pool_a, log_a = run_rollout(
+            list(range(10, 10 + R)), piv, policy="level", W=W, F_total=F,
+            c_tensor=C, nv=6, beta=0.5, depth_cap=4, temps=temps,
+            forward_fn=fwd, glue_rows_by_root=np.ones((R, 5), np.uint8),
+            rope_base_by_root=[100 + r for r in range(R)], K_glue=4,
+            context_len=700)
+
+        torch.manual_seed(7)
+        def sample_fn(sel, fan):
+            f = sample_fn.calls
+            sample_fn.calls += 1
+            toks, raws = tree_sample_wor(fixed_logits[f].clone(), temps,
+                                         C)
+            return toks[:len(sel)], raws[:len(sel)]
+        sample_fn.calls = 0
+        pool_b, log_b = rollout_reference(
+            list(range(10, 10 + R)), piv, None, policy="level", W=W,
+            F_total=F, c_tensor=C, nv=6, beta=0.5, depth_cap=4,
+            sample_fn=sample_fn)
+
+        self.assertEqual(pool_a.n, pool_b.n)
+        for fld in ("tok", "parent_idx", "depth", "root", "sib_order",
+                    "cell", "state"):
+            ta = getattr(pool_a, fld)[:pool_a.n].tolist()
+            tb = getattr(pool_b, fld)[:pool_b.n].tolist()
+            self.assertEqual(ta, tb, f"{fld} 불일치")
+
+    def test_rope_uses_depth_not_forward(self):
+        import numpy as np
+        from ssd.engine.helpers.p2_tree import run_rollout
+        seen = {}
+        def fwd(f, ids, rope, packed, indptr):
+            seen[f] = rope.clone()
+            return torch.randn(4, 32)
+        torch.manual_seed(1)
+        run_rollout([10], torch.tensor([1.0]), policy="frontier", W=4,
+                    F_total=3, c_tensor=3, nv=8, beta=0.5, depth_cap=4,
+                    temps=torch.full((4,), 0.7), forward_fn=fwd,
+                    glue_rows_by_root=np.ones((1, 5), np.uint8),
+                    rope_base_by_root=[500], K_glue=4, context_len=600)
+        self.assertEqual(int(seen[0][0]), 500)      # root: depth 0
+        # 이후 forward의 유효 행 rope는 500+depth (depth는 1 이상)
+        self.assertGreaterEqual(int(seen[1][0]), 501)

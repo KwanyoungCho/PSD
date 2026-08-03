@@ -293,3 +293,69 @@ def build_tree_mask_packed(fwd, W, K_glue, context_len, prefix_glue_rows,
     packed = np.packbits(m.ravel(), bitorder="little")
     indptr = np.array([0, len(packed)], dtype=np.int32)
     return packed, indptr
+
+
+def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
+                beta, depth_cap, temps, forward_fn, glue_rows_by_root,
+                rope_base_by_root, K_glue, context_len, sampler_x=None,
+                F_x=None, pad_token=0):
+    """엔진-주입형 rollout (T1.4b-a): forward_fn만 바꾸면 stub/실엔진
+    양쪽에서 동작. per-forward로 (input_ids[W], rope[W], packed mask)를
+    구성해 forward_fn(f, input_ids, rope, packed, indptr) -> logits[W,V]
+    를 호출하고, tree_sample_wor로 자식을 뽑아 pool을 채운다.
+
+    rollout_reference와 topology가 동일해야 한다 (stub 테스트로 고정).
+    pad 행: 유효 노드가 W 미만이면 pad_token/rope_base[0]로 채우고
+    fanout 0 (자식 무시; RNG는 소비 — 고정 shape 유지).
+    """
+    R = len(root_toks)
+    pool = TreePool(capacity=R + F_total * W * c_tensor)
+    budgets = alloc_root_budgets(root_piv, total=F_total * W, beta=beta,
+                                 cap=nv)
+    remaining = budgets.clone()
+    logpiv = root_piv.clamp_min(1e-9).log()
+    for r in range(R):
+        pool.add(int(root_toks[r]), -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
+    eval_log = []
+    for f in range(F_total):
+        sel = select_nodes(pool, policy, W, f, depth_cap)
+        n_sel = len(sel)
+        fan = torch.zeros(W, dtype=torch.int64)
+        if n_sel:
+            pri = pool.logpri[torch.tensor(sel)]
+            roots = pool.root[torch.tensor(sel)]
+            fan[:n_sel] = alloc_fanouts(pri, roots, remaining, c_tensor)
+            for k, i in enumerate(sel):
+                remaining[int(roots[k])] -= int(fan[k])
+        # --- per-forward 텐서 구성 (동적 3요소) ---
+        input_ids = torch.full((W,), pad_token, dtype=torch.int64)
+        rope = torch.full((W,), int(rope_base_by_root[0]),
+                          dtype=torch.int64)
+        glue = np.zeros((W, K_glue + 1), dtype=np.uint8)
+        anc = [[] for _ in range(W)]
+        selfc = [-1] * W
+        for k, i in enumerate(sel):
+            r = int(pool.root[i])
+            input_ids[k] = pool.tok[i]
+            rope[k] = int(rope_base_by_root[r]) + int(pool.depth[i])
+            glue[k] = glue_rows_by_root[r]
+            anc[k] = pool.ancestors_cells(i)
+            selfc[k] = f * W + k
+        packed, indptr = build_tree_mask_packed(
+            f, W, K_glue, context_len, glue, anc, selfc)
+        logits = forward_fn(f, input_ids, rope, packed, indptr)
+        toks, raws = tree_sample_wor(logits, temps, c_tensor,
+                                     sampler_x=sampler_x, F=F_x)
+        for k, i in enumerate(sel):
+            cell = f * W + k
+            pool.cell[i] = cell
+            pool.state[i] = 1
+            for c in range(int(fan[k])):
+                pool.add(int(toks[k][c]), i, cell,
+                         int(pool.depth[i]) + 1, int(pool.root[i]), c,
+                         float(pool.logpri[i])
+                         + float(torch.log(torch.clamp(raws[k][c],
+                                                       min=1e-9))),
+                         float(raws[k][c]))
+        eval_log.append((sel, fan[:n_sel]))
+    return pool, eval_log
