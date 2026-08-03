@@ -363,6 +363,7 @@ class LLMEngine:
                     draft_runner_rank=self.num_tp_gpus,
                     tokenizer=self.tokenizer,
                     verbose=config.verbose,
+                    config=config,
                 )
             else:
                 speculator = SpeculatorSync(

@@ -63,8 +63,10 @@ class SpeculatorAsync(SpeculatorBase):
         draft_runner_rank: int,
         tokenizer: AutoTokenizer,
         verbose: bool,
+        config=None,
     ):
         super().__init__(lookahead, device)
+        self.config = config          # T3.4-b2: tree wire 게이트/크기 참조
         self.async_fan_out = async_fan_out
         self.max_blocks = max_blocks
         self.vocab_size = vocab_size
