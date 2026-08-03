@@ -387,6 +387,20 @@ autograd 경로 컴파일 → inplace-op RuntimeError로 전 rank 사망.
 데코레이터 양쪽 명시로 수정. 교훈: 함수-단위 삽입 앵커는 데코레이터
 포함 여부를 반드시 확인.
 
+**이슈 #18 (CG 검증 2·3차 — 연속 트리 스텝 크래시의 진짜 원인)**:
+CG replay 분기가 prepare_decode의 체인-verify context(cu_seqlens_q
+설정)를 교체하지 않아 lm_head의 mq-decode 분기가 [1, rows, V] 3-D를
+반환 → `shape[0]==r_b` pad-절단 조건이 무력화되어 r_b행 전체가
+verifier로 유출. 증상이 스텝 데이터에 따라 view 크래시(나눠떨어지지
+않음) 또는 보행 내 R-D 크기 불일치(나눠떨어짐 — last dim 36000)로
+변장해 이틀치 가설을 소모함. **진단 방법론이 결정적이었음**: 양측
+wire 불변 가드 + 반환 행수 하드 불변(진단값 동봉)을 심은 재현 런
+1회로 rows=1(=3-D) 포착 → lm_head의 context 의존 확인. 수정: CG
+분기도 eager와 동일하게 cu_seqlens_q 없는 context로 교체. 가드
+3점은 상시 유지 (비용 무시 가능, 이 클래스 재발 시 즉시 국소화).
+**CG 효과 확정: 트리 스텝 graph_pre 693ms → 31.5ms (22×), 체인
+수준 도달.**
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
