@@ -51,7 +51,11 @@ class _Writer:
         self.drops = 0
         self.written = 0
         self._q = queue.Queue(maxsize=8192)
-        self._f = open(path, "a", buffering=1 << 20)
+        # Line-buffered: the engine may hard-exit (no atexit) — an unflushed
+        # block buffer silently loses the tail (관측: draft 꼬리 ~700 step
+        # 유실, docs/duet/17 이슈 #5). Writes happen on this background
+        # thread, so per-line flush costs nothing on the engine path.
+        self._f = open(path, "a", buffering=1)
         self._t = threading.Thread(target=self._loop, daemon=True)
         self._t.start()
 
@@ -68,6 +72,14 @@ class _Writer:
                     rec[k] = v.tolist()
             self._f.write(json.dumps(rec) + "\n")
             self.written += 1
+            # Heartbeat: the engine hard-exits (atexit unreliable), so the
+            # drop counter is persisted periodically — E0 hygiene (drop=0)
+            # is verifiable from the last heartbeat even without a clean
+            # close (docs/duet/17 이슈 #5 후속).
+            if self.written % 1000 == 0:
+                self._f.write(json.dumps(
+                    {"kind": "heartbeat", "written": self.written,
+                     "drops": self.drops}) + "\n")
         self._f.write(json.dumps(
             {"kind": "summary", "written": self.written,
              "drops": self.drops}) + "\n")
