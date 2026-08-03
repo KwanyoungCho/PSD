@@ -73,6 +73,12 @@ class Config:
     # duet_proxy_total_budget, and the verifier's per-step K-position
     # allocation scales proportionally (duet_p2_budget_at).
     duet_p2_budget: int | None = None
+    # P2-tree (docs/duet/15 v6, T1 — docs/duet/20). "off" = 기존 체인
+    # 경로 그대로 (T1 hard 게이트: off에서 bit-identical).
+    duet_tree_policy: str = "off"            # off | level | frontier
+    duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
+    duet_tree_nv: int = 8                    # 응답 절단 N_v (T2에서 사용)
+    duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k, K2 <= K1.
@@ -382,6 +388,20 @@ class Config:
                 if self.duet_p2_budget is not None and self.duet_p2_budget < 1:
                     raise ValueError(
                         f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
+                # P2-tree 노브 검증 (T1.1) — -O 생존형 raise.
+                if self.duet_tree_policy not in ("off", "level", "frontier"):
+                    raise ValueError(
+                        f"duet_tree_policy must be off|level|frontier; "
+                        f"got {self.duet_tree_policy!r}")
+                if self.duet_tree_policy != "off":
+                    if not (1 <= self.duet_tree_c_tensor <= 8):
+                        raise ValueError(
+                            f"duet_tree_c_tensor must be in [1,8]; "
+                            f"got {self.duet_tree_c_tensor}")
+                    if not (4 <= self.duet_tree_nv <= 10):
+                        raise ValueError(
+                            f"duet_tree_nv must be in [4,10]; "
+                            f"got {self.duet_tree_nv}")
 
             import os as _os_cfg
             # Tier-2 (docs/duet/16): split-K1/K2 is the ONLY DUET path, so

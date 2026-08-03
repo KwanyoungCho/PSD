@@ -116,6 +116,16 @@ def parse_arguments():
     parser.add_argument("--duet_p2_budget", type=int, default=None,
                         help="Direct Phase-2 seed budget (docs/duet/16 Tier-3). "
                              "Default: derived pfo*(K1+1) where pfo = f - p1_fanout.")
+    parser.add_argument("--duet_tree_policy", choices=("off", "level", "frontier"),
+                        default="off",
+                        help="P2-tree rollout policy (docs/duet/15 v6 D1). "
+                             "off = current chain path (default).")
+    parser.add_argument("--duet_tree_c_tensor", type=int, default=3,
+                        help="P2-tree: per-node batched WOR sample width C_tensor.")
+    parser.add_argument("--duet_tree_nv", type=int, default=8,
+                        help="P2-tree: response truncation N_v (used from T2).")
+    parser.add_argument("--duet_tree_beta", type=float, default=0.5,
+                        help="P2-tree: budget allocation exponent (E1 default 0.5).")
 
     # Weight-only quantization (target only) — AWQ Marlin is the supported path.
     # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
@@ -300,6 +310,11 @@ def create_llm_kwargs(args, draft_path):
         llm_kwargs["duet_jit_short"] = not args.duet_no_jit_short
         if args.duet_p2_budget is not None:
             llm_kwargs["duet_p2_budget"] = args.duet_p2_budget
+        llm_kwargs["duet_tree_policy"] = args.duet_tree_policy
+        if args.duet_tree_policy != "off":
+            llm_kwargs["duet_tree_c_tensor"] = args.duet_tree_c_tensor
+            llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
+            llm_kwargs["duet_tree_beta"] = args.duet_tree_beta
         if args.duet_phase1_k is not None:
             llm_kwargs["duet_phase1_k"] = args.duet_phase1_k
         if args.duet_phase2_k is not None:
