@@ -156,11 +156,10 @@ class Config:
         K_max = max(K1, K2) in split mode (= K1 by K2 ≤ K1), else speculate_k.
         See docs/duet/05-policy-b-fix.md Section 3.5.
         """
-        import os as _os_cfg
-        _split_mode = (
-            self.duet_phase1_k is not None
-            and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-        )
+        # Tier-3: field-based split detection — the property must not depend
+        # on call-time environ (post-init the env is guaranteed set for DUET,
+        # but a Config object's derived values should be self-contained).
+        _split_mode = self.duet_phase1_k is not None
         if _split_mode:
             K_max = max(self.duet_phase1_k, self.duet_phase2_k)
         else:
@@ -242,11 +241,10 @@ class Config:
         """
         if self.duet_p2_budget is not None:
             return self.duet_p2_budget
-        import os as _os_cfg
-        _split_mode = (
-            self.duet_phase1_k is not None
-            and _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-        )
+        # Tier-3: field-based split detection — the property must not depend
+        # on call-time environ (post-init the env is guaranteed set for DUET,
+        # but a Config object's derived values should be self-contained).
+        _split_mode = self.duet_phase1_k is not None
         if _split_mode:
             K_max = max(self.duet_phase1_k, self.duet_phase2_k)
         else:

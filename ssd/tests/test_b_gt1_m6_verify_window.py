@@ -365,7 +365,10 @@ class TestProxyHPadding(unittest.TestCase):
             duet_proxy_top_k=top_k, duet_proxy_on_draft=False,
             duet_exit_replica=False, jit_speculate=True,
             duet_proxy_fan_out=1, duet_policy="b",
-            duet_proxy_wire_N=WIRE_N, max_num_seqs=4)
+            duet_proxy_wire_N=WIRE_N, max_num_seqs=4,
+            # Tier-3 (docs/duet/16): verifier reads the per-step budget via
+            # this helper; the stub mirrors the default-path formula.
+            duet_p2_budget_at=lambda K: 1 * (K + 1))
         stub = SimpleNamespace(
             target_model_runner=SimpleNamespace(config=cfg),
             _proxy_send_ring=None, _proxy_send_call_count=0)
