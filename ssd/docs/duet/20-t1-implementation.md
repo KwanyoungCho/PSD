@@ -118,3 +118,11 @@ forward → 비복원 샘플 → pool 갱신; pad 행은 fanout 0 + RNG 소비 �
 전 필드 일치** + rope가 forward 인덱스가 아닌 depth 기반임을 검증.
 유닛 누적 30/30. 남은 배선: 실엔진 어댑터(forward_fn = _decode_tree_
 step + mask 캐시 주입) — T1.4b-b.
+
+**T1.4b-b 완료 (배선)**: ① cudagraph_helpers에 mask override 훅
+(`cache["_tree_mask_override"]` — 키 부재 시 체인 경로 무영향 3줄),
+② `DraftRunner._p2tree_rollout` — run_rollout 코어에 실엔진 forward_fn
+주입 (기존 셀 그리드 slot/context 재사용, input/rope/mask만 동적;
+piv 역매칭 브릿지; finally로 override 정리). 라이브 진입 게이트는
+T2(응답 조립) 전까지 미연결 — 검증은 stub 하네스(T1.4b-c)와 OFF 회귀.
+회귀 44/44 + 유닛 30/30 유지.

@@ -437,8 +437,14 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     kv_indptr_cpu, kv_lpl_cpu = cache["plan_cpu_args"][step]
     qo_indptr_cpu = cache["cu_seqlens_q_cpu"]
 
-    packed_mask = cache["cpu_packed_masks"][step]
-    packed_indptr = cache["cpu_packed_indptrs"][step]
+    # P2-tree (T1.4b, docs/duet/20): per-forward 동적 mask 주입 —
+    # rollout 어댑터가 채우는 override. 체인 경로는 키 부재로 무영향.
+    _tree_ov = cache.get("_tree_mask_override")
+    if _tree_ov is not None and step in _tree_ov:
+        packed_mask, packed_indptr = _tree_ov[step]
+    else:
+        packed_mask = cache["cpu_packed_masks"][step]
+        packed_indptr = cache["cpu_packed_indptrs"][step]
 
     # Phase C-2: optional perturbation of packed_mask buffer at runtime to
     # test if captured CG kernel actually reads it. Gated by env var:

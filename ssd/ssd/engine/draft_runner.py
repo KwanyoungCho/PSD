@@ -1435,6 +1435,92 @@ class DraftRunner(ModelRunner):
                     "chosen_piv": chosen_piv}
         return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
 
+    def _p2tree_rollout(self, duet_proxy, proxy_forked, proxy_fan_out_tensor,
+                        tree_args, layout, step_slot_maps,
+                        step_context_lens, temps):
+        """P2-tree rollout 엔진 어댑터 (T1.4b-b — docs/duet/20).
+
+        B=1 전용 (v6: B>1 게이트 OFF). run_rollout 코어에 실엔진
+        forward_fn을 주입: 셀 그리드 slot/context는 기존 체인 것을
+        재사용하고 input/rope/mask만 동적으로 교체 (mask는
+        cudagraph_helpers cache["_tree_mask_override"] 훅으로).
+        반환: (pool, eval_log) — 응답 조립은 T2.
+        """
+        import numpy as _np
+        from ssd.engine.helpers import cudagraph_helpers as _CH
+        from ssd.engine.helpers import p2_tree as _PT
+        from ssd.utils.context import set_context, reset_context
+
+        cfg = self.config
+        W = layout.MQ_LEN
+        K2 = cfg.duet_phase2_k
+        V = self.hf_config.vocab_size
+        fo = proxy_fan_out_tensor[0].tolist()
+        toks = proxy_forked[0]
+        seeds, i = [], 0
+        for p, c in enumerate(fo):
+            for _ in range(c):
+                seeds.append((p, int(toks[i])))
+                i += 1
+        # piv 역매칭 브릿지 (T2.1 selector score 관통 전)
+        wp = duet_proxy["chosen_pos"][0]
+        wt = duet_proxy["chosen_tok"][0]
+        pv = duet_proxy.get("chosen_piv")
+        piv_list = []
+        for (p, t) in seeds:
+            m = ((wp == p) & (wt == t)).nonzero().flatten()
+            piv_list.append(float(pv[0][m[0]]) if (pv is not None and
+                                                   m.numel()) else 1e-6)
+        root_piv = torch.tensor(piv_list)
+        # 글루 가시성/rope base: seed 행의 것 (위치 p 기반)
+        glue_rows = _np.zeros((len(seeds), K2 + 1), dtype=_np.uint8)
+        for r, (p, _t) in enumerate(seeds):
+            glue_rows[r, :min(p, K2) + 1] = 1
+        rope0 = tree_args["rope_positions"]
+        rope_base = [int(rope0[r]) for r in range(len(seeds))]
+        ctx_len = int(step_context_lens[0][0]) - 0  # chain 빌더 입력과 동일
+
+        dbt = tree_args["block_tables"]
+        cache_hits_list = tree_args.get("cache_hits_list") or [1]
+        _CH.cache["_tree_mask_override"] = {}
+
+        def forward_fn(f, input_ids_w, rope_w, packed, indptr):
+            _CH.cache["_tree_mask_override"][f] = (
+                torch.from_numpy(packed).to(self.device),
+                torch.from_numpy(indptr.astype(_np.int32)).to(self.device))
+            set_context(
+                is_prefill=False,
+                slot_mapping=step_slot_maps[f],
+                context_lens=step_context_lens[f].to(torch.int32),
+                block_tables=dbt,
+                active_mq_len=W,
+                active_wrappers=self.prefill_wrappers_by_layout.get(
+                    layout.name),
+                active_layout=layout,
+                active_cache_hits_list=cache_hits_list,
+            )
+            logits = self.run_model(
+                input_ids_w.to(self.device), rope_w.to(self.device),
+                is_prefill=False, last_only=False, tree_decode_step=f,
+                cache_hits=tree_args.get("cache_hits"))
+            reset_context()
+            return logits.view(-1, V)[:W].float().cpu()
+
+        try:
+            pool, eval_log = _PT.run_rollout(
+                [t for _p, t in seeds], root_piv,
+                policy=cfg.duet_tree_policy, W=W, F_total=K2,
+                c_tensor=cfg.duet_tree_c_tensor, nv=cfg.duet_tree_nv,
+                beta=cfg.duet_tree_beta, depth_cap=K2,
+                temps=temps[:1].expand(W).cpu().float(),
+                forward_fn=forward_fn, glue_rows_by_root=glue_rows,
+                rope_base_by_root=rope_base, K_glue=K2,
+                context_len=ctx_len,
+                sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
+        finally:
+            _CH.cache.pop("_tree_mask_override", None)
+        return pool, eval_log
+
     def _policy_b_from_raw_proxy(self, raw, out_logits, out_tokens, K_step):
         """Compute Policy B {chosen_pos, chosen_tok} draft-side from the raw
         top-M exit proxy (SSD_DUET_PROXY_ON_DRAFT=1). Mirrors the verifier's
