@@ -215,14 +215,15 @@ confidence보다 강할 수 있는 사전점수(ĥ×P_iv — E0로 실증할 가
   신규 필요물: parent_idx 관리 + **동적 조상 mask 생성기** (draft CG
   family 추가는 없으나 mask 내용 생성기는 신규). target에는 tree-verify
   bucket 신규 (§7) — **"전체 신규 CG 0개" 주장은 폐기.**
-- **D2(v4) — root prior는 rank 기반 + score 비트-pack**: wire는 점수
-  내림차순이므로 rank가 공짜 서열 정보다. E0가 P(hit|rank,...)를
-  캘리브레이션하고, raw score가 rank보다 유의하게 나을 때 **score를
-  chosen_tok int64의 상위 비트에 pack** — chosen_tok은 V=32,000이라
-  15비트만 사용, 16비트 양자화 log-score를 실어도 33비트 여유. wire
-  항목 수는 valid_k와 무관한 config 상수라 pack에 장애 없음 (확인:
-  config.py:131-170, 고정 ring 송신 verifier.py:497-501). NCCL 호출
-  수 불변.
+- **D2(v5) — π̂ = 라이브 P_iv, score 비트-pack 필수** (결정 ③으로
+  조건부→필수 승격): log P_iv를 16비트 고정소수점(범위 log₁₀P ∈
+  [−6,0])으로 양자화해 **chosen_tok int64의 비트 15~30에 pack** —
+  V=32,000이라 토큰은 15비트만 사용(vocab ≤ 32768 assert + 버전 비트
+  1개), 부호 비트 불사용. wire 항목 수는 valid_k와 무관한 config
+  상수라 장애 없음 (config.py:131-170; 고정 ring 송신 verifier.py:
+  497-501). NCCL 호출 수·통신량 증가 0. rank prior/경험 테이블은
+  폐기 — E0의 역할은 P_iv의 **calibration 검증**(위치별 신뢰도
+  곡선)으로 전환.
 - **D3 — log 공간 유지**: value 비교는 log-합 (top-k 선택에 raw 곱과
   동치, 수치 안전).
 - **D4 — 동적 선택 오버헤드 최소**: forward당 frontier topk 1회, 신규
@@ -292,6 +293,15 @@ for f in 1..F_total:
 priority(n) = log π̂(root(n)) + Σ_경로 log c_raw
 ```
 
+- **π̂(root) = 이번 step의 라이브 P_iv** (결정 ③, 2026-08-04):
+  P_iv = ĥ×corr는 구조적으로 "검증 결과가 (pos, tok)일 확률"의
+  추정치이므로 root hit 확률 그 자체다 — 경험 테이블/rank prior는
+  폐기하고 step별 라이브 값을 wire 비트-pack으로 수신해 사용 (사용자
+  결정: 문맥-평균 테이블은 step별 신호를 버림). 상대 배분에는 균일
+  편향이 상쇄되므로(모든 root에 같은 log-상수) 무해하고, **비균일
+  (위치별) 편향만** E0의 calibration 곡선으로 검증 — 발견 시 위치별
+  보정계수를 라이브 값에 곱해 교정 (테이블 회귀 아님). budget 사전
+  분배는 보류 (동적 배분 확정; E1 비교군에 참고용으로만 유지).
 - **c_raw = 그 토큰의 "부모 원본 q_eff에서의" 확률.** 비복원 샘플링은
   재정규화된 나머지 분포로 뽑지만, value 기록은 반드시 **원본 확률**로
   한다 — 형제 순서 효과가 자동 내장되기 때문: 형제2의 검사 확률
@@ -383,7 +393,7 @@ P2 트리 대형: N_v=8    (N_v=10은 E1/E2가 명확히 지지할 때만)
 | D5 | KV 처리 | **잠정 (a) scratch+복사** (§7.3, SGLang 대비 근거) — E2③ 실측으로 확정 |
 | D6 | 응답 절단 | value 우선 + **조상 폐포·형제-prefix 보존** (규칙 ③) — bucket {4,6,8} 중 선택 |
 | D7 | 탐색 공간 초기값 | W=10 고정, F_total=D=4 우선(D=5 후속), R ∈ {4,6,8,10}, N_v ∈ {4,6,8} — E1이 결정 |
-| D9(신규) | value의 π̂/â 형태 | rank-기반 캘리브레이션 prior vs raw score — E0가 결정 (ECE/Brier 비교) |
+| ~~D9~~ | ~~value의 π̂/â 형태~~ | **해소 (결정 ③)**: π̂ = 라이브 P_iv (위치별 calibration은 E0 검증, 필요시 라이브 보정계수) |
 
 ## 9. 관문 실험 (구현 전 — 전부 green이어야 착수)
 
