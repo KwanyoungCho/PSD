@@ -425,3 +425,80 @@ def build_root_views(pool: TreePool, R: int, nv: int, cell_logits=None):
         out["parent_q_logits"] = pq_logits
         out["u_valid"] = u_valid
     return out
+
+
+def tree_verify_walk(view, p_dists, q_dists, root_p, rng):
+    """무손실 트리 수락 보행 (T3.3 — v6 §7.2 + 리뷰4 수치 규약).
+
+    참조 구현 (CPU, dict 분포): 전수 분포-일치 테스트의 대상이며 T3
+    엔진 보행의 정답지. 형제 그룹별 잔차 사다리:
+        R₁=p, D₁=q(재정규화 없음 — 원본), a_j = min(1, R_j[x]/D_j[x]),
+        R_{j+1} = norm((R_j − D_j)₊), D_{j+1} = x_j 제거·재정규화.
+    내부 수락 → 자식 그룹은 **새 컨텍스트 p로 리셋**. 수락된 잎 →
+    plain p에서 bonus. 전원 기각 → 마지막 잔차에서 recovery.
+
+    Args:
+        view: build_root_views의 한 root 조각 (tok/parent_local/
+              sib_order/valid — 텐서 행).
+        p_dists: dict node_ctx -> target 분포 (dict tok->prob).
+                 node_ctx = -1 (root 직후) 또는 뷰 로컬 노드 인덱스
+                 (그 노드 수락 후 컨텍스트).
+        q_dists: 동일 키 -> draft 제안 분포 (그 컨텍스트의 q_eff).
+        root_p: p_dists[-1] (root 직후 target 분포).
+        rng:    random.Random (재현성).
+
+    Returns: (accepted_path 로컬 인덱스 리스트, 종료토큰) — 종료토큰은
+             recovery/bonus로 뽑힌 실제 커밋 토큰.
+    """
+    n = int(view["valid"])
+    kids = {}
+    for j in range(n):
+        par = int(view["parent_local"][j])
+        kids.setdefault(par, []).append(j)
+    for v_ in kids.values():
+        v_.sort(key=lambda j: int(view["sib_order"][j]))
+
+    def norm(d):
+        Z = sum(d.values())
+        return {k: v / Z for k, v in d.items()} if Z > 1e-12 else {}
+
+    path = []
+    ctx = -1
+    p = dict(root_p)
+    while True:
+        group = kids.get(ctx, [])
+        q = dict(q_dists[ctx]) if group else None
+        R = dict(p)
+        accepted = None
+        for j in group:
+            tok = int(view["tok"][j])
+            D = q
+            if D.get(tok, 0.0) <= 0.0:
+                raise ValueError("D_j[x_j]=0 — proposal/verifier parity 오류")
+            a = min(1.0, R.get(tok, 0.0) / D[tok])
+            if rng.random() < a:
+                accepted = j
+                break
+            resid = {k: max(0.0, R.get(k, 0.0) - D.get(k, 0.0))
+                     for k in set(R) | set(D)}
+            R = norm(resid)
+            if not R:
+                R = {}                      # 도달불가 분기 (질량 0)
+            q = norm({k: v for k, v in D.items() if k != tok})
+        if accepted is None:
+            # 전원 기각 (또는 자식 없음=잎): R(잔차 또는 plain p)에서 종료토큰
+            src = R if group else p
+            if not src:
+                src = p                     # 잔차 소진 극단 — plain p
+            r = rng.random()
+            acc = 0.0
+            last = None
+            for k in sorted(src):
+                acc += src[k]
+                last = k
+                if r <= acc:
+                    return path, k
+            return path, last
+        path.append(accepted)
+        ctx = accepted
+        p = dict(p_dists[ctx])              # 컨텍스트 리셋 (리뷰4)

@@ -147,3 +147,11 @@ q_eff의 원천 — 각 노드의 제안분포 = 부모 셀의 draft logits) +
 순 U 인덱싱, U_max=N_v assert; v6 §7.1 스키마 [parent_q_ref[nv] +
 parent_q_logits[U,V] + u_valid]). 노드↔부모셀 logits 일치 테스트.
 유닛 34/34 + 회귀 44/44.
+
+**T3.3 완료 — 무손실 하드 게이트 통과 (v6 §10 go/no-go ①)**:
+`tree_verify_walk` (잔차 사다리 + 컨텍스트 리셋 + 잎 bonus/전원기각
+recovery + 수치 규약 [D_j=0 raise, 잔차소진 처리]) 참조 구현.
+**전수 검증: 비복원 순서 전수 열거 × 사다리 해석해 합성 = target p
+(30 케이스 × fanout 1-3, p=q·반희소 포함, 오차 < 1e-9)** + walk
+구현의 MC 정합 (20만 시행 ±0.005). 트리 채택의 수학적 전제가 코드로
+증명됨 — 남은 것은 이 참조를 엔진(T3 GPU 보행)이 재현하는지.

@@ -474,3 +474,101 @@ class TestParentQRefs(unittest.TestCase):
         # u_valid ≤ valid ≤ nv
         for r in range(R):
             self.assertLessEqual(int(v["u_valid"][r]), int(v["valid"][r]) or 1)
+
+
+class TestLosslessExhaustive(unittest.TestCase):
+    """v6 §10 go/no-go ① — 작은 vocab 전수 분포-일치 (하드 게이트)."""
+
+    @staticmethod
+    def _ladder(p, q, order):
+        # 형제 그룹 사다리 해석해: 주어진 WOR 순서에 대해
+        # (j별 도달·수락 확률, 전원기각 잔차 분포)
+        def norm(d):
+            Z = sum(d.values())
+            return {k: v / Z for k, v in d.items()} if Z > 1e-12 else {}
+        R = dict(p); D = dict(q)
+        reach = 1.0; acc = []
+        for tok in order:
+            a = min(1.0, R.get(tok, 0.0) / D[tok]) if D.get(tok, 0) > 0 else 0.0
+            acc.append((tok, reach * a))
+            reach *= (1.0 - a)
+            R = norm({k: max(0.0, R.get(k, 0.0) - D.get(k, 0.0))
+                      for k in set(R) | set(D)})
+            D = norm({k: v for k, v in D.items() if k != tok})
+        return acc, reach, R
+
+    @staticmethod
+    def _wor_orders(q, f):
+        # 비복원 순서 전수 열거 (chain rule 확률)
+        import itertools
+        toks = [t for t in q if q[t] > 0]
+        out = []
+        for perm in itertools.permutations(toks, min(f, len(toks))):
+            pr = 1.0; rem = 1.0
+            for t in perm:
+                pr *= q[t] / rem
+                rem -= q[t]
+            out.append((list(perm), pr))
+        return out
+
+    def _exact_first_token_dist(self, p, q, f):
+        # Σ_순서 P(순서) × [수락 j → tok_j, 전원기각 → 잔차]
+        from collections import defaultdict
+        out = defaultdict(float)
+        for order, pr in self._wor_orders(q, f):
+            acc, reach, R = self._ladder(p, q, order)
+            for tok, a in acc:
+                out[tok] += pr * a
+            for k, v in (R if R else p).items():
+                out[k] += pr * reach * v
+        return dict(out)
+
+    def test_exhaustive_first_token_equals_p(self):
+        import random
+        rnd = random.Random(0)
+        for trial in range(30):
+            V = 4
+            pw = [rnd.random() + 1e-3 for _ in range(V)]
+            qw = [rnd.random() + 1e-3 for _ in range(V)]
+            if trial % 5 == 0:
+                qw = list(pw)                      # p=q 케이스
+            if trial % 7 == 0:
+                pw[0] = 1e-9                       # 반-희소 케이스
+            p = {i: w / sum(pw) for i, w in enumerate(pw)}
+            q = {i: w / sum(qw) for i, w in enumerate(qw)}
+            for f in (1, 2, 3):
+                out = self._exact_first_token_dist(p, q, f)
+                for k in p:
+                    self.assertAlmostEqual(out.get(k, 0.0), p[k], places=9,
+                        msg=f"trial{trial} f={f} tok{k}")
+
+    def test_walk_mc_matches_analytic(self):
+        # tree_verify_walk 구현이 해석해와 일치하는지 (단일 그룹, MC)
+        import random
+        from ssd.engine.helpers.p2_tree import tree_verify_walk
+        p = {0: 0.5, 1: 0.3, 2: 0.2}
+        q = {0: 0.6, 1: 0.3, 2: 0.1}
+        f = 2
+        rnd = random.Random(42)
+        N = 200_000
+        counts = {0: 0, 1: 0, 2: 0}
+        for _ in range(N):
+            # WOR 샘플 (chain rule)
+            toks = [0, 1, 2]; w = dict(q); order = []
+            for _j in range(f):
+                z = sum(w.values()); r = rnd.random() * z; accum = 0.0
+                for t in list(w):
+                    accum += w[t]
+                    if r <= accum:
+                        order.append(t); del w[t]; break
+            view = {"valid": torch.tensor(f),
+                    "tok": torch.tensor(order),
+                    "parent_local": torch.tensor([-1] * f),
+                    "sib_order": torch.tensor(list(range(f)))}
+            path, term = tree_verify_walk(
+                view, {j: p for j in range(f)}, {-1: q}, p, rnd)
+            first = order[path[0]] if path else term
+            counts[first] += 1
+        for k in p:
+            self.assertAlmostEqual(counts[k] / N, p[k], delta=0.005,
+                                   msg=f"tok{k}: {counts[k]/N} vs {p[k]}")
