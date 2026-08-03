@@ -231,7 +231,7 @@ class SpeculatorAsync(SpeculatorBase):
 
         return SpeculateResult(
             speculations, logits_q, cache_hits, phase_source, valid_k,
-            tree_ints=_tree_ints,
+            tree_ints=getattr(self, "_tree_ints_step", None),
             parent_q_logits=self._tree_parent_q,
             profile_cache_status=profile_cache_status,
             step_id=self._request_step_id,
@@ -323,8 +323,10 @@ class SpeculatorAsync(SpeculatorBase):
         valid_k = self._fused_response[2 * B:3 * B]
         _spec_end = 3 * B + B * self.K
         speculations = self._fused_response[3 * B:_spec_end].view(B, self.K)
-        _tree_ints = (self._fused_response[_spec_end:].view(B, -1)
-                      if self._tree_wire_extra else None)
+        # T3.4-b2 fix(이슈 #9): speculate()가 SpeculateResult 조립에서
+        # 읽도록 self에 스태시 (recv 헬퍼와 함수 스코프가 다름)
+        self._tree_ints_step = (self._fused_response[_spec_end:].view(B, -1)
+                                if self._tree_wire_extra else None)
         dist.recv(self._logits_q, src=self.draft_runner_rank, group=self.async_pg)
         if self._tree_parent_q is not None:
             dist.recv(self._tree_parent_q, src=self.draft_runner_rank,
