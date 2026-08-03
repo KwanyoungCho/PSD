@@ -586,3 +586,89 @@ def build_verify_mask_packed(valid: int, ancestors, kv_len: int):
         m[j, prefix + j] = 1
     packed = np.packbits(m.ravel(), bitorder="little")
     return torch.from_numpy(packed)
+
+
+def tree_verify_walk_tensor(tree_ints, p_logits, q_parent_probs, temp_p,
+                            coin_fn, mult_fn):
+    """프로덕션 보행 (T3.4-a — full-vocab 텐서; 참조 tree_verify_walk와
+    동일-코인 동등성 테스트로 고정).
+
+    Args:
+        tree_ints: parse_tree_ints 출력 (valid/tok/parent_local/
+                   sib_order/parent_q_ref).
+        p_logits:  [valid+1, V] — row0 = root 직후 컨텍스트의 target
+                   logits, row j+1 = 노드 j 수락 후 컨텍스트.
+        q_parent_probs: [U, V] — 부모 분포 (이미 temp/sampler_x 처리된
+                   **확률**; draft 샘플측과 동일 build 함수 산출).
+        temp_p:    target temperature (>0 — temp0은 트리 게이트).
+        coin_fn(): U(0,1) 1개 (재현성 주입).
+        mult_fn(probs): 분포에서 토큰 1개 샘플 (주입).
+
+    Returns: (accepted_path 노드 인덱스 리스트, 종료 토큰 int)
+    """
+    valid = tree_ints["valid"]
+    par = tree_ints["parent_local"]
+    sib = tree_ints["sib_order"]
+    kids = {}
+    for j in range(valid):
+        kids.setdefault(int(par[j]), []).append(j)
+    for v_ in kids.values():
+        v_.sort(key=lambda j: int(sib[j]))
+
+    def p_of(ctx):
+        row = 0 if ctx < 0 else ctx + 1
+        return torch.softmax(p_logits[row].float() /
+                             max(temp_p, 1e-8), dim=-1)
+
+    path = []
+    ctx = -1
+    while True:
+        group = kids.get(ctx, [])
+        p = p_of(ctx)
+        if not group:                          # 수락된 잎 → plain p bonus
+            return path, int(mult_fn(p))
+        R = p.clone()
+        D = q_parent_probs[int(tree_ints["parent_q_ref"][group[0]])] \
+            .float().clone()
+        accepted = None
+        for j in group:
+            t = int(tree_ints["tok"][j])
+            if float(D[t]) <= 0.0:
+                raise ValueError("D_j[x_j]=0 — parity 오류 (리뷰4 규약)")
+            a = min(1.0, float(R[t]) / float(D[t]))
+            if coin_fn() < a:
+                accepted = j
+                break
+            R = torch.clamp(R - D, min=0.0)
+            Z = float(R.sum())
+            R = R / Z if Z > 1e-12 else torch.zeros_like(R)
+            D[t] = 0.0
+            Zd = float(D.sum())
+            D = D / Zd if Zd > 1e-12 else torch.zeros_like(D)
+        if accepted is None:                   # 전원 기각 → 잔차 recovery
+            src = R if float(R.sum()) > 1e-12 else p
+            return path, int(mult_fn(src))
+        path.append(accepted)
+        ctx = accepted
+
+
+def commit_copy_plan(accepted_path, pos0: int, block_table,
+                     block_size: int):
+    """T3.5-a — 수락 경로 KV의 scratch→canonical 복사 계획 (pure).
+
+    scratch 셀 j는 pos0+1+j (build_verify_rows 계약), canonical 목적지는
+    pos0+1+k (k = 경로 순서). 겹침 대비: (src, dst) 쌍 리스트 반환 —
+    실행부(T3.5-b)는 rank별 temp buffer 경유 gather→scatter (리뷰4).
+    """
+    plan = []
+    for k, j in enumerate(accepted_path):
+        src_pos = pos0 + 1 + int(j)
+        dst_pos = pos0 + 1 + k
+        if src_pos == dst_pos:
+            continue
+        sb = int(block_table[src_pos // block_size]) * block_size \
+            + src_pos % block_size
+        db = int(block_table[dst_pos // block_size]) * block_size \
+            + dst_pos % block_size
+        plan.append((sb, db))
+    return plan

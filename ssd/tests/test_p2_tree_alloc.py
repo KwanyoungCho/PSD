@@ -633,3 +633,68 @@ class TestVerifyRows(unittest.TestCase):
         self.assertEqual(m[3, pre + 1], 1)                # 조상 n1
         self.assertEqual(m[3, pre + 2], 0)                # 형제 아님-조상
         self.assertEqual(m[3, pre + 3], 1)                # 자기
+
+
+class TestTensorWalkEquivalence(unittest.TestCase):
+    def test_same_coins_same_outcome(self):
+        # 같은 분포·같은 코인열에서 dict-참조와 텐서 보행이 동일 결과
+        import random
+        from ssd.engine.helpers.p2_tree import (tree_verify_walk,
+                                                tree_verify_walk_tensor)
+        V = 8
+        rnd = random.Random(0)
+        for trial in range(50):
+            # 트리: 2 자식 + 첫 자식 밑 1 자식
+            ti = {"valid": 3,
+                  "tok": torch.tensor([rnd.randrange(V) for _ in range(3)]),
+                  "parent_local": torch.tensor([-1, -1, 0]),
+                  "sib_order": torch.tensor([0, 1, 0]),
+                  "parent_q_ref": torch.tensor([0, 0, 1])}
+            if int(ti["tok"][0]) == int(ti["tok"][1]):
+                continue                       # 형제 중복 배제 (비복원)
+            pl = torch.randn(4, V)
+            qp = torch.softmax(torch.randn(2, V), dim=-1)
+            coins = [rnd.random() for _ in range(8)]
+            # 참조 dict 세계 구성
+            p_d = {c: {k: float(torch.softmax(pl[c + 1 if c >= 0 else 0]
+                                              .float() / 0.7, -1)[k])
+                       for k in range(V)} for c in (-1, 0, 1, 2)}
+            q_d = {-1: {k: float(qp[0][k]) for k in range(V)},
+                   0: {k: float(qp[1][k]) for k in range(V)},
+                   1: {k: float(qp[1][k]) for k in range(V)},
+                   2: {k: float(qp[1][k]) for k in range(V)}}
+            class R1:
+                def __init__(self): self.i = 0
+                def random(self):
+                    v = coins[self.i]; self.i += 1; return v
+            r1, r2 = R1(), R1()
+            view = {"valid": torch.tensor(3), "tok": ti["tok"],
+                    "parent_local": ti["parent_local"],
+                    "sib_order": ti["sib_order"]}
+            path_a, term_a = tree_verify_walk(
+                view, {j: p_d[j] for j in range(3)}, q_d, p_d[-1], r1)
+            # 텐서판: mult_fn을 같은 코인으로 CDF 샘플
+            def mult(probs):
+                r = r2.random(); acc = 0.0
+                for k in range(V):
+                    acc += float(probs[k])
+                    if r <= acc:
+                        return k
+                return V - 1
+            path_b, term_b = tree_verify_walk_tensor(
+                ti, pl, qp, 0.7, coin_fn=r2.random, mult_fn=mult)
+            self.assertEqual(path_a, path_b, f"trial {trial}")
+            self.assertEqual(term_a, term_b, f"trial {trial}")
+
+
+class TestCommitPlan(unittest.TestCase):
+    def test_plan_and_identity_skip(self):
+        from ssd.engine.helpers.p2_tree import commit_copy_plan
+        bt = torch.arange(8, dtype=torch.int64) + 50
+        # 경로 [0, 2]: 노드0 → dst 자리 그대로 (skip), 노드2 → dst k=1
+        plan = commit_copy_plan([0, 2], pos0=30, block_table=bt,
+                                block_size=16)
+        self.assertEqual(len(plan), 1)
+        src, dst = plan[0]
+        self.assertEqual(src, int(bt[33 // 16]) * 16 + 33 % 16)
+        self.assertEqual(dst, int(bt[32 // 16]) * 16 + 32 % 16)
