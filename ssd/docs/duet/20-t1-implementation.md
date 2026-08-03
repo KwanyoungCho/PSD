@@ -90,3 +90,23 @@ mask 기하([prefix|glue|spec 블록], packbits little)를 정확 복제한 트�
 버전 (조상 셀 비트 + 자기 셀). **핵심 게이트 통과: fanout=1 퇴화에서
 기존 체인 대각 mask와 비트 단위 일치** (step 0-2 전수) + 교차-행
 조상 비트 정합 테스트. 유닛 누적 28/28.
+
+**T1.4b-2 통합 노트 (다음 조각 — 발견된 정확한 접점)**:
+- 진입: `_build_tree_batch_split_k1k2`의 P2 빌드 지점 (`policy != off`
+  && B==1 && temps>0 분기; 아니면 기존 체인 경로). T1 단계에서 응답
+  경로는 명시 raise (T2 전 — 검증은 stub 하네스).
+- forward 재사용: `_decode_tree_step` 그대로 (slot/context는 기존
+  `_compute_step_positions_and_slot_maps`의 (f,행) 셀 그리드 재사용).
+  **동적 3요소만 교체**: ① input_ids[f] = 선택 노드 토큰, ②
+  rope[f] = rope_base[root] + depth(노드) (레이아웃 정적 오프셋 무시),
+  ③ mask[f] = `build_tree_mask_packed` 산출을 layout 캐시
+  `cache["cpu_packed_masks"][f]`에 주입 (run_fi가 그 슬롯을 읽음 —
+  cudagraph_helpers :441-456 확인). 글루 행 = root의 원 seed-행 글루
+  패턴을 선택 순서로 재배열.
+- 순차 의존: mask(f)는 f-1 샘플 결과에 의존 → F-루프 안에서 선택→
+  mask 주입→forward→샘플 순서 (사전 일괄 불가 — 설계 §6 예고대로).
+- root piv: T2.1(selector score 관통) 전까지는 rollout 진입부에서
+  retained (pos,tok)를 wire에 역매칭해 chosen_piv gather (B=1 trivial).
+- 검증(T1.4b-3): m2-패턴 stub 하네스 (run_model/sampler stub) —
+  rollout_reference와 topology/장부 완전 일치 + fanout=1 퇴화에서
+  기존 체인 경로와 spec_tokens 동일.
