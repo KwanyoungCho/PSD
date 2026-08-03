@@ -114,6 +114,11 @@ AL 우열은 단일런 잡음 범위 — T4 sweep에서 판정.
 - Decode 2.60은 v1 미최적화(트리 verify eager, 보행 CPU, 매 스텝
   rollout 오버헤드) × CPU 오염 복합 — 성능 판정 구간 아님. 최적화
   1차(롤아웃 GPU 상주)는 적용 완료, 스팬 분해는 PROFILE 런에서.
+- PROFILE 분해 (오염 하 상대 비교): 트리 스텝 target graph_pre
+  693ms/post 194ms (체인 33/13 — eager 80층 ~21×) = 지배 항. →
+  **T3.2 CG capture 적용 후 첫 트리 스텝 graph_pre 31.5ms (22×
+  개선, 체인 수준)** 확인. 연속 트리 스텝에서 행수 불변 위반 크래시
+  발견 — 진단 가드로 원인 추적 중 (docs/duet/20 이슈 로그).
 
 ## 5. T4 sweep (예정 — 한산 가드)
 

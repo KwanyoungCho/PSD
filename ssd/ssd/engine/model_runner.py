@@ -1386,6 +1386,13 @@ class ModelRunner:
         # pad 행 절단 — 소비자는 [n_rows, V]만 본다
         if logits is not None and not last_only and logits.shape[0] == r_b:
             logits = logits[:n_rows]
+        if logits is not None and not last_only \
+                and logits.shape[0] != n_rows:
+            raise RuntimeError(
+                f"tree verify row invariant: logits rows="
+                f"{logits.shape[0]} != n_rows={n_rows} "
+                f"(valid={valid} r_b={r_b} nv_b={nv_b} "
+                f"cg={_cg is not None} in_rows={input_ids.shape[0]})")
         return logits
 
 
