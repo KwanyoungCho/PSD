@@ -1296,6 +1296,17 @@ class ModelRunner:
             bufs["rope"].copy_(rope)
             bufs["slot_mapping"].copy_(slot_mapping)
             bufs["context_lens"][0] = kv_len
+            # 이슈 #18: prepare_decode의 체인-verify context(cu_seqlens_q
+            # 설정)가 남아 있으면 lm_head가 [1, rows, V] 3-D를 반환해
+            # pad 절단이 무력화된다 (rows=1 관측). eager 분기와 동일하게
+            # cu_seqlens_q 없는 decode context로 교체 — lm_head는 flat
+            # [rows, V] 경로를 탄다 (replay 자체는 context 무관).
+            set_context(
+                is_prefill=False,
+                slot_mapping=slot_mapping,
+                context_lens=context.context_lens,
+                block_tables=context.block_tables,
+            )
             wcg.plan(
                 qo_indptr, kv_indptr, kv_indices, kv_last_page_len,
                 max(1, self.hf_config.num_attention_heads // _tp),
