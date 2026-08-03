@@ -1166,6 +1166,7 @@ def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
     return out, graph_pool
 
 
+@torch.inference_mode()
 def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None):
     """DUET split verify CudaGraph.
     graph_pre: layers [0, exit_layer] → exit_hidden, exit_residual
