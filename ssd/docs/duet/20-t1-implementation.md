@@ -163,3 +163,10 @@ draft의 512MB는 그쪽 선택값], KV 할당 전 확보, B=1 고정 버퍼). t
 policy 게이트 — off면 무할당 (OFF 불변, 회귀 44/44). 남은 T3.1b:
 attention.py의 명시 TREE_VERIFY mode 배선 (context 플래그 → wrapper
 경로, 오진입 raise).
+
+**T3.1b 완료**: attention에 명시 TREE_VERIFY 분기 —
+`context.tree_verify_wrapper` 설정 시에만 FlashInfer wrapper 경로
+(공통 꼬리와 동일한 [-1, H·D] 반환), draft에서 설정되면 명시 raise
+(mode 오배선 방지 — 리뷰4). 미설정이면 기존 경로 완전 불변 (회귀
+44/44). 남은 T3: T3.2 bucket capture(packed mask plan/run) → T3.4
+엔진 보행+통합 → T3.5 TP4 commit-ack → live E2E.

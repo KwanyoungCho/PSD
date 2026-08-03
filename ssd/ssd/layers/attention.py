@@ -94,6 +94,18 @@ class Attention(nn.Module):
                                        max_seqlen_k=context.max_seqlen_k, cu_seqlens_k=context.cu_seqlens_k,
                                        softmax_scale=self.scale, causal=True)
         else:
+            # P2-tree TREE_VERIFY (T3.1b, docs/duet/20): 명시 mode — 현행
+            # 암묵 dispatch(cu_seqlens 유무)로는 트리 mask를 표현할 수
+            # 없다 (리뷰4). context.tree_verify_wrapper가 설정된 verify
+            # 에서만 진입; 미설정이면 기존 경로 완전 불변.
+            _tv_wrapper = getattr(context, "tree_verify_wrapper", None)
+            if _tv_wrapper is not None:
+                if self.draft:
+                    raise RuntimeError(
+                        "tree_verify_wrapper set on DRAFT attention — "
+                        "mode 오배선 (target verify 전용)")
+                o = _tv_wrapper.run(q, (self.k_cache, self.v_cache))
+                return o.view(-1, self.num_heads * self.head_dim)
             # verify/glue decode: multi-query with cu_seqlens_q (K+1 or variable per seq)
             verify_or_glue = (
                 self.speculate and context.cu_seqlens_q is not None
