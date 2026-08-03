@@ -96,8 +96,23 @@ is not None`)으로 교체 — DUET 실행에서는 env가 필수였으므로 �
   `tests/test_policy_b_unified_padded.py` 4/4 에러 — base 커밋
   e29c4b6에서도 동일 재현. M1 배칭 이전의 1-D 형상을 넘기는 레거시
   테스트. 처분은 사용자 판단 대상 (갱신 vs 삭제).
-- **champion GPU 스모크 (구 명령 vs 신 명령)**: 진행 중 — 결과 추가
-  예정 (`experiments/proxy_async_overlap/g0_args_cleanup/smoke_{old,new}.log`).
+- **champion GPU 스모크 (구 명령 vs 신 명령)** — 완료
+  (`experiments/proxy_async_overlap/g0_args_cleanup/smoke_*.log`;
+  numseqs 8 ×4셋, out 256, temp 0.7, seed 42 — 동등성 확인용 짧은 런,
+  TPS 판정용 아님):
+
+  | 런 | decode TPS | tok/step | T_full(ms) | T_verify(ms) | draft(ms) |
+  |---|---:|---:|---:|---:|---:|
+  | 구-방식 1회차 | 75.68 | 3.74 | 52.23 | 45.59 | 44.65 |
+  | 구-방식 2회차 | 77.91 | 3.91 | 53.06 | 46.40 | 44.78 |
+  | 신-방식 | 82.96 | 4.17 | 53.40 | 46.42 | 45.11 |
+
+  **판독**: Config 출력은 세 런 모두 동일 (exit=56, top_k=14, dfo=2,
+  pfo=1, K1=9, K2=4; 신-방식은 k=13 유도 포함). **시간 지표는 세 런이
+  구간 내 동일**하고, TPS 차이는 전부 tok/step — temp 0.7 짧은 런의
+  토큰 샘플링 운 (async 레이스로 같은 seed여도 hit 경로가 갈림; 구-
+  방식끼리도 75.68 vs 77.91). 엔진 행동 차이의 증거 없음. 정밀 판정이
+  필요하면 5-rep 인터리브로 재실측 가능 (사용자 요청 시).
 
 ## 2. P0 — E0 기록 게이트
 
