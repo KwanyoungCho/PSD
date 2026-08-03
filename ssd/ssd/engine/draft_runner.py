@@ -1501,7 +1501,7 @@ class DraftRunner(ModelRunner):
             return logits.view(-1, V)[:W].float().cpu()
 
         try:
-            pool, eval_log = _PT.run_rollout(
+            pool, eval_log, cell_logits = _PT.run_rollout(
                 [t for _p, t in seeds], root_piv,
                 policy=cfg.duet_tree_policy, W=W, F_total=K2,
                 c_tensor=cfg.duet_tree_c_tensor, nv=cfg.duet_tree_nv,
@@ -1513,7 +1513,7 @@ class DraftRunner(ModelRunner):
                 sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
         finally:
             _CH.cache.pop("_tree_mask_override", None)
-        return pool, eval_log
+        return pool, eval_log, cell_logits
 
     def _policy_b_from_raw_proxy(self, raw, out_logits, out_tokens, K_step):
         """Compute Policy B {chosen_pos, chosen_tok} draft-side from the raw

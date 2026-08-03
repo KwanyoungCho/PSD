@@ -333,7 +333,7 @@ class TestRunRollout(unittest.TestCase):
             return fixed_logits[f].clone()
 
         torch.manual_seed(7)
-        pool_a, log_a = run_rollout(
+        pool_a, log_a, _cl = run_rollout(
             list(range(10, 10 + R)), piv, policy="level", W=W, F_total=F,
             c_tensor=C, nv=6, beta=0.5, depth_cap=4, temps=temps,
             forward_fn=fwd, glue_rows_by_root=np.ones((R, 5), np.uint8),
@@ -368,7 +368,7 @@ class TestRunRollout(unittest.TestCase):
             seen[f] = rope.clone()
             return torch.randn(4, 32)
         torch.manual_seed(1)
-        run_rollout([10], torch.tensor([1.0]), policy="frontier", W=4,
+        _ = run_rollout([10], torch.tensor([1.0]), policy="frontier", W=4,
                     F_total=3, c_tensor=3, nv=8, beta=0.5, depth_cap=4,
                     temps=torch.full((4,), 0.7), forward_fn=fwd,
                     glue_rows_by_root=np.ones((1, 5), np.uint8),
@@ -442,3 +442,35 @@ class TestSelectorPivPassthrough(unittest.TestCase):
             {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok},
             draft_forked, K_rank=4, total_budget=4)
         self.assertEqual(len(out), 2)
+
+
+class TestParentQRefs(unittest.TestCase):
+    def test_parent_q_matches_cell_logits(self):
+        import numpy as np
+        from ssd.engine.helpers.p2_tree import build_root_views, run_rollout
+        R, W, F, C, V = 3, 3, 3, 2, 32
+        piv = torch.tensor([0.5, 0.3, 0.2])
+        fixed = torch.randn(F, W, V)
+        def fwd(f, ids, rope, packed, indptr):
+            return fixed[f].clone()
+        torch.manual_seed(11)
+        pool, log, cell_logits = run_rollout(
+            [7, 8, 9], piv, policy="level", W=W, F_total=F, c_tensor=C,
+            nv=6, beta=0.5, depth_cap=4, temps=torch.full((W,), 0.7),
+            forward_fn=fwd, glue_rows_by_root=np.ones((R, 5), np.uint8),
+            rope_base_by_root=[10, 20, 30], K_glue=4, context_len=100)
+        v = build_root_views(pool, R, nv=6, cell_logits=cell_logits)
+        # 각 노드의 parent_q_logits[ref] == cell_logits[부모 셀]
+        cnt = [0] * R
+        for i in range(pool.n):
+            if int(pool.parent_idx[i]) < 0:
+                continue
+            r = int(pool.root[i]); j = cnt[r]; cnt[r] += 1
+            ref = int(v["parent_q_ref"][r, j])
+            self.assertGreaterEqual(ref, 0)
+            pc = int(pool.parent_cell[i])
+            self.assertTrue(torch.equal(v["parent_q_logits"][r, ref],
+                                        cell_logits[pc]))
+        # u_valid ≤ valid ≤ nv
+        for r in range(R):
+            self.assertLessEqual(int(v["u_valid"][r]), int(v["valid"][r]) or 1)

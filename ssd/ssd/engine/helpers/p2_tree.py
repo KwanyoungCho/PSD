@@ -317,6 +317,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     for r in range(R):
         pool.add(int(root_toks[r]), -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
     eval_log = []
+    cell_logits = None                     # [F·W, V] — verify q_eff 원천 (T2.2)
     for f in range(F_total):
         sel = select_nodes(pool, policy, W, f, depth_cap)
         n_sel = len(sel)
@@ -344,6 +345,10 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
         packed, indptr = build_tree_mask_packed(
             f, W, K_glue, context_len, glue, anc, selfc)
         logits = forward_fn(f, input_ids, rope, packed, indptr)
+        if cell_logits is None:
+            cell_logits = torch.zeros(F_total * W, logits.shape[-1],
+                                      dtype=logits.dtype)
+        cell_logits[f * W:(f + 1) * W] = logits[:W]
         toks, raws = tree_sample_wor(logits, temps, c_tensor,
                                      sampler_x=sampler_x, F=F_x)
         for k, i in enumerate(sel):
@@ -358,10 +363,10 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                                                        min=1e-9))),
                          float(raws[k][c]))
         eval_log.append((sel, fan[:n_sel]))
-    return pool, eval_log
+    return pool, eval_log, cell_logits
 
 
-def build_root_views(pool: TreePool, R: int, nv: int):
+def build_root_views(pool: TreePool, R: int, nv: int, cell_logits=None):
     """root별 서브트리 응답 뷰 (T1.5; U_max=N_v 고정 pad — v6 §7.1).
 
     결정 ⑤v2의 생성-시점 캡(≤ nv) 덕분에 **절단이 발생하지 않는다**
@@ -392,5 +397,31 @@ def build_root_views(pool: TreePool, R: int, nv: int):
         raw_q[r, j] = pool.raw_q[i]
         local_of[i] = j
         valid[r] = j + 1
-    return {"tok": tok, "parent_local": parent_local, "sib_order": sib,
-            "raw_q": raw_q, "valid": valid}
+    out = {"tok": tok, "parent_local": parent_local, "sib_order": sib,
+           "raw_q": raw_q, "valid": valid}
+    if cell_logits is not None:
+        # T2.2: parent_q 참조 — root별 고유 부모 셀 (첫 등장 순), U ≤ nv.
+        V = cell_logits.shape[-1]
+        pq_ref = torch.full((R, nv), -1, dtype=torch.int64)
+        pq_logits = torch.zeros(R, nv, V, dtype=cell_logits.dtype)
+        u_valid = torch.zeros(R, dtype=torch.int64)
+        uniq = [dict() for _ in range(R)]
+        # 다시 순회하며 노드별 부모 셀 → 로컬 U 인덱스
+        cnt = [0] * R
+        for i in range(pool.n):
+            if int(pool.parent_idx[i]) < 0:
+                continue
+            r = int(pool.root[i])
+            pc = int(pool.parent_cell[i])
+            if pc not in uniq[r]:
+                u = len(uniq[r])
+                assert u < nv, "U_max=N_v 위반"
+                uniq[r][pc] = u
+                pq_logits[r, u] = cell_logits[pc]
+                u_valid[r] = u + 1
+            pq_ref[r, cnt[r]] = uniq[r][pc]
+            cnt[r] += 1
+        out["parent_q_ref"] = pq_ref
+        out["parent_q_logits"] = pq_logits
+        out["u_valid"] = u_valid
+    return out

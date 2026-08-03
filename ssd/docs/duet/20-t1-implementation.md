@@ -140,3 +140,10 @@ parent_local/sib_order/raw_q/valid). ⑤v2 생성-시점 캡 덕에 **절단
 인덱싱**으로 taken_piv 반환 (chosen_piv 있을 때만 3-tuple — 기존 호출
 2-tuple 불변). `_p2tree_rollout`의 역매칭 브릿지 제거. 유닛 33/33 +
 회귀 44/44.
+
+**T2.2 완료**: run_rollout이 **셀별 logits [F·W, V] 보존** (verify
+q_eff의 원천 — 각 노드의 제안분포 = 부모 셀의 draft logits) +
+`build_root_views`에 parent_q 참조 추가 (root별 고유 부모 셀 첫-등장
+순 U 인덱싱, U_max=N_v assert; v6 §7.1 스키마 [parent_q_ref[nv] +
+parent_q_logits[U,V] + u_valid]). 노드↔부모셀 logits 일치 테스트.
+유닛 34/34 + 회귀 44/44.
