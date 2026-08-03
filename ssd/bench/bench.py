@@ -113,6 +113,9 @@ def parse_arguments():
     parser.add_argument("--duet_no_jit_short", action="store_true",
                         help="Disable JIT-short (miss JIT at K2 depth). Default is ON "
                              "(champion standard; replaces SSD_DUET_JIT_SHORT=1).")
+    parser.add_argument("--duet_p2_budget", type=int, default=None,
+                        help="Direct Phase-2 seed budget (docs/duet/16 Tier-3). "
+                             "Default: derived pfo*(K1+1) where pfo = f - p1_fanout.")
 
     # Weight-only quantization (target only) — AWQ Marlin is the supported path.
     # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
@@ -180,6 +183,17 @@ def parse_arguments():
             args.k = args.duet_phase1_k + args.duet_phase2_k
             print(f"[bench] --k omitted -> derived k = K1+K2 = {args.k}",
                   flush=True)
+        # --f omission with a direct budget: keeps the legacy pfo = f - dfo
+        # derivation consistent (Config still computes pfo; the direct
+        # budget overrides the total via duet_p2_budget).
+        if (args.duet_p2_budget is not None and '--f' not in sys.argv
+                and args.duet_draft_fan_out is not None
+                and args.duet_phase1_k is not None):
+            import math
+            args.f = args.duet_draft_fan_out + math.ceil(
+                args.duet_p2_budget / (args.duet_phase1_k + 1))
+            print(f"[bench] --f omitted -> derived f = p1_fanout + "
+                  f"ceil(budget/(K1+1)) = {args.f}", flush=True)
     return args
 
 
@@ -284,6 +298,8 @@ def create_llm_kwargs(args, draft_path):
             llm_kwargs["duet_draft_fan_out"] = args.duet_draft_fan_out
         llm_kwargs["duet_policy"] = args.duet_policy
         llm_kwargs["duet_jit_short"] = not args.duet_no_jit_short
+        if args.duet_p2_budget is not None:
+            llm_kwargs["duet_p2_budget"] = args.duet_p2_budget
         if args.duet_phase1_k is not None:
             llm_kwargs["duet_phase1_k"] = args.duet_phase1_k
         if args.duet_phase2_k is not None:

@@ -246,10 +246,17 @@ class DraftRunner(ModelRunner):
             #   MQ_LEN = pfo*(K_max+1) (worst-case sizing)
             #   position_count / fan_out_list updated per-step in caller.
             K_rank_max = K1 if K1 >= K2 else K2     # = K1 (K2 ≤ K1 invariant)
+            # Tier-3: capture-time placeholder list sums to the single-source
+            # total budget (== [pfo]*(K_max+1) exactly when duet_p2_budget
+            # unset; per-step values are rewritten by the caller anyway).
+            _p2_total = self.config.duet_proxy_total_budget
+            _p2_base, _p2_rem = divmod(int(_p2_total), K_rank_max + 1)
+            _p2_list = [_p2_base + (1 if i < _p2_rem else 0)
+                        for i in range(K_rank_max + 1)]
             self.split_k2_layout = create_tree_layout(
                 name="split_k2",
-                fan_out_list=[proxy_fo] * (K_rank_max + 1),
-                fan_out_list_miss=[proxy_fo] * (K_rank_max + 1),
+                fan_out_list=_p2_list,
+                fan_out_list_miss=list(_p2_list),
                 K=K2, device=d, position_count=K_rank_max + 1,
             )
             _short_str = (

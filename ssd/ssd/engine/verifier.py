@@ -418,7 +418,10 @@ class Verifier(VerifierBase):
         # This removes ~0.5ms from draft critical path
         # M1 (docs/duet/13 §3): batched over B — h [B, K+1]. At B=1 this is
         # numerically identical to the former accept_probs[0] single-seq path.
-        proxy_fan_out_total = config.duet_proxy_fan_out * (K + 1)  # total proxy budget
+        # Tier-3: per-step budget helper (K = step vk_max, varies per step —
+        # a DIFFERENT quantity from the constant duet_proxy_total_budget;
+        # == pfo*(K+1) exactly when duet_p2_budget is unset).
+        proxy_fan_out_total = config.duet_p2_budget_at(K)
         cumprod = torch.cumprod(accept_probs, dim=1)     # [B, K]
         h = torch.zeros(B, K + 1, device=accept_probs.device)
         h[:, 0] = 1 - accept_probs[:, 0]

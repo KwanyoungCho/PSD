@@ -55,7 +55,7 @@ class Scheduler:
             else:
                 self._sk_mq_p1 = int(config.duet_draft_fan_out) * (self._sk_K1 + 1)
             _K_rank_max = self._sk_K1 if self._sk_K1 >= self._sk_K2 else self._sk_K2
-            self._sk_mq_p2 = int(config.duet_proxy_fan_out) * (_K_rank_max + 1)
+            self._sk_mq_p2 = int(config.duet_proxy_total_budget)  # Tier-3 single source
         else:
             self._sk_K1 = 0
             self._sk_K2 = 0

@@ -67,6 +67,12 @@ class Config:
     # for old-script compat and the resolved value is re-exported for the
     # draft process import-time read.
     duet_jit_short: bool = True
+    # Direct Phase-2 seed budget (docs/duet/16 Tier-3). None → derived
+    # pfo*(K_max+1) (100% 재현). When set it is THE single source: layout
+    # MQ_LEN / scheduler reservation / wire sizing read
+    # duet_proxy_total_budget, and the verifier's per-step K-position
+    # allocation scales proportionally (duet_p2_budget_at).
+    duet_p2_budget: int | None = None
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k, K2 <= K1.
@@ -159,8 +165,7 @@ class Config:
             K_max = max(self.duet_phase1_k, self.duet_phase2_k)
         else:
             K_max = self.speculate_k
-        K_plus_1 = K_max + 1
-        total_budget = self.duet_proxy_fan_out * K_plus_1
+        total_budget = self.duet_proxy_total_budget   # Tier-3 single source
         # List-aware Phase 1 dedup loss bound
         _p1_list = self.duet_split_phase1_fan_out_list
         if _split_mode and _p1_list is not None:
@@ -235,6 +240,8 @@ class Config:
 
         See docs/duet/05-policy-b-fix.md Section 3.5 / 3.7.
         """
+        if self.duet_p2_budget is not None:
+            return self.duet_p2_budget
         import os as _os_cfg
         _split_mode = (
             self.duet_phase1_k is not None
@@ -245,6 +252,17 @@ class Config:
         else:
             K_max = self.speculate_k
         return self.duet_proxy_fan_out * (K_max + 1)
+
+    def duet_p2_budget_at(self, K: int) -> int:
+        """Per-step proxy budget over K+1 positions (verifier-side h/fan-out
+        allocation; K = the step's vk_max, varies per step — NOT the same
+        quantity as duet_proxy_total_budget). Default path reproduces the
+        historical pfo*(K+1) exactly; a direct duet_p2_budget scales
+        proportionally by position count (== exact on full-K steps)."""
+        if self.duet_p2_budget is None:
+            return self.duet_proxy_fan_out * (K + 1)
+        K_max = max(self.duet_phase1_k, self.duet_phase2_k)
+        return max(1, round(self.duet_p2_budget * (K + 1) / (K_max + 1)))
 
     def __post_init__(self):
         model = self.model 
@@ -356,6 +374,16 @@ class Config:
                     f"got K1={self.duet_phase1_k} + K2={self.duet_phase2_k} != "
                     f"speculate_k={self.speculate_k}"
                 )
+                # Tier-3: early fail (moved up from DraftRunner init; the
+                # runner check stays as defense). -O 생존형 raise.
+                if self.duet_phase2_k > self.duet_phase1_k:
+                    raise ValueError(
+                        f"DUET split requires K2 <= K1 (short/long CG bucket "
+                        f"invariant); got K1={self.duet_phase1_k}, "
+                        f"K2={self.duet_phase2_k}")
+                if self.duet_p2_budget is not None and self.duet_p2_budget < 1:
+                    raise ValueError(
+                        f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
 
             import os as _os_cfg
             # Tier-2 (docs/duet/16): split-K1/K2 is the ONLY DUET path, so
@@ -440,7 +468,7 @@ class Config:
             K_plus_1 = K_max + 1
             pfo = self.duet_proxy_fan_out
             dfo = self.duet_draft_fan_out
-            total_budget = pfo * K_plus_1
+            total_budget = self.duet_proxy_total_budget  # Tier-3 single source
 
             # List-aware Phase 1 fan-out stats — used in ALL cases when user
             # provides list, otherwise fall back to uniform [dfo]*(K1+1).

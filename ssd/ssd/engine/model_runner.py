@@ -196,10 +196,8 @@ class ModelRunner:
         torch.set_default_dtype(default_dtype)
 
         if self.config.draft_async:
-            if self.config.fan_out_list is None:
-                self.config.fan_out_list = [
-                    self.config.async_fan_out] * (self.config.speculate_k + 1)
-
+            # fan_out_list is always set by Config.__post_init__ — the former
+            # re-derivation here was a dead duplicate (docs/duet/16 Tier-3).
             self.config.fan_out_t = torch.tensor(self.config.fan_out_list, device=self.device)
             self.config.fan_out_t_miss = torch.tensor(self.config.fan_out_list_miss, device=self.device)
             assert len(self.config.fan_out_list) == self.config.speculate_k + \
@@ -308,7 +306,7 @@ class ModelRunner:
                 # short-hit savings). wire_N (=total_budget+buffer) is
                 # NCCL-pack only and unrelated to layout MQ_LEN.
                 K_rank_max = max(K1_cfg_split, K2_cfg_split)   # = K1
-                _p2_mq = _pfo * (K_rank_max + 1)
+                _p2_mq = self.config.duet_proxy_total_budget  # Tier-3 single source
                 _layout_specs.append(("split_k2", _p2_mq))
                 for layout_name, layout_mq_len in _layout_specs:
                     l_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
