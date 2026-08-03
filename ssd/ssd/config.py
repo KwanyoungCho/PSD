@@ -414,6 +414,20 @@ class Config:
                         raise ValueError(
                             f"duet_tree_nv ({self.duet_tree_nv}) must be "
                             f"<= max(K1,K2)={_k_max} (response wire width)")
+                    # 이슈 #15: 트리 v1 미지원 proxy 게이트 — raw-proxy는
+                    # _tree_step_p1p2에 변환 분기가 없고(KeyError),
+                    # topm_gather dict-wire는 pack_piv가 없어 트리 셀렉터
+                    # 계약(P_iv 관통)을 깨뜨린다. 지원 전까지 명시 차단.
+                    if self.duet_proxy_on_draft:
+                        raise ValueError(
+                            "duet_tree_policy != off is not supported with "
+                            "SSD_DUET_PROXY_ON_DRAFT=1 (v1 — raw-proxy 변환 "
+                            "분기 미구현)")
+                    if self.duet_exit_topm_gather:
+                        raise ValueError(
+                            "duet_tree_policy != off is not supported with "
+                            "SSD_DUET_EXIT_TOPM_GATHER=1 (v1 — dict-wire에 "
+                            "P_iv pack 미구현)")
 
             import os as _os_cfg
             # Tier-2 (docs/duet/16): split-K1/K2 is the ONLY DUET path, so
@@ -521,6 +535,11 @@ class Config:
             wire_N = total_budget + buffer
             per_pos_min = total_budget + p1_max + 2
             total_min = -(-wire_N // (K_min + 1))                # ceil(wire_N / (K_min+1))
+            if getattr(self, "duet_tree_policy", "off") != "off":
+                # 이슈 #16: 트리 응답의 valid는 1까지 내려간다 (root 예산
+                # 1인 서브트리) — 위치축 (valid+1)=2 최악 기준으로 P_iv
+                # 후보가 wire_N을 덮도록 하한 상향.
+                total_min = max(total_min, -(-wire_N // 2))
             required_top_k = max(per_pos_min, total_min)
             if self.duet_proxy_top_k < required_top_k:
                 print(f'[Config] duet_proxy_top_k raised {self.duet_proxy_top_k} → {required_top_k} '

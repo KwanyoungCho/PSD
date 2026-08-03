@@ -1259,8 +1259,15 @@ class ModelRunner:
                 m[r, pos0 + 1 + a] = True
             m[r, pos0 + 1 + j] = True
 
-        # FlashInfer plan (rank-로컬 head 수)
-        w = self.tree_verify_wrappers[nv_b]
+        # FlashInfer plan (rank-로컬 head 수). v1 eager는 CG-제약 없는
+        # 지연-생성 wrapper 사용 (use_cuda_graph=True 버킷 wrapper는
+        # public plan과 제약이 충돌할 수 있음 — capture 도입 시 전환).
+        w = getattr(self, "_tree_eager_wrapper", None)
+        if w is None:
+            import flashinfer
+            w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                self._tree_workspace, "NHD")
+            self._tree_eager_wrapper = w
         bs = self.block_size
         n_blocks = (kv_len + bs - 1) // bs
         kv_indices = context.block_tables[0, :n_blocks].to(torch.int32)
@@ -1300,17 +1307,22 @@ class ModelRunner:
         _ev_el = duet_record("exit_logits")
         duet_proxy_fn = self._duet_proxy_fn
         _replica = getattr(self, "_duet_lm_head_replica", None)
+        # 이슈 #12: exit-proxy에는 패딩 행이 새면 안 된다 —
+        # _compute_and_send_proxy가 [1, vk+1, V]로 view하므로 반드시
+        # n_rows(=valid+1)로 절단해 전달 (collective 참여 shape은 전
+        # rank 동일한 n_rows 기준).
         if getattr(cfg, "duet_exit_replica", False):
             # rank0 전용 replica — rank1+는 exit 계산 없이 post로 (CG와 동일)
             if duet_proxy_fn is not None and _replica is not None:
-                normed = self.model.model.norm(hs + res, None)
+                normed = self.model.model.norm(
+                    (hs + res)[:n_rows], None)
                 exit_logits = torch.nn.functional.linear(normed, _replica)
                 duet_proxy_fn(exit_logits, 1)
         else:
-            normed = self.model.model.norm(hs + res, None)
+            normed = self.model.model.norm((hs + res)[:n_rows], None)
             if getattr(cfg, "duet_exit_topm_gather", False):
                 exit_logits = _duet_exit_topm_gather(
-                    self, normed, input_ids, cfg.duet_proxy_topm)
+                    self, normed, input_ids[:n_rows], cfg.duet_proxy_topm)
             else:
                 # 전 rank compute_logits (gather 참여) — rank0만 실값
                 exit_logits = self.model.compute_logits(

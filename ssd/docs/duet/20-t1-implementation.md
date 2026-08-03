@@ -344,6 +344,29 @@ tok/s (CPU load ~82 오염 하; 절대값 해석 금지), AL 3.53, cache hit
 같은 시각, 트리-ON 경로의 #8/#9 동류 결함을 실행 전 정적으로 걷어내는
 5-finder + 적대검증 감사 병행 (아래).
 
+**정적 통합 감사 (E2E-2 전, 5-finder + 발견별 적대검증 워크플로)**:
+finder 18건 → 검증 17건 확정 → 근본 결함 7개로 수렴, 전부 수정:
+- **이슈 #10 (champion 즉발 크래시)**: run_fi step-0의 MQ-변경
+  `cache.clear()`가 `_tree_mask_override`를 삭제 — P1(16)↔P2(10) 폭이
+  달라 **모든 트리 빌드**에서 f=0 무음 체인-마스크 + f=1 KeyError.
+  pop/복원으로 보존.
+- **이슈 #11**: override 활성 진입의 체인 mask 재빌드가 트리 글루
+  기하(음수 prefix)로 깨질 수 있고 결과물도 안 읽힘 — override 존재
+  시 통째로 생략 (체인 호출은 자기 step-0에서 재빌드).
+- **이슈 #12 (즉발 크래시)**: `_run_tree_verify`의 N_v bucket 패딩
+  행이 exit-proxy에 유출 — `view(B, vk+1, V)` shape 크래시. 세 게이트
+  분기 모두 n_rows 절단 (collective 참여 shape 전 rank 동일 유지).
+- **이슈 #13 (즉발 크래시)**: backbone `_bl` fp32 — fp16 draft_logits
+  와 `torch.cat` dtype 불일치. hf dtype으로 할당.
+- **이슈 #14 (무손실성)**: valid==0 root(예산 0)의 zero-backbone 행이
+  체인 응답으로 서빙되면 q가 실제 제안분포가 아니게 됨 — populate 후
+  해당 키 -1 무효화 (miss → JIT).
+- **이슈 #15**: raw-proxy(SSD_DUET_PROXY_ON_DRAFT)·topm_gather와 tree
+  ON 조합이 config-합법이었으나 경로 미구현 (KeyError/piv 소실) —
+  v1 상호배제 raise (champion은 무영향).
+- **이슈 #16**: 트리 valid 하한이 1이라 P_iv 후보가 wire_N을 못 덮는
+  구성 가능 — proxy_top_k 자동 상향에 트리 바닥 ceil(wire_N/2) 추가.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;

@@ -272,8 +272,14 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     if step == 0:
         # Layout change: clear cache if MQ_LEN changed (2-pass DUET reuses global cache)
         if cache.get("_mq_len") != MQ_LEN:
+            # 이슈 #10: 레이아웃 전환 clear가 트리 mask override 훅을
+            # 삭제하면 안 된다 (P1↔P2 폭이 다른 모든 트리 step에서
+            # f=0 무음 오마스크 + f=1 KeyError) — pop/복원으로 보존.
+            _tree_ov_keep = cache.pop("_tree_mask_override", None)
             cache.clear()
             cache["_mq_len"] = MQ_LEN
+            if _tree_ov_keep is not None:
+                cache["_tree_mask_override"] = _tree_ov_keep
         cache["cu_seqlens_q_cpu"] = torch.arange(B + 1, dtype=torch.int32) * MQ_LEN
         context_lens_list = context_lens.tolist()   # GPU sync
         cache["block_tables"] = block_tables
@@ -327,87 +333,97 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         else:
             cache_hits_list = cache_hits[:B].tolist()
 
-        # M3 (docs/duet/13 §4): split_k2's fan_out_list is a list of per-seq
-        # lists ([B][position_count]); build one glue block per seq. Flat
-        # lists (all other layouts + non-DUET) keep the shared-glue path.
-        _per_seq_fol = bool(_fan_out_list) and isinstance(_fan_out_list[0], list)
-        # Layout change detection: if fan_out changed, recompute glue masks.
-        # The _cached_fol key is the FULL per-seq structure when nested, so any
-        # per-seq distribution change (the norm at B>1) forces a rebuild; at
-        # B=1 a repeated distribution still hits the cache exactly as pre-M3.
-        _needs_recompute = "glue_hit_np" not in cache
-        if not _needs_recompute and cache.get("_cached_fol") != _fan_out_list:
-            _needs_recompute = True
-        if _needs_recompute:
-            cache["_cached_fol"] = _fan_out_list
-            _fol = _fan_out_list
-            _fol_miss = _fan_out_list_miss
-            # Step 9A: glue tril dim follows the layout's position_count
-            # (= K_for_mask+1). For phase1_short bucket K_for_mask=K_short<K_long.
-            _tril = np.tril(np.ones((K_for_mask + 1, K_for_mask + 1), dtype=np.uint8))
-            if _per_seq_fol:
-                cache["glue_hit_np"] = [np.repeat(_tril, f, axis=0) for f in _fol]
-                cache["glue_miss_np"] = (
-                    cache["glue_hit_np"] if _fol_miss is _fol
-                    else [np.repeat(_tril, f, axis=0) for f in _fol_miss])
-            else:
-                cache["glue_hit_np"] = np.repeat(_tril, _fol, axis=0)
-                cache["glue_miss_np"] = np.repeat(_tril, _fol_miss, axis=0)
-
-        _glue_hit = cache["glue_hit_np"]
-        _glue_miss = cache["glue_miss_np"]
-        _rows_np = np.arange(MQ_LEN)
-
-        cache["cpu_packed_masks"] = []
-        cache["cpu_packed_indptrs"] = []
-
-        # ─────────────────────────────────────────────────────────────────
-        # NOTE: this generic mask formula assumes the layout
-        #     [persistent | glue (K+1) | diag blocks of MQ_LEN]
-        # i.e. single-pass tree decode where K = layout.K and no prior spec
-        # scratch was written. That holds for every live caller (non-DUET
-        # full layout + split-K1/K2 passes, which each start from a clean
-        # scratch region). The removed hybrid "continuation pass" violated
-        # it — see git history (2026-07 removal) for the KNOWN BUG writeup.
-        # ─────────────────────────────────────────────────────────────────
-        for s in range(K_loop):
-            # Step 9A: ttl_added_s uses K_for_mask (= layout glue width)
-            # not the outer K (config.speculate_k). For phase1_short the
-            # glue width is K_short+1; for phase1_long / non-DUET it's
-            # K_long+1.
-            ttl_added_s = (s + 1) * MQ_LEN + (K_for_mask + 1)
-            packed_segs = []
-            seg_packed_sizes = []
-
-            for b in range(B):
-                cols_b = int(context_lens_list[b]) + s * MQ_LEN
-                prefix_len_b = cols_b - ttl_added_s
-
-                mask_b = np.zeros((MQ_LEN, cols_b), dtype=np.uint8)
-                mask_b[:, :prefix_len_b] = 1
-                glue = _glue_hit if int(cache_hits_list[b]) == 1 else _glue_miss
+        # 이슈 #11: 트리 override 활성 진입은 실행되는 모든 step의 mask를
+        # override가 공급한다 (TREE_GLUE=step0 한정, P1=전 step 사전등록,
+        # rollout=매 forward 직전 등록). 체인 mask 재빌드는 글루 폭 전제
+        # (K_for_mask+1)가 트리 글루(n_valid+1)와 달라 음수 prefix 등으로
+        # 깨질 수 있고 결과물도 읽히지 않으므로 통째로 생략 — 체인 호출은
+        # 자기 step-0 진입에서 재빌드한다.
+        if cache.get("_tree_mask_override") is not None:
+            cache.pop("cpu_packed_masks", None)
+            cache.pop("cpu_packed_indptrs", None)
+        else:
+            # M3 (docs/duet/13 §4): split_k2's fan_out_list is a list of per-seq
+            # lists ([B][position_count]); build one glue block per seq. Flat
+            # lists (all other layouts + non-DUET) keep the shared-glue path.
+            _per_seq_fol = bool(_fan_out_list) and isinstance(_fan_out_list[0], list)
+            # Layout change detection: if fan_out changed, recompute glue masks.
+            # The _cached_fol key is the FULL per-seq structure when nested, so any
+            # per-seq distribution change (the norm at B>1) forces a rebuild; at
+            # B=1 a repeated distribution still hits the cache exactly as pre-M3.
+            _needs_recompute = "glue_hit_np" not in cache
+            if not _needs_recompute and cache.get("_cached_fol") != _fan_out_list:
+                _needs_recompute = True
+            if _needs_recompute:
+                cache["_cached_fol"] = _fan_out_list
+                _fol = _fan_out_list
+                _fol_miss = _fan_out_list_miss
+                # Step 9A: glue tril dim follows the layout's position_count
+                # (= K_for_mask+1). For phase1_short bucket K_for_mask=K_short<K_long.
+                _tril = np.tril(np.ones((K_for_mask + 1, K_for_mask + 1), dtype=np.uint8))
                 if _per_seq_fol:
-                    # per-seq glue block; padded rows (b >= real B when the
-                    # CG bucket pads) reuse the last real seq's block — their
-                    # outputs are discarded (slot_map -1).
-                    glue = glue[b] if b < len(glue) else glue[-1]
-                mask_b[:, prefix_len_b:prefix_len_b + K_for_mask + 1] = glue
-                diag_start = prefix_len_b + K_for_mask + 1
-                for blk in range(s + 1):
-                    mask_b[_rows_np, diag_start + blk * MQ_LEN + _rows_np] = 1
+                    cache["glue_hit_np"] = [np.repeat(_tril, f, axis=0) for f in _fol]
+                    cache["glue_miss_np"] = (
+                        cache["glue_hit_np"] if _fol_miss is _fol
+                        else [np.repeat(_tril, f, axis=0) for f in _fol_miss])
+                else:
+                    cache["glue_hit_np"] = np.repeat(_tril, _fol, axis=0)
+                    cache["glue_miss_np"] = np.repeat(_tril, _fol_miss, axis=0)
 
-                packed = np.packbits(mask_b.ravel(), bitorder='little')
-                packed_segs.append(packed)
-                seg_packed_sizes.append(len(packed))
+            _glue_hit = cache["glue_hit_np"]
+            _glue_miss = cache["glue_miss_np"]
+            _rows_np = np.arange(MQ_LEN)
 
-            full_packed = np.concatenate(packed_segs) if B > 1 else packed_segs[0]
-            indptr = np.zeros(B + 1, dtype=np.int32)
-            indptr[1:] = np.cumsum(seg_packed_sizes)
+            cache["cpu_packed_masks"] = []
+            cache["cpu_packed_indptrs"] = []
 
-            cache["cpu_packed_masks"].append(
-                torch.from_numpy(full_packed.copy()).to(model_runner.device, non_blocking=True))
-            cache["cpu_packed_indptrs"].append(
-                torch.from_numpy(indptr.copy()).to(model_runner.device, non_blocking=True))
+            # ─────────────────────────────────────────────────────────────────
+            # NOTE: this generic mask formula assumes the layout
+            #     [persistent | glue (K+1) | diag blocks of MQ_LEN]
+            # i.e. single-pass tree decode where K = layout.K and no prior spec
+            # scratch was written. That holds for every live caller (non-DUET
+            # full layout + split-K1/K2 passes, which each start from a clean
+            # scratch region). The removed hybrid "continuation pass" violated
+            # it — see git history (2026-07 removal) for the KNOWN BUG writeup.
+            # ─────────────────────────────────────────────────────────────────
+            for s in range(K_loop):
+                # Step 9A: ttl_added_s uses K_for_mask (= layout glue width)
+                # not the outer K (config.speculate_k). For phase1_short the
+                # glue width is K_short+1; for phase1_long / non-DUET it's
+                # K_long+1.
+                ttl_added_s = (s + 1) * MQ_LEN + (K_for_mask + 1)
+                packed_segs = []
+                seg_packed_sizes = []
+
+                for b in range(B):
+                    cols_b = int(context_lens_list[b]) + s * MQ_LEN
+                    prefix_len_b = cols_b - ttl_added_s
+
+                    mask_b = np.zeros((MQ_LEN, cols_b), dtype=np.uint8)
+                    mask_b[:, :prefix_len_b] = 1
+                    glue = _glue_hit if int(cache_hits_list[b]) == 1 else _glue_miss
+                    if _per_seq_fol:
+                        # per-seq glue block; padded rows (b >= real B when the
+                        # CG bucket pads) reuse the last real seq's block — their
+                        # outputs are discarded (slot_map -1).
+                        glue = glue[b] if b < len(glue) else glue[-1]
+                    mask_b[:, prefix_len_b:prefix_len_b + K_for_mask + 1] = glue
+                    diag_start = prefix_len_b + K_for_mask + 1
+                    for blk in range(s + 1):
+                        mask_b[_rows_np, diag_start + blk * MQ_LEN + _rows_np] = 1
+
+                    packed = np.packbits(mask_b.ravel(), bitorder='little')
+                    packed_segs.append(packed)
+                    seg_packed_sizes.append(len(packed))
+
+                full_packed = np.concatenate(packed_segs) if B > 1 else packed_segs[0]
+                indptr = np.zeros(B + 1, dtype=np.int32)
+                indptr[1:] = np.cumsum(seg_packed_sizes)
+
+                cache["cpu_packed_masks"].append(
+                    torch.from_numpy(full_packed.copy()).to(model_runner.device, non_blocking=True))
+                cache["cpu_packed_indptrs"].append(
+                    torch.from_numpy(indptr.copy()).to(model_runner.device, non_blocking=True))
 
         # Pre-transfer KV metadata to GPU (eliminates per-step pageable H2D transfers)
         cache["qo_indptr_gpu"] = cache["cu_seqlens_q_cpu"].to(model_runner.device, non_blocking=True)

@@ -1191,6 +1191,15 @@ class DraftRunner(ModelRunner):
         duet_close("glue", _mev_glue)
         return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, 1
 
+    def _invalidate_zero_valid_tree_keys(self):
+        """이슈 #14: valid==0 root는 서빙 실체(뷰)가 없다 — zero backbone
+        행이 체인 응답으로 나가면 q가 실제 제안분포가 아니게 되어 수락
+        보존이 깨진다. 키를 -1로 무효화해 hit 자체를 봉쇄 (miss → JIT)."""
+        _zv = (self._tree_views["valid"] == 0).nonzero().flatten()
+        if _zv.numel():
+            self.tree_cache_keys[
+                self._last_n_draft_keys + _zv.to(self.device)] = -1
+
     def _tree_backbone_project(self, pool, R, K2, cell_logits):
         """rollout pool → 체인-호환 populate 입력 [R, K2] (backbone=맏이 사슬).
 
@@ -1199,7 +1208,8 @@ class DraftRunner(ModelRunner):
         """
         V = self.hf_config.vocab_size
         _bt = torch.zeros(R, K2, dtype=torch.int64)
-        _bl = torch.zeros(R, K2, V)
+        # 이슈 #13: fp32면 fp16 draft_logits와 cat에서 dtype 크래시
+        _bl = torch.zeros(R, K2, V, dtype=self.hf_config.torch_dtype)
         _first_child = {}
         for i in range(pool.n):
             _pi = int(pool.parent_idx[i])
@@ -1403,6 +1413,7 @@ class DraftRunner(ModelRunner):
             proxy_layout=_layout_k2,
             draft_layout=_layout_k1,
             draft_fan_idx_override=_ctx_of_row.to(self.device))
+        self._invalidate_zero_valid_tree_keys()
 
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         if self.config.verbose:
@@ -2445,6 +2456,8 @@ class DraftRunner(ModelRunner):
             cache_hits_list, draft_acts, proxy_acts,
             proxy_layout=_layout_k2,
             draft_layout=_layout_k1)
+        if getattr(self, "_tree_views", None) is not None:
+            self._invalidate_zero_valid_tree_keys()
 
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
