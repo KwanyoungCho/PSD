@@ -170,3 +170,17 @@ attention.py의 명시 TREE_VERIFY mode 배선 (context 플래그 → wrapper
 (mode 오배선 방지 — 리뷰4). 미설정이면 기존 경로 완전 불변 (회귀
 44/44). 남은 T3: T3.2 bucket capture(packed mask plan/run) → T3.4
 엔진 보행+통합 → T3.5 TP4 commit-ack → live E2E.
+
+**T3.2-a/T3.4-a/T3.5-a 완료 (pure 3종)**: target verify 행 조립
+(depth 복원·rope·scratch slot·조상 mask — 리뷰4 row 계약) / 프로덕션
+텐서 보행 (**참조 dict-보행과 동일-코인 50시행 완전 동등**) / 수락
+경로 복사 계획 (겹침 대비). 유닛 40/40.
+
+**T4 사전 준비**: sweep 하네스 골격 `tree_sweep/run_tree_sweep.sh` —
+그리드 (정책 2 × R{8,10} × N_v{6,8} × β{0.5,1.0}) + **오염 가드**
+(load<24 && GPU 유휴 확인 후 실행 — 19번 이슈의 공유-박스 교훈).
+
+**남은 통합 (T3.4-b, Explore 맵 대기 중)**: SHM 명령 확장(rank1-3에
+트리 메타 전달) + verify() 트리 분기(행 조립→wrapper plan→eager
+forward→보행) + respond/wire 스플라이스 + glue 수락경로 재실체화 +
+commit 실행부. 이 한 방이 live E2E 스위치.
