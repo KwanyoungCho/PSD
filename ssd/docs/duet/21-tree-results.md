@@ -123,6 +123,12 @@ AL 우열은 단일런 잡음 범위 — T4 sweep에서 판정.
   완주, 불변 가드 미발화. Decode 17.38 (eager 2.60 → 6.7×; OFF와의
   잔여 격차는 오염 하 draft python 성분 — 한산 창에서 재측정), AL
   3.42, hit 0.82, P2 hit 0.284, P2 수락 길이 1.24.
+- **최종 PROFILE (prof_cg_final)**: 트리 스텝 target 스팬이 체인과
+  동률 — graph_pre 35.8 vs 34.5ms, graph_post 12.0 vs 13.0ms, 보행
+  10.4 vs 11.0ms (**eager 693→35.8ms, 보행 96→10.4ms**). 잔여
+  오버헤드는 draft 트리-스텝 빌드 python 성분 (phase1/2_build 각
+  ~58ms, 체인 ~7ms; 오염 하 — 후속 최적화 여지). timeline 렌더
+  파이프라인 검증 완료 (hit_k1/hit_k2/miss 3종 PNG).
 
 ## 5. T4 sweep (예정 — 한산 가드)
 
