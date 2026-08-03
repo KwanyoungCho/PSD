@@ -572,3 +572,36 @@ class TestLosslessExhaustive(unittest.TestCase):
         for k in p:
             self.assertAlmostEqual(counts[k] / N, p[k], delta=0.005,
                                    msg=f"tok{k}: {counts[k]/N} vs {p[k]}")
+
+
+class TestTreeWire(unittest.TestCase):
+    def test_roundtrip(self):
+        import numpy as np
+        from ssd.engine.helpers.p2_tree import (build_root_views,
+                                                pack_tree_ints,
+                                                parse_tree_ints,
+                                                run_rollout,
+                                                tree_wire_ints_len)
+        R, W, F, V, NV = 3, 3, 3, 32, 6
+        piv = torch.tensor([0.5, 0.3, 0.2])
+        fixed = torch.randn(F, W, V)
+        torch.manual_seed(4)
+        pool, _, cl = run_rollout(
+            [7, 8, 9], piv, policy="level", W=W, F_total=F, c_tensor=2,
+            nv=NV, beta=0.5, depth_cap=4, temps=torch.full((W,), 0.7),
+            forward_fn=lambda f, *a: fixed[f].clone(),
+            glue_rows_by_root=np.ones((R, 5), np.uint8),
+            rope_base_by_root=[10, 20, 30], K_glue=4, context_len=100)
+        v = build_root_views(pool, R, nv=NV, cell_logits=cl)
+        for r in range(R):
+            buf = pack_tree_ints(v, r, NV)
+            self.assertEqual(buf.numel(), tree_wire_ints_len(NV))
+            got = parse_tree_ints(buf, NV)
+            self.assertEqual(got["valid"], int(v["valid"][r]))
+            self.assertEqual(got["tok"].tolist(), v["tok"][r].tolist())
+            self.assertEqual(got["parent_local"].tolist(),
+                             v["parent_local"][r].tolist())
+        # miss: 전부 0, 크기 동일 (max-padded)
+        z = pack_tree_ints(v, -1, NV)
+        self.assertEqual(int(z.abs().sum()), 0)
+        self.assertEqual(z.numel(), tree_wire_ints_len(NV))

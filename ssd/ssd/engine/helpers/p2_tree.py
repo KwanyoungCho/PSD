@@ -502,3 +502,40 @@ def tree_verify_walk(view, p_dists, q_dists, root_p, rng):
         path.append(accepted)
         ctx = accepted
         p = dict(p_dists[ctx])              # 컨텍스트 리셋 (리뷰4)
+
+
+# --- T2.3: 트리 응답 wire 블록 (global max-padded — v6/리뷰4) ---
+
+def tree_wire_ints_len(nv: int) -> int:
+    """seq당 int64 블록 길이: [valid | u_valid | 예약(epoch)] + 4×nv."""
+    return 3 + 4 * nv
+
+
+def pack_tree_ints(view, hit_root: int, nv: int) -> torch.Tensor:
+    """hit root의 뷰를 고정 길이 int64 블록으로. hit_root<0 → 전부 0
+    (miss/P1 step — max-padded 규약상 크기는 동일)."""
+    out = torch.zeros(tree_wire_ints_len(nv), dtype=torch.int64)
+    if hit_root < 0:
+        return out
+    r = hit_root
+    out[0] = view["valid"][r]
+    out[1] = view["u_valid"][r]
+    out[2] = 1                                   # epoch/버전 자리 (T2.4)
+    o = 3
+    out[o:o + nv] = view["tok"][r]
+    out[o + nv:o + 2 * nv] = view["parent_local"][r]
+    out[o + 2 * nv:o + 3 * nv] = view["sib_order"][r]
+    out[o + 3 * nv:o + 4 * nv] = view["parent_q_ref"][r]
+    return out
+
+
+def parse_tree_ints(buf: torch.Tensor, nv: int):
+    """→ dict (valid/u_valid/epoch/tok/parent_local/sib_order/pq_ref)."""
+    o = 3
+    return {
+        "valid": int(buf[0]), "u_valid": int(buf[1]), "epoch": int(buf[2]),
+        "tok": buf[o:o + nv],
+        "parent_local": buf[o + nv:o + 2 * nv],
+        "sib_order": buf[o + 2 * nv:o + 3 * nv],
+        "parent_q_ref": buf[o + 3 * nv:o + 4 * nv],
+    }
