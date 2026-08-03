@@ -93,3 +93,52 @@ class TestFanouts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWorSampler(unittest.TestCase):
+    def _mk(self, B=4, V=64, seed=7):
+        g = torch.Generator().manual_seed(seed)
+        logits = torch.randn(B, V, generator=g)
+        temps = torch.full((B,), 0.7)
+        return logits, temps
+
+    def test_c1_bit_identical_to_sampler(self):
+        # 현행 Sampler.forward와 RNG 소비·결과 동일 (fast-path 근거)
+        from ssd.engine.helpers.p2_tree import tree_sample_wor
+        from ssd.layers.sampler import Sampler
+        logits, temps = self._mk()
+        torch.manual_seed(123)
+        ref = Sampler()(logits.clone(), temps)
+        state_ref = torch.get_rng_state()
+        torch.manual_seed(123)
+        tok, _ = tree_sample_wor(logits.clone(), temps, c_tensor=1)
+        state_new = torch.get_rng_state()
+        self.assertEqual(ref.tolist(), tok.squeeze(1).tolist())
+        self.assertTrue(bool((state_ref == state_new).all()))
+
+    def test_wor_no_duplicates_and_order(self):
+        from ssd.engine.helpers.p2_tree import tree_sample_wor
+        logits, temps = self._mk(B=8, V=32)
+        torch.manual_seed(5)
+        tok, raw = tree_sample_wor(logits, temps, c_tensor=4)
+        for row in tok.tolist():
+            self.assertEqual(len(set(row)), 4)          # 비복원
+        self.assertEqual(raw.shape, (8, 4))
+
+    def test_raw_q_is_unrenormalized(self):
+        # 결정 ②: raw_q는 원본 q_eff 값 (독립 재계산과 일치)
+        from ssd.engine.helpers.p2_tree import tree_sample_wor
+        logits, temps = self._mk(B=2, V=16)
+        torch.manual_seed(9)
+        tok, raw = tree_sample_wor(logits.clone(), temps, c_tensor=3)
+        expect = torch.softmax(logits / temps.unsqueeze(1), dim=-1)
+        got = expect.gather(1, tok)
+        self.assertTrue(torch.allclose(raw, got, atol=1e-6))
+        # 형제 합 ≤ 1 (원본 규약의 자연 귀결)
+        self.assertTrue(bool((raw.sum(1) <= 1.0 + 1e-6).all()))
+
+    def test_temp0_gated(self):
+        from ssd.engine.helpers.p2_tree import tree_sample_wor
+        logits, _ = self._mk(B=2)
+        with self.assertRaises(ValueError):
+            tree_sample_wor(logits, torch.tensor([0.7, 0.0]), 2)

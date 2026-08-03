@@ -9,6 +9,8 @@ T1.2: 사전 예산 배분 (결정 ⑤v2 + 외부 리뷰 4차 규약).
 """
 import torch
 
+from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
+
 
 def alloc_root_budgets(piv: torch.Tensor, total: int, beta: float,
                        cap: int) -> torch.Tensor:
@@ -71,3 +73,41 @@ def alloc_fanouts(parent_priority: torch.Tensor,
             out[i] = take
             remaining[r] -= take
     return out
+
+
+def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
+                    c_tensor: int, sampler_x=None, F=None):
+    """비복원(WOR) C_tensor개 샘플 — 순서 보존 (T1.3; D8/D11).
+
+    구현: exponential-race top-k — race 점수 내림차순 = 순차 비복원
+    추출 순서 (지수시계 표준 성질). **c_tensor=1이면 현행
+    Sampler.forward와 op 시퀀스·RNG 소비·결과가 bit-identical**
+    (fast-path 게이트의 근거; 테스트로 고정).
+
+    temp==0 금지 (v6 게이트: 트리 OFF 폴백은 호출자 책임) — one-hot
+    support에서 2번째 비복원 추출이 미정의이기 때문 (fallback 미구현
+    을 의도적으로 게이트).
+
+    Returns:
+        tokens [B, C] int64 — WOR 순서 (형제 순서 기록 그 자체).
+        raw_q  [B, C] float — **원본 q_eff 확률** (재정규화 전 —
+            결정 ② c_raw 규약: priority는 이 값으로 계산).
+    """
+    if bool((temperatures <= 0).any()):
+        raise ValueError(
+            "tree_sample_wor: temperature==0 is gated (v6 §7.2 — "
+            "support-exhaustion fallback intentionally not implemented; "
+            "caller must fall back to the chain path)")
+    logits_cpy = logits.to(torch.float)
+    logits_cpy.div_(temperatures.unsqueeze(dim=1))
+    probs = torch.softmax(logits_cpy, dim=-1, dtype=torch.float)
+    if sampler_x is not None:
+        probs = apply_sampler_x_rescaling(probs, sampler_x, F)
+    raw_q = probs.clone()                      # 원본 보존 (c_raw)
+    epsilon = 1e-10
+    scores = probs.div_(torch.empty_like(probs).exponential_(1) + epsilon)
+    if c_tensor == 1:
+        tokens = scores.argmax(dim=-1, keepdim=True)   # Sampler와 동일 op
+    else:
+        tokens = scores.topk(c_tensor, dim=-1).indices
+    return tokens, raw_q.gather(1, tokens)

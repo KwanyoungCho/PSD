@@ -52,3 +52,11 @@ bit-identical이 T1의 hard 게이트.
 forward 부모들 priority-정렬 prefix 배분 — 리뷰 4차 초과 반례 방지).
 **D10을 시그니처로 보장** (자식 정체 입력 없음 — 테스트로 고정).
 유닛 11/11 (합 보존/cap/균등·비례 경계/결정론/무변이).
+
+**T1.3 완료**: `tree_sample_wor` — exponential-race top-k (내림차순 =
+비복원 추출 순서; 형제 순서 = 열 인덱스). **c=1이면 현행 Sampler와
+op 시퀀스·RNG 소비·결과 bit-identical** (RNG state 동일성까지 테스트
+고정 — fast-path 게이트의 핵심 근거). raw_q는 재정규화 전 원본
+q_eff (결정② c_raw 규약; 독립 재계산 일치 + 형제합≤1 테스트).
+temp==0은 명시 raise (v6 게이트 — 폴백은 rollout 호출자 책임).
+유닛 누적 15/15.
