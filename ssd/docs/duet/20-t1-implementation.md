@@ -155,3 +155,11 @@ recovery + 수치 규약 [D_j=0 raise, 잔차소진 처리]) 참조 구현.
 (30 케이스 × fanout 1-3, p=q·반희소 포함, 오차 < 1e-9)** + walk
 구현의 MC 정합 (20만 시행 ±0.005). 트리 채택의 수학적 전제가 코드로
 증명됨 — 남은 것은 이 참조를 엔진(T3 GPU 보행)이 재현하는지.
+
+**T3.1 완료 (부분)**: target rank-로컬 tree-verify wrapper 인프라 —
+`_init_tree_verify_wrappers` (N_v bucket {4,6,nv}별 CUDA-graph용
+FlashInfer prefill wrapper + **rank당 128MB 공유 workspace** [리뷰4:
+draft의 512MB는 그쪽 선택값], KV 할당 전 확보, B=1 고정 버퍼). tree
+policy 게이트 — off면 무할당 (OFF 불변, 회귀 44/44). 남은 T3.1b:
+attention.py의 명시 TREE_VERIFY mode 배선 (context 플래그 → wrapper
+경로, 오진입 raise).

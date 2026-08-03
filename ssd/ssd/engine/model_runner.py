@@ -162,6 +162,13 @@ class ModelRunner:
         # cudagraph logic for FlashInfer kernels, need diff wrapper for each batch size we make a graph for 
         if is_draft and config.draft_async:
             self._init_flashinfer_wrappers()
+        # P2-tree (T3.1, docs/duet/20): target rank들도 tree-verify용
+        # FlashInfer wrapper/workspace 필요 (기존엔 draft 전용 — 리뷰4
+        # 확인). tree policy 게이트 — off면 무할당 (OFF 경로 불변).
+        self.tree_verify_wrappers = None
+        if (not is_draft) and getattr(config, "duet_enabled", False) \
+                and getattr(config, "duet_tree_policy", "off") != "off":
+            self._init_tree_verify_wrappers()
         
         if self.verbose: print(f'INSIDE MODEL RUNNER INIT, DRAFT={is_draft}', flush=True)
         self.tp_pg = None 
@@ -227,6 +234,45 @@ class ModelRunner:
                 self.loop()
                 
         if self.verbose: print(f'-----{model_type}MODEL RUNNER INITIALIZED----', flush=True)
+
+    def _init_tree_verify_wrappers(self):
+        """T3.1 — target rank-로컬 tree-verify wrapper (N_v bucket별).
+
+        리뷰4 반영: workspace는 rank당 1개 공유, 128MB (FlashInfer 권장
+        — draft의 512MB는 그쪽 선택값), KV cache 할당 전에 잡는다
+        (이 함수는 __init__ 초기에 호출됨). bucket = N_v+1 행 고정
+        (B=1 — v6: B>1은 tree 게이트 OFF).
+        """
+        import flashinfer
+        nv = int(self.config.duet_tree_nv)
+        rows = nv + 1                          # +1 = recovery/bonus 행
+        max_blocks = (self.config.max_model_len + self.block_size - 1) \
+            // self.block_size
+        self._tree_workspace = torch.zeros(
+            128 * 1024 * 1024, dtype=torch.uint8, device=self.device)
+        self.tree_verify_wrappers = {}
+        for nv_b in sorted({4, 6, nv}):
+            r = nv_b + 1
+            w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                self._tree_workspace, "NHD", use_cuda_graph=True,
+                qo_indptr_buf=torch.empty(2, dtype=torch.int32,
+                                          device=self.device),
+                paged_kv_indptr_buf=torch.empty(2, dtype=torch.int32,
+                                                device=self.device),
+                paged_kv_indices_buf=torch.empty(max_blocks,
+                                                 dtype=torch.int32,
+                                                 device=self.device),
+                paged_kv_last_page_len_buf=torch.empty(
+                    1, dtype=torch.int32, device=self.device),
+                custom_mask_buf=torch.empty(
+                    r * self.config.max_model_len, dtype=torch.uint8,
+                    device=self.device),
+                mask_indptr_buf=torch.empty(2, dtype=torch.int32,
+                                            device=self.device),
+            )
+            w._kv_lens_buffer = torch.empty(1, dtype=torch.int32,
+                                            device=self.device)
+            self.tree_verify_wrappers[nv_b] = w
 
     def _init_flashinfer_wrappers(self):
         """Initialize FlashInfer wrappers for draft async mode."""
