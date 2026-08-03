@@ -116,9 +116,13 @@ AL 우열은 단일런 잡음 범위 — T4 sweep에서 판정.
   1차(롤아웃 GPU 상주)는 적용 완료, 스팬 분해는 PROFILE 런에서.
 - PROFILE 분해 (오염 하 상대 비교): 트리 스텝 target graph_pre
   693ms/post 194ms (체인 33/13 — eager 80층 ~21×) = 지배 항. →
-  **T3.2 CG capture 적용 후 첫 트리 스텝 graph_pre 31.5ms (22×
-  개선, 체인 수준)** 확인. 연속 트리 스텝에서 행수 불변 위반 크래시
-  발견 — 진단 가드로 원인 추적 중 (docs/duet/20 이슈 로그).
+  **T3.2 CG capture 적용 후 트리 스텝 graph_pre 31.5ms (22× 개선,
+  체인 수준)**. CG 경로 안정화까지 이슈 #17(데코레이터 가로채기)·
+  #18(context 상속 3-D 반환) — docs/duet/20 로그.
+- **CG+수정 전체 검증 런 (e2e2_level_cg_full, 4 seqs)**: 무크래시
+  완주, 불변 가드 미발화. Decode 17.38 (eager 2.60 → 6.7×; OFF와의
+  잔여 격차는 오염 하 draft python 성분 — 한산 창에서 재측정), AL
+  3.42, hit 0.82, P2 hit 0.284, P2 수락 길이 1.24.
 
 ## 5. T4 sweep (예정 — 한산 가드)
 
