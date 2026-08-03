@@ -114,13 +114,51 @@ is not None`)으로 교체 — DUET 실행에서는 env가 필수였으므로 �
   방식끼리도 75.68 vs 77.91). 엔진 행동 차이의 증거 없음. 정밀 판정이
   필요하면 5-rep 인터리브로 재실측 가능 (사용자 요청 시).
 
-## 2. P0 — E0 기록 게이트
+## 2. P0 — E0 기록 게이트 (커밋 48c606f + 75f6aac)
 
-- 상태: 대기 (스모크 green 확인 후 착수)
+**구현**: 독립 모듈 `ssd/engine/helpers/e0_trace.py` — 엔진에는 게이트
+분기 4곳만 남기고 (verifier 1 + draft_runner 3) 전 로직을 모듈에 격리
+(통째 제거 가능). 게이트 `SSD_DUET_E0_TRACE=1`, 기본 OFF.
+
+- **target "wire"** (step당 1): 전체 wire 후보 (pos, tok) + **raw P_iv
+  값** + 충분통계 — 위치별 y-logit(exit/draft), 정확한 lse@temp1,
+  top-32 exit/draft logits, 후보별 exit logit. temp-정합 P_iv를
+  오프라인에서 재계산 가능 (설계 v6 E0 ④; top-M 근사는 설계 허용).
+- **draft**: "request"(직전 step 실제 outcome = cache key + temp),
+  "response"(phase_source/valid_k/응답 토큰), "selector"(파싱된 wire =
+  rank 순 + dedup 후 잔존 P2 seed + 위치별 fan-out — 원 rank 재구성
+  가능).
+- **오버헤드 설계**: pinned-host 비동기 복사 + CUDA event + 백그라운드
+  스레드 직렬화 (임계경로 sync 0회), queue 넘침은 drop 카운트 (블로킹
+  금지), SUBSAMPLE/DIR/TOPM env 옵션. **사용자 조건 이행**: TPS 측정
+  런과 완전 분리 (전용 런 전용, ON 런 TPS는 보고 금지), OFF 비용 =
+  모듈 bool 분기, 독립 모듈이라 통째 삭제 가능.
+
+**검증**:
+- 유닛테스트 `tests/test_e0_trace.py` 4/4 (기본 OFF / 스키마·값 정합
+  (P_iv·후보 logit 수치 재계산 일치) / 서브샘플 / drop=0 summary) +
+  기존 회귀 44/44 유지.
+- GPU: P0 코드 포함 + 게이트 OFF 런 정상 (TPS 74.60 — 스모크 밴드 내,
+  §1.4와 동일 노이즈 규모). 게이트 ON 검증 런에서 trace 산출 확인.
+
+**이슈 #5 — 파일 버퍼 꼬리 유실 (ON 검증 1차에서 발견)**: 엔진이
+hard-exit라 atexit이 안 돌고, 1MB 블록 버퍼에 남은 draft 꼬리 ~700
+step이 유실됐다 (target 2134 vs draft 1438; draft step_id가 1..1438
+연속 + 뒤가 통째로 없는 패턴 + K 분포 비율은 양쪽 일치 = 꼬리 절단의
+전형). **수정**: 라인 버퍼링(쓰기는 백그라운드 스레드라 비용 무관) +
+1000-레코드마다 heartbeat(drops 지속 기록 — 위생 "drop=0"을 비정상
+종료에서도 검증 가능). **재검증: target 2188 == draft
+request/response/selector 2188 완전 정합.**
 
 ## 3. E0 수집 런
 
-- 상태: 대기
+- 상태: **진행 중** — champion 형상 (final_rematch 관례: numseqs 50
+  ×4셋, out 512, temp 0.7, seed 42), 전용 계측 런
+  (`experiments/proxy_async_overlap/e0_collect/run1/`). 대용량 trace
+  (예상 target ~200MB)는 **git 비추적** (분석 산출물만 커밋 예정).
+  완료 후: 카운트/heartbeat-drop 검증 → phase 분포·hit율을 champion
+  공인값과 대조 → calibration 곡선 등 E0 판정 지표 산출을 이 문서에
+  기록.
 
 ## 이슈 로그 (전체)
 
