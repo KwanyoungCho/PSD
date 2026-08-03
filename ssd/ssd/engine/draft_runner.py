@@ -18,6 +18,8 @@ PROFILE_DRAFT = os.environ.get("SSD_PROFILE_DRAFT", "0") == "1"
 #   - Proxy pass = K2 forwards → proxy-sourced rows of depth K2
 #   - NO continuation. valid_k space = {K1, K2}.
 # Hybrid path is untouched when this flag is off.
+from ssd.engine.helpers.e0_trace import E0_TRACE as _E0_TRACE
+from ssd.engine.helpers import e0_trace as _e0
 SPLIT_K1K2_MODE = os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
 # Trace gate for split-K1/K2 contract validation. Active only when
 # SSD_TRACE_SPLIT_K1K2=1. Logs every step's valid_k / shapes / per-position
@@ -660,6 +662,9 @@ class DraftRunner(ModelRunner):
         off += B * max_blocks
         temps_as_int64 = fused_req[off:off + B]
         off += B
+        if _E0_TRACE:  # E0: 직전 step의 실제 outcome (P0, docs/duet/17 §2)
+            self._e0_step_id = step_id
+            _e0.record_draft_request(step_id, cache_keys, temps_as_int64)
         assert off == fused_total
         temperatures = temps_as_int64.to(torch.int32).view(torch.float32)
 
@@ -728,6 +733,10 @@ class DraftRunner(ModelRunner):
                     print(f"    Detokenized: {tokens_text}", flush=True)
             print(f"", flush=True)
 
+        if _E0_TRACE:  # E0: 이번에 서빙한 응답 (hit 유형/깊이/토큰 — P0)
+            _e0.record_draft_response(
+                getattr(self, "_e0_step_id", -1), phase_source, valid_k,
+                out_tokens[:, :K])
         # Wire layout matches speculator_async._fused_response: [cache_hits, phase_source, valid_k, out_tokens].
         fused_response = torch.cat([cache_hits.reshape(-1).to(torch.int64),
                                     phase_source.reshape(-1),
@@ -1864,6 +1873,11 @@ class DraftRunner(ModelRunner):
             K_rank=K_rank, total_budget=total_budget,
             draft_forked_mask=draft_forked_p1_mask,
         )
+        if _E0_TRACE:  # E0: wire(=rank 순) + dedup 후 잔존 P2 seed (P0)
+            _e0.record_draft_selector(
+                getattr(self, "_e0_step_id", -1),
+                duet_proxy["chosen_pos"], duet_proxy["chosen_tok"],
+                proxy_forked, proxy_fan_out_tensor)
         _layout_k2 = self._update_phase2_layout_inplace(proxy_fan_out_tensor, K_rank)
         if TRACE_SPLIT_K1K2:
             _fol_dbg = proxy_fan_out_tensor.tolist()      # debug-only sync

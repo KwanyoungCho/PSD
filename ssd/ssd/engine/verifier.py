@@ -1,4 +1,6 @@
 import os
+from ssd.engine.helpers.e0_trace import E0_TRACE as _E0_TRACE
+from ssd.engine.helpers import e0_trace as _e0
 import torch
 from time import perf_counter
 from transformers import AutoTokenizer
@@ -460,6 +462,14 @@ class Verifier(VerifierBase):
             chosen_tok = correction_topk_ids.flatten(1).gather(1, top_idx)    # [B, wire_N]
             if _detail_profile:
                 _mc_d("proxy_pack", _ev_pack)
+
+            # ===== E0 calibration trace (P0, docs/duet/17 §2; default OFF —
+            # dedicated runs only, never TPS measurement) =====
+            if _E0_TRACE:
+                _e0.record_target_wire(
+                    config, exit_logits, logits_q, draft_tokens, B, K,
+                    valid_k, cache_hits, P_iv, top_idx, chosen_pos,
+                    chosen_tok, h)
 
             # ===== TRACE point 3 (Policy B) =====
             if (
