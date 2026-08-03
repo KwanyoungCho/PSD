@@ -52,6 +52,28 @@ def load_period():
     return {k: st.mean(v) for k, v in per.items()}
 
 
+def load_slack():
+    """짝런 draft profile의 draft_recv_cmd(작업후 대기) 분포 per status.
+    delay 기대치 E[max(0, Δ−slack)]를 분포로 계산 (평균-slack만 쓰면
+    볼록성 때문에 delay를 과소평가)."""
+    recs = json.load(open(glob.glob(
+        PAIRED + "/duet_profile_draft_*.json")[0]))
+    by = {}
+    for r in recs:
+        if r.get("label") == "draft_recv_cmd" and r.get("status") \
+                and r.get("step_id", 0) and r["step_id"] > 10:
+            by.setdefault(r["status"], []).append(
+                r["end_ms"] - r["start_ms"])
+    return by
+
+
+def delay_fn(slack_by, status, delta):
+    v = slack_by.get(status)
+    if not v:
+        return delta
+    return sum(max(0.0, delta - x) for x in v) / len(v)
+
+
 def load_steps():
     """step → (phase, outcome(pos,tok), retained[(pos,tok)...] rank순)."""
     req, resp, sel = {}, {}, {}
@@ -120,16 +142,18 @@ def fit_alpha(steps):
     return alpha, st.mean(Ls)
 
 
-def tree_L(budget, alpha):
+def tree_L(budget, alpha, lam=1.0):
     """budget 노드를 D_CAP 레벨에 앞-우선 균등 배분한 트리의 기대 수락
-    연속 길이 (MODEL: 형제 독립 근사)."""
+    연속 길이. lam = 형제 상관 할인 (1=독립 근사(낙관), 0=완전 상관
+    (형제 무가치, 체인과 동일 — 보수 하한)): 유효 fanout = 1+lam(f−1)."""
     base, rem = divmod(budget, D_CAP)
     fo = [base + (1 if i < rem else 0) for i in range(D_CAP)]
     L, surv = 0.0, 1.0
     for d in range(D_CAP):
         if fo[d] <= 0:
             break
-        a = 1.0 - (1.0 - alpha[d]) ** fo[d]
+        f_eff = 1.0 + lam * (fo[d] - 1)
+        a = 1.0 - (1.0 - alpha[d]) ** f_eff
         surv *= a
         L += surv
     return L
@@ -231,6 +255,71 @@ def main():
         run_arm("ⓔ oracle: R=20 + 사후최적 배분, N_v=8", 20, row_ms,
                 nv_cap=8, oracle_alloc=True)
         print(f"  (기준: ⓐ={base:.2f} — 상대 비교로 읽을 것)")
+
+    # ---------------- Step 3 ----------------
+    slack_by = load_slack()
+    print(f"\n[slack 분포] n per status: "
+          f"{ {k: len(v) for k, v in slack_by.items()} }")
+
+    def run_arm3(label, R, row_ms=1.9, nv_cap=8, lam=1.0, beta=1.0,
+                 calib_posK=1.0, delta_draft=0.0):
+        """Step-3 변형: lam(형제 상관), beta(배분 지수), calib_posK
+        (pos=K 후보 P_iv 보정 배수 — root 정렬·배분 모두 적용),
+        delta_draft(draft 증분 비용 ms — status별 slack 분포로 delay)."""
+        tot_tok = tot_ms = 0.0
+        for s in steps:
+            ph, committed = s["phase"], s["committed"]
+            if ph == 1:
+                tot_tok += committed
+                tot_ms += period["hit_k1"] + delay_fn(
+                    slack_by, "hit_k1", delta_draft)
+                continue
+            roots = roots_for(s, R)
+            if calib_posK != 1.0:
+                K_step = max(p for p, _, in
+                             [(seed[0], 0) for _, seed, _ in roots]) \
+                    if roots else 0
+                # pos=K(전부수락) 후보의 점수 보정 후 재정렬
+                scored = [(pv * (calib_posK if seed[0] == K_step else 1.0),
+                           rk, seed) for rk, seed, pv in roots]
+                scored.sort(key=lambda x: -x[0])
+                roots = [(rk, seed, sc) for sc, rk, seed in scored]
+            hit_rank = None
+            for i, (rk, seed, pv) in enumerate(roots):
+                if seed == s["outcome"]:
+                    hit_rank = i
+                    break
+            if hit_rank is not None:
+                piv_sel = [max(pv, 1e-6) ** beta for _, _, pv in roots]
+                b = max(1, round(NODE_BUDGET * piv_sel[hit_rank]
+                                 / sum(piv_sel)))
+                nv = min(b, nv_cap)
+                L = tree_L(nv, alpha, lam)
+                tot_tok += 1 + L
+                tot_ms += period["hit_k2"] + max(0, nv - 4) * row_ms \
+                    + delay_fn(slack_by, "hit_k2", delta_draft)
+            else:
+                tot_tok += committed if ph == 0 else 2.77
+                tot_ms += period["miss"] + delay_fn(
+                    slack_by, "miss", delta_draft)
+        tps = tot_tok / (tot_ms / 1000.0)
+        print(f"  {label:44s} tok/step={tot_tok/n:.3f} TPS={tps:6.2f}")
+        return tps
+
+    print("\n=== Step3-A: draft 증분 비용 Δ의 delay 전파 "
+          "(최선 arm R=8/N_v=8, λ=1, 행당 1.9ms) ===")
+    for d in (0.0, 0.5, 1.0, 2.0, 3.0):
+        run_arm3(f"Δ_draft={d}ms", 8, delta_draft=d)
+
+    print("\n=== Step3-B: 형제 상관 민감도 λ (R=8/N_v=8, Δ=1ms) ===")
+    for lam in (1.0, 0.5, 0.25, 0.0):
+        run_arm3(f"λ={lam} (1=독립 낙관, 0=체인과 동일 보수)", 8,
+                 lam=lam, delta_draft=1.0)
+
+    print("\n=== Step3-C: 배분 변형 (R=8/N_v=8, λ=1, Δ=0 — 순수 비교) ===")
+    for beta in (0.0, 0.5, 1.0, 2.0):
+        run_arm3(f"β={beta} (배분 ∝ P_iv^β)", 8, beta=beta)
+    run_arm3("pos-K 보정 ×2 (E0 발견 반영, β=1)", 8, calib_posK=2.0)
 
 
 if __name__ == "__main__":
