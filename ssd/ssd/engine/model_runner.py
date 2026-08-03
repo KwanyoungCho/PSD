@@ -1168,6 +1168,27 @@ class ModelRunner:
             bucket=bucket,
         )
 
+    @torch.inference_mode()
+    def commit_tree_kv(self, src_slots, dst_slots):
+        """T3.4-b6-3 — 수락 경로 KV의 scratch→canonical 셀 복사.
+
+        rope는 KV에 이미 구워져 있어 (트리 rope = pos0+1+depth = 경로
+        canonical 위치와 동일) 셀 이동만으로 재실체화가 완성된다
+        (commit_copy_plan의 실행부). 겹침 대비 gather 후 scatter.
+        target은 verifier가 call()로 전 rank에 브로드캐스트, draft는
+        로컬 호출 (TP1). B=1: SHM 명령 순서가 다음 run()보다 선행을
+        보장 — ack 불요 (B>1 tree 게이트 OFF).
+        """
+        if not src_slots:
+            return
+        kc = self.kv_cache
+        flat = kc.view(kc.shape[0], kc.shape[1], -1, kc.shape[4],
+                       kc.shape[5])
+        src = torch.tensor(src_slots, dtype=torch.int64, device=kc.device)
+        dst = torch.tensor(dst_slots, dtype=torch.int64, device=kc.device)
+        tmp = flat[:, :, src].clone()
+        flat[:, :, dst] = tmp
+
     def _run_tree_verify(self, input_ids, positions, last_only):
         """P2-tree verify (T3.4-b4). B=1 전용, v1은 eager 분할 forward.
 

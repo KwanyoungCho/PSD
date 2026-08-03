@@ -293,3 +293,28 @@ GPU화 후속. 유닛 40/40 + 회귀 44/44.
 요청 키 k_idx = 종단 노드 id, D14 수락경로 재실체화 (draft, 다음
 step 글루 앞 aux forward), target TP4 commit (path cells gather→
 scatter + ack — commit_copy_plan 실행부).
+
+**T3.4-b6 완료 (outcome/commit — live 루프 폐합)**: 핵심 단순화 발견
+— **재실체화는 forward가 아니라 KV 셀 복사로 충분**: 트리 rope
+(pos0+1+depth)가 수락 경로에서는 canonical 위치와 정확히 일치하므로
+셀 자리만 뷰-순서 → 경로-순서로 옮기면 D14가 완성된다 (aux forward
+불요 — 설계 §7.5ⓐ의 "glue가 다시 만들어준다"보다 싼 등가 실행).
+- **b6-1**: verifier가 종단 노드 id를 seq에 스태시 → speculator 다음
+  요청 k_idx = 종단 id (트리-step populate의 fan_idx 네임스페이스와
+  일치). 절단 시에도 경로-prefix == 수락-prefix라 id 유효 (키 miss
+  가능 — 무해).
+- **b6-2 (draft)**: respond에서 서빙 스냅샷 double-buffer
+  (_tree_served_ints/_numtok), 다음 요청 수신 직후 parent_local
+  사슬로 경로 복원 → a_eff = num_tokens 델타 (EOS/max 절단 자동
+  반영) → commit_tree_kv 로컬 복사. one-shot 소거.
+- **b6-3 (target)**: `ModelRunner.commit_tree_kv(src,dst)` — kv_cache
+  flat 뷰 gather→scatter (겹침 대비 tmp). verifier가 보행 직후
+  call()로 전 TP rank 브로드캐스트. **ack 생략 근거 (B=1)**: SHM
+  명령은 rank별 순차 실행 — commit(cmd n)이 다음 run(cmd n+1)보다
+  항상 선행. B>1 tree는 게이트 OFF; ack는 그때 신설 (설계 §7.5 원안
+  그대로 명시).
+- 보행이 경로를 직접 반환하도록 확장 (_walk_path → src/dst 슬롯).
+회귀 44/44 + 유닛 40/40. **이로써 draft 서빙→target 트리 verify→
+보행→commit→다음 요청 키→재실체화→노드-fork 캐시빌드의 라이브
+루프가 코드 상 폐합** — 남은 것은 E2E 검증 (OFF 회귀 → 퇴화 ON →
+실런).

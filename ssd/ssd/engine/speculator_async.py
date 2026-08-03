@@ -256,7 +256,13 @@ class SpeculatorAsync(SpeculatorBase):
         # Fill send buffers in-place (avoids torch.tensor from Python lists)
         for i, seq in enumerate(seqs):
             self._cache_keys[i, 0] = seq.seq_id
-            self._cache_keys[i, 1] = seq.last_spec_step_accepted_len - 1
+            # T3.4-b6-1: 직전 step이 트리 verify였으면 k_idx = 종단 노드
+            # id (0=root-종단, 1+j=노드 j) — draft의 트리-step populate
+            # 키(fan_idx=컨텍스트 id)와 같은 네임스페이스. 체인 step은
+            # 기존 수락-길이 좌표 그대로.
+            _tn = getattr(seq, "tree_terminal_node", None)
+            self._cache_keys[i, 1] = (_tn if _tn is not None
+                                      else seq.last_spec_step_accepted_len - 1)
             self._cache_keys[i, 2] = seq.recovery_token_id
             self._num_tokens_buf[i] = seq.num_tokens
             self._temps_buf[i] = seq.draft_temperature if seq.draft_temperature is not None else seq.temperature

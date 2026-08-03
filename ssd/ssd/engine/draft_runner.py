@@ -562,13 +562,18 @@ class DraftRunner(ModelRunner):
                         out_tokens[0, :_nv] = \
                             _tviews["tok"][_root].to(self.device)
                         valid_k[0] = _n_valid
-                        self._tree_wire_ints = pack_tree_ints(
-                            _tviews, _root, _nv).to(self.device)
+                        _packed_ints = pack_tree_ints(_tviews, _root, _nv)
+                        self._tree_wire_ints = _packed_ints.to(self.device)
                         self._tree_wire_parent_q = \
                             _tviews["parent_q_logits"][_root].to(
                                 device=self.device,
                                 dtype=out_logits.dtype).unsqueeze(0)
                         self._tree_hit_root = _root
+                        # b6-2 (D14): 다음 요청에서 수락 경로 재실체화에
+                        # 쓸 서빙 스냅샷 (double buffer — 다음 build가
+                        # _tree_views를 덮어써도 유지)
+                        self._tree_served_ints = _packed_ints.clone()
+                        self._tree_served_numtok = int(num_tokens[0])
         elif self.config.jit_speculate:
             # Cache is empty (first iteration), must JIT all
             if self.config.verbose:
@@ -695,6 +700,41 @@ class DraftRunner(ModelRunner):
             _e0.record_draft_request(step_id, cache_keys, temps_as_int64)
         assert off == fused_total
         temperatures = temps_as_int64.to(torch.int32).view(torch.float32)
+
+        # === T3.4-b6-2 (D14): 직전 step이 트리 서빙이었으면 수락 경로
+        # KV를 뷰-순서 셀 → canonical 셀로 복사. rope는 트리 rope
+        # (pos0+1+depth)가 이미 canonical 위치와 같아 셀 이동만으로
+        # 재실체화 완성. k_idx = 종단 노드 id (b6-1), a_eff는
+        # num_tokens 델타 (EOS/max-token 절단을 자동 반영 — 경로
+        # prefix == 수락 prefix). one-shot 소거.
+        _served = getattr(self, "_tree_served_ints", None)
+        if _served is not None:
+            self._tree_served_ints = None
+            _a_eff = int(num_tokens[0]) - self._tree_served_numtok - 1
+            _T = int(cache_keys[0, 1])
+            if _a_eff > 0 and _T > 0:
+                _nv_s = self.config.duet_tree_nv
+                _par = _served[3 + _nv_s:3 + 2 * _nv_s]
+                _path = []
+                _j = _T - 1
+                while _j >= 0:
+                    _path.append(_j)
+                    _j = int(_par[_j])
+                _path.reverse()
+                _path = _path[:_a_eff]
+                _p0 = self._tree_served_numtok - 1
+                _bs = self.block_size
+                _max_pos = _p0 + 1 + max(_path) + 1
+                _dbt0 = draft_block_tables[0, :(_max_pos // _bs) + 1].cpu()
+                _src, _dst = [], []
+                for _k, _jj in enumerate(_path):
+                    if _jj == _k:
+                        continue
+                    _sp, _dp = _p0 + 1 + _jj, _p0 + 1 + _k
+                    _src.append(int(_dbt0[_sp // _bs]) * _bs + _sp % _bs)
+                    _dst.append(int(_dbt0[_dp // _bs]) * _bs + _dp % _bs)
+                if _src:
+                    self.commit_tree_kv(_src, _dst)
 
         target_recovery_activations = torch.zeros(
             B, 3 * self.config.d_model_target, dtype=self.hf_config.torch_dtype, device=self.device

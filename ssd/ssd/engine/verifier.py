@@ -238,14 +238,35 @@ class Verifier(VerifierBase):
         if _tree_meta_arg is not None:
             # T3.4-b5: 트리 보행 (잔차 사다리 — tree_verify_walk_tensor,
             # 참조 보행과 동일-코인 동등성으로 고정된 프로덕션 경로).
-            new_suffixes, recovery_tokens, _term_node = \
+            new_suffixes, recovery_tokens, _term_node, _walk_path = \
                 self._tree_verify_walk(
                     speculate_result, logits_p,
                     temperatures_target, temperatures_draft)
-            # b6: outcome wire에 실릴 종단 노드 id (0=root-종단, 1+j=노드 j)
-            self._tree_terminal_node = _term_node
+            # b6-1: 종단 노드 id (0=root-종단, 1+j=노드 j) — 다음 요청
+            # 키 k_idx로 나간다 (speculator). 절단 시에도 경로-prefix가
+            # 수락-prefix와 일치하므로 id는 그대로 유효 (키는 miss 가능
+            # — 무해).
+            seqs[0].tree_terminal_node = _term_node
+            # b6-3: 수락 경로 KV commit — scratch(뷰-순서 셀) → canonical
+            # (경로-순서 셀). 전 rank가 SHM 명령 순서로 실행 — B=1에서는
+            # 다음 run()보다 항상 먼저 완료 (per-rank 순차 loop) → ack
+            # 없이 race 없음 (B>1 tree는 게이트 OFF; ack는 그때 신설).
+            _pos0_t = seqs[0].num_tokens - (_step_lookahead + 1)
+            _bt = seqs[0].block_table
+            _bs = self.target_model_runner.block_size
+            _src, _dst = [], []
+            for k, j in enumerate(_walk_path):
+                if j == k:
+                    continue
+                sp = _pos0_t + 1 + j
+                dp = _pos0_t + 1 + k
+                _src.append(_bt[sp // _bs] * _bs + sp % _bs)
+                _dst.append(_bt[dp // _bs] * _bs + dp % _bs)
+            if _src:
+                self.target_model_runner.call("commit_tree_kv", _src, _dst)
         else:
-            self._tree_terminal_node = None
+            for _s in seqs:
+                _s.tree_terminal_node = None
             new_suffixes, recovery_tokens = verify(
                 logits_p=logits_p,
                 logits_q=speculate_result.logits_q,
@@ -354,7 +375,7 @@ class Verifier(VerifierBase):
         rec0 = int(speculate_result.speculations[0, 0])
         suffix = [rec0] + [int(ti["tok"][j]) for j in path]
         term_node = (1 + path[-1]) if path else 0
-        return [suffix], [terminal], term_node
+        return [suffix], [terminal], term_node, path
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,
