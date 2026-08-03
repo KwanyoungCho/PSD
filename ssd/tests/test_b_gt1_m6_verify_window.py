@@ -66,7 +66,7 @@ def _mk_stub_runner():
     stub.device = DEV
     stub.config = SimpleNamespace(
         use_eagle=False,
-        duet_proxy_on_draft=False,
+        duet_tree_policy="off", duet_proxy_on_draft=False,
         duet_proxy_wire_N=WIRE_N,
         duet_phase1_k=K1,
         duet_phase2_k=K2,
@@ -362,7 +362,7 @@ class TestProxyHPadding(unittest.TestCase):
         V, B, K = 500, 2, 9
         top_k = 6                                     # (K2+1)*6 = 30 >= 28
         cfg = SimpleNamespace(
-            duet_proxy_top_k=top_k, duet_proxy_on_draft=False,
+            duet_proxy_top_k=top_k, duet_tree_policy="off", duet_proxy_on_draft=False,
             duet_exit_replica=False, jit_speculate=True,
             duet_proxy_fan_out=1, duet_policy="b",
             duet_proxy_wire_N=WIRE_N, max_num_seqs=4,

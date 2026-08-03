@@ -464,6 +464,11 @@ class Verifier(VerifierBase):
             _, top_idx = P_iv.flatten(1).topk(wire_N, dim=-1)                 # [B, wire_N]
             chosen_pos = top_idx // top_k                                     # [B, wire_N], ∈ [0, K]
             chosen_tok = correction_topk_ids.flatten(1).gather(1, top_idx)    # [B, wire_N]
+            if config.duet_tree_policy != "off":
+                # T2.0 (v6 D2): 라이브 P_iv를 wire에 동승 (양자화 pack).
+                from ssd.engine.helpers.p2_tree import pack_piv
+                _piv_chosen = P_iv.flatten(1).gather(1, top_idx)
+                chosen_tok = pack_piv(chosen_tok, _piv_chosen)
             if _detail_profile:
                 _mc_d("proxy_pack", _ev_pack)
 

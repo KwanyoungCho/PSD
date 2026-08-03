@@ -111,3 +111,34 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
     else:
         tokens = scores.topk(c_tensor, dim=-1).indices
     return tokens, raw_q.gather(1, tokens)
+
+
+# --- T2.0: P_iv wire 비트-pack (설계 v6 D2; tree policy != off 게이트) ---
+PIV_SHIFT = 15                      # 토큰은 비트 0-14 (vocab ≤ 32768 가드)
+PIV_BITS = 16                       # log10 P_iv ∈ [-6, 0] 16비트 양자화
+PIV_VER_BIT = 31                    # 버전/유효 마커
+_PIV_QMAX = (1 << PIV_BITS) - 1
+_TOK_MASK = (1 << PIV_SHIFT) - 1
+_LOG_MIN = -6.0
+
+
+def pack_piv(chosen_tok: torch.Tensor, piv: torch.Tensor) -> torch.Tensor:
+    """chosen_tok int64의 비트 15-30에 양자화 log10(P_iv)를 pack.
+
+    양자화 오차 ≤ 반스텝 (6데케이드/65535 ≈ 9.2e-5 데케이드). NCCL
+    호출 수·크기 불변 (같은 int64 자리). 수신측은 dedup **이전**에
+    unpack해야 한다 (D2 정확성 함정 — draft_runner에서 보장)."""
+    q = ((piv.clamp_min(1e-9).log10().clamp(_LOG_MIN, 0.0) - _LOG_MIN)
+         / (-_LOG_MIN) * _PIV_QMAX).round().long()
+    return chosen_tok | (q << PIV_SHIFT) | (1 << PIV_VER_BIT)
+
+
+def unpack_piv(packed: torch.Tensor):
+    """→ (clean_tok [.,N] int64, piv [.,N] float32). 버전 비트 검증."""
+    if not bool((packed >> PIV_VER_BIT & 1).all()):
+        raise ValueError("unpack_piv: version bit missing — "
+                         "pack 게이트 불일치 (tree policy 양단 확인)")
+    tok = packed & _TOK_MASK
+    q = (packed >> PIV_SHIFT) & _PIV_QMAX
+    piv = torch.pow(10.0, q.float() / _PIV_QMAX * (-_LOG_MIN) + _LOG_MIN)
+    return tok, piv

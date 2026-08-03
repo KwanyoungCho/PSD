@@ -60,3 +60,16 @@ op 시퀀스·RNG 소비·결과 bit-identical** (RNG state 동일성까지 테�
 q_eff (결정② c_raw 규약; 독립 재계산 일치 + 형제합≤1 테스트).
 temp==0은 명시 raise (v6 게이트 — 폴백은 rollout 호출자 책임).
 유닛 누적 15/15.
+
+**T2.0 완료 (순서 최적화 — T1.4의 priority가 라이브 P_iv에 의존하므로
+선행)**: P_iv wire 비트-pack — `pack_piv`/`unpack_piv` (log10∈[-6,0]
+16bit @ bits 15-30, 버전 bit 31, 양자화 오차 ≤ 9.2e-5 데케이드),
+verifier 송신측 pack + draft `_unpack_duet_proxy`에서 **dedup 이전
+단일 지점** unpack (D2 함정 회피). `duet_tree_policy != off` 게이트로
+OFF wire 바이트 보존. config에 vocab≤32768 -O 생존 raise. 유닛 4종
+(라운드트립 정밀도/dedup 안전/버전 비트/극단값 clamp) + 회귀 44/44
+(m6 스텁에 tree_policy 필드 추가).
+
+**이슈 #6**: 신설 config 필드 참조가 기존 테스트 스텁(SimpleNamespace)
+을 깨는 패턴 반복 (이슈 #2와 동형) — 스텁에 필드 추가로 해결. 신규
+config 필드 도입 시 스텁 갱신을 체크리스트화.

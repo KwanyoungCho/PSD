@@ -142,3 +142,36 @@ class TestWorSampler(unittest.TestCase):
         logits, _ = self._mk(B=2)
         with self.assertRaises(ValueError):
             tree_sample_wor(logits, torch.tensor([0.7, 0.0]), 2)
+
+
+class TestPivPack(unittest.TestCase):
+    def test_roundtrip_accuracy(self):
+        from ssd.engine.helpers.p2_tree import pack_piv, unpack_piv
+        tok = torch.randint(0, 32000, (2, 28), dtype=torch.int64)
+        piv = torch.tensor([[10 ** (-6 * torch.rand(1).item())
+                             for _ in range(28)] for _ in range(2)])
+        packed = pack_piv(tok, piv)
+        tok2, piv2 = unpack_piv(packed)
+        self.assertEqual(tok.tolist(), tok2.tolist())     # 토큰 무손실
+        # log10 양자화 오차 ≤ 반스텝 (6/65535 ≈ 9.2e-5 데케이드)
+        err = (piv2.log10() - piv.log10()).abs().max().item()
+        self.assertLess(err, 6.0 / 65535)
+    def test_packed_differs_from_clean(self):
+        # dedup 함정 재현 방지: pack된 값은 원 토큰과 달라야 하고
+        # (버전 비트), unpack 없이 비교하면 실패해야 정상
+        from ssd.engine.helpers.p2_tree import pack_piv
+        tok = torch.tensor([[5, 100]], dtype=torch.int64)
+        packed = pack_piv(tok, torch.tensor([[0.5, 0.001]]))
+        self.assertFalse(bool((packed == tok).any()))
+    def test_version_bit_enforced(self):
+        from ssd.engine.helpers.p2_tree import unpack_piv
+        with self.assertRaises(ValueError):
+            unpack_piv(torch.tensor([[5]], dtype=torch.int64))  # pack 안 됨
+    def test_extreme_piv_clamped(self):
+        from ssd.engine.helpers.p2_tree import pack_piv, unpack_piv
+        tok = torch.tensor([[1, 2, 3]], dtype=torch.int64)
+        piv = torch.tensor([[1.0, 1e-9, 0.0]])
+        _, piv2 = unpack_piv(pack_piv(tok, piv))
+        self.assertAlmostEqual(piv2[0, 0].item(), 1.0, places=3)
+        self.assertAlmostEqual(piv2[0, 1].item(), 1e-6, places=8)  # 하한 clamp
+        self.assertAlmostEqual(piv2[0, 2].item(), 1e-6, places=8)

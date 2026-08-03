@@ -1426,6 +1426,13 @@ class DraftRunner(ModelRunner):
         wire_N = self.config.duet_proxy_wire_N
         chosen_pos = buf[:B * wire_N].view(B, wire_N)
         chosen_tok = buf[B * wire_N:2 * B * wire_N].view(B, wire_N)
+        if self.config.duet_tree_policy != "off":
+            # T2.0 (v6 D2): dedup **이전** 단일 지점에서 unpack —
+            # selector/캐시/rollout에는 순수 토큰만 흘린다.
+            from ssd.engine.helpers.p2_tree import unpack_piv
+            chosen_tok, chosen_piv = unpack_piv(chosen_tok)
+            return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok,
+                    "chosen_piv": chosen_piv}
         return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
 
     def _policy_b_from_raw_proxy(self, raw, out_logits, out_tokens, K_step):

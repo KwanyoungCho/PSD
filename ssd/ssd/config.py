@@ -394,6 +394,12 @@ class Config:
                         f"duet_tree_policy must be off|level|frontier; "
                         f"got {self.duet_tree_policy!r}")
                 if self.duet_tree_policy != "off":
+                    # D2 pack 가드: 토큰이 비트 0-14를 넘으면 안 됨.
+                    if self.hf_config.vocab_size > 32768:
+                        raise ValueError(
+                            f"P2-tree pack requires vocab_size <= 32768 "
+                            f"(D2 — token bits 0-14); got "
+                            f"{self.hf_config.vocab_size}")
                     if not (1 <= self.duet_tree_c_tensor <= 8):
                         raise ValueError(
                             f"duet_tree_c_tensor must be in [1,8]; "
