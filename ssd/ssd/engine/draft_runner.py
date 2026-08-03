@@ -1151,6 +1151,129 @@ class DraftRunner(ModelRunner):
         duet_close("glue", _mev_glue)
         return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, 1
 
+    def _select_tree_fork_tokens(self, glue_logits, fan_counts, child_toks):
+        """트리 step P1 fork 선택 (T3.4-b3-4, 결정④ ⓑ). B=1 전용.
+
+        체인 선택기의 '다음 토큰 제외'를 일반화: 컨텍스트 c의 제외 집합 =
+        뷰 안에 이미 있는 c의 자식 토큰들. 컨텍스트별 top-fan_counts[c].
+
+        Returns: (flat [1, sum(fan_counts)], padded [1, n_rows, max_fo],
+                  mask [n_rows, max_fo] bool)
+        """
+        lg = glue_logits[0].clone()                     # [n_rows, V]
+        n_rows = lg.shape[0]
+        for c, toks in enumerate(child_toks):
+            if toks:
+                lg[c, torch.tensor(toks, dtype=torch.int64,
+                                   device=lg.device)] = float("-inf")
+        max_fo = max(fan_counts)
+        top = lg.topk(max_fo, dim=-1).indices           # [n_rows, max_fo]
+        flat = torch.cat([top[c, :fan_counts[c]] for c in range(n_rows)])
+        padded = torch.zeros(1, n_rows, max_fo, dtype=torch.int64,
+                             device=lg.device)
+        mask = torch.zeros(n_rows, max_fo, dtype=torch.bool,
+                           device=lg.device)
+        for c in range(n_rows):
+            padded[0, c, :fan_counts[c]] = top[c, :fan_counts[c]]
+            mask[c, :fan_counts[c]] = True
+        return flat.view(1, -1), padded, mask
+
+    def _tree_step_p1p2(self, partial_tree_decode_args, glue_logits,
+                        cache_hits, cache_hits_list, dbt,
+                        proxy_recv_work, proxy_buf):
+        """트리-hit step의 P1/P2 (T3.4-b3-4/-5, 결정④ ⓑⓒ). B=1 전용.
+
+        P1: fork 컨텍스트 = [rec(root-종단), 뷰 노드 0..n_valid-1] —
+        fan_idx가 그대로 종단 노드 id 네임스페이스가 된다. CG 불변을
+        위해 MQ 폭은 split_k1_long 그대로 두고 컨텍스트별 fanout을
+        균등-우선 재배분 (F7 예산 재검토 전 v1). fork 행 mask = 조상
+        비트맵 (전 step override), rope = 컨텍스트 depth 기반.
+        """
+        import numpy as _np
+        from ssd.engine.helpers import cudagraph_helpers as _CH
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr, duet_close as _mc)
+
+        K1 = self.config.duet_phase1_k
+        _layout_k1 = self.split_k1_long_layout
+        W1 = _layout_k1.MQ_LEN
+        n_rows = glue_logits.shape[1]
+        n_valid = n_rows - 1
+        _views = self._tree_views
+        _root = self._tree_hit_root
+        par = _views["parent_local"][_root]
+        vtok = _views["tok"][_root]
+
+        # 컨텍스트 topology: depth / 조상 / 뷰-내 자식 토큰(fork 제외 집합)
+        depths = [0] * n_valid
+        anc = [[] for _ in range(n_valid)]
+        child_toks = [[] for _ in range(n_rows)]
+        depth_ctx = [0] * n_rows              # ctx0(rec)=0, ctx 1+j = 1+depth_j
+        for j in range(n_valid):
+            p = int(par[j])
+            if p >= 0:
+                depths[j] = depths[p] + 1
+                anc[j] = anc[p] + [p]
+            child_toks[p + 1].append(int(vtok[j]))
+            depth_ctx[1 + j] = 1 + depths[j]
+
+        # === P1: 노드-fork, K1 forwards ===
+        _mev_p1b = _mr("phase1_build")
+        fan_counts = [W1 // n_rows + (1 if i < W1 % n_rows else 0)
+                      for i in range(n_rows)]
+        draft_forked_k1, draft_forked_p1_padded, draft_forked_p1_mask = \
+            self._select_tree_fork_tokens(glue_logits, fan_counts, child_toks)
+        draft_tree_args = self._build_tree_decode_args_for_layout(
+            partial_tree_decode_args, draft_forked_k1, _layout_k1,
+            cache_hits_list)
+        _ctx_of_row = torch.repeat_interleave(
+            torch.arange(n_rows, dtype=torch.int64),
+            torch.tensor(fan_counts, dtype=torch.int64))
+        pos0 = int(partial_tree_decode_args["num_tokens"][0]) - 1
+        draft_tree_args["rope_positions"] = torch.tensor(
+            [pos0 + 1 + depth_ctx[int(c)] for c in _ctx_of_row],
+            dtype=torch.int64, device=self.device)
+
+        # 전 step packed mask: [prefix+rec | 조상 노드 셀 | 자기 행 체인 셀]
+        base = int(draft_tree_args["positions"][0])   # = pos0 + glue_offset
+        ov = {}
+        for f in range(K1):
+            cols = base + (f + 1) * W1
+            m = _np.zeros((W1, cols), dtype=_np.uint8)
+            m[:, :pos0 + 1] = 1                       # prefix + rec 셀
+            for r in range(W1):
+                c = int(_ctx_of_row[r])
+                if c > 0:
+                    j = c - 1
+                    for a in anc[j]:
+                        m[r, pos0 + 1 + a] = 1
+                    m[r, pos0 + 1 + j] = 1
+                for s in range(f + 1):
+                    m[r, base + s * W1 + r] = 1
+            packed = _np.packbits(m.ravel(), bitorder="little")
+            indptr = _np.array([0, len(packed)], dtype=_np.int32)
+            ov[f] = (torch.from_numpy(packed).to(self.device),
+                     torch.from_numpy(indptr).to(self.device))
+        _mc("phase1_build", _mev_p1b)
+        _CH.cache["_tree_mask_override"] = ov
+        try:
+            draft_tokens, draft_logits, draft_acts = self._decode_tree(
+                draft_tree_args, layout=_layout_k1)
+        finally:
+            _CH.cache.pop("_tree_mask_override", None)
+
+        # === proxy 대기 ===
+        _mev_pw = _mr("proxy_wait")
+        proxy_recv_work.wait()
+        _mc("proxy_wait", _mev_pw)
+        B = partial_tree_decode_args["num_tokens"].shape[0]
+        K = self.config.speculate_k
+        duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
+
+        raise NotImplementedError(
+            "T3.4-b3-5: tree-step P2 (node-seed rollout) — 다음 조각 "
+            "(P1 node-fork까지 구현됨)")
+
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         if self.config.verbose:
             print(f'about to build tree batch')
@@ -1998,14 +2121,13 @@ class DraftRunner(ModelRunner):
         _tree_step = getattr(self, "_tree_hit_root", None) is not None
         if _tree_step:
             # T3.4-b3-3 (결정④ ⓐ): 트리-hit step은 TREE_GLUE — 뷰를 트리
-            # topology로 실체화. 이후 P1/P2의 노드-fork 일반화(ⓑⓒ)는
-            # 다음 조각 — 그 전까지 live ON은 여기서 명시 중단.
+            # topology로 실체화한 뒤 노드-fork P1/P2 (ⓑⓒ)로 이어간다.
             glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, \
                 B_glue = self._tree_glue_decode(
                     partial_tree_decode_args, glue_decode_input_ids)
-            raise NotImplementedError(
-                "T3.4-b3-4: tree-step P1/P2 node-fork — 다음 조각 "
-                "(TREE_GLUE까지 구현됨)")
+            return self._tree_step_p1p2(
+                partial_tree_decode_args, glue_logits, cache_hits,
+                cache_hits_list, dbt, proxy_recv_work, proxy_buf)
         glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
             self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
 
@@ -2207,7 +2329,8 @@ class DraftRunner(ModelRunner):
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
                                     proxy_args, proxy_tokens, proxy_logits,
                                     cache_hits_list, draft_acts=None, proxy_acts=None,
-                                    proxy_layout=None, draft_layout=None):
+                                    proxy_layout=None, draft_layout=None,
+                                    draft_fan_idx_override=None):
         """Merge draft + proxy tree decode results into single cache.
         proxy_layout / draft_layout: the step's runtime layouts (split-K1/K2
         caller always passes both).
@@ -2234,9 +2357,14 @@ class DraftRunner(ModelRunner):
         draft_row_vk = int(draft_tokens.shape[1])
         proxy_row_vk = int(proxy_tokens.shape[1])
 
-        # Build keys with layout-specific fan_idx
-        draft_k = torch.cat([_draft_layout.fan_idx_hit if int(h) else _draft_layout.fan_idx_miss
-                              for h in cache_hits_list])
+        # Build keys with layout-specific fan_idx.
+        # T3.4-b3-4: 트리 step은 fan_idx = 종단 노드 id (0=root-종단,
+        # 1+j=뷰 노드 j) — 호출자가 컨텍스트 매핑을 직접 넘긴다.
+        if draft_fan_idx_override is not None:
+            draft_k = draft_fan_idx_override.to(torch.int64)
+        else:
+            draft_k = torch.cat([_draft_layout.fan_idx_hit if int(h) else _draft_layout.fan_idx_miss
+                                  for h in cache_hits_list])
         draft_keys = torch.stack([
             draft_args["seq_ids_expanded"].to(torch.int64),
             draft_k, draft_args["rec_flat"].to(torch.int64)], dim=1)
