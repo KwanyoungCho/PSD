@@ -356,13 +356,16 @@ class Verifier(VerifierBase):
         cfg = self.target_model_runner.config
         nv = int(cfg.duet_tree_nv)
         ti = parse_tree_ints(speculate_result.tree_ints[0].cpu(), nv)
-        pq = speculate_result.parent_q_logits[0].float().cpu()   # [nv, V]
+        pq = speculate_result.parent_q_logits[0].float()         # [nv, V] GPU
         td = float(temperatures_draft[0])
         tt = float(temperatures_target[0])
         q_probs = q_probs_from_logits(
-            pq, torch.full((pq.shape[0],), max(td, 1e-8)),
+            pq, torch.full((pq.shape[0],), max(td, 1e-8),
+                           device=pq.device),
             self.sampler_x, self.async_fan_out)
-        p_rows = logits_p[0].float().cpu()                       # [valid+1, V]
+        p_rows = logits_p[0].float()             # [valid+1, V] GPU 상주 —
+        # 사다리 벡터 연산([V])을 GPU에서 수행 (CPU 복사 2.3MB/step 제거;
+        # walk_tensor는 device-agnostic, 스칼라 sync는 형제당 소수)
 
         def _coin():
             return float(torch.rand(1).item())

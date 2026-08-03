@@ -686,6 +686,19 @@ class ModelRunner:
                           + (f' + duet_verify_k2 CG (K2={K2})' if K2 < K1
                              else f' (K2==K1, k2 SKIPPED)'),
                           flush=True)
+                    # T3.2: P2-tree verify bucket capture (policy != off)
+                    if getattr(self.config, "duet_tree_policy", "off") \
+                            != "off" and getattr(
+                                self, "tree_verify_wrappers", None):
+                        from ssd.engine.helpers.cudagraph_helpers import (
+                            capture_tree_verify_cudagraph)
+                        self._tree_verify_cg, _tree_pool = \
+                            capture_tree_verify_cudagraph(
+                                self, graph_pool=duet_pool_k1)
+                        self.graph_pools["tree_verify"] = _tree_pool
+                        print(f'[DUET tree] Captured tree_verify CG '
+                              f'(buckets={sorted(self._tree_verify_cg)})',
+                              flush=True)
                 else:
                     _split_k1k2_draft = (
                         self.is_draft
@@ -1259,15 +1272,6 @@ class ModelRunner:
                 m[r, pos0 + 1 + a] = True
             m[r, pos0 + 1 + j] = True
 
-        # FlashInfer plan (rank-로컬 head 수). v1 eager는 CG-제약 없는
-        # 지연-생성 wrapper 사용 (use_cuda_graph=True 버킷 wrapper는
-        # public plan과 제약이 충돌할 수 있음 — capture 도입 시 전환).
-        w = getattr(self, "_tree_eager_wrapper", None)
-        if w is None:
-            import flashinfer
-            w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-                self._tree_workspace, "NHD")
-            self._tree_eager_wrapper = w
         bs = self.block_size
         n_blocks = (kv_len + bs - 1) // bs
         kv_indices = context.block_tables[0, :n_blocks].to(torch.int32)
@@ -1280,29 +1284,63 @@ class ModelRunner:
         qo_indptr = torch.tensor([0, r_b], dtype=torch.int32,
                                  device=self.device)
         _tp = max(1, self.num_tp_gpus)     # KV 할당(:896)과 동일한 분모
-        w.plan(
-            qo_indptr, kv_indptr, kv_indices, kv_last_page_len,
-            max(1, self.hf_config.num_attention_heads // _tp),
-            max(1, self.hf_config.num_key_value_heads // _tp),
-            self.hf_config.head_dim, bs,
-            custom_mask=m.flatten().to(self.device),
-            q_data_type=self.hf_config.torch_dtype,
-            kv_data_type=self.hf_config.torch_dtype,
-        )
 
-        set_context(
-            is_prefill=False,
-            slot_mapping=slot_mapping,
-            context_lens=context.context_lens,
-            block_tables=context.block_tables,
-            tree_verify_wrapper=w,
-        )
+        # === CG replay 경로 (T3.2 capture 존재 + eager 강제 아님) ===
+        _cg = None
+        if os.environ.get("SSD_TREE_VERIFY_EAGER", "0") != "1":
+            _cg = getattr(self, "_tree_verify_cg", {}).get(nv_b)
+        if _cg is not None:
+            bufs = _cg["bufs"]
+            wcg = _cg["wrapper"]
+            bufs["input_ids"].copy_(input_ids)
+            bufs["rope"].copy_(rope)
+            bufs["slot_mapping"].copy_(slot_mapping)
+            bufs["context_lens"][0] = kv_len
+            wcg.plan(
+                qo_indptr, kv_indptr, kv_indices, kv_last_page_len,
+                max(1, self.hf_config.num_attention_heads // _tp),
+                max(1, self.hf_config.num_key_value_heads // _tp),
+                self.hf_config.head_dim, bs,
+                custom_mask=m.flatten().to(self.device),
+                q_data_type=self.hf_config.torch_dtype,
+                kv_data_type=self.hf_config.torch_dtype,
+            )
+            _ev = duet_record("graph_pre")
+            _cg["pre"].replay()
+            duet_close("graph_pre", _ev)
+            hs = bufs["exit_hidden"]
+            res = bufs["exit_residual"]
+        else:
+            # eager 폴백: CG-제약 없는 지연-생성 wrapper
+            w = getattr(self, "_tree_eager_wrapper", None)
+            if w is None:
+                import flashinfer
+                w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                    self._tree_workspace, "NHD")
+                self._tree_eager_wrapper = w
+            w.plan(
+                qo_indptr, kv_indptr, kv_indices, kv_last_page_len,
+                max(1, self.hf_config.num_attention_heads // _tp),
+                max(1, self.hf_config.num_key_value_heads // _tp),
+                self.hf_config.head_dim, bs,
+                custom_mask=m.flatten().to(self.device),
+                q_data_type=self.hf_config.torch_dtype,
+                kv_data_type=self.hf_config.torch_dtype,
+            )
+            set_context(
+                is_prefill=False,
+                slot_mapping=slot_mapping,
+                context_lens=context.context_lens,
+                block_tables=context.block_tables,
+                tree_verify_wrapper=w,
+            )
 
-        # === eager 분할 forward: pre → exit-proxy → post (CG mid 미러) ===
+            # === eager 분할 forward: pre → exit-proxy → post ===
+            _ev = duet_record("graph_pre")
+            hs, res = self.model(input_ids, rope,
+                                 end_layer=cfg.duet_exit_layer + 1)
+            duet_close("graph_pre", _ev)
         exit_layer = cfg.duet_exit_layer
-        _ev = duet_record("graph_pre")
-        hs, res = self.model(input_ids, rope, end_layer=exit_layer + 1)
-        duet_close("graph_pre", _ev)
 
         _ev_el = duet_record("exit_logits")
         duet_proxy_fn = self._duet_proxy_fn
@@ -1332,10 +1370,14 @@ class ModelRunner:
         duet_close("exit_logits", _ev_el)
 
         _ev = duet_record("graph_post")
-        out = self.model(input_ids, rope, start_layer=exit_layer + 1,
-                         init_hidden_states=hs, init_residual=res)
-        if isinstance(out, tuple):
-            out = out[0]
+        if _cg is not None:
+            _cg["post"].replay()
+            out = _cg["bufs"]["outputs"]
+        else:
+            out = self.model(input_ids, rope, start_layer=exit_layer + 1,
+                             init_hidden_states=hs, init_residual=res)
+            if isinstance(out, tuple):
+                out = out[0]
         duet_close("graph_post", _ev)
 
         _ev_fl = duet_record("final_logits")
