@@ -193,3 +193,24 @@ max-padded로 크기·호출순서 불변), target 수신 버퍼/파싱/조립. 
 tree policy 게이트 (off는 wire 바이트 불변). 구성자 위치인자 호출
 전수 확인 (valid_k 이후는 전부 keyword ✓). 회귀 44/44 + 유닛 40/40.
 다음: b3 draft 라이브 경로 (rollout→뷰 저장→respond 채움).
+
+**T3.4-b3 완료 (draft 라이브 경로)**: ① selector 3-tuple 수용 (tree
+ON일 때 taken_piv 관통), ② P2 빌드 지점에 tree 분기 — `policy != off
+&& B==1 && temps>0`이면 `_decode_tree` 대신 `_p2tree_rollout` 호출
+(step slot/context는 chain과 동일한 `_compute_step_positions_and_slot_
+maps` 산출 재사용, metadata_ints 기반), `build_root_views`로 뷰 저장
+(`self._tree_views`), populate에는 root별 **backbone(맏이 사슬) [R,K2]
+투영**을 공급 — 캐시 키/valid_k/serving 형식은 체인과 동일 유지 (실제
+응답 내용은 뷰가 담당; root는 pool[0..R-1] seed 순서 — run_rollout
+확인), ③ respond 서빙 — P2 hit && B==1이면 out_tokens[:nv] = 뷰 토큰
+(생성 순서), valid_k = 유효 노드 수 → **기존 extend/prepare 기계가
+트리 행을 그대로 나른다** (창 = [rec]+뷰, scratch 셀 선형 — 리뷰4 row
+계약과 정확 일치, 이것이 b4를 rope override+mask+plan으로 최소화하는
+핵심), topology/parent_q는 b2 wire 블록에 pack_tree_ints로 채움. wire
+필드는 respond 진입 시 step-국소 리셋 (이전 step 잔재 방지). config에
+`nv <= max(K1,K2)` 검증 추가 (응답 wire 폭 계약). 유닛 40/40 + 회귀
+44/44.
+
+**b3 유의 (다음 조각 전 live ON 금지)**: 트리 hit 서빙 시 이 step의
+glue가 뷰를 **선형으로** 실체화하려 들면 폭 nv+1 버킷이 없어 크래시
+— TREE_GLUE(b3-3)가 선행돼야 live ON 가능. OFF 경로는 바이트 불변.

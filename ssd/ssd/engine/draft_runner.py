@@ -383,6 +383,9 @@ class DraftRunner(ModelRunner):
         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
         # Draft model now returns full target vocab size logits (after d2t expansion)
         V = self.hf_config.vocab_size
+        # T3.4-b3: 트리 wire 필드는 step-국소 — 이전 step 잔재 제거
+        self._tree_wire_ints = None
+        self._tree_wire_parent_q = None
 
         # Init miss slots with valid random logits so token IDs are in-vocab (fixes B>1 crash)
         out_logits = torch.empty((B, K, V), dtype=self.hf_config.torch_dtype, device=self.device).uniform_()
@@ -541,6 +544,29 @@ class DraftRunner(ModelRunner):
                 out_logits[sel, :_cache_w] = self.tree_cache_logits[idx[sel]]
                 if self.config.use_eagle:
                     out_activations[sel, :_cache_w] = self.tree_cache_activations[idx[sel]]
+                # === T3.4-b3: P2-tree hit 서빙 (B=1) — 뷰가 체인 행을 대체.
+                # out_tokens = 뷰 노드(생성 순서), valid_k = 유효 노드 수 →
+                # 기존 extend/prepare 기계가 트리 행을 그대로 나른다 (창 =
+                # [rec]+뷰, scratch 셀 선형 — 리뷰4 row 계약). topology와
+                # parent_q는 wire 트리 블록(b2 스플라이스)으로 동승.
+                _tviews = getattr(self, "_tree_views", None)
+                if (_tviews is not None and B == 1
+                        and bool(cache_hits[0])
+                        and int(phase_source[0]) == 2):
+                    from ssd.engine.helpers.p2_tree import pack_tree_ints
+                    _root = int(idx[0]) - self._last_n_draft_keys
+                    _nv = self.config.duet_tree_nv
+                    _n_valid = int(_tviews["valid"][_root])
+                    if _n_valid > 0:
+                        out_tokens[0, :_nv] = \
+                            _tviews["tok"][_root].to(self.device)
+                        valid_k[0] = _n_valid
+                        self._tree_wire_ints = pack_tree_ints(
+                            _tviews, _root, _nv).to(self.device)
+                        self._tree_wire_parent_q = \
+                            _tviews["parent_q_logits"][_root].to(
+                                device=self.device,
+                                dtype=out_logits.dtype).unsqueeze(0)
         elif self.config.jit_speculate:
             # Cache is empty (first iteration), must JIT all
             if self.config.verbose:
@@ -1981,11 +2007,16 @@ class DraftRunner(ModelRunner):
         if duet_proxy["chosen_pos"].dim() == 1:
             duet_proxy = {"chosen_pos": duet_proxy["chosen_pos"].unsqueeze(0),
                           "chosen_tok": duet_proxy["chosen_tok"].unsqueeze(0)}
-        proxy_forked, proxy_fan_out_tensor = self._select_proxy_sourced_tokens_unified(
+        _sel_out = self._select_proxy_sourced_tokens_unified(
             duet_proxy, draft_forked_p1_padded,
             K_rank=K_rank, total_budget=total_budget,
             draft_forked_mask=draft_forked_p1_mask,
         )
+        if len(_sel_out) == 3:                 # tree ON: piv 관통 (T2.1)
+            proxy_forked, proxy_fan_out_tensor, proxy_piv = _sel_out
+        else:
+            proxy_forked, proxy_fan_out_tensor = _sel_out
+            proxy_piv = None
         if _E0_TRACE:  # E0: wire(=rank 순) + dedup 후 잔존 P2 seed (P0)
             _e0.record_draft_selector(
                 getattr(self, "_e0_step_id", -1),
@@ -2001,8 +2032,53 @@ class DraftRunner(ModelRunner):
         proxy_tree_args = self._build_tree_decode_args_for_layout(
             partial_tree_decode_args, proxy_forked, _layout_k2, cache_hits_list)
         _mc("phase2_build", _mev_p2b)
-        proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
-            proxy_tree_args, layout=_layout_k2)
+        _temps_p2 = proxy_tree_args["temps"]
+        if (self.config.duet_tree_policy != "off" and B == 1
+                and bool((_temps_p2 > 0).all())):
+            # === P2-tree rollout (T3.4-b3) — 체인 P2 decode 대체 ===
+            from ssd.engine.helpers.p2_tree import build_root_views
+            _tree_args = dict(proxy_tree_args)
+            _tree_args["proxy_piv"] = proxy_piv
+            _mB, _mK, _mF, _mN = proxy_tree_args["metadata_ints"]
+            _, _srp, _scl, _ssm = self._compute_step_positions_and_slot_maps(
+                proxy_tree_args["positions"],
+                proxy_tree_args["rope_positions"],
+                proxy_tree_args["block_tables"],
+                _mB, _mK, _mF, _mN, _layout_k2.MQ_LEN, layout=_layout_k2)
+            pool, _elog, _cell_logits = self._p2tree_rollout(
+                duet_proxy, proxy_forked, proxy_fan_out_tensor,
+                _tree_args, _layout_k2, _ssm, _scl, _temps_p2)
+            _R = _layout_k2.MQ_LEN
+            _nv = self.config.duet_tree_nv
+            self._tree_views = build_root_views(
+                pool, _R, _nv, cell_logits=_cell_logits)
+            # 체인-호환 populate 입력: root별 backbone(맏이 사슬)을 [R, K2]로
+            # 투영 — 키/valid_k/serving 형식 유지, 실제 응답 내용은 뷰가 담당
+            _V = self.hf_config.vocab_size
+            _bt = torch.zeros(_R, K2, dtype=torch.int64)
+            _bl = torch.zeros(_R, K2, _V)
+            _first_child = {}
+            for i in range(pool.n):
+                _pi = int(pool.parent_idx[i])
+                if _pi >= 0 and int(pool.sib_order[i]) == 0 \
+                        and _pi not in _first_child:
+                    _first_child[_pi] = i
+            for r in range(_R):
+                cur, d = r, 0
+                while cur in _first_child and d < K2:
+                    nx = _first_child[cur]
+                    _bt[r, d] = pool.tok[nx]
+                    _pc = int(pool.parent_cell[nx])
+                    if _cell_logits is not None and _pc >= 0:
+                        _bl[r, d] = _cell_logits[_pc]
+                    cur, d = nx, d + 1
+            proxy_tokens = _bt.to(self.device)
+            proxy_logits = _bl.to(self.device)
+            proxy_acts = None
+        else:
+            self._tree_views = None
+            proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
+                proxy_tree_args, layout=_layout_k2)
 
         # === Cache write: draft rows valid_k=K1, proxy rows valid_k=K2 ===
         # _merge_and_populate_cache infers per-row valid_k from

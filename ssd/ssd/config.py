@@ -408,6 +408,12 @@ class Config:
                         raise ValueError(
                             f"duet_tree_nv must be in [4,10]; "
                             f"got {self.duet_tree_nv}")
+                    # b3 서빙 계약: 뷰가 응답 out_tokens[K_max] 폭에 실림.
+                    _k_max = max(self.duet_phase1_k, self.duet_phase2_k)
+                    if self.duet_tree_nv > _k_max:
+                        raise ValueError(
+                            f"duet_tree_nv ({self.duet_tree_nv}) must be "
+                            f"<= max(K1,K2)={_k_max} (response wire width)")
 
             import os as _os_cfg
             # Tier-2 (docs/duet/16): split-K1/K2 is the ONLY DUET path, so
