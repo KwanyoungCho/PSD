@@ -376,3 +376,36 @@ class TestRunRollout(unittest.TestCase):
         self.assertEqual(int(seen[0][0]), 500)      # root: depth 0
         # 이후 forward의 유효 행 rope는 500+depth (depth는 1 이상)
         self.assertGreaterEqual(int(seen[1][0]), 501)
+
+
+class TestRootViews(unittest.TestCase):
+    def test_views_invariants(self):
+        from ssd.engine.helpers.p2_tree import (build_root_views,
+                                                rollout_reference)
+        import torch as T
+        R = 4
+        piv = T.tensor([0.5 / (1.6 ** r) for r in range(R)])
+        g = T.Generator().manual_seed(3)
+        def sample_fn(sel, fan):
+            n = len(sel)
+            return (T.randint(100, 200, (n, 3), generator=g),
+                    T.rand(n, 3, generator=g) * 0.3)
+        T.manual_seed(7)
+        pool, _ = rollout_reference(
+            list(range(10, 10 + R)), piv, None, policy="frontier", W=4,
+            F_total=3, c_tensor=3, nv=6, beta=0.5, depth_cap=4,
+            sample_fn=sample_fn)
+        v = build_root_views(pool, R, nv=6)
+        # 유효 수 = pool의 자식 수와 일치, nv 이하
+        for r in range(R):
+            kids = sum(1 for i in range(pool.n)
+                       if int(pool.root[i]) == r and int(pool.parent_idx[i]) >= 0)
+            self.assertEqual(int(v["valid"][r]), kids)
+            self.assertLessEqual(kids, 6)
+        # parent_local < 자기 인덱스 (보행 invariant), pad는 -1/0
+        for r in range(R):
+            n = int(v["valid"][r])
+            for j in range(n):
+                self.assertLess(int(v["parent_local"][r, j]), j)
+            for j in range(n, 6):
+                self.assertEqual(int(v["tok"][r, j]), 0)

@@ -126,3 +126,12 @@ step + mask 캐시 주입) — T1.4b-b.
 piv 역매칭 브릿지; finally로 override 정리). 라이브 진입 게이트는
 T2(응답 조립) 전까지 미연결 — 검증은 stub 하네스(T1.4b-c)와 OFF 회귀.
 회귀 44/44 + 유닛 30/30 유지.
+
+**T1.5 완료**: `build_root_views` — root별 [nv] 고정 pad 뷰 (tok/
+parent_local/sib_order/raw_q/valid). ⑤v2 생성-시점 캡 덕에 **절단
+자체가 소멸** (assert 고정). 생성 순서 뷰 → parent_local < 자기
+인덱스 (verify 보행 invariant — 리뷰4 row/slot 규약 충족). 유닛
+누적 31/31, 회귀 44/44.
+
+**T1 상태**: 알고리즘·배선·뷰 완료. 남은 것: T1.4b-c stub 하네스
+(어댑터 vs 참조 topology — GPU/실런은 T2 응답 후 E2E에서), T2로 진행.

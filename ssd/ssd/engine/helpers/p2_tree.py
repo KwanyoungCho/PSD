@@ -359,3 +359,38 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                          float(raws[k][c]))
         eval_log.append((sel, fan[:n_sel]))
     return pool, eval_log
+
+
+def build_root_views(pool: TreePool, R: int, nv: int):
+    """root별 서브트리 응답 뷰 (T1.5; U_max=N_v 고정 pad — v6 §7.1).
+
+    결정 ⑤v2의 생성-시점 캡(≤ nv) 덕분에 **절단이 발생하지 않는다**
+    (검증 assert). 뷰 노드 순서 = 생성 순서(= 셀 순서와 일치 — 부모가
+    항상 자식보다 앞) → parent_local이 항상 자기보다 앞 (verify 보행
+    invariant, 리뷰4 row/slot 규약).
+
+    Returns dict of [R, nv] 텐서: tok / parent_local(-1=root직결) /
+    sib_order / raw_q / valid([R] 유효 노드 수).
+    """
+    tok = torch.zeros(R, nv, dtype=torch.int64)
+    parent_local = torch.full((R, nv), -1, dtype=torch.int64)
+    sib = torch.zeros(R, nv, dtype=torch.int64)
+    raw_q = torch.zeros(R, nv)
+    valid = torch.zeros(R, dtype=torch.int64)
+    local_of = {}
+    for i in range(pool.n):
+        p = int(pool.parent_idx[i])
+        if p < 0:
+            continue                       # root 자체는 뷰에 안 들어감
+        r = int(pool.root[i])
+        j = int(valid[r])
+        assert j < nv, "생성-시점 캡 위반 (⑤v2 — 있을 수 없음)"
+        tok[r, j] = pool.tok[i]
+        pp = int(pool.parent_idx[i])
+        parent_local[r, j] = local_of.get(pp, -1)   # 부모가 root면 -1
+        sib[r, j] = pool.sib_order[i]
+        raw_q[r, j] = pool.raw_q[i]
+        local_of[i] = j
+        valid[r] = j + 1
+    return {"tok": tok, "parent_local": parent_local, "sib_order": sib,
+            "raw_q": raw_q, "valid": valid}
