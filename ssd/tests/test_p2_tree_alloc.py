@@ -409,3 +409,36 @@ class TestRootViews(unittest.TestCase):
                 self.assertLess(int(v["parent_local"][r, j]), j)
             for j in range(n, 6):
                 self.assertEqual(int(v["tok"][r, j]), 0)
+
+
+class TestSelectorPivPassthrough(unittest.TestCase):
+    def test_piv_follows_token_indexing(self):
+        # 관통된 piv가 토큰과 동일한 dedup/take/정렬 경로를 따라야 함
+        from ssd.engine.draft_runner import DraftRunner
+        B, N, P, FO = 1, 12, 5, 2
+        chosen_pos = torch.tensor([[0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 0, 1]])
+        chosen_tok = torch.arange(100, 112).view(1, N)
+        piv = torch.linspace(0.5, 0.05, N).view(1, N)
+        draft_forked = torch.full((B, P, FO), -1, dtype=torch.int64)
+        draft_forked[0, 0, 0] = 100          # rank0 후보는 P1 중복 → dedup
+        out = DraftRunner._select_proxy_sourced_tokens_unified(
+            {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok,
+             "chosen_piv": piv},
+            draft_forked, K_rank=4, total_budget=8)
+        result, fo_t, taken_piv = out
+        # dedup된 100의 piv(0.5)는 빠지고, 각 슬롯 piv == 원 piv[tok-100]
+        for j in range(8):
+            t = int(result[0, j])
+            self.assertNotEqual(t, 100)
+            self.assertAlmostEqual(float(taken_piv[0, j]),
+                                   float(piv[0, t - 100]), places=6)
+
+    def test_no_piv_keeps_two_tuple(self):
+        from ssd.engine.draft_runner import DraftRunner
+        chosen_pos = torch.zeros(1, 4, dtype=torch.int64)
+        chosen_tok = torch.arange(4).view(1, 4) + 10
+        draft_forked = torch.full((1, 5, 2), -1, dtype=torch.int64)
+        out = DraftRunner._select_proxy_sourced_tokens_unified(
+            {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok},
+            draft_forked, K_rank=4, total_budget=4)
+        self.assertEqual(len(out), 2)

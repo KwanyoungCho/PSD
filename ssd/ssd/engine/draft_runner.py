@@ -1462,16 +1462,10 @@ class DraftRunner(ModelRunner):
             for _ in range(c):
                 seeds.append((p, int(toks[i])))
                 i += 1
-        # piv 역매칭 브릿지 (T2.1 selector score 관통 전)
-        wp = duet_proxy["chosen_pos"][0]
-        wt = duet_proxy["chosen_tok"][0]
-        pv = duet_proxy.get("chosen_piv")
-        piv_list = []
-        for (p, t) in seeds:
-            m = ((wp == p) & (wt == t)).nonzero().flatten()
-            piv_list.append(float(pv[0][m[0]]) if (pv is not None and
-                                                   m.numel()) else 1e-6)
-        root_piv = torch.tensor(piv_list)
+        # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
+        seed_piv = tree_args.get("proxy_piv")
+        root_piv = (seed_piv[0].cpu().float() if seed_piv is not None
+                    else torch.full((len(seeds),), 1e-6))
         # 글루 가시성/rope base: seed 행의 것 (위치 p 기반)
         glue_rows = _np.zeros((len(seeds), K2 + 1), dtype=_np.uint8)
         for r, (p, _t) in enumerate(seeds):
@@ -1730,6 +1724,12 @@ class DraftRunner(ModelRunner):
         # new sync.
         taken_pos = chosen_pos[take].view(B, total_budget)            # [B, total_budget]
         taken_tok = chosen_tok[take].view(B, total_budget)
+        # T2.1 (P2-tree): 잔존 seed의 P_iv를 토큰과 동일 인덱싱으로 관통
+        # (기존 역매칭 브릿지 제거 — 결정 ③ 라이브 값 사용).
+        _piv = duet_proxy.get("chosen_piv") if isinstance(duet_proxy, dict) \
+            else None
+        taken_piv = _piv[take].view(B, total_budget) if _piv is not None \
+            else None
 
         # fan_out 동적 재구성 — per seq (length = K_rank+1 per row)
         K_plus_1 = K_rank + 1
@@ -1747,6 +1747,8 @@ class DraftRunner(ModelRunner):
         # Return fan_out_tensor (GPU) — caller does .tolist() once (cheap
         # for B×(K_plus_1 ~9) elements) and updates layout in-place.
         # See Fix ④ (avoid per-step create_tree_layout).
+        if taken_piv is not None:
+            return result, fan_out_tensor, taken_piv.gather(1, order)
         return result, fan_out_tensor
 
     def _build_tree_decode_args_for_layout(self, partial_tree_decode_args, forked_tokens,

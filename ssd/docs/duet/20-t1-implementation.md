@@ -135,3 +135,8 @@ parent_local/sib_order/raw_q/valid). ⑤v2 생성-시점 캡 덕에 **절단
 
 **T1 상태**: 알고리즘·배선·뷰 완료. 남은 것: T1.4b-c stub 하네스
 (어댑터 vs 참조 topology — GPU/실런은 T2 응답 후 E2E에서), T2로 진행.
+
+**T2.1 완료**: selector P_iv 관통 — 토큰과 **동일한 dedup/take/정렬
+인덱싱**으로 taken_piv 반환 (chosen_piv 있을 때만 3-tuple — 기존 호출
+2-tuple 불변). `_p2tree_rollout`의 역매칭 브릿지 제거. 유닛 33/33 +
+회귀 44/44.
