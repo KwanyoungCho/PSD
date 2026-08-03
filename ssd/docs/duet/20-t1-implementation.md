@@ -214,3 +214,23 @@ maps` 산출 재사용, metadata_ints 기반), `build_root_views`로 뷰 저장
 **b3 유의 (다음 조각 전 live ON 금지)**: 트리 hit 서빙 시 이 step의
 glue가 뷰를 **선형으로** 실체화하려 들면 폭 nv+1 버킷이 없어 크래시
 — TREE_GLUE(b3-3)가 선행돼야 live ON 가능. OFF 경로는 바이트 불변.
+
+**T3.4-b3-3 완료 (TREE_GLUE — 결정④ ⓐ)**: `_tree_glue_decode` —
+트리-hit step의 글루를 split_k2 tree-decode CG(step 0) + packed mask
+override 한 번의 W-폭 MQ forward로 대체. 입력 = [rec]+뷰 노드(생성
+순서; make_glue가 이미 그 형태), KV = 체인과 동일 canonical scratch
+셀 pos0+1+j (뷰 순서 — **target verify row 계약과 일치**), rope만
+pos0+1+depth(j) 덮어쓰기, mask = [prefix 1s | rec+조상+self] 직접
+구성 (packbits little, B=1 세그먼트 — 기존 규약 복제). pad 행 slot
+-1 + prefix-only mask (NaN 방지). respond에 `_tree_hit_root` 스태시
+추가. 진입 분기: 트리 step이면 TREE_GLUE 후 **명시 raise** (P1/P2
+노드-fork ⓑⓒ가 다음 조각 — live ON 중단 지점을 프런티어에 유지).
+유닛 40/40 + 회귀 44/44 (OFF 불변).
+
+**b3-4 계획 (노드-fork P1 — 결정④ ⓑ v1)**: fork 컨텍스트 =
+[rec(root-종단), 노드 0..n_valid-1] = 종단 노드 id 네임스페이스
+(p=0 → root-종단, p=1+j → 노드 j — populate의 fan_idx가 그대로 종단
+id가 됨). CG 불변 유지를 위해 P1 폭은 기존 레이아웃(MQ 16) 유지,
+컨텍스트별 fanout은 (2,2,2,2,2,2,1,1,1)+filler 재배분 (F7 예산
+재검토 전 v1 — report 명시). fork 행 mask = 조상 비트맵 (split_k1
+CG 전 step mask override), rope = depth 기반.

@@ -386,6 +386,7 @@ class DraftRunner(ModelRunner):
         # T3.4-b3: 트리 wire 필드는 step-국소 — 이전 step 잔재 제거
         self._tree_wire_ints = None
         self._tree_wire_parent_q = None
+        self._tree_hit_root = None
 
         # Init miss slots with valid random logits so token IDs are in-vocab (fixes B>1 crash)
         out_logits = torch.empty((B, K, V), dtype=self.hf_config.torch_dtype, device=self.device).uniform_()
@@ -567,6 +568,7 @@ class DraftRunner(ModelRunner):
                             _tviews["parent_q_logits"][_root].to(
                                 device=self.device,
                                 dtype=out_logits.dtype).unsqueeze(0)
+                        self._tree_hit_root = _root
         elif self.config.jit_speculate:
             # Cache is empty (first iteration), must JIT all
             if self.config.verbose:
@@ -1048,6 +1050,106 @@ class DraftRunner(ModelRunner):
 
         duet_close("glue", _mev_glue)
         return glue_decode_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B
+
+    def _tree_glue_decode(self, partial_tree_decode_args,
+                          glue_decode_input_ids):
+        """TREE_GLUE (T3.4-b3-3, v6 §7.5 ⓐ / 결정④): 트리-hit step의 글루.
+
+        입력 = [rec] + 뷰 노드(생성 순서, 폭 n_valid+1). 체인 글루와 달리
+        노드 j는 prefix + rec + 조상(j)만 봐야 하므로 causal varlen 대신
+        **split_k2 tree-decode CG(step 0) + packed mask override**로 한
+        번의 W-폭 MQ forward를 돌린다. KV는 체인과 동일한 canonical
+        scratch 셀(pos0+1+j, 뷰 순서 — target verify row 계약과 일치)에
+        쓰이고, rope만 pos0+1+depth(j)로 덮어쓴다. B=1 전용.
+
+        Returns: (glue_logits [1, n_valid+1, V], gd_for_fork [1, n_valid+1],
+                  cache_hits, cache_hits_list, dbt, B)
+        """
+        import numpy as _np
+        from ssd.engine.helpers import cudagraph_helpers as _CH
+        from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
+        _mev_glue = duet_record("glue")
+        dbt = partial_tree_decode_args["dbt"]
+        cache_hits = partial_tree_decode_args["cache_hits"]
+        cache_hits_list = cache_hits.tolist()
+        num_tokens = partial_tree_decode_args["num_tokens"]
+        V = self.hf_config.vocab_size
+        _layout = self.split_k2_layout
+        W = _layout.MQ_LEN
+
+        _root = self._tree_hit_root
+        _views = self._tree_views
+        par = _views["parent_local"][_root]
+        n_valid = int(_views["valid"][_root])
+        n_rows = n_valid + 1
+        assert glue_decode_input_ids.numel() == n_rows, (
+            f"tree glue width mismatch: ids={glue_decode_input_ids.numel()} "
+            f"vs n_valid+1={n_rows}")
+        assert n_rows <= W, f"tree glue rows {n_rows} > W {W}"
+
+        # 노드별 depth/조상 (parent_local은 항상 자기보다 앞 — 뷰 invariant)
+        depth = [0] * n_valid
+        anc = [[] for _ in range(n_valid)]
+        for j in range(n_valid):
+            p = int(par[j])
+            if p >= 0:
+                depth[j] = depth[p] + 1
+                anc[j] = anc[p] + [p]
+
+        ctxt = self.prepare_glue_decode_ctxt(
+            num_tokens=num_tokens, input_ids=glue_decode_input_ids,
+            dbt=dbt, B=1, valid_k=n_valid)
+        pos0 = int(ctxt["positions"][0])
+        cols = int(ctxt["context_lens"][0])
+
+        # W-폭 패딩: pad 행은 slot -1 (KV 미기록), rope pos0, prefix-only mask
+        input_w = torch.zeros(W, dtype=torch.int64, device=self.device)
+        input_w[:n_rows] = glue_decode_input_ids.reshape(-1)
+        rope_w = torch.full((W,), pos0, dtype=torch.int64, device=self.device)
+        rope_w[1:n_rows] = pos0 + 1 + torch.tensor(
+            depth, dtype=torch.int64, device=self.device)
+        slot_w = torch.full((W,), -1, dtype=torch.int32, device=self.device)
+        slot_w[:n_rows] = ctxt["slot_map"]
+
+        # mask: [W, cols] = [prefix 1s | rec+노드 셀 (n_rows)]
+        prefix_len = cols - n_rows
+        m = _np.zeros((W, cols), dtype=_np.uint8)
+        m[:, :prefix_len] = 1                      # pad 행 포함 (NaN 방지)
+        m[0, prefix_len] = 1                       # rec: prefix+self
+        for j in range(n_valid):
+            r = 1 + j
+            m[r, prefix_len] = 1                   # rec
+            for a in anc[j]:
+                m[r, prefix_len + 1 + a] = 1       # 조상 노드
+            m[r, prefix_len + 1 + j] = 1           # self
+        packed = _np.packbits(m.ravel(), bitorder="little")
+        indptr = _np.array([0, len(packed)], dtype=_np.int32)
+
+        _CH.cache["_tree_mask_override"] = {0: (
+            torch.from_numpy(packed).to(self.device),
+            torch.from_numpy(indptr).to(self.device))}
+        set_context(
+            is_prefill=False,
+            slot_mapping=slot_w,
+            context_lens=ctxt["context_lens"].to(torch.int32),
+            block_tables=dbt,
+            active_mq_len=W,
+            active_wrappers=self.prefill_wrappers_by_layout.get(_layout.name),
+            active_layout=_layout,
+            active_cache_hits_list=cache_hits_list,
+        )
+        try:
+            logits = self.run_model(
+                input_w, rope_w, is_prefill=False, last_only=False,
+                tree_decode_step=0, cache_hits=cache_hits)
+        finally:
+            _CH.cache.pop("_tree_mask_override", None)
+            reset_context()
+
+        glue_logits = logits.view(-1, V)[:n_rows].view(1, n_rows, V)
+        gd_for_fork = glue_decode_input_ids.reshape(1, n_rows)
+        duet_close("glue", _mev_glue)
+        return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, 1
 
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         if self.config.verbose:
@@ -1893,6 +1995,17 @@ class DraftRunner(ModelRunner):
         # Glue width follows valid_k+1 (matched row depth + 1):
         #   - valid_k=K1 (or first-step K_max=K1) → glue width = K1+1
         #   - valid_k=K2                          → glue width = K2+1
+        _tree_step = getattr(self, "_tree_hit_root", None) is not None
+        if _tree_step:
+            # T3.4-b3-3 (결정④ ⓐ): 트리-hit step은 TREE_GLUE — 뷰를 트리
+            # topology로 실체화. 이후 P1/P2의 노드-fork 일반화(ⓑⓒ)는
+            # 다음 조각 — 그 전까지 live ON은 여기서 명시 중단.
+            glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, \
+                B_glue = self._tree_glue_decode(
+                    partial_tree_decode_args, glue_decode_input_ids)
+            raise NotImplementedError(
+                "T3.4-b3-4: tree-step P1/P2 node-fork — 다음 조각 "
+                "(TREE_GLUE까지 구현됨)")
         glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
             self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
 
