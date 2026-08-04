@@ -536,6 +536,19 @@ stale-log skip 위험 — 이후 verdict는 라벨에 코드 rev 포함. **필�
 - 유닛 58/58 (신규 8: 비례배분·W경합 tip·R>W·사다리 반례·체인퇴화
   패리티·질량보존·MC골드·GPU패리티).
 
+**수정 후 E2E 스모크 (eslab18 유휴, 8×256 + 4×192, 8455b1e)**:
+EXIT:0 무크래시, #27 불변 위반 0건 (전 rollout generated==allocated).
+P2AL **2.13** (구-코드 verdict 2.06), P2 hit **0.230** (구 0.217) —
+hit·AL 동시 개선 방향 (소표본 — 판정은 reverdict로). exit_logits
+스팬(hit_k2): 17.6ms(파이썬 구현) → 9.4(1차 GPU화) → **6.3ms**
+(dense-padded 단일-H2D; 8455b1e). 잔여 ~6ms는 사다리 커널 dispatch
+— 다음 지렛대는 rollout 정적 템플릿 (리뷰2 설계 방향, 별도 트랙).
+
+**AR 기준선 교정 (T5 AR 팔 크래시 수정 후, eslab17 클린박스)**:
+c1_ar = **33.48 tok/s** (70B AWQ TP4 확인). 종전 "6.7×"는 오염박스
+(61/64 core 점유) 비율 — 클린박스 기준 체인 78.6은 **~2.35×** vs
+AR, async-SD C(78.2)와는 parity. c2/c3 완료 후 3-cycle 확정.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
