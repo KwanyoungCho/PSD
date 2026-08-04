@@ -449,8 +449,15 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     if PROFILE_DRAFT:
         _ev_mask0 = torch.cuda.Event(enable_timing=True); _ev_mask0.record()
 
-    kv_indices = cache["precomputed_kv"][step]
-    kv_indptr_cpu, kv_lpl_cpu = cache["plan_cpu_args"][step]
+    # plan-once (트리 rollout, docs/duet/21 §4.5 시간축): kv 기하를
+    # 최종 forward 길이로 한 번만 plan — 미기록 셀은 마스크 0으로 배제
+    # (KV는 재사용 메모리 = 실수값; FI는 mask 후 softmax라 안전).
+    # step>0에서는 plan 블록 전체 생략 (마스크 교체+replay만).
+    _tree_plan_once = (cache.get("_tree_mask_override") is not None
+                       and cache.get("_tree_plan_once", False))
+    _plan_step = (K_loop - 1) if _tree_plan_once else step
+    kv_indices = cache["precomputed_kv"][_plan_step]
+    kv_indptr_cpu, kv_lpl_cpu = cache["plan_cpu_args"][_plan_step]
     qo_indptr_cpu = cache["cu_seqlens_q_cpu"]
 
     # P2-tree (T1.4b, docs/duet/20): per-forward 동적 mask 주입 —
@@ -478,41 +485,42 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     wrapper._custom_mask_buf[:len(packed_mask)].copy_(packed_mask, non_blocking=True)
     wrapper._mask_indptr_buf.copy_(packed_indptr, non_blocking=True)
 
-    # GPU-to-GPU copies from pre-transferred tensors (no pageable H2D)
-    wrapper._qo_indptr_buf.copy_(cache["qo_indptr_gpu"], non_blocking=True)
-    wrapper._paged_kv_indptr_buf.copy_(cache["kv_indptr_gpu"][step], non_blocking=True)
-    wrapper._paged_kv_last_page_len_buf.copy_(cache["kv_lpl_gpu"][step], non_blocking=True)
-    wrapper._paged_kv_indices_buf[:len(kv_indices)].copy_(kv_indices, non_blocking=True)
+    if not (_tree_plan_once and step > 0):
+        # GPU-to-GPU copies from pre-transferred tensors (no pageable H2D)
+        wrapper._qo_indptr_buf.copy_(cache["qo_indptr_gpu"], non_blocking=True)
+        wrapper._paged_kv_indptr_buf.copy_(cache["kv_indptr_gpu"][_plan_step], non_blocking=True)
+        wrapper._paged_kv_last_page_len_buf.copy_(cache["kv_lpl_gpu"][_plan_step], non_blocking=True)
+        wrapper._paged_kv_indices_buf[:len(kv_indices)].copy_(kv_indices, non_blocking=True)
 
-    total_num_rows = int(qo_indptr_cpu[-1].item())
-    wrapper._kv_lens_buffer[:len(kv_indptr_cpu) - 1].copy_(cache["kv_lens_gpu"][step], non_blocking=True)
+        total_num_rows = int(qo_indptr_cpu[-1].item())
+        wrapper._kv_lens_buffer[:len(kv_indptr_cpu) - 1].copy_(cache["kv_lens_gpu"][_plan_step], non_blocking=True)
 
-    # Event-based sync: only wait for this stream's copies, not all CUDA streams.
-    global _plan_event
-    if _plan_event is None:
-        _plan_event = torch.cuda.Event()
-    _plan_event.record()
-    _plan_event.synchronize()
+        # Event-based sync: only wait for this stream's copies, not all CUDA streams.
+        global _plan_event
+        if _plan_event is None:
+            _plan_event = torch.cuda.Event()
+        _plan_event.record()
+        _plan_event.synchronize()
 
-    if PROFILE_DRAFT:
-        _ev_plan0 = torch.cuda.Event(enable_timing=True); _ev_plan0.record()
+        if PROFILE_DRAFT:
+            _ev_plan0 = torch.cuda.Event(enable_timing=True); _ev_plan0.record()
 
-    plan_args = [
-        wrapper._float_workspace_buffer, wrapper._int_workspace_buffer,
-        wrapper._pin_memory_int_workspace_buffer,
-        # kv_lens passed as CPU tensor (FlashInfer's standard wrapper.plan()
-        # contract is kv_lens_arr_host on CPU).
-        qo_indptr_cpu, kv_indptr_cpu, cache["kv_lens_cpu"][step],
-        wrapper._max_total_num_rows or total_num_rows,
-        B, model_runner.hf_config.num_attention_heads,
-        model_runner.hf_config.num_key_value_heads,
-        model_runner.block_size, wrapper.is_cuda_graph_enabled,
-        model_runner.hf_config.head_dim, model_runner.hf_config.head_dim,
-        False, -1,
-    ]
-    if wrapper._backend == "fa2":
-        plan_args.extend([-1, False])
-    wrapper._plan_info = wrapper._cached_module.plan(*plan_args)
+        plan_args = [
+            wrapper._float_workspace_buffer, wrapper._int_workspace_buffer,
+            wrapper._pin_memory_int_workspace_buffer,
+            # kv_lens passed as CPU tensor (FlashInfer's standard wrapper.plan()
+            # contract is kv_lens_arr_host on CPU).
+            qo_indptr_cpu, kv_indptr_cpu, cache["kv_lens_cpu"][_plan_step],
+            wrapper._max_total_num_rows or total_num_rows,
+            B, model_runner.hf_config.num_attention_heads,
+            model_runner.hf_config.num_key_value_heads,
+            model_runner.block_size, wrapper.is_cuda_graph_enabled,
+            model_runner.hf_config.head_dim, model_runner.hf_config.head_dim,
+            False, -1,
+        ]
+        if wrapper._backend == "fa2":
+            plan_args.extend([-1, False])
+        wrapper._plan_info = wrapper._cached_module.plan(*plan_args)
 
     if PROFILE_DRAFT:
         _ev_plan1 = torch.cuda.Event(enable_timing=True); _ev_plan1.record()
@@ -562,8 +570,9 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
 
     if PROFILE_DRAFT:
         _ev_replay1 = torch.cuda.Event(enable_timing=True); _ev_replay1.record()
-        _draft_events.append((step, "mask+buf", _ev_mask0, _ev_plan0))
-        _draft_events.append((step, "plan", _ev_plan0, _ev_plan1))
+        if not (_tree_plan_once and step > 0):   # plan 생략 step은 이벤트 없음
+            _draft_events.append((step, "mask+buf", _ev_mask0, _ev_plan0))
+            _draft_events.append((step, "plan", _ev_plan0, _ev_plan1))
         _draft_events.append((step, "replay", _ev_replay0, _ev_replay1))
 
     if PROFILE:
