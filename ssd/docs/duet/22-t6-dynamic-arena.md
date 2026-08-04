@@ -1,75 +1,92 @@
-# 22 — T6-dynamic: 고정 크기 GPU arena rollout (설계)
+# 22 — T6: P2 draft 추가 22ms 제거 (GPU 상주 트리 상태) — v2
 
-2026-08-04. 근거: 21번 §4.7 분해 (+23.5ms/step 중 ~86%가 host 재조립)
-+ 리뷰3 판정 (20번) — budget-static은 현 raw_q-적응 정책의 drop-in이
-아니므로 (실형상 반례: q 회전 시 40중 18 재배치), **의미를 보존하는
-GPU화**가 1차 트랙. budget-static은 별도 정책 arm (P2AL 보존 검증
-조건부).
+2026-08-04 v2 (리뷰4 수용 — v1의 모호성·오류 정정). 근거 수치는 전부
+405794e 프로파일 쌍 재계산으로 검증 완료.
 
-## 목표
+## 문제 (쉬운 말로)
 
-P2AL +18% (재판정 §5-re)를 그대로 두고 시간만 회수한다.
-- core-입증 회수: P2 창 내부 idle 9.2ms (0.27 대비)
-- stretch: build→merge 전체 Δ22ms 중 GPU화 가능분 (구현 후 측정)
-- 명시적 비목표: plan-once (#20 붕괴 재도전 금지), fixed topology
+트리는 체인보다 스텝당 +23.5ms 느리다. draft 모델 forward 속도는
+완전히 같다 (4회 합 9.43 vs 9.44ms). 차이는 **P2 구간의 앞·사이·뒤에
+붙은 CPU 왕복**이다:
 
-## 설계
+| P2 구간 분해 (p50) | 체인 | 트리 | 추가 |
+|---|---|---|---|
+| build 시작→첫 forward | 2.1 | 7.4 | **+5.3** (root piv .cpu(), 예산·선택 파이썬) |
+| forward 사이 간격 합 | 0.27 | 9.21 | **+9.2** (샘플 .cpu() 대기 + 파이썬 장부 + mask 재생성 + plan 동기화) |
+| 마지막 forward→merge | — | — | **+7.5** (view/wire 파이썬 조립) |
+| **build→merge 전체** | **14.7** | **36.7** | **+22.0** |
 
-### A. Arena (고정 크기 GPU 상주 상태)
+주의: 간격 9.2ms 전체가 "제거 가능한 낭비"는 아니다 — 그 안에 필수
+GPU 샘플링(WOR/softmax/topk ~1.5ms)이 있다. 회수량은 구현 후
+kernel-level 재측정으로만 확정.
 
-capacity = R + F·W·C 고정. 전 필드 GPU int64/float32 텐서:
-`active/tok/parent_idx/parent_cell/root/depth/sib/logpri/raw_q/cell`
-+ `n_nodes` GPU 스칼라 (cumsum으로 갱신 — readback 금지).
-tip_idx[R]·remaining[R]·reserve[R]도 GPU.
+**target 추가비용은 두 번째 문제**: hit_k2(트리 캐시를 실제로 맞힌
+스텝)에서만 +15ms (graph_pre +7.4, exit/seed +5.9); hit_k1·miss는
+≈0. 스텝 비중 반영 시 평균 +2~3ms — P2의 22ms를 먼저 없앤 뒤 판단.
 
-### B. per-forward 루프 (python K2회 유지, 내부 전부 텐서 op)
+**인과 정리 (v1 오류 정정)**: 실행 순서는 P1 → proxy_wait → P2 →
+view/merge. 따라서 **P2 절감은 proxy_wait로 전가되지 않고 그대로
+스텝에서 빠진다** (전가 논리는 P1 절감에만 해당). P2를 충분히 줄이면
+그때 target 완료/다음 요청이 새 한계가 되는 것뿐.
 
-1) **select**: elig = (state==0)&(depth==f, level) → tip 의무 lane
-   (#27 유지: remaining>0 root의 tip 먼저) + 잔여 lane stable
-   argsort(logpri) top-W. sel [W] GPU (pad=-1).
-2) **fanout**: backbone 규칙 (tip 1 + rescue priority-라운드) —
-   W·R≤10이라 dense [W,R] 마스크 연산으로 전개 (순차 의존은 C≤3
-   라운드 unroll).
-3) **mask**: 조상 bitset [W, F·W] GPU 증분 갱신 (자식 = 부모 bitset
-   | 자기 셀 비트) → uint8 packbits 동형 비트연산 → captured
-   `_custom_mask_buf`에 **in-place copy** (GPU→GPU; 리뷰3-6 —
-   포인터 교체 불가). prefix/글루 열은 요청 시점 상수라 사전 조립.
-4) **forward**: 기존 per-forward FlashInfer plan **유지** (parity
-   먼저 — plan-ahead는 후속 독립 A/B). input_ids/rope는 arena
-   gather.
-5) **sample+insert**: tree_sample_wor GPU 그대로 → 자식 삽입을
-   cumsum(fan) offset scatter로 (raw_q≤0 배제 #38은 mask로).
-   logpri = gather(parent)+log(raw_q). **readback 0회.**
+## 목표 TPS (새 기준으로 재산정 — v1 산술 폐기)
 
-### C. 종료부 (view/wire)
+기준: 트리 56.59 TPS·스텝 81.33ms (체인 78.89). 의미·AL 유지 가정:
+`TPS ≈ 56.59 × 81.33 / (81.33 − 회수량)`
 
-- build_root_views 대체: [R,Nv,V] parent-q 물질화 금지 (리뷰3-12) —
-  `cell_logits[F·W, V]` + `parent_cell[R,Nv]` 참조 유지, 서빙 시
-  hit root만 gather.
-- pack_tree_ints GPU화 → wire 버퍼 직행. 필요 sync는 응답 경계
-  1회 이하.
+| 실제 critical-path 회수 | 예상 상한 |
+|---|---|
+| 간격만 ~9ms | ~63.6 |
+| P2 전체 17ms | ~71.5 |
+| draft-only 최대 ~19.9ms | ~74.9 |
 
-### D. target측 병행 (critical path = max(draft, target) — 리뷰3-5)
+전부 **상한**이다 (마지막 ~2ms는 요청 경계에 가려질 수 있음) — 확정은
+wall-time A/B로만.
 
-- graph_pre Δ+7.4ms: 트리 verify CG의 mask copy/컨텍스트 교체 구간
-  프로파일 후 축소 (별도 이슈로 계측부터).
-- Policy-B 잔여 6.2ms: 사다리 커널 융합 또는 CG화.
+## 설계 (정책 불변 — 알고리즘은 그대로, 계산 장소만 CPU→GPU)
 
-### E. 검증 게이트 (순서 고정)
+전제 명확화 (v1 정정):
+- **R_phys=10 / R_active=6 구분**: 물리 seed 10개 유지, 상위 6개만
+  예산 (#24 — 하위는 piv=0). arena·view·cache-key는 R_phys 기준,
+  예산·tip lane은 R_active 기준.
+- arena 필드에 **state(0=미평가/1=평가완료)** 명시 (v1 "active" 모호
+  — 유효성은 n_nodes 미만 여부, 평가상태는 state).
+- **ancestor bitset은 노드 전체 capacity 기준** [cap, F·W]: 이번에
+  선택 안 된 후보도 나중에 선택될 수 있으므로 lane 폭 [W]로는 조상
+  정보가 유실된다 (v1 오류). 자식 삽입 시 parent bitset | 자기 셀.
+- 표기 정정: W≤10, R_phys≤10 (v1 "W·R≤10"은 오기).
+- 동등성 게이트를 위해 **priority/예산 산술은 GPU float64** (스칼라
+  급 텐서라 비용 무시 가능; vocab-폭 텐서만 float32 유지). stable
+  argsort 동률 규약·RNG 소비 순서(현행 tree_sample_wor [W,V] 호출
+  형상)를 그대로 보존.
 
-1. stub-forward 동일-시드 **topology 동등성**: arena vs 현 CPU
-   rollout (교체 전 회귀 기준). RNG 소비 순서 보존 확인.
-2. C=1 체인-퇴화 byte-parity (기존 게이트 재실행).
-3. alloc 불변 (requested/allocated/generated — #39 3값).
-4. E2E 스모크 → 동일-시드 A/B (P2AL 보존 ±노이즈 이내 필수).
-5. 성능 판정: component 합산 금지 — 3연속 구간 wall
-   (① target proxy gate ② P2 first-prep→last-replay ③ gate→merge).
+### 구현 순서 (리뷰4 권장 순서 채택)
 
-## correctness 부채 (arena 전 처리 — 리뷰3-10)
+1. **P2 전체를 GPU 상주로 이전** (정책·예산·형상 불변): root budget →
+   select(+tip lane) → fanout → mask → 샘플 삽입 → view/wire까지.
+   fixed-topology·새 예산 정책 절대 혼입 금지.
+2. **중간 CPU readback 0회 검사**: `.cpu()/.item()/.tolist()`/NumPy
+   mask 재생성 전수 grep + 런타임 카운터.
+3. **동작 동일성 게이트 (합격 조건 — "+18% 유지"는 여기 통과 전엔
+   주장 금지)**: 같은 입력·시드에서 round별 비교 —
+   선택 노드 / root별 fanout / token·raw_q / parent·sibling 순서 /
+   priority / ancestor mask / 최종 root view / cache key / RNG 소비
+   순서. 이후 E2E 스모크(무크래시·불변량) → 인터리브 A/B.
+4. **남은 간격 재측정·분리**: GPU 샘플링 자체 vs FlashInfer plan
+   동기화(`_plan_event.synchronize()` — GPU 이식만으로는 forward마다
+   남는다). 필요 시 forward별 plan을 **rollout 전에 미리 준비**
+   (기하는 요청 시점에 이미 확정 — context_len/DBT). 단 **마지막
+   forward용 plan 하나를 4회 재사용하는 방식(plan-once)은 금지**
+   (#20 붕괴 전례).
+5. **P2만 바꾼 3회+ 인터리브 A/B 후 target 판단**: 그래도 평균
+   +2~3ms target 병목이 남으면 그때 hit_k2 경로(graph_pre·exit)
+   최적화.
 
-- [x] WOR support (#38), 양단 temp 게이트 (#37), assert 경화 (#40)
-- [ ] wire epoch 상수 1 → seq 재진입 카운터 (staging seq 가드 #35와
-  통합)
-- [ ] SHM read-ACK vs GPU-완료 ACK: B=1·순차·단일 stream 가정에서만
-  안전 — arena가 stream을 늘리면 15번 §ACK 계약대로 승격 필요
-- [ ] W10-top6 chain 대조군 knob (시간축 엄밀 분리용)
+## correctness 부채 (병행)
+
+- [x] WOR support(#38)·temp0 게이트·assert 경화(#40)·requested 3값(#39)
+- [ ] wire epoch 상수 1 → seq 재진입 카운터 (#35 staging 가드와 통합)
+- [ ] SHM read-ACK: B=1·순차·단일 stream 가정에서만 안전 — stream
+  추가 시 15번 ACK 계약으로 승격
+- [ ] W10-top6 chain 대조군 knob (시간축 엄밀 분리)
+- [ ] #36/#37 재도전 arm (인터리브 게이트에서만)

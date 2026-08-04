@@ -254,10 +254,12 @@ select/fanout/WOR/pool** — 현 정책 의미(P2AL +18%)를 보존한 채
 상한 ≈22ms (stretch — 구현 후 측정). P1 build 절감은 proxy_wait로
 전가되므로 **단독으론 무효** — critical path = max(draft P1 ready,
 target proxy ready); target측 게이트(graph_pre +7.4·Policy-B
-+5.9·graph_post +2.3)를 함께 줄여야 한다. TPS 산술(정정): 17-20ms
-회수 시 **67.0-70.5 (체인 −12.4~−16.8%)**; parity에는 ≈26ms +
-AL +2%가 필요 — "접전권"이 아니라 중요한 중간 단계. budget-static
-은 별도 정책 arm (compute-matched P2AL 보존 시에만). 구현 T6.
++5.9·graph_post +2.3)를 함께 줄여야 한다. TPS 산술(재정정 — 리뷰4: 구 52.46 기준 재사용 오류): 새 기준
+(56.59 TPS·81.33ms)으로 `TPS ≈ 56.59×81.33/(81.33−회수)` — 간격만
+9ms → ~63.6; P2 전체 17ms → ~71.5; draft-only 최대 19.9ms →
+**~74.9 (상한)**. 인과 정정: P2는 proxy_wait **이후** 실행 —
+P2 절감은 전가 없이 그대로 스텝 단축 (전가 논리는 P1에만 해당).
+budget-static은 별도 정책 arm. 구현 계획 22번 v2.
 
 ## 5. 최종 동일-시드 인터리브 (eslab17 한산, 25×384, 3-cycle — 리뷰 게이트)
 
