@@ -382,6 +382,19 @@ class Verifier(VerifierBase):
 
         path, terminal = tree_verify_walk_tensor(
             ti, p_rows, q_probs, tt, _coin, _mult)
+        if os.environ.get("SSD_TREE_DIAG", "0") == "1":
+            # 판별 진단: 수락이 서브트리 "상한"에 막히는가(예산 문제) vs
+            # 깊은 트리에서도 일찍 기각되는가(보행/q 문제)
+            _v = int(ti["valid"])
+            _par_d = ti["parent_local"]
+            _dep = [0] * _v
+            for _j in range(_v):
+                _pp = int(_par_d[_j])
+                _dep[_j] = (_dep[_pp] + 1) if _pp >= 0 else 1
+            _dmax = max(_dep) if _v else 0
+            print(f"[tree-diag] valid={_v} dmax={_dmax} "
+                  f"path={len(path)} ceil={int(len(path) >= _dmax)} "
+                  f"term={(1 + path[-1]) if path else 0}", flush=True)
         rec0 = int(speculate_result.speculations[0, 0])
         suffix = [rec0] + [int(ti["tok"][j]) for j in path]
         term_node = (1 + path[-1]) if path else 0
