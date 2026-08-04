@@ -115,10 +115,44 @@ wall-time A/B로만.
    간격의 바닥. 체인이 0.27ms인 진짜 이유는 forward+샘플링 루프가
    **CUDA graph 안에 통째로 캡처**되어 host가 사이에 없기 때문.
 
-**따라서 다음 지렛대는 "장부의 GPU화"가 아니라 "체인과 같은 캡처"**:
-per-forward [replay→샘플→장부→다음 mask]를 CG로 캡처. 선결 재설계
-둘 — ① mask를 가변 cols 대신 고정-폭 캔버스로 (packbits 비트
-오프셋이 cols에 종속 — FlashInfer 계약 재검토 필요), ② plan-ahead
-(기하는 요청 시점 확정 — plan-once 금지 유지). = 1b+step4 통합
-트랙. arena 코드는 parity-검증된 기반으로 유지 (SSD_TREE_ARENA
-기본 OFF — 프로덕션 경로 불변).
+~~다음 지렛대 = 통째 캡처~~ — **리뷰5로 사실오류 정정 (v3)**:
+
+1. **체인은 forward+샘플링을 통째로 캡처하지 않는다** (코드 확인:
+   CG 캡처 범위 = model+logits뿐, cudagraph_helpers ~1051; 샘플링·
+   depth 루프는 밖). 체인이 0.27ms인 이유는 "CPU가 없어서"가 아니라
+   **replay 후 작업이 readback·가변 mask·plan 없이 연속 비동기
+   enqueue 가능**하기 때문. 트리도 model×4 monolithic 캡처가 필수가
+   아니다 (기존 graph를 바깥 graph로 감싸기는 PyTorch 2.8에서 불가
+   확인 — "Cannot prepare for replay during capturing" — raw model
+   재캡처는 최후 선택지).
+2. **arena v1-2의 "readback 0회"는 거짓이었다**: boolean indexing이
+   내부 nonzero→DtoH 동기화 (격리 프로파일: nonzero 24·DtoH 24·
+   streamSync 34회/rollout), to_pool도 다중 DtoH, 진입 전 seed
+   int()×10. 라운드당 kernel/copy 이벤트는 ~296 (내 "60-80"은
+   표현식 수 — 부정확).
+3. 수치 라벨 정정: v1 step 평균 99.07(warmup 제외; 96.9는 p50 근사),
+   "후처리 53→47.5"는 build→merge 전체 (마지막 replay 이후 순수
+   구간은 14.82→10.13), P2AL 2.28은 v1·v2는 2.07 (버전 구분).
+
+**확정 방향 (리뷰5 채택)**: 기존 model graph 유지 + 트리 갱신부를
+고정 형상·무동기 연산으로 만들어 **같은 stream에 교대로 enqueue**:
+`plan×4 선준비 → [model graph replay f] → [트리갱신 f] → ...`
+- 고정 mask 캔버스 = **주소·용량만 고정, 논리 kv_len은 forward별
+  실제값 유지** (mask_indptr = 실제 qo×kv — 최대폭 강제는 plan-once
+  의미 변경 재발).
+- plan-ahead = forward별 wrapper/plan state 분리 (한 wrapper에 4
+  plan 연속은 마지막만 남음; plan은 CG 내부 실행 불가 — FlashInfer
+  명세).
+- 순서: 문서·수치 정정 → CUDA parity CI → **plan-ahead 단독을 CPU
+  tree에 A/B** → persistent arena·동적할당 제거 → boolean indexing
+  제거(고정 W×C dummy-slot) → actual-cols mask-pack kernel byte
+  parity → (필요시) 갱신부만 Triton/CG → view/wire GPU화.
+- 성능 게이트 (단계): ① build→merge ≤36.7·step ≤81.3 (CPU tree
+  동률 — 현재 +11.8ms 부채) → ② step ≤72.4 (63.6 TPS) → 그 후에만
+  재예측. 67-70 TPS 재예측은 이르다.
+
+**1a 후속 반영 (arena v3, 이번 배치)**: boolean indexing 전폐
+(고정 W×C + 말단 scratch 슬롯 라우팅), to_pool 동기화 3회로 통합
+(int/float 필드 stack 2 DtoH + n 스칼라; 압축·재매김은 CPU), 정렬
+키 f32 정합 (CPU 비교 키와 동률 거동 일치), 진입 전 seed int()×10
+제거, CUDA 실기 parity + zero-q support-소진 테스트 CI 추가.

@@ -1140,3 +1140,103 @@ class TestArenaParity(unittest.TestCase):
                              f"seed={seed}")
             self.assertEqual(pool.tok[:n].tolist(),
                              pool2.tok[:n].tolist(), f"seed={seed}")
+
+
+class TestArenaCudaParity(unittest.TestCase):
+    """리뷰5: CPU-장치 패리티만으론 불충분 — 실제 CUDA에서 CPU rollout
+    과의 동등성을 CI로 고정 (실형상 R_phys=10/R_active=6, zero-q 포함)."""
+
+    @unittest.skipUnless(torch.cuda.is_available(), "no cuda")
+    def test_cuda_parity_live_shape(self):
+        import numpy as _np
+        R, W, F, C = 10, 10, 4, 3           # R_phys=10 (live)
+        piv = torch.tensor([0.4, 0.2, 0.1, 0.06, 0.03, 0.01,
+                            0.0, 0.0, 0.0, 0.0])   # R_active=6 (#24)
+        toks = list(range(30, 30 + R))
+        glue = _np.ones((R, 5), dtype=_np.uint8)
+        rope_base = [77] * R
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=8,
+                  beta=0.5, depth_cap=4, K_glue=4, context_len=180,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.7))
+        V = 48
+        g = torch.Generator().manual_seed(11)
+        per_f = [torch.randn(W, V, generator=g) for _ in range(F)]
+
+        def fwd_cpu(f, ids, rope, packed, indptr):
+            return per_f[f].clone()
+
+        def fwd_gpu(f, ids, rope, packed, indptr):
+            return per_f[f].clone().cuda()
+
+        # RNG: CPU rollout은 CPU 제너레이터, arena(CUDA)는 CUDA 제너레이터
+        # — 다른 스트림이므로 '같은 샘플'을 강제하기 위해 raw_q/tok을
+        # forward logits이 아니라 결정적 샘플러로 비교하는 대신, 여기선
+        # 동일-분포 정책 검증이 목적이 아니라 **위상 규칙 동등성**이
+        # 목적 — 같은 토큰이 뽑히도록 온도를 낮춰 결정성 확보.
+        kw["temps"] = torch.full((W,), 1e-3)   # 사실상 greedy WOR
+        torch.manual_seed(5)
+        pool, _, _ = PT.run_rollout(
+            toks, piv, forward_fn=fwd_cpu, glue_rows_by_root=glue,
+            rope_base_by_root=rope_base, **kw)
+        torch.manual_seed(5)
+        torch.cuda.manual_seed_all(5)
+        ar, _, _ = PT.run_rollout_arena(
+            toks, piv.cuda(), forward_fn=fwd_gpu,
+            glue_rows_by_root=glue, rope_base_by_root=rope_base,
+            device="cuda:0", **kw)
+        pool2 = ar.to_pool(R)
+        self.assertEqual(pool.n, pool2.n)
+        n = pool.n
+        self.assertEqual(pool.tok[:n].tolist(), pool2.tok[:n].tolist())
+        self.assertEqual(pool.parent_idx[:n].tolist(),
+                         pool2.parent_idx[:n].tolist())
+        self.assertEqual(pool.root[:n].tolist(),
+                         pool2.root[:n].tolist())
+        self.assertEqual(pool.cell[:n].tolist(),
+                         pool2.cell[:n].tolist())
+        # R_active 분리: 무예산 root(6-9)는 자식 0
+        gen_by_root = [0] * R
+        for i in range(n):
+            if int(pool2.parent_idx[i]) >= 0:
+                gen_by_root[int(pool2.root[i])] += 1
+        self.assertTrue(all(gen_by_root[r] == 0 for r in range(6, 10)),
+                        gen_by_root)
+
+    def test_zero_q_support_exhaustion_cpu(self):
+        # WOR support < C: zero-q 자식은 양쪽 모두 제외 (#38) — 위상
+        # 재매김 후에도 동일 pool이어야 한다.
+        import numpy as _np
+        R, W, F, C = 2, 4, 2, 3
+        piv = torch.tensor([0.7, 0.3])
+        glue = _np.ones((R, 3), dtype=_np.uint8)
+        V = 3                                # support 3 — C=3과 경계
+        g = torch.Generator().manual_seed(2)
+        # 한 행은 사실상 one-hot (support 1) → 2·3번째 샘플 zero-q
+        base = torch.full((W, V), -30.0)
+        base[:, 0] = 5.0
+        per_f = [base.clone(), torch.randn(W, V, generator=g)]
+
+        def fwd(f, ids, rope, packed, indptr):
+            return per_f[f].clone()
+
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=4,
+                  beta=0.5, depth_cap=2, K_glue=2, context_len=60,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.7))
+        torch.manual_seed(9)
+        pool, _, _ = PT.run_rollout(
+            [5, 6], piv, forward_fn=fwd, glue_rows_by_root=glue,
+            rope_base_by_root=[10, 20], **kw)
+        torch.manual_seed(9)
+        ar, _, _ = PT.run_rollout_arena(
+            [5, 6], piv.clone(), forward_fn=fwd, glue_rows_by_root=glue,
+            rope_base_by_root=[10, 20], device="cpu", **kw)
+        pool2 = ar.to_pool(R)
+        self.assertEqual(pool.n, pool2.n)
+        n = pool.n
+        self.assertEqual(pool.parent_idx[:n].tolist(),
+                         pool2.parent_idx[:n].tolist())
+        self.assertEqual(pool.tok[:n].tolist(), pool2.tok[:n].tolist())
+        self.assertEqual(pool.sib_order[:n].tolist(),
+                         pool2.sib_order[:n].tolist())

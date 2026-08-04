@@ -1135,6 +1135,9 @@ class TreeArena:
 
     def __init__(self, capacity: int, device):
         d = device
+        capacity = capacity + 1     # 말단 scratch 슬롯 (무효 쓰기 흡수
+        #                             — boolean indexing의 nonzero/DtoH
+        #                             동기화 회피, 리뷰5)
         self.tok = torch.zeros(capacity, dtype=torch.int64, device=d)
         self.parent_idx = torch.full((capacity,), -1, dtype=torch.int64,
                                      device=d)
@@ -1160,34 +1163,38 @@ class TreeArena:
         — CPU run_rollout과 동일한 인덱스 공간·순서 보장). 전 과정
         텐서 압축 (파이썬 노드 루프 금지 — v1 루프가 build→merge를
         +16ms 부풀린 실측 교훈)."""
-        n = int(self.n)                     # 유일한 sync 지점
-        dev = self.device
-        keep = self.valid[:n]
-        kept = torch.nonzero(keep).flatten()          # [m] (장치 상주)
-        m = kept.numel()
-        remap = torch.full((n + 1,), -1, dtype=torch.int64, device=dev)
-        remap[kept] = torch.arange(m, device=dev)
-        par_old = self.parent_idx[:n].index_select(0, kept)
+        n = int(self.n)                     # sync ① (스칼라)
+        ints = torch.stack([self.tok[:n], self.parent_idx[:n],
+                            self.depth[:n], self.root[:n],
+                            self.sib[:n], self.state[:n],
+                            self.cell[:n],
+                            self.valid[:n].long()]).cpu()   # sync ②
+        flts = torch.stack([self.logpri[:n],
+                            self.raw_q[:n]]).cpu()          # sync ③
+        keep = ints[7].bool()
+        kept = torch.nonzero(keep).flatten()                # CPU — sync 無
+        m = int(kept.numel())
+        remap = torch.full((n + 1,), -1, dtype=torch.int64)
+        remap[kept] = torch.arange(m)
+        par_old = ints[1].index_select(0, kept)
         par_new = torch.where(par_old >= 0,
                               remap.gather(0, par_old.clamp(min=0)),
                               par_old)
-        # parent_cell은 hot loop에서 빼고 여기서 파생 (cell[parent])
         pcell = torch.where(par_old >= 0,
-                            self.cell[:n].gather(0, par_old.clamp(min=0)),
+                            ints[6].gather(0, par_old.clamp(min=0)),
                             torch.full_like(par_old, -1))
         pool = TreePool(capacity=self.capacity)
-        pool.n = int(m)
-        sel = kept
-        pool.tok[:m] = self.tok[:n].index_select(0, sel).cpu()
-        pool.parent_idx[:m] = par_new.cpu()
-        pool.parent_cell[:m] = pcell.cpu()
-        pool.depth[:m] = self.depth[:n].index_select(0, sel).cpu()
-        pool.root[:m] = self.root[:n].index_select(0, sel).cpu()
-        pool.sib_order[:m] = self.sib[:n].index_select(0, sel).cpu()
-        pool.logpri[:m] = self.logpri[:n].index_select(0, sel).float().cpu()
-        pool.raw_q[:m] = self.raw_q[:n].index_select(0, sel).float().cpu()
-        pool.state[:m] = self.state[:n].index_select(0, sel).cpu()
-        pool.cell[:m] = self.cell[:n].index_select(0, sel).cpu()
+        pool.n = m
+        pool.tok[:m] = ints[0].index_select(0, kept)
+        pool.parent_idx[:m] = par_new
+        pool.parent_cell[:m] = pcell
+        pool.depth[:m] = ints[2].index_select(0, kept)
+        pool.root[:m] = ints[3].index_select(0, kept)
+        pool.sib_order[:m] = ints[4].index_select(0, kept)
+        pool.logpri[:m] = flts[0].index_select(0, kept).float()
+        pool.raw_q[:m] = flts[1].index_select(0, kept).float()
+        pool.state[:m] = ints[5].index_select(0, kept)
+        pool.cell[:m] = ints[6].index_select(0, kept)
         if hasattr(self, "_budgets"):
             pool.alloc_stats = _alloc_stats(
                 pool, self._budgets.cpu(), R,
@@ -1216,7 +1223,7 @@ def _arena_select(ar: TreeArena, policy, W, f, depth_cap, tip_idx,
         t_ok = (tip_idx >= 0) & (remaining > 0) & elig.gather(0, t)
         mand_slot.scatter_(0, t, t_ok)
     key = torch.where(elig, ar.logpri + mand_slot.double() * 1000.0,
-                      torch.full_like(ar.logpri, float("-inf")))
+                      torch.full_like(ar.logpri, float("-inf"))).float()
     final = torch.argsort(key, descending=True, stable=True)
     elig_o = elig.gather(0, final)
     sel = final[:W]
@@ -1246,7 +1253,7 @@ def _arena_fanout_backbone(ar: TreeArena, sel, sel_valid, tip_idx,
     # phase 2: priority 내림차순 라운드 (+1씩, c_tensor 라운드 = 정확 상계)
     pri = torch.where(sel_valid, ar.logpri.gather(0, sel.clamp(min=0)),
                       torch.full((W,), float("-inf"), dtype=torch.float64,
-                                 device=dev))
+                                 device=dev)).float()
     lane_order = torch.argsort(pri, descending=True, stable=True)
     r_sorted = r_of.gather(0, lane_order)
     onehot = torch.nn.functional.one_hot(r_sorted, R).long()   # [W, R]
@@ -1396,15 +1403,17 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         cgrid = torch.arange(c_tensor, device=dev)
         slot = offs.unsqueeze(1) + cgrid.unsqueeze(0)       # [W, C]
         child_ok = cgrid.unsqueeze(0) < fan.unsqueeze(1)    # [W, C]
+        # boolean indexing 금지 (리뷰5: nonzero→DtoH 동기화 24회/rollout)
+        # — 전 W×C 슬롯 밀집 쓰기, fan 밖 자식은 말단 scratch 슬롯으로.
+        scratch = ar.capacity - 1
+        sl = torch.where(child_ok, slot,
+                         torch.full_like(slot, scratch)).reshape(-1)
+        par = sel.unsqueeze(1).expand(W, c_tensor).reshape(-1)
+        cix = cgrid.unsqueeze(0).expand(W, c_tensor).reshape(-1)
+        tk = toks.reshape(-1)
         raws64 = raws.double()
-        pos_q = raws64 > 0.0                                # #38
-        flat_ok = child_ok.reshape(-1)
-        sl = slot.reshape(-1)[flat_ok]
-        par = sel.unsqueeze(1).expand(W, c_tensor).reshape(-1)[flat_ok]
-        cix = cgrid.unsqueeze(0).expand(W, c_tensor).reshape(-1)[flat_ok]
-        tk = toks.reshape(-1)[flat_ok]
-        rq = raws64.reshape(-1)[flat_ok]
-        ok_q = pos_q.reshape(-1)[flat_ok]
+        rq = raws64.reshape(-1)
+        ok_q = (raws64 > 0.0).reshape(-1) & child_ok.reshape(-1)   # #38
         ar.tok.scatter_(0, sl, tk)
         ar.parent_idx.scatter_(0, sl, par)
         ar.depth.scatter_(0, sl, ar.depth.gather(0, par) + 1)
@@ -1416,12 +1425,13 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
             ok_q, child_lp, torch.full_like(child_lp, float("-inf"))))
         ar.raw_q.scatter_(0, sl, rq)
         ar.valid.scatter_(0, sl, ok_q)
-        # 무효(zero-q) 슬롯은 평가 불가로 마킹 (선택 배제)
+        # 무효(zero-q·scratch) 슬롯은 평가 불가로 마킹 (선택 배제)
         ar.state.scatter_(0, sl, torch.where(
             ok_q, torch.zeros_like(sl), torch.ones_like(sl)))
         ar.anc_bits.scatter_(
             0, sl, ar.anc_bits.gather(0, par)
-            | (torch.ones_like(par) << ar.cell.gather(0, par)))
+            | (torch.ones_like(par)
+               << ar.cell.gather(0, par).clamp(min=0)))
         ar.n = ar.n + fan.sum()
         # backbone tip 전진: tip lane의 맏이(c=0). 주의 — pad lane의
         # r_of가 0으로 라우팅되므로 scatter_(중복 승자 미정)는 root0의

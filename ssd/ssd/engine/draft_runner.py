@@ -1931,11 +1931,20 @@ class DraftRunner(ModelRunner):
         V = self.hf_config.vocab_size
         fo = proxy_fan_out_tensor[0].tolist()
         toks = proxy_forked[0]
+        # T6 1a: arena 모드는 seed 토큰 정체가 CPU에 불필요 (glue는 p만
+        # 사용) — per-seed int() 동기화 10회 제거 (리뷰5 pre-구간 지적).
+        _arena_pre = os.environ.get("SSD_TREE_ARENA", "0") == "1"
         seeds, i = [], 0
-        for p, c in enumerate(fo):
-            for _ in range(c):
-                seeds.append((p, int(toks[i])))
-                i += 1
+        if _arena_pre:
+            for p, c in enumerate(fo):
+                for _ in range(c):
+                    seeds.append((p, None))
+                    i += 1
+        else:
+            for p, c in enumerate(fo):
+                for _ in range(c):
+                    seeds.append((p, int(toks[i])))
+                    i += 1
         # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
         seed_piv = tree_args.get("proxy_piv")
         # T6 1a (docs/duet/22): SSD_TREE_ARENA=1이면 GPU 상주 rollout —
