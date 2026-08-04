@@ -1144,10 +1144,12 @@ class DraftRunner(ModelRunner):
         par = _views["parent_local"][_root]
         n_valid = int(_views["valid"][_root])
         n_rows = n_valid + 1
-        assert glue_decode_input_ids.numel() == n_rows, (
-            f"tree glue width mismatch: ids={glue_decode_input_ids.numel()} "
-            f"vs n_valid+1={n_rows}")
-        assert n_rows <= W, f"tree glue rows {n_rows} > W {W}"
+        if glue_decode_input_ids.numel() != n_rows:
+            raise RuntimeError(
+                f"tree glue width mismatch: ids="
+                f"{glue_decode_input_ids.numel()} vs n_valid+1={n_rows}")
+        if n_rows > W:
+            raise RuntimeError(f"tree glue rows {n_rows} > W {W}")
 
         # 노드별 depth/조상 (parent_local은 항상 자기보다 앞 — 뷰 invariant)
         depth = [0] * n_valid
@@ -1335,9 +1337,18 @@ class DraftRunner(ModelRunner):
         # ~0.52 — docs/duet/18 λ·E1 α)로 가중, 바닥 1 lane (전 ctx
         # 생존), largest-remainder 반올림 (합 = W1, CG 폭 불변).
         if W1 >= n_rows:
+            # 리뷰3-8 정정: A^depth에는 '앞 형제 전원 기각' 인자가 빠져
+            # 둘째 형제를 2.08× 과대평가 — reach를 부모 사슬로 전개:
+            # reach(rec)=1, reach(j)=reach(par)·A·(1−A)^sib_order(j),
+            # w(ctx)=reach(ctx)·(1−A)^자식수.
             _A = 0.52
-            w_ctx = [(_A ** depth_ctx[c])
-                     * ((1.0 - _A) ** len(child_toks[c]))
+            _sib = _views["sib_order"][_root]
+            _reach = [0.0] * n_rows
+            _reach[0] = 1.0
+            for j in range(n_valid):
+                _reach[1 + j] = (_reach[int(par[j]) + 1] * _A
+                                 * ((1.0 - _A) ** int(_sib[j])))
+            w_ctx = [_reach[c] * ((1.0 - _A) ** len(child_toks[c]))
                      for c in range(n_rows)]
             _ws = sum(w_ctx)
             _extra = W1 - n_rows

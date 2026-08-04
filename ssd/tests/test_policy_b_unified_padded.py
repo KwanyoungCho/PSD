@@ -51,7 +51,8 @@ class TestPaddedFalseMatch(unittest.TestCase):
         # padded slot. wire_N=4 (4 candidates, all kept).
         chosen_pos = torch.tensor([1, 2, 0, 0])    # try all positions
         chosen_tok = torch.tensor([0, 0, 99, 50])  # 0 first two, then real-match, then no-match
-        mesa_proxy = {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
+        mesa_proxy = {"chosen_pos": chosen_pos.unsqueeze(0),
+                      "chosen_tok": chosen_tok.unsqueeze(0)}  # [B=1, N]
 
         # total_budget=2 — only first 2 valid take. assert in production code
         # would fire if take.sum() != 2. Test focused on dedup correctness:
@@ -67,9 +68,9 @@ class TestPaddedFalseMatch(unittest.TestCase):
         # Result must contain chosen_tok values for valid takes (0 and 0 — at
         # positions 1 and 2). int(fan_out_tensor[1] = 1, int(fan_out_tensor[2] = 1, sum=2.
         self.assertEqual(int(fan_out_tensor.sum().item()), 2)
-        self.assertEqual(int(fan_out_tensor[1].item()), 1, "pos 1 (chosen_tok=0, all padding) must be taken")
-        self.assertEqual(int(fan_out_tensor[2].item()), 1, "pos 2 (chosen_tok=0, first real=77, slot 1 padding) must be taken")
-        self.assertEqual(int(fan_out_tensor[0].item()), 0, "pos 0 takes excluded (in_draft on first cand) or beyond budget")
+        self.assertEqual(int(fan_out_tensor[0, 1].item()), 1, "pos 1 (chosen_tok=0, all padding) must be taken")
+        self.assertEqual(int(fan_out_tensor[0, 2].item()), 1, "pos 2 (chosen_tok=0, first real=77, slot 1 padding) must be taken")
+        self.assertEqual(int(fan_out_tensor[0, 0].item()), 0, "pos 0 takes excluded (in_draft on first cand) or beyond budget")
 
     def test_no_mask_means_all_real_uniform_path(self):
         # Uniform Phase 1: padded already full, mask=None signals all-real.
@@ -81,13 +82,14 @@ class TestPaddedFalseMatch(unittest.TestCase):
         # in_draft = [True, False, True] → valid = [F, T, F] → only pos 1 takes.
         chosen_pos = torch.tensor([0, 1, 2])
         chosen_tok = torch.tensor([10, 99, 50])
-        mesa_proxy = {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
+        mesa_proxy = {"chosen_pos": chosen_pos.unsqueeze(0),
+                      "chosen_tok": chosen_tok.unsqueeze(0)}  # [B=1, N]
 
         result, fan_out_tensor = _unified(
             mesa_proxy, padded, K_rank=2, total_budget=1,
             draft_forked_mask=None)   # uniform path
         self.assertEqual(int(fan_out_tensor.sum().item()), 1)
-        self.assertEqual(int(fan_out_tensor[1].item()), 1, "pos 1 (chosen_tok=99 not in [30,40]) must be taken")
+        self.assertEqual(int(fan_out_tensor[0, 1].item()), 1, "pos 1 (chosen_tok=99 not in [30,40]) must be taken")
 
     def test_chosen_tok_zero_matches_real_zero_with_mask(self):
         # Edge case: an actual real slot has token 0. Mask says it's real
@@ -102,15 +104,16 @@ class TestPaddedFalseMatch(unittest.TestCase):
         # chosen_tok=0 at pos 1: slot 0=7, slot 1=0 padding → NOT match → take.
         chosen_pos = torch.tensor([0, 1])
         chosen_tok = torch.tensor([0, 0])
-        mesa_proxy = {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
+        mesa_proxy = {"chosen_pos": chosen_pos.unsqueeze(0),
+                      "chosen_tok": chosen_tok.unsqueeze(0)}  # [B=1, N]
 
         result, fan_out_tensor = _unified(
             mesa_proxy, padded, K_rank=1, total_budget=1,
             draft_forked_mask=mask)
         self.assertEqual(int(fan_out_tensor.sum().item()), 1)
-        self.assertEqual(int(fan_out_tensor[1].item()), 1,
+        self.assertEqual(int(fan_out_tensor[0, 1].item()), 1,
             "pos 1 (chosen_tok=0, real slots [7], padding [0]) must take")
-        self.assertEqual(int(fan_out_tensor[0].item()), 0,
+        self.assertEqual(int(fan_out_tensor[0, 0].item()), 0,
             "pos 0 (chosen_tok=0 is real → in_draft → excluded) must NOT take")
 
 
@@ -131,7 +134,8 @@ class TestParityUniformAndPadded(unittest.TestCase):
                                     padded[0, 2, 1].item(),
                                     98,
                                     97])
-        mesa_proxy = {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
+        mesa_proxy = {"chosen_pos": chosen_pos.unsqueeze(0),
+                      "chosen_tok": chosen_tok.unsqueeze(0)}  # [B=1, N]
 
         result_a, fan_out_a_tensor = _unified(
             mesa_proxy, padded, K_rank=3, total_budget=3,

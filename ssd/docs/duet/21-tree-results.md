@@ -218,8 +218,9 @@ R=10 기본은 water-filling이 저-P_iv root까지 채워 얕은 서빙 혼입
 ## 4.7 스텝타임 +26ms 전수 분해 (2026-08-04, 수정 rev — 사용자 지시:
 "sweep이 아니라 근본 overhead를 먼저")
 
-draft 스텝 주기 (p50, 프로파일): 체인 hit_k1 60.1 / hit_k2 47.3 /
-miss 54.6ms vs 트리 80.2 / 90.6 / 78.0 — **전 스텝 유형 +20~43ms**.
+draft 스텝 주기 (405794e 동창 쌍, 첫 20스텝 제외 p50): 체인 61.3 /
+48.0 / 55.6ms vs 트리 80.2 / 86.2 / 75.8 — Δ +18.9/+38.2/+20.2;
+**동일가중 +25.8, 실비중 전체평균 +23.5ms** (혼동 방지: 두 평균 병기).
 스팬 diff + rollout gap-prof(534 rollout)로 귀속:
 
 | 항목 | 스텝당 | 측정 | 근본 원인 |
@@ -235,20 +236,28 @@ miss 54.6ms vs 트리 80.2 / 90.6 / 78.0 — **전 스텝 유형 +20~43ms**.
 ~85%가 "매 스텝 topology를 파이썬으로 다시 만드는" 구조 비용**이고
 GPU forward 비용은 체인과 동일 (K2×W 동형).
 
-**frontier 교차 검증 (18번, 5런, load 31-35 캐비앗)**: nv 축소는
-TPS만 사고 (52-56) 토큰 이득을 지움 — nv4 P2AL 1.76-1.82 <
-체인 1.86; **P2AL>체인은 nv8에서만 실재** (스모크 2.13). 즉
-파라미터로 못 풀고, nv8 유지 + host 시간 제거가 유일 경로.
+**frontier 교차 검증 (18번, 5런, load 31-35 캐비앗; 리뷰3 해석
+정정)**: nv4 팔은 P2AL 1.76-1.82 < 체인 1.86 — 단 이는 서빙 폭
+효과만이 아니라 **이용률 교란** (Nv는 root당 생성 cap 겸용:
+W10/Nv4·R6는 requested 40 중 allocated 24 = 60%). nv6@W10은
+미측정 (sweep 중단). 확정 가능한 결론: "nv4는 손실, nv8은 우위
+(재판정 P2AL 2.12)" — 중간은 열림. 어느 쪽이든 host 시간 제거가
+선결이라는 판단은 불변.
 
-**처방 — 정적 토폴로지 템플릿 (리뷰2 설계 방향 채택, 수치 부여)**:
-(W,F,C,Nv,R) 고정 시 topology는 예산벡터(=P_iv rank의 결정적 함수)
-로 완전 결정 → 도달가능 예산벡터별 mask/rope/route/cell을 사전
-컴파일해 GPU 상주. 런타임 = piv→budgets→템플릿 lookup→K2 연속
-CG replay (mask 포인터 교체만), 샘플 GPU 누적, readback ≤1회.
-D10 보존 (선택 입력 = P_iv뿐). 예상 회수: rollout 16→~3 + P1/글루
-정적화 −7@hit_k2 + 오버랩 복원 −2 ≈ **−17~20ms/step → 트리
-~62-70ms/step → TPS ~65-72 (체인 −7~15%)**, nv8 토큰 이득
-(P2AL +13%) 유지 시 실효 접전권. 구현은 별도 트랙 (T6).
+**처방 (리뷰3 정정 반영)**: ~~budget-only 정적 템플릿~~은 **불가** —
+topology는 이미 샘플된 raw_q에 적응한다 (누적 logpri가 top-W 컷과
+rescue 배분을 결정; 실형상 반례: q 열회전만으로 40중 18 노드 재배치).
+따라서 1차 방향은 **T6-dynamic: 고정 크기 GPU arena + 동적 GPU
+select/fanout/WOR/pool** — 현 정책 의미(P2AL +18%)를 보존한 채
+중간 CPU readback 0회. 회수 전망(정정): **core-입증 ≈9.1ms**
+(P2 창 내부 idle 0.27→9.21ms 제거), build→merge 전체 GPU화 시
+상한 ≈22ms (stretch — 구현 후 측정). P1 build 절감은 proxy_wait로
+전가되므로 **단독으론 무효** — critical path = max(draft P1 ready,
+target proxy ready); target측 게이트(graph_pre +7.4·Policy-B
++5.9·graph_post +2.3)를 함께 줄여야 한다. TPS 산술(정정): 17-20ms
+회수 시 **67.0-70.5 (체인 −12.4~−16.8%)**; parity에는 ≈26ms +
+AL +2%가 필요 — "접전권"이 아니라 중요한 중간 단계. budget-static
+은 별도 정책 arm (compute-matched P2AL 보존 시에만). 구현 T6.
 
 ## 5. 최종 동일-시드 인터리브 (eslab17 한산, 25×384, 3-cycle — 리뷰 게이트)
 

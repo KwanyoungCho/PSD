@@ -177,14 +177,28 @@ class Verifier(VerifierBase):
 
             _tree_meta_for_proxy = _tree_meta_arg
 
+            # 리뷰3-9: 트리 Policy-B는 실제 verify 보행과 같은 분포로 —
+            # p^E는 target temp, q는 draft temp+sampler_x (B=1 스칼라).
+            _tp0 = seqs[0].temperature
+            _td0 = (seqs[0].draft_temperature
+                    if seqs[0].draft_temperature is not None
+                    else seqs[0].temperature)
+            if _tree_meta_arg is not None and _tp0 <= 0:
+                # 리뷰3-10: target temp=0 + 트리 미정의 — draft측 WOR
+                # 게이트와 동일하게 명시 차단 (조용한 오분포 금지).
+                raise NotImplementedError(
+                    "P2-tree requires target temperature > 0 "
+                    "(temp-0 tree verify is gated; use chain policy)")
+
             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead,
-                          _tm=_tree_meta_for_proxy):
+                          _tm=_tree_meta_for_proxy, _tp=_tp0, _td=_td0):
                 if _tm is not None:
                     # 이슈 #25 (리뷰 2C): 트리 step은 체인 수식 금지 —
                     # p^E row = parent+1 페어링 + terminal-mass DP.
                     self._compute_and_send_proxy_tree(
                         exit_logits, draft_tokens, logits_q, orig_bs,
-                        _vk, _tm, async_pg, draft_rank)
+                        _vk, _tm, async_pg, draft_rank,
+                        temp_p=_tp, temp_d=_td)
                 else:
                     self._compute_and_send_proxy(
                         exit_logits, draft_tokens, logits_q, orig_bs,
@@ -412,7 +426,8 @@ class Verifier(VerifierBase):
 
     def _compute_and_send_proxy_tree(self, exit_logits, draft_tokens,
                                      logits_q, B, vk, tree_meta,
-                                     async_pg, draft_rank):
+                                     async_pg, draft_rank,
+                                     temp_p=1.0, temp_d=1.0):
         """트리 step Policy-B (이슈 #25, v6 §7.5ⓒ — 리뷰 2C 수용).
 
         체인 수식과의 차이:
@@ -451,8 +466,18 @@ class Verifier(VerifierBase):
         par = [int(x) for x in tree_meta[3 + nv:3 + 2 * nv][:valid]]
         sib = [int(x) for x in tree_meta[3 + 2 * nv:3 + 3 * nv][:valid]]
 
-        p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
-        q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
+        # 리뷰3-9: 보행과 동일 분포 빌드 — p^E는 target temp,
+        # q는 draft temp + sampler_x/F (q_probs_from_logits — 보행의
+        # q_parent_probs와 같은 헬퍼; 종전 양쪽 plain softmax는 temp≠1
+        # 에서 α̂·terminal·residual 전부 편향).
+        from ssd.engine.helpers.p2_tree import q_probs_from_logits
+        p_E = torch.softmax(exit_logits[0].float()
+                            / max(temp_p, 1e-8), dim=-1)         # [vk+1, V]
+        q_rows = q_probs_from_logits(
+            logits_q[0],
+            torch.full((logits_q.shape[1],), max(temp_d, 1e-8),
+                       device=logits_q.device),
+            self.sampler_x, self.async_fan_out)                  # [vk, V]
         tokens = draft_tokens[0, :valid].to(p_E.device)
 
         _alpha, term, resid = tree_policy_b_ladder(

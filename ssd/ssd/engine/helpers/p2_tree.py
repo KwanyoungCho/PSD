@@ -491,12 +491,12 @@ def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
     return (mand_ranked + rest)[:W]
 
 
-def _alloc_stats(pool: TreePool, budgets: torch.Tensor, R: int):
-    """이슈 #27 불변 기록: allocated vs generated (+ root별 dmax).
-
-    generated < allocated 이면 예산 소실 — tip lane 이후에도 발생 시
-    원인(마지막 forward의 c_tensor 흡수 한계 등)을 추적할 수 있게
-    per-root 수치를 남긴다. run_rollout이 pool.alloc_stats로 부착.
+def _alloc_stats(pool: TreePool, budgets: torch.Tensor, R: int,
+                 requested: int | None = None):
+    """이슈 #27 불변 기록: requested/allocated/generated 3값 분리
+    (리뷰3-7: cap(nv)이 requested를 먼저 자르므로 allocated만 보면
+    이용률 손실이 안 보인다 — 예: W10·Nv4·R6은 requested 40 중
+    allocated 24, 이용률 60%) + root별 dmax.
     """
     n = pool.n
     gen = [0] * R
@@ -508,7 +508,8 @@ def _alloc_stats(pool: TreePool, budgets: torch.Tensor, R: int):
         if d > dmax[r]:
             dmax[r] = d
     alloc_l = budgets.tolist()
-    return {"allocated": int(sum(alloc_l)), "generated": int(n - R),
+    return {"requested": requested, "allocated": int(sum(alloc_l)),
+            "generated": int(n - R),
             "per_root_alloc": alloc_l, "per_root_gen": gen,
             "per_root_dmax": dmax}
 
@@ -568,6 +569,8 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
             pool.cell[i] = cell
             pool.state[i] = 1                     # D11: single-shot
             for c in range(int(fan[k])):
+                if float(raws[k][c]) <= 0.0:      # WOR support 소진 (동상)
+                    continue
                 child = pool.add(int(toks[k][c]), i, cell,
                          int(pool.depth[i]) + 1, int(pool.root[i]), c,
                          float(pool.logpri[i])
@@ -578,7 +581,8 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
                         and i == tip_idx[int(pool.root[i])]:
                     tip_idx[int(pool.root[i])] = child
         eval_log.append((sel, fan))
-    pool.alloc_stats = _alloc_stats(pool, budgets, R)
+    pool.alloc_stats = _alloc_stats(pool, budgets, R,
+                                    requested=F_total * W)
     return pool, eval_log
 
 
@@ -727,6 +731,13 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
             pool.state[i] = 1
             for c in range(fan_l[k]):
                 rq = raws_l[k][c]
+                if rq <= 0.0:
+                    # 리뷰3-10: WOR support 소진 — fan > nonzero support면
+                    # zero-q 토큰이 top-k에 들어오고 verify 보행이
+                    # D[t]==0 hard-fail. 분포 성질(support)만 본 사후
+                    # 배제 (정체 무관 — D10 안전; 기존 .cpu() 편승,
+                    # 추가 sync 0). 미소진 예산은 alloc_stats에 기록.
+                    continue
                 lp = node_logpri[i] + math.log(max(rq, 1e-9))
                 child = pool.add(toks_l[k][c], i, cell,
                                  node_depth[i] + 1, node_root[i], c,
@@ -746,11 +757,13 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                   f"cpu_sync={(_t4-_t3)*1e3:.2f} "
                   f"pool={(_t5-_t4)*1e3:.2f}", flush=True)
         eval_log.append((sel, fan[:n_sel]))
-    pool.alloc_stats = _alloc_stats(pool, budgets, R)
+    pool.alloc_stats = _alloc_stats(pool, budgets, R,
+                                    requested=F_total * W)
     if os.environ.get("SSD_TREE_ALLOC_CHECK", "0") == "1":
         st = pool.alloc_stats
         if st["generated"] != st["allocated"]:
-            print(f"[tree-alloc #27] generated={st['generated']} != "
+            print(f"[tree-alloc #27] requested={st['requested']} "
+                  f"generated={st['generated']} != "
                   f"allocated={st['allocated']} per_root_gen="
                   f"{st['per_root_gen']} alloc={st['per_root_alloc']} "
                   f"dmax={st['per_root_dmax']}", flush=True)
@@ -780,7 +793,9 @@ def build_root_views(pool: TreePool, R: int, nv: int, cell_logits=None):
             continue                       # root 자체는 뷰에 안 들어감
         r = int(pool.root[i])
         j = int(valid[r])
-        assert j < nv, "생성-시점 캡 위반 (⑤v2 — 있을 수 없음)"
+        if j >= nv:
+            raise RuntimeError("생성-시점 캡 위반 (⑤v2) — view overflow "
+                               f"root={r} j={j} nv={nv} (리뷰3: -O 생존 가드)")
         tok[r, j] = pool.tok[i]
         pp = int(pool.parent_idx[i])
         parent_local[r, j] = local_of.get(pp, -1)   # 부모가 root면 -1

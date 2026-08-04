@@ -549,6 +549,42 @@ c1_ar = **33.48 tok/s** (70B AWQ TP4 확인). 종전 "6.7×"는 오염박스
 (61/64 core 점유) 비율 — 클린박스 기준 체인 78.6은 **~2.35×** vs
 AR, async-SD C(78.2)와는 parity. c2/c3 완료 후 3-cycle 확정.
 
+## 외부 리뷰 3차 검토 (2026-08-04) — 전수 재계산 판정 (무조건 수용 금지 지침)
+
+raw 프로파일(405794e 쌍)·반례 런·수계산으로 주장별 확정/기각:
+
+| 주장 | 판정 | 근거 |
+|---|---|---|
+| topology는 budget-only가 아님 (raw_q-적응) | **확정** | 실형상(W10·R6·C3) q 열회전 → 40중 18 노드 재배치. 단 리뷰의 최소반례 수치 자체는 미재현 (해당 파라미터에선 rescue avail=0) — 원리 성립, 예시 부정확 |
+| 스텝격차: 동일가중 +25.8 / 실비중 +23.5 | 확정 | 재계산 일치 (첫 20스텝 제외 p50: +18.9/+38.2/+20.2) |
+| P2 4-replay GPU 합은 동일, 전체 GPU는 비동일 | 확정 | replay 9.44 vs 9.96; target graph_pre +7.37·exit+send +5.85·graph_post +2.26 |
+| core-입증 회수 ≈8.8ms (16→3 과대) | 확정 | P2 창 12.35→21.49 (idle 0.27→9.21) — Δ9.1; build→merge 전체 Δ21.96은 stretch 상한 |
+| P1build+proxy_wait 이중계상 | 확정 | critical path = max(draft P1 ready, target proxy ready); target측 +15ms가 게이트 |
+| TPS 산술 (65-72·−7~15% 오류) | 확정 | 17-20 회수 시 67.0-70.5 (−12.4~−16.8%); parity bar ≈26ms+AL2% |
+| "Nv8만 이득" 미입증 | 확정 | Nv는 root cap 겸용 — W10/Nv4 requested 40 중 allocated 24 (이용률 60%) 교란; nv6@W10 미측정 (sweep 중단). **nv8 우위 자체(재판정 2.12)는 유지** |
+| P1 prior에 앞형제-기각 인자 누락 | **확정 (버그)** | 둘째 형제 2.08× 과대 — #36 수정 |
+| Policy-B가 temp/sampler_x 미적용 | **확정 (버그)** | 보행은 q_probs_from_logits(td)+p(tp); proxy는 양쪽 plain softmax — #37 수정 |
+| WOR support 소진 → D[t]=0 fail | 확정 (위험) | #38 수정 (raw_q≤0 자식 배제 — 기존 sync 편승) |
+| mask "포인터 교체" 불가 | 확정 | captured _custom_mask_buf in-place copy 필요; plan-once 재도전 금지 (#20 교훈 유지), plan-ahead(기하 불변)만 |
+| chainR6=budget6는 CG폭 변경 | 부분수용 | 토큰축(P2AL 귀속) 결론은 유효 (사석행은 hit 불가 — 등가); 시간축 비교엔 W10-top6 knob 필요 (후속) |
+| SHM read-ACK / epoch 상수 / assert -O 소거 | 확정 (부채) | assert 3곳 경화(#40); epoch·ACK는 T6 correctness 배치 |
+
+**즉시 수정 (이번 배치)**: #36 P1 reach·presib prior, #37 Policy-B
+temp/sampler_x 미러 + target temp≤0 명시 게이트, #38 WOR support
+가드, #39 alloc_stats requested/allocated/generated 3값, #40 무손실
+경계 assert→RuntimeError, #41 stale policy-b 픽스처 [B,N] 정합 —
+유닛 62/62 green.
+
+**T6 방향 수정 (리뷰 권고 수용)**: budget-only 정적 템플릿은 현
+정책의 drop-in이 아니라 **신규 fixed-topology 정책** — P2AL 보존
+보장 없음. 1차 구현은 **T6-dynamic: 고정 크기 GPU arena + 동적
+GPU select/fanout/WOR/pool** (현 raw_q-적응 의미 보존, 중간 CPU
+readback 0회; per-forward plan 유지 채 parity 먼저) → view/wire
+GPU화 → plan-ahead·TREE_GLUE·P1 mask 독립 A/B. **T6-static은 별도
+정책 arm**으로 compute-matched P2AL 보존 검증 후에만 채택. 성능
+판정은 component 합산이 아니라 3연속 구간 wall (target proxy gate /
+P2 prep→last replay / gate→merge).
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
