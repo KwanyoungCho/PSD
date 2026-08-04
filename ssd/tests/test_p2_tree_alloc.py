@@ -1008,3 +1008,135 @@ class TestReview2Fixes(unittest.TestCase):
         self.assertTrue(torch.allclose(a_c, a_g.cpu(), atol=1e-5))
         self.assertTrue(torch.allclose(t_c, t_g.cpu(), atol=1e-5))
         self.assertTrue(torch.allclose(r_c, r_g.cpu(), atol=1e-5))
+
+
+class TestArenaParity(unittest.TestCase):
+    """T6 1a 동등성 게이트 (22번 v2 §3): 같은 입력·시드에서 arena와
+    CPU rollout의 라운드 트레이스가 완전 일치해야 한다."""
+
+    def _mk(self, V=64, seed=5, F=4, W=10):
+        g = torch.Generator().manual_seed(seed)
+        per_f = [torch.randn(W, V, generator=g) for _ in range(F)]
+        cap_cpu, cap_ar = [], []
+
+        def fwd_cpu(f, ids, rope, packed, indptr):
+            cap_cpu.append((ids.clone(), rope.clone(), packed.copy()))
+            return per_f[f].clone()
+
+        def fwd_ar(f, ids, rope, packed, indptr):
+            cap_ar.append((ids.cpu().clone(), rope.cpu().clone(),
+                           packed.cpu().numpy().copy()))
+            return per_f[f].clone()
+
+        return fwd_cpu, fwd_ar, cap_cpu, cap_ar
+
+    def test_budgets_gpu_matches_cpu(self):
+        g = torch.Generator().manual_seed(3)
+        for _ in range(200):
+            R = int(torch.randint(1, 11, (1,), generator=g))
+            piv = torch.rand(R, generator=g)
+            piv[torch.rand(R, generator=g) < 0.3] = 0.0   # sentinel 혼합
+            total = int(torch.randint(1, 41, (1,), generator=g))
+            cap = int(torch.randint(1, 9, (1,), generator=g))
+            beta = float(torch.rand(1, generator=g))
+            a = PT.alloc_root_budgets(piv, total, beta, cap)
+            b = PT.alloc_root_budgets_gpu(piv, total, beta, cap)
+            self.assertEqual(a.tolist(), b.tolist(),
+                             f"piv={piv.tolist()} t={total} c={cap} "
+                             f"b={beta}")
+
+    def test_rollout_arena_full_parity(self):
+        import numpy as _np
+        R, W, F, C = 6, 10, 4, 3
+        piv = torch.tensor([0.5, 0.2, 0.1, 0.05, 0.02, 0.01])
+        toks = list(range(10, 16))
+        glue = _np.zeros((R, 5), dtype=_np.uint8)
+        for r in range(R):
+            glue[r, :(r % 5) + 1] = 1
+        rope_base = [100 + 3 * r for r in range(R)]
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=8,
+                  beta=0.5, depth_cap=4, K_glue=4, context_len=200,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.7))
+        fwd_cpu, fwd_ar, cap_cpu, cap_ar = self._mk(W=W, F=F)
+        torch.manual_seed(77)
+        pool, log, cl_cpu = PT.run_rollout(
+            toks, piv, forward_fn=fwd_cpu, glue_rows_by_root=glue,
+            rope_base_by_root=rope_base, **kw)
+        torch.manual_seed(77)
+        ar, trace, cl_ar = PT.run_rollout_arena(
+            toks, piv.clone(), forward_fn=fwd_ar,
+            glue_rows_by_root=glue, rope_base_by_root=rope_base,
+            device="cpu", **kw)
+        pool2 = ar.to_pool(R)
+        # ① 노드 수·필드 전체
+        self.assertEqual(pool.n, pool2.n)
+        n = pool.n
+        for fld, fld2 in (("tok", "tok"), ("parent_idx", "parent_idx"),
+                          ("parent_cell", "parent_cell"),
+                          ("depth", "depth"), ("root", "root"),
+                          ("sib_order", "sib_order"),
+                          ("state", "state"), ("cell", "cell")):
+            self.assertEqual(getattr(pool, fld)[:n].tolist(),
+                             getattr(pool2, fld2)[:n].tolist(), fld)
+        self.assertTrue(torch.allclose(pool.raw_q[:n].double(),
+                                       pool2.raw_q[:n].double(),
+                                       atol=1e-6))
+        lp1 = pool.logpri[:n].double()
+        lp2 = pool2.logpri[:n].double()
+        fin = torch.isfinite(lp1)
+        self.assertTrue(torch.equal(fin, torch.isfinite(lp2)))
+        self.assertTrue(torch.allclose(lp1[fin], lp2[fin], atol=1e-9))
+        # ② 선택·fanout 라운드 트레이스
+        sel_t, val_t, fan_t = trace
+        for f in range(F):
+            sel_cpu, fan_cpu = log[f]
+            n_sel = len(sel_cpu)
+            self.assertEqual(int(val_t[f].sum()), n_sel, f"f={f}")
+            self.assertEqual(sel_t[f][:n_sel].tolist(), sel_cpu, f"f={f}")
+            self.assertEqual(fan_t[f][:n_sel].tolist(),
+                             fan_cpu.tolist()
+                             if torch.is_tensor(fan_cpu) else fan_cpu,
+                             f"f={f}")
+        # ③ forward 입력·mask 바이트
+        self.assertEqual(len(cap_cpu), len(cap_ar))
+        for f, ((i1, r1, p1), (i2, r2, p2)) in enumerate(
+                zip(cap_cpu, cap_ar)):
+            self.assertEqual(i1.tolist(), i2.tolist(), f"ids f={f}")
+            self.assertEqual(r1.tolist(), r2.tolist(), f"rope f={f}")
+            self.assertTrue((_np.frombuffer(p1.tobytes(), _np.uint8)
+                             == p2).all(), f"mask f={f}")
+        # ④ cell_logits (같은 stub — 배선 확인)
+        self.assertTrue(torch.allclose(cl_cpu, cl_ar, atol=0))
+
+    def test_rollout_arena_parity_fuzz_seeds(self):
+        import numpy as _np
+        R, W, F, C = 6, 10, 4, 3
+        glue = _np.ones((R, 5), dtype=_np.uint8)
+        rope_base = [50] * R
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=7,
+                  beta=1.0, depth_cap=4, K_glue=4, context_len=120,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.9))
+        for seed in (1, 2, 9, 42):
+            piv = torch.rand(R, generator=torch.Generator()
+                             .manual_seed(seed))
+            fwd_cpu, fwd_ar, _, _ = self._mk(W=W, F=F, seed=seed)
+            torch.manual_seed(seed)
+            pool, _, _ = PT.run_rollout(
+                list(range(20, 20 + R)), piv, forward_fn=fwd_cpu,
+                glue_rows_by_root=glue, rope_base_by_root=rope_base,
+                **kw)
+            torch.manual_seed(seed)
+            ar, _, _ = PT.run_rollout_arena(
+                list(range(20, 20 + R)), piv.clone(), forward_fn=fwd_ar,
+                glue_rows_by_root=glue, rope_base_by_root=rope_base,
+                device="cpu", **kw)
+            pool2 = ar.to_pool(R)
+            self.assertEqual(pool.n, pool2.n, f"seed={seed}")
+            n = pool.n
+            self.assertEqual(pool.parent_idx[:n].tolist(),
+                             pool2.parent_idx[:n].tolist(),
+                             f"seed={seed}")
+            self.assertEqual(pool.tok[:n].tolist(),
+                             pool2.tok[:n].tolist(), f"seed={seed}")

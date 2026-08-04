@@ -1079,3 +1079,360 @@ def commit_copy_plan(accepted_path, pos0: int, block_table,
             + dst_pos % block_size
         plan.append((sb, db))
     return plan
+
+
+# ====================================================================
+# T6 1a — GPU 상주 rollout (docs/duet/22 v2). 정책·산술·RNG 소비 순서를
+# run_rollout과 동일하게 유지한 채, forward 사이 CPU readback을 0회로.
+# 동등성 게이트: tests의 arena-vs-CPU 라운드 트레이스 비교로 고정.
+# ====================================================================
+
+def alloc_root_budgets_gpu(piv: torch.Tensor, total: int, beta: float,
+                           cap: int) -> torch.Tensor:
+    """alloc_root_budgets의 무동기(sync-free) 미러 — float64 동일 산술,
+    고정 반복(브레이크 대신 no-op 수렴), .item() 0회. CPU/GPU 텐서 모두
+    동작하며 값은 CPU판과 정확히 일치 (동등성 테스트로 고정)."""
+    R = piv.numel()
+    dev = piv.device
+    elig = piv > 0
+    w = torch.where(elig, piv.clamp_min(1e-9).double().pow(beta),
+                    torch.zeros(R, dtype=torch.float64, device=dev))
+    quota = torch.zeros(R, dtype=torch.float64, device=dev)
+    active = elig.clone()
+    left = torch.tensor(float(total), dtype=torch.float64, device=dev)
+    zero = torch.zeros((), dtype=torch.float64, device=dev)
+    cap_f = torch.tensor(float(cap), dtype=torch.float64, device=dev)
+    for _ in range(R):
+        wa = torch.where(active, w, torch.zeros_like(w))
+        add = wa / wa.sum().clamp_min(1e-300) * left
+        newq = quota + add
+        over = active & (newq >= cap)
+        anyover = over.any()
+        take = torch.where(over, cap_f - quota, torch.zeros_like(quota))
+        quota = torch.where(anyover,
+                            torch.where(over, cap_f.expand(R), quota),
+                            newq)
+        left = torch.where(anyover, left - take.sum(), zero)
+        active = active & ~over
+    base = quota.floor().long().clamp_max(cap)
+    rem = (total - base.sum()).clamp(min=0)
+    rem = torch.minimum(rem, elig.long().sum() * cap - base.sum())
+    frac = quota - quota.floor()
+    order = torch.argsort(frac, descending=True, stable=True)
+    for _ in range(2):                     # largest-remainder, 고정 2패스
+        ok = (base < cap) & elig
+        ok_o = ok.index_select(0, order)
+        cum = ok_o.long().cumsum(0)
+        take_o = ok_o & (cum <= rem)
+        base.scatter_add_(0, order, take_o.long())
+        rem = rem - take_o.long().sum()
+    return base
+
+
+class TreeArena:
+    """rollout 상태 전체를 device 텐서로 (22번 v2 — state 필드 명시,
+    조상 bitset은 노드 capacity 폭 int64 1워드, F·W ≤ 63 가드)."""
+
+    def __init__(self, capacity: int, device):
+        d = device
+        self.tok = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.parent_idx = torch.full((capacity,), -1, dtype=torch.int64,
+                                     device=d)
+        self.parent_cell = torch.full((capacity,), -1, dtype=torch.int64,
+                                      device=d)
+        self.depth = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.root = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.sib = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.logpri = torch.full((capacity,), float("-inf"),
+                                 dtype=torch.float64, device=d)
+        self.raw_q = torch.ones(capacity, dtype=torch.float64, device=d)
+        self.state = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.cell = torch.full((capacity,), -1, dtype=torch.int64,
+                               device=d)
+        self.valid = torch.zeros(capacity, dtype=torch.bool, device=d)
+        self.anc_bits = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.n = torch.zeros((), dtype=torch.int64, device=d)
+        self.capacity = capacity
+        self.device = d
+
+    def to_pool(self, R: int):
+        """단일 sync: CPU TreePool로 실체화 (+#38 무효 슬롯 압축 재매김
+        — CPU run_rollout과 동일한 인덱스 공간·순서 보장)."""
+        n = int(self.n)                     # 유일한 sync 지점
+        keep = self.valid[:n].cpu()
+        remap = torch.full((n,), -1, dtype=torch.int64)
+        remap[keep] = torch.arange(int(keep.sum()))
+        pool = TreePool(capacity=self.capacity)
+        fields = {k: getattr(self, k)[:n].cpu()
+                  for k in ("tok", "parent_idx", "parent_cell", "depth",
+                            "root", "sib", "logpri", "raw_q", "state",
+                            "cell")}
+        m = 0
+        for i in range(n):
+            if not bool(keep[i]):
+                continue
+            pool.tok[m] = fields["tok"][i]
+            p = int(fields["parent_idx"][i])
+            pool.parent_idx[m] = remap[p] if p >= 0 else -1
+            pool.parent_cell[m] = fields["parent_cell"][i]
+            pool.depth[m] = fields["depth"][i]
+            pool.root[m] = fields["root"][i]
+            pool.sib_order[m] = fields["sib"][i]
+            pool.logpri[m] = fields["logpri"][i]
+            pool.raw_q[m] = fields["raw_q"][i]
+            pool.state[m] = fields["state"][i]
+            pool.cell[m] = fields["cell"][i]
+            m += 1
+        pool.n = m
+        if hasattr(self, "_budgets"):
+            pool.alloc_stats = _alloc_stats(
+                pool, self._budgets.cpu(), R,
+                requested=getattr(self, "_requested", None))
+        return pool
+
+
+def _arena_select(ar: TreeArena, policy, W, f, depth_cap, tip_idx,
+                  remaining):
+    """select_nodes 미러 (무동기): 반환 sel [W] (pad는 임의 slot),
+    sel_valid [W]. 의무 tip 우선 + priority 순 — CPU와 동일 규약."""
+    cap = ar.capacity
+    dev = ar.device
+    idxs = torch.arange(cap, device=dev)
+    elig = (idxs < ar.n) & (ar.state == 0) & (ar.depth < depth_cap) \
+        & ar.valid
+    if policy == "level":
+        elig = elig & (ar.depth == f)
+    key = torch.where(elig, ar.logpri,
+                      torch.full_like(ar.logpri, float("-inf")))
+    order = torch.argsort(key, descending=True, stable=True)
+    mand_slot = torch.zeros(cap, dtype=torch.bool, device=dev)
+    if tip_idx is not None:
+        t = tip_idx.clamp(min=0)
+        t_ok = (tip_idx >= 0) & (remaining > 0) & elig.gather(0, t)
+        mand_slot.scatter_(0, t, t_ok)
+    mand_o = mand_slot.gather(0, order)
+    reorder = torch.argsort((~mand_o).to(torch.int8), stable=True)
+    final = order.gather(0, reorder)
+    elig_o = elig.gather(0, final)
+    sel = final[:W]
+    sel_valid = elig_o[:W]
+    return sel, sel_valid
+
+
+def _arena_fanout_backbone(ar: TreeArena, sel, sel_valid, tip_idx,
+                           remaining, reserve, c_tensor, R):
+    """alloc_fanouts_backbone 미러 (무동기). 반환 fan [W] (호출자가
+    remaining 차감 — CPU 경로와 동일 분리)."""
+    dev = ar.device
+    W = sel.shape[0]
+    r_of = ar.root.gather(0, sel.clamp(min=0))
+    r_of = torch.where(sel_valid, r_of, torch.zeros_like(r_of))
+    out = torch.zeros(W, dtype=torch.int64, device=dev)
+    rem = remaining.clone()
+    res = reserve.clone()
+    # phase 1: tip fan 1 (같은 root의 tip은 유일)
+    is_tip = sel_valid & (sel == tip_idx.gather(0, r_of))
+    tip_take = is_tip & (rem.gather(0, r_of) > 0)
+    out = out + tip_take.long()
+    rem.scatter_add_(0, r_of, -tip_take.long())
+    res_dec = torch.zeros_like(res)
+    res_dec.scatter_add_(0, r_of, tip_take.long())
+    res = (res - res_dec).clamp(min=0)
+    # phase 2: priority 내림차순 라운드 (+1씩, c_tensor 라운드 = 정확 상계)
+    pri = torch.where(sel_valid, ar.logpri.gather(0, sel.clamp(min=0)),
+                      torch.full((W,), float("-inf"), dtype=torch.float64,
+                                 device=dev))
+    lane_order = torch.argsort(pri, descending=True, stable=True)
+    r_sorted = r_of.gather(0, lane_order)
+    onehot = torch.nn.functional.one_hot(r_sorted, R).long()   # [W, R]
+    for _ in range(c_tensor):
+        uncapped = (out.gather(0, lane_order) < c_tensor) \
+            & sel_valid.gather(0, lane_order)
+        oh = onehot * uncapped.unsqueeze(1).long()
+        rank = oh.cumsum(0) - oh                                # 앞행 수
+        rank_of_lane = (rank * oh).sum(1)
+        avail = (rem - res).clamp(min=0).gather(0, r_sorted)
+        take = uncapped & (rank_of_lane < avail)
+        out.scatter_add_(0, lane_order, take.long())
+        rem = rem - (oh * take.unsqueeze(1).long()).sum(0)
+    return out
+
+
+def _arena_mask_pack(f, W, K_glue, context_len, glue_sel, anc_sel,
+                     sel_valid, device):
+    """build_tree_mask_packed 미러 (GPU packbits little). 반환
+    (packed uint8 [ceil(W·cols/8)], indptr int32 [2]) — device 상주."""
+    cols = int(context_len) + f * W
+    ttl = (f + 1) * W + (K_glue + 1)
+    prefix_len = cols - ttl
+    spec_w = (f + 1) * W
+    m = torch.zeros(W, cols, dtype=torch.uint8, device=device)
+    m[:, :prefix_len] = 1
+    m[:, prefix_len:prefix_len + K_glue + 1] = \
+        glue_sel * sel_valid.unsqueeze(1).to(torch.uint8)
+    spec0 = prefix_len + K_glue + 1
+    shifts = torch.arange(spec_w, device=device)
+    bits = ((anc_sel.unsqueeze(1) >> shifts) & 1).to(torch.uint8)
+    selfbit = torch.zeros(W, spec_w, dtype=torch.uint8, device=device)
+    lane = torch.arange(W, device=device)
+    selfbit[lane, f * W + lane] = 1
+    m[:, spec0:] = (bits | selfbit) * sel_valid.unsqueeze(1).to(torch.uint8)
+    flat = m.reshape(-1)
+    pad = (-flat.numel()) % 8
+    if pad:
+        flat = torch.cat([flat, torch.zeros(pad, dtype=torch.uint8,
+                                            device=device)])
+    weights = (1 << torch.arange(8, device=device)).to(torch.uint8)
+    packed = (flat.view(-1, 8) * weights).sum(1, dtype=torch.int64) \
+        .to(torch.uint8)
+    indptr = torch.tensor([0, packed.numel()], dtype=torch.int32,
+                          device=device)
+    return packed, indptr
+
+
+def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
+                      c_tensor, nv, beta, depth_cap, temps, forward_fn,
+                      glue_rows_by_root, rope_base_by_root, K_glue,
+                      context_len, sampler_x=None, F_x=None, pad_token=0,
+                      fanout_policy="backbone", device=None):
+    """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
+
+    정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
+    tree_sample_wor per forward)를 CPU판과 동일하게 유지 — 차이는
+    계산 장소뿐. forward 루프 내 CPU readback 0회; 유일한 sync는
+    반환 후 to_pool() (1a 임시 — 1b에서 view/wire GPU화로 제거).
+
+    Args (run_rollout 대비): root_piv/temps는 device 텐서 권장 (CPU면
+    올림); glue_rows_by_root [R, K_glue+1] uint8, rope_base_by_root
+    [R] int64 (텐서/리스트 허용). forward_fn은 device 텐서를 받는다.
+
+    Returns: (arena, eval_trace, cell_logits) — eval_trace =
+    (sel [F,W], sel_valid [F,W], fan [F,W]) device 텐서.
+    """
+    if fanout_policy != "backbone":
+        raise NotImplementedError("arena는 backbone 전용 (T6 1a)")
+    R = len(root_toks)
+    if R > W:
+        raise ValueError(f"tree rollout: R={R} > W={W} (이슈 #27)")
+    if F_total * W > 63:
+        raise ValueError(f"arena anc bitset 1워드 초과: F·W={F_total*W}")
+    dev = torch.device(device) if device is not None \
+        else (root_piv.device if torch.is_tensor(root_piv) else "cpu")
+    piv = (root_piv if torch.is_tensor(root_piv)
+           else torch.tensor(root_piv)).to(dev)
+    toks0 = (root_toks if torch.is_tensor(root_toks)
+             else torch.tensor(root_toks, dtype=torch.int64)).to(dev)
+    glue_rows = (glue_rows_by_root if torch.is_tensor(glue_rows_by_root)
+                 else torch.as_tensor(glue_rows_by_root)) \
+        .to(device=dev, dtype=torch.uint8)
+    rope_base = (rope_base_by_root if torch.is_tensor(rope_base_by_root)
+                 else torch.tensor(rope_base_by_root,
+                                   dtype=torch.int64)).to(dev)
+    temps_dev = temps.to(dev)
+
+    ar = TreeArena(R + F_total * W * c_tensor, dev)
+    budgets = alloc_root_budgets_gpu(piv, total=F_total * W, beta=beta,
+                                     cap=nv)
+    ar._budgets = budgets
+    ar._requested = F_total * W
+    remaining = budgets.clone()
+    logpiv = piv.clamp_min(1e-9).double().log()
+    aR = torch.arange(R, device=dev)
+    ar.tok[:R] = toks0
+    ar.root[:R] = aR
+    ar.logpri[:R] = logpiv
+    ar.valid[:R] = True
+    ar.n += R
+    tip_idx = aR.clone()
+    tip_depth = torch.zeros(R, dtype=torch.int64, device=dev)
+    sel_tr, val_tr, fan_tr = [], [], []
+    cell_logits = None
+    for f in range(F_total):
+        sel, sel_valid = _arena_select(ar, policy, W, f, depth_cap,
+                                       tip_idx, remaining)
+        reserve = (depth_cap - tip_depth).clamp(min=0)
+        fan = _arena_fanout_backbone(ar, sel, sel_valid, tip_idx,
+                                     remaining, reserve, c_tensor, R)
+        r_of = torch.where(
+            sel_valid, ar.root.gather(0, sel.clamp(min=0)),
+            torch.zeros_like(sel))
+        remaining.scatter_add_(0, r_of, -fan)
+        # --- forward 입력 (전부 device) ---
+        input_ids = torch.where(sel_valid,
+                                ar.tok.gather(0, sel.clamp(min=0)),
+                                torch.full_like(sel, pad_token))
+        rope = torch.where(
+            sel_valid,
+            rope_base.gather(0, r_of) + ar.depth.gather(0, sel.clamp(min=0)),
+            rope_base[0].expand(W))
+        glue_sel = glue_rows.index_select(0, r_of)
+        anc_sel = ar.anc_bits.gather(0, sel.clamp(min=0)) \
+            * sel_valid.long()
+        packed, indptr = _arena_mask_pack(
+            f, W, K_glue, context_len, glue_sel, anc_sel, sel_valid, dev)
+        logits = forward_fn(f, input_ids, rope, packed, indptr)
+        if cell_logits is None:
+            cell_logits = torch.zeros(F_total * W, logits.shape[-1],
+                                      dtype=logits.dtype,
+                                      device=logits.device)
+        cell_logits[f * W:(f + 1) * W] = logits[:W]
+        toks, raws = tree_sample_wor(logits, temps_dev, c_tensor,
+                                     sampler_x=sampler_x, F=F_x,
+                                     assume_pos_temps=True)
+        # --- 자식 삽입 (lane-major, c-minor — CPU append 순서 동일) ---
+        lane_cell = f * W + torch.arange(W, device=dev)
+        ar.cell.scatter_(0, sel.clamp(min=0),
+                         torch.where(sel_valid, lane_cell,
+                                     ar.cell.gather(0, sel.clamp(min=0))))
+        ar.state.scatter_(0, sel.clamp(min=0),
+                          torch.where(sel_valid, torch.ones_like(sel),
+                                      ar.state.gather(0, sel.clamp(min=0))))
+        offs = ar.n + torch.cumsum(fan, 0) - fan            # [W] excl.
+        cgrid = torch.arange(c_tensor, device=dev)
+        slot = offs.unsqueeze(1) + cgrid.unsqueeze(0)       # [W, C]
+        child_ok = cgrid.unsqueeze(0) < fan.unsqueeze(1)    # [W, C]
+        raws64 = raws.double()
+        pos_q = raws64 > 0.0                                # #38
+        flat_ok = child_ok.reshape(-1)
+        sl = slot.reshape(-1)[flat_ok]
+        par = sel.unsqueeze(1).expand(W, c_tensor).reshape(-1)[flat_ok]
+        cix = cgrid.unsqueeze(0).expand(W, c_tensor).reshape(-1)[flat_ok]
+        tk = toks.reshape(-1)[flat_ok]
+        rq = raws64.reshape(-1)[flat_ok]
+        ok_q = pos_q.reshape(-1)[flat_ok]
+        ar.tok.scatter_(0, sl, tk)
+        ar.parent_idx.scatter_(0, sl, par)
+        ar.parent_cell.scatter_(0, sl, lane_cell.unsqueeze(1)
+                                .expand(W, c_tensor).reshape(-1)[flat_ok])
+        ar.depth.scatter_(0, sl, ar.depth.gather(0, par) + 1)
+        ar.root.scatter_(0, sl, ar.root.gather(0, par))
+        ar.sib.scatter_(0, sl, cix)
+        child_lp = ar.logpri.gather(0, par) \
+            + rq.clamp_min(1e-9).log()
+        ar.logpri.scatter_(0, sl, torch.where(
+            ok_q, child_lp, torch.full_like(child_lp, float("-inf"))))
+        ar.raw_q.scatter_(0, sl, rq)
+        ar.valid.scatter_(0, sl, ok_q)
+        # 무효(zero-q) 슬롯은 평가 불가로 마킹 (선택 배제)
+        ar.state.scatter_(0, sl, torch.where(
+            ok_q, torch.zeros_like(sl), torch.ones_like(sl)))
+        ar.anc_bits.scatter_(
+            0, sl, ar.anc_bits.gather(0, par)
+            | (torch.ones_like(par) << ar.cell.gather(0, par)))
+        ar.n = ar.n + fan.sum()
+        # backbone tip 전진: tip lane의 맏이(c=0). 주의 — pad lane의
+        # r_of가 0으로 라우팅되므로 scatter_(중복 승자 미정)는 root0의
+        # tip을 낡은 값으로 덮을 수 있다. tip은 root당 최대 1 lane
+        # 이므로 델타 scatter_add(나머지는 +0)로 중복-안전하게 갱신.
+        tip_adv = sel_valid & (sel == tip_idx.gather(0, r_of)) & (fan > 0)
+        old_tip = tip_idx.gather(0, r_of)
+        delta = torch.where(tip_adv, offs - old_tip,
+                            torch.zeros_like(offs))
+        tip_idx.scatter_add_(0, r_of, delta)
+        tip_depth.scatter_add_(0, r_of, tip_adv.long())
+        sel_tr.append(sel)
+        val_tr.append(sel_valid)
+        fan_tr.append(fan)
+    trace = (torch.stack(sel_tr), torch.stack(val_tr),
+             torch.stack(fan_tr))
+    return ar, trace, cell_logits

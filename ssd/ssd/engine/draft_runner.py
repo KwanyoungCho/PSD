@@ -1938,8 +1938,17 @@ class DraftRunner(ModelRunner):
                 i += 1
         # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
         seed_piv = tree_args.get("proxy_piv")
-        root_piv = (seed_piv[0].cpu().float() if seed_piv is not None
-                    else torch.full((len(seeds),), 1e-6))
+        # T6 1a (docs/duet/22): SSD_TREE_ARENA=1이면 GPU 상주 rollout —
+        # piv를 CPU로 내리지 않는다 (pre 구간 sync 제거).
+        _use_arena = os.environ.get("SSD_TREE_ARENA", "0") == "1"
+        if _use_arena:
+            root_piv = (seed_piv[0].float() if seed_piv is not None
+                        else torch.full((len(seeds),), 1e-6,
+                                        device=self.device))
+        else:
+            root_piv = (seed_piv[0].cpu().float()
+                        if seed_piv is not None
+                        else torch.full((len(seeds),), 1e-6))
         # 이슈 #24: R-W 분리 — 상위 R root 외에는 piv를 0으로 눌러
         # 예산이 가지 않게 한다 (구조·CG·키 폭은 불변; 무예산 root는
         # 뷰 0 → populate 후 #14 키 무효화 경로로 명시적 miss).
@@ -1947,7 +1956,8 @@ class DraftRunner(ModelRunner):
         if _rc is not None and _rc < len(seeds):
             _keep = torch.argsort(root_piv, descending=True,
                                   stable=True)[:_rc]
-            _mask_r = torch.zeros(len(seeds), dtype=torch.bool)
+            _mask_r = torch.zeros(len(seeds), dtype=torch.bool,
+                                  device=root_piv.device)
             _mask_r[_keep] = True
             root_piv = torch.where(_mask_r, root_piv,
                                    torch.zeros_like(root_piv))
@@ -1966,7 +1976,10 @@ class DraftRunner(ModelRunner):
                 glue_rows[r, :p + 1] = 1
             K_glue_used = _n_pos - 1
         rope0 = tree_args["rope_positions"]
-        rope_base = [int(rope0[r]) for r in range(len(seeds))]
+        if _use_arena and torch.is_tensor(rope0):
+            rope_base = rope0[:len(seeds)].to(torch.int64)  # sync 0회
+        else:
+            rope_base = [int(rope0[r]) for r in range(len(seeds))]
         ctx_len = int(step_context_lens[0][0]) - 0  # chain 빌더 입력과 동일
 
         dbt = tree_args["block_tables"]
@@ -1974,9 +1987,14 @@ class DraftRunner(ModelRunner):
         _CH.cache["_tree_mask_override"] = {}
 
         def forward_fn(f, input_ids_w, rope_w, packed, indptr):
-            _CH.cache["_tree_mask_override"][f] = (
-                torch.from_numpy(packed).to(self.device),
-                torch.from_numpy(indptr.astype(_np.int32)).to(self.device))
+            if torch.is_tensor(packed):            # arena: device 상주
+                _CH.cache["_tree_mask_override"][f] = (
+                    packed.to(self.device), indptr.to(self.device))
+            else:
+                _CH.cache["_tree_mask_override"][f] = (
+                    torch.from_numpy(packed).to(self.device),
+                    torch.from_numpy(indptr.astype(_np.int32))
+                    .to(self.device))
             set_context(
                 is_prefill=False,
                 slot_mapping=step_slot_maps[f],
@@ -1996,17 +2014,38 @@ class DraftRunner(ModelRunner):
             return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
 
         try:
-            pool, eval_log, cell_logits = _PT.run_rollout(
-                [t for _p, t in seeds], root_piv,
-                policy=cfg.duet_tree_policy, W=W, F_total=K2,
-                c_tensor=cfg.duet_tree_c_tensor, nv=cfg.duet_tree_nv,
-                beta=cfg.duet_tree_beta, depth_cap=K2,
-                temps=temps[:1].expand(W).float(),
-                forward_fn=forward_fn, glue_rows_by_root=glue_rows,
-                rope_base_by_root=rope_base, K_glue=K_glue_used,
-                fanout_policy=cfg.duet_tree_fanout_policy,
-                context_len=ctx_len,
-                sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
+            if _use_arena:
+                _ar, eval_log, cell_logits = _PT.run_rollout_arena(
+                    toks[:len(seeds)], root_piv,
+                    policy=cfg.duet_tree_policy, W=W, F_total=K2,
+                    c_tensor=cfg.duet_tree_c_tensor,
+                    nv=cfg.duet_tree_nv, beta=cfg.duet_tree_beta,
+                    depth_cap=K2, temps=temps[:1].expand(W).float(),
+                    forward_fn=forward_fn, glue_rows_by_root=glue_rows,
+                    rope_base_by_root=rope_base, K_glue=K_glue_used,
+                    fanout_policy=cfg.duet_tree_fanout_policy,
+                    context_len=ctx_len, sampler_x=cfg.sampler_x,
+                    F_x=cfg.async_fan_out, device=self.device)
+                # 1a 경계: 단일 sync로 기존 view/wire 경로에 접속
+                # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/22)
+                pool = _ar.to_pool(len(seeds))
+                if os.environ.get("SSD_TREE_ALLOC_CHECK", "0") == "1":
+                    st = pool.alloc_stats
+                    if st["generated"] != st["allocated"]:
+                        print(f"[tree-alloc #27/arena] {st}", flush=True)
+            else:
+                pool, eval_log, cell_logits = _PT.run_rollout(
+                    [t for _p, t in seeds], root_piv,
+                    policy=cfg.duet_tree_policy, W=W, F_total=K2,
+                    c_tensor=cfg.duet_tree_c_tensor,
+                    nv=cfg.duet_tree_nv,
+                    beta=cfg.duet_tree_beta, depth_cap=K2,
+                    temps=temps[:1].expand(W).float(),
+                    forward_fn=forward_fn, glue_rows_by_root=glue_rows,
+                    rope_base_by_root=rope_base, K_glue=K_glue_used,
+                    fanout_policy=cfg.duet_tree_fanout_policy,
+                    context_len=ctx_len,
+                    sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
         finally:
             _CH.cache.pop("_tree_mask_override", None)
         return pool, eval_log, cell_logits
