@@ -16,11 +16,13 @@ export SSD_DATASET_DIR=/data2/chokwans99/datasets
 export MPLCONFIGDIR=/tmp/matplotlib SSD_PROFILE_DUET=0
 
 wait_clean_box () {
+  # 사용자 지시 (2026-08-04): GPU 유휴만 확인 — CPU load 조건 제거
+  # (타 사용자 CPU 작업 무관하게 GPU 비는 대로 시작; 절대 TPS는
+  # 오염 주의, sweep은 동일-창 상대 비교 + verdict는 인터리브)
   while true; do
-    load=$(cut -d' ' -f1 /proc/loadavg | cut -d. -f1)
     gmax=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits -i 0,1,2,3,4 | sort -n | tail -1)
-    if [ "${load}" -lt 24 ] && [ "${gmax}" -lt 1000 ]; then break; fi
-    echo "[guard] load=${load} gpu_mem=${gmax}MiB — 60s 대기"; sleep 60
+    if [ "${gmax}" -lt 1000 ]; then break; fi
+    echo "[guard] gpu_mem=${gmax}MiB — 60s 대기"; sleep 60
   done
 }
 
