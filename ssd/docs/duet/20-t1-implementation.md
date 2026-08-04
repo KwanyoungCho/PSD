@@ -484,6 +484,30 @@ logpri/tip_depth — 텐서 캐스팅 제거, 결과 불변·topology 테스트
 ~7.2는 .cpu() 동기 = GPU 실행 대기(순차 의존 하한). 추가 회수는
 plan 오버랩(이중-그래프) 등 리스크 항목 — T5 판정 후 결정.
 
+## 외부 리뷰 2차 수용 (2026-08-04) — 7주장 전수 테스트 확정
+
+검증 배터리(재현 런·반례 계산·전수 열거·프로파일)로 전 항목 확정.
+**1차 결론 2건 철회**: "예산 보존 상쇄"(→진범은 P1 악화: P2 축
++0.048 vs P1 축 −0.054), "+0.6pt DP 이득"(top-6=90.7% off-by-one
+정정 후 실측 0.217 < 예측 0.220).
+
+| 이슈 | 내용 | 검증 | 수정 방향 |
+|---|---|---|---|
+| #27 | select_nodes top-W 컷이 backbone tip을 탈락시켜 예산 소실 (재현: 40 중 34 생성, 약root dmax=1 영구정지; trace 평균 32.15/40) | 재현 ✓ | tip 우선 예약 lane + 잔여만 priority rescue + generated==allocated 불변 기록 |
+| #28 | 트리 Policy-B 형제 α가 원본 p/q 독립곱 — 실제 사다리(R/D 갱신)와 상이 (반례: 0 vs 0.28125) | 반례 ✓ | 정확 사다리 C≤3 unroll, GPU 벡터화 |
+| #29 | R6 손실 서술 off-by-one (top-5 87% ≠ top-6 90.7%) | 재계산 ✓ | 분석·서술 정정 (완료) |
+| #30 | AL 상쇄 회계 오류 (잃은 hit은 0이 아니라 miss 2.72로 이동) | 재계산 ✓ | 21번 판정 정정 (완료) — P1 악화가 주범 |
+| #31 | 트리-스텝 P1 균등배분 (terminal mass 비대칭 무시) — P1 악화의 유력 원인 | 회계 ✓ | terminal-mass 가중 P1 배분 (empirical prior/2단 배분) |
+| #32 | 2.137은 상한 아님 — 전수 열거(24,364) 최적 2.2167 @ [-1,-1,-1,0,0,1,3,6] | 열거 ✓ | "한 형상의 대체 예측값"으로 정정 + 열거-기반 template 설계 입력 |
+| #33 | water-filling이 cap 후 비례 재계산 없이 라운드로빈 균등화 ([8,5,3] vs [8,7,1]) | 예제 ✓ | active-set 비례 재정규화 |
+| #34 | #25 구현이 exit_logits 0.3→17.6ms (GPU 스칼라 추출·CPU full-vocab 행) | 프로파일 ✓ | Policy-B 전면 GPU화 (사다리와 함께) |
+| #35 | pending state 가드 부재 (staging에 seq_id/epoch 없음·preempt/prefill 미청소·tree_terminal_node 비정식 필드) + SHM event는 read-ACK | 코드 ✓ | seq_id/epoch 가드 + prefill/preempt clear + 정식 필드화 |
+
+방법론 노트(수용): T5 스크립트 주석 5회↔실제 3회 정정, 고정 팔-순서,
+stale-log skip 위험 — 이후 verdict는 라벨에 코드 rev 포함. **필수
+대조군에 chain-R6 추가** (P2AL +12.8%에서 상위-root 선택편향 분리).
+현 T5 런의 tree 팔은 "현행-구현" 데이터점으로 캐비앳.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
