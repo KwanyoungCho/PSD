@@ -466,18 +466,14 @@ class Verifier(VerifierBase):
         par = [int(x) for x in tree_meta[3 + nv:3 + 2 * nv][:valid]]
         sib = [int(x) for x in tree_meta[3 + 2 * nv:3 + 3 * nv][:valid]]
 
-        # 리뷰3-9: 보행과 동일 분포 빌드 — p^E는 target temp,
-        # q는 draft temp + sampler_x/F (q_probs_from_logits — 보행의
-        # q_parent_probs와 같은 헬퍼; 종전 양쪽 plain softmax는 temp≠1
-        # 에서 α̂·terminal·residual 전부 편향).
-        from ssd.engine.helpers.p2_tree import q_probs_from_logits
-        p_E = torch.softmax(exit_logits[0].float()
-                            / max(temp_p, 1e-8), dim=-1)         # [vk+1, V]
-        q_rows = q_probs_from_logits(
-            logits_q[0],
-            torch.full((logits_q.shape[1],), max(temp_d, 1e-8),
-                       device=logits_q.device),
-            self.sampler_x, self.async_fan_out)                  # [vk, V]
+        # 리뷰3-9(분포 미러)는 **동일-시드 A/B로 원복** (2026-08-04):
+        # temp/sampler_x 반영판은 hit +0.011에 P2AL 2.13→1.94 —
+        # 날카로워진 p^E가 wire 후보를 얕은 ctx로 몰아 깊이를 깎았다
+        # (tok/step 4.55→4.36 순손실). plain softmax가 체인 proxy와도
+        # 일관된 경험적 동작점 — 재도전은 P_iv 랭킹·β·prior 공동
+        # recalibration으로만 (T6 부채; 20번 판정표 참조).
+        p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
+        q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
         tokens = draft_tokens[0, :valid].to(p_E.device)
 
         _alpha, term, resid = tree_policy_b_ladder(

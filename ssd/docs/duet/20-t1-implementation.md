@@ -562,18 +562,18 @@ raw 프로파일(405794e 쌍)·반례 런·수계산으로 주장별 확정/기�
 | P1build+proxy_wait 이중계상 | 확정 | critical path = max(draft P1 ready, target proxy ready); target측 +15ms가 게이트 |
 | TPS 산술 (65-72·−7~15% 오류) | 확정 | 17-20 회수 시 67.0-70.5 (−12.4~−16.8%); parity bar ≈26ms+AL2% |
 | "Nv8만 이득" 미입증 | 확정 | Nv는 root cap 겸용 — W10/Nv4 requested 40 중 allocated 24 (이용률 60%) 교란; nv6@W10 미측정 (sweep 중단). **nv8 우위 자체(재판정 2.12)는 유지** |
-| P1 prior에 앞형제-기각 인자 누락 | **확정 (버그)** | 둘째 형제 2.08× 과대 — #36 수정 |
-| Policy-B가 temp/sampler_x 미적용 | **확정 (버그)** | 보행은 q_probs_from_logits(td)+p(tp); proxy는 양쪽 plain softmax — #37 수정 |
+| P1 prior에 앞형제-기각 인자 누락 | 확정(모델) → **원복(실측)** | 수학상 둘째 형제 2.08× 과대는 맞으나, 동일-시드 A/B(8×256)에서 presib 보정판이 P1AL 4.13→3.88 회귀 — 실제 형제 조건부 수락은 λ-할인(18번)으로 고정-A 예측보다 높아 미보정형이 보상. #31 형태 유지, calibrated prior는 T6 부채 |
+| Policy-B가 temp/sampler_x 미적용 | 확정(모델) → **원복(실측)** | 미러판이 hit +0.011에 P2AL 2.13→1.94 (tok/step 4.55→4.36 순손실) — 날카로운 p^E가 wire 후보를 얕은 ctx로 집중. plain softmax(체인 일관)가 경험적 동작점; 재도전은 P_iv 랭킹·β·prior 공동 recalibration으로 (T6 부채). temp0 명시 게이트는 유지 |
 | WOR support 소진 → D[t]=0 fail | 확정 (위험) | #38 수정 (raw_q≤0 자식 배제 — 기존 sync 편승) |
 | mask "포인터 교체" 불가 | 확정 | captured _custom_mask_buf in-place copy 필요; plan-once 재도전 금지 (#20 교훈 유지), plan-ahead(기하 불변)만 |
 | chainR6=budget6는 CG폭 변경 | 부분수용 | 토큰축(P2AL 귀속) 결론은 유효 (사석행은 hit 불가 — 등가); 시간축 비교엔 W10-top6 knob 필요 (후속) |
 | SHM read-ACK / epoch 상수 / assert -O 소거 | 확정 (부채) | assert 3곳 경화(#40); epoch·ACK는 T6 correctness 배치 |
 
-**즉시 수정 (이번 배치)**: #36 P1 reach·presib prior, #37 Policy-B
-temp/sampler_x 미러 + target temp≤0 명시 게이트, #38 WOR support
-가드, #39 alloc_stats requested/allocated/generated 3값, #40 무손실
-경계 assert→RuntimeError, #41 stale policy-b 픽스처 [B,N] 정합 —
-유닛 62/62 green.
+**이번 배치 최종 상태**: #38 WOR support 가드, #39 requested 3값,
+#40 assert 경화, #41 픽스처 정합, temp0 게이트 — 채택 (62/62
+green). #36·#37은 **이분 탐색 A/B로 원복** (위 표 — "모델상 옳음 ≠
+실측 개선"의 교훈; #20 plan-once와 동일 패턴: 라이브 경로 변경은
+반드시 동일-시드 A/B 게이트).
 
 **T6 방향 수정 (리뷰 권고 수용)**: budget-only 정적 템플릿은 현
 정책의 drop-in이 아니라 **신규 fixed-topology 정책** — P2AL 보존

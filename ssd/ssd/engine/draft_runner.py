@@ -1337,18 +1337,16 @@ class DraftRunner(ModelRunner):
         # ~0.52 — docs/duet/18 λ·E1 α)로 가중, 바닥 1 lane (전 ctx
         # 생존), largest-remainder 반올림 (합 = W1, CG 폭 불변).
         if W1 >= n_rows:
-            # 리뷰3-8 정정: A^depth에는 '앞 형제 전원 기각' 인자가 빠져
-            # 둘째 형제를 2.08× 과대평가 — reach를 부모 사슬로 전개:
-            # reach(rec)=1, reach(j)=reach(par)·A·(1−A)^sib_order(j),
-            # w(ctx)=reach(ctx)·(1−A)^자식수.
+            # 리뷰3-8의 presib 보정(reach에 (1−A)^sib_order 포함)은
+            # 고정-A '모델'로는 정확하나 **동일-시드 A/B에서 P1AL
+            # 4.13→3.88·P2AL 2.13→1.94 회귀** (2026-08-04, 8×256) —
+            # 실제 둘째-형제 조건부 수락은 λ-할인(18번: a₂≈1−(1−α)^0.52)
+            # 으로 고정-A 예측보다 높아, 미보정형이 우연히 보상한다.
+            # 경험 우선으로 #31 형태 유지; 진짜 교정은 depth/sib별
+            # calibrated prior (T6 부채 — 리뷰3도 동일 제안).
             _A = 0.52
-            _sib = _views["sib_order"][_root]
-            _reach = [0.0] * n_rows
-            _reach[0] = 1.0
-            for j in range(n_valid):
-                _reach[1 + j] = (_reach[int(par[j]) + 1] * _A
-                                 * ((1.0 - _A) ** int(_sib[j])))
-            w_ctx = [_reach[c] * ((1.0 - _A) ** len(child_toks[c]))
+            w_ctx = [(_A ** depth_ctx[c])
+                     * ((1.0 - _A) ** len(child_toks[c]))
                      for c in range(n_rows)]
             _ws = sum(w_ctx)
             _extra = W1 - n_rows
