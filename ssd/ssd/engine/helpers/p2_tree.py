@@ -235,6 +235,10 @@ def tree_policy_b_ladder(par, sib, tokens, p_rows, q_rows):
     """
     valid = len(par)
     dev = p_rows.device
+    resid = p_rows[:valid + 1].clone()
+    if valid == 0:
+        return (torch.zeros(0, device=dev), torch.ones(1, device=dev),
+                resid)
     kids = {}
     for j in range(valid):
         kids.setdefault(int(par[j]), []).append(j)
@@ -242,65 +246,73 @@ def tree_policy_b_ladder(par, sib, tokens, p_rows, q_rows):
         v_.sort(key=lambda j: int(sib[j]))
     groups = sorted(kids.keys())                     # ctx key 오름차순
     G = len(groups)
-    alpha = torch.zeros(valid, device=dev)
-    presib = torch.ones(valid, device=dev)
-    resid = p_rows[:valid + 1].clone()
-    if valid == 0:
-        return alpha, torch.ones(1, device=dev), resid
-    if G:
-        ctx_rows = torch.tensor([g + 1 for g in groups], dtype=torch.int64,
-                                device=dev)
-        first_child = torch.tensor([kids[g][0] for g in groups],
-                                   dtype=torch.int64, device=dev)
-        R_mat = p_rows.index_select(0, ctx_rows).clone()   # [G, V]
-        D_mat = q_rows.index_select(0, first_child).clone()
-        group_cum = torch.ones(G, device=dev)
-        max_c = max(len(kids[g]) for g in groups)
-        for s in range(max_c):
-            has = [gi for gi, g in enumerate(groups) if len(kids[g]) > s]
-            gi_t = torch.tensor(has, dtype=torch.int64, device=dev)
-            cj = torch.tensor([kids[groups[gi]][s] for gi in has],
-                              dtype=torch.int64, device=dev)
-            tj = tokens.index_select(0, cj)
-            r_t = R_mat[gi_t, tj]
-            d_t = D_mat[gi_t, tj]
-            a_s = (r_t / (d_t + 1e-10)).clamp(max=1.0)
-            alpha.index_copy_(0, cj, a_s)
-            presib.index_copy_(0, cj, group_cum.index_select(0, gi_t))
-            group_cum.index_copy_(
-                0, gi_t, group_cum.index_select(0, gi_t) * (1.0 - a_s))
-            # 기각 갱신 (walk 동일: R←norm((R−D)+); D[t]←0 renorm)
-            R_g = (R_mat.index_select(0, gi_t)
-                   - D_mat.index_select(0, gi_t)).clamp(min=0.0)
-            Z = R_g.sum(-1, keepdim=True)
-            R_g = torch.where(Z > 1e-12, R_g / Z.clamp_min(1e-30),
-                              torch.zeros_like(R_g))
-            R_mat.index_copy_(0, gi_t, R_g)
-            D_g = D_mat.index_select(0, gi_t).clone()
-            D_g.scatter_(1, tj.unsqueeze(1), 0.0)
-            Zd = D_g.sum(-1, keepdim=True)
-            D_g = torch.where(Zd > 1e-12, D_g / Zd.clamp_min(1e-30),
-                              torch.zeros_like(D_g))
-            D_mat.index_copy_(0, gi_t, D_g)
-        # recovery 원천 (walk: src = R if sum>1e-12 else p)
-        R_ok = R_mat.sum(-1, keepdim=True) > 1e-12
-        resid[ctx_rows] = torch.where(
-            R_ok, R_mat, p_rows.index_select(0, ctx_rows))
-    # reach: reach[j] = alpha·presib·reach[parent] — depth 고정점 반복
-    par_t = torch.tensor([int(p) for p in par], dtype=torch.int64,
-                         device=dev)
+    max_c = max(len(kids[g]) for g in groups)
     depth = [0] * valid
     for j in range(valid):
         depth[j] = 1 if int(par[j]) < 0 else depth[int(par[j])] + 1
+    # 단일 H2D 토포 팩 (#34 μ-opt): 분산 torch.tensor(..., device) 호출
+    # (~8회)은 혼잡 스트림에서 staging 직렬화 — CPU에서 한 텐서로 조립
+    # 후 1회 전송, GPU에서는 view 슬라이스만.
+    # 레이아웃: [ctx_rows G | first_child G | cj G*C | par valid]
+    # cj pad = valid (dummy slot — alpha/presib를 valid+1로 잡고 버림).
+    cj_pad = []
+    for g in groups:
+        ch = kids[g]
+        cj_pad += ch + [valid] * (max_c - len(ch))
+    topo = torch.tensor(
+        [g + 1 for g in groups]
+        + [kids[g][0] for g in groups]
+        + cj_pad
+        + [int(x) for x in par],
+        dtype=torch.int64).to(dev, non_blocking=True)
+    ctx_rows = topo[:G]
+    first_child = topo[G:2 * G]
+    cj_mat = topo[2 * G:2 * G + G * max_c].view(G, max_c)
+    par_t = topo[2 * G + G * max_c:]
+    valid_mat = cj_mat < valid                       # [G, C] 유효 마스크
+    tok_ext = torch.cat([tokens, tokens.new_zeros(1)])
+    alpha_x = torch.zeros(valid + 1, device=dev)     # [+dummy]
+    presib_x = torch.ones(valid + 1, device=dev)
+    R_mat = p_rows.index_select(0, ctx_rows).clone()   # [G, V]
+    D_mat = q_rows.index_select(0, first_child).clone()
+    group_cum = torch.ones(G, 1, device=dev)
+    for s in range(max_c):
+        cj = cj_mat[:, s]                            # [G] (pad=valid)
+        vm = valid_mat[:, s:s + 1].float()           # [G,1]
+        tj = tok_ext.index_select(0, cj).unsqueeze(1)   # [G,1]
+        r_t = R_mat.gather(1, tj)
+        d_t = D_mat.gather(1, tj)
+        a_s = (r_t / (d_t + 1e-10)).clamp(max=1.0) * vm
+        alpha_x.index_copy_(0, cj, a_s.squeeze(1))
+        presib_x.index_copy_(0, cj, group_cum.squeeze(1))
+        group_cum = group_cum * (1.0 - a_s)
+        # 기각 갱신 (walk 동일: R←norm((R−D)+); D[t]←0 renorm) — 전 G
+        # 행 dense 계산 후 무효 행은 where로 원복 (subset index 제거)
+        R_new = (R_mat - D_mat).clamp(min=0.0)
+        Z = R_new.sum(-1, keepdim=True)
+        R_new = torch.where(Z > 1e-12, R_new / Z.clamp_min(1e-30),
+                            torch.zeros_like(R_new))
+        R_mat = torch.where(vm > 0, R_new, R_mat)
+        D_new = D_mat.scatter(1, tj, 0.0)
+        Zd = D_new.sum(-1, keepdim=True)
+        D_new = torch.where(Zd > 1e-12, D_new / Zd.clamp_min(1e-30),
+                            torch.zeros_like(D_new))
+        D_mat = torch.where(vm > 0, D_new, D_mat)
+    alpha = alpha_x[:valid]
+    presib = presib_x[:valid]
+    # recovery 원천 (walk: src = R if sum>1e-12 else p)
+    R_ok = R_mat.sum(-1, keepdim=True) > 1e-12
+    resid[ctx_rows] = torch.where(
+        R_ok, R_mat, p_rows.index_select(0, ctx_rows))
+    # reach: reach[j] = alpha·presib·reach[parent] — depth 고정점 반복
     base = alpha * presib
     reach = base.clone()
     one = torch.ones(1, device=dev)
-    for _ in range(max(depth) - 1 if valid else 0):
+    for _ in range(max(depth) - 1):
         reach = base * torch.cat([one, reach]).index_select(0, par_t + 1)
     reach_ext = torch.cat([one, reach])              # [valid+1]
     allrej = torch.ones(valid + 1, device=dev)
-    if G:
-        allrej.index_copy_(0, ctx_rows, group_cum)   # g=-1 → row 0 포함
+    allrej.index_copy_(0, ctx_rows, group_cum.squeeze(1))  # g=-1 → row 0
     term = reach_ext * allrej
     return alpha, term, resid
 
