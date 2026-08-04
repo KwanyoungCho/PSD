@@ -165,6 +165,9 @@ class Scheduler:
         # print(f"[_preempt] Seq {seq.seq_id}: preempting sequence", flush=True)
         seq.status = SequenceStatus.WAITING
         seq.recovery_token_id = None
+        # 이슈 #35: 트리 종단 pending 소거 — 잔존 시 재-prefill 후 첫
+        # spec step의 k_idx가 stale 노드 id로 나가 오염 hit 가능.
+        seq.tree_terminal_node = None
         self.block_manager.deallocate(seq)
         if self.speculate:
             self.draft_block_manager.deallocate(seq)

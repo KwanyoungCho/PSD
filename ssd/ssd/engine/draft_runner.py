@@ -579,6 +579,8 @@ class DraftRunner(ModelRunner):
                         # _tree_views를 덮어써도 유지)
                         self._tree_served_ints = _packed_ints.clone()
                         self._tree_served_numtok = int(num_tokens[0])
+                        # 이슈 #35: staging 소비 가드용 seq 정체 기록
+                        self._tree_served_seq = int(request_keys[0, 0])
         elif self.config.jit_speculate:
             # Cache is empty (first iteration), must JIT all
             if self.config.verbose:
@@ -719,6 +721,11 @@ class DraftRunner(ModelRunner):
             self._tree_staged_kv = None
             _a_eff = int(num_tokens[0]) - self._tree_served_numtok - 1
             _T = int(cache_keys[0, 1])
+            # 이슈 #35: 서빙 시점 seq와 다른 seq의 요청이면 (종료 후 새
+            # seq 진입 등) staged KV는 폐기 — a_eff/k_idx가 새 seq
+            # 좌표로 우연히 유효해 보여도 KV 오염이므로 정체 대조 필수.
+            if int(seq_ids[0]) != getattr(self, "_tree_served_seq", -1):
+                _staged = None
             if _a_eff > 0 and _T > 0 and _staged is not None:
                 _nv_s = self.config.duet_tree_nv
                 _par = _served[3 + _nv_s:3 + 2 * _nv_s]
@@ -1321,8 +1328,30 @@ class DraftRunner(ModelRunner):
 
         # === P1: 노드-fork, K1 forwards ===
         _mev_p1b = _mr("phase1_build")
-        fan_counts = [W1 // n_rows + (1 if i < W1 % n_rows else 0)
-                      for i in range(n_rows)]
+        # 이슈 #31 (리뷰2-5): 균등 배분(W1//n_rows)은 rec(최빈 종단
+        # 컨텍스트)에도 소수 lane만 줘 P1 궤적 품질을 깎는다 (verdict
+        # 회계: P1 축 −0.054 tok/step — AL 동률의 주범). 종단질량
+        # prior ∝ a^depth·(1−a)^{자식수} (a = per-depth 수락률 적합
+        # ~0.52 — docs/duet/18 λ·E1 α)로 가중, 바닥 1 lane (전 ctx
+        # 생존), largest-remainder 반올림 (합 = W1, CG 폭 불변).
+        if W1 >= n_rows:
+            _A = 0.52
+            w_ctx = [(_A ** depth_ctx[c])
+                     * ((1.0 - _A) ** len(child_toks[c]))
+                     for c in range(n_rows)]
+            _ws = sum(w_ctx)
+            _extra = W1 - n_rows
+            _quota = [_extra * w / _ws for w in w_ctx]
+            fan_counts = [1 + int(q) for q in _quota]
+            _rem = W1 - sum(fan_counts)
+            _ord = sorted(range(n_rows),
+                          key=lambda c: _quota[c] - int(_quota[c]),
+                          reverse=True)
+            for c in _ord[:_rem]:
+                fan_counts[c] += 1
+        else:
+            fan_counts = [W1 // n_rows + (1 if i < W1 % n_rows else 0)
+                          for i in range(n_rows)]
         draft_forked_k1, draft_forked_p1_padded, draft_forked_p1_mask = \
             self._select_tree_fork_tokens(glue_logits, fan_counts, child_toks)
         draft_tree_args = self._build_tree_decode_args_for_layout(

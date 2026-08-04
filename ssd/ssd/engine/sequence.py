@@ -22,6 +22,7 @@ class Sequence:
         'num_draft_cached_tokens', 'temperature', 'draft_temperature', 'max_new_tokens',
         'ignore_eos', 'recovery_token_id', 'last_target_hidden_state',
         'extend_eagle_acts', 'extend_token_ids', 'extend_count',
+        'tree_terminal_node',
     ]
 
     def __init__(self, token_ids: list[int], sampling_params = SamplingParams()):
@@ -45,6 +46,9 @@ class Sequence:
 
         self.recovery_token_id = None
         self.last_target_hidden_state = None
+        # 이슈 #35: P2-tree 종단 노드 id (verifier가 트리 step마다 설정,
+        # 비-트리 step·preempt에서 None 소거) — 정식 필드화.
+        self.tree_terminal_node = None
 
         self.extend_eagle_acts = None
         self.extend_token_ids = None
