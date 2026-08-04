@@ -8,6 +8,8 @@ T1.2: 사전 예산 배분 (결정 ⑤v2 + 외부 리뷰 4차 규약).
 전부 pure 함수 (텐서 in → 텐서 out, 상태 없음) — CPU 유닛테스트 대상.
 """
 import numpy as np
+import math
+import os
 import torch
 
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
@@ -195,7 +197,8 @@ def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
 
 
 def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
-                    c_tensor: int, sampler_x=None, F=None):
+                    c_tensor: int, sampler_x=None, F=None,
+                    assume_pos_temps: bool = False):
     """비복원(WOR) C_tensor개 샘플 — 순서 보존 (T1.3; D8/D11).
 
     구현: exponential-race top-k — race 점수 내림차순 = 순차 비복원
@@ -212,7 +215,9 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
         raw_q  [B, C] float — **원본 q_eff 확률** (재정규화 전 —
             결정 ② c_raw 규약: priority는 이 값으로 계산).
     """
-    if bool((temperatures <= 0).any()):
+    # gap-prof: GPU temps의 .any()→bool()은 forward 완료 대기 동기점
+    # (2.4ms/forward). rollout은 진입 전 temp>0 확인 — 가드 생략 허용.
+    if not assume_pos_temps and bool((temperatures <= 0).any()):
         raise ValueError(
             "tree_sample_wor: temperature==0 is gated (v6 §7.2 — "
             "support-exhaustion fallback intentionally not implemented; "
@@ -449,26 +454,33 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     eval_log = []
     cell_logits = None                     # [F·W, V] — verify q_eff 원천 (T2.2)
     tip_idx = list(range(R))               # backbone tip (root 자신부터)
+    # gap-prof 슬림화: pool 텐서 캐스팅 대신 파이썬 미러 (결과 불변)
+    tip_depth = [0] * R
+    node_root = list(range(R))
+    node_depth = [0] * R
+    node_logpri = [float(x) for x in logpiv.tolist()]
     for f in range(F_total):
         sel = select_nodes(pool, policy, W, f, depth_cap)
         n_sel = len(sel)
         fan = torch.zeros(W, dtype=torch.int64)
+        fan_l = []
         if n_sel:
-            pri = pool.logpri[torch.tensor(sel)]
-            roots = pool.root[torch.tensor(sel)]
+            pri = torch.tensor([node_logpri[i] for i in sel])
+            roots = torch.tensor([node_root[i] for i in sel])
             if fanout_policy == "backbone":
                 reserve = torch.tensor(
-                    [max(0, depth_cap - int(pool.depth[tip_idx[r]]))
-                     for r in range(R)], dtype=torch.int64)
+                    [max(0, depth_cap - tip_depth[r]) for r in range(R)],
+                    dtype=torch.int64)
                 is_tip = torch.tensor(
-                    [sel[k] == tip_idx[int(roots[k])]
+                    [sel[k] == tip_idx[node_root[sel[k]]]
                      for k in range(n_sel)], dtype=torch.bool)
                 fan[:n_sel] = alloc_fanouts_backbone(
                     pri, roots, remaining, reserve, is_tip, c_tensor)
             else:
                 fan[:n_sel] = alloc_fanouts(pri, roots, remaining, c_tensor)
-            for k, i in enumerate(sel):
-                remaining[int(roots[k])] -= int(fan[k])
+            fan_l = fan[:n_sel].tolist()
+            for k in range(n_sel):
+                remaining[node_root[sel[k]]] -= fan_l[k]
         # --- per-forward 텐서 구성 (동적 3요소) ---
         input_ids = torch.full((W,), pad_token, dtype=torch.int64)
         rope = torch.full((W,), int(rope_base_by_root[0]),
@@ -483,9 +495,17 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
             glue[k] = glue_rows_by_root[r]
             anc[k] = pool.ancestors_cells(i)
             selfc[k] = f * W + k
+        _gp = os.environ.get("SSD_TREE_GAP_PROF", "0") == "1"
+        if _gp:
+            import time as _t
+            _t0 = _t.perf_counter()
         packed, indptr = build_tree_mask_packed(
             f, W, K_glue, context_len, glue, anc, selfc)
+        if _gp:
+            _t1 = _t.perf_counter()
         logits = forward_fn(f, input_ids, rope, packed, indptr)
+        if _gp:
+            _t2 = _t.perf_counter()
         if cell_logits is None:
             # forward_fn 디바이스 상주 (엔진=GPU — [W,V] CPU 왕복 제거;
             # stub 테스트는 CPU 그대로)
@@ -494,22 +514,40 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                                       device=logits.device)
         cell_logits[f * W:(f + 1) * W] = logits[:W]
         toks, raws = tree_sample_wor(logits, temps.to(logits.device),
-                                     c_tensor, sampler_x=sampler_x, F=F_x)
+                                     c_tensor, sampler_x=sampler_x, F=F_x,
+                                     assume_pos_temps=True)
+        if _gp:
+            _t3 = _t.perf_counter()
         toks, raws = toks.cpu(), raws.cpu()   # pool 장부는 CPU (소량 1회)
-        for k, i in enumerate(sel):
+        if _gp:
+            _t4 = _t.perf_counter()
+        toks_l = toks.tolist()
+        raws_l = raws.tolist()
+        for k in range(n_sel):
+            i = sel[k]
             cell = f * W + k
             pool.cell[i] = cell
             pool.state[i] = 1
-            for c in range(int(fan[k])):
-                child = pool.add(int(toks[k][c]), i, cell,
-                         int(pool.depth[i]) + 1, int(pool.root[i]), c,
-                         float(pool.logpri[i])
-                         + float(torch.log(torch.clamp(raws[k][c],
-                                                       min=1e-9))),
-                         float(raws[k][c]))
+            for c in range(fan_l[k]):
+                rq = raws_l[k][c]
+                lp = node_logpri[i] + math.log(max(rq, 1e-9))
+                child = pool.add(toks_l[k][c], i, cell,
+                                 node_depth[i] + 1, node_root[i], c,
+                                 lp, rq)
+                node_root.append(node_root[i])
+                node_depth.append(node_depth[i] + 1)
+                node_logpri.append(lp)
                 if fanout_policy == "backbone" and c == 0 \
-                        and i == tip_idx[int(pool.root[i])]:
-                    tip_idx[int(pool.root[i])] = child
+                        and i == tip_idx[node_root[i]]:
+                    tip_idx[node_root[i]] = child
+                    tip_depth[node_root[i]] = node_depth[i] + 1
+        if _gp:
+            _t5 = _t.perf_counter()
+            print(f"[gap-prof] f={f} mask={( _t1-_t0)*1e3:.2f} "
+                  f"fwd(plan+replay)={(_t2-_t1)*1e3:.2f} "
+                  f"sample_launch={(_t3-_t2)*1e3:.2f} "
+                  f"cpu_sync={(_t4-_t3)*1e3:.2f} "
+                  f"pool={(_t5-_t4)*1e3:.2f}", flush=True)
         eval_log.append((sel, fan[:n_sel]))
     return pool, eval_log, cell_logits
 

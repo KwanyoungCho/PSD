@@ -474,6 +474,16 @@ budget8에서 2.137 (+19.1% per-hit) — **control 실측 2.14와 일치**
 (backbone이 이미 상한 실현). AL 환산 +2%대 = 교정된 토큰 이득 상한.
 상세 21번 §4.6.
 
+**시간축 안전-슬림화 (gap-prof 계측 → 표적 제거)**: forward 사이
+구간을 5분할 계측(SSD_TREE_GAP_PROF=1)해 분해 — sample단 9.8ms/step
+의 정체는 tree_sample_wor 진입 가드(GPU temps .any())의 조기 동기,
+pool 6.1ms는 파이썬 캐스팅. 수정: ① 가드를 호출자-보증
+(assume_pos_temps)으로 생략, ② pool 장부 파이썬 미러(root/depth/
+logpri/tip_depth — 텐서 캐스팅 제거, 결과 불변·topology 테스트
+통과). **비-fwd 오버헤드 16.4 → 12.2ms/step (−4.2)**; 잔여 12.2 중
+~7.2는 .cpu() 동기 = GPU 실행 대기(순차 의존 하한). 추가 회수는
+plan 오버랩(이중-그래프) 등 리스크 항목 — T5 판정 후 결정.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
