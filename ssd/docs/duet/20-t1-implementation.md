@@ -412,6 +412,33 @@ attention 마스크/plan 기하 변경은 GPU 단위 A/B(동일 시드 수락률
 대조) 없이 랜딩 금지. 시간축 재도전은 저위험 항목(pool 장부 텐서화,
 packbits 제거, plan-ahead 별도 wrapper)부터.
 
+## 외부 리뷰 수용 (2026-08-04, 사용자 전달) — 전 항목 코드-대조 검증
+
+리뷰 요지: "현 구현은 설계가 의도한 최적 트리가 아니다 — topology·
+Policy-B·KV lifecycle 수정 전 sweep/채택 판단 금지." 항목별 검증
+결과 **전부 타당** 판정, 이슈 채번 후 수정 착수. 제 이전 판단 3건
+정정: ① "SHM 순서가 ack 대체" 철회 (write_shm은 소비-대기 없는 단일
+버퍼 — 레이스 실재), ② Policy-B의 p^E row 페어링은 '문서화된 근사'가
+아니라 오배열 (q만 parent로 고치고 분자는 체인 그대로였음), ③ E1
++3.8%는 동적-트리 가정의 수치 — 명시 트리 상한 아님.
+
+| 이슈 | 내용 (리뷰 항목) | 검증 | 수정 |
+|---|---|---|---|
+| #21 | draft 수락경로 KV 지연-copy가 해제된 scratch 재참조 가능 (2D) | scheduler가 매 step excess draft block 해제 — 새 dbt로 src 재계산하는 b6-2는 경계-초과 step에서 오염 가능 | TREE_GLUE 직후 뷰 KV를 staging buffer로 gather, 다음 요청에서 accepted path만 canonical로 scatter |
+| #22 | TP commit SHM ACK 부재 (2E) | write_shm이 소비 확인 없이 버퍼 덮어씀 — 스텝당 call 2회(commit+run)가 되며 노출 | write_shm에 소비-대기 (worker read 후 event clear를 기다림) — 전 명령 공통의 클로버 방지 |
+| #23 | root budget 조용한 유실 (2A) | 재현: β=1 cap=8 → 32.45/40 (최저 18); +1 루프가 root당 1회뿐 | capped water-filling (소진 보장) + `sum == min(total, R·cap)` 테스트 |
+| #24 | R=W 결합 — R8은 다변수 동시 변경 (2B) | 기확인 (root당 예산=K2 상수) | `duet_tree_root_count` — W/CG/예약 불변, 상위-R root만 예산 (나머지는 #14 키 무효화 경로) |
+| #25 | Policy-B 체인 수식 (2C) | p^E gather가 row j (체인) — 트리는 parent+1 row가 정답; ĥ cumprod도 체인 전제 | 트리 전용 proxy: p^E row=parent+1 페어링 + terminal-mass DP (reach×앞형제기각×전원기각) |
+| #26 | E1 tree_L이 동적-트리 가정 (3) | tree_L은 레벨당 fanout 공유 가정 — 명시 [2,2,2,2]는 30노드 필요 | 명시-트리 terminal DP로 상한 재산정 (분석 스크립트) |
+
+리뷰 4절(무죄 항목: mask/RoPE/보행/dup)은 자체 진단(§4.5 — C=1이
+체인 수락 재현)과 합치. 리뷰 인용 체인 P2AL 1.76은 측정창 차이
+(우리 1.69~2.14 변동 범위 내). 수정 순서 = 리뷰 5절 채택:
+correctness(#21·#22) → 예산(#23) → R분리(#24) → spine+rescue 정련 →
+Policy-B DP(#25) → E1 재산정(#26) → C=1 byte-parity 게이트 →
+동일-시드 인터리브 재실험. **진행 중이던 v2 sweep은 중단** (판정
+부적격 상태 측정 방지).
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
