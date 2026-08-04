@@ -1904,7 +1904,6 @@ class DraftRunner(ModelRunner):
         dbt = tree_args["block_tables"]
         cache_hits_list = tree_args.get("cache_hits_list") or [1]
         _CH.cache["_tree_mask_override"] = {}
-        _CH.cache["_tree_plan_once"] = True   # rollout 전용 (21번 §4.5)
 
         def forward_fn(f, input_ids_w, rope_w, packed, indptr):
             _CH.cache["_tree_mask_override"][f] = (
@@ -1942,7 +1941,6 @@ class DraftRunner(ModelRunner):
                 sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
         finally:
             _CH.cache.pop("_tree_mask_override", None)
-            _CH.cache.pop("_tree_plan_once", None)
         return pool, eval_log, cell_logits
 
     def _policy_b_from_raw_proxy(self, raw, out_logits, out_tokens, K_step):

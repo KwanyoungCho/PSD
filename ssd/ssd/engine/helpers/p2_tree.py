@@ -338,7 +338,7 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
 
 
 def build_tree_mask_packed(fwd, W, K_glue, context_len, prefix_glue_rows,
-                           ancestor_cells, self_cols, cols_override=None):
+                           ancestor_cells, self_cols):
     """forward `fwd`의 packed attention mask (T1.4b; 기존 chain 빌더의
     기하를 정확히 복제 — cudagraph_helpers cpu_packed_masks와 동일 규약:
     [prefix 1s | glue (K_glue+1) | spec 블록 (fwd+1)개 × W], packbits
@@ -357,16 +357,9 @@ def build_tree_mask_packed(fwd, W, K_glue, context_len, prefix_glue_rows,
     Returns: (packed uint8 np.ndarray, indptr int32 np.ndarray)
     """
     cols = int(context_len) + fwd * W
-    # plan-once (docs/duet/21 §4.5 시간축): kv를 최종 길이로 한 번만
-    # plan하고 마스크 폭을 그에 맞춘다 — 미기록 셀 열은 0 (기본값).
-    if cols_override is not None:
-        assert cols_override >= cols
-        cols_full = int(cols_override)
-    else:
-        cols_full = cols
     ttl_added = (fwd + 1) * W + (K_glue + 1)
     prefix_len = cols - ttl_added
-    m = np.zeros((W, cols_full), dtype=np.uint8)
+    m = np.zeros((W, cols), dtype=np.uint8)
     m[:, :prefix_len] = 1
     m[:, prefix_len:prefix_len + K_glue + 1] = prefix_glue_rows
     spec0 = prefix_len + K_glue + 1
@@ -439,8 +432,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
             anc[k] = pool.ancestors_cells(i)
             selfc[k] = f * W + k
         packed, indptr = build_tree_mask_packed(
-            f, W, K_glue, context_len, glue, anc, selfc,
-            cols_override=int(context_len) + (F_total - 1) * W)
+            f, W, K_glue, context_len, glue, anc, selfc)
         logits = forward_fn(f, input_ids, rope, packed, indptr)
         if cell_logits is None:
             # forward_fn 디바이스 상주 (엔진=GPU — [W,V] CPU 왕복 제거;
