@@ -447,6 +447,10 @@ staging이 권위 소스). ② write_shm 소비-대기 — 모든 worker의 even
 clear(=버퍼 복사 완료) 확인 후 기록 (전 명령 공통 클로버 방지; 평시
 즉시 통과). 회귀 44/44 + 유닛 45/45.
 
+**#23 완료**: alloc_root_budgets를 capped water-filling으로 (frac
+내림차순 라운드-로빈, 소진 보장). 검증 강화: 스큐 piv 300케이스
+전수에서 `sum == min(total, R·cap)` + cap-바인딩 케이스. 유닛 47/47.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;

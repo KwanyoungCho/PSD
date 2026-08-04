@@ -32,16 +32,22 @@ def alloc_root_budgets(piv: torch.Tensor, total: int, beta: float,
     base = quota.floor().long().clamp_max(cap)
     rem_budget = int(total - base.sum().item())
     if rem_budget > 0:
+        # 이슈 #23 (리뷰 2A): capped water-filling — 종전 단일-패스
+        # (+1은 root당 1회)는 cap-절단 질량을 버려 β=1·cap=8에서 평균
+        # 32/40만 소진 (최저 18). frac 내림차순 라운드-로빈으로 미달
+        # root들에 소진될 때까지 재배분: sum == min(total, R·cap) 보장.
         frac = quota - quota.floor()
-        # cap 도달 root는 추가 배분 제외
-        frac = torch.where(base >= cap, torch.full_like(frac, -1.0), frac)
-        order = torch.argsort(frac, descending=True, stable=True)
-        for i in order.tolist():
-            if rem_budget <= 0:
-                break
-            if base[i] < cap:
-                base[i] += 1
-                rem_budget -= 1
+        order = torch.argsort(frac, descending=True, stable=True).tolist()
+        progressed = True
+        while rem_budget > 0 and progressed:
+            progressed = False
+            for i in order:
+                if rem_budget <= 0:
+                    break
+                if base[i] < cap:
+                    base[i] += 1
+                    rem_budget -= 1
+                    progressed = True
     return base
 
 

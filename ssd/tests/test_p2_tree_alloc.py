@@ -699,6 +699,31 @@ class TestCommitPlan(unittest.TestCase):
         self.assertEqual(src, int(bt[33 // 16]) * 16 + 33 % 16)
         self.assertEqual(dst, int(bt[32 // 16]) * 16 + 32 % 16)
 
+class TestBudgetExhaustion(unittest.TestCase):
+    """이슈 #23 (리뷰 2A): 예산 완전 소진 — sum == min(total, R·cap)."""
+
+    def test_skewed_piv_full_exhaustion(self):
+        import ssd.engine.helpers.p2_tree as PT
+        torch.manual_seed(0)
+        for beta in (0.5, 1.0, 2.0):
+            for cap in (6, 8):
+                for _ in range(50):
+                    piv = torch.distributions.Dirichlet(
+                        torch.full((10,), 0.3)).sample()
+                    b = PT.alloc_root_budgets(piv, total=40, beta=beta,
+                                              cap=cap)
+                    self.assertEqual(int(b.sum()),
+                                     min(40, 10 * cap),
+                                     f"beta={beta} cap={cap}")
+                    self.assertTrue(bool((b <= cap).all()))
+
+    def test_cap_binds_total(self):
+        import ssd.engine.helpers.p2_tree as PT
+        piv = torch.ones(3)
+        b = PT.alloc_root_budgets(piv, total=40, beta=0.5, cap=8)
+        self.assertEqual(int(b.sum()), 24)   # R·cap = 24 < 40
+
+
 class TestBackboneFanout(unittest.TestCase):
     """형상 진단(docs/duet/21 §4.5) 수정: backbone-우선 배분의 형상 보장."""
 
