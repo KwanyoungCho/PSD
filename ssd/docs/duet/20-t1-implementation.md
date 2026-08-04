@@ -506,7 +506,35 @@ plan 오버랩(이중-그래프) 등 리스크 항목 — T5 판정 후 결정.
 방법론 노트(수용): T5 스크립트 주석 5회↔실제 3회 정정, 고정 팔-순서,
 stale-log skip 위험 — 이후 verdict는 라벨에 코드 rev 포함. **필수
 대조군에 chain-R6 추가** (P2AL +12.8%에서 상위-root 선택편향 분리).
-현 T5 런의 tree 팔은 "현행-구현" 데이터점으로 캐비앳.
+현 T5 런의 tree 팔은 "현행-구현" 데이터점으로 캐비앗.
+
+**구현 완료 (2026-08-04, 28b7c21 + e868a71)**:
+- #27: select_nodes에 tip 의무 lane (tip_idx/root_remaining 옵션 인자
+  — 잔여예산 root의 tip은 top-W 탈락 불가; backbone 정책 R>W는
+  rollout ValueError + config `root_count<=p2_budget` 검증). 재현
+  픽스처 [7,7,7,7,6,6]·W10·F4·C3: 34/40·약root dmax=1 → **40/40·
+  전root dmax=4**. pool.alloc_stats(allocated/generated/per-root
+  dmax) 상시 부착, SSD_TREE_ALLOC_CHECK=1이면 불일치 로그.
+- #28+#34: `tree_policy_b_ladder` — verify 보행의 기각 갱신
+  (R←norm((R−D)+), D[t]=0 renorm)을 그대로 미러하는 조건부 α̂·
+  종단질량·잔차 **일괄 텐서 계산** (.item()/.cpu() 0회). verifier
+  `_compute_and_send_proxy_tree` 전면 교체 — residual도 사다리 최종
+  R (보행 recovery 원천과 동일 분포). MC-vs-walk 3만회 게이트: 전
+  ctx 종단빈도 오차 <1.2%. terminal_mass_dp는 조건부-α 규약 명시
+  후 분석 도구 전용 강등.
+- #33: alloc_root_budgets — active-set 비례 water-filling (포화 root
+  제외 후 남은 예산을 남은 가중치 비율로 재계산, ≤R회 수렴; 소진
+  보장 유지). [0.9,.09,.01]·total16·cap8: [8,5,3]→[8,7,1].
+- #31: 트리-hit step P1 fork 배분 — 균등(W1//n_rows) → 종단질량
+  prior ∝ a^depth·(1−a)^자식수 (a=0.52), 바닥 1 lane, largest-
+  remainder (합=W1 — CG 폭 불변).
+- #35: b6-2 staging 소비에 seq 정체 대조 (`_tree_served_seq` — 다른
+  seq면 staged 폐기); `Sequence.tree_terminal_node` 정식 필드
+  (_ATTRIBUTES 포함); `scheduler.preempt`에서 소거. _tree_hit_root/
+  _tree_wire_*는 hit_cache_and_respond 첫머리 매-스텝 리셋으로 이미
+  step-국소임을 확인 (구멍 없음).
+- 유닛 58/58 (신규 8: 비례배분·W경합 tip·R>W·사다리 반례·체인퇴화
+  패리티·질량보존·MC골드·GPU패리티).
 
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
