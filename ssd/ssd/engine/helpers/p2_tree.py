@@ -1157,33 +1157,37 @@ class TreeArena:
 
     def to_pool(self, R: int):
         """단일 sync: CPU TreePool로 실체화 (+#38 무효 슬롯 압축 재매김
-        — CPU run_rollout과 동일한 인덱스 공간·순서 보장)."""
+        — CPU run_rollout과 동일한 인덱스 공간·순서 보장). 전 과정
+        텐서 압축 (파이썬 노드 루프 금지 — v1 루프가 build→merge를
+        +16ms 부풀린 실측 교훈)."""
         n = int(self.n)                     # 유일한 sync 지점
-        keep = self.valid[:n].cpu()
-        remap = torch.full((n,), -1, dtype=torch.int64)
-        remap[keep] = torch.arange(int(keep.sum()))
+        dev = self.device
+        keep = self.valid[:n]
+        kept = torch.nonzero(keep).flatten()          # [m] (장치 상주)
+        m = kept.numel()
+        remap = torch.full((n + 1,), -1, dtype=torch.int64, device=dev)
+        remap[kept] = torch.arange(m, device=dev)
+        par_old = self.parent_idx[:n].index_select(0, kept)
+        par_new = torch.where(par_old >= 0,
+                              remap.gather(0, par_old.clamp(min=0)),
+                              par_old)
+        # parent_cell은 hot loop에서 빼고 여기서 파생 (cell[parent])
+        pcell = torch.where(par_old >= 0,
+                            self.cell[:n].gather(0, par_old.clamp(min=0)),
+                            torch.full_like(par_old, -1))
         pool = TreePool(capacity=self.capacity)
-        fields = {k: getattr(self, k)[:n].cpu()
-                  for k in ("tok", "parent_idx", "parent_cell", "depth",
-                            "root", "sib", "logpri", "raw_q", "state",
-                            "cell")}
-        m = 0
-        for i in range(n):
-            if not bool(keep[i]):
-                continue
-            pool.tok[m] = fields["tok"][i]
-            p = int(fields["parent_idx"][i])
-            pool.parent_idx[m] = remap[p] if p >= 0 else -1
-            pool.parent_cell[m] = fields["parent_cell"][i]
-            pool.depth[m] = fields["depth"][i]
-            pool.root[m] = fields["root"][i]
-            pool.sib_order[m] = fields["sib"][i]
-            pool.logpri[m] = fields["logpri"][i]
-            pool.raw_q[m] = fields["raw_q"][i]
-            pool.state[m] = fields["state"][i]
-            pool.cell[m] = fields["cell"][i]
-            m += 1
-        pool.n = m
+        pool.n = int(m)
+        sel = kept
+        pool.tok[:m] = self.tok[:n].index_select(0, sel).cpu()
+        pool.parent_idx[:m] = par_new.cpu()
+        pool.parent_cell[:m] = pcell.cpu()
+        pool.depth[:m] = self.depth[:n].index_select(0, sel).cpu()
+        pool.root[:m] = self.root[:n].index_select(0, sel).cpu()
+        pool.sib_order[:m] = self.sib[:n].index_select(0, sel).cpu()
+        pool.logpri[:m] = self.logpri[:n].index_select(0, sel).float().cpu()
+        pool.raw_q[:m] = self.raw_q[:n].index_select(0, sel).float().cpu()
+        pool.state[:m] = self.state[:n].index_select(0, sel).cpu()
+        pool.cell[:m] = self.cell[:n].index_select(0, sel).cpu()
         if hasattr(self, "_budgets"):
             pool.alloc_stats = _alloc_stats(
                 pool, self._budgets.cpu(), R,
@@ -1202,17 +1206,18 @@ def _arena_select(ar: TreeArena, policy, W, f, depth_cap, tip_idx,
         & ar.valid
     if policy == "level":
         elig = elig & (ar.depth == f)
-    key = torch.where(elig, ar.logpri,
-                      torch.full_like(ar.logpri, float("-inf")))
-    order = torch.argsort(key, descending=True, stable=True)
+    # 합성키 1회 정렬: mand에 +1000 오프셋 (logpri ∈ (-100, 0] 범위 —
+    # float64 정밀 손실 없음; 그룹 내 상대 순서 = logpri 순 보존 =
+    # CPU의 2단(order→mand-first) 결과와 동일. 런치 수 절감 (v1 실측:
+    # eager 커널 오버헤드가 병목).
     mand_slot = torch.zeros(cap, dtype=torch.bool, device=dev)
     if tip_idx is not None:
         t = tip_idx.clamp(min=0)
         t_ok = (tip_idx >= 0) & (remaining > 0) & elig.gather(0, t)
         mand_slot.scatter_(0, t, t_ok)
-    mand_o = mand_slot.gather(0, order)
-    reorder = torch.argsort((~mand_o).to(torch.int8), stable=True)
-    final = order.gather(0, reorder)
+    key = torch.where(elig, ar.logpri + mand_slot.double() * 1000.0,
+                      torch.full_like(ar.logpri, float("-inf")))
+    final = torch.argsort(key, descending=True, stable=True)
     elig_o = elig.gather(0, final)
     sel = final[:W]
     sel_valid = elig_o[:W]
@@ -1402,8 +1407,6 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         ok_q = pos_q.reshape(-1)[flat_ok]
         ar.tok.scatter_(0, sl, tk)
         ar.parent_idx.scatter_(0, sl, par)
-        ar.parent_cell.scatter_(0, sl, lane_cell.unsqueeze(1)
-                                .expand(W, c_tensor).reshape(-1)[flat_ok])
         ar.depth.scatter_(0, sl, ar.depth.gather(0, par) + 1)
         ar.root.scatter_(0, sl, ar.root.gather(0, par))
         ar.sib.scatter_(0, sl, cix)
