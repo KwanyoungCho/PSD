@@ -215,6 +215,41 @@ R=10 기본은 water-filling이 저-P_iv root까지 채워 얕은 서빙 혼입
 (P2AL 1.67) — 집중이 정답 방향. **토큰 축 판정: 트리-R6 우위 확립;
 잔여 과제는 시간 축(-15ms/step)**.
 
+## 4.7 스텝타임 +26ms 전수 분해 (2026-08-04, 수정 rev — 사용자 지시:
+"sweep이 아니라 근본 overhead를 먼저")
+
+draft 스텝 주기 (p50, 프로파일): 체인 hit_k1 60.1 / hit_k2 47.3 /
+miss 54.6ms vs 트리 80.2 / 90.6 / 78.0 — **전 스텝 유형 +20~43ms**.
+스팬 diff + rollout gap-prof(534 rollout)로 귀속:
+
+| 항목 | 스텝당 | 측정 | 근본 원인 |
+|---|---|---|---|
+| P2 rollout 비-fwd host | **12.4ms** | gap-prof: cpu_sync **8.0** + pool 2.7 + sample 1.5 + mask 0.3 | 파이썬 pool 장부가 **forward마다 .cpu() 동기화** 강제 (4회/스텝) |
+| rollout fwd host | 3.5ms | gap-prof | forward마다 set_context·mask override 교체 |
+| proxy_wait 증가 | +8.9 @hit_k2 (≈+2.0/step) | 스팬 diff (0.8→9.7) | target exit 6.3ms + P1 build 비대로 오버랩 여유 소진 |
+| P1 fork mask build | +5.5 @hit_k2 (≈+1.2/step) | 스팬 diff (0.3→5.9) | numpy packbits W1×cols×K1 매 스텝 재생성 |
+| TREE_GLUE·phase2_build | +2.0·+0.5~2.5 | 스팬 diff | topology 실체화 파이썬 |
+| views/populate/wire 잔여 | ~3-8ms | 주기−스팬 차감 | 파이썬 후처리 |
+
+합계 ≈ +23~29ms/step — 관측 격차(평균 +26)와 정합. **TPS 격차의
+~85%가 "매 스텝 topology를 파이썬으로 다시 만드는" 구조 비용**이고
+GPU forward 비용은 체인과 동일 (K2×W 동형).
+
+**frontier 교차 검증 (18번, 5런, load 31-35 캐비앗)**: nv 축소는
+TPS만 사고 (52-56) 토큰 이득을 지움 — nv4 P2AL 1.76-1.82 <
+체인 1.86; **P2AL>체인은 nv8에서만 실재** (스모크 2.13). 즉
+파라미터로 못 풀고, nv8 유지 + host 시간 제거가 유일 경로.
+
+**처방 — 정적 토폴로지 템플릿 (리뷰2 설계 방향 채택, 수치 부여)**:
+(W,F,C,Nv,R) 고정 시 topology는 예산벡터(=P_iv rank의 결정적 함수)
+로 완전 결정 → 도달가능 예산벡터별 mask/rope/route/cell을 사전
+컴파일해 GPU 상주. 런타임 = piv→budgets→템플릿 lookup→K2 연속
+CG replay (mask 포인터 교체만), 샘플 GPU 누적, readback ≤1회.
+D10 보존 (선택 입력 = P_iv뿐). 예상 회수: rollout 16→~3 + P1/글루
+정적화 −7@hit_k2 + 오버랩 복원 −2 ≈ **−17~20ms/step → 트리
+~62-70ms/step → TPS ~65-72 (체인 −7~15%)**, nv8 토큰 이득
+(P2AL +13%) 유지 시 실효 접전권. 구현은 별도 트랙 (T6).
+
 ## 5. 최종 동일-시드 인터리브 (eslab17 한산, 25×384, 3-cycle — 리뷰 게이트)
 
 | 평균 (min-max) | 체인 | 트리-R6 |
