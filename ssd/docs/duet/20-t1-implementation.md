@@ -451,6 +451,12 @@ clear(=버퍼 복사 완료) 확인 후 기록 (전 명령 공통 클로버 방�
 내림차순 라운드-로빈, 소진 보장). 검증 강화: 스큐 piv 300케이스
 전수에서 `sum == min(total, R·cap)` + cap-바인딩 케이스. 유닛 47/47.
 
+**#24 완료**: `duet_tree_root_count` — W/CG/스케줄러 예약/키 폭 전부
+불변, P_iv 상위 R root만 예산 (adapter에서 하위 piv를 0 sentinel로;
+alloc은 piv≤0을 water-filling 포화 후에도 명시 배제). 무예산 root는
+뷰 0 → #14 키 무효화 = 명시적 miss. 이제 R ablation이 단일 변수.
+유닛 48/48 + 회귀 44/44.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;

@@ -1902,6 +1902,17 @@ class DraftRunner(ModelRunner):
         seed_piv = tree_args.get("proxy_piv")
         root_piv = (seed_piv[0].cpu().float() if seed_piv is not None
                     else torch.full((len(seeds),), 1e-6))
+        # 이슈 #24: R-W 분리 — 상위 R root 외에는 piv를 0으로 눌러
+        # 예산이 가지 않게 한다 (구조·CG·키 폭은 불변; 무예산 root는
+        # 뷰 0 → populate 후 #14 키 무효화 경로로 명시적 miss).
+        _rc = getattr(cfg, "duet_tree_root_count", None)
+        if _rc is not None and _rc < len(seeds):
+            _keep = torch.argsort(root_piv, descending=True,
+                                  stable=True)[:_rc]
+            _mask_r = torch.zeros(len(seeds), dtype=torch.bool)
+            _mask_r[_keep] = True
+            root_piv = torch.where(_mask_r, root_piv,
+                                   torch.zeros_like(root_piv))
         # 글루 가시성/rope base: seed 행의 것 — 체인 step은 위치-prefix,
         # 트리 step은 조상 비트맵 override (T3.4-b3-5)
         _gro = tree_args.get("glue_rows_override")

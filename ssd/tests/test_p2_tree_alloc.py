@@ -717,6 +717,15 @@ class TestBudgetExhaustion(unittest.TestCase):
                                      f"beta={beta} cap={cap}")
                     self.assertTrue(bool((b <= cap).all()))
 
+    def test_zero_piv_excluded(self):
+        # 이슈 #24: piv==0 root는 water-filling 포화 후에도 예산 0
+        import ssd.engine.helpers.p2_tree as PT
+        piv = torch.tensor([0.5, 0.3, 0.0, 0.0])
+        b = PT.alloc_root_budgets(piv, total=40, beta=0.5, cap=8)
+        self.assertEqual(int(b[2]), 0)
+        self.assertEqual(int(b[3]), 0)
+        self.assertEqual(int(b.sum()), 16)   # 유자격 2×cap
+
     def test_cap_binds_total(self):
         import ssd.engine.helpers.p2_tree as PT
         piv = torch.ones(3)

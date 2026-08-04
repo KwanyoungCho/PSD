@@ -27,7 +27,13 @@ def alloc_root_budgets(piv: torch.Tensor, total: int, beta: float,
     remainder 배분; 동률은 낮은 인덱스 = 높은 rank 우선).
     """
     R = piv.numel()
+    # 이슈 #24: piv<=0은 예산 제외 sentinel (root_count 분리 — cap
+    # 포화 후 water-filling이 무자격 root로 새지 않게 명시 배제)
+    _elig = piv > 0
     w = piv.clamp_min(1e-9).double().pow(beta)
+    w = torch.where(_elig, w, torch.zeros_like(w))
+    if not bool(_elig.any()):
+        return torch.zeros(R, dtype=torch.int64)
     quota = w / w.sum() * total                       # 실수 몫
     base = quota.floor().long().clamp_max(cap)
     rem_budget = int(total - base.sum().item())
@@ -44,7 +50,7 @@ def alloc_root_budgets(piv: torch.Tensor, total: int, beta: float,
             for i in order:
                 if rem_budget <= 0:
                     break
-                if base[i] < cap:
+                if base[i] < cap and bool(_elig[i]):
                     base[i] += 1
                     rem_budget -= 1
                     progressed = True
