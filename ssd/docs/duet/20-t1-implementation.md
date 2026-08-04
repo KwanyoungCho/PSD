@@ -401,6 +401,17 @@ wire 불변 가드 + 반환 행수 하드 불변(진단값 동봉)을 심은 재
 **CG 효과 확정: 트리 스텝 graph_pre 693ms → 31.5ms (22×), 체인
 수준 도달.**
 
+**이슈 #20 (plan-once 회귀 — 롤백)**: 시간축 최적화로 rollout의
+per-forward FlashInfer plan을 최종-기하 1회로 대체(64052f6)했으나,
+같은 박스·시드 대조에서 P2 히트당 수락 2.14(29d4a2d) → 1.1~1.3으로
+붕괴 (reject_all 0.12→0.40; 트리 형상은 무사 dmax4=78%). plan-skip
+여부(po0/po1)와 무관하게 깨져 상시-켜진 마스크 최종-폭 확장
+(cols_override)이 fa2 packed-mask 소비와 불일치하는 것으로 추정 —
+정확 기전 미상. **전체 revert** (검증된 29d4a2d 동작 복원). 교훈:
+attention 마스크/plan 기하 변경은 GPU 단위 A/B(동일 시드 수락률
+대조) 없이 랜딩 금지. 시간축 재도전은 저위험 항목(pool 장부 텐서화,
+packbits 제거, plan-ahead 별도 wrapper)부터.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
