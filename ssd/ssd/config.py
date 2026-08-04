@@ -414,6 +414,15 @@ class Config:
                         raise ValueError(
                             f"duet_tree_nv ({self.duet_tree_nv}) must be "
                             f"<= max(K1,K2)={_k_max} (response wire width)")
+                    # 이슈 #19: TREE_GLUE는 split_k2 CG(W=P2 예산)의 W-폭
+                    # forward — 글루 행(nv+1)이 W를 넘으면 못 싣는다
+                    # (R8+nv8 sweep 크래시; assert는 -O로 제거됨).
+                    _w_p2 = self.duet_proxy_total_budget
+                    if self.duet_tree_nv + 1 > _w_p2:
+                        raise ValueError(
+                            f"duet_tree_nv+1 ({self.duet_tree_nv + 1}) must "
+                            f"be <= P2 budget W ({_w_p2}) — TREE_GLUE row "
+                            f"capacity (docs/duet/20 이슈 #19)")
                     # 이슈 #15: 트리 v1 미지원 proxy 게이트 — raw-proxy는
                     # _tree_step_p1p2에 변환 분기가 없고(KeyError),
                     # topm_gather dict-wire는 pack_piv가 없어 트리 셀렉터

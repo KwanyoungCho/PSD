@@ -55,9 +55,11 @@ run_one () {
 # 기준선 (tree off)
 run_one base_off off 10 8 0.5
 # 그리드 (E1 근거로 압축: R∈{8,10}, N_v∈{6,8}, β∈{0.5,1.0}, 정책 2종)
+# 이슈 #19: nv+1 <= budget(W) — R8은 nv6만 유효 (R8+nv8 조합 제거)
 for policy in level frontier; do
   for budget in 8 10; do
     for nv in 6 8; do
+      if [ $((nv + 1)) -gt "${budget}" ]; then continue; fi
       for beta in 0.5 1.0; do
         run_one "t_${policy}_R${budget}_nv${nv}_b${beta}" \
           "${policy}" "${budget}" "${nv}" "${beta}"
