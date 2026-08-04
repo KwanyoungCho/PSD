@@ -468,6 +468,12 @@ gather (종전 row-j 페어링 오배열 수정), ② ĥ를 `terminal_mass_dp`
 불변 (chosen_pos = ctx id = fork 네임스페이스). 유닛 50/50 + 회귀
 44/44.
 
+**#26 완료**: E1 상한 재산정 (e1_explicit_tree.py) — 구모델은 공유-
+트리 가정(명시 30노드)이라 무효; 명시 backbone+rescue DP 상한 =
+budget8에서 2.137 (+19.1% per-hit) — **control 실측 2.14와 일치**
+(backbone이 이미 상한 실현). AL 환산 +2%대 = 교정된 토큰 이득 상한.
+상세 21번 §4.6.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
