@@ -439,6 +439,14 @@ Policy-B DP(#25) → E1 재산정(#26) → C=1 byte-parity 게이트 →
 동일-시드 인터리브 재실험. **진행 중이던 v2 sweep은 중단** (판정
 부적격 상태 측정 방지).
 
+**#21·#22 완료 (correctness 쌍)**: ① KV staging — TREE_GLUE가 쓴
+[rec+뷰] 셀의 KV를 staging 텐서로 gather (tinyllama 기준 ~360KB),
+다음 요청의 수락경로 재실체화는 staging→canonical scatter (물리 블록
+생존 무의존; 종전의 dbt-재계산 src 제거, same-slot skip도 제거 —
+staging이 권위 소스). ② write_shm 소비-대기 — 모든 worker의 event
+clear(=버퍼 복사 완료) 확인 후 기록 (전 명령 공통 클로버 방지; 평시
+즉시 통과). 회귀 44/44 + 유닛 45/45.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;

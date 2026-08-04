@@ -867,6 +867,13 @@ class ModelRunner:
 
     def write_shm(self, method_name, *args):
         assert self.world_size > 1 and not self.rank
+        # 이슈 #22 (리뷰 2E): 단일 SHM 버퍼 — 모든 worker가 이전 명령을
+        # 소비(read_shm에서 event.clear())하기 전에 덮어쓰면 명령 유실.
+        # 소비-대기 후 기록 (평시 즉시 통과; commit+run처럼 스텝당 2회
+        # call이 생긴 트리 경로에서 필수).
+        for event in self.event:
+            while event.is_set():
+                time.sleep(0.0001)
         data = pickle.dumps([method_name, *args])
         n = len(data)
         assert n + 4 <= self.shm.size, f"SHM overflow: {n+4} > {self.shm.size}. Increase SHM buffer size."

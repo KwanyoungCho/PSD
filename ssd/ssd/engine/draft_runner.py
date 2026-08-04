@@ -715,9 +715,11 @@ class DraftRunner(ModelRunner):
         _served = getattr(self, "_tree_served_ints", None)
         if _served is not None:
             self._tree_served_ints = None
+            _staged = getattr(self, "_tree_staged_kv", None)
+            self._tree_staged_kv = None
             _a_eff = int(num_tokens[0]) - self._tree_served_numtok - 1
             _T = int(cache_keys[0, 1])
-            if _a_eff > 0 and _T > 0:
+            if _a_eff > 0 and _T > 0 and _staged is not None:
                 _nv_s = self.config.duet_tree_nv
                 _par = _served[3 + _nv_s:3 + 2 * _nv_s]
                 _path = []
@@ -727,19 +729,27 @@ class DraftRunner(ModelRunner):
                     _j = int(_par[_j])
                 _path.reverse()
                 _path = _path[:_a_eff]
+                # 이슈 #21: src = staging(글루 시점 gather — 물리블록
+                # 해제와 무관), dst = 현재 dbt의 canonical 슬롯.
+                # staging 행 j+1 = 뷰 노드 j ([0]=rec).
                 _p0 = self._tree_served_numtok - 1
                 _bs = self.block_size
-                _max_pos = _p0 + 1 + max(_path) + 1
+                _max_pos = _p0 + 1 + len(_path) + 1
                 _dbt0 = draft_block_tables[0, :(_max_pos // _bs) + 1].cpu()
-                _src, _dst = [], []
+                _src_rows, _dst = [], []
                 for _k, _jj in enumerate(_path):
-                    if _jj == _k:
-                        continue
-                    _sp, _dp = _p0 + 1 + _jj, _p0 + 1 + _k
-                    _src.append(int(_dbt0[_sp // _bs]) * _bs + _sp % _bs)
+                    _dp = _p0 + 1 + _k
+                    _src_rows.append(1 + _jj)
                     _dst.append(int(_dbt0[_dp // _bs]) * _bs + _dp % _bs)
-                if _src:
-                    self.commit_tree_kv(_src, _dst)
+                if _src_rows:
+                    kc = self.kv_cache
+                    _flat = kc.view(kc.shape[0], kc.shape[1], -1,
+                                    kc.shape[4], kc.shape[5])
+                    _sr = torch.tensor(_src_rows, dtype=torch.int64,
+                                       device=kc.device)
+                    _dt = torch.tensor(_dst, dtype=torch.int64,
+                                       device=kc.device)
+                    _flat[:, :, _dt] = _staged[:, :, _sr]
 
         target_recovery_activations = torch.zeros(
             B, 3 * self.config.d_model_target, dtype=self.hf_config.torch_dtype, device=self.device
@@ -1193,6 +1203,15 @@ class DraftRunner(ModelRunner):
 
         glue_logits = logits.view(-1, V)[:n_rows].view(1, n_rows, V)
         gd_for_fork = glue_decode_input_ids.reshape(1, n_rows)
+        # 이슈 #21: 뷰 노드 KV를 staging으로 gather — scheduler가 excess
+        # draft block을 해제해도 다음 요청의 수락경로 재실체화가 물리
+        # 블록 생존에 의존하지 않게 한다 (리뷰 2D). [rec+노드] 전체
+        # (n_rows 셀), scatter는 b6-2에서 경로만.
+        kc = self.kv_cache
+        _flat = kc.view(kc.shape[0], kc.shape[1], -1, kc.shape[4],
+                        kc.shape[5])
+        _slots_dev = ctxt["slot_map"].to(torch.int64)
+        self._tree_staged_kv = _flat[:, :, _slots_dev].clone()
         duet_close("glue", _mev_glue)
         return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, 1
 
