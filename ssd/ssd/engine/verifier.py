@@ -427,10 +427,19 @@ class Verifier(VerifierBase):
           그대로 (잎 보너스 = plain p 샘플과 정합).
         wire 형식/pack은 체인과 동일 (chosen_pos = ctx id: 0=rec,
         1+j=노드 j — draft fork 네임스페이스와 정합).
+
+        이슈 #28+#34 (리뷰2): ① 형제 α̂를 원본 p/q 독립곱으로 계산하던
+        근사를 verify 보행과 동일한 **정확 사다리**(R/D 순차 갱신)로
+        교체 — 2형제 반례에서 all-reject 질량 0 vs 실제 0.28125.
+        ② residual도 사다리 최종 R (보행의 recovery 원천과 동일 분포).
+        ③ 전면 GPU 텐서화 — 종전 파이썬 구현(노드별 float()/int() 동기
+        + CPU [valid+1, V] 행 조립)이 exit_logits 스팬을 0.3→17.6ms로
+        부풀림 (tree-hit step 실측). 이제 sync/CPU 왕복 0회 — 토폴로지
+        인덱스는 tree_meta(CPU 리스트)에서 빌드.
         """
         import torch.distributed as dist
         from ssd.utils.async_helpers.nccl_pack import send_int64
-        from ssd.engine.helpers.p2_tree import pack_piv
+        from ssd.engine.helpers.p2_tree import pack_piv, tree_policy_b_ladder
         config = self.target_model_runner.config
         if exit_logits is None:
             return
@@ -439,47 +448,24 @@ class Verifier(VerifierBase):
         V = exit_logits.shape[-1]
         nv = int(config.duet_tree_nv)
         valid = int(tree_meta[0])
-        par = tree_meta[3 + nv:3 + 2 * nv]
+        par = [int(x) for x in tree_meta[3 + nv:3 + 2 * nv][:valid]]
+        sib = [int(x) for x in tree_meta[3 + 2 * nv:3 + 3 * nv][:valid]]
 
         p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
         q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
+        tokens = draft_tokens[0, :valid].to(p_E.device)
 
-        # 컨텍스트 구조: ctx -1(=rec, p^E row 0) + 노드 j(p^E row 1+j)
-        kids = {}
-        for j in range(valid):
-            kids.setdefault(int(par[j]), []).append(j)
+        _alpha, term, resid = tree_policy_b_ladder(
+            par, sib, tokens, p_E, q_rows)
 
-        # α̂_j: p^E[부모 ctx row], q = parent_q(row j — b5에서 gather됨)
-        alpha = torch.zeros(valid)
-        for j in range(valid):
-            ctx_row = int(par[j]) + 1                            # -1→0
-            tok = int(draft_tokens[0, j])
-            pe = float(p_E[ctx_row, tok])
-            qd = float(q_rows[j, tok])
-            alpha[j] = min(1.0, pe / (qd + 1e-10))
-
-        # reach/terminal DP (pure 함수 — 체인-퇴화 일치 유닛 고정)
-        from ssd.engine.helpers.p2_tree import terminal_mass_dp
-        term = terminal_mass_dp([int(par[j]) for j in range(valid)],
-                                alpha)
-
-        # residual per ctx → P_iv(ctx, v) = term(ctx)·r̂_norm(ctx, v)
-        top_k = config.duet_proxy_top_k
+        # P_iv(ctx, v) = term(ctx)·resid(ctx, v); 드래프트된 자식 토큰은
+        # 후보에서 제외 (fork 네임스페이스와 중복 — 체인 규약 동일).
+        piv_rows = resid * term.unsqueeze(1)                     # [valid+1, V]
+        if valid:
+            par_t = torch.tensor(par, dtype=torch.int64,
+                                 device=p_E.device)
+            piv_rows[par_t + 1, tokens] = 0.0
         wire_N = config.duet_proxy_wire_N
-        piv_rows = torch.zeros(valid + 1, V)
-        for ci in range(valid + 1):
-            ctx_key = ci - 1
-            ch = kids.get(ctx_key, [])
-            pe_row = p_E[ci]
-            if ch:
-                r = (pe_row - q_rows[ch[0]]).clamp(min=0)
-                for c in ch:
-                    r[int(draft_tokens[0, c])] = 0.0
-            else:
-                r = pe_row.clone()
-            rs = float(r.sum())
-            if rs > 1e-10:
-                piv_rows[ci] = (r / rs) * float(term[ci])
         flat = piv_rows.flatten()
         k = min(wire_N, flat.numel())
         top_v, top_i = flat.topk(k)

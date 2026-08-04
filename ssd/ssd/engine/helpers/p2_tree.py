@@ -36,14 +36,35 @@ def alloc_root_budgets(piv: torch.Tensor, total: int, beta: float,
     w = torch.where(_elig, w, torch.zeros_like(w))
     if not bool(_elig.any()):
         return torch.zeros(R, dtype=torch.int64)
-    quota = w / w.sum() * total                       # 실수 몫
+    # 이슈 #33 (리뷰2-7): cap-절단 질량을 active set에 '비례'로 재배분
+    # (water-filling 본형). 종전 frac 라운드-로빈은 잔여를 균등화해
+    # [0.9,.09,.01]·β=1·total16·cap8 → [8,5,3] (비례 기대 [8,7,1]) —
+    # 약root 과잉지원이 P_iv<0.01 슬롯 점유(41.5%, hit 기여 3.9%)의
+    # 한 원인. 포화 root를 제외하며 남은 예산을 남은 가중치 비율로
+    # 재계산: 수렴 ≤ R회. 소진 보장(sum == min(total, R_elig·cap))은
+    # #23과 동일 (정수 반올림은 largest-remainder + 라운드-로빈 백스톱).
+    quota = torch.zeros_like(w)
+    active = _elig.clone()
+    left = float(total)
+    for _ in range(R):
+        if left <= 1e-9 or not bool(active.any()):
+            break
+        wa = torch.where(active, w, torch.zeros_like(w))
+        add = wa / wa.sum() * left
+        newq = quota + add
+        over = active & (newq >= cap)
+        if bool(over.any()):
+            left -= float((cap - quota[over]).sum())
+            quota[over] = float(cap)
+            active[over] = False
+        else:
+            quota = newq
+            left = 0.0
     base = quota.floor().long().clamp_max(cap)
     rem_budget = int(total - base.sum().item())
+    n_elig_cap = int(_elig.sum().item()) * cap
+    rem_budget = min(rem_budget, n_elig_cap - int(base.sum().item()))
     if rem_budget > 0:
-        # 이슈 #23 (리뷰 2A): capped water-filling — 종전 단일-패스
-        # (+1은 root당 1회)는 cap-절단 질량을 버려 β=1·cap=8에서 평균
-        # 32/40만 소진 (최저 18). frac 내림차순 라운드-로빈으로 미달
-        # root들에 소진될 때까지 재배분: sum == min(total, R·cap) 보장.
         frac = quota - quota.floor()
         order = torch.argsort(frac, descending=True, stable=True).tolist()
         progressed = True
@@ -142,16 +163,20 @@ def alloc_fanouts_backbone(parent_priority: torch.Tensor,
 
 
 def terminal_mass_dp(par, alpha):
-    """트리 Policy-B의 종단질량 DP (이슈 #25, v6 §7.5ⓒ).
+    """종단질량 DP — **조건부 α 입력 규약** (이슈 #28 정정).
 
-    reach(j) = reach(parent)·∏앞형제(1−α̂)·α̂_j;
-    terminal(ctx) = reach(ctx)·∏자식(1−α̂). 독립 근사 (체인과 동일
-    수준). 체인-퇴화(일렬)에서 chain first-reject 분포와 정확 일치 +
-    총질량 1 (유닛 고정).
+    reach(j) = reach(parent)·∏앞형제(1−α_j)·α_j;
+    terminal(ctx) = reach(ctx)·∏자식(1−α). 곱 형태가 정확하려면 α_k가
+    "앞 형제 전원 기각 given" **조건부** 수락확률이어야 한다 — 원본
+    p/q로 계산한 독립 α를 넣으면 2형제 반례에서 all-reject 질량 0
+    (실제 0.5) — 리뷰2-2 확정. 라이브 경로는 tree_policy_b_ladder가
+    조건부 α·잔차까지 일괄 계산하므로 이 함수를 더 쓰지 않는다;
+    분석 도구(e1_explicit_tree — λ-할인 조건부 α 모델)와 체인-퇴화
+    검증용으로 유지.
 
     Args:
         par:   [valid] parent_local (-1=rec 직결; 생성 순서 = 부모 선행).
-        alpha: [valid] 노드별 α̂.
+        alpha: [valid] 노드별 **조건부** α.
     Returns: term [valid+1] — [0]=rec ctx, [1+j]=노드 j에서 종단.
     """
     valid = len(par)
@@ -179,6 +204,105 @@ def terminal_mass_dp(par, alpha):
         reach[j] = base * pre * float(alpha[j])
         term[1 + j] = _terminal_of(j, reach[j])
     return torch.tensor(term, dtype=torch.float32)
+
+
+def tree_policy_b_ladder(par, sib, tokens, p_rows, q_rows):
+    """이슈 #28+#34: 트리 Policy-B의 **정확 sibling 사다리** (전면 텐서).
+
+    tree_verify_walk_tensor의 기각 갱신을 그대로 미러한다:
+      a_k = min(1, R_k[t_k]/D_k[t_k]) (조건부 — 앞 형제 전원 기각 given),
+      기각 시 R ← norm((R−D)+), D[t_k] ← 0 후 renorm,
+      전원 기각 ctx의 recovery 원천 = 최종 R (합 소멸 시 p^E 폴백).
+    종전 terminal_mass_dp 독립-α 근사(원본 p/q로 모든 형제 평가)는
+    2형제 반례에서 all-reject 질량 0 vs 실제 0.28125 — 사다리로 대체.
+
+    전 연산 텐서 op (`.item()`/`.cpu()` 없음) — GPU 입력이면 sync 0회
+    (#34: 종전 파이썬 구현이 exit_logits 0.3→17.6ms). CPU 입력이면
+    유닛테스트 참조 구현으로 동작.
+
+    Args:
+        par:    [valid] python list — parent_local (-1=rec 직결).
+        sib:    [valid] python list — 형제 순서 (walk와 동일 정렬 키).
+        tokens: [valid] int64 텐서 — 노드 토큰 (p/q와 같은 디바이스).
+        p_rows: [valid+1, V] — p^E 확률 (row 0=rec ctx, 1+j=노드 j).
+        q_rows: [valid, V] — 노드별 **부모 컨텍스트의** draft 제안 q.
+
+    Returns:
+        alpha  [valid]    — 조건부 수락확률 (terminal DP 입력 규약).
+        term   [valid+1]  — 컨텍스트별 종단질량 (합 1).
+        resid  [valid+1, V] — ctx별 recovery 분포 (정규화; 자식 있는
+            ctx는 사다리 최종 R, 잎 ctx는 p^E row).
+    """
+    valid = len(par)
+    dev = p_rows.device
+    kids = {}
+    for j in range(valid):
+        kids.setdefault(int(par[j]), []).append(j)
+    for v_ in kids.values():
+        v_.sort(key=lambda j: int(sib[j]))
+    groups = sorted(kids.keys())                     # ctx key 오름차순
+    G = len(groups)
+    alpha = torch.zeros(valid, device=dev)
+    presib = torch.ones(valid, device=dev)
+    resid = p_rows[:valid + 1].clone()
+    if valid == 0:
+        return alpha, torch.ones(1, device=dev), resid
+    if G:
+        ctx_rows = torch.tensor([g + 1 for g in groups], dtype=torch.int64,
+                                device=dev)
+        first_child = torch.tensor([kids[g][0] for g in groups],
+                                   dtype=torch.int64, device=dev)
+        R_mat = p_rows.index_select(0, ctx_rows).clone()   # [G, V]
+        D_mat = q_rows.index_select(0, first_child).clone()
+        group_cum = torch.ones(G, device=dev)
+        max_c = max(len(kids[g]) for g in groups)
+        for s in range(max_c):
+            has = [gi for gi, g in enumerate(groups) if len(kids[g]) > s]
+            gi_t = torch.tensor(has, dtype=torch.int64, device=dev)
+            cj = torch.tensor([kids[groups[gi]][s] for gi in has],
+                              dtype=torch.int64, device=dev)
+            tj = tokens.index_select(0, cj)
+            r_t = R_mat[gi_t, tj]
+            d_t = D_mat[gi_t, tj]
+            a_s = (r_t / (d_t + 1e-10)).clamp(max=1.0)
+            alpha.index_copy_(0, cj, a_s)
+            presib.index_copy_(0, cj, group_cum.index_select(0, gi_t))
+            group_cum.index_copy_(
+                0, gi_t, group_cum.index_select(0, gi_t) * (1.0 - a_s))
+            # 기각 갱신 (walk 동일: R←norm((R−D)+); D[t]←0 renorm)
+            R_g = (R_mat.index_select(0, gi_t)
+                   - D_mat.index_select(0, gi_t)).clamp(min=0.0)
+            Z = R_g.sum(-1, keepdim=True)
+            R_g = torch.where(Z > 1e-12, R_g / Z.clamp_min(1e-30),
+                              torch.zeros_like(R_g))
+            R_mat.index_copy_(0, gi_t, R_g)
+            D_g = D_mat.index_select(0, gi_t).clone()
+            D_g.scatter_(1, tj.unsqueeze(1), 0.0)
+            Zd = D_g.sum(-1, keepdim=True)
+            D_g = torch.where(Zd > 1e-12, D_g / Zd.clamp_min(1e-30),
+                              torch.zeros_like(D_g))
+            D_mat.index_copy_(0, gi_t, D_g)
+        # recovery 원천 (walk: src = R if sum>1e-12 else p)
+        R_ok = R_mat.sum(-1, keepdim=True) > 1e-12
+        resid[ctx_rows] = torch.where(
+            R_ok, R_mat, p_rows.index_select(0, ctx_rows))
+    # reach: reach[j] = alpha·presib·reach[parent] — depth 고정점 반복
+    par_t = torch.tensor([int(p) for p in par], dtype=torch.int64,
+                         device=dev)
+    depth = [0] * valid
+    for j in range(valid):
+        depth[j] = 1 if int(par[j]) < 0 else depth[int(par[j])] + 1
+    base = alpha * presib
+    reach = base.clone()
+    one = torch.ones(1, device=dev)
+    for _ in range(max(depth) - 1 if valid else 0):
+        reach = base * torch.cat([one, reach]).index_select(0, par_t + 1)
+    reach_ext = torch.cat([one, reach])              # [valid+1]
+    allrej = torch.ones(valid + 1, device=dev)
+    if G:
+        allrej.index_copy_(0, ctx_rows, group_cum)   # g=-1 → row 0 포함
+    term = reach_ext * allrej
+    return alpha, term, resid
 
 
 def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
@@ -315,12 +439,19 @@ class TreePool:
 
 
 def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
-                 depth_cap: int):
+                 depth_cap: int, tip_idx=None, root_remaining=None):
     """이번 forward에서 평가할 노드 선택 (D1 정책 스위치).
 
     level    : depth == fwd 인 미평가 노드만 (level-synchronous).
     frontier : 미평가 전체에서 priority 상위 W.
     공통: depth ≥ depth_cap 노드는 제외 (자식이 캡 초과라 확장 무의미).
+
+    이슈 #27 (리뷰2-1): tip_idx/root_remaining이 주어지면 **잔여 예산이
+    있는 root의 backbone tip은 의무 lane** — top-W 경합에서 탈락 불가.
+    (탈락 시 level 정책은 그 depth를 재방문하지 않아 root의 깊이가
+    영구 정지 + 예산 소실: budgets [7,7,7,7,6,6]·W10·F4·C3 재현에서
+    40 중 34만 생성, 약root dmax=1.) 의무 tip 수 ≤ R ≤ W는 호출자
+    (run_rollout의 R≤W 가드 + config root_count 검증)가 보장.
     반환: pool 인덱스 리스트 (≤ W; 부족하면 그만큼 — pad는 호출자).
     """
     n = pool.n
@@ -330,9 +461,44 @@ def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
     idx = torch.nonzero(elig).flatten()
     if idx.numel() == 0:
         return []
+    mand = []
+    if tip_idx is not None and root_remaining is not None:
+        elig_set = set(idx.tolist())
+        for r, t in enumerate(tip_idx):
+            if int(root_remaining[r]) > 0 and t in elig_set:
+                mand.append(t)
     pri = pool.logpri[idx]
     order = torch.argsort(pri, descending=True, stable=True)
-    return idx[order][:W].tolist()
+    ranked = idx[order].tolist()
+    if not mand:
+        return ranked[:W]
+    mand_set = set(mand)
+    rest = [i for i in ranked if i not in mand_set]
+    # 의무 tip 먼저 (priority 순 유지), 잔여 lane은 우선순위 rescue
+    mand_ranked = [i for i in ranked if i in mand_set]
+    return (mand_ranked + rest)[:W]
+
+
+def _alloc_stats(pool: TreePool, budgets: torch.Tensor, R: int):
+    """이슈 #27 불변 기록: allocated vs generated (+ root별 dmax).
+
+    generated < allocated 이면 예산 소실 — tip lane 이후에도 발생 시
+    원인(마지막 forward의 c_tensor 흡수 한계 등)을 추적할 수 있게
+    per-root 수치를 남긴다. run_rollout이 pool.alloc_stats로 부착.
+    """
+    n = pool.n
+    gen = [0] * R
+    dmax = [0] * R
+    for i in range(R, n):
+        r = int(pool.root[i])
+        gen[r] += 1
+        d = int(pool.depth[i])
+        if d > dmax[r]:
+            dmax[r] = d
+    alloc_l = budgets.tolist()
+    return {"allocated": int(sum(alloc_l)), "generated": int(n - R),
+            "per_root_alloc": alloc_l, "per_root_gen": gen,
+            "per_root_dmax": dmax}
 
 
 def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
@@ -345,6 +511,11 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
     반환: (pool, eval_log) — eval_log[f] = (선택 인덱스, fanout) 기록.
     """
     R = len(root_toks)
+    if fanout_policy == "backbone" and R > W:
+        raise ValueError(
+            f"tree rollout: root_count R={R} > W={W} — tip 의무 lane이 "
+            f"W를 초과 (이슈 #27; backbone 정책은 R<=W 필요 — "
+            f"duet_tree_root_count 설정 오류)")
     pool = TreePool(capacity=R + F_total * W * c_tensor)
     budgets = alloc_root_budgets(root_piv, total=F_total * W, beta=beta,
                                  cap=nv)
@@ -355,7 +526,11 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
     eval_log = []
     tip_idx = list(range(R))                      # backbone tip (root부터)
     for f in range(F_total):
-        sel = select_nodes(pool, policy, W, f, depth_cap)
+        sel = select_nodes(
+            pool, policy, W, f, depth_cap,
+            tip_idx=tip_idx if fanout_policy == "backbone" else None,
+            root_remaining=remaining if fanout_policy == "backbone"
+            else None)
         if not sel:
             eval_log.append(([], None))
             continue
@@ -391,6 +566,7 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
                         and i == tip_idx[int(pool.root[i])]:
                     tip_idx[int(pool.root[i])] = child
         eval_log.append((sel, fan))
+    pool.alloc_stats = _alloc_stats(pool, budgets, R)
     return pool, eval_log
 
 
@@ -444,6 +620,11 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     fanout 0 (자식 무시; RNG는 소비 — 고정 shape 유지).
     """
     R = len(root_toks)
+    if fanout_policy == "backbone" and R > W:
+        raise ValueError(
+            f"tree rollout: root_count R={R} > W={W} — tip 의무 lane이 "
+            f"W를 초과 (이슈 #27; backbone 정책은 R<=W 필요 — "
+            f"duet_tree_root_count 설정 오류)")
     pool = TreePool(capacity=R + F_total * W * c_tensor)
     budgets = alloc_root_budgets(root_piv, total=F_total * W, beta=beta,
                                  cap=nv)
@@ -460,7 +641,11 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     node_depth = [0] * R
     node_logpri = [float(x) for x in logpiv.tolist()]
     for f in range(F_total):
-        sel = select_nodes(pool, policy, W, f, depth_cap)
+        sel = select_nodes(
+            pool, policy, W, f, depth_cap,
+            tip_idx=tip_idx if fanout_policy == "backbone" else None,
+            root_remaining=remaining if fanout_policy == "backbone"
+            else None)
         n_sel = len(sel)
         fan = torch.zeros(W, dtype=torch.int64)
         fan_l = []
@@ -549,6 +734,14 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                   f"cpu_sync={(_t4-_t3)*1e3:.2f} "
                   f"pool={(_t5-_t4)*1e3:.2f}", flush=True)
         eval_log.append((sel, fan[:n_sel]))
+    pool.alloc_stats = _alloc_stats(pool, budgets, R)
+    if os.environ.get("SSD_TREE_ALLOC_CHECK", "0") == "1":
+        st = pool.alloc_stats
+        if st["generated"] != st["allocated"]:
+            print(f"[tree-alloc #27] generated={st['generated']} != "
+                  f"allocated={st['allocated']} per_root_gen="
+                  f"{st['per_root_gen']} alloc={st['per_root_alloc']} "
+                  f"dmax={st['per_root_dmax']}", flush=True)
     return pool, eval_log, cell_logits
 
 

@@ -432,6 +432,17 @@ class Config:
                         raise ValueError(
                             f"duet_tree_root_count must be >= 1; got "
                             f"{self.duet_tree_root_count}")
+                    # 이슈 #27: tip 의무 lane이 W(=P2 예산)를 초과하면
+                    # rollout이 구조적으로 불가 — config에서 조기 차단.
+                    if (self.duet_tree_root_count is not None
+                            and self.duet_p2_budget is not None
+                            and self.duet_tree_root_count
+                            > self.duet_p2_budget):
+                        raise ValueError(
+                            f"duet_tree_root_count "
+                            f"({self.duet_tree_root_count}) must be <= "
+                            f"duet_p2_budget ({self.duet_p2_budget}) — "
+                            f"tip 의무 lane > W (이슈 #27)")
                     # 이슈 #19: TREE_GLUE는 split_k2 CG(W=P2 예산)의 W-폭
                     # forward — 글루 행(nv+1)이 W를 넘으면 못 싣는다
                     # (R8+nv8 sweep 크래시; assert는 -O로 제거됨).

@@ -8,6 +8,7 @@ import unittest
 import torch
 
 from ssd.engine.helpers.p2_tree import alloc_fanouts, alloc_root_budgets
+import ssd.engine.helpers.p2_tree as PT
 
 
 class TestRootBudgets(unittest.TestCase):
@@ -840,3 +841,170 @@ class TestBackboneFanout(unittest.TestCase):
                     if int(pool.parent_idx[i]) >= 0), default=0)
         self.assertLessEqual(dmax, 2)
 
+
+
+class TestReview2Fixes(unittest.TestCase):
+    """리뷰2 수용 (이슈 #27/#28/#33) — docs/duet/20."""
+
+    # --- #33: 비례 water-filling ---
+    def test_proportional_after_cap(self):
+        # 리뷰2-7 예제: cap-절단 질량은 잔여 가중치 '비례'로 재배분
+        # (종전 라운드-로빈은 [8,5,3]로 균등화)
+        b = PT.alloc_root_budgets(torch.tensor([0.9, 0.09, 0.01]),
+                                  total=16, beta=1.0, cap=8)
+        self.assertEqual(b.tolist(), [8, 7, 1])
+
+    # --- #27: W-경합에서 tip 의무 lane ---
+    def test_tip_lane_under_w_contention(self):
+        # 재현 픽스처: 예산 [7,7,7,7,6,6], W=10, F=4, C=3 — 종전
+        # top-W 컷이 약root tip을 탈락시켜 34/40 생성, dmax=1 정지.
+        forced = torch.tensor([7, 7, 7, 7, 6, 6], dtype=torch.int64)
+        orig = PT.alloc_root_budgets
+        try:
+            PT.alloc_root_budgets = lambda *a, **k: forced.clone()
+            g = torch.Generator().manual_seed(11)
+
+            def sample_fn(sel, fan):
+                n = len(sel)
+                C = max(1, int(fan.max())) if len(fan) else 1
+                return (torch.randint(100, 2000, (n, C), generator=g),
+                        torch.rand(n, C, generator=g) * 0.5)
+
+            piv = torch.tensor([0.5, 0.2, 0.1, 0.05, 0.02, 0.01])
+            pool, _ = PT.rollout_reference(
+                list(range(10, 16)), piv, None, policy="level", W=10,
+                F_total=4, c_tensor=3, nv=7, beta=0.5, depth_cap=4,
+                sample_fn=sample_fn, fanout_policy="backbone")
+        finally:
+            PT.alloc_root_budgets = orig
+        st = pool.alloc_stats
+        self.assertEqual(st["generated"], st["allocated"],
+                         f"예산 소실: {st}")
+        # 모든 root의 backbone이 depth_cap=4까지 연장 (예산 6-7 ≥ 4)
+        self.assertTrue(all(d == 4 for d in st["per_root_dmax"]),
+                        f"약root 깊이 정지: {st['per_root_dmax']}")
+
+    def test_backbone_r_gt_w_raises(self):
+        with self.assertRaises(ValueError):
+            PT.rollout_reference(
+                list(range(10, 22)), torch.rand(12), None,
+                policy="level", W=10, F_total=4, c_tensor=3, nv=7,
+                beta=0.5, depth_cap=4,
+                sample_fn=lambda s, f: (torch.zeros(len(s), 3,
+                                                    dtype=torch.int64),
+                                        torch.ones(len(s), 3) * 0.3),
+                fanout_policy="backbone")
+
+    # --- #28: 정확 sibling ladder ---
+    def test_ladder_counterexample_vs_independent(self):
+        # 2형제 반례 (수계산): q=[.5,.25,.25], p^E=[.25,.25,.5], toks 0,1
+        # 독립 근사: α=(.5, 1) → all-reject 0.
+        # 사다리: a1=.5; R←norm((p−q)+)=[0,0,1], D←[0,.5,.5];
+        #         a2=min(1, 0/.5)=0 → all-reject (1−.5)(1−0)=0.5.
+        p_rows = torch.tensor([[0.25, 0.25, 0.5],
+                               [1 / 3, 1 / 3, 1 / 3],
+                               [1 / 3, 1 / 3, 1 / 3]])
+        q_rows = torch.tensor([[0.5, 0.25, 0.25]] * 2)
+        toks = torch.tensor([0, 1])
+        alpha, term, resid = PT.tree_policy_b_ladder(
+            [-1, -1], [0, 1], toks, p_rows, q_rows)
+        self.assertAlmostEqual(float(alpha[0]), 0.5, places=6)
+        self.assertAlmostEqual(float(alpha[1]), 0.0, places=6)
+        self.assertAlmostEqual(float(term[0]), 0.5, places=6)  # rec 종단
+        # 독립 근사는 0 — 정정 확인
+        ind = PT.terminal_mass_dp([-1, -1], torch.tensor([0.5, 1.0]))
+        self.assertAlmostEqual(float(ind[0]), 0.0, places=6)
+        # rec ctx residual = 사다리 최종 R = [0,0,1]
+        self.assertTrue(torch.allclose(
+            resid[0], torch.tensor([0.0, 0.0, 1.0]), atol=1e-6))
+
+    def test_ladder_chain_degenerate_matches_dp(self):
+        # C=1 사슬: 형제 없음 → 조건부 == 독립, DP와 일치해야 함
+        torch.manual_seed(5)
+        V = 8
+        p_rows = torch.softmax(torch.randn(4, V), dim=-1)
+        q_rows = torch.softmax(torch.randn(3, V), dim=-1)
+        toks = torch.randint(0, V, (3,))
+        par = [-1, 0, 1]
+        alpha, term, _ = PT.tree_policy_b_ladder(
+            par, [0, 0, 0], toks, p_rows, q_rows)
+        ind = PT.terminal_mass_dp(par, alpha)
+        self.assertTrue(torch.allclose(term, ind, atol=1e-5),
+                        f"{term} vs {ind}")
+        for j in range(3):
+            a_ref = min(1.0, float(p_rows[par[j] + 1, toks[j]])
+                        / (float(q_rows[j, toks[j]]) + 1e-10))
+            self.assertAlmostEqual(float(alpha[j]), a_ref, places=5)
+
+    def test_ladder_terminal_mass_sums_to_one(self):
+        torch.manual_seed(7)
+        V = 16
+        # rec→(n0,n1), n0→(n2,n3), n1→n4 — 형제 2쌍 포함
+        par = [-1, -1, 0, 0, 1]
+        sib = [0, 1, 0, 1, 0]
+        p_rows = torch.softmax(torch.randn(6, V), dim=-1)
+        q_rows = torch.softmax(torch.randn(5, V) * 0.7, dim=-1)
+        # 노드별 q row = 부모 컨텍스트 분포 (형제는 동일 row)
+        q_rows[1] = q_rows[0]
+        q_rows[3] = q_rows[2]
+        toks = torch.tensor([2, 5, 1, 9, 4])
+        _, term, resid = PT.tree_policy_b_ladder(
+            par, sib, toks, p_rows, q_rows)
+        self.assertAlmostEqual(float(term.sum()), 1.0, places=5)
+        for r in range(6):
+            self.assertAlmostEqual(float(resid[r].sum()), 1.0, places=4)
+
+    def test_ladder_matches_walk_monte_carlo(self):
+        # 골드 테스트: p_logits=log p^E로 보행을 돌리면 (proxy=truth)
+        # 보행의 종단 ctx 빈도 ≈ ladder term (같은 수학의 두 구현).
+        torch.manual_seed(13)
+        V = 6
+        par = [-1, -1, 0, 0, 1]
+        sib = [0, 1, 0, 1, 0]
+        toks = torch.tensor([0, 1, 2, 3, 4])
+        p_rows = torch.softmax(torch.randn(6, V), dim=-1)
+        q_base = torch.softmax(torch.randn(3, V) * 0.5, dim=-1)
+        # q_rows[j] = 부모 ctx의 제안분포; parent_q_ref: rec→0, n0→1, n1→2
+        q_rows = q_base[torch.tensor([0, 0, 1, 1, 2])]
+        alpha, term, resid = PT.tree_policy_b_ladder(
+            par, sib, toks, p_rows, q_rows)
+        ints = {"valid": 5, "tok": toks.tolist(), "parent_local": par,
+                "sib_order": sib,
+                "parent_q_ref": [0, 0, 1, 1, 2]}
+        g = torch.Generator().manual_seed(99)
+        counts = torch.zeros(6)
+        N = 30000
+        p_logits = torch.log(p_rows.clamp_min(1e-30))
+        for _ in range(N):
+            def coin():
+                return float(torch.rand(1, generator=g))
+
+            def mult(pr):
+                return int(torch.multinomial(pr, 1, generator=g))
+            path, _t = PT.tree_verify_walk_tensor(
+                ints, p_logits, q_base, 1.0, coin, mult)
+            counts[(1 + path[-1]) if path else 0] += 1
+        freq = counts / N
+        for c in range(6):
+            self.assertAlmostEqual(float(freq[c]), float(term[c]),
+                                   delta=0.012,
+                                   msg=f"ctx {c}: walk {freq.tolist()} "
+                                       f"vs ladder {term.tolist()}")
+
+    def test_ladder_gpu_parity(self):
+        if not torch.cuda.is_available():
+            self.skipTest("no cuda")
+        torch.manual_seed(3)
+        V = 12
+        par = [-1, -1, 0, 0, 1]
+        sib = [0, 1, 0, 1, 0]
+        toks = torch.randint(0, V, (5,))
+        p_rows = torch.softmax(torch.randn(6, V), dim=-1)
+        q_rows = torch.softmax(torch.randn(5, V), dim=-1)
+        a_c, t_c, r_c = PT.tree_policy_b_ladder(par, sib, toks, p_rows,
+                                                q_rows)
+        a_g, t_g, r_g = PT.tree_policy_b_ladder(
+            par, sib, toks.cuda(), p_rows.cuda(), q_rows.cuda())
+        self.assertTrue(torch.allclose(a_c, a_g.cpu(), atol=1e-5))
+        self.assertTrue(torch.allclose(t_c, t_g.cpu(), atol=1e-5))
+        self.assertTrue(torch.allclose(r_c, r_g.cpu(), atol=1e-5))
