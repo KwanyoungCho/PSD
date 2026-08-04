@@ -46,16 +46,11 @@ run_one () {
 }
 
 run_one base_off off 10 8 0.5
-# 이슈 #19: nv+1 <= budget — R8은 nv6만
+# 형상 진단(21번 §4.5) 후 신-그리드: backbone 고정(기본값), budget10/nv8,
+# 정책 × β만 — 형제-이득 극대 지점 탐색 (구 C-그리드는 폐기)
 for policy in level frontier; do
-  for budget in 8 10; do
-    for nv in 6 8; do
-      if [ $((nv + 1)) -gt "${budget}" ]; then continue; fi
-      for beta in 0.5 1.0; do
-        run_one "t_${policy}_R${budget}_nv${nv}_b${beta}" \
-          "${policy}" "${budget}" "${nv}" "${beta}"
-      done
-    done
+  for beta in 0.3 0.5 0.8; do
+    run_one "bb_${policy}_b${beta}" "${policy}" 10 8 "${beta}"
   done
 done
 echo "SWEEP_DONE"
