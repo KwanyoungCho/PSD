@@ -698,3 +698,86 @@ class TestCommitPlan(unittest.TestCase):
         src, dst = plan[0]
         self.assertEqual(src, int(bt[33 // 16]) * 16 + 33 % 16)
         self.assertEqual(dst, int(bt[32 // 16]) * 16 + 32 % 16)
+
+class TestBackboneFanout(unittest.TestCase):
+    """형상 진단(docs/duet/21 §4.5) 수정: backbone-우선 배분의 형상 보장."""
+
+    def _run(self, budgets_override, c_tensor, depth_cap=4, W=10, F=4,
+             policy="level"):
+        import ssd.engine.helpers.p2_tree as PT
+        R = len(budgets_override)
+        toks = list(range(100, 100 + R))
+        piv = torch.ones(R)
+        orig = PT.alloc_root_budgets
+        try:
+            PT.alloc_root_budgets = lambda *a, **k: torch.tensor(
+                budgets_override, dtype=torch.int64)
+            def sample_fn(sel, fan):
+                n = len(sel)
+                C = max(1, int(fan.max())) if hasattr(fan, "max") else 1
+                t = torch.arange(n * C).view(n, C) + 1000
+                q = torch.full((n, C), 0.5)
+                return t, q
+            pool, _ = PT.rollout_reference(
+                toks, piv, None, policy=policy, W=W, F_total=F,
+                c_tensor=c_tensor, nv=8, beta=0.5, depth_cap=depth_cap,
+                sample_fn=sample_fn, fanout_policy="backbone")
+        finally:
+            PT.alloc_root_budgets = orig
+        # root별 최대 깊이/노드 수
+        dmax = [0] * R
+        cnt = [0] * R
+        for i in range(pool.n):
+            if int(pool.parent_idx[i]) < 0:
+                continue
+            r = int(pool.root[i])
+            dmax[r] = max(dmax[r], int(pool.depth[i]))
+            cnt[r] += 1
+        return dmax, cnt
+
+    def test_budget8_full_depth_plus_siblings(self):
+        # 예산 8 → 백본 4 + 형제 4 (E1 승리 형상)
+        dmax, cnt = self._run([8], c_tensor=3)
+        self.assertEqual(dmax[0], 4)
+        self.assertEqual(cnt[0], 8)
+
+    def test_budget4_pure_chain(self):
+        # 예산 4 = depth_cap → 순수 체인 (형제 0, C와 무관)
+        dmax, cnt = self._run([4], c_tensor=3)
+        self.assertEqual(dmax[0], 4)
+        self.assertEqual(cnt[0], 4)
+
+    def test_budget2_partial_backbone(self):
+        # 예산 2 → 깊이 2 부분 백본 (최대한 깊게)
+        dmax, cnt = self._run([2], c_tensor=3)
+        self.assertEqual(dmax[0], 2)
+        self.assertEqual(cnt[0], 2)
+
+    def test_multi_root_each_backboned(self):
+        # 여러 root 혼합 예산 — 각자 min(budget, depth_cap) 깊이 보장
+        dmax, cnt = self._run([8, 4, 2, 0], c_tensor=3)
+        self.assertEqual(dmax, [4, 4, 2, 0])
+        self.assertEqual(cnt, [8, 4, 2, 0])
+
+    def test_ctensor_policy_unchanged(self):
+        # 기존 정책은 그대로 (회귀 가드): budget 4, C=3 → 폭 소진 깊이 2
+        import ssd.engine.helpers.p2_tree as PT
+        orig = PT.alloc_root_budgets
+        try:
+            PT.alloc_root_budgets = lambda *a, **k: torch.tensor(
+                [4], dtype=torch.int64)
+            def sample_fn(sel, fan):
+                n = len(sel)
+                C = max(1, int(fan.max()))
+                return torch.arange(n * C).view(n, C) + 1000, \
+                    torch.full((n, C), 0.5)
+            pool, _ = PT.rollout_reference(
+                [100], torch.ones(1), None, policy="level", W=10,
+                F_total=4, c_tensor=3, nv=8, beta=0.5, depth_cap=4,
+                sample_fn=sample_fn, fanout_policy="ctensor")
+        finally:
+            PT.alloc_root_budgets = orig
+        dmax = max((int(pool.depth[i]) for i in range(pool.n)
+                    if int(pool.parent_idx[i]) >= 0), default=0)
+        self.assertLessEqual(dmax, 2)
+

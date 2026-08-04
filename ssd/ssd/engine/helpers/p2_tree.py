@@ -76,6 +76,57 @@ def alloc_fanouts(parent_priority: torch.Tensor,
     return out
 
 
+def alloc_fanouts_backbone(parent_priority: torch.Tensor,
+                           parent_root: torch.Tensor,
+                           root_remaining: torch.Tensor,
+                           root_reserve: torch.Tensor,
+                           is_tip: torch.Tensor,
+                           c_tensor: int) -> torch.Tensor:
+    """backbone-우선 fanout (형상 진단 2026-08-04 — docs/duet/21 §4.5).
+
+    고정-C 배분은 예산을 폭으로 소진해 깊이가 죽는다 (C=1은 형제 0,
+    C≥2는 dmax≈K2/2 — E1 승리 형상 '깊이 유지+형제 추가'가 생성
+    불가). 규칙:
+      1) 백본 tip(각 root의 맏이-사슬 끝, 깊이 미완)은 fan 1을 최우선
+         보장 — 모든 root가 최소한 체인-동형 기저를 가진다.
+      2) 형제 추가는 (remaining - reserve)의 잔여 예산에서만 priority
+         내림차순 +1씩 (노드당 c_tensor 상한). reserve = 백본 완성까지
+         남은 깊이 — 미래의 백본 연장분을 형제가 먹지 못하게 예약.
+
+    Args:
+        root_reserve: [R] 백본 완성까지 남은 깊이 (tip fan 1 배정 시
+            호출자가 -1; 여기서는 읽기만).
+        is_tip: [W] bool — 해당 부모가 자기 root의 백본 tip인가.
+
+    Returns: [W] int64 fanout.
+    """
+    W = parent_priority.numel()
+    out = torch.zeros(W, dtype=torch.int64)
+    remaining = root_remaining.clone()
+    reserve = root_reserve.clone()
+    # 1) 백본 tip: fan 1 보장 (예약분 소비)
+    for i in range(W):
+        if bool(is_tip[i]):
+            r = int(parent_root[i])
+            if int(remaining[r]) > 0:
+                out[i] = 1
+                remaining[r] -= 1
+                reserve[r] = max(0, int(reserve[r]) - 1)
+    # 2) 잔여-예약 차감분에서 priority-prefix로 형제 +1씩
+    order = torch.argsort(parent_priority, descending=True, stable=True)
+    progressed = True
+    while progressed:
+        progressed = False
+        for i in order.tolist():
+            r = int(parent_root[i])
+            avail = int(remaining[r]) - int(reserve[r])
+            if avail > 0 and int(out[i]) < c_tensor:
+                out[i] += 1
+                remaining[r] -= 1
+                progressed = True
+    return out
+
+
 def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
                         sampler_x=None, F=None):
     """draft 제안분포 q 빌드 — 샘플측(tree_sample_wor)과 verify측
@@ -228,7 +279,8 @@ def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
 
 
 def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
-                      c_tensor, nv, beta, depth_cap, sample_fn):
+                      c_tensor, nv, beta, depth_cap, sample_fn,
+                      fanout_policy="ctensor"):
     """rollout 참조 구현 (T1.4a — 엔진 배선(T1.4b)의 정답지이자
     CPU 테스트 대상). sample_fn(node_indices, fanouts) -> (tokens [n, C],
     raw_q [n, C]) — 정체는 여기서만 관측 (D10: 예산·선택은 그 전에 확정).
@@ -244,6 +296,7 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
     for r in range(R):
         pool.add(root_toks[r], -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
     eval_log = []
+    tip_idx = list(range(R))                      # backbone tip (root부터)
     for f in range(F_total):
         sel = select_nodes(pool, policy, W, f, depth_cap)
         if not sel:
@@ -251,7 +304,17 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
             continue
         pri = pool.logpri[torch.tensor(sel)]
         roots = pool.root[torch.tensor(sel)]
-        fan = alloc_fanouts(pri, roots, remaining, c_tensor)
+        if fanout_policy == "backbone":
+            reserve = torch.tensor(
+                [max(0, depth_cap - int(pool.depth[tip_idx[r]]))
+                 for r in range(R)], dtype=torch.int64)
+            is_tip = torch.tensor(
+                [sel[k] == tip_idx[int(roots[k])] for k in range(len(sel))],
+                dtype=torch.bool)
+            fan = alloc_fanouts_backbone(pri, roots, remaining, reserve,
+                                         is_tip, c_tensor)
+        else:
+            fan = alloc_fanouts(pri, roots, remaining, c_tensor)
         # 예산 소진 반영 (draw 전 확정 — D10)
         for k, i in enumerate(sel):
             remaining[int(roots[k])] -= int(fan[k])
@@ -261,11 +324,15 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
             pool.cell[i] = cell
             pool.state[i] = 1                     # D11: single-shot
             for c in range(int(fan[k])):
-                pool.add(int(toks[k][c]), i, cell,
+                child = pool.add(int(toks[k][c]), i, cell,
                          int(pool.depth[i]) + 1, int(pool.root[i]), c,
                          float(pool.logpri[i])
                          + float(torch.log(torch.clamp(raws[k][c], min=1e-9))),
                          float(raws[k][c]))
+                # backbone 연장: tip의 맏이(c=0)가 새 tip
+                if fanout_policy == "backbone" and c == 0 \
+                        and i == tip_idx[int(pool.root[i])]:
+                    tip_idx[int(pool.root[i])] = child
         eval_log.append((sel, fan))
     return pool, eval_log
 
@@ -309,7 +376,7 @@ def build_tree_mask_packed(fwd, W, K_glue, context_len, prefix_glue_rows,
 def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                 beta, depth_cap, temps, forward_fn, glue_rows_by_root,
                 rope_base_by_root, K_glue, context_len, sampler_x=None,
-                F_x=None, pad_token=0):
+                F_x=None, pad_token=0, fanout_policy="ctensor"):
     """엔진-주입형 rollout (T1.4b-a): forward_fn만 바꾸면 stub/실엔진
     양쪽에서 동작. per-forward로 (input_ids[W], rope[W], packed mask)를
     구성해 forward_fn(f, input_ids, rope, packed, indptr) -> logits[W,V]
@@ -329,6 +396,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
         pool.add(int(root_toks[r]), -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
     eval_log = []
     cell_logits = None                     # [F·W, V] — verify q_eff 원천 (T2.2)
+    tip_idx = list(range(R))               # backbone tip (root 자신부터)
     for f in range(F_total):
         sel = select_nodes(pool, policy, W, f, depth_cap)
         n_sel = len(sel)
@@ -336,7 +404,17 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
         if n_sel:
             pri = pool.logpri[torch.tensor(sel)]
             roots = pool.root[torch.tensor(sel)]
-            fan[:n_sel] = alloc_fanouts(pri, roots, remaining, c_tensor)
+            if fanout_policy == "backbone":
+                reserve = torch.tensor(
+                    [max(0, depth_cap - int(pool.depth[tip_idx[r]]))
+                     for r in range(R)], dtype=torch.int64)
+                is_tip = torch.tensor(
+                    [sel[k] == tip_idx[int(roots[k])]
+                     for k in range(n_sel)], dtype=torch.bool)
+                fan[:n_sel] = alloc_fanouts_backbone(
+                    pri, roots, remaining, reserve, is_tip, c_tensor)
+            else:
+                fan[:n_sel] = alloc_fanouts(pri, roots, remaining, c_tensor)
             for k, i in enumerate(sel):
                 remaining[int(roots[k])] -= int(fan[k])
         # --- per-forward 텐서 구성 (동적 3요소) ---
@@ -371,12 +449,15 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
             pool.cell[i] = cell
             pool.state[i] = 1
             for c in range(int(fan[k])):
-                pool.add(int(toks[k][c]), i, cell,
+                child = pool.add(int(toks[k][c]), i, cell,
                          int(pool.depth[i]) + 1, int(pool.root[i]), c,
                          float(pool.logpri[i])
                          + float(torch.log(torch.clamp(raws[k][c],
                                                        min=1e-9))),
                          float(raws[k][c]))
+                if fanout_policy == "backbone" and c == 0 \
+                        and i == tip_idx[int(pool.root[i])]:
+                    tip_idx[int(pool.root[i])] = child
         eval_log.append((sel, fan[:n_sel]))
     return pool, eval_log, cell_logits
 

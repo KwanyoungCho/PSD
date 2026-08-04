@@ -79,6 +79,9 @@ class Config:
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
     duet_tree_nv: int = 8                    # 응답 절단 N_v (T2에서 사용)
     duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
+    # 형상 진단 (docs/duet/21 §4.5): 고정-C 배분은 깊이를 굶긴다 —
+    # backbone(맏이-사슬 fan1, 깊이 K2 보장) 우선 + 잔여만 형제.
+    duet_tree_fanout_policy: str = "backbone"   # backbone | ctensor
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k, K2 <= K1.
@@ -400,6 +403,12 @@ class Config:
                             f"P2-tree pack requires vocab_size <= 32768 "
                             f"(D2 — token bits 0-14); got "
                             f"{self.hf_config.vocab_size}")
+                    if self.duet_tree_fanout_policy not in (
+                            "backbone", "ctensor"):
+                        raise ValueError(
+                            f"duet_tree_fanout_policy must be "
+                            f"backbone|ctensor; got "
+                            f"{self.duet_tree_fanout_policy!r}")
                     if not (1 <= self.duet_tree_c_tensor <= 8):
                         raise ValueError(
                             f"duet_tree_c_tensor must be in [1,8]; "

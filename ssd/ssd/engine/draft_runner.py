@@ -1936,6 +1936,7 @@ class DraftRunner(ModelRunner):
                 temps=temps[:1].expand(W).float(),
                 forward_fn=forward_fn, glue_rows_by_root=glue_rows,
                 rope_base_by_root=rope_base, K_glue=K_glue_used,
+                fanout_policy=cfg.duet_tree_fanout_policy,
                 context_len=ctx_len,
                 sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
         finally:

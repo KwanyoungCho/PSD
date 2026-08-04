@@ -124,6 +124,8 @@ def parse_arguments():
                         help="P2-tree: per-node batched WOR sample width C_tensor.")
     parser.add_argument("--duet_tree_nv", type=int, default=8,
                         help="P2-tree: response truncation N_v (used from T2).")
+    parser.add_argument("--duet_tree_fanout_policy", type=str,
+                        default="backbone", choices=["backbone", "ctensor"])
     parser.add_argument("--duet_tree_beta", type=float, default=0.5,
                         help="P2-tree: budget allocation exponent (E1 default 0.5).")
 
@@ -315,6 +317,7 @@ def create_llm_kwargs(args, draft_path):
             llm_kwargs["duet_tree_c_tensor"] = args.duet_tree_c_tensor
             llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
             llm_kwargs["duet_tree_beta"] = args.duet_tree_beta
+            llm_kwargs["duet_tree_fanout_policy"] = args.duet_tree_fanout_policy
         if args.duet_phase1_k is not None:
             llm_kwargs["duet_phase1_k"] = args.duet_phase1_k
         if args.duet_phase2_k is not None:
