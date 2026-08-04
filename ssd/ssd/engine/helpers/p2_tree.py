@@ -139,6 +139,46 @@ def alloc_fanouts_backbone(parent_priority: torch.Tensor,
     return out
 
 
+def terminal_mass_dp(par, alpha):
+    """트리 Policy-B의 종단질량 DP (이슈 #25, v6 §7.5ⓒ).
+
+    reach(j) = reach(parent)·∏앞형제(1−α̂)·α̂_j;
+    terminal(ctx) = reach(ctx)·∏자식(1−α̂). 독립 근사 (체인과 동일
+    수준). 체인-퇴화(일렬)에서 chain first-reject 분포와 정확 일치 +
+    총질량 1 (유닛 고정).
+
+    Args:
+        par:   [valid] parent_local (-1=rec 직결; 생성 순서 = 부모 선행).
+        alpha: [valid] 노드별 α̂.
+    Returns: term [valid+1] — [0]=rec ctx, [1+j]=노드 j에서 종단.
+    """
+    valid = len(par)
+    kids = {}
+    for j in range(valid):
+        kids.setdefault(int(par[j]), []).append(j)
+    reach = [0.0] * valid
+    term = [0.0] * (valid + 1)
+
+    def _terminal_of(ctx_key, rv):
+        m = rv
+        for c in kids.get(ctx_key, []):
+            m *= (1.0 - float(alpha[c]))
+        return m
+
+    term[0] = _terminal_of(-1, 1.0)
+    for j in range(valid):
+        pk = int(par[j])
+        base = 1.0 if pk < 0 else reach[pk]
+        pre = 1.0
+        for sblg in kids.get(pk, []):
+            if sblg == j:
+                break
+            pre *= (1.0 - float(alpha[sblg]))
+        reach[j] = base * pre * float(alpha[j])
+        term[1 + j] = _terminal_of(j, reach[j])
+    return torch.tensor(term, dtype=torch.float32)
+
+
 def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
                         sampler_x=None, F=None):
     """draft 제안분포 q 빌드 — 샘플측(tree_sample_wor)과 verify측

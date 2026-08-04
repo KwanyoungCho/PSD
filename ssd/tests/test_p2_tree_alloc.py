@@ -699,6 +699,31 @@ class TestCommitPlan(unittest.TestCase):
         self.assertEqual(src, int(bt[33 // 16]) * 16 + 33 % 16)
         self.assertEqual(dst, int(bt[32 // 16]) * 16 + 32 % 16)
 
+class TestTerminalMassDP(unittest.TestCase):
+    """이슈 #25: 트리 Policy-B 종단질량 DP."""
+
+    def test_chain_degenerate_equals_first_reject(self):
+        import ssd.engine.helpers.p2_tree as PT
+        a = torch.tensor([0.9, 0.8, 0.7, 0.6])
+        term = PT.terminal_mass_dp([-1, 0, 1, 2], a)
+        chain = [0.1, 0.9 * 0.2, 0.9 * 0.8 * 0.3,
+                 0.9 * 0.8 * 0.7 * 0.4, 0.9 * 0.8 * 0.7 * 0.6]
+        for i, c in enumerate(chain):
+            self.assertAlmostEqual(float(term[i]), c, places=6)
+        self.assertAlmostEqual(float(term.sum()), 1.0, places=6)
+
+    def test_sibling_mass_and_total(self):
+        import ssd.engine.helpers.p2_tree as PT
+        # root 자식 둘 (형제): [-1,-1], 뒤형제는 앞형제 기각 조건
+        a = torch.tensor([0.5, 0.5])
+        term = PT.terminal_mass_dp([-1, -1], a)
+        # rec 종단 = (1-.5)(1-.5)=.25; 노드0 종단 = .5(잎); 노드1 = .25
+        self.assertAlmostEqual(float(term[0]), 0.25, places=6)
+        self.assertAlmostEqual(float(term[1]), 0.5, places=6)
+        self.assertAlmostEqual(float(term[2]), 0.25, places=6)
+        self.assertAlmostEqual(float(term.sum()), 1.0, places=6)
+
+
 class TestBudgetExhaustion(unittest.TestCase):
     """이슈 #23 (리뷰 2A): 예산 완전 소진 — sum == min(total, R·cap)."""
 

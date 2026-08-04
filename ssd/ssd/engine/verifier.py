@@ -175,11 +175,21 @@ class Verifier(VerifierBase):
                 logits_q = speculate_result.logits_q[:, :_step_lookahead, :]        # [B, vk, V]
             cache_hits = speculate_result.cache_hits                                  # [B] or None
 
-            def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead):
-                self._compute_and_send_proxy(
-                    exit_logits, draft_tokens, logits_q, orig_bs,
-                    _vk, async_pg, draft_rank, cache_hits=cache_hits,
-                    valid_k=speculate_result.valid_k)
+            _tree_meta_for_proxy = _tree_meta_arg
+
+            def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead,
+                          _tm=_tree_meta_for_proxy):
+                if _tm is not None:
+                    # 이슈 #25 (리뷰 2C): 트리 step은 체인 수식 금지 —
+                    # p^E row = parent+1 페어링 + terminal-mass DP.
+                    self._compute_and_send_proxy_tree(
+                        exit_logits, draft_tokens, logits_q, orig_bs,
+                        _vk, _tm, async_pg, draft_rank)
+                else:
+                    self._compute_and_send_proxy(
+                        exit_logits, draft_tokens, logits_q, orig_bs,
+                        _vk, async_pg, draft_rank, cache_hits=cache_hits,
+                        valid_k=speculate_result.valid_k)
 
             self.target_model_runner._duet_proxy_fn = _proxy_fn
 
@@ -399,6 +409,92 @@ class Verifier(VerifierBase):
         suffix = [rec0] + [int(ti["tok"][j]) for j in path]
         term_node = (1 + path[-1]) if path else 0
         return [suffix], [terminal], term_node, path
+
+    def _compute_and_send_proxy_tree(self, exit_logits, draft_tokens,
+                                     logits_q, B, vk, tree_meta,
+                                     async_pg, draft_rank):
+        """트리 step Policy-B (이슈 #25, v6 §7.5ⓒ — 리뷰 2C 수용).
+
+        체인 수식과의 차이:
+        - α̂_j의 p^E는 **부모 컨텍스트 row** (parent_local+1; root직결=
+          row 0)에서 gather — 종전 row j 페어링은 형제/사촌에서 오배열.
+        - ĥ는 cumprod가 아니라 topology-따라 전파하는 terminal-mass DP:
+          reach(j) = reach(parent)·∏앞형제(1−α̂)·α̂_j,
+          terminal(ctx) = reach(ctx)·∏자식(1−α̂) (독립 근사 — 체인과
+          동일 수준; 사다리 정밀 반영은 후속).
+        - residual(ctx): 내부 ctx는 (p^E_ctx − q_ctx)+ 에 자식 토큰
+          제외 (q_ctx = 그 ctx 자식의 parent_q row); 잎 ctx는 p^E_ctx
+          그대로 (잎 보너스 = plain p 샘플과 정합).
+        wire 형식/pack은 체인과 동일 (chosen_pos = ctx id: 0=rec,
+        1+j=노드 j — draft fork 네임스페이스와 정합).
+        """
+        import torch.distributed as dist
+        from ssd.utils.async_helpers.nccl_pack import send_int64
+        from ssd.engine.helpers.p2_tree import pack_piv
+        config = self.target_model_runner.config
+        if exit_logits is None:
+            return
+        if exit_logits.dim() == 2:
+            exit_logits = exit_logits.view(B, vk + 1, -1)
+        V = exit_logits.shape[-1]
+        nv = int(config.duet_tree_nv)
+        valid = int(tree_meta[0])
+        par = tree_meta[3 + nv:3 + 2 * nv]
+
+        p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
+        q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
+
+        # 컨텍스트 구조: ctx -1(=rec, p^E row 0) + 노드 j(p^E row 1+j)
+        kids = {}
+        for j in range(valid):
+            kids.setdefault(int(par[j]), []).append(j)
+
+        # α̂_j: p^E[부모 ctx row], q = parent_q(row j — b5에서 gather됨)
+        alpha = torch.zeros(valid)
+        for j in range(valid):
+            ctx_row = int(par[j]) + 1                            # -1→0
+            tok = int(draft_tokens[0, j])
+            pe = float(p_E[ctx_row, tok])
+            qd = float(q_rows[j, tok])
+            alpha[j] = min(1.0, pe / (qd + 1e-10))
+
+        # reach/terminal DP (pure 함수 — 체인-퇴화 일치 유닛 고정)
+        from ssd.engine.helpers.p2_tree import terminal_mass_dp
+        term = terminal_mass_dp([int(par[j]) for j in range(valid)],
+                                alpha)
+
+        # residual per ctx → P_iv(ctx, v) = term(ctx)·r̂_norm(ctx, v)
+        top_k = config.duet_proxy_top_k
+        wire_N = config.duet_proxy_wire_N
+        piv_rows = torch.zeros(valid + 1, V)
+        for ci in range(valid + 1):
+            ctx_key = ci - 1
+            ch = kids.get(ctx_key, [])
+            pe_row = p_E[ci]
+            if ch:
+                r = (pe_row - q_rows[ch[0]]).clamp(min=0)
+                for c in ch:
+                    r[int(draft_tokens[0, c])] = 0.0
+            else:
+                r = pe_row.clone()
+            rs = float(r.sum())
+            if rs > 1e-10:
+                piv_rows[ci] = (r / rs) * float(term[ci])
+        flat = piv_rows.flatten()
+        k = min(wire_N, flat.numel())
+        top_v, top_i = flat.topk(k)
+        chosen_pos = (top_i // V).to(torch.int64)
+        chosen_tok = (top_i % V).to(torch.int64)
+        if k < wire_N:                       # pad (드묾)
+            pad = wire_N - k
+            chosen_pos = torch.cat([chosen_pos, chosen_pos.new_zeros(pad)])
+            chosen_tok = torch.cat([chosen_tok, chosen_tok.new_zeros(pad)])
+            top_v = torch.cat([top_v, top_v.new_zeros(pad)])
+        if getattr(config, "duet_tree_policy", "off") != "off":
+            chosen_tok = pack_piv(chosen_tok, top_v)
+        dev = self.device
+        send_int64(async_pg, draft_rank,
+                   chosen_pos.to(dev), chosen_tok.to(dev))
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,

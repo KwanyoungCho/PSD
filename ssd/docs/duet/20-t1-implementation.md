@@ -457,6 +457,17 @@ alloc은 piv≤0을 water-filling 포화 후에도 명시 배제). 무예산 roo
 뷰 0 → #14 키 무효화 = 명시적 miss. 이제 R ablation이 단일 변수.
 유닛 48/48 + 회귀 44/44.
 
+**#25 완료**: `_compute_and_send_proxy_tree` — 트리 step 전용
+Policy-B. ① α̂의 p^E를 **부모 컨텍스트 row**(parent_local+1)에서
+gather (종전 row-j 페어링 오배열 수정), ② ĥ를 `terminal_mass_dp`
+(pure 함수)로: reach = 경로곱×앞형제기각, terminal = reach×자식전원
+기각 — **체인-퇴화에서 chain first-reject 분포와 정확 일치 + 총질량
+1을 유닛으로 고정** (+형제 케이스), ③ residual: 내부 ctx =
+(p^E−q_ctx)+에 자식 토큰 제외, 잎 ctx = p^E 그대로 (잎 보너스 정합),
+④ P_iv = terminal(ctx)·r̂ → (ctx,tok) 전역 topk — wire/pack 형식
+불변 (chosen_pos = ctx id = fork 네임스페이스). 유닛 50/50 + 회귀
+44/44.
+
 **v1 근사/후속 목록 (T4 전 확정 사항)**:
 - P1 컨텍스트별 fanout = 균등-우선 (F7 예산 설계 대기).
 - 트리-step Policy B ĥ = 체인 수식의 노드-축 재해석 (맏이-정확;
