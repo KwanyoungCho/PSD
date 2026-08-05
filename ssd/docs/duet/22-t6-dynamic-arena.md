@@ -231,3 +231,21 @@ vs 1.80 (+15.6%), tok/step 4.49 vs 4.30 (+4.4%), P1AL 4.05≥3.96.
 게이트로 재선정; ② target hit_k2 +15ms (평균 +2-3ms/step); ③
 plan-ahead 2×2 (~2.5ms, 양 시스템 공통); ④ 갱신부 CG/Triton
 (gap 바닥 ~6.6ms). TPS 재예측은 각 게이트 통과 후에만.
+
+
+## 형상 재선정 게이트 (2026-08-05, eslab17 인터리브 3-cycle 회전)
+
+| 평균 | chain | **w10_nv8 (유지)** | w8_nv6 |
+|---|---|---|---|
+| TPS | 79.23 | **61.60** | 60.74 |
+| P2AL | 1.84 | **2.10** | 1.94 |
+| tok/step | 4.34 | **4.46** | 4.35 |
+
+**판정: 챔피언 w10_nv8 유지.** frontier의 w8_nv6 스윗스팟은
+CPU-rollout 시절(arena OFF rev) 산물 — arena+1b가 노드-수 비례
+host 비용을 제거하자 큰 트리의 토큰 우위가 시간 열세를 상쇄.
+"T6 이후 프런티어 이동" 예측 실증. 현행 canonical: **tree 61.6-62.2
+vs chain 78.4-79.2 (격차 약 −21%)**, 토큰축 +15%대 유지. 남은
+레버: target hit_k2 (+2-3ms/step 평균), plan-ahead 2×2 (~2.5ms
+공통), 갱신부 CG/Triton (gap 바닥 6.6ms), F_total>K2 예산 확장
+(토큰축 — 시간과 교환).
