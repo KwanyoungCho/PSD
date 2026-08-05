@@ -241,3 +241,19 @@ arena 20% 이하·P2 시간 3/3 단축·TPS 3/3 우세(95% CI>0)·P2AL 하락
 캡처-시 1회; [R,Nv] 직접 기록) → 단계 3 결정적 parity (고정 noise
 주입) → 단계 4 전버킷+SSD_TREE_EXEC → 단계 5 성능 (마이크로→스모크
 →타임라인→eslab17 3-arm 회전 인터리브) → 단계 6 채택 판정.
+
+
+## 단계 2 진입 노트 (실모델 실행기 구현 사실 — 코드 확인)
+
+- **KV 순서 호재**: `layers/attention.py` forward가 이미
+  `store_kvcache(k,v,slot_mapping) → attention` 순서 — 리뷰12가
+  요구한 실순서와 동일. PoC의 후-기록 문제는 실모델 캡처에선
+  자동 해소 (mask의 self-cell도 방금 기록된 KV를 읽음).
+- **context 소비 방식**: attention은 get_context()를 trace 시점에
+  읽음 — 캡처 중 set_context는 라운드당 1회(캡처 시)만 실행되고,
+  slot_mapping/wrapper 버퍼는 **주소가 박히고 내용은 replay 가변**
+  (page-ID 교체 실험과 동일 원리) → 라운드별 고정 버퍼 설계 그대로.
+- 실행기 모듈: `ssd/ssd/engine/helpers/p2_tree_executor.py` (신규) —
+  raw `model(input_ids, positions)` + `compute_logits` 직접 캡처
+  (run_model/run_fi_tree_decode_cudagraph 우회; 기존 graph 재생 금지).
+- 지원 범위: 비-EAGLE Llama draft만 1차 (그 외 arena fallback).
