@@ -2228,6 +2228,17 @@ class DraftRunner(ModelRunner):
             if _use_arena:
                 if not hasattr(self, "_tree_arena_ws"):
                     self._tree_arena_ws = {}
+                # 격리 실험 (23번 §RNG): 라이브 arena P2에 전용 gen만
+                # 주입(커널은 auto 고정)해 실행기의 RNG-분리를 재현 —
+                # hit 하락이 RNG 때문인지 kernel(fa2) 때문인지 판별.
+                _p2gen = None
+                if os.environ.get("SSD_TREE_P2_DEDICATED_RNG", "0") == "1":
+                    if not hasattr(self, "_p2_iso_gen"):
+                        self._p2_iso_gen = torch.Generator(
+                            device=self.device)
+                        self._p2_iso_gen.manual_seed(
+                            torch.initial_seed() % (2**31))
+                    _p2gen = self._p2_iso_gen
                 _ar, eval_log, cell_logits = _PT.run_rollout_arena(
                     toks[:len(seeds)], root_piv,
                     workspace=self._tree_arena_ws,
@@ -2239,7 +2250,8 @@ class DraftRunner(ModelRunner):
                     rope_base_by_root=rope_base, K_glue=K_glue_used,
                     fanout_policy=cfg.duet_tree_fanout_policy,
                     context_len=ctx_len, sampler_x=cfg.sampler_x,
-                    F_x=cfg.async_fan_out, device=self.device)
+                    F_x=cfg.async_fan_out, device=self.device,
+                    p2_gen=_p2gen)
                 # 1a 경계: 단일 sync로 기존 view/wire 경로에 접속
                 # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/22)
                 pool = _ar.to_pool(len(seeds))

@@ -1365,7 +1365,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                       glue_rows_by_root, rope_base_by_root, K_glue,
                       context_len, sampler_x=None, F_x=None, pad_token=0,
                       fanout_policy="backbone", device=None,
-                      workspace=None):
+                      workspace=None, p2_gen=None):
     """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
 
     정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
@@ -1455,7 +1455,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         cell_logits[f * W:(f + 1) * W] = logits[:W]
         toks, raws = tree_sample_wor(logits, temps_dev, c_tensor,
                                      sampler_x=sampler_x, F=F_x,
-                                     assume_pos_temps=True)
+                                     assume_pos_temps=True,
+                                     generator=p2_gen)
         # --- 자식 삽입 (lane-major, c-minor — CPU append 순서 동일) ---
         lane_cell = f * W + torch.arange(W, device=dev)
         ar.cell.scatter_(0, sel.clamp(min=0),
