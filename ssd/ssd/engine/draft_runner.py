@@ -2024,8 +2024,11 @@ class DraftRunner(ModelRunner):
 
         try:
             if _use_arena:
+                if not hasattr(self, "_tree_arena_ws"):
+                    self._tree_arena_ws = {}
                 _ar, eval_log, cell_logits = _PT.run_rollout_arena(
                     toks[:len(seeds)], root_piv,
+                    workspace=self._tree_arena_ws,
                     policy=cfg.duet_tree_policy, W=W, F_total=K2,
                     c_tensor=cfg.duet_tree_c_tensor,
                     nv=cfg.duet_tree_nv, beta=cfg.duet_tree_beta,

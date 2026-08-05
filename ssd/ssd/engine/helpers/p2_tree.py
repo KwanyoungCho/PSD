@@ -1129,6 +1129,22 @@ def alloc_root_budgets_gpu(piv: torch.Tensor, total: int, beta: float,
     return base
 
 
+def _arena_get(capacity, dev, workspace=None):
+    """persistent arena (리뷰6 §6): rollout마다 ~15개 텐서 신규 할당
+    대신 workspace dict에서 재사용 + reset. workspace=None이면 신규
+    (테스트 경로)."""
+    if workspace is None:
+        return TreeArena(capacity, dev)
+    key = (capacity, str(dev))
+    ar = workspace.get(key)
+    if ar is None:
+        ar = TreeArena(capacity, dev)
+        workspace[key] = ar
+    else:
+        ar.reset()
+    return ar
+
+
 class TreeArena:
     """rollout 상태 전체를 device 텐서로 (22번 v2 — state 필드 명시,
     조상 bitset은 노드 capacity 폭 int64 1워드, F·W ≤ 63 가드)."""
@@ -1157,6 +1173,19 @@ class TreeArena:
         self.n = torch.zeros((), dtype=torch.int64, device=d)
         self.capacity = capacity
         self.device = d
+
+    def reset(self):
+        """persistent 재사용용 초기화 — 이전 rollout 상태 소거."""
+        self.parent_idx.fill_(-1)
+        self.parent_cell.fill_(-1)
+        self.logpri.fill_(float("-inf"))
+        self.state.zero_()
+        self.cell.fill_(-1)
+        self.valid.zero_()
+        self.anc_bits.zero_()
+        self.n.zero_()
+        # tok/depth/root/sib/raw_q는 삽입 시 전량 덮어씀 (scratch 제외
+        # — scratch 슬롯 값은 정의상 미사용)
 
     def to_pool(self, R: int):
         """단일 sync: CPU TreePool로 실체화 (+#38 무효 슬롯 압축 재매김
@@ -1309,7 +1338,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                       c_tensor, nv, beta, depth_cap, temps, forward_fn,
                       glue_rows_by_root, rope_base_by_root, K_glue,
                       context_len, sampler_x=None, F_x=None, pad_token=0,
-                      fanout_policy="backbone", device=None):
+                      fanout_policy="backbone", device=None,
+                      workspace=None):
     """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
 
     정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
@@ -1345,9 +1375,13 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                                    dtype=torch.int64)).to(dev)
     temps_dev = temps.to(dev)
 
-    ar = TreeArena(R + F_total * W * c_tensor, dev)
-    budgets = alloc_root_budgets_gpu(piv, total=F_total * W, beta=beta,
-                                     cap=nv)
+    ar = _arena_get(R + F_total * W * c_tensor, dev, workspace)
+    # 예산: CPU 정확판 + 1 sync (교대 A/B 실측 — GPU 무동기판은 ~256
+    # 이벤트로 pre +3.4ms의 주범; piv.cpu()는 proxy_wait 직후라 큐가
+    # 얕아 ~0.4ms. 패리티는 CPU 함수 그 자체이므로 자명)
+    budgets = alloc_root_budgets(piv.cpu(), total=F_total * W,
+                                 beta=beta, cap=nv).to(dev,
+                                                       non_blocking=True)
     ar._budgets = budgets
     ar._requested = F_total * W
     remaining = budgets.clone()

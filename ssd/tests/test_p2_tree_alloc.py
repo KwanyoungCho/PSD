@@ -1394,3 +1394,47 @@ class TestArenaParityHardening(unittest.TestCase):
             self.assertEqual(
                 fan_t[f][:ns].cpu().tolist(),
                 fan_cpu.tolist() if torch.is_tensor(fan_cpu) else fan_cpu)
+
+    def test_workspace_reuse_parity(self):
+        # persistent arena: 같은 workspace로 연속 2회 rollout — 2회차가
+        # fresh와 동일해야 함 (stale 상태 누출 검사)
+        import numpy as _np
+        R, W, F, C = 4, 6, 3, 3
+        glue = _np.ones((R, 4), dtype=_np.uint8)
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=6,
+                  beta=0.5, depth_cap=3, K_glue=3, context_len=90,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.8))
+        V = 16
+        g = torch.Generator().manual_seed(6)
+        per_f = [torch.randn(W, V, generator=g) for _ in range(F)]
+
+        def fwd(f, ids, rope, packed, indptr):
+            return per_f[f].clone()
+
+        ws = {}
+        piv1 = torch.tensor([0.5, 0.3, 0.1, 0.05])
+        piv2 = torch.tensor([0.05, 0.4, 0.4, 0.1])
+        # 1회차 (큰 트리로 workspace 오염 유도)
+        torch.manual_seed(1)
+        PT.run_rollout_arena([1, 2, 3, 4], piv1.clone(), forward_fn=fwd,
+                             glue_rows_by_root=glue,
+                             rope_base_by_root=[5] * R, device="cpu",
+                             workspace=ws, **kw)
+        # 2회차: 재사용 vs fresh 비교
+        torch.manual_seed(2)
+        ar_a, _, _ = PT.run_rollout_arena(
+            [9, 8, 7, 6], piv2.clone(), forward_fn=fwd,
+            glue_rows_by_root=glue, rope_base_by_root=[5] * R,
+            device="cpu", workspace=ws, **kw)
+        torch.manual_seed(2)
+        ar_b, _, _ = PT.run_rollout_arena(
+            [9, 8, 7, 6], piv2.clone(), forward_fn=fwd,
+            glue_rows_by_root=glue, rope_base_by_root=[5] * R,
+            device="cpu", workspace=None, **kw)
+        pa, pb = ar_a.to_pool(R), ar_b.to_pool(R)
+        self.assertEqual(pa.n, pb.n)
+        n = pa.n
+        for fld in ("tok", "parent_idx", "root", "cell", "sib_order"):
+            self.assertEqual(getattr(pa, fld)[:n].tolist(),
+                             getattr(pb, fld)[:n].tolist(), fld)
