@@ -1240,3 +1240,157 @@ class TestArenaCudaParity(unittest.TestCase):
         self.assertEqual(pool.tok[:n].tolist(), pool2.tok[:n].tolist())
         self.assertEqual(pool.sib_order[:n].tolist(),
                          pool2.sib_order[:n].tolist())
+
+
+class TestArenaParityHardening(unittest.TestCase):
+    """리뷰6 강화: near-tie 정렬, 실제 zero-q, 결정적 샘플러 주입으로
+    temp 0.7 분기 상태의 전필드 CUDA 패리티."""
+
+    def test_near_tie_mandatory_ordering(self):
+        # 반례 회귀: mand 두 tip의 priority가 f32 해상도(@1000)보다
+        # 가깝게 붙어도 CPU와 같은 순서로 선택돼야 한다.
+        import numpy as _np
+        R, W, F, C = 2, 3, 2, 2
+        piv = torch.tensor([float(_np.exp(-1.00001)),
+                            float(_np.exp(-1.0))])   # logpri -1.00001/-1.0
+        glue = _np.ones((R, 3), dtype=_np.uint8)
+        V = 8
+        g = torch.Generator().manual_seed(4)
+        per_f = [torch.randn(W, V, generator=g) for _ in range(F)]
+
+        def fwd(f, ids, rope, packed, indptr):
+            return per_f[f].clone()
+
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=4,
+                  beta=0.5, depth_cap=2, K_glue=2, context_len=60,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.7))
+        torch.manual_seed(3)
+        pool, log, _ = PT.run_rollout(
+            [5, 6], piv, forward_fn=fwd, glue_rows_by_root=glue,
+            rope_base_by_root=[10, 20], **kw)
+        torch.manual_seed(3)
+        ar, trace, _ = PT.run_rollout_arena(
+            [5, 6], piv.clone(), forward_fn=fwd, glue_rows_by_root=glue,
+            rope_base_by_root=[10, 20], device="cpu", **kw)
+        sel_t, val_t, _ = trace
+        for f in range(F):
+            sel_cpu, _fan = log[f]
+            n_sel = len(sel_cpu)
+            self.assertEqual(sel_t[f][:n_sel].tolist(), sel_cpu,
+                             f"f={f}: near-tie 선택 순서 불일치")
+
+    def test_true_zero_q_support_exhaustion(self):
+        # -inf logits → 정확히 0 확률 (리뷰6: 종전 -30은 1.9e-22 양수)
+        import numpy as _np
+        R, W, F, C = 2, 4, 2, 3
+        piv = torch.tensor([0.7, 0.3])
+        glue = _np.ones((R, 3), dtype=_np.uint8)
+        V = 3
+        base = torch.full((W, V), float("-inf"))
+        base[:, 0] = 1.0                      # support 1 < C=3
+        g = torch.Generator().manual_seed(2)
+        per_f = [base.clone(), torch.randn(W, V, generator=g)]
+
+        def fwd(f, ids, rope, packed, indptr):
+            return per_f[f].clone()
+
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=4,
+                  beta=0.5, depth_cap=2, K_glue=2, context_len=60,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.7))
+        torch.manual_seed(9)
+        pool, _, _ = PT.run_rollout(
+            [5, 6], piv, forward_fn=fwd, glue_rows_by_root=glue,
+            rope_base_by_root=[10, 20], **kw)
+        torch.manual_seed(9)
+        ar, _, _ = PT.run_rollout_arena(
+            [5, 6], piv.clone(), forward_fn=fwd, glue_rows_by_root=glue,
+            rope_base_by_root=[10, 20], device="cpu", **kw)
+        pool2 = ar.to_pool(R)
+        # f=0에서 root당 zero-q 자식 최대 2개 배제 발생 확인
+        f0_kids = sum(1 for i in range(pool.n)
+                      if int(pool.parent_idx[i]) >= 0
+                      and int(pool.depth[i]) == 1)
+        self.assertLessEqual(f0_kids, R)      # support 1 → root당 1
+        self.assertEqual(pool.n, pool2.n)
+        n = pool.n
+        self.assertEqual(pool.parent_idx[:n].tolist(),
+                         pool2.parent_idx[:n].tolist())
+        self.assertEqual(pool.tok[:n].tolist(), pool2.tok[:n].tolist())
+        self.assertTrue(torch.allclose(pool.raw_q[:n], pool2.raw_q[:n],
+                                       atol=1e-6))
+
+    @unittest.skipUnless(torch.cuda.is_available(), "no cuda")
+    def test_cuda_full_parity_deterministic_sampler(self):
+        # RNG 스트림 차이를 제거하기 위해 tree_sample_wor를 결정적
+        # 스텁으로 치환 — temp 0.7 실분기 상태에서 전필드+트레이스
+        # CUDA 패리티 (리뷰6: 종전 1e-3 greedy는 분기 미검증).
+        import numpy as _np
+        R, W, F, C = 10, 10, 4, 3
+        piv = torch.tensor([0.4, 0.2, 0.1, 0.06, 0.03, 0.01,
+                            0.0, 0.0, 0.0, 0.0])
+        glue = _np.ones((R, 5), dtype=_np.uint8)
+        V = 32
+        g = torch.Generator().manual_seed(21)
+        per_f = [torch.randn(W, V, generator=g) for _ in range(F)]
+        det_state = {"calls": 0}
+        orig = PT.tree_sample_wor
+
+        def det_wor(logits, temps, c, sampler_x=None, F=None,
+                    assume_pos_temps=False):
+            gg = torch.Generator().manual_seed(1000 + det_state["calls"])
+            det_state["calls"] += 1
+            Wl, Vl = logits.shape
+            toks = torch.stack([torch.randperm(Vl, generator=gg)[:c]
+                                for _ in range(Wl)]).to(logits.device)
+            raws = (torch.rand(Wl, c, generator=gg) * 0.5 + 0.01) \
+                .to(logits.device)
+            return toks, raws
+
+        kw = dict(policy="level", W=W, F_total=F, c_tensor=C, nv=8,
+                  beta=0.5, depth_cap=4, K_glue=4, context_len=180,
+                  pad_token=0, fanout_policy="backbone",
+                  temps=torch.full((W,), 0.7))
+        try:
+            PT.tree_sample_wor = det_wor
+            det_state["calls"] = 0
+            pool, log, _ = PT.run_rollout(
+                list(range(30, 40)), piv,
+                forward_fn=lambda f, i, r, p, ip: per_f[f].clone(),
+                glue_rows_by_root=glue, rope_base_by_root=[7] * R, **kw)
+            det_state["calls"] = 0
+            cap_masks = []
+
+            def fwd_gpu(f, ids, rope, packed, indptr):
+                cap_masks.append(packed.cpu().numpy().copy())
+                return per_f[f].clone().cuda()
+
+            ar, trace, _ = PT.run_rollout_arena(
+                list(range(30, 40)), piv.cuda(), forward_fn=fwd_gpu,
+                glue_rows_by_root=glue, rope_base_by_root=[7] * R,
+                device="cuda:0", **kw)
+        finally:
+            PT.tree_sample_wor = orig
+        pool2 = ar.to_pool(R)
+        self.assertEqual(pool.n, pool2.n)
+        n = pool.n
+        for fld in ("tok", "parent_idx", "parent_cell", "depth", "root",
+                    "sib_order", "state", "cell"):
+            self.assertEqual(getattr(pool, fld)[:n].tolist(),
+                             getattr(pool2, fld)[:n].tolist(), fld)
+        self.assertTrue(torch.allclose(pool.raw_q[:n], pool2.raw_q[:n],
+                                       atol=1e-6))
+        lp1, lp2 = pool.logpri[:n], pool2.logpri[:n]
+        fin = torch.isfinite(lp1)
+        self.assertTrue(torch.equal(fin, torch.isfinite(lp2)))
+        self.assertTrue(torch.allclose(lp1[fin], lp2[fin], atol=1e-5))
+        # 선택 트레이스도 비교
+        sel_t, val_t, fan_t = trace
+        for f in range(F):
+            sel_cpu, fan_cpu = log[f]
+            ns = len(sel_cpu)
+            self.assertEqual(sel_t[f][:ns].cpu().tolist(), sel_cpu)
+            self.assertEqual(
+                fan_t[f][:ns].cpu().tolist(),
+                fan_cpu.tolist() if torch.is_tensor(fan_cpu) else fan_cpu)

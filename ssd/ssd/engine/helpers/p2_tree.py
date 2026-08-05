@@ -1195,7 +1195,9 @@ class TreeArena:
         pool.raw_q[:m] = flts[1].index_select(0, kept).float()
         pool.state[:m] = ints[5].index_select(0, kept)
         pool.cell[:m] = ints[6].index_select(0, kept)
-        if hasattr(self, "_budgets"):
+        if hasattr(self, "_budgets") and \
+                os.environ.get("SSD_TREE_ALLOC_CHECK", "0") == "1":
+            # 4번째 DtoH — 진단 게이트에서만 (리뷰6: "3 sync" 정정)
             pool.alloc_stats = _alloc_stats(
                 pool, self._budgets.cpu(), R,
                 requested=getattr(self, "_requested", None))
@@ -1222,8 +1224,9 @@ def _arena_select(ar: TreeArena, policy, W, f, depth_cap, tip_idx,
         t = tip_idx.clamp(min=0)
         t_ok = (tip_idx >= 0) & (remaining > 0) & elig.gather(0, t)
         mand_slot.scatter_(0, t, t_ok)
-    key = torch.where(elig, ar.logpri + mand_slot.double() * 1000.0,
-                      torch.full_like(ar.logpri, float("-inf"))).float()
+    base = ar.logpri.float().double()      # CPU 비교 정밀도(f32) 고정
+    key = torch.where(elig, base + mand_slot.double() * 1000.0,
+                      torch.full_like(base, float("-inf")))
     final = torch.argsort(key, descending=True, stable=True)
     elig_o = elig.gather(0, final)
     sel = final[:W]
@@ -1348,7 +1351,9 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
     ar._budgets = budgets
     ar._requested = F_total * W
     remaining = budgets.clone()
-    logpiv = piv.clamp_min(1e-9).double().log()
+    # CPU 경로와 동일 정밀도: f32 log 후 double 확장 (리뷰6 —
+    # double-log는 near-tie에서 1ULP 차이로 선택 순서를 바꿀 수 있음)
+    logpiv = piv.clamp_min(1e-9).float().log().double()
     aR = torch.arange(R, device=dev)
     ar.tok[:R] = toks0
     ar.root[:R] = aR
