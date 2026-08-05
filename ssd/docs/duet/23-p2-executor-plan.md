@@ -180,8 +180,32 @@ packed bit 해석 — 토폴로지 검증엔 무관했으나 의미론 미검증
 in-graph GPU packbits→_custom_mask_buf 기록이 JIT-plan 참조와 정확
 일치함을 별도 테스트로 확정 (buffer zero 후 replay 재생성 포함).
 
-**프로덕션 실행기 전제 검증 전체 완료**: ①round별 preplanned plan
-②page-end canvas ③전체-캡처+동적정책+RNG ④in-graph packed mask
-⑤캡처 차단 3패턴 체크리스트. 다음: raw draft model forward 통합
-(대역→실모델·set_context per round 캡처), KV write 경로, round×
-page-bucket 캡처, 엔진 배선 (SSD_TREE_EXEC 게이트) → 인터리브 게이트.
+~~전제 검증 전체 완료~~ **[리뷰11 정정]: "핵심 capture 가능성 검증
+완료 — 프로덕션 blocker 4종 잔존"이 정확한 표현.** blocker 처리:
+
+1. **전용 graph RNG — 해소**: teardown 규약(파기+reseed)은 프로덕션
+   불가 (graph 상주 + eager 교차 필요). 해법: P2 전용
+   torch.Generator(cuda) + CUDAGraph.register_generator_state +
+   tree_sample_wor(generator=) — eager↔graphA↔graphB 교차·전진·
+   무오염 테스트 통과.
+2. **버킷 정의 — 확정**: 버킷 수는 config.max_blocks 유도 (8 하드
+   코딩 금지). round간 page 전환은 **p+1 고정 canvas** (예비 1 page
+   전체 mask=0; F4·W10 총확장 40 ≤ PAGE=256이라 최대 1 page 추가)
+   — 전체-예비-page 오염 + 비연속 page ID 검증 통과 (기존 arange
+   한계 지적 해소). glue 폭 2종(K1+1/K2+1)은 capture key 또는
+   최대-폭 canvas 통합 — 실행기에서 결정.
+3. **메모리 — 해소**: 실측 wrapper당 auto 72.2MB (vector sparse)
+   vs **fa2 명시 8.1MB** → 8버킷×4 = 2.26GB → **0.25GB**. 실행기는
+   backend="fa2" 명시 (+pinned 8MB/wrapper 별도 계상).
+4. **실모델 KV 경로 — 미해소 (다음 블록)**: PoC는 K/V를 attention
+   '후' 기록 (self-slot stale — 캡처 역학 검증용). 실 transformer는
+   현재 토큰 KV 기록 후 self 포함 attention. **단일 버킷 실모델
+   PoC** (엔진 배선 前): layer별 KV slot 기록/판독, round간 KV 의존,
+   slot/page 교체 replay, fallback↔graph 캐시 무오염 + **결정적
+   debug parity** (고정 noise buffer 주입으로 eager==graph 전항목
+   exact 비교 — budget/sel/fanout/rope/mask byte/logits/token/
+   장부/[R,Nv]/KV) → 통과 후에만 전 버킷 + SSD_TREE_EXEC 배선.
+
+설계 단순화 (리뷰11-6): plan은 **init/capture 시 버킷별 1회, runtime
+plan 0회** — "proxy_wait 겹침" 요구는 이 설계에선 소멸 (문서상 두
+설계 병존 금지; overlap 검증 불요).
