@@ -470,8 +470,11 @@ class TestParentQRefs(unittest.TestCase):
             ref = int(v["parent_q_ref"][r, j])
             self.assertGreaterEqual(ref, 0)
             pc = int(pool.parent_cell[i])
-            self.assertTrue(torch.equal(v["parent_q_logits"][r, ref],
-                                        cell_logits[pc]))
+            # 1b: lazy pq — cells 참조로 검증 (물질화는 서빙 시 gather)
+            self.assertEqual(int(v["parent_q_cells"][r, ref]), pc)
+            self.assertTrue(torch.equal(
+                v["cell_logits"][int(v["parent_q_cells"][r, ref])],
+                cell_logits[pc]))
         # u_valid ≤ valid ≤ nv
         for r in range(R):
             self.assertLessEqual(int(v["u_valid"][r]), int(v["valid"][r]) or 1)

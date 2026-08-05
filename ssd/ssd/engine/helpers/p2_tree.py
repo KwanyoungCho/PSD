@@ -781,56 +781,70 @@ def build_root_views(pool: TreePool, R: int, nv: int, cell_logits=None):
     Returns dict of [R, nv] 텐서: tok / parent_local(-1=root직결) /
     sib_order / raw_q / valid([R] 유효 노드 수).
     """
+    # 1b (docs/duet/22): ① 노드별 '텐서 인덱싱' 루프(~500 스칼라 op)를
+    # 단일 tolist 후 파이썬 리스트 루프로 (수 ms → ~0.1ms); ② pq_logits
+    # [R,nv,V] (~10MB) 선제 물질화 제거 — parent_q_cells만 만들고 서빙
+    # 시 hit root 1개만 cell_logits에서 gather (리뷰3-12 권고).
+    n = pool.n
+    tok_l = pool.tok[:n].tolist()
+    par_l = pool.parent_idx[:n].tolist()
+    root_l = pool.root[:n].tolist()
+    sib_l = pool.sib_order[:n].tolist()
+    rq_l = pool.raw_q[:n].tolist()
+    pc_l = pool.parent_cell[:n].tolist()
     tok = torch.zeros(R, nv, dtype=torch.int64)
     parent_local = torch.full((R, nv), -1, dtype=torch.int64)
     sib = torch.zeros(R, nv, dtype=torch.int64)
     raw_q = torch.zeros(R, nv)
-    valid = torch.zeros(R, dtype=torch.int64)
+    valid_l = [0] * R
     local_of = {}
-    for i in range(pool.n):
-        p = int(pool.parent_idx[i])
+    tk = [[0] * nv for _ in range(R)]
+    pl = [[-1] * nv for _ in range(R)]
+    sb = [[0] * nv for _ in range(R)]
+    rq = [[0.0] * nv for _ in range(R)]
+    pq_ref_l = [[-1] * nv for _ in range(R)]
+    pq_cells_l = [[-1] * nv for _ in range(R)]
+    uniq = [dict() for _ in range(R)]
+    u_valid_l = [0] * R
+    for i in range(n):
+        p = par_l[i]
         if p < 0:
             continue                       # root 자체는 뷰에 안 들어감
-        r = int(pool.root[i])
-        j = int(valid[r])
+        r = root_l[i]
+        j = valid_l[r]
         if j >= nv:
             raise RuntimeError("생성-시점 캡 위반 (⑤v2) — view overflow "
                                f"root={r} j={j} nv={nv} (리뷰3: -O 생존 가드)")
-        tok[r, j] = pool.tok[i]
-        pp = int(pool.parent_idx[i])
-        parent_local[r, j] = local_of.get(pp, -1)   # 부모가 root면 -1
-        sib[r, j] = pool.sib_order[i]
-        raw_q[r, j] = pool.raw_q[i]
+        tk[r][j] = tok_l[i]
+        pl[r][j] = local_of.get(p, -1)     # 부모가 root면 -1
+        sb[r][j] = sib_l[i]
+        rq[r][j] = rq_l[i]
+        if cell_logits is not None:
+            pc = pc_l[i]
+            u = uniq[r].get(pc)
+            if u is None:
+                u = len(uniq[r])
+                if u >= nv:
+                    raise RuntimeError("U_max=N_v 위반")
+                uniq[r][pc] = u
+                pq_cells_l[r][u] = pc
+                u_valid_l[r] = u + 1
+            pq_ref_l[r][j] = u
         local_of[i] = j
-        valid[r] = j + 1
+        valid_l[r] = j + 1
+    tok = torch.tensor(tk, dtype=torch.int64)
+    parent_local = torch.tensor(pl, dtype=torch.int64)
+    sib = torch.tensor(sb, dtype=torch.int64)
+    raw_q = torch.tensor(rq)
+    valid = torch.tensor(valid_l, dtype=torch.int64)
     out = {"tok": tok, "parent_local": parent_local, "sib_order": sib,
            "raw_q": raw_q, "valid": valid}
     if cell_logits is not None:
-        # T2.2: parent_q 참조 — root별 고유 부모 셀 (첫 등장 순), U ≤ nv.
-        V = cell_logits.shape[-1]
-        pq_ref = torch.full((R, nv), -1, dtype=torch.int64)
-        pq_logits = torch.zeros(R, nv, V, dtype=cell_logits.dtype,
-                                device=cell_logits.device)
-        u_valid = torch.zeros(R, dtype=torch.int64)
-        uniq = [dict() for _ in range(R)]
-        # 다시 순회하며 노드별 부모 셀 → 로컬 U 인덱스
-        cnt = [0] * R
-        for i in range(pool.n):
-            if int(pool.parent_idx[i]) < 0:
-                continue
-            r = int(pool.root[i])
-            pc = int(pool.parent_cell[i])
-            if pc not in uniq[r]:
-                u = len(uniq[r])
-                assert u < nv, "U_max=N_v 위반"
-                uniq[r][pc] = u
-                pq_logits[r, u] = cell_logits[pc]
-                u_valid[r] = u + 1
-            pq_ref[r, cnt[r]] = uniq[r][pc]
-            cnt[r] += 1
-        out["parent_q_ref"] = pq_ref
-        out["parent_q_logits"] = pq_logits
-        out["u_valid"] = u_valid
+        out["parent_q_ref"] = torch.tensor(pq_ref_l, dtype=torch.int64)
+        out["parent_q_cells"] = torch.tensor(pq_cells_l,
+                                             dtype=torch.int64)
+        out["u_valid"] = torch.tensor(u_valid_l, dtype=torch.int64)
+        out["cell_logits"] = cell_logits    # 서빙-시 hit root만 gather
     return out
 
 

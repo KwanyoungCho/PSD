@@ -569,8 +569,13 @@ class DraftRunner(ModelRunner):
                                 f"{int(_packed_ints[0])} != _n_valid="
                                 f"{_n_valid} root={_root}")
                         self._tree_wire_ints = _packed_ints.to(self.device)
+                        # 1b: pq는 서빙 시 hit root만 gather (선제
+                        # [R,nv,V] 물질화 제거 — docs/duet/22)
+                        _pqc = _tviews["parent_q_cells"][_root].clamp(
+                            min=0).to(_tviews["cell_logits"].device)
                         self._tree_wire_parent_q = \
-                            _tviews["parent_q_logits"][_root].to(
+                            _tviews["cell_logits"].index_select(
+                                0, _pqc).to(
                                 device=self.device,
                                 dtype=out_logits.dtype).unsqueeze(0)
                         self._tree_hit_root = _root
