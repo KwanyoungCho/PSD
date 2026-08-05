@@ -213,3 +213,21 @@ gap cpu 8.87 / ar 6.65 (−2.2) — hot loop 승, pre 패.
 cpu 53.2 vs ar 55.7. 잔여 트랙: 1b view/wire GPU화, plan-ahead
 2×2, target hit_k2 (+15ms), 형상 재선정(w8_nv6 후보 — 21번
 frontier 완결판).
+
+
+## 1b + 헤드라인 재측정 (2026-08-05, eslab17 클린 인터리브 3-cycle)
+
+**1b (3c4973a)**: view 빌드 리스트화 + parent_q lazy화 (pq [R,nv,V]
+~10MB 물질화 제거, 서빙 시 hit root만 gather) — 진짜 후처리 p50
+**8.4→4.2ms/step**, 로컬 step p50 74.9 (최고).
+
+**헤드라인 (chain vs tree=arena+1b, 25×384)**: chain 78.43
+(75.8-82.8) vs tree **62.17** (60.9-64.1) — 격차 **−28.3% →
+−20.7%** (canonical 56.6 → 62.2, +9.9%). 토큰축 유지: P2AL 2.08
+vs 1.80 (+15.6%), tok/step 4.49 vs 4.30 (+4.4%), P1AL 4.05≥3.96.
+
+**남은 레버 (예상 순)**: ① 형상 재선정 — frontier 완결판의 w8_nv6
+스윗스팟 (로컬 CPU-rollout 기준 +8.4 TPS at 3/4 이득) → 클린박스
+게이트로 재선정; ② target hit_k2 +15ms (평균 +2-3ms/step); ③
+plan-ahead 2×2 (~2.5ms, 양 시스템 공통); ④ 갱신부 CG/Triton
+(gap 바닥 ~6.6ms). TPS 재예측은 각 게이트 통과 후에만.
