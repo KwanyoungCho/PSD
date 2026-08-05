@@ -1113,9 +1113,11 @@ def alloc_root_budgets_gpu(piv: torch.Tensor, total: int, beta: float,
                     torch.zeros(R, dtype=torch.float64, device=dev))
     quota = torch.zeros(R, dtype=torch.float64, device=dev)
     active = elig.clone()
-    left = torch.tensor(float(total), dtype=torch.float64, device=dev)
+    # 캡처 호환 (리뷰9-6/PoC 실측): torch.tensor(스칼라, device)는
+    # pageable H2D — capture 중 금지. full()은 fill 커널이라 안전.
+    left = torch.full((), float(total), dtype=torch.float64, device=dev)
     zero = torch.zeros((), dtype=torch.float64, device=dev)
-    cap_f = torch.tensor(float(cap), dtype=torch.float64, device=dev)
+    cap_f = torch.full((), float(cap), dtype=torch.float64, device=dev)
     for _ in range(R):
         wa = torch.where(active, w, torch.zeros_like(w))
         add = wa / wa.sum().clamp_min(1e-300) * left
