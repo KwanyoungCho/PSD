@@ -30,7 +30,35 @@ W10 실행 버퍼에 6 root 배치, 나머지 4행은 고정 padding** (root/키
 통신은 448→384B (64B — B=1에선 무의미; 목적은 구조 정리: R/W 분리,
 view 루프 축소, 키 무효화 제거, 정적 템플릿 설계 용이).
 
-## 단계 2 — 고정 트리 1개로 latency 하한 확인
+## [v2 개정 — 리뷰8] 주력 = 동적-내용·고정-틀 P2 전체 CUDA graph
+
+리뷰8 (SGLang EAGLE 현행 구현 확인): 동적 트리를 포기하지 않고도
+여러 draft forward + 후보 선택을 **하나의 CUDA graph**에 캡처 가능
+— 고정해야 하는 것은 반복 횟수·최대 폭·shape·주소·연산 순서뿐이고,
+토큰·점수·부모·mask 내용은 실행마다 달라도 된다. 따라서 **정적
+트리는 주력이 아니라 보조**(latency 하한 측정·capture PoC·동적
+이득 대조)로 강등하고, 주력은:
+
+1. **P2 전용 CUDA graph 실행기**: [round1 forward → 샘플 → 선택/
+   배분 → mask 갱신 → round2 ... → round4 → 최종 출력] 전체 캡처.
+   기존 model graph의 replay를 감싸지 않는다 (리뷰5 확증: nested
+   불가) — 실행기 안에서 **raw draft forward**를 호출해 통째 캡처.
+2. **트리 갱신 kernel 통합**: 현 arena의 수십 개 고정-shape 텐서
+   연산(이미 패리티 게이트 통과 — capture의 전제)을 round당 1~2개
+   Triton/CUDA kernel로 (커널 A: score·예산·선택·샘플링 / 커널 B:
+   parent·root 기록·다음 mask/KV metadata).
+3. **round별 attention 사전 준비**: wrapper/plan state ×4 독립
+   (plan은 capture 불가 — P2 시작 전 host에서 완료; plan-once
+   금지 유지). replay 중 plan()/sync/신규할당/.cpu()/.item()/
+   nonzero/파이썬 분기 0회.
+4. **최종 view/wire도 graph 안 고정 버퍼로** (CPU는 P2 종료 후
+   최소 metadata 1회 읽기).
+
+캡처 shape는 요청 context 길이에 의존 → round×KV-page-bucket
+버킷 캡처 (체인 CG와 동일 전략). eager는 진단 A/B 전용 — 최종
+설계 아님 (arena v1 실측: eager 커널 비용 > 파이썬).
+
+## 단계 2(보조) — 고정 트리 1개로 latency 하한 확인
 
 - 기존 **동적 실행 로그에서 대표 부모·자식 구조 1개** 추출 (root
   순위별 평균 예산·깊이별 선택 빈도·형제 기여 위치 — 오프라인 설계,
@@ -47,13 +75,13 @@ view 루프 축소, 키 무효화 제거, 정적 템플릿 설계 용이).
 - 목적: "트리 구조가 느린가, 동적 파이썬/PyTorch 구현이 느린가"에
   가장 빨리 답하는 기준 구현.
 
-## 단계 3 — 3-arm 판단 (sweep 금지)
+## 단계 3(보조) — 3-arm 판단 (sweep 금지)
 
 chain / 현 동적 tree / 고정 tree 1개. 고정이 이득 대부분 유지 →
 채택. 체인 수준으로 AL 하락 → 정적은 최종안 아님 (round-graph
 틀만 재사용). 템플릿 추가는 이때도 금지 (동적 통합으로 이동).
 
-## 단계 4 — (AL 손실 시) 동적 정책의 kernel 통합
+## 단계 4 — 동적 정책의 kernel 통합 (v2: 주력 트랙의 2단계로 승격)
 
 select/fanout/다음 입력/mask/장부를 round당 1~2개 Triton/CUDA
 kernel로 — round graph에 포함. 동적 AL 유지 + CPU 개입 0 + 소형
