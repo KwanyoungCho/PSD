@@ -458,3 +458,23 @@ arena-dedicated 비교:
 TPS는 8/8 exec 우세(+7~21%). 체계적 확정. hit 하락이 P1(실행기와
 RNG로만 결합)에 집중 → RNG 격리 실험으로 원인 최종 판별 중
 (SSD_TREE_P2_DEDICATED_RNG, 18번 가동).
+
+## RNG 격리 결과 (2026-08-05) — RNG는 원인 아님 → 커널/mask로 좁힘
+
+라이브 arena(auto 커널 고정)에서 P2 RNG만 토글 (s42, 두 박스):
+| | CacheHit | P1hit |
+|---|---|---|
+| 18 default | 0.81 | 0.570 |
+| 18 dedicated | **0.83** | 0.570 |
+| 17 default | 0.82 | 0.561 |
+| 17 dedicated | 0.82 | 0.587 |
+
+**arena-dedicated이 hit을 떨어뜨리지 않음** (오히려 동등~약간 높음).
+→ 전용 gen(P1-P2 스트림 분리) 자체는 무해. 실행기의 −4.6%p hit
+하락은 **RNG가 아니라 나머지 차이 = fa2 preplanned 커널 또는
+실행기 mask/context 구성**에서 옴 (§7 mask/slot 범주).
+
+주의: 모듈 판별 테스트의 logits 비교는 실은 **fa2-vs-fa2**(참조도
+mask 재구성 후 자체 fa2 plan) — fa2-vs-auto logit 차는 아직 직접
+측정 안 됨. 다음: 동일 입력·동일 mask에서 auto vs fa2 logit의
+signed-mean/max 직접 측정 (systematic bias 여부 판별).
