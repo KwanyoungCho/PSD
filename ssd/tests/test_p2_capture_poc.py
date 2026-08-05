@@ -381,3 +381,84 @@ class TestInGraphPackedMask(unittest.TestCase):
         del gph
         self.assertTrue(_ok, f"in-graph packed mask != JIT ref "
                              f"(max diff {diff})")
+
+
+@unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no fi/cuda")
+class TestDedicatedGraphRNG(unittest.TestCase):
+    """리뷰11-1 blocker: P2 전용 제너레이터로 여러 graph 상주 +
+    eager RNG 교차 사용이 안전해야 프로덕션 성립 (teardown 규약은
+    해결책이 아님)."""
+
+    def test_eager_and_multi_graph_interleave(self):
+        dev = "cuda:0"
+        tree_gen = torch.Generator(device=dev)
+        tree_gen.manual_seed(7)
+        buf_a = torch.zeros(64, device=dev)
+        buf_b = torch.zeros(64, device=dev)
+
+        def draw(buf):
+            buf.copy_(torch.empty_like(buf).exponential_(
+                1, generator=tree_gen))
+
+        # 워밍업 (전용 gen)
+        draw(buf_a)
+        torch.cuda.synchronize()
+        ga = torch.cuda.CUDAGraph()
+        ga.register_generator_state(tree_gen)
+        with torch.cuda.graph(ga):
+            draw(buf_a)
+        gb = torch.cuda.CUDAGraph()
+        gb.register_generator_state(tree_gen)
+        with torch.cuda.graph(gb):
+            draw(buf_b)
+        torch.cuda.synchronize()
+        seen = []
+        # eager(기본 gen) ↔ graph A ↔ eager ↔ graph B ↔ graph A 교차
+        e1 = torch.randn(32, device=dev)              # 기본 gen eager
+        ga.replay(); torch.cuda.synchronize()
+        seen.append(buf_a.clone())
+        e2 = torch.randn(32, device=dev)              # 기본 gen eager
+        gb.replay(); torch.cuda.synchronize()
+        seen.append(buf_b.clone())
+        ga.replay(); torch.cuda.synchronize()
+        seen.append(buf_a.clone())
+        gb.replay(); torch.cuda.synchronize()
+        seen.append(buf_b.clone())
+        # ① 오류 없음 (여기 도달) ② graph RNG 매 replay 전진
+        self.assertFalse(torch.equal(seen[0], seen[2]),
+                         "graph A replay 간 RNG 미전진")
+        self.assertFalse(torch.equal(seen[1], seen[3]),
+                         "graph B replay 간 RNG 미전진")
+        # ③ eager 기본 gen 정상 (서로 다른 draw)
+        self.assertFalse(torch.equal(e1, e2))
+        # ④ 상호 오염 없음: 기본 gen으로 계속 eager 샘플 가능
+        e3 = torch.empty(32, device=dev).exponential_(1)
+        self.assertTrue(torch.isfinite(e3).all())
+        del ga, gb
+
+    def test_tree_sample_wor_with_dedicated_gen_in_graph(self):
+        dev = "cuda:0"
+        tree_gen = torch.Generator(device=dev)
+        tree_gen.manual_seed(11)
+        logits = torch.randn(W, V, device=dev)
+        temps = torch.full((W,), 0.8, device=dev)
+        # 워밍업
+        PT.tree_sample_wor(logits, temps, C, assume_pos_temps=True,
+                           generator=tree_gen)
+        torch.cuda.synchronize()
+        out_t = torch.zeros(W, C, dtype=torch.int64, device=dev)
+        g = torch.cuda.CUDAGraph()
+        g.register_generator_state(tree_gen)
+        with torch.cuda.graph(g):
+            t, r = PT.tree_sample_wor(logits, temps, C,
+                                      assume_pos_temps=True,
+                                      generator=tree_gen)
+            out_t.copy_(t)
+        g.replay(); torch.cuda.synchronize()
+        s1 = out_t.clone()
+        g.replay(); torch.cuda.synchronize()
+        s2 = out_t.clone()
+        self.assertFalse(torch.equal(s1, s2), "WOR-in-graph RNG 미전진")
+        # 기본 제너레이터 eager 경로 무오염
+        _ = torch.empty(8, device=dev).exponential_(1)
+        del g

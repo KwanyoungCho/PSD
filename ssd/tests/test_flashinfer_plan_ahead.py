@@ -173,3 +173,114 @@ class TestPlanAheadParity(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no flashinfer")
+class TestBucketCanvasExtended(unittest.TestCase):
+    """리뷰11-2: p+1 전체-page canvas와 비연속 page ID 검증
+    (기존 테스트는 마지막 page 꼬리만 오염 + kv_indices가 항상
+    arange — 'page ID 변경' 미검증이었음)."""
+
+    def test_full_extra_page_poisoned(self):
+        # 초기 p page + 예비 1 page 전체를 canvas로; 예비 page 전체
+        # 오염 + mask=0 → 정확-길이 결과와 일치 (p+1 고정 canvas 설계)
+        dev = "cuda:0"
+        torch.manual_seed(3)
+        ctx = PAGE * 3 - 4                 # p=3, 예비 page 미진입
+        kv_len = ctx
+        p_used = (kv_len + PAGE - 1) // PAGE
+        p_canvas = p_used + 1              # 예비 1 page
+        cache = _mk_cache(p_canvas, dev)
+        poison = cache.clone()
+        poison[p_used] = 1e4               # 예비 page 전체 오염
+        q = torch.randn(W, H, D, dtype=torch.float16, device=dev)
+        ws = torch.empty(96 * 2**20, dtype=torch.uint8, device=dev)
+        qo = torch.tensor([0, W], dtype=torch.int32, device=dev)
+        # 정확
+        wr1 = flashinfer.BatchPrefillWithPagedKVCacheWrapper(ws, "NHD")
+        wr1.plan(qo,
+                 torch.tensor([0, p_used], dtype=torch.int32, device=dev),
+                 torch.arange(p_used, dtype=torch.int32, device=dev),
+                 torch.tensor([kv_len - (p_used - 1) * PAGE],
+                              dtype=torch.int32, device=dev),
+                 H, HKV, D, PAGE,
+                 custom_mask=torch.ones(W * kv_len, dtype=torch.bool,
+                                        device=dev),
+                 q_data_type=torch.float16, kv_data_type=torch.float16)
+        out_exact = wr1.run(q, cache)
+        # canvas p+1 (예비 page 포함, lpl=PAGE, 초과분 전부 mask=0)
+        canvas = p_canvas * PAGE
+        m = torch.zeros(W, canvas, dtype=torch.bool, device=dev)
+        m[:, :kv_len] = True
+        wr2 = flashinfer.BatchPrefillWithPagedKVCacheWrapper(ws, "NHD")
+        wr2.plan(qo,
+                 torch.tensor([0, p_canvas], dtype=torch.int32,
+                              device=dev),
+                 torch.arange(p_canvas, dtype=torch.int32, device=dev),
+                 torch.tensor([PAGE], dtype=torch.int32, device=dev),
+                 H, HKV, D, PAGE, custom_mask=m.reshape(-1),
+                 q_data_type=torch.float16, kv_data_type=torch.float16)
+        out_canvas = wr2.run(q, poison)
+        self.assertTrue(
+            torch.allclose(out_exact, out_canvas, atol=2e-3, rtol=2e-3),
+            f"max diff {(out_exact-out_canvas).abs().max()}")
+
+    def test_noncontiguous_page_ids(self):
+        # 실 블록테이블처럼 임의 page ID — arange 참조와 동일해야 함
+        dev = "cuda:0"
+        torch.manual_seed(5)
+        ctx = PAGE * 2 + 7
+        p = (ctx + PAGE - 1) // PAGE
+        lpl = ctx - (p - 1) * PAGE
+        big = _mk_cache(p + 6, dev)        # 넉넉한 물리 페이지
+        q = torch.randn(W, H, D, dtype=torch.float16, device=dev)
+        ws = torch.empty(96 * 2**20, dtype=torch.uint8, device=dev)
+        qo = torch.tensor([0, W], dtype=torch.int32, device=dev)
+        mask = (torch.rand(W, ctx, device=dev) > 0.3)
+        perm = torch.tensor([5, 1, 7], dtype=torch.int32,
+                            device=dev)[:p]  # 비연속 ID
+        # 참조: 같은 '논리' KV를 arange 페이지에 배치
+        ref_cache = _mk_cache(p, dev)
+        for li, pid in enumerate(perm.tolist()):
+            ref_cache[li] = big[pid]
+        wr_ref = flashinfer.BatchPrefillWithPagedKVCacheWrapper(ws, "NHD")
+        wr_ref.plan(qo, torch.tensor([0, p], dtype=torch.int32,
+                                     device=dev),
+                    torch.arange(p, dtype=torch.int32, device=dev),
+                    torch.tensor([lpl], dtype=torch.int32, device=dev),
+                    H, HKV, D, PAGE, custom_mask=mask.reshape(-1),
+                    q_data_type=torch.float16,
+                    kv_data_type=torch.float16)
+        out_ref = wr_ref.run(q, ref_cache)
+        # 비연속 ID로 big 캐시 직접 사용
+        wr_nc = flashinfer.BatchPrefillWithPagedKVCacheWrapper(ws, "NHD")
+        wr_nc.plan(qo, torch.tensor([0, p], dtype=torch.int32,
+                                    device=dev),
+                   perm,
+                   torch.tensor([lpl], dtype=torch.int32, device=dev),
+                   H, HKV, D, PAGE, custom_mask=mask.reshape(-1),
+                   q_data_type=torch.float16,
+                   kv_data_type=torch.float16)
+        out_nc = wr_nc.run(q, big)
+        self.assertTrue(
+            torch.allclose(out_ref, out_nc, atol=2e-3, rtol=2e-3),
+            f"max diff {(out_ref-out_nc).abs().max()}")
+
+    def test_memory_fa2_vs_auto_real_dims(self):
+        # 리뷰11-3: 실측 — auto는 wrapper당 ~72MB(vector sparse),
+        # fa2 명시 시 ~8MB. 8버킷×4 설계는 fa2 명시 필수.
+        dev = "cuda:0"
+        ws = torch.empty(96 * 2**20, dtype=torch.uint8, device=dev)
+        a0 = torch.cuda.memory_allocated()
+        wr_auto = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+            ws, "NHD")
+        a1 = torch.cuda.memory_allocated()
+        wr_fa2 = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+            ws, "NHD", backend="fa2")
+        a2 = torch.cuda.memory_allocated()
+        auto_mb = (a1 - a0) / 2**20
+        fa2_mb = (a2 - a1) / 2**20
+        print(f"[mem] wrapper auto {auto_mb:.1f}MB vs fa2 {fa2_mb:.1f}MB"
+              f" → 8버킷×4: auto {32*auto_mb/1024:.2f}GB vs fa2 "
+              f"{32*fa2_mb/1024:.2f}GB")
+        self.assertLess(fa2_mb, 16)
