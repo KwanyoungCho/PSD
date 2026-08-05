@@ -309,3 +309,15 @@ f=1부터 rescue 순서(8,7 vs 7,8)·fanout 배분이 갈림 — 토폴로지
   무관하게 exact 요구. (valid/tok/par/sib exact, raw_q 1e-5.)
 - arena-vs-exec 의미 판정은 분포 지표(인터리브 AL/hit)로 —
   리뷰12 §6 채택 기준 그대로 (P2AL 하락 ≤0.05 등).
+
+### 실모델 스모크 v6/v7 (2026-08-05, eslab18 상대비교 — 기록기 수정 후)
+동일 명령(70B AWQ TP4 + 1B, E9K24 exit56, W10/Nv8/level/β0.5,
+numseqs 10, temp 0.7 seed 42) A/B:
+- **실행기 실가동 확정**: p2exec stats `{capture: 2, replay: 1550}`,
+  fallback 0회.
+- **P2AL 회복**: arena 1.74 vs exec 1.72 — Δ0.02 (기준 ≤0.05 통과).
+  v5의 1.33 붕괴 = 기록기 중복-scatter 충돌이 원인이었음 확정.
+- Decode TPS: exec 52.58 vs arena 50.88 (+3.3%) — 소표본·옆 GPU
+  부하 있는 상대 참고치. 절대 판정은 eslab17 3-arm에서.
+- tok/step(회복 포함) 3.74 vs 3.36, P1 hit 0.508 vs 0.471 —
+  소표본 변동 범위; P2 지표(AL/AR/hit)는 사실상 동일.

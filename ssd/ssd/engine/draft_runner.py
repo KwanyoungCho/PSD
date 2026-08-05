@@ -2991,6 +2991,8 @@ class DraftRunner(ModelRunner):
                 if self._draft_step_times:
                     avg_ms = sum(self._draft_step_times) * 1000 / len(self._draft_step_times)
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)
+                if getattr(self, "_p2exec_stats", None):
+                    print(f"[metrics] p2exec stats: {self._p2exec_stats}", flush=True)
                 try:
                     from ssd.engine.helpers.cudagraph_helpers import duet_dump
                     duet_dump("draft")
