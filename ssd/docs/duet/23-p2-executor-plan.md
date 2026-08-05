@@ -27,8 +27,15 @@ W10 실행 버퍼에 6 root 배치, 나머지 4행은 고정 padding** (root/키
 
 동등성 게이트 (단독 성능 캠페인 아님 — executor 입력 정리):
 선택 위치·토큰·P_iv·hit 가능 cache key·P2AL이 기존 top-6와 일치.
-통신은 448→384B (64B — B=1에선 무의미; 목적은 구조 정리: R/W 분리,
-view 루프 축소, 키 무효화 제거, 정적 템플릿 설계 용이).
+
+**[v3 상태 정정 — 리뷰9]** 완료: 송신 24 · 선택 6 · rollout root 6 ·
+selector 고정-shape(boolean indexing 제거) · top_k 자동보정 R 기준 ·
+R≤W 검사 무조건화. **미완**: cache/view/key 행은 아직 10 (pad 4키
+populate 후 #14 무효화 유지 — layout 계약 보존을 위한 과도기),
+"키 생성 안 함/무효화 소멸"은 목표 상태이지 현 상태가 아님. 최종
+분리 목표: root_token/pos/piv/rope [6] 입력, W=10은 forward 전용,
+cache root 행 R=6 — **insertion-시점 root-local index 부여로
+to_pool/build_root_views 자체를 제거하는 단계 5와 함께 완결.**
 
 ## [v2 개정 — 리뷰8] 주력 = 동적-내용·고정-틀 P2 전체 CUDA graph
 
@@ -43,20 +50,39 @@ view 루프 축소, 키 무효화 제거, 정적 템플릿 설계 용이).
    배분 → mask 갱신 → round2 ... → round4 → 최종 출력] 전체 캡처.
    기존 model graph의 replay를 감싸지 않는다 (리뷰5 확증: nested
    불가) — 실행기 안에서 **raw draft forward**를 호출해 통째 캡처.
-2. **트리 갱신 kernel 통합**: 현 arena의 수십 개 고정-shape 텐서
-   연산(이미 패리티 게이트 통과 — capture의 전제)을 round당 1~2개
-   Triton/CUDA kernel로 (커널 A: score·예산·선택·샘플링 / 커널 B:
-   parent·root 기록·다음 mask/KV metadata).
-3. **round별 attention 사전 준비**: wrapper/plan state ×4 독립
-   (plan은 capture 불가 — P2 시작 전 host에서 완료; plan-once
-   금지 유지). replay 중 plan()/sync/신규할당/.cpu()/.item()/
-   nonzero/파이썬 분기 0회.
-4. **최종 view/wire도 graph 안 고정 버퍼로** (CPU는 P2 종료 후
-   최소 metadata 1회 읽기).
+2. **트리 갱신 kernel 통합 (v3 범위 정정 — 리뷰9-7)**: 샘플링
+   (WOR softmax/top-k/RNG)은 **kernel에 합치지 않는다** — 기존 GPU
+   연산 그대로 graph에 포함 (RNG 순서·verifier q 일치 보존; 병목
+   확인 후에만 별도). 합치는 것은 장부만: 커널1 = 선택+fanout+다음
+   입력/rope, 커널2 = 자식 삽입+parent/root/local index+다음 mask.
+3. **round별 attention 사전 준비 (v3 정밀화 — 리뷰9-3/4/5)**:
+   - plan-ahead의 이득 조건: 단순 전진이 아니라 **proxy_wait/P1과
+     겹칠 때만** wall 감소 (page/slot 구조는 proxy 도착 전 기지 —
+     P1 후·wait 진입 전이 준비 지점).
+   - wrapper 상태는 _plan_info 하나가 아니라 int workspace/qo·KV
+     indptr/page indices/last-page len/mask buf 전부 — round별
+     분리. **캡처된 graph는 캡처 시점 buffer 주소를 기억** — 파이썬
+     wrapper 교체는 무효; 주력은 전체-P2 raw-forward graph 안에서
+     wrapper 4개 사용. float workspace는 공유 가능성 검토.
+   - **선행 검증 구현 (완성 아님)**: round별 독립 wrapper ×4로
+     page-경계 포함 케이스에서 preplanned == 매-round plan 결과
+     일치 + proxy_wait 중 준비 시에만 wall 감소함을 확인.
+   - replay 중 plan()/sync/신규할당/.cpu()/.item()/nonzero/파이썬
+     분기 0회.
+4. **최종 출력 (v3 의미 정정 — 리뷰9-8)**: P2 시점엔 hit root를
+   모르므로 "단일 wire 완성"이 아니라 **root별 [R,Nv] 고정 출력**
+   (tok/parent_local/sib/raw_q/pq_ref/valid) + root별 사전 포장
+   wire block — hit 확정 후 해당 행만 gather. 최적형: 삽입 시점에
+   root-local index를 부여해 [R,Nv]에 직접 기록 (to_pool·
+   build_root_views 소멸).
 
-캡처 shape는 요청 context 길이에 의존 → round×KV-page-bucket
-버킷 캡처 (체인 CG와 동일 전략). eager는 진단 A/B 전용 — 최종
-설계 아님 (arena v1 실측: eager 커널 비용 > 파이썬).
+캡처 shape는 요청 context 길이에 의존 — "page bucket"의 정확한
+정의 (v3, 리뷰9-5): **mask canvas를 page 끝까지 고정 폭으로 잡고
+실길이 밖은 항상 0** (예: kv 173 → canvas 176, 173..175 = 0).
+같은 page-수 버킷 안에서 shape 불변 → 버킷당 1 graph. glue 폭
+(K_rank+1)·backend/dtype도 capture key. **canvas-패딩이 FlashInfer
+attention에서 정확함을 먼저 검증** (전제 미검증 상태로 캡처 금지).
+eager는 진단 A/B 전용 (arena v1 실측: eager 커널 비용 > 파이썬).
 
 ## 단계 2(보조) — 고정 트리 1개로 latency 하한 확인
 

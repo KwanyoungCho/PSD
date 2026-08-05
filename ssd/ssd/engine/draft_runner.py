@@ -2312,17 +2312,19 @@ class DraftRunner(ModelRunner):
                 f"Section 3.5."
             )
 
-        # Boolean indexing on [B, N] yields row-major order; each seq
-        # contributes EXACTLY total_budget elements (invariant above), so the
-        # view recovers per-seq groups. Same boolean-index op as pre-M3 — no
-        # new sync.
-        taken_pos = chosen_pos[take].view(B, total_budget)            # [B, total_budget]
-        taken_tok = chosen_tok[take].view(B, total_budget)
+        # 리뷰9-6: boolean indexing은 내부 nonzero→DtoH 동기화 (매 스텝
+        # 핫패스 — arena v1과 동일 패턴). 고정-shape 대체: ~take의
+        # stable argsort는 take=True 인덱스를 행-순서 그대로 앞으로
+        # 모은다 → 앞 total_budget개 gather (결과 동일, sync 0).
+        _ord_take = (~take).to(torch.int8).argsort(dim=1, stable=True)
+        _sel_idx = _ord_take[:, :total_budget]                 # [B, budget]
+        taken_pos = chosen_pos.gather(1, _sel_idx)
+        taken_tok = chosen_tok.gather(1, _sel_idx)
         # T2.1 (P2-tree): 잔존 seed의 P_iv를 토큰과 동일 인덱싱으로 관통
         # (기존 역매칭 브릿지 제거 — 결정 ③ 라이브 값 사용).
         _piv = duet_proxy.get("chosen_piv") if isinstance(duet_proxy, dict) \
             else None
-        taken_piv = _piv[take].view(B, total_budget) if _piv is not None \
+        taken_piv = _piv.gather(1, _sel_idx) if _piv is not None \
             else None
 
         # fan_out 동적 재구성 — per seq (length = K_rank+1 per row)

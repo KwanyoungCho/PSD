@@ -449,13 +449,14 @@ class Config:
                     # 이슈 #27: tip 의무 lane이 W(=P2 예산)를 초과하면
                     # rollout이 구조적으로 불가 — config에서 조기 차단.
                     if (self.duet_tree_root_count is not None
-                            and self.duet_p2_budget is not None
                             and self.duet_tree_root_count
-                            > self.duet_p2_budget):
+                            > self.duet_proxy_total_budget):
+                        # 리뷰9-2: p2_budget 명시 여부와 무관하게 유효
+                        # W(파생값 포함)와 비교 (이슈 #27)
                         raise ValueError(
                             f"duet_tree_root_count "
                             f"({self.duet_tree_root_count}) must be <= "
-                            f"duet_p2_budget ({self.duet_p2_budget}) — "
+                            f"W ({self.duet_proxy_total_budget}) — "
                             f"tip 의무 lane > W (이슈 #27)")
                     # 이슈 #19: TREE_GLUE는 split_k2 CG(W=P2 예산)의 W-폭
                     # forward — 글루 행(nv+1)이 W를 넘으면 못 싣는다
@@ -564,7 +565,7 @@ class Config:
             K_plus_1 = K_max + 1
             pfo = self.duet_proxy_fan_out
             dfo = self.duet_draft_fan_out
-            total_budget = self.duet_proxy_total_budget  # Tier-3 single source
+            total_budget = self.duet_p2_seed_count  # 리뷰9-2: R 기준
 
             # List-aware Phase 1 fan-out stats — used in ALL cases when user
             # provides list, otherwise fall back to uniform [dfo]*(K1+1).
