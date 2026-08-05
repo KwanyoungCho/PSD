@@ -153,6 +153,18 @@ class Config:
         return (self.max_model_len + self.kvcache_block_size - 1) // self.kvcache_block_size
 
     @property
+    def duet_p2_seed_count(self) -> int:
+        """P2 시작 후보(seed) 수 (23번 단계1 — R/W 분리).
+
+        트리 ON + root_count 설정 시 R (선택기가 dedup 후 R개만 취함;
+        나머지 W-R 행은 실행 padding — root/키 미생성). 그 외엔 종전
+        W(total_budget) — 체인 경로 불변."""
+        if getattr(self, "duet_tree_policy", "off") != "off" \
+                and self.duet_tree_root_count is not None:
+            return int(self.duet_tree_root_count)
+        return self.duet_proxy_total_budget
+
+    @property
     def duet_proxy_wire_N(self) -> int:
         """Total (chosen_pos, chosen_tok) entries on Policy B wire = total_budget + buffer.
 
@@ -177,7 +189,9 @@ class Config:
             K_max = max(self.duet_phase1_k, self.duet_phase2_k)
         else:
             K_max = self.speculate_k
-        total_budget = self.duet_proxy_total_budget   # Tier-3 single source
+        # 23번 단계1: 송신량 = seed_count + dedup 여유 (종전 W + 여유
+        # = 28 → 트리 R6에선 24). 체인(off)에선 종전과 동일.
+        total_budget = self.duet_p2_seed_count
         # List-aware Phase 1 dedup loss bound
         _p1_list = self.duet_split_phase1_fan_out_list
         if _split_mode and _p1_list is not None:

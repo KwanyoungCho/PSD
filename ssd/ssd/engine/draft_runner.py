@@ -1238,7 +1238,8 @@ class DraftRunner(ModelRunner):
             self.tree_cache_keys[
                 self._last_n_draft_keys + _zv.to(self.device)] = -1
 
-    def _tree_backbone_project(self, pool, R, K2, cell_logits):
+    def _tree_backbone_project(self, pool, R, K2, cell_logits,
+                               n_roots=None):
         """rollout pool → 체인-호환 populate 입력 [R, K2] (backbone=맏이 사슬).
 
         키/valid_k/serving 형식을 체인과 동일하게 유지하기 위한 투영 —
@@ -1256,7 +1257,10 @@ class DraftRunner(ModelRunner):
             if _pi >= 0 and int(pool.sib_order[i]) == 0 \
                     and _pi not in _first_child:
                 _first_child[_pi] = i
-        for r in range(R):
+        # 23번 단계1: seed<R(레이아웃 폭)면 r>=n_roots는 pool 인덱스가
+        # root가 아니라 자식 — 걷지 않고 0행 유지 (키는 #14 무효화).
+        _nr = R if n_roots is None else n_roots
+        for r in range(min(R, _nr)):
             cur, d = r, 0
             while cur in _first_child and d < K2:
                 nx = _first_child[cur]
@@ -1422,7 +1426,8 @@ class DraftRunner(ModelRunner):
         from ssd.engine.helpers.p2_tree import build_root_views
         K2 = self.config.duet_phase2_k
         K_rank = n_valid
-        total_budget = self.config.duet_proxy_total_budget
+        # 23번 단계1: 선택 수 = seed_count (트리 R6; 체인 W) — R/W 분리
+        total_budget = self.config.duet_p2_seed_count
         _sel_out = self._select_proxy_sourced_tokens_unified(
             duet_proxy, draft_forked_p1_padded,
             K_rank=K_rank, total_budget=total_budget,
@@ -1433,6 +1438,19 @@ class DraftRunner(ModelRunner):
         else:
             proxy_forked, proxy_fan_out_tensor = _sel_out
             proxy_piv = None
+        # args/merge/fan_idx는 layout 폭(MQ_LEN=합) 계약 — seed<W면
+        # forked 꼬리 pad + fan은 마지막 position에 흡수 (pad 행 키는
+        # 빈 뷰 → 기존 #14 무효화가 명시적 miss 처리; 23번 단계1)
+        _W_l2 = self.split_k2_layout.MQ_LEN
+        if proxy_forked.shape[1] < _W_l2:
+            _padw = _W_l2 - proxy_forked.shape[1]
+            proxy_forked = torch.cat(
+                [proxy_forked,
+                 torch.zeros(proxy_forked.shape[0], _padw,
+                             dtype=proxy_forked.dtype,
+                             device=proxy_forked.device)], dim=1)
+            proxy_fan_out_tensor = proxy_fan_out_tensor.clone()
+            proxy_fan_out_tensor[:, -1] += _padw
         _layout_k2 = self._update_phase2_layout_inplace(
             proxy_fan_out_tensor, K_rank)
         proxy_tree_args = self._build_tree_decode_args_for_layout(
@@ -1473,7 +1491,9 @@ class DraftRunner(ModelRunner):
         self._tree_views = build_root_views(
             pool, _R, _nv, cell_logits=_cell_logits)
         proxy_tokens, proxy_logits = self._tree_backbone_project(
-            pool, _R, K2, _cell_logits)
+            pool, _R, K2, _cell_logits,
+            n_roots=(proxy_piv.shape[1] if proxy_piv is not None
+                     else _R))
 
         self._merge_and_populate_cache(
             draft_tree_args, draft_tokens, draft_logits,
@@ -1954,6 +1974,10 @@ class DraftRunner(ModelRunner):
                     i += 1
         # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
         seed_piv = tree_args.get("proxy_piv")
+        # 23번 단계1: fan 합은 layout 폭(pad 흡수)이지만 실제 seed는
+        # piv 폭 — pad 행은 root로 만들지 않는다 (빈 키는 #14 무효화).
+        if seed_piv is not None and seed_piv.shape[1] < len(seeds):
+            seeds = seeds[:seed_piv.shape[1]]
         # T6 1a (docs/duet/22): SSD_TREE_ARENA=1이면 GPU 상주 rollout —
         # piv를 CPU로 내리지 않는다 (pre 구간 sync 제거).
         _use_arena = os.environ.get("SSD_TREE_ARENA", "1") == "1"
@@ -2048,6 +2072,22 @@ class DraftRunner(ModelRunner):
                 # 1a 경계: 단일 sync로 기존 view/wire 경로에 접속
                 # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/22)
                 pool = _ar.to_pool(len(seeds))
+                _topo = os.environ.get("SSD_TREE_TOPO_TRACE", "")
+                if _topo:
+                    # 23번 단계2: 대표 고정트리 설계용 오프라인 로그
+                    # (계측 전용 런에서만 — 상시 경로 비용 0)
+                    import json as _json
+                    _st = pool.alloc_stats if hasattr(pool, "alloc_stats") \
+                        else {}
+                    with open(_topo + ".draft.jsonl", "a") as _f:
+                        _f.write(_json.dumps({
+                            "n": pool.n,
+                            "par": pool.parent_idx[:pool.n].tolist(),
+                            "root": pool.root[:pool.n].tolist(),
+                            "depth": pool.depth[:pool.n].tolist(),
+                            "sib": pool.sib_order[:pool.n].tolist(),
+                            "alloc": _st.get("per_root_alloc"),
+                        }) + "\n")
                 if os.environ.get("SSD_TREE_ALLOC_CHECK", "0") == "1":
                     st = pool.alloc_stats
                     if st["generated"] != st["allocated"]:
@@ -2527,6 +2567,7 @@ class DraftRunner(ModelRunner):
         if duet_proxy["chosen_pos"].dim() == 1:
             duet_proxy = {"chosen_pos": duet_proxy["chosen_pos"].unsqueeze(0),
                           "chosen_tok": duet_proxy["chosen_tok"].unsqueeze(0)}
+        total_budget = self.config.duet_p2_seed_count   # 23번 단계1
         _sel_out = self._select_proxy_sourced_tokens_unified(
             duet_proxy, draft_forked_p1_padded,
             K_rank=K_rank, total_budget=total_budget,
@@ -2542,13 +2583,27 @@ class DraftRunner(ModelRunner):
                 getattr(self, "_e0_step_id", -1),
                 duet_proxy["chosen_pos"], duet_proxy["chosen_tok"],
                 proxy_forked, proxy_fan_out_tensor)
-        _layout_k2 = self._update_phase2_layout_inplace(proxy_fan_out_tensor, K_rank)
+        _n_seed_real = proxy_forked.shape[1]   # pad 전 실제 seed 수
         if TRACE_SPLIT_K1K2:
             _fol_dbg = proxy_fan_out_tensor.tolist()      # debug-only sync
             print(f"[TRACE-split-k1k2 #4b proxy_seed policy=b] K2={K2} K_rank={K_rank} "
                   f"total_budget={total_budget} fan_out_list={_fol_dbg}",
                   flush=True)
 
+        # 23번 단계1: args/merge/fan_idx는 layout 폭 계약 — seed<W면
+        # forked 꼬리 pad + fan 마지막 position 흡수
+        _W_l2b = self.split_k2_layout.MQ_LEN
+        if proxy_forked.shape[1] < _W_l2b:
+            _padwb = _W_l2b - proxy_forked.shape[1]
+            proxy_forked = torch.cat(
+                [proxy_forked,
+                 torch.zeros(proxy_forked.shape[0], _padwb,
+                             dtype=proxy_forked.dtype,
+                             device=proxy_forked.device)], dim=1)
+            proxy_fan_out_tensor = proxy_fan_out_tensor.clone()
+            proxy_fan_out_tensor[:, -1] += _padwb
+        _layout_k2 = self._update_phase2_layout_inplace(
+            proxy_fan_out_tensor, K_rank)
         proxy_tree_args = self._build_tree_decode_args_for_layout(
             partial_tree_decode_args, proxy_forked, _layout_k2, cache_hits_list)
         _mc("phase2_build", _mev_p2b)
@@ -2574,7 +2629,9 @@ class DraftRunner(ModelRunner):
                 pool, _R, _nv, cell_logits=_cell_logits)
             # 체인-호환 populate 입력: backbone(맏이 사슬) [R, K2] 투영
             proxy_tokens, proxy_logits = self._tree_backbone_project(
-                pool, _R, K2, _cell_logits)
+                pool, _R, K2, _cell_logits,
+                n_roots=(proxy_piv.shape[1] if proxy_piv is not None
+                         else _R))
             proxy_acts = None
         else:
             self._tree_views = None

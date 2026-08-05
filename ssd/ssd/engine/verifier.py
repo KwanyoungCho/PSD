@@ -422,6 +422,18 @@ class Verifier(VerifierBase):
         rec0 = int(speculate_result.speculations[0, 0])
         suffix = [rec0] + [int(ti["tok"][j]) for j in path]
         term_node = (1 + path[-1]) if path else 0
+        _topo = os.environ.get("SSD_TREE_TOPO_TRACE", "")
+        if _topo:
+            # 23번 단계2: 서빙된 root의 topology + 수락 경로 (계측 전용)
+            import json as _json
+            _v = int(ti["valid"])
+            with open(_topo + ".walk.jsonl", "a") as _f:
+                _f.write(_json.dumps({
+                    "par": [int(ti["parent_local"][j]) for j in range(_v)],
+                    "sib": [int(ti["sib_order"][j]) for j in range(_v)],
+                    "path": [int(x) for x in path],
+                    "term": term_node,
+                }) + "\n")
         return [suffix], [terminal], term_node, path
 
     def _compute_and_send_proxy_tree(self, exit_logits, draft_tokens,
