@@ -175,5 +175,13 @@ host 공백·런치 비용의 붕괴 (PoC 스케일; 실모델은 forward가 지
 3. 캡처 그래프 생존 중 기본 CUDA RNG는 graph-모드 — eager RNG와
    교차 사용 금지 (그래프 파기 후 manual_seed 재설정 규약)
 
-다음: 프로덕션 실행기 — raw draft model forward 통합 (대역→실모델),
-KV write 경로, round×page-bucket 캡처, 엔진 배선 + 인터리브 게이트.
+**갭 폐쇄 (동일 날)**: PoC의 mask 기록은 bool 바이트였음 (커널은
+packed bit 해석 — 토폴로지 검증엔 무관했으나 의미론 미검증) →
+in-graph GPU packbits→_custom_mask_buf 기록이 JIT-plan 참조와 정확
+일치함을 별도 테스트로 확정 (buffer zero 후 replay 재생성 포함).
+
+**프로덕션 실행기 전제 검증 전체 완료**: ①round별 preplanned plan
+②page-end canvas ③전체-캡처+동적정책+RNG ④in-graph packed mask
+⑤캡처 차단 3패턴 체크리스트. 다음: raw draft model forward 통합
+(대역→실모델·set_context per round 캡처), KV write 경로, round×
+page-bucket 캡처, 엔진 배선 (SSD_TREE_EXEC 게이트) → 인터리브 게이트.
