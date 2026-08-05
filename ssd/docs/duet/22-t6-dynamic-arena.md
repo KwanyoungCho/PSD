@@ -176,3 +176,22 @@ wall-time A/B로만.
 **persistent arena** (rollout마다 ~15개 텐서 신규 할당 제거 — pre
 직접 대응). 게이트① (step ≤81.3) 미달 상태 — 통과 전 TPS 재예측
 금지 유지.
+
+
+## 동일-커밋 교대 A/B ×2 (2026-08-05, 교정 집계기 — 리뷰6 §4 방법론)
+
+**1차 (a5c3287, 정렬키·집계기 수정판)**: TPS cpu 47.52 vs ar 48.49
+(+0.97); step p50 77.4 vs 78.3. pre cpu 7.3 / ar 10.7 (+3.4),
+gap cpu 8.87 / ar 6.65 (−2.2) — hot loop 승, pre 패.
+
+**2차 (pre 공략판: CPU 예산+persistent ws)**: TPS cpu 46.87 vs ar
+**48.88 (+2.0)**; step 평균 cpu 80.85 vs ar 82.22 (ar3 88.9 outlier
+포함 — 박스 load 편차). **pre 10.7 → 7.2-9.6 (목표 달성)**, gap ar
+6.3-9.3 vs cpu 8.7-9.2.
+
+**판정**: pre 레버 적중. 종합은 **로컬 박스 분해능 한계 내 동률**
+(TPS는 ar +2.0, step 평균은 ar +1.4 열세 — 상호 모순 = 노이즈 지배;
+런간 step 스프레드 cpu 78-83, ar 75-89). 로컬에서 더 좁힐 수 없음 —
+남은 구조 레버는 **1b: view/wire GPU화** (post ~8-9ms; to_pool 제거
+— 소비자(build_root_views/pack/populate/staging)의 GPU 텐서 수용
+필요). 채택 게이트는 eslab17 클린 인터리브 (측정 규율).
