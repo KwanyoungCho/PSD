@@ -30,7 +30,8 @@ from ssd.engine.helpers import p2_tree as PT
 class P2TreeExecutor:
     def __init__(self, model, compute_logits_fn, config, device,
                  block_size, max_blocks, vocab_size,
-                 num_heads, num_kv_heads, head_dim):
+                 num_heads, num_kv_heads, head_dim,
+                 dtype=torch.float16):
         self.model = model
         self.compute_logits = compute_logits_fn
         self.cfg = config
@@ -39,6 +40,7 @@ class P2TreeExecutor:
         self.max_blocks = max_blocks
         self.V = vocab_size
         self.H, self.HKV, self.D = num_heads, num_kv_heads, head_dim
+        self.dtype = dtype
         self.W = int(config.duet_proxy_total_budget)
         self.R = int(config.duet_tree_root_count or self.W)
         self.F = int(config.duet_phase2_k)
@@ -71,14 +73,27 @@ class P2TreeExecutor:
         self.arena = PT.TreeArena(R + F * W * C, d)
         self.gen = torch.Generator(device=d)
         self.gen.manual_seed(torch.initial_seed() % (2**31))
-        self.out_tok = torch.zeros(R, NV, dtype=torch.int64, device=d)
-        self.out_par = torch.full((R, NV), -1, dtype=torch.int64,
+        # +1 더미 슬롯: 제외 항목 라우팅용 (index-0 충돌 방지 —
+        # 중복-scatter 승자미정, tip 버그와 동일 계열; 판별 parity로
+        # 발견). view는 [:, :NV]만 소비.
+        self.out_tok = torch.zeros(R * NV + 1, dtype=torch.int64,
+                                   device=d)
+        self.out_par = torch.full((R * NV + 1,), -1, dtype=torch.int64,
                                   device=d)
-        self.out_sib = torch.zeros(R, NV, dtype=torch.int64, device=d)
-        self.out_rawq = torch.zeros(R, NV, dtype=torch.float32, device=d)
-        self.out_pcell = torch.full((R, NV), -1, dtype=torch.int64,
+        self.out_sib = torch.zeros(R * NV + 1, dtype=torch.int64,
+                                   device=d)
+        self.out_rawq = torch.zeros(R * NV + 1, dtype=torch.float32,
+                                    device=d)
+        self.out_pcell = torch.full((R * NV + 1,), -1, dtype=torch.int64,
                                     device=d)
         self.out_valid = torch.zeros(R, dtype=torch.int64, device=d)
+
+        # 소비자용 [R,NV] 뷰 (더미 슬롯 제외)
+        self.view_tok = self.out_tok[:R * NV].view(R, NV)
+        self.view_par = self.out_par[:R * NV].view(R, NV)
+        self.view_sib = self.out_sib[:R * NV].view(R, NV)
+        self.view_rawq = self.out_rawq[:R * NV].view(R, NV)
+        self.view_pcell = self.out_pcell[:R * NV].view(R, NV)
         self.cell_logits = torch.zeros(F * W, vocab_size,
                                        dtype=torch.float32, device=d)
         # 캡처 호환 상수
@@ -115,7 +130,7 @@ class P2TreeExecutor:
                 self.H, self.HKV, self.D, self.bs,
                 custom_mask=torch.zeros(W * canvas_cols,
                                         dtype=torch.bool, device=d),
-                q_data_type=torch.float16, kv_data_type=torch.float16)
+                q_data_type=self.dtype, kv_data_type=self.dtype)
         wr._canvas_cols = canvas_cols
         return wr
 
@@ -294,7 +309,7 @@ class P2TreeExecutor:
             dst = child_root * NV + local_c
             wmask = ok_q & (local < NV)
             dst_safe = torch.where(wmask, dst,
-                                   torch.zeros_like(dst))
+                                   torch.full_like(dst, R * NV))
             def _w(outbuf, val):
                 flatb = outbuf.view(-1)
                 cur = flatb.gather(0, dst_safe)
@@ -322,7 +337,10 @@ class P2TreeExecutor:
             tip_idx.scatter_add_(0, r_of, delta)
             tip_depth.scatter_add_(0, r_of, tip_adv.long())
 
+    @torch.inference_mode()
     def capture(self, n_pages0):
+        # inference_mode 필수 — 실모델 호출이 autograd에 추적되면
+        # inplace 충돌 (엔진 실행 경로 규약; 실기 스모크로 확인)
         if n_pages0 not in self.wrappers:
             self.prepare_bucket(n_pages0)
         self._local_idx = torch.full((self.arena.capacity,), -1,

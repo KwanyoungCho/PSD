@@ -275,3 +275,37 @@ arena 20% 이하·P2 시간 3/3 단축·TPS 3/3 우세(95% CI>0)·P2AL 하락
 - 남은 것: draft_runner 배선 (SSD_TREE_EXEC=1 + 미지원 fallback +
   계수), 실모델 스모크, arena-vs-executor 의미 parity (동일 noise),
   전버킷 lazy capture, 3-arm 인터리브 → 채택 판정.
+
+## 판별 parity 결론 (2026-08-05) — 기록기 버그 1건 수정 + 게이트 재정의
+
+배경: 실모델 스모크 v5에서 실행기 경로 fallback 0회 완주했으나
+P2AL 1.33 붕괴 → 같은 미니모델·같은 noise로 arena(JIT-plan 경유
+fwd) vs 실행기(preplanned fa2)를 비교하는 판별 테스트 구축
+(`TestExecutorVsArenaSemantics`).
+
+### 발견 1 — 기록기 중복-scatter 충돌 (실버그, 수정 완료)
+[R,Nv] 직접 기록에서 비활성 lane의 목적지를 dst=0으로 뭉개면
+같은 replay 안에서 slot 0에 다수 lane이 scatter되어 승자-미정
+(키메라 레코드, tok[0]=0). **수정: flat R·Nv+1 버퍼 + 더미슬롯
+R·Nv 라우팅** (`dst_safe = where(wmask, dst, R*Nv)`), 소비자는
+`view_*` [R,Nv] 뷰 사용. v5의 P2AL 붕괴 주범으로 추정 — v6
+스모크로 확인.
+
+### 발견 2 — 커널 비결정성에 의한 트리 분기 (버그 아님, 원리적)
+round별 logits는 두 경로가 fp16 허용오차 내 일치 (max ~2e-3;
+mask/slot/rope 정합 증거). 그러나 참조(auto backend JIT-plan)와
+실행기(fa2 preplanned)는 **커널이 달라 bit-동일이 아니고**,
+~1e-3 logits 차가 WOR raw_q의 근접-동률 priority를 뒤집어
+f=1부터 rescue 순서(8,7 vs 7,8)·fanout 배분이 갈림 — 토폴로지
+분기는 18/40 민감성(기실측)과 동일 기전. CPU/GPU 예산은 동일
+확인 ([8,8,8,8,5,3]). **결론: 커널이 다른 두 경로 간 결정적
+트리-동일성은 원리적으로 비보장.**
+
+### 게이트 재정의 (판별 테스트 최종형, 통과)
+- ① logits-경로 검증: round별 exec vs ref logits fp16 허용오차
+  (mask/slot/rope/KV 순서의 정합 게이트).
+- ② 기록기 게이트: 실행기 [R,Nv] 직접 기록 == **자기 arena**의
+  build_root_views — 같은 트리의 두 서술이므로 커널 비결정성과
+  무관하게 exact 요구. (valid/tok/par/sib exact, raw_q 1e-5.)
+- arena-vs-exec 의미 판정은 분포 지표(인터리브 AL/hit)로 —
+  리뷰12 §6 채택 기준 그대로 (P2AL 하락 ≤0.05 등).

@@ -1968,7 +1968,7 @@ class DraftRunner(ModelRunner):
                     self.device, self.block_size, cfg.max_blocks,
                     self.hf_config.vocab_size,
                     hf.num_attention_heads, hf.num_key_value_heads,
-                    hf.head_dim)
+                    hf.head_dim, dtype=hf.torch_dtype)
             ex = self._p2_exec
             ctx0 = int(ctx_len)
             p0 = (ctx0 + self.block_size - 1) // self.block_size
@@ -2041,10 +2041,10 @@ class DraftRunner(ModelRunner):
         """[R,Nv] 고정 출력 → 기존 소비자 계약 (views/populate).
         v1: uniq-pq 매핑·backbone 투영만 CPU 소형 (1 DtoH)."""
         NV, K2 = ex.NV, self.config.duet_phase2_k
-        ints = torch.stack([ex.out_tok, ex.out_par, ex.out_sib,
-                            ex.out_pcell]).cpu()      # 1 DtoH
+        ints = torch.stack([ex.view_tok, ex.view_par, ex.view_sib,
+                            ex.view_pcell]).cpu()      # 1 DtoH
         valid = ex.out_valid.cpu()
-        rawq = ex.out_rawq.cpu()
+        rawq = ex.view_rawq.cpu()
         pq_ref = torch.full((ex.R, NV), -1, dtype=torch.int64)
         pq_cells = torch.full((ex.R, NV), -1, dtype=torch.int64)
         u_valid = torch.zeros(ex.R, dtype=torch.int64)
@@ -2207,10 +2207,12 @@ class DraftRunner(ModelRunner):
 
         _use_exec = os.environ.get("SSD_TREE_EXEC", "0") == "1"
         if _use_exec and _use_arena:
-            _r = self._try_p2_executor(
-                toks, root_piv, glue_rows, rope_base, ctx_len,
-                K_glue_used, step_slot_maps, step_context_lens, dbt,
-                temps, seeds)
+            with torch.inference_mode():
+                # 캡처와 동일 모드 (replay·버퍼 갱신의 inference-tensor 규칙)
+                _r = self._try_p2_executor(
+                    toks, root_piv, glue_rows, rope_base, ctx_len,
+                    K_glue_used, step_slot_maps, step_context_lens, dbt,
+                    temps, seeds)
             if _r is not None:
                 _CH.cache.pop("_tree_mask_override", None)
                 return _r
