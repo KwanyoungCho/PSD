@@ -157,10 +157,6 @@ class TestExecutorModuleParity(unittest.TestCase):
         del g
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 @unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no fi/cuda")
 class TestExecutorVsArenaSemantics(unittest.TestCase):
     """판별 parity: 같은 미니모델·같은 noise에서 arena(run_rollout_
@@ -324,6 +320,174 @@ class TestExecutorVsArenaSemantics(unittest.TestCase):
             self.assertTrue(torch.allclose(
                 ve["raw_q"][r, :n], ex.view_rawq[r, :n].cpu(),
                 atol=1e-5), f"기록기: root {r} raw_q")
+
+
+@unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no fi/cuda")
+class TestExecutorMandatoryParity(TestExecutorModuleParity):
+    """리뷰12 deterministic-parity 필수 케이스 (모듈 수준 — 같은
+    커널이므로 결정성 보장 영역):
+      - page 경계 (round kv_len의 lpl ∈ {1, PAGE-1, PAGE})
+      - page/slot 교체 후 replay == 교체 전 (page-ID buffer 내용
+        교체 가능성 — 논리 계산 동일이므로 결과 exact)
+      - graph↔eager 20회 교차 (fallback 교차 시 graph 상태 무오염)
+      - sentinel KV (replay의 KV 기록이 in_slot 슬롯에만 국한)
+    round간 KV 영향은 판별 ①이 커버 (round f logits가 f'<f 기록
+    KV에 의존하는 arena 참조와 일치)."""
+
+    def _noise(self, ex, V, seed=33):
+        gN = torch.Generator().manual_seed(seed)
+        return [(torch.empty(ex.W, V).exponential_(1, generator=gN))
+                .to(ex.dev) for _ in range(ex.F)]
+
+    def _prep_local(self, ex):
+        ex._local_idx = torch.full((ex.arena.capacity,), -1,
+                                   dtype=torch.int64, device=ex.dev)
+
+    def _snap(self, ex):
+        out = {k: getattr(ex, k).clone()
+               for k in ("view_tok", "view_par", "view_sib",
+                         "view_rawq", "view_pcell", "out_valid")}
+        out["logits"] = ex.cell_logits.clone()
+        return out
+
+    def _assert_snap(self, a, b, msg):
+        for k, v in a.items():
+            got = b[k]
+            if v.dtype.is_floating_point:
+                self.assertTrue(
+                    torch.allclose(v, got, atol=2e-2, rtol=2e-2),
+                    f"{msg}:{k}")
+            else:
+                self.assertTrue(torch.equal(v, got), f"{msg}:{k}")
+
+    def test_page_boundary_lpl(self):
+        # PAGE=64, W=10, F=4: round kv_len = ctx0+f·W+W.
+        # ctx0=119 → round0 kv 129 (lpl=1) / ctx0=87 → round2 kv
+        # 127 (lpl=PAGE-1) / ctx0=88 → round3 kv 128 (lpl=PAGE).
+        dev = "cuda:0"
+        for ctx0 in (119, 87, 88):
+            ex, cfg, PAGE, V = self._mk(dev)
+            p0 = (ctx0 + PAGE - 1) // PAGE
+            ex.prepare_bucket(p0)
+            self._fill_inputs(ex, PAGE, ctx0)
+            ex.parity_noise = self._noise(ex, V)
+            self._prep_local(ex)
+            ex.model.cache.zero_()
+            ex._local_idx.fill_(-1)
+            ex.run_once(p0)
+            ref = self._snap(ex)
+            ex.model.cache.zero_()
+            g = ex.capture(p0)
+            ex.model.cache.zero_()
+            g.replay()
+            torch.cuda.synchronize()
+            self._assert_snap(ref, self._snap(ex), f"ctx0={ctx0}")
+            del g
+            torch.cuda.synchronize()
+
+    def test_page_swap_between_replays(self):
+        # 캡처 후 wrapper page-ID 버퍼·in_slot을 물리 재배치
+        # (논리 순서 불변) → replay 결과는 교체 전과 동일해야 함.
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev)
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE          # 2
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        ex.parity_noise = self._noise(ex, V)
+        self._prep_local(ex)
+        ex.model.cache.zero_()
+        g = ex.capture(p0)
+        ex.model.cache.zero_()
+        g.replay()
+        torch.cuda.synchronize()
+        ref = self._snap(ex)
+        # 물리 재배치: 논리 page 0,1,2 → 물리 5,3,7 (max_blocks=8)
+        kvi = torch.tensor([5, 3, 7], dtype=torch.int32, device=dev)
+        for f in range(ex.F):
+            ex.wrappers[p0][f]._paged_kv_indices_buf[:p0 + 1] \
+                .copy_(kvi)
+            base = ctx0 + f * ex.W
+            pos = base + torch.arange(ex.W)
+            phys = kvi.cpu()[pos // PAGE] * PAGE + pos % PAGE
+            ex.in_slot[f].copy_(phys.to(torch.int32).to(dev))
+        ex.model.cache.zero_()
+        g.replay()
+        torch.cuda.synchronize()
+        self._assert_snap(ref, self._snap(ex), "page-swap")
+        del g
+        torch.cuda.synchronize()
+
+    def test_graph_eager_interleave_20(self):
+        # graph replay(A) ↔ eager run_once(B_i, 다른 입력) 20회 교차:
+        # 교차 후 A 입력 복원 replay가 항상 최초 A 결과와 동일 —
+        # eager(fallback) 개입이 graph 상태를 오염시키지 않음.
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev)
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        ex.parity_noise = self._noise(ex, V)
+        self._prep_local(ex)
+        ex.model.cache.zero_()
+        g = ex.capture(p0)
+        ex.model.cache.zero_()
+        g.replay()
+        torch.cuda.synchronize()
+        ref = self._snap(ex)
+        for i in range(20):
+            # eager: 다른 root 토큰 (fallback 대역) — 엔진 게이트와
+            # 동일하게 inference_mode 안에서 실행
+            with torch.inference_mode():
+                gB = torch.Generator().manual_seed(100 + i)
+                ex.in_root_tok.copy_(
+                    torch.randint(0, 100, (ex.R,), generator=gB)
+                    .to(dev))
+                ex.model.cache.zero_()
+                ex._local_idx.fill_(-1)
+                ex.run_once(p0)
+            self.assertGreater(int(ex.out_valid.sum()), 0)
+            # A 입력 복원 → replay == 최초 A
+            self._fill_inputs(ex, PAGE, ctx0)
+            ex.model.cache.zero_()
+            g.replay()
+            torch.cuda.synchronize()
+            self._assert_snap(ref, self._snap(ex), f"iter{i}")
+        del g
+        torch.cuda.synchronize()
+
+    def test_sentinel_kv_replay_writes_only_slots(self):
+        # replay의 KV 기록은 in_slot의 F·W 슬롯에만 — 나머지 cache는
+        # sentinel 유지 (KV 오염 부재).
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev)
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        ex.parity_noise = self._noise(ex, V)
+        self._prep_local(ex)
+        ex.model.cache.zero_()
+        g = ex.capture(p0)
+        SEN = 7.0
+        ex.model.cache.fill_(SEN)
+        g.replay()
+        torch.cuda.synchronize()
+        cache = ex.model.cache
+        written = torch.zeros(cache.shape[0] * PAGE,
+                              dtype=torch.bool, device=dev)
+        for f in range(ex.F):
+            written[ex.in_slot[f].long()] = True
+        wmask = written.view(cache.shape[0], 1, PAGE, 1, 1) \
+            .expand_as(cache)
+        untouched = cache[~wmask]
+        self.assertTrue(bool((untouched == SEN).all()),
+                        "in_slot 밖 cache가 변조됨 (KV 오염)")
+        self.assertFalse(bool((cache[wmask] == SEN).all()),
+                         "in_slot 슬롯에 기록이 없음")
+        del g
+        torch.cuda.synchronize()
 
 
 if __name__ == "__main__":

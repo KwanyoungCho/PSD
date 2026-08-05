@@ -1959,6 +1959,14 @@ class DraftRunner(ModelRunner):
                     or R > W:
                 self._p2exec_count("unsupported_cfg")
                 return None
+            # 디버그: graph↔fallback 교차 검증용 (n회마다 1회 arena)
+            alt = int(os.getenv("SSD_TREE_EXEC_ALT", "0"))
+            if alt > 0:
+                self._p2exec_alt_n = getattr(self, "_p2exec_alt_n",
+                                             0) + 1
+                if self._p2exec_alt_n % alt == 0:
+                    self._p2exec_count("alt_forced_fallback")
+                    return None
             if not hasattr(self, "_p2_exec"):
                 from ssd.engine.helpers.p2_tree_executor import \
                     P2TreeExecutor

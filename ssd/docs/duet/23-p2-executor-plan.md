@@ -321,3 +321,31 @@ numseqs 10, temp 0.7 seed 42) A/B:
   부하 있는 상대 참고치. 절대 판정은 eslab17 3-arm에서.
 - tok/step(회복 포함) 3.74 vs 3.36, P1 hit 0.508 vs 0.471 —
   소표본 변동 범위; P2 지표(AL/AR/hit)는 사실상 동일.
+
+## deterministic parity 필수 케이스 + runtime 가드 (2026-08-05)
+
+### 모듈 필수 케이스 (test_p2_executor_parity — 7/7 통과)
+- page 경계: round kv_len의 lpl ∈ {1, PAGE-1, PAGE} 3구성 각각
+  eager==replay exact.
+- page/slot 교체 replay: 캡처 후 wrapper page-ID 버퍼·in_slot을
+  물리 재배치(논리 순서 불변) → replay == 교체 전 exact (page-ID
+  buffer 내용 교체 전제의 모듈 확증).
+- graph↔eager 20회 교차: 다른 입력의 eager(fallback 대역) 개입
+  후에도 A-입력 replay가 항상 최초 A와 동일 — graph 상태 무오염.
+- sentinel KV: replay의 KV 기록이 in_slot F·W 슬롯에만 국한
+  (sentinel 7.0 완전 보존) — KV 오염 부재.
+- round간 KV 영향: 판별 ①이 커버 (round f logits가 이전 round
+  기록 KV에 의존하는 arena 참조와 일치).
+
+### 엔진 graph↔fallback 교차 (SSD_TREE_EXEC_ALT=2 스모크)
+p2exec stats {capture 2, alt_forced_fallback 731, replay 729} —
+1:1 교차 완주, P2AL 1.82·TPS 51.3 (arena 50.9/exec 52.6 사이),
+오류 0. fallback 개입이 graph·cache 상태를 오염시키지 않음.
+
+### runtime 가드 (모듈 마이크로벤치, 20 warmup + 200회)
+- replay wall p50 2.021ms / p95 2.022ms (미니모델 — 절대치는
+  참고용, 산포 없음이 요점)
+- **replay당 CPU 시간 p50 6.5μs / p95 7.5μs** (graph launch 1회 —
+  4-forward 사이 CPU 개입 구조적 0)
+- **plan 호출 0회 / 400 replay**, alloc delta 0 bytes,
+  sync_debug_mode(2)에서 암묵 sync 예외 0 (200회)
