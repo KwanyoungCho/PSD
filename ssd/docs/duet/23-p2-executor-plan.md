@@ -28,6 +28,12 @@ W10 실행 버퍼에 6 root 배치, 나머지 4행은 고정 padding** (root/키
 동등성 게이트 (단독 성능 캠페인 아님 — executor 입력 정리):
 선택 위치·토큰·P_iv·hit 가능 cache key·P2AL이 기존 top-6와 일치.
 
+**동등성 게이트 통과 (2026-08-05, eslab17 인터리브 3-cycle, 8ce10ba)**:
+tree 60.81 (60.7-61.1) vs chain 78.69 — 토큰축 완전 일치 (P2AL
+2.10·hit 0.226·tok/step 4.44 = 전일 2.08/0.223/4.49 밴드), TPS는
+전일 스프레드(60.9-64.1) 하단 (−2.2% — 편차 범위, 회귀 근거 없음).
+selector 고정-shape판(a35cb72)은 로컬 스모크 통과 (P2AL 2.14).
+
 **[v3 상태 정정 — 리뷰9]** 완료: 송신 24 · 선택 6 · rollout root 6 ·
 selector 고정-shape(boolean indexing 제거) · top_k 자동보정 R 기준 ·
 R≤W 검사 무조건화. **미완**: cache/view/key 행은 아직 10 (pad 4키
