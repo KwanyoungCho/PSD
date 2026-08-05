@@ -209,3 +209,35 @@ in-graph GPU packbits→_custom_mask_buf 기록이 JIT-plan 참조와 정확
 설계 단순화 (리뷰11-6): plan은 **init/capture 시 버킷별 1회, runtime
 plan 0회** — "proxy_wait 겹침" 요구는 이 설계에선 소멸 (문서상 두
 설계 병존 금지; overlap 검증 불요).
+
+
+## 리뷰12 연속-실행 지침 채택 (2026-08-05) + 단계 1 완성
+
+**지침 요지**: 중간 허가 요청 없이 구현→검증→실험→채택 판정까지
+연속 진행. 고정: W10/R6/Nv8/F4/C3/level/wire24/seed6/top_k14.
+중단 조건 4가지(수락 규약 변경 필요·캡처 불가 증거·공유 후에도
+OOM·반복 캐시 오염)에서만 질문. 채택 기준: 결정적 parity 전통과·
+4-forward 사이 sync/readback/plan 0·미설명 idle ≤ chain+1ms 또는
+arena 20% 이하·P2 시간 3/3 단축·TPS 3/3 우세(95% CI>0)·P2AL 하락
+≤0.05·tok/step 하락 ≤0.03·hit 하락 ≤1%p. 비교 대상은 **arena**
+(chain 동률은 요구 아님 — target 검증 비용은 별도 문제).
+
+**단계 1 완성 (프로덕션 조건 — "3종 해소 과장" 정정 후 재검증)**:
+- RNG: 기본 수열 state-복원 기준 **정확 보존** (e1≠e2 수준 아님) +
+  동일-seed 재구축 replay 수열 재현 ✓.
+- 버킷: **결정 실험 통과** — fa2·use_cuda_graph·PAGE=256 실치수,
+  plan 캡처-전 1회, replay 사이 page-ID 버퍼 A→B→A 교체 = 매번
+  fresh-plan eager 일치 + runtime plan 0회 계수 → **indices는
+  런타임에 버퍼에서 읽힘 = runtime-plan-0 설계 성립**.
+- glue 폭: 최대-폭 canvas 0-mask == 좁은 glue 정확 → **버킷 키 =
+  page-count 단독** (wrapper 수 ×2 회피).
+- 메모리: 실측은 wrapper 생성분 기준 (fa2 8.1MB) — **전체 상주
+  측정(모델+graph+pinned)은 단계 2 실모델 실행기에서** (0.25GB는
+  wrapper 추정치로만 표기).
+
+**다음 (연속)**: 단계 2 — 실모델 단일 버킷 실행기
+(p2_tree_executor.py; raw self.model+compute_logits 직접 캡처,
+실 KV 순서: KV 기록→self 포함 attention; round별 wrapper·set_context
+캡처-시 1회; [R,Nv] 직접 기록) → 단계 3 결정적 parity (고정 noise
+주입) → 단계 4 전버킷+SSD_TREE_EXEC → 단계 5 성능 (마이크로→스모크
+→타임라인→eslab17 3-arm 회전 인터리브) → 단계 6 채택 판정.
