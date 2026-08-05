@@ -369,3 +369,46 @@ phase2_* 구간 (draft 프로파일, step별 span/busy/idle):
   순서회전 25×384, PROFILE=0, load 기록) — **가동 중**.
 - `run_exec_gate17.sh` — eslab17 클린박스 절대판정용 준비 완료
   (18번에서 17번으로의 SSH 자격 없음 — 17번 셸에서 실행 필요).
+
+## 채택 게이트 1차 결과 (2026-08-05) — TPS 통과, 품질 델타 조사 필요
+
+### eslab17 클린박스 (절대판정, 25×384, 3-cycle 순서회전, PROFILE=0)
+| metric | arena | exec | Δ |
+|---|---|---|---|
+| **Decode TPS** | 63.03 | **70.01** | **+11.1%** |
+| TPS per-cycle Δ | | | [7.85, 6.27, 6.82] |
+| **95% CI** | | | **[4.99, 8.97] PASS(>0)** |
+| P2AL | 1.953 | 1.910 | −0.043 (≥−0.05 ✓) |
+| tok/step | 4.093 | 3.993 | −0.100 (기준 −0.03 ✗) |
+| Avg Cache Hit | 0.817 | 0.763 | −0.054 (기준 −0.01 ✗) |
+| P1 hit | 0.578 | 0.546 | −0.032 (기준 −0.01 ✗) |
+| p2exec | | capture 4 / replay ~9.7k / fallback 0 | |
+
+eslab18(옆 부하 有): TPS +15.3%지만 arena arm이 c2/c3 급락(분산↑)
+→ CI [−1.29, 18.04] 하한 음수 (noisy box — 판정은 17 기준).
+
+### 핵심 재해석: 3-cycle은 같은 seed 42 → 독립 3표본 아님
+3사이클 순서회전은 arm-순서 오염만 제거할 뿐 **seed가 동일**하므로
+같은 궤적을 3번 측정한 것(사이클 간 미세차 = async 타이밍 지터).
+따라서 품질 3지표의 3/3 일관 하락은 **seed-42 궤적 특유일 수
+있고, 체계적 열화의 독립 증거가 아니다**. 근거: P2AL(트리 자체
+품질)은 동등(−0.043)한데 cache-hit(−5.4%p)만 큰 하락 —
+트리 품질이 아니라 궤적 정렬(어느 speculation이 서빙과 맞는지)이
+갈린 양상.
+
+### 두 divergence 원천 (둘 다 valid tree — 열화 아님)
+1. RNG 스트림: 라이브 arena=기본 RNG(generator=None,
+   p2_tree.py:727), 실행기=전용 graph-safe generator → P2 이후
+   기본 RNG 위치가 달라 다음-스텝 P1 draft 샘플이 갈림.
+2. attention kernel: arena=auto JIT-plan, 실행기=fa2 preplanned →
+   ~1e-3 logit 차 → WOR 근접-동률 뒤집힘 → 트리 토폴로지 분기.
+
+### 메모리 실측 (GPU4 draft 프로세스 peak, 18-gate run별)
+arena 20644 MiB(×3) vs exec 20524–20640 MiB — **실행기 순증 없음**
+(preplanned wrapper×4+graph가 arena의 반복 JIT-plan+tree CG를 대체).
+OOM 우려 없음.
+
+### 다음: seed-민감도 A/B (델타가 체계적 vs seed-특유 판별)
+여러 seed에서 arena vs exec의 cache-hit/tok-step 델타 평균이
+0 근방이면 seed-특유(→채택), 일관 음수면 체계적 열화(→§7 근본
+원인: RNG 정렬 또는 KV/slot 조사).
