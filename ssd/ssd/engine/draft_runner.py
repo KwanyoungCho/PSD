@@ -1933,7 +1933,9 @@ class DraftRunner(ModelRunner):
         toks = proxy_forked[0]
         # T6 1a: arena 모드는 seed 토큰 정체가 CPU에 불필요 (glue는 p만
         # 사용) — per-seed int() 동기화 10회 제거 (리뷰5 pre-구간 지적).
-        _arena_pre = os.environ.get("SSD_TREE_ARENA", "0") == "1"
+        # 채택 (2026-08-05 eslab17 게이트: 인터리브 3/3 승 +10.8%,
+        # 토큰축 동등) — 기본 ON, SSD_TREE_ARENA=0으로 구경로 폴백.
+        _arena_pre = os.environ.get("SSD_TREE_ARENA", "1") == "1"
         seeds, i = [], 0
         if _arena_pre:
             for p, c in enumerate(fo):
@@ -1949,7 +1951,7 @@ class DraftRunner(ModelRunner):
         seed_piv = tree_args.get("proxy_piv")
         # T6 1a (docs/duet/22): SSD_TREE_ARENA=1이면 GPU 상주 rollout —
         # piv를 CPU로 내리지 않는다 (pre 구간 sync 제거).
-        _use_arena = os.environ.get("SSD_TREE_ARENA", "0") == "1"
+        _use_arena = os.environ.get("SSD_TREE_ARENA", "1") == "1"
         if _use_arena:
             root_piv = (seed_piv[0].float() if seed_piv is not None
                         else torch.full((len(seeds),), 1e-6,

@@ -195,3 +195,21 @@ gap cpu 8.87 / ar 6.65 (−2.2) — hot loop 승, pre 패.
 남은 구조 레버는 **1b: view/wire GPU화** (post ~8-9ms; to_pool 제거
 — 소비자(build_root_views/pack/populate/staging)의 GPU 텐서 수용
 필요). 채택 게이트는 eslab17 클린 인터리브 (측정 규율).
+
+
+## 채택 게이트 결과 (2026-08-05, eslab17 클린 인터리브 3-cycle, 25×384)
+
+| cycle | CPU rollout | arena |
+|---|---|---|
+| c1 | 49.61 (P2AL 2.15) | 51.99 (2.00) |
+| c2 | 51.25 (2.08) | 59.31 (2.11) |
+| c3 | 53.54 (2.13) | 59.71 (2.14) |
+| 평균 | 51.47 | **57.00 (+10.8%)** |
+
+**판정: 채택** — 3/3 사이클 승 (band-clear), P1AL/P2AL/hit 동등.
+`SSD_TREE_ARENA` 기본 ON 전환 (=0으로 폴백 가능). 주의: 당일 cpu
+팔 절대치(51.5)는 전일 canonical(56.6)보다 낮음 — 일간 박스 변동;
+판정은 동창 인터리브만 유효 (측정 규율). 프로파일 쌍(4×192, ON):
+cpu 53.2 vs ar 55.7. 잔여 트랙: 1b view/wire GPU화, plan-ahead
+2×2, target hit_k2 (+15ms), 형상 재선정(w8_nv6 후보 — 21번
+frontier 완결판).
