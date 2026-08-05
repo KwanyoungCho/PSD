@@ -257,3 +257,21 @@ arena 20% 이하·P2 시간 3/3 단축·TPS 3/3 우세(95% CI>0)·P2AL 하락
   raw `model(input_ids, positions)` + `compute_logits` 직접 캡처
   (run_model/run_fi_tree_decode_cudagraph 우회; 기존 graph 재생 금지).
 - 지원 범위: 비-EAGLE Llama draft만 1차 (그 외 arena fallback).
+
+
+## 단계 2 진행 (2026-08-05 연속) — 실행기 모듈 + 모듈 parity 통과
+
+- `p2_tree_executor.py` v1: raw forward 캡처 구조, round별 fa2
+  wrapper(plan 1회), 전용 RNG, **[R,Nv] 삽입-시점 직접 기록**
+  (root-local index — to_pool/build_root_views 소멸 경로),
+  **mask 열 전부 버퍼-구동** (python-int 슬라이싱의 캡처-박힘 결함
+  자체 발견·수정 — prefix 경계는 요청별 '내용').
+- parity-noise 모드 (리뷰12 §3): tree_sample_wor(noise=) — 고정
+  exponential noise를 eager/graph 동일 주입.
+- **모듈 결정적 parity 통과**: 동일 입력 버퍼·동일 noise에서
+  eager run_once == captured replay — [R,Nv] 정수 전항목 exact,
+  logits/raw_q/KV allclose, 불변량 유지. 미니모델은 실 attention
+  계약(KV 기록→attention, get_context의 slot/wrapper 소비)을 미러.
+- 남은 것: draft_runner 배선 (SSD_TREE_EXEC=1 + 미지원 fallback +
+  계수), 실모델 스모크, arena-vs-executor 의미 parity (동일 noise),
+  전버킷 lazy capture, 3-arm 인터리브 → 채택 판정.
