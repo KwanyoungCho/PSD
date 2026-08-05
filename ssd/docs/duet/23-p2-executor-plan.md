@@ -478,3 +478,21 @@ RNG로만 결합)에 집중 → RNG 격리 실험으로 원인 최종 판별 중
 mask 재구성 후 자체 fa2 plan) — fa2-vs-auto logit 차는 아직 직접
 측정 안 됨. 다음: 동일 입력·동일 mask에서 auto vs fa2 logit의
 signed-mean/max 직접 측정 (systematic bias 여부 판별).
+
+## fa2==auto 직접 측정 (2026-08-05) — 커널도 배제 → 입력 구성이 원인
+
+동일 입력·동일 mask에서 auto vs fa2 attention logit (미니, 5 trial):
+**signed_mean=0, abs_max=0, cos=1.000000 — bit 동일** (auto가 이
+shape에서 fa2 선택). → 커널은 실행기·arena 간 차이 원천 아님.
+
+RNG 격리 최종(18, auto 고정): dHit +0.02/−0.02/+0.02 (straddle,
+평균≈0) → RNG도 배제.
+
+**해석 전환**: 앞선 판별에서 실행기 vs arena 트리 분기를 "커널
+비결정성"으로 귀속했으나, 커널 동일 + (판별 테스트는) noise 동일
+이라면 분기는 **입력 구성(mask/rope/slot/KV) 차이**가 유일한 설명.
+즉 실행기의 per-round mask/context가 arena와 미세하게 달라 ~2e-3
+logit 차 → 근접-동률 WOR 뒤집힘 → 체계적 −4.6%p hit. 이는 §7
+"mask/pageID/slot/KV순서" 범주의 실버그이며, 교정 시 속도 유지·hit
+회복 가능(클린 채택 경로). 다음: 실행기 mask/rope/slot vs arena
+_arena_mask_pack 직접 대조 (round 0 동일 상태).
