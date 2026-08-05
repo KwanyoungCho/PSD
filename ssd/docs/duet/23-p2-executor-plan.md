@@ -349,3 +349,23 @@ p2exec stats {capture 2, alt_forced_fallback 731, replay 729} —
   4-forward 사이 CPU 개입 구조적 0)
 - **plan 호출 0회 / 400 replay**, alloc delta 0 bytes,
   sync_debug_mode(2)에서 암묵 sync 예외 0 (200회)
+
+## 실모델 P2 시간 비교 (2026-08-05, eslab18 프로파일 쌍 numseqs 10)
+
+phase2_* 구간 (draft 프로파일, step별 span/busy/idle):
+
+| | span p50 | span p95 | GPU busy p50 | idle p50 | idle p95 | CPU-dispatch p50 |
+|---|---|---|---|---|---|---|
+| arena | 28.28ms | 76.83ms | 14.05ms | 14.86ms | 57.57ms | 4.66ms |
+| graph | **1.82ms** | 48.68ms | 1.82ms | **0.001ms** | 40.90ms | 1.82ms |
+
+- **P2 span p50 ×15.5 단축, P2 내 GPU idle 사실상 0** (채택 기준
+  "미설명 idle ≤ chain+1ms 또는 arena의 20% 이하" 압도 통과 방향).
+- p95 꼬리는 프로파일 ON 오염·타 스텝 겹침 포함 — 판정은
+  PROFILE=0 게이트에서. TPS(프로파일 ON): arena 45.99 → exec 56.70.
+
+## 채택 게이트 가동 (2026-08-05)
+- `run_exec_gate18.sh` — eslab18 상대판정 (arena vs graph 3-cycle
+  순서회전 25×384, PROFILE=0, load 기록) — **가동 중**.
+- `run_exec_gate17.sh` — eslab17 클린박스 절대판정용 준비 완료
+  (18번에서 17번으로의 SSH 자격 없음 — 17번 셸에서 실행 필요).
