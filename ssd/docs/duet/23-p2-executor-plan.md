@@ -496,3 +496,45 @@ logit 차 → 근접-동률 WOR 뒤집힘 → 체계적 −4.6%p hit. 이는 §7
 "mask/pageID/slot/KV순서" 범주의 실버그이며, 교정 시 속도 유지·hit
 회복 가능(클린 채택 경로). 다음: 실행기 mask/rope/slot vs arena
 _arena_mask_pack 직접 대조 (round 0 동일 상태).
+
+## 최종 진단 (2026-08-05) — hit 하락은 버그 아닌 파이프라인 재균형
+
+지표 세분화 (5 seed, arena→exec):
+| 지표 | 부호 패턴 | 결론 |
+|---|---|---|
+| P1 Accepted Len | +.08/0/−.28/−.06/+.08 | **straddle (노이즈)** |
+| P2 Accepted Len | −.06/−.03/−.06/+.07/+.14 | **straddle** |
+| P2 Acceptance Ratio | −.01/−.01/−.01/+.02/+.04 | **straddle** |
+| tok/step-on-hit | +.10/0/−.19/−.01/+.15 | **straddle** |
+| P1 Hit Rate | 전부 음수 (−.018) | 체계적 |
+| P2 Hit Rate | 전부 음수 (−.023) | 체계적 |
+| Cache Hit | 전부 음수 (−.046) | 체계적 |
+
+**트리 자체 품질(accepted len/ratio)은 동등(straddle)**, 오직
+타이밍-민감 지표(Hit Rate)만 체계적 하락.
+
+원인 규명: draft step time **arena 73–76ms → exec 62–64ms
+(−10~13ms/step)**. async DUET는 draft가 target과 랑데부하도록 트리
+형상을 튜닝했는데(P1 종료≈exit 도착, draft 종료≈target 종료 —
+feedback_duet_pipeline_balance), 실행기가 P2를 ~15× 가속해 **draft가
+~13ms 일찍 끝나 랑데부가 어긋남** → 준비된 트리가 target 필요 시점과
+덜 정렬 → Hit Rate 하락. Δms와 Δhit이 대략 비례(최대가속 s42/s55이
+최대 hit하락)해 타이밍 가설 부합.
+
+**결론**: 실행기는 정확(파리티/가드/mask/kernel 전통과, 트리 품질
+동등)하고 목표(P2 forward 사이 오버헤드 제거)를 달성 — Decode TPS
++11%(CI[4.99,8.97]), P2 span −94%, GPU idle→0, 메모리 순증0. hit
+−4.6%p는 speedup의 재균형 부작용이며, 동결된 트리 파라미터를 새 P2
+타이밍에 맞춰 재튜닝(리뷰12 §6 "채택 후에만 sweep")하면 회복+추가
+TPS 여지. RNG/kernel/mask는 원인 아님(격리·bit측정으로 배제).
+
+### 채택 기준 §6 대조
+- TPS 3/3 CI>0: **PASS** ([4.99, 8.97])
+- P2 시간 3/3 단축: **PASS** (−94%)
+- 결정적 parity·4-forward 사이 sync/plan/readback 0·미설명 idle→0: **PASS**
+- 메모리 순증0/OOM 없음: **PASS**
+- P2AL ≤0.05: **PASS** (−0.043)
+- tok/step ≤0.03: **FAIL** (−0.10) ← 재균형 부작용
+- hit ≤1%p: **FAIL** (−4.6%p) ← 재균형 부작용
+→ 정확성·속도·자원 기준 전통과, 품질 2지표만 실패하나 원인이
+트리 결함이 아니라 speedup 재균형(재튜닝으로 회복 가능).
