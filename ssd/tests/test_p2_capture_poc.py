@@ -283,3 +283,101 @@ class TestP2CapturePoC(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no fi/cuda")
+class TestInGraphPackedMask(unittest.TestCase):
+    """PoC 갭 폐쇄: 캡처 '안'에서 packed-bit mask를 wrapper 버퍼에
+    기록했을 때 attention이 JIT-plan(같은 논리 mask) 참조와 일치해야
+    프로덕션 실행기의 mask 경로가 성립한다."""
+
+    def tearDown(self):
+        import gc
+        gc.collect()
+        torch.cuda.synchronize()
+        torch.cuda.manual_seed(999)
+
+    @staticmethod
+    def _pack_bits_gpu(mask_bool_flat):
+        """np.packbits(little)와 동형 — GPU 텐서 연산 (캡처 호환)."""
+        n = mask_bool_flat.numel()
+        pad = (-n) % 8
+        if pad:
+            mask_bool_flat = torch.cat(
+                [mask_bool_flat,
+                 torch.zeros(pad, dtype=mask_bool_flat.dtype,
+                             device=mask_bool_flat.device)])
+        w = (1 << torch.arange(8, device=mask_bool_flat.device)) \
+            .to(torch.uint8)
+        return (mask_bool_flat.view(-1, 8).to(torch.uint8) * w) \
+            .sum(1, dtype=torch.int64).to(torch.uint8)
+
+    def test_ingraph_packed_mask_matches_jit(self):
+        dev = "cuda:0"
+        torch.manual_seed(5)
+        ctx = PAGE * 2 + 5
+        f = 2
+        kv_len = ctx + f * W + W          # 이번 round 신규 W 포함
+        npg = (kv_len + PAGE - 1) // PAGE
+        canvas = npg * PAGE
+        g0 = torch.Generator().manual_seed(9)
+        cache = (torch.randn(npg, 2, PAGE, HKV, D, generator=g0)
+                 ).to(dtype=torch.float16, device=dev)
+        q = (torch.randn(W, H, D, generator=g0)) \
+            .to(dtype=torch.float16, device=dev)
+        logical = torch.zeros(W, canvas, dtype=torch.bool)
+        logical[:, :ctx] = True
+        gm = torch.Generator().manual_seed(4)
+        logical[:, ctx:kv_len] = torch.rand(W, kv_len - ctx,
+                                            generator=gm) > 0.5
+        float_ws = torch.empty(96 * 2**20, dtype=torch.uint8, device=dev)
+        # ── 참조: JIT plan에 논리 mask 직접 전달
+        wr_ref = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+            float_ws, "NHD")
+        qo = torch.tensor([0, W], dtype=torch.int32, device=dev)
+        kvp = torch.tensor([0, npg], dtype=torch.int32, device=dev)
+        kvi = torch.arange(npg, dtype=torch.int32, device=dev)
+        lpl = torch.tensor([PAGE], dtype=torch.int32, device=dev)
+        wr_ref.plan(qo, kvp, kvi, lpl, H, HKV, D, PAGE,
+                    custom_mask=logical.reshape(-1).to(dev),
+                    q_data_type=torch.float16,
+                    kv_data_type=torch.float16)
+        out_ref = wr_ref.run(q, cache)
+        # ── 캡처 경로: 고정 buf wrapper + 더미 plan → 캡처 안에서
+        #    packed bit 기록 → run
+        mask_buf = torch.zeros((W * canvas + 7) // 8, dtype=torch.uint8,
+                               device=dev)
+        wr_cap = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+            float_ws, "NHD", use_cuda_graph=True,
+            qo_indptr_buf=qo.clone(), paged_kv_indptr_buf=kvp.clone(),
+            paged_kv_indices_buf=kvi.clone(),
+            paged_kv_last_page_len_buf=lpl.clone(),
+            custom_mask_buf=mask_buf,
+            mask_indptr_buf=torch.tensor([0, W * canvas],
+                                         dtype=torch.int32, device=dev))
+        wr_cap.plan(qo, kvp, kvi, lpl, H, HKV, D, PAGE,
+                    custom_mask=torch.zeros(W * canvas, dtype=torch.bool,
+                                            device=dev),
+                    q_data_type=torch.float16,
+                    kv_data_type=torch.float16)
+        logical_dev = logical.to(dev)
+        out_buf = torch.zeros_like(out_ref)
+        # 워밍업 (eager 동일 시퀀스)
+        packed = self._pack_bits_gpu(logical_dev.reshape(-1))
+        mask_buf[:packed.numel()].copy_(packed)
+        out_buf.copy_(wr_cap.run(q, cache))
+        torch.cuda.synchronize()
+        gph = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(gph):
+            packed_g = self._pack_bits_gpu(logical_dev.reshape(-1))
+            mask_buf[:packed_g.numel()].copy_(packed_g)
+            out_buf.copy_(wr_cap.run(q, cache))
+        mask_buf.zero_()                   # replay가 다시 채워야 함
+        out_buf.zero_()
+        gph.replay()
+        torch.cuda.synchronize()
+        diff = (out_ref - out_buf).abs().max()
+        _ok = torch.allclose(out_ref, out_buf, atol=2e-3, rtol=2e-3)
+        del gph
+        self.assertTrue(_ok, f"in-graph packed mask != JIT ref "
+                             f"(max diff {diff})")
