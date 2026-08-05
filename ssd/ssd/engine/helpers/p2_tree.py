@@ -334,7 +334,8 @@ def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
 
 def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
                     c_tensor: int, sampler_x=None, F=None,
-                    assume_pos_temps: bool = False, generator=None):
+                    assume_pos_temps: bool = False, generator=None,
+                    noise=None):
     """비복원(WOR) C_tensor개 샘플 — 순서 보존 (T1.3; D8/D11).
 
     구현: exponential-race top-k — race 점수 내림차순 = 순차 비복원
@@ -362,10 +363,15 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
     raw_q = probs.clone()                      # 원본 보존 (c_raw)
     epsilon = 1e-10
     # generator: P2 전용 CUDA graph-safe 제너레이터 (리뷰11-1 — 기본
-    # 제너레이터는 P1/eager 전용으로 격리; None이면 종전 동작 그대로)
-    scores = probs.div_(
-        torch.empty_like(probs).exponential_(1, generator=generator)
-        + epsilon)
+    # 제너레이터는 P1/eager 전용으로 격리; None이면 종전 동작 그대로).
+    # noise: 결정적 parity 전용 (리뷰12 §3) — [.,V] 고정 exponential
+    # noise를 eager/graph 양쪽에 동일 주입해 비교 가능하게 함.
+    if noise is not None:
+        scores = probs.div_(noise + epsilon)
+    else:
+        scores = probs.div_(
+            torch.empty_like(probs).exponential_(1, generator=generator)
+            + epsilon)
     if c_tensor == 1:
         tokens = scores.argmax(dim=-1, keepdim=True)   # Sampler와 동일 op
     else:

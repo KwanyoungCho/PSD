@@ -29,7 +29,8 @@ from ssd.engine.helpers import p2_tree as PT
 
 class P2TreeExecutor:
     def __init__(self, model, compute_logits_fn, config, device,
-                 block_size, max_blocks, vocab_size):
+                 block_size, max_blocks, vocab_size,
+                 num_heads, num_kv_heads, head_dim):
         self.model = model
         self.compute_logits = compute_logits_fn
         self.cfg = config
@@ -37,6 +38,7 @@ class P2TreeExecutor:
         self.bs = block_size
         self.max_blocks = max_blocks
         self.V = vocab_size
+        self.H, self.HKV, self.D = num_heads, num_kv_heads, head_dim
         self.W = int(config.duet_proxy_total_budget)
         self.R = int(config.duet_tree_root_count or self.W)
         self.F = int(config.duet_phase2_k)
@@ -78,6 +80,10 @@ class P2TreeExecutor:
         self.lane_w = torch.arange(W, device=d)
         self.arange_R = torch.arange(R, device=d)
         self.graphs = {}                       # n_pages → CUDAGraph
+        # 결정적 parity 모드 (리뷰12 §3): round별 [W,V] 고정 noise
+        # 버퍼 — None이면 프로덕션 RNG. 주소는 캡처에 박히고 내용은
+        # 교체 가능 → eager/replay 동일 noise 주입 비교.
+        self.parity_noise = None
         self.wrappers = {}                     # n_pages → [wrapper]*F
         self._float_ws = torch.empty(128 * 2**20, dtype=torch.uint8,
                                      device=d)
@@ -100,13 +106,7 @@ class P2TreeExecutor:
             mask_indptr_buf=torch.tensor([0, W * canvas_cols],
                                          dtype=torch.int32, device=d))
         wr.plan(qo, kvp, kvi, lpl,
-                self.model.config.num_attention_heads
-                if hasattr(self.model, "config") else 32,
-                getattr(getattr(self.model, "config", None),
-                        "num_key_value_heads", 4),
-                getattr(getattr(self.model, "config", None),
-                        "head_dim", 64),
-                self.bs,
+                self.H, self.HKV, self.D, self.bs,
                 custom_mask=torch.zeros(W * canvas_cols,
                                         dtype=torch.bool, device=d),
                 q_data_type=torch.float16, kv_data_type=torch.float16)
@@ -233,7 +233,9 @@ class P2TreeExecutor:
             self.cell_logits[f * W:(f + 1) * W] = logits
             toks, raws = PT.tree_sample_wor(
                 logits, self.in_temps, C, assume_pos_temps=True,
-                generator=self.gen)
+                generator=self.gen,
+                noise=(self.parity_noise[f]
+                       if self.parity_noise is not None else None))
             # ── 삽입 + [R,NV] 직접 기록
             lane_cell = f * W + self.lane_w
             ar.cell.scatter_(0, sel.clamp(min=0),
