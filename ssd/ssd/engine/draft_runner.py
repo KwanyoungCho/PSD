@@ -1488,12 +1488,17 @@ class DraftRunner(ModelRunner):
             proxy_tree_args, _layout_k2, _ssm, _scl, _temps_p2)
         _R = _layout_k2.MQ_LEN
         _nv = self.config.duet_tree_nv
-        self._tree_views = build_root_views(
-            pool, _R, _nv, cell_logits=_cell_logits)
-        proxy_tokens, proxy_logits = self._tree_backbone_project(
-            pool, _R, K2, _cell_logits,
-            n_roots=(proxy_piv.shape[1] if proxy_piv is not None
-                     else _R))
+        if isinstance(pool, dict):
+            # 23번 단계2: 실행기 경로 — views/backbone 직접 반환
+            self._tree_views = pool
+            proxy_tokens, proxy_logits = _elog
+        else:
+            self._tree_views = build_root_views(
+                pool, _R, _nv, cell_logits=_cell_logits)
+            proxy_tokens, proxy_logits = self._tree_backbone_project(
+                pool, _R, K2, _cell_logits,
+                n_roots=(proxy_piv.shape[1] if proxy_piv is not None
+                         else _R))
 
         self._merge_and_populate_cache(
             draft_tree_args, draft_tokens, draft_logits,
@@ -1934,6 +1939,153 @@ class DraftRunner(ModelRunner):
                     "chosen_piv": chosen_piv}
         return {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok}
 
+    def _p2exec_count(self, reason):
+        if not hasattr(self, "_p2exec_stats"):
+            self._p2exec_stats = {}
+        self._p2exec_stats[reason] = self._p2exec_stats.get(reason, 0) + 1
+
+    def _try_p2_executor(self, toks, root_piv, glue_rows, rope_base,
+                         ctx_len, K_glue_used, step_slot_maps,
+                         step_context_lens, dbt, temps, seeds):
+        """23번 단계2: 전체-P2 graph 실행기 시도. 미지원/실패 시 None
+        (호출측 arena fallback — 계수 기록)."""
+        import numpy as _np
+        cfg = self.config
+        R = len(seeds)
+        W = cfg.duet_proxy_total_budget
+        F = cfg.duet_phase2_k
+        try:
+            if cfg.use_eagle or cfg.duet_tree_policy != "level" \
+                    or R > W:
+                self._p2exec_count("unsupported_cfg")
+                return None
+            if not hasattr(self, "_p2_exec"):
+                from ssd.engine.helpers.p2_tree_executor import \
+                    P2TreeExecutor
+                hf = self.hf_config
+                self._p2_exec = P2TreeExecutor(
+                    self.model, self.model.compute_logits, cfg,
+                    self.device, self.block_size, cfg.max_blocks,
+                    self.hf_config.vocab_size,
+                    hf.num_attention_heads, hf.num_key_value_heads,
+                    hf.head_dim)
+            ex = self._p2_exec
+            ctx0 = int(ctx_len)
+            p0 = (ctx0 + self.block_size - 1) // self.block_size
+            need_pages = p0 + 1
+            # 지원 조건: block table에 p0+1 page 존재, 길이 초과 없음
+            if ctx0 + F * W + W > cfg.max_model_len \
+                    or need_pages > dbt.shape[1]:
+                self._p2exec_count("bucket_unsupported")
+                return None
+            gw = K_glue_used + 1
+            if gw > ex.gw_max or R > ex.R:
+                self._p2exec_count("shape_unsupported")
+                return None
+            # ── 버퍼 채우기 (host→고정 버퍼; readback 없음)
+            ex.in_root_tok[:R].copy_(toks[:R])
+            if R < ex.R:
+                ex.in_root_tok[R:].zero_()
+                ex.in_root_piv[R:].zero_()
+            ex.in_root_piv[:R].copy_(root_piv[:R].float())
+            if torch.is_tensor(rope_base):
+                ex.in_rope_base[:R].copy_(rope_base[:R])
+            else:
+                ex.in_rope_base[:R].copy_(
+                    torch.tensor(rope_base[:R], dtype=torch.int64,
+                                 device=self.device))
+            ex.in_glue.zero_()
+            _g = torch.from_numpy(_np.ascontiguousarray(
+                glue_rows[:R, :gw])).to(self.device)
+            ex.in_glue[:R, :gw].copy_(_g)
+            ex.in_glue_w.fill_(gw)
+            ex.in_temps.copy_(temps[:1].expand(ex.W).float())
+            ex.in_prefix_len.fill_(ctx0 - gw - ex.W)
+            ex.in_block_tables[:, :dbt.shape[1]].copy_(dbt[:1])
+            for f in range(F):
+                ex.in_slot[f].copy_(step_slot_maps[f][:ex.W]
+                                    .to(torch.int32))
+                ex.in_ctx_len[f].copy_(
+                    step_context_lens[f][:1, 0].to(torch.int32)
+                    if step_context_lens[f].dim() > 1
+                    else step_context_lens[f][:1].to(torch.int32))
+            if p0 in ex.wrappers:
+                for f in range(F):
+                    ex.wrappers[p0][f]._paged_kv_indices_buf[
+                        :need_pages].copy_(
+                        dbt[0, :need_pages].to(torch.int32))
+            # ── capture(최초) 또는 replay
+            if p0 not in ex.graphs:
+                ex.prepare_bucket(p0)
+                for f in range(F):
+                    ex.wrappers[p0][f]._paged_kv_indices_buf[
+                        :need_pages].copy_(
+                        dbt[0, :need_pages].to(torch.int32))
+                ex.capture(p0)       # 캡처 pass 자체가 이 요청을 실행
+                self._p2exec_count("capture")
+            else:
+                ex.graphs[p0].replay()
+                self._p2exec_count("replay")
+            # ── 출력 → views (임시 debug 변환: uniq-pq만 CPU 소형)
+            return self._exec_outputs_to_views(ex, R)
+        except Exception as e:
+            self._p2exec_count(f"error:{type(e).__name__}")
+            if not hasattr(self, "_p2exec_err_logged"):
+                self._p2exec_err_logged = True
+                import traceback
+                print(f"[p2exec] fallback to arena: {e}\n"
+                      f"{traceback.format_exc()}", flush=True)
+            return None
+
+    def _exec_outputs_to_views(self, ex, R):
+        """[R,Nv] 고정 출력 → 기존 소비자 계약 (views/populate).
+        v1: uniq-pq 매핑·backbone 투영만 CPU 소형 (1 DtoH)."""
+        NV, K2 = ex.NV, self.config.duet_phase2_k
+        ints = torch.stack([ex.out_tok, ex.out_par, ex.out_sib,
+                            ex.out_pcell]).cpu()      # 1 DtoH
+        valid = ex.out_valid.cpu()
+        rawq = ex.out_rawq.cpu()
+        pq_ref = torch.full((ex.R, NV), -1, dtype=torch.int64)
+        pq_cells = torch.full((ex.R, NV), -1, dtype=torch.int64)
+        u_valid = torch.zeros(ex.R, dtype=torch.int64)
+        for r in range(min(R, ex.R)):
+            uniq = {}
+            for j in range(int(valid[r])):
+                pc = int(ints[3][r, j])
+                u = uniq.get(pc)
+                if u is None:
+                    u = len(uniq)
+                    uniq[pc] = u
+                    pq_cells[r, u] = pc
+                    u_valid[r] = u + 1
+                pq_ref[r, j] = u
+        views = {"tok": ints[0], "parent_local": ints[1],
+                 "sib_order": ints[2], "raw_q": rawq,
+                 "valid": valid, "parent_q_ref": pq_ref,
+                 "parent_q_cells": pq_cells, "u_valid": u_valid,
+                 "cell_logits": ex.cell_logits}
+        # backbone 투영 [R, K2] (populate 계약)
+        V = self.hf_config.vocab_size
+        bt = torch.zeros(ex.R, K2, dtype=torch.int64)
+        bl = torch.zeros(ex.R, K2, V, dtype=self.hf_config.torch_dtype,
+                         device=ex.cell_logits.device)
+        for r in range(min(R, ex.R)):
+            # 맏이 사슬: parent -1·sib0 → 그 자식(sib0) ...
+            cur_local, d = -1, 0
+            childs = {}
+            for j in range(int(valid[r])):
+                key = int(ints[1][r, j])
+                if int(ints[2][r, j]) == 0 and key not in childs:
+                    childs[key] = j
+            while d < K2 and cur_local in childs:
+                nx = childs[cur_local]
+                bt[r, d] = ints[0][r, nx]
+                pc = int(ints[3][r, nx])
+                if pc >= 0:
+                    bl[r, d] = ex.cell_logits[pc]
+                cur_local, d = nx, d + 1
+        return views, (bt.to(self.device), bl), ex.cell_logits
+
     def _p2tree_rollout(self, duet_proxy, proxy_forked, proxy_fan_out_tensor,
                         tree_args, layout, step_slot_maps,
                         step_context_lens, temps):
@@ -2053,6 +2205,15 @@ class DraftRunner(ModelRunner):
             reset_context()
             return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
 
+        _use_exec = os.environ.get("SSD_TREE_EXEC", "0") == "1"
+        if _use_exec and _use_arena:
+            _r = self._try_p2_executor(
+                toks, root_piv, glue_rows, rope_base, ctx_len,
+                K_glue_used, step_slot_maps, step_context_lens, dbt,
+                temps, seeds)
+            if _r is not None:
+                _CH.cache.pop("_tree_mask_override", None)
+                return _r
         try:
             if _use_arena:
                 if not hasattr(self, "_tree_arena_ws"):
@@ -2627,13 +2788,19 @@ class DraftRunner(ModelRunner):
                 _tree_args, _layout_k2, _ssm, _scl, _temps_p2)
             _R = _layout_k2.MQ_LEN
             _nv = self.config.duet_tree_nv
-            self._tree_views = build_root_views(
-                pool, _R, _nv, cell_logits=_cell_logits)
-            # 체인-호환 populate 입력: backbone(맏이 사슬) [R, K2] 투영
-            proxy_tokens, proxy_logits = self._tree_backbone_project(
-                pool, _R, K2, _cell_logits,
-                n_roots=(proxy_piv.shape[1] if proxy_piv is not None
-                         else _R))
+            if isinstance(pool, dict):
+                # 23번 단계2: 실행기 경로 — views/backbone 직접
+                self._tree_views = pool
+                proxy_tokens, proxy_logits = _elog
+            else:
+                self._tree_views = build_root_views(
+                    pool, _R, _nv, cell_logits=_cell_logits)
+                # 체인-호환 populate 입력: backbone [R, K2] 투영
+                proxy_tokens, proxy_logits = \
+                    self._tree_backbone_project(
+                        pool, _R, K2, _cell_logits,
+                        n_roots=(proxy_piv.shape[1]
+                                 if proxy_piv is not None else _R))
             proxy_acts = None
         else:
             self._tree_views = None
