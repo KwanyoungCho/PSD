@@ -412,3 +412,29 @@ OOM 우려 없음.
 여러 seed에서 arena vs exec의 cache-hit/tok-step 델타 평균이
 0 근방이면 seed-특유(→채택), 일관 음수면 체계적 열화(→§7 근본
 원인: RNG 정렬 또는 KV/slot 조사).
+
+## seed-민감도 A/B 결과 (2026-08-05) — 품질 델타는 체계적
+
+5 seed(42/123/7/2024/55) × arena vs exec, 두 박스:
+
+| seed | box | ΔCacheHit | ΔP1hit | arena→exec TPS |
+|---|---|---|---|---|
+| 42 | 18 | −0.070 | −0.031 | 53.82→63.97 |
+| 123 | 18 | −0.030 | −0.019 | 54.12→61.86 |
+| 42 | 17 | −0.030 | −0.013 | 65.08→69.86 |
+| 123 | 17 | −0.060 | −0.046 | — |
+| 7 | 17 | −0.070 | −0.016 | — |
+
+**ΔCacheHit 5/5 음수** (mean ≈ −0.052), **ΔP1hit 5/5 음수**
+(mean ≈ −0.025), straddle 없음 → **체계적** (seed-특유 아님).
+P2AL은 중립인데 hit 하락이 P1(실행기가 RNG로만 결합)에 집중.
+
+### 두 후보 원천 격리 실험 (진행)
+실행기는 arena 대비 두 가지가 동시에 다름: ①P2 RNG(전용 gen vs
+기본 RNG — P1과의 스트림 분리) ②attention kernel(fa2 preplanned
+vs auto JIT). SSD_TREE_P2_DEDICATED_RNG 플래그로 **라이브 arena에
+전용 gen만** 주입(커널은 auto 고정) → arena-default vs
+arena-dedicated 비교:
+- arena-dedicated도 동일 hit 하락 → RNG가 체계적 원인 (실행기
+  hit 하락 = "다른 valid 스트림", 트리 열화 아님).
+- arena-dedicated ≈ arena-default → 커널(fa2)이 원인.
