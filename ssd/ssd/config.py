@@ -565,7 +565,10 @@ class Config:
             K_plus_1 = K_max + 1
             pfo = self.duet_proxy_fan_out
             dfo = self.duet_draft_fan_out
-            total_budget = self.duet_p2_seed_count  # 리뷰9-2: R 기준
+            # 리뷰10 원복: top_k는 W 기준 유지 — verifier가 top_k 절단
+            # 후 재정규화하므로 (truncated-dist) top_k 축소는 P_iv 값
+            # 자체를 바꾸는 '정책 변경' (동결 위반). wire_N/선택만 R.
+            total_budget = self.duet_proxy_total_budget
 
             # List-aware Phase 1 fan-out stats — used in ALL cases when user
             # provides list, otherwise fall back to uniform [dfo]*(K1+1).

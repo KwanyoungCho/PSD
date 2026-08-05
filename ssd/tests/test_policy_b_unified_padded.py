@@ -152,3 +152,69 @@ class TestParityUniformAndPadded(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFixedShapeSelectorExact(unittest.TestCase):
+    """리뷰10-4: boolean indexing → argsort-gather 교체의 exact 동등성
+    고정 (구현 참조: 옛 boolean 방식을 여기 로컬로 재현해 대조)."""
+
+    @staticmethod
+    def _old_take(chosen_pos, chosen_tok, piv, take, B, budget):
+        tp = chosen_pos[take].view(B, budget)
+        tt = chosen_tok[take].view(B, budget)
+        tv = piv[take].view(B, budget) if piv is not None else None
+        return tp, tt, tv
+
+    @staticmethod
+    def _new_take(chosen_pos, chosen_tok, piv, take, B, budget):
+        order = (~take).to(torch.int8).argsort(dim=1, stable=True)
+        sel = order[:, :budget]
+        return (chosen_pos.gather(1, sel), chosen_tok.gather(1, sel),
+                piv.gather(1, sel) if piv is not None else None)
+
+    def _case(self, B, N, budget, n_valid_per_row, seed):
+        g = torch.Generator().manual_seed(seed)
+        pos = torch.randint(0, 5, (B, N), generator=g)
+        tok = torch.randint(0, 1000, (B, N), generator=g)
+        piv = torch.rand(B, N, generator=g)
+        take = torch.zeros(B, N, dtype=torch.bool)
+        for b in range(B):
+            idx = torch.randperm(N, generator=g)[:n_valid_per_row[b]]
+            take[b, idx] = True
+            # 행별 유효 수가 budget 이상이 되도록 보장된 케이스만
+        o = self._old_take(pos, tok, piv,
+                           take & (take.long().cumsum(1) <= budget),
+                           B, budget)
+        n = self._new_take(pos, tok, piv,
+                           take & (take.long().cumsum(1) <= budget),
+                           B, budget)
+        for a, b_ in zip(o, n):
+            self.assertTrue(torch.equal(a, b_))
+
+    def test_random_dedup_patterns(self):
+        for seed in range(20):
+            self._case(B=1, N=24, budget=6, n_valid_per_row=[15],
+                       seed=seed)
+
+    def test_boundary_max_dedup(self):
+        # dedup 손실 최대 18 → 유효 정확히 6 (경계)
+        self._case(B=1, N=24, budget=6, n_valid_per_row=[6], seed=3)
+
+    def test_b_gt1_row_independence(self):
+        for seed in range(8):
+            self._case(B=3, N=24, budget=6,
+                       n_valid_per_row=[7, 20, 6], seed=seed)
+
+    def test_ties_and_zero_tokens(self):
+        # 동률/0토큰 혼입에도 순서·값 동일
+        B, N, budget = 1, 12, 4
+        pos = torch.zeros(B, N, dtype=torch.int64)
+        tok = torch.zeros(B, N, dtype=torch.int64)
+        piv = torch.full((B, N), 0.5)
+        take = torch.tensor([[1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0]],
+                            dtype=torch.bool)
+        take = take & (take.long().cumsum(1) <= budget)
+        o = self._old_take(pos, tok, piv, take, B, budget)
+        n = self._new_take(pos, tok, piv, take, B, budget)
+        for a, b_ in zip(o, n):
+            self.assertTrue(torch.equal(a, b_))

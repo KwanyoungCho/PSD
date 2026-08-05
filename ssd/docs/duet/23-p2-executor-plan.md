@@ -28,11 +28,18 @@ W10 실행 버퍼에 6 root 배치, 나머지 4행은 고정 padding** (root/키
 동등성 게이트 (단독 성능 캠페인 아님 — executor 입력 정리):
 선택 위치·토큰·P_iv·hit 가능 cache key·P2AL이 기존 top-6와 일치.
 
-**동등성 게이트 통과 (2026-08-05, eslab17 인터리브 3-cycle, 8ce10ba)**:
-tree 60.81 (60.7-61.1) vs chain 78.69 — 토큰축 완전 일치 (P2AL
-2.10·hit 0.226·tok/step 4.44 = 전일 2.08/0.223/4.49 밴드), TPS는
-전일 스프레드(60.9-64.1) 하단 (−2.2% — 편차 범위, 회귀 근거 없음).
-selector 고정-shape판(a35cb72)은 로컬 스모크 통과 (P2AL 2.14).
+**단계 1 최종 판정 (리뷰10 표현으로 정정)**: "토큰축 무회귀 통과,
+TPS는 정규화 −2.5% 미확정이나 진행 허용" — 게이트는 8ce10ba 기준
+(P2AL 2.10·hit 0.226·tok/step 4.44; 집계 지표 기준 무회귀이지
+요청별 선택 동일성의 증명은 아님). 게이트 이후 변경 2건 처리:
+① selector 고정-shape — exact 단위 테스트로 고정 (boolean 참조
+구현과 random dedup/최대 dedup 경계/동률·0토큰/B>1 행독립 전부
+동일; a35cb72 + 테스트 커밋). ② **top_k R기준 변경은 원복** —
+verifier가 top_k 절단 후 재정규화하므로 14→12는 P_iv 값·순위를
+바꾸는 정책 변경 (동결 위반; wire_N=24·선택 R=6만 유지, top_k는
+W기준 14). top_k 축소는 추후 별도 정책 arm. __debug__ .item()
+가드는 -O 밖 실행에서 sync — 전체-graph 경로에선 GPU 오류 플래그
+또는 graph-밖 진단으로 이전 예정.
 
 **[v3 상태 정정 — 리뷰9]** 완료: 송신 24 · 선택 6 · rollout root 6 ·
 selector 고정-shape(boolean indexing 제거) · top_k 자동보정 R 기준 ·
@@ -70,9 +77,19 @@ to_pool/build_root_views 자체를 제거하는 단계 5와 함께 완결.**
      분리. **캡처된 graph는 캡처 시점 buffer 주소를 기억** — 파이썬
      wrapper 교체는 무효; 주력은 전체-P2 raw-forward graph 안에서
      wrapper 4개 사용. float workspace는 공유 가능성 검토.
-   - **선행 검증 구현 (완성 아님)**: round별 독립 wrapper ×4로
-     page-경계 포함 케이스에서 preplanned == 매-round plan 결과
-     일치 + proxy_wait 중 준비 시에만 wall 감소함을 확인.
+   - **선행 검증 구현 (완성 아님) — 통과 기준 (리뷰10-6)**:
+     ⓐ round별 독립 metadata (int workspace/qo·KV indptr/page
+     indices/last-page len/KV len/mask buf·indptr/plan launch 정보);
+     ⓑ page 경계: last-page len ∈ {1, bs−1, bs} + round 중 새 page
+     진입 + page ID 변경 케이스; ⓒ page-end canvas: 실KV 밖 슬롯에
+     고의로 stale/큰 KV 기록 + mask=0 → 정확-길이 결과와 허용오차
+     일치; ⓓ preplanned vs 현행: attention 출력·최종 logits·KV
+     write·4-round 최종 topology 비교; ⓔ 시간: P2 직전 배치 vs
+     P1/proxy_wait 겹침 — **전체 step wall + GPU timeline**으로
+     판정 (proxy_wait span 축소만은 증거 아님 — 계측 구간 밖 이동
+     착시); ⓕ 메모리: wrapper 4개 독립 생성 후, 공유 가능한 float
+     workspace vs round별 보존 필요한 plan metadata/int workspace
+     분리 평가.
    - replay 중 plan()/sync/신규할당/.cpu()/.item()/nonzero/파이썬
      분기 0회.
 4. **최종 출력 (v3 의미 정정 — 리뷰9-8)**: P2 시점엔 hit root를
