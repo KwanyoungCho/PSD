@@ -50,7 +50,13 @@ class P2TreeExecutor:
         self.in_root_tok = torch.zeros(R, dtype=torch.int64, device=d)
         self.in_root_piv = torch.zeros(R, dtype=torch.float32, device=d)
         self.in_rope_base = torch.zeros(R, dtype=torch.int64, device=d)
-        self.in_glue = torch.zeros(R, F + 1, dtype=torch.uint8, device=d)
+        gw_max = max(int(getattr(config, "duet_phase1_k", None) or F),
+                     int(getattr(config, "duet_phase2_k", F))) + 1
+        self.gw_max = gw_max
+        self.in_glue = torch.zeros(R, gw_max, dtype=torch.uint8,
+                                   device=d)
+        # 실 glue 폭 (요청별 상이 — spec 열 정렬에 필요; 내용-구동)
+        self.in_glue_w = torch.zeros(1, dtype=torch.int64, device=d)
         self.in_temps = torch.zeros(W, dtype=torch.float32, device=d)
         self.in_slot = [torch.zeros(W, dtype=torch.int32, device=d)
                         for _ in range(F)]
@@ -136,22 +142,23 @@ class P2TreeExecutor:
         sel, sel_valid = self._sel[f]
         plen = self.in_prefix_len                     # [1] int64 버퍼
         col = torch.arange(canvas, device=self.dev)   # [canvas]
-        gW = self.in_glue.shape[1]
+        gW_max = self.in_glue.shape[1]
+        gW = self.in_glue_w                            # [1] 실폭 (버퍼)
         r_of = torch.where(sel_valid,
                            ar.root.gather(0, sel.clamp(min=0)),
                            torch.zeros_like(sel))
         # prefix: col < plen
         m = (col.unsqueeze(0) < plen).expand(W, canvas) \
             .to(torch.uint8).clone()
-        # glue: col ∈ [plen, plen+gW) → glue[r_of, col-plen]
+        # glue: col ∈ [plen, plen+gW실폭) → glue[r_of, col-plen]
         g_off = col.unsqueeze(0) - plen               # [1, canvas]
         in_glue_rng = (g_off >= 0) & (g_off < gW)
-        g_idx = g_off.clamp(min=0, max=gW - 1)
+        g_idx = g_off.clamp(min=0, max=gW_max - 1)
         g_bits = self.in_glue.index_select(0, r_of) \
             .gather(1, g_idx.expand(W, canvas)) \
             * sel_valid.unsqueeze(1).to(torch.uint8)
         m = torch.where(in_glue_rng.expand(W, canvas), g_bits, m)
-        # 조상 셀: col ∈ [plen+gW, plen+gW+f·W) → anc bit (col-spec0)
+        # 조상 셀: col ∈ [plen+gW, plen+gW+f·W) — 실폭 기준 정렬
         spec_off = g_off - gW
         anc = ar.anc_bits.gather(0, sel.clamp(min=0)) * sel_valid.long()
         in_spec = (spec_off >= 0) & (spec_off < f * W) if f else \
@@ -161,7 +168,7 @@ class P2TreeExecutor:
                        >> spec_off.clamp(min=0, max=max(f * W - 1, 0)))
                       & 1).to(torch.uint8)
             m = torch.where(in_spec.expand(W, canvas), a_bits, m)
-        # self 셀: col == plen+gW+f·W+lane
+        # self 셀: col == plen+gW(실폭)+f·W+lane
         self_col = plen + gW + f * W + self.lane_w.unsqueeze(1)  # [W,1]
         is_self = col.unsqueeze(0) == self_col        # [W, canvas]
         m = torch.where(is_self, self.ones_w.unsqueeze(1)

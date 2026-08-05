@@ -88,9 +88,12 @@ class TestExecutorModuleParity(unittest.TestCase):
         piv = torch.tensor([.4, .2, .1, .06, .03, .01])
         ex.in_root_piv.copy_(piv.to(ex.dev))
         ex.in_rope_base.fill_(ctx0 - 1)
-        ex.in_glue.fill_(1)
+        gw = ex.F + 1                       # 이 테스트의 실 glue 폭
+        ex.in_glue.zero_()
+        ex.in_glue[:, :gw] = 1
+        ex.in_glue_w.fill_(gw)
         ex.in_temps.fill_(0.8)
-        ex.in_prefix_len.fill_(ctx0 - ex.in_glue.shape[1] - W)
+        ex.in_prefix_len.fill_(ctx0 - gw - W)
         p0 = (ctx0 + PAGE - 1) // PAGE
         for f in range(F):
             base = ctx0 + f * W
