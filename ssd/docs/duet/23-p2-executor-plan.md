@@ -156,3 +156,24 @@ target hit_k2 (tree attention 준비·exit proxy·verify row·mask) →
 - 체인 측정 근거: 체인 CG도 model+logits만 캡처 — 빠른 이유는
   "전부 캡처"가 아니라 **readback·가변 mask·plan 없는 연속 비동기
   enqueue** (리뷰5). round-graph는 여기에 캡처를 더하는 것.
+
+
+## PoC 결과 (2026-08-05 — 캡처 실증)
+
+**전체-P2 단일 CUDA graph 캡처 성공** (기존 arena 텐서 연산 그대로,
+kernel 융합 전): [reset → GPU 예산 → (select → fanout → mask 기록 →
+FlashInfer attention(round별 preplanned wrapper) → WOR 샘플 → 자식
+삽입) ×4]. 검증: 재실행 무오류·**replay마다 동적 트리** (RNG 전진 —
+동적 정책 보존의 캡처 증명)·토폴로지 불변량 유지.
+**시간: eager 4-round 13.92ms → captured replay 1.87ms (×7.4)** —
+host 공백·런치 비용의 붕괴 (PoC 스케일; 실모델은 forward가 지배).
+
+발견된 캡처 차단 패턴 (프로덕션 실행기 체크리스트):
+1. `torch.tensor(스칼라, device)` = pageable H2D → `torch.full()`
+   (alloc_root_budgets_gpu 프로덕션 수정 완료)
+2. advanced-index 대입의 파이썬-스칼라 RHS → 사전 할당 텐서 RHS
+3. 캡처 그래프 생존 중 기본 CUDA RNG는 graph-모드 — eager RNG와
+   교차 사용 금지 (그래프 파기 후 manual_seed 재설정 규약)
+
+다음: 프로덕션 실행기 — raw draft model forward 통합 (대역→실모델),
+KV write 경로, round×page-bucket 캡처, 엔진 배선 + 인터리브 게이트.
