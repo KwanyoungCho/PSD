@@ -2064,7 +2064,8 @@ class DraftRunner(ModelRunner):
             # 대체 — mask=0이라 내용 무영향(비연속 ID 전제 검증 완료).
             # 단계2: 이 -1 그대로 사용이 hit 하락 주범 클래스로 특정.
             _pages_fill = dbt[0, :need_pages].to(torch.int32).clone()
-            if int(_pages_fill[p0]) < 0:
+            if int(_pages_fill[p0]) < 0 and os.environ.get(
+                    "SSD_TREE_CANVAS_SUB", "1") == "1":
                 _pages_fill[p0] = _pages_fill[0]
             if p0 in ex.wrappers:
                 for f in range(F):
