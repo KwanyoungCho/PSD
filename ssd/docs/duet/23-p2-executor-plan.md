@@ -352,17 +352,28 @@ p2exec stats {capture 2, alt_forced_fallback 731, replay 729} —
 
 ## 실모델 P2 시간 비교 (2026-08-05, eslab18 프로파일 쌍 numseqs 10)
 
-phase2_* 구간 (draft 프로파일, step별 span/busy/idle):
+### ⚠️ 정정 (2026-08-06, 리뷰 지적 수용) — "94% 단축"은 측정 오류
+초기 보고("phase2_* span 28.3ms→1.8ms, ×15.5")는 **레이블 커버리지
+불일치로 인한 apples-to-oranges**였다:
+- `phase2_build`(선택기/레이아웃)는 **양쪽 다 p50 1.82ms로 동일**
+  (실행기가 안 바꿈).
+- arena는 4 forward가 `phase2_prep`/`phase2_replay`로 레이블돼 span에
+  포함(→28ms)되지만, **실행기의 graph replay+후처리는 무레이블**이라
+  분석기가 phase2_build(1.8ms)만 집계 → 실행기 P2를 과소계상.
 
-| | span p50 | span p95 | GPU busy p50 | idle p50 | idle p95 | CPU-dispatch p50 |
-|---|---|---|---|---|---|---|
-| arena | 28.28ms | 76.83ms | 14.05ms | 14.86ms | 57.57ms | 4.66ms |
-| graph | **1.82ms** | 48.68ms | 1.82ms | **0.001ms** | 40.90ms | 1.82ms |
+**정확한 P2 경로**(`phase2_build.start → merge_cache.end`, step별 p50):
+| | P2 경로 p50 | 구성 |
+|---|---|---|
+| arena | **30.94ms** | build 1.8 + proxy_wait 7.4 + 4×(prep+replay) + merge 0.4 |
+| exec | **20.06ms** | build 1.8 + proxy_wait 6.7 + [graph replay+후처리 무레이블 ~11] + merge 0.5 |
 
-- **P2 span p50 ×15.5 단축, P2 내 GPU idle 사실상 0** (채택 기준
-  "미설명 idle ≤ chain+1ms 또는 arena의 20% 이하" 압도 통과 방향).
-- p95 꼬리는 프로파일 ON 오염·타 스텝 겹침 포함 — 판정은
-  PROFILE=0 게이트에서. TPS(프로파일 ON): arena 45.99 → exec 56.70.
+**실제 회수 ~10.9ms (−35%)** — draft step time 델타(−11~13ms)와 정합.
+94%가 아니라 **35%**가 정직한 수치. 실행기 뒤에도 후처리(무레이블
+~11ms: `_exec_outputs_to_views`의 .cpu()×3 + Python 이중루프 +
+full-vocab `torch.zeros(R,K2,V)`)가 남아 있어 **추가 GPU화로 더 회수
+가능**(다음 성능 우선순위).
+- P2 내 GPU idle이 크게 준 것은 사실이나(4-forward가 graph로 묶임),
+  그 이득의 상당분이 후처리 CPU 시간으로 상쇄됨.
 
 ## 채택 게이트 가동 (2026-08-05)
 - `run_exec_gate18.sh` — eslab18 상대판정 (arena vs graph 3-cycle
@@ -513,28 +524,37 @@ _arena_mask_pack 직접 대조 (round 0 동일 상태).
 **트리 자체 품질(accepted len/ratio)은 동등(straddle)**, 오직
 타이밍-민감 지표(Hit Rate)만 체계적 하락.
 
-원인 규명: draft step time **arena 73–76ms → exec 62–64ms
-(−10~13ms/step)**. async DUET는 draft가 target과 랑데부하도록 트리
-형상을 튜닝했는데(P1 종료≈exit 도착, draft 종료≈target 종료 —
-feedback_duet_pipeline_balance), 실행기가 P2를 ~15× 가속해 **draft가
-~13ms 일찍 끝나 랑데부가 어긋남** → 준비된 트리가 target 필요 시점과
-덜 정렬 → Hit Rate 하락. Δms와 Δhit이 대략 비례(최대가속 s42/s55이
-최대 hit하락)해 타이밍 가설 부합.
+초기 원인 가설(타이밍 재균형)은 **철회**한다 — 아래 정정 참조.
 
-**결론**: 실행기는 정확(파리티/가드/mask/kernel 전통과, 트리 품질
-동등)하고 목표(P2 forward 사이 오버헤드 제거)를 달성 — Decode TPS
-+11%(CI[4.99,8.97]), P2 span −94%, GPU idle→0, 메모리 순증0. hit
-−4.6%p는 speedup의 재균형 부작용이며, 동결된 트리 파라미터를 새 P2
-타이밍에 맞춰 재튜닝(리뷰12 §6 "채택 후에만 sweep")하면 회복+추가
-TPS 여지. RNG/kernel/mask는 원인 아님(격리·bit측정으로 배제).
+### ⚠️ 정정 (2026-08-06, 리뷰 지적 수용) — hit 원인은 미확정
+"hit 하락 = speedup 재균형(버그 아님)" 결론은 **성급했다**. 반증:
+1. **cache hit은 시간 조건이 아니라 정확 키 일치**다. 키 =
+   (seq_id, 종단노드/수락위치, recovery_token) — speculator_async.py
+   :260에서 생성, draft_runner.py:436-440에서 정확 tensor 동등 비교.
+   **timeout·"너무 일찍 만든 캐시 무효" 같은 조건 없음.** 트리를 빨리
+   완성해도 올바른 키가 틀린 키가 되지 않는다 → "너무 빨라서 hit
+   하락"은 메커니즘상 성립 안 함.
+2. **P2AL 동등 ≠ coverage 동등.** hit rate = 트리가 실제 다음 결과를
+   덮었는가(coverage 품질). P2AL(hit 시 수락 길이)이 같아도 hit
+   횟수가 줄면 총 기여는 감소. hit는 그 자체로 핵심 품질 지표.
+3. **Δms–Δhit 상관 근거 부족.** 18번 5-seed에서만 r≈0.9였고 n=5
+   단일 박스. 17번 per-seed Δms 미측정이라 8-페어 상관은 미확정 —
+   과대 해석이었음.
 
-### 채택 기준 §6 대조
+**현재 확실한 것**: hit −4.6%p는 실재·8/8 반복. RNG/kernel/mask는
+배제(격리·bit). 그러나 **실행기 트리가 arena와 다르다**(≥1e-3 수치
+차로 근접-동률 WOR 뒤집힘)는 사실은 남아 있고, 이 **트리 내용 차이가
+coverage(hit)를 체계적으로 낮추는지**는 미확정. 원인 후보: 실모델
+per-forward 입력(mask bytes/position/slot/KV/logits) 직접 대조 미수행,
+miss 종류별 미기록, 인위 지연 반증 미수행.
+
+### 채택 기준 §6 대조 (정정)
 - TPS 3/3 CI>0: **PASS** ([4.99, 8.97])
-- P2 시간 3/3 단축: **PASS** (−94%)
-- 결정적 parity·4-forward 사이 sync/plan/readback 0·미설명 idle→0: **PASS**
-- 메모리 순증0/OOM 없음: **PASS**
+- P2 시간 단축: **PASS이나 −35%(−11ms)** (−94% 아님, 위 정정)
+- 결정적 parity(eager==graph)·sync/plan/readback 0·메모리 순증0: **PASS**
+  — 단 이는 실행기 자기-일관성 증명, **arena 의미 동일성 아님**
 - P2AL ≤0.05: **PASS** (−0.043)
-- tok/step ≤0.03: **FAIL** (−0.10) ← 재균형 부작용
-- hit ≤1%p: **FAIL** (−4.6%p) ← 재균형 부작용
-→ 정확성·속도·자원 기준 전통과, 품질 2지표만 실패하나 원인이
-트리 결함이 아니라 speedup 재균형(재튜닝으로 회복 가능).
+- tok/step ≤0.03: **FAIL** (−0.10)
+- hit ≤1%p: **FAIL** (−4.6%p)
+→ **채택 보류.** 실행기는 플래그(SSD_TREE_EXEC) 뒤 주력 후보로 유지.
+hit 원인 규명 + 후처리 ~11ms 제거 후 최종 채택 재판정. sweep 미개시.
