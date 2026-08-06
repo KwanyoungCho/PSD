@@ -2000,21 +2000,28 @@ class DraftRunner(ModelRunner):
             # 스텝은 -1 센티널(slot/ctx/pages/rope) — 실행기가 이를
             # 모르고 돌면 쓰레기 트리를 populate (실버그). arena
             # fallback으로 회피. (소형 GPU sync 1회 — 정확성 우선)
-            _degen = int(ctx_len) <= 0
-            if not _degen:
+            _dg_why = None
+            if int(ctx_len) <= 0:
+                _dg_why = "ctx"
+            else:
                 _sl_all = torch.stack(
                     [m[:ex.W] for m in step_slot_maps[:F]])
                 _cl_all = torch.stack(
                     [c.reshape(-1)[:1] for c in step_context_lens[:F]])
-                _degen = bool((_sl_all < 0).any()) \
-                    or bool((_cl_all <= 0).any()) \
-                    or bool((dbt[0, :need_pages] < 0).any())
-            if not _degen and torch.is_tensor(rope_base):
-                _degen = bool((rope_base[:R] < 0).any())
-            elif not _degen and not torch.is_tensor(rope_base):
-                _degen = any(int(x) < 0 for x in rope_base[:R])
-            if _degen:
-                self._p2exec_count("degenerate_step")
+                if bool((_sl_all < 0).any()):
+                    _dg_why = "slot"
+                elif bool((_cl_all <= 0).any()):
+                    _dg_why = "ctxlen"
+                elif bool((dbt[0, :need_pages] < 0).any()):
+                    _dg_why = "pages"
+            if _dg_why is None and torch.is_tensor(rope_base):
+                if bool((rope_base[:R] < 0).any()):
+                    _dg_why = "rope"
+            elif _dg_why is None and not torch.is_tensor(rope_base):
+                if any(int(x) < 0 for x in rope_base[:R]):
+                    _dg_why = "rope"
+            if _dg_why is not None:
+                self._p2exec_count(f"degenerate_{_dg_why}")
                 return None
             # ── 버퍼 채우기 (host→고정 버퍼; readback 없음)
             from ssd.engine.helpers.cudagraph_helpers import (
@@ -2201,6 +2208,11 @@ class DraftRunner(ModelRunner):
             "logits": ex.cell_logits.clone(),
             "slot": [ex.in_slot[f].clone() for f in range(F)],
             "ctx": [ex.in_ctx_len[f].clone() for f in range(F)],
+            "a_slot": [step_slot_maps[f][:ex.W].clone()
+                       for f in range(F)],
+            "a_ctx": [step_context_lens[f].reshape(-1)[:1].clone()
+                      for f in range(F)],
+            "a_pages": dbt[0].clone(),
             "pages": ex.wrappers[p0][0]
                 ._paged_kv_indices_buf[:p0 + 1].clone(),
             "mask": [ex.wrappers[p0][f]._custom_mask_buf.clone()
@@ -2274,22 +2286,22 @@ class DraftRunner(ModelRunner):
                 mark(f, "rope", f"a={trace['rope'][f].tolist()} "
                                 f"e={art['rope'][f].tolist()}")
                 continue
-            if not torch.equal(step_slot_maps[f][:W].to(torch.int32),
+            if not torch.equal(art["a_slot"][f].to(torch.int32),
                                art["slot"][f]):
                 mark(f, "slot",
-                     f"a={step_slot_maps[f][:W].tolist()} "
+                     f"a={art['a_slot'][f].tolist()} "
                      f"e={art['slot'][f].tolist()}")
                 continue
-            _ctx_a = step_context_lens[f].reshape(-1)[:1].to(torch.int32)
+            _ctx_a = art["a_ctx"][f].to(torch.int32)
             if not torch.equal(_ctx_a, art["ctx"][f].reshape(-1)[:1]):
                 mark(f, "ctx_len", f"a={_ctx_a.tolist()} "
                                    f"e={art['ctx'][f].tolist()}")
                 continue
             p0 = art["p0"]
-            if not torch.equal(dbt[0, :p0 + 1].to(torch.int32),
+            if not torch.equal(art["a_pages"][:p0 + 1].to(torch.int32),
                                art["pages"]):
                 mark(f, "pages",
-                     f"a={dbt[0, :p0 + 1].tolist()} "
+                     f"a={art['a_pages'][:p0 + 1].tolist()} "
                      f"e={art['pages'].tolist()}")
                 continue
             cols = cols0 + f * W
@@ -2307,6 +2319,23 @@ class DraftRunner(ModelRunner):
                    [f * W:(f + 1) * W]).abs().max()
             if float(dlg) != 0.0:
                 mark(f, "logits", f"absmax={float(dlg):.3e}")
+                if f == 0 and st.get("eager_probes", 0) < 3:
+                    st["eager_probes"] = st.get("eager_probes", 0) + 1
+                    try:
+                        ex = self._p2_exec
+                        with torch.inference_mode():
+                            ex.run_once(art["p0"])
+                        d_eg = (ex.cell_logits[:W]
+                                - art["logits"][:W]).abs().max()
+                        d_ea = (ex.cell_logits[:W]
+                                - trace["logits"][0]).abs().max()
+                        print(f"[stage1][eager-probe] f0 "
+                              f"graphΔ={float(d_eg):.3e} "
+                              f"arenaΔ={float(d_ea):.3e}",
+                              flush=True)
+                    except Exception as _pe:
+                        print(f"[stage1][eager-probe] err {_pe}",
+                              flush=True)
                 continue
             if not torch.equal(trace["toks"][f], art["toks"][f]):
                 _da = trace["toks"][f]; _de = art["toks"][f]
@@ -2359,6 +2388,8 @@ class DraftRunner(ModelRunner):
         if st["steps"] % 300 == 0:
             print(f"[stage1][periodic] steps={st['steps']} "
                   f"counts={st['counts']}", flush=True)
+            for _k, _v in sorted(st.get("first_by_item", {}).items()):
+                print(f"[stage1][first {_k}] {_v}", flush=True)
 
     def _p2tree_rollout(self, duet_proxy, proxy_forked, proxy_fan_out_tensor,
                         tree_args, layout, step_slot_maps,
@@ -2484,6 +2515,10 @@ class DraftRunner(ModelRunner):
 
         _mc_p2("p2_prepare", _mev_p2prep)
         _stage1 = os.environ.get("SSD_TREE_STAGE1", "0") == "1"
+        if _stage1 and hasattr(self, "_s1_stats") \
+                and self._s1_stats["steps"] >= int(
+                    os.environ.get("SSD_TREE_STAGE1_CAP", "800")):
+            _stage1 = False
         _s1_art = None
         if _stage1 and _use_arena:
             _s1_art = self._stage1_exec_shadow(
@@ -2532,7 +2567,10 @@ class DraftRunner(ModelRunner):
                     context_len=ctx_len, sampler_x=cfg.sampler_x,
                     F_x=cfg.async_fan_out, device=self.device,
                     p2_gen=_p2gen,
-                    noise_list=(self._s1_noise if _s1_art is not None
+                    noise_list=(self._s1_noise
+                                if (_stage1
+                                    and hasattr(self, "_s1_noise")
+                                    and _s1_art is not None)
                                 else None),
                     trace_out=_s1_trace)
                 _mc_p2("p2_rollout", _mev_roll)
