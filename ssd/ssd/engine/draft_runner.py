@@ -2926,6 +2926,36 @@ class DraftRunner(ModelRunner):
         R_l = self.split_k2_layout.MQ_LEN
         v_ref = _PT.build_root_views(pool, R_l, NV)
         v_ex = art["views"]
+        # 응답-조립 산출물: uniq-pq / backbone (이전까지 미비교 —
+        # terminal-계 miss 3배의 용의 표면)
+        try:
+            v_ex_full, (bt_e, bl_e), _cl = \
+                self._exec_outputs_to_views(self._p2_exec, R_l)
+            R_n = self.split_k2_layout.MQ_LEN
+            v_rf = _PT.build_root_views(pool, R_n, NV,
+                                        cell_logits=None)
+            for key in ("parent_q_ref", "parent_q_cells", "u_valid"):
+                if key in v_rf and key in v_ex_full:
+                    a_ = v_rf[key]
+                    b_ = v_ex_full[key]
+                    if not torch.equal(a_.cpu(), b_.cpu()):
+                        mark(None, f"asm_{key}", "")
+                        break
+            K2_ = self.config.duet_phase2_k
+            bt_a, _bl_a = None, None
+            bt_a = self._tree_backbone_project(
+                pool, R_n, K2_, None,
+                n_roots=int((root_piv > 0).sum()))[0] \
+                if hasattr(self, "_tree_backbone_project") else None
+            if bt_a is not None and not torch.equal(
+                    bt_a.cpu(), bt_e.cpu()):
+                _dr = (bt_a.cpu() != bt_e.cpu()).any(1) \
+                    .nonzero().flatten()[:3].tolist()
+                mark(None, "asm_backbone",
+                     f"rows={_dr} a={bt_a.cpu()[_dr].tolist()} "
+                     f"e={bt_e.cpu()[_dr].tolist()}")
+        except Exception as _ae:
+            mark(None, "asm_error", str(_ae)[:120])
         if not torch.equal(v_ref["valid"], v_ex["valid"]):
             mark(None, "views_valid",
                  f"a={v_ref['valid'].tolist()} "

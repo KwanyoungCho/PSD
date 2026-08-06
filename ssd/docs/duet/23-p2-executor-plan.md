@@ -702,3 +702,86 @@ page/KV/22층 전부 bit-동일. 잔여 발산원은 lm_head GEMM ulp 하나로
 과거 '구현 동등성 실패' 우려는 참조 하네스 기하 오류가 만든
 교란이었음. 남은 판정(hit 갭이 이 ulp-발산만으로 설명되는지)은
 로드맵대로 e2e smoke 1회 → 최종 캠페인 6런에서.
+
+═══════════════════════════════════════════════════════════════
+## 세션 인수인계 (2026-08-06 저녁) — 새 세션 시작점
+═══════════════════════════════════════════════════════════════
+
+### 한 줄 상태
+속도(+10% TPS·P2 −35%)와 forward 정확성(hidden까지 bit-동일)은
+증명 완료. **유일 blocker = 품질 게이트: 최종 캠페인에서 hit
+−3.97%p (기준 −1%p), P2AL −0.207 (기준 −0.05) — 채택 보류 유지.**
+
+### 확정된 사실 (증거 있는 것만)
+1. 실행기 forward == 프로덕션: 상태-랩 live-앵커에서 f0 logits
+   34~33/36 bit-동일 (crossing·canvas_missing 태그 전부 포함),
+   eager==replay 36/36, 22층 hidden 전부 bit-동일.
+2. 잔여 발산원 = lm_head GEMM ulp 단 하나 (fp16 2-3 ulp; 두 CUDA
+   graph의 캡처별 커널 선택). CUBLAS_WORKSPACE_CONFIG=:4096:8로는
+   통일 안 됨 (3/36 잔존 — lab16).
+3. 프로덕션 실버그 3건 수정 완료: 비활성-lane self-bit /
+   퇴화-스텝(-1 센티널) 미감지 / canvas -1 페이지(OOB→간헐 NaN,
+   메커니즘 실증 tests/diag/test_canvas_nan_poison.py).
+4. 과거 하네스들(discriminator, lab-A/B)의 기하 오류: 새 KV는
+   ctx0 '안'(마지막 W열, slot%bs 실측=plen+gw+lane). 실행기
+   _pack_row_mask가 물리 정합. 이 오류가 과거 '0.125=커널차'
+   해석을 오염시켰음.
+5. 최종 캠페인 (17번, 8b824fb, arena/exec ×3seed, ~/final_campaign):
+   seed42 Δhit −2.0%p·ΔP2AL −0.41 / s123 −6.2%p·−0.04 /
+   s7 −3.7%p·−0.17. **taxonomy 구조 신호: terminal-계 miss만
+   3seed 모두 ~3배** (miss_p1_terminal_or_ctx 58→158/55→156/
+   60→141, terminal_mismatch ~2.5배; root_absent는 소폭).
+
+### 최우선 미해결 질문
+hit −4%p의 원인. 무작위 ulp-궤적이라기엔 terminal-계 miss 3배가
+너무 구조적. **유력 가설: 응답 조립(backbone 투영·uniq-pq·wire
+종단 id 네임스페이스)의 exec-경로 어긋남** — "rec는 후보에 있는데
+종단 노드(fan_idx)가 안 맞는" miss가 정확히 그 서명.
+- 검증 시도(stage1k, 미완): stage1에 asm_backbone/pq 비교 추가 →
+  300스텝에서 asm_backbone 40건 검출됐으나 **참조측이 all-zero =
+  비교 코드 자기 버그 의심 (미확정)** — _tree_backbone_project
+  호출 인자(cell_logits=None, n_roots) 재점검 필요. 그 런은
+  stage1 간헐 크래시(35/40 지점, 이슈 지속)로 중단.
+
+### 다음 세션이 할 일 (순서)
+1. **stage1k의 asm 비교 코드 수정** (draft_runner._stage1_diff 끝
+   부분): _tree_backbone_project를 프로덕션과 동일 인자
+   (cell_logits=_s1용 산출, n_roots=len(seeds))로 호출하거나, 차라리
+   **호출부 B가 실제 쓰는 proxy_tokens(백본)를 rollout 직후 캡처해
+   exec의 bt와 비교**. exec측도 동일 스텝 산출물로. → 어긋남이
+   실측되면 그것이 hit 갭의 직접 원인 (수정 후 캠페인 재판정).
+2. asm이 결백하면: wire 송신 정수 블록과 verify 종단-id 왕복
+   (target walk → tree_terminal_node → 다음 키)을 스텝 페어로
+   로깅해 네임스페이스 어긋남 검증 (stage2 확장).
+3. stage1 간헐 크래시(arena 엔진CG indexSelect OOB, 진단 모드
+   한정): CUDA_LAUNCH_BLOCKING+TORCH_USE_CUDA_DSA로 1회 국소화
+   가치 있음 — 진단 신뢰성 위해.
+4. 품질 게이트 통과 후에만: 단계4(후처리 ~5ms GPU화: _exec_
+   outputs_to_views의 .cpu()×3+Python 루프 제거) → 파라미터 해동.
+
+### 도구 (전부 커밋됨, 분 단위 반복)
+- **상태-랩**: SSD_TREE_LAB=1 (+SSD_TREE_LAB_N/PER_TAG/MAX_STEPS)
+  — 대표 P2 상태 저장→KV 복원→동일 noise 재실행. live-앵커(liveF0)
+  vs C(eager) vs D(replay), layer-훅(_lab_layer_probe). lab-A/B는
+  기하-오구성 참조라 SSD_TREE_LAB_AB=1로만 활성 (사용 비권장).
+- **러너**: scratchpad/smoke/lab_runner.sh <run.sh> <log> — 랩 완료
+  마커 감시 후 즉시 전체 정리 (고아 0초; os._exit 잔재 스핀 방지).
+- stage1(SSD_TREE_STAGE1=1): 라이브 이중실행 항목별 비교 (kv/logits
+  독립 평가). stage2(SSD_TREE_STAGE2=1): miss 6종 분류+원시 카운트.
+- 캠페인 스크립트: ~/final17.sh (17번), 결과 ~/final_campaign/.
+- **고아 정리** (crash 시 GPU0만 100%·GPU4 0MiB 패턴):
+  `for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader);
+   do [ "$(ps -o user= -p $p)" = chokwans99 ] && kill -9 $p; done`
+
+### 금지 유지 (리뷰 지침)
+가설당 장시간 generation 금지 (랩/stage1으로) · 파라미터 sweep
+금지 · 실행기 기본 ON 금지 · 기준 사후 완화 금지 · 미니 결과로
+실엔진 배제 선언 금지.
+
+### 서버·커밋
+- HEAD: 8b824fb + 미커밋(stage1 asm비교 초안·CUBLAS 실험 잔재 —
+  asm 부분은 버그 의심, 수정 필요 상태로 커밋함)
+- 17번: ~/Parallel_SD/ssd @ 8b824fb, 비어있음. 접속: ~/.ssh/config
+  eslab17 (10.201.135.195:1100, pw 세션 메모), pexpect 헬퍼
+  scratchpad/ssh17.py
+- 18번: 비어있음 (GPU5-7 타 사용자 가변)
