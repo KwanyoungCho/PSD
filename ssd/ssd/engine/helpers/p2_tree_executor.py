@@ -183,10 +183,15 @@ class P2TreeExecutor:
                        >> spec_off.clamp(min=0, max=max(f * W - 1, 0)))
                       & 1).to(torch.uint8)
             m = torch.where(in_spec.expand(W, canvas), a_bits, m)
-        # self 셀: col == plen+gW(실폭)+f·W+lane
+        # self 셀: col == plen+gW(실폭)+f·W+lane — 비활성 lane은 0
+        # (arena _arena_mask_pack의 `(bits|selfbit)*sel_valid` 규약;
+        # 단계0 강화 mask 대조가 잡은 최초 불일치 — 비활성 lane
+        # self=1은 valid-lane logits에는 무영향이나 mask bytes exact
+        # 계약 위반)
         self_col = plen + gW + f * W + self.lane_w.unsqueeze(1)  # [W,1]
         is_self = col.unsqueeze(0) == self_col        # [W, canvas]
-        m = torch.where(is_self, self.ones_w.unsqueeze(1)
+        m = torch.where(is_self,
+                        sel_valid.to(torch.uint8).unsqueeze(1)
                         .expand(W, canvas), m)
         flat = m.reshape(-1)
         pad = (-flat.numel()) % 8

@@ -1,87 +1,150 @@
-"""실행기 _pack_row_mask vs arena _arena_mask_pack 순수 대조.
-동일 (context_len, f, K_glue, glue, anc, sel_valid, prefix)에서
-unpacked bool mask가 bit-동일한지. 다르면 그 열이 hit-drop 버그.
+"""단계0 — 실행기 mask 대조 (강화판, 고정 지침).
+
+이전 판(복사 구현 대조)의 결함을 수정: **실제 executor의
+`_pack_row_mask`를 호출**해 `wr._custom_mask_buf`에 기록된 packed
+bit를 unpack, 같은 상태의 `_arena_mask_pack` 결과와 bit-대조한다.
+
+커버: forward f=0..3 전부 / 완전-활성·부분-활성 lane(희소 트리) /
+실제 block 크기 256과 미니 64 / page 마지막 길이 lpl ∈ {1,
+PAGE−1, PAGE} / canvas 꼬리 전-0 검사.
+
+실행: python -m unittest tests.diag.test_exec_mask_vs_arena
+(성공 시 종료코드 0, 실패는 assertion)
 """
-import sys, torch
-sys.path.insert(0, "/home/chokwans99/PSD/ssd")
+import unittest
+import torch
+
+try:
+    import flashinfer                              # noqa: F401
+    HAS_FI = True
+except Exception:
+    HAS_FI = False
+
 from ssd.engine.helpers.p2_tree import _arena_mask_pack
-
-dev = "cuda:0"
-PAGE = 64
-
-
-def exec_mask(canvas, plen, gW, gW_max, glue_row, anc, sel_valid, W, f):
-    """_pack_row_mask 로직 재현 → unpacked [W, canvas] uint8."""
-    col = torch.arange(canvas, device=dev)
-    plen_t = torch.tensor([plen], device=dev)
-    gW_t = torch.tensor([gW], device=dev)
-    m = (col.unsqueeze(0) < plen_t).expand(W, canvas).to(torch.uint8).clone()
-    g_off = col.unsqueeze(0) - plen_t
-    in_glue = (g_off >= 0) & (g_off < gW_t)
-    g_idx = g_off.clamp(min=0, max=gW_max - 1)
-    g_bits = glue_row.gather(1, g_idx.expand(W, canvas)) \
-        * sel_valid.unsqueeze(1).to(torch.uint8)
-    m = torch.where(in_glue.expand(W, canvas), g_bits, m)
-    spec_off = g_off - gW_t
-    in_spec = (spec_off >= 0) & (spec_off < f * W) if f else \
-        torch.zeros(1, canvas, dtype=torch.bool, device=dev)
-    if f:
-        a_bits = ((anc.unsqueeze(1) >> spec_off.clamp(
-            min=0, max=max(f * W - 1, 0))) & 1).to(torch.uint8)
-        m = torch.where(in_spec.expand(W, canvas), a_bits, m)
-    lane = torch.arange(W, device=dev)
-    self_col = plen_t + gW_t + f * W + lane.unsqueeze(1)
-    is_self = col.unsqueeze(0) == self_col
-    ones = torch.ones(W, dtype=torch.uint8, device=dev)
-    m = torch.where(is_self, ones.unsqueeze(1).expand(W, canvas), m)
-    return m
+from tests.test_p2_executor_parity import (
+    TestExecutorModuleParity)
 
 
-W = 10
-mismatch = 0
-for trial in range(200):
-    g = torch.Generator(device=dev).manual_seed(trial)
-    f = trial % 3
-    K_glue = int(torch.randint(1, 5, (1,), generator=g, device=dev))
-    context_len = int(torch.randint(80, 200, (1,), generator=g, device=dev))
-    p0 = (context_len + PAGE - 1) // PAGE
-    canvas = (p0 + 1) * PAGE
-    gW = K_glue + 1
-    plen = context_len - gW - W
-    if plen < 0:
-        continue
-    # arena inputs
-    glue_sel = (torch.rand(W, gW, generator=g, device=dev) > 0.3) \
-        .to(torch.uint8)
-    spec_w = (f + 1) * W
-    anc = torch.randint(0, 1 << min(spec_w, 30), (W,), generator=g,
-                        device=dev, dtype=torch.int64)
-    # anc의 현재-라운드 비트([f·W, (f+1)·W))는 0 (조상은 과거만)
-    if f < 1:
-        pass
-    mask_hi = ((1 << (f * W)) - 1) if f else 0
-    anc = anc & mask_hi
-    sel_valid = torch.ones(W, dtype=torch.bool, device=dev)
-    packed, _ = _arena_mask_pack(f, W, K_glue, context_len, glue_sel,
-                                 anc, sel_valid, dev)
-    cols = context_len + f * W
-    bits = torch.zeros(W * cols + ((-W * cols) % 8), dtype=torch.uint8,
-                       device=dev)
-    wbits = (1 << torch.arange(8, device=dev)).to(torch.uint8)
-    unp = ((packed.unsqueeze(1) >> torch.arange(8, device=dev)) & 1) \
-        .to(torch.uint8).reshape(-1)[:W * cols].view(W, cols)
-    # exec mask (canvas ≥ cols); 앞 cols열만 비교, 나머지는 0이어야
-    glue_row_full = torch.zeros(W, gW, device=dev, dtype=torch.uint8)
-    em = exec_mask(canvas, plen, gW, gW, glue_sel, anc, sel_valid, W, f)
-    em_cols = em[:, :cols]
-    em_tail = em[:, cols:]
-    d_core = (em_cols != unp).sum().item()
-    d_tail = (em_tail != 0).sum().item()
-    if d_core or d_tail:
-        mismatch += 1
-        if mismatch <= 3:
-            diffcols = (em_cols != unp).any(0).nonzero().flatten()[:10]
-            print(f"trial {trial} f={f} K_glue={K_glue} ctx={context_len}"
-                  f" core_diff={d_core} tail_diff={d_tail} "
-                  f"cols={diffcols.tolist()}")
-print(f"\n{mismatch}/200 trials mismatch")
+def unpack_mask_buf(wr, W, canvas, dev):
+    """wr._custom_mask_buf(uint8 packbits little) → [W, canvas] uint8."""
+    nbits = W * canvas
+    nby = (nbits + 7) // 8
+    pk = wr._custom_mask_buf[:nby]
+    bits = ((pk.unsqueeze(1)
+             >> torch.arange(8, device=dev)) & 1).to(torch.uint8)
+    return bits.reshape(-1)[:nbits].view(W, canvas)
+
+
+@unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no fi/cuda")
+class TestRealPackRowMaskVsArena(unittest.TestCase):
+    """f=0..3 각각, run_once로 만든 실제 상태(_sel/arena/버퍼)에서
+    ex._pack_row_mask 재호출 → arena _arena_mask_pack과 bit-대조."""
+
+    def _harness(self):
+        h = TestExecutorModuleParity()
+        h.tearDown = lambda: None
+        return h
+
+    def _run_case(self, PAGE, ctx0, piv, gw=None, seed=7):
+        dev = "cuda:0"
+        h = self._harness()
+        ex, cfg, _page, V = h._mk(dev, PAGE=PAGE)
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        self.assertLessEqual(p0 + 1, ex.max_blocks)
+        ex.prepare_bucket(p0)
+        # 기본 입력 채움 (harness와 동일) 후 piv 덮어쓰기
+        h._fill_inputs(ex, PAGE, ctx0)
+        ex.in_root_piv.copy_(torch.tensor(piv, device=dev).float())
+        if gw is not None:
+            self.assertLessEqual(gw, ex.in_glue.shape[1])
+            ex.in_glue.zero_()
+            ex.in_glue[:, :gw] = 1
+            ex.in_glue_w.fill_(gw)
+            ex.in_prefix_len.fill_(ctx0 - gw - ex.W)
+        gN = torch.Generator().manual_seed(33 + seed)
+        ex.parity_noise = [
+            (torch.empty(ex.W, V).exponential_(1, generator=gN)).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx = torch.full((ex.arena.capacity,), -1,
+                                   dtype=torch.int64, device=dev)
+        ex.model.cache.zero_()
+        with torch.inference_mode():
+            ex.run_once(p0)
+        W = ex.W
+        gw_real = int(ex.in_glue_w.item())
+        plen = int(ex.in_prefix_len.item())
+        K_glue = gw_real - 1
+        context_len = plen + gw_real + W
+        self.assertEqual(context_len, ctx0)
+        partial_seen = False
+        for f in range(ex.F):
+            wr = ex.wrappers[p0][f]
+            sel, sel_valid = ex._sel[f]
+            if not bool(sel_valid.all()):
+                partial_seen = True
+            # ── 실제 메서드 재호출 (상태는 run 후에도 불변:
+            # anc_bits/root는 삽입 시 고정, _sel[f]는 라운드 기록)
+            with torch.inference_mode():
+                ex._pack_row_mask(wr, f)
+            canvas = wr._canvas_cols
+            em = unpack_mask_buf(wr, W, canvas, dev)
+            # ── arena 기준
+            ar = ex.arena
+            r_of = torch.where(
+                sel_valid, ar.root.gather(0, sel.clamp(min=0)),
+                torch.zeros_like(sel))
+            glue_sel = ex.in_glue.index_select(0, r_of)[:, :gw_real]
+            anc_sel = ar.anc_bits.gather(0, sel.clamp(min=0)) \
+                * sel_valid.long()
+            packed, _ = _arena_mask_pack(
+                f, W, K_glue, context_len, glue_sel, anc_sel,
+                sel_valid, dev)
+            cols = context_len + f * W
+            bits = ((packed.unsqueeze(1)
+                     >> torch.arange(8, device=dev)) & 1) \
+                .to(torch.uint8).reshape(-1)[:W * cols].view(W, cols)
+            core_diff = int((em[:, :cols] != bits).sum())
+            tail_diff = int((em[:, cols:] != 0).sum())
+            self.assertEqual(
+                core_diff, 0,
+                f"PAGE={PAGE} ctx0={ctx0} f={f}: core {core_diff} "
+                f"bit 불일치 (최초 열 "
+                f"{(em[:, :cols] != bits).any(0).nonzero().flatten()[:5].tolist()})")
+            self.assertEqual(
+                tail_diff, 0,
+                f"PAGE={PAGE} ctx0={ctx0} f={f}: canvas 꼬리 비-0")
+        return partial_seen
+
+    def test_full_lanes_mini_page64(self):
+        piv = [.4, .2, .1, .06, .03, .01]
+        self._run_case(64, 64 + 21, piv)
+
+    def test_page_boundaries_mini(self):
+        piv = [.4, .2, .1, .06, .03, .01]
+        # 라운드 kv_len(lpl) 경계: ctx0=119→r0 lpl1 / 87→r2 lpl63 /
+        # 88→r3 lpl64 (W=10, F=4, PAGE=64)
+        for ctx0 in (119, 87, 88):
+            self._run_case(64, ctx0, piv)
+
+    def test_partial_and_inactive_lanes(self):
+        # 뿌리 2개만 유효 → 노드 수 < F·W → 후반 라운드 부분-활성
+        piv = [.4, .2, 0.0, 0.0, 0.0, 0.0]
+        seen = self._run_case(64, 64 + 21, piv)
+        self.assertTrue(seen, "부분-활성 lane 케이스가 발생하지 않음 — "
+                              "piv 재조정 필요")
+
+    def test_real_block_size_256(self):
+        piv = [.4, .2, .1, .06, .03, .01]
+        # 실 block 256: lpl 경계 {1, 255, 256} — W=10, F=4
+        # r0 kv=ctx0+10: ctx0=247→lpl1(kv257) / 245→lpl255 / 246→lpl256
+        for ctx0 in (256 + 21, 247, 245, 246):
+            self._run_case(256, ctx0, piv)
+
+    def test_glue_width_variants(self):
+        piv = [.4, .2, .1, .06, .03, .01]
+        for gw in (2, 3):
+            self._run_case(64, 64 + 21, piv, gw=gw)
+
+
+if __name__ == "__main__":
+    unittest.main()

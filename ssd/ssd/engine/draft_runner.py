@@ -1991,6 +1991,9 @@ class DraftRunner(ModelRunner):
                 self._p2exec_count("shape_unsupported")
                 return None
             # ── 버퍼 채우기 (host→고정 버퍼; readback 없음)
+            from ssd.engine.helpers.cudagraph_helpers import (
+                duet_record as _mr_x, duet_close as _mc_x)
+            _mev_prep = _mr_x("p2_prepare")
             ex.in_root_tok[:R].copy_(toks[:R])
             if R < ex.R:
                 ex.in_root_tok[R:].zero_()
@@ -2022,7 +2025,9 @@ class DraftRunner(ModelRunner):
                     ex.wrappers[p0][f]._paged_kv_indices_buf[
                         :need_pages].copy_(
                         dbt[0, :need_pages].to(torch.int32))
+            _mc_x("p2_prepare", _mev_prep)
             # ── capture(최초) 또는 replay
+            _mev_rep = _mr_x("p2_graph_replay")
             if p0 not in ex.graphs:
                 ex.prepare_bucket(p0)
                 for f in range(F):
@@ -2034,8 +2039,12 @@ class DraftRunner(ModelRunner):
             else:
                 ex.graphs[p0].replay()
                 self._p2exec_count("replay")
+            _mc_x("p2_graph_replay", _mev_rep)
             # ── 출력 → views (임시 debug 변환: uniq-pq만 CPU 소형)
-            return self._exec_outputs_to_views(ex, R)
+            _mev_cv = _mr_x("p2_output_convert")
+            _views = self._exec_outputs_to_views(ex, R)
+            _mc_x("p2_output_convert", _mev_cv)
+            return _views
         except Exception as e:
             self._p2exec_count(f"error:{type(e).__name__}")
             if not hasattr(self, "_p2exec_err_logged"):
@@ -2108,8 +2117,11 @@ class DraftRunner(ModelRunner):
         import numpy as _np
         from ssd.engine.helpers import cudagraph_helpers as _CH
         from ssd.engine.helpers import p2_tree as _PT
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr_p2, duet_close as _mc_p2)
         from ssd.utils.context import set_context, reset_context
 
+        _mev_p2prep = _mr_p2("p2_prepare")
         cfg = self.config
         W = layout.MQ_LEN
         K2 = cfg.duet_phase2_k
@@ -2213,6 +2225,7 @@ class DraftRunner(ModelRunner):
             reset_context()
             return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
 
+        _mc_p2("p2_prepare", _mev_p2prep)
         _use_exec = os.environ.get("SSD_TREE_EXEC", "0") == "1"
         if _use_exec and _use_arena:
             with torch.inference_mode():
@@ -2239,6 +2252,7 @@ class DraftRunner(ModelRunner):
                         self._p2_iso_gen.manual_seed(
                             torch.initial_seed() % (2**31))
                     _p2gen = self._p2_iso_gen
+                _mev_roll = _mr_p2("p2_rollout")
                 _ar, eval_log, cell_logits = _PT.run_rollout_arena(
                     toks[:len(seeds)], root_piv,
                     workspace=self._tree_arena_ws,
@@ -2252,8 +2266,10 @@ class DraftRunner(ModelRunner):
                     context_len=ctx_len, sampler_x=cfg.sampler_x,
                     F_x=cfg.async_fan_out, device=self.device,
                     p2_gen=_p2gen)
+                _mc_p2("p2_rollout", _mev_roll)
                 # 1a 경계: 단일 sync로 기존 view/wire 경로에 접속
                 # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/22)
+                _mev_cv2 = _mr_p2("p2_output_convert")
                 pool = _ar.to_pool(len(seeds))
                 _topo = os.environ.get("SSD_TREE_TOPO_TRACE", "")
                 if _topo:
@@ -2288,6 +2304,7 @@ class DraftRunner(ModelRunner):
                     fanout_policy=cfg.duet_tree_fanout_policy,
                     context_len=ctx_len,
                     sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
+            _mc_p2("p2_output_convert", _mev_cv2)
         finally:
             _CH.cache.pop("_tree_mask_override", None)
         return pool, eval_log, cell_logits
@@ -2810,6 +2827,9 @@ class DraftRunner(ModelRunner):
                 _tree_args, _layout_k2, _ssm, _scl, _temps_p2)
             _R = _layout_k2.MQ_LEN
             _nv = self.config.duet_tree_nv
+            from ssd.engine.helpers.cudagraph_helpers import (
+                duet_record as _mr_cv, duet_close as _mc_cv)
+            _mev_cvB = _mr_cv("p2_output_convert")
             if isinstance(pool, dict):
                 # 23번 단계2: 실행기 경로 — views/backbone 직접
                 self._tree_views = pool
@@ -2823,6 +2843,7 @@ class DraftRunner(ModelRunner):
                         pool, _R, K2, _cell_logits,
                         n_roots=(proxy_piv.shape[1]
                                  if proxy_piv is not None else _R))
+            _mc_cv("p2_output_convert", _mev_cvB)
             proxy_acts = None
         else:
             self._tree_views = None
@@ -2857,6 +2878,7 @@ class DraftRunner(ModelRunner):
         """
         from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
         _mev_mc = _mr("merge_cache")
+        _mev_mc2 = _mr("p2_cache_merge")
         _proxy_layout = proxy_layout
         _draft_layout = draft_layout
         # Cache row width: split-only K1/K2 mode pads to K_max=max(K1,K2)
@@ -2933,6 +2955,7 @@ class DraftRunner(ModelRunner):
         self.tree_cache_valid_k = torch.empty(n_total, dtype=torch.int64, device=self.device)
         self.tree_cache_valid_k[:n_draft] = draft_row_vk
         self.tree_cache_valid_k[n_draft:] = proxy_row_vk
+        _mc("p2_cache_merge", _mev_mc2)
         _mc("merge_cache", _mev_mc)
 
     # new one, with true asynchrony
