@@ -1978,6 +1978,12 @@ class DraftRunner(ModelRunner):
                     hf.num_attention_heads, hf.num_key_value_heads,
                     hf.head_dim, dtype=hf.torch_dtype)
             ex = self._p2_exec
+            if os.environ.get("SSD_TREE_STAGE1", "0") == "1" \
+                    and ex.parity_noise is None:
+                # 단계1: 캡처 전에 noise 버퍼 주소를 graph에 박음
+                # (내용은 step마다 교체 — 검증된 버퍼 패턴)
+                self._stage1_init()
+                ex.parity_noise = self._s1_noise
             ctx0 = int(ctx_len)
             p0 = (ctx0 + self.block_size - 1) // self.block_size
             need_pages = p0 + 1
@@ -1989,6 +1995,26 @@ class DraftRunner(ModelRunner):
             gw = K_glue_used + 1
             if gw > ex.gw_max or R > ex.R:
                 self._p2exec_count("shape_unsupported")
+                return None
+            # 퇴화 스텝 감지 (단계1 발견): 엔진이 P2를 축소/비활성한
+            # 스텝은 -1 센티널(slot/ctx/pages/rope) — 실행기가 이를
+            # 모르고 돌면 쓰레기 트리를 populate (실버그). arena
+            # fallback으로 회피. (소형 GPU sync 1회 — 정확성 우선)
+            _degen = int(ctx_len) <= 0
+            if not _degen:
+                _sl_all = torch.stack(
+                    [m[:ex.W] for m in step_slot_maps[:F]])
+                _cl_all = torch.stack(
+                    [c.reshape(-1)[:1] for c in step_context_lens[:F]])
+                _degen = bool((_sl_all < 0).any()) \
+                    or bool((_cl_all <= 0).any()) \
+                    or bool((dbt[0, :need_pages] < 0).any())
+            if not _degen and torch.is_tensor(rope_base):
+                _degen = bool((rope_base[:R] < 0).any())
+            elif not _degen and not torch.is_tensor(rope_base):
+                _degen = any(int(x) < 0 for x in rope_base[:R])
+            if _degen:
+                self._p2exec_count("degenerate_step")
                 return None
             # ── 버퍼 채우기 (host→고정 버퍼; readback 없음)
             from ssd.engine.helpers.cudagraph_helpers import (
@@ -2102,6 +2128,237 @@ class DraftRunner(ModelRunner):
                     bl[r, d] = ex.cell_logits[pc]
                 cur_local, d = nx, d + 1
         return views, (bt.to(self.device), bl), ex.cell_logits
+
+    # ───────────────────── 단계1 (고정 지침) ─────────────────────
+    # 실경로 이중실행 비교: 같은 step의 같은 입력·같은 noise로
+    # executor(그래프)와 arena를 모두 실행, forward별 아티팩트를
+    # 지침 순서로 비교해 '최초 불일치'를 특정한다. 서빙은 arena 결과
+    # (SSD_TREE_STAGE1=1은 진단 전용 모드).
+    def _stage1_init(self):
+        if hasattr(self, "_s1_noise"):
+            return
+        W = self.config.duet_proxy_total_budget
+        F = self.config.duet_phase2_k
+        V = self.hf_config.vocab_size
+        self._s1_gen = torch.Generator(device=self.device)
+        self._s1_gen.manual_seed(20260806)
+        self._s1_noise = [torch.empty(W, V, device=self.device)
+                          for _ in range(F)]
+        self._s1_stats = {"steps": 0, "compared": 0, "skipped": 0,
+                          "first": None, "counts": {}}
+
+    def _stage1_fill_noise(self):
+        for t in self._s1_noise:
+            t.exponential_(1, generator=self._s1_gen)
+
+    def _stage1_scratch_slots(self, step_slot_maps, W):
+        return torch.cat([m[:W].to(torch.int64)
+                          for m in step_slot_maps])
+
+    def _stage1_exec_shadow(self, toks, root_piv, glue_rows, rope_base,
+                            ctx_len, K_glue_used, step_slot_maps,
+                            step_context_lens, dbt, temps, seeds):
+        """executor를 그림자 실행하고 아티팩트 스냅샷을 반환.
+        scratch KV는 실행 전 저장 → 실행 후 (기록분 스냅샷 뒤) 복원."""
+        self._stage1_init()
+        self._stage1_fill_noise()
+        W = self.config.duet_proxy_total_budget
+        L = self.hf_config.num_hidden_layers
+        kvflat = self.kv_cache.view(2, L, -1, *self.kv_cache.shape[-2:])
+        slots = self._stage1_scratch_slots(step_slot_maps, W) \
+            .to(self.device)
+        saved = kvflat[:, :, slots].clone()
+        with torch.inference_mode():
+            r = self._try_p2_executor(
+                toks, root_piv, glue_rows, rope_base, ctx_len,
+                K_glue_used, step_slot_maps, step_context_lens, dbt,
+                temps, seeds)
+        if r is None:
+            kvflat[:, :, slots] = saved
+            self._s1_stats["skipped"] += 1
+            return None
+        ex = self._p2_exec
+        F = ex.F
+        p0 = (int(ctx_len) + self.block_size - 1) // self.block_size
+        if self._s1_stats["steps"] < 30 and p0 in ex.graphs:
+            _lg1 = ex.cell_logits.clone()
+            ex.graphs[p0].replay()
+            torch.cuda.synchronize()
+            _d = float((ex.cell_logits - _lg1).abs().max())
+            k = "exec_selfdiff"
+            if _d != 0.0:
+                self._s1_stats["counts"][k] = \
+                    self._s1_stats["counts"].get(k, 0) + 1
+        art = {
+            "views": r[0],
+            "sel": {f: (ex.dbg_sel[f].clone(), ex.dbg_selv[f].clone())
+                    for f in range(F)},
+            "fan": ex.dbg_fan.clone(),
+            "ids": ex.dbg_ids.clone(),
+            "rope": ex.dbg_rope.clone(),
+            "toks": ex.dbg_toks.clone(),
+            "raws": ex.dbg_raws.clone(),
+            "logits": ex.cell_logits.clone(),
+            "slot": [ex.in_slot[f].clone() for f in range(F)],
+            "ctx": [ex.in_ctx_len[f].clone() for f in range(F)],
+            "pages": ex.wrappers[p0][0]
+                ._paged_kv_indices_buf[:p0 + 1].clone(),
+            "mask": [ex.wrappers[p0][f]._custom_mask_buf.clone()
+                     for f in range(F)],
+            "canvas": ex.wrappers[p0][0]._canvas_cols,
+            "kv": kvflat[:, :, slots].clone(),
+            "p0": p0,
+        }
+        kvflat[:, :, slots] = saved
+        return art
+
+    @staticmethod
+    def _s1_unpack(packed, rows, cols):
+        bits = ((packed.unsqueeze(1)
+                 >> torch.arange(8, device=packed.device)) & 1) \
+            .to(torch.uint8).reshape(-1)
+        return bits[:rows * cols].view(rows, cols)
+
+    def _stage1_diff(self, art, trace, eval_tr, ar, pool, ctx_len,
+                     step_slot_maps, step_context_lens, dbt, root_piv):
+        """지침 순서로 비교, step의 최초 불일치를 기록."""
+        from ssd.engine.helpers import p2_tree as _PT
+        st = self._s1_stats
+        st["compared"] += 1
+        W = self.config.duet_proxy_total_budget
+        F = self.config.duet_phase2_k
+        NV = self.config.duet_tree_nv
+        sel_a, val_a, fan_a = eval_tr
+        first = None
+
+        def mark(f, item, detail=""):
+            nonlocal first
+            key = f"f{f}:{item}" if f is not None else item
+            st["counts"][key] = st["counts"].get(key, 0) + 1
+            st.setdefault("first_by_item", {})
+            if key not in st["first_by_item"]:
+                st["first_by_item"][key] = \
+                    {"step": st["steps"], "detail": detail[:300]}
+            if first is None:
+                first = {"step": st["steps"], "f": f, "item": item,
+                         "detail": detail[:200]}
+
+        # 0. 예산 (CPU판 vs GPU판)
+        bud_cpu = ar._budgets
+        bud_gpu = _PT.alloc_root_budgets_gpu(
+            root_piv.float(), total=F * W,
+            beta=self.config.duet_tree_beta, cap=NV)
+        if not torch.equal(bud_cpu.to(bud_gpu.device), bud_gpu):
+            mark(None, "budget",
+                 f"cpu={bud_cpu.tolist()} gpu={bud_gpu.tolist()}")
+        cols0 = int(ctx_len)
+        for f in range(F):
+            se, ve = art["sel"][f]
+            sa, va = sel_a[f], val_a[f]
+            if not torch.equal(va, ve):
+                mark(f, "sel_valid", f"a={va.tolist()} e={ve.tolist()}")
+                continue
+            if not torch.equal(torch.where(va, sa, torch.zeros_like(sa)),
+                               torch.where(ve, se, torch.zeros_like(se))):
+                mark(f, "sel", f"a={sa.tolist()} e={se.tolist()}")
+                continue
+            if not torch.equal(fan_a[f], art["fan"][f]):
+                mark(f, "fan", f"a={fan_a[f].tolist()} "
+                               f"e={art['fan'][f].tolist()}")
+                continue
+            if not torch.equal(trace["ids"][f], art["ids"][f]):
+                mark(f, "ids", f"a={trace['ids'][f].tolist()} "
+                               f"e={art['ids'][f].tolist()}")
+                continue
+            if not torch.equal(trace["rope"][f], art["rope"][f]):
+                mark(f, "rope", f"a={trace['rope'][f].tolist()} "
+                                f"e={art['rope'][f].tolist()}")
+                continue
+            if not torch.equal(step_slot_maps[f][:W].to(torch.int32),
+                               art["slot"][f]):
+                mark(f, "slot",
+                     f"a={step_slot_maps[f][:W].tolist()} "
+                     f"e={art['slot'][f].tolist()}")
+                continue
+            _ctx_a = step_context_lens[f].reshape(-1)[:1].to(torch.int32)
+            if not torch.equal(_ctx_a, art["ctx"][f].reshape(-1)[:1]):
+                mark(f, "ctx_len", f"a={_ctx_a.tolist()} "
+                                   f"e={art['ctx'][f].tolist()}")
+                continue
+            p0 = art["p0"]
+            if not torch.equal(dbt[0, :p0 + 1].to(torch.int32),
+                               art["pages"]):
+                mark(f, "pages",
+                     f"a={dbt[0, :p0 + 1].tolist()} "
+                     f"e={art['pages'].tolist()}")
+                continue
+            cols = cols0 + f * W
+            em = self._s1_unpack(art["mask"][f], W, art["canvas"])
+            am = self._s1_unpack(trace["packed"][f], W, cols)
+            if not torch.equal(em[:, :cols], am):
+                dc = (em[:, :cols] != am).any(0).nonzero() \
+                    .flatten()[:8].tolist()
+                mark(f, "mask", f"cols={dc}")
+                continue
+            if int(em[:, cols:].sum()) != 0:
+                mark(f, "mask_tail", "")
+                continue
+            dlg = (trace["logits"][f] - art["logits"]
+                   [f * W:(f + 1) * W]).abs().max()
+            if float(dlg) != 0.0:
+                mark(f, "logits", f"absmax={float(dlg):.3e}")
+                continue
+            if not torch.equal(trace["toks"][f], art["toks"][f]):
+                _da = trace["toks"][f]; _de = art["toks"][f]
+                _w = (_da != _de).any(1).nonzero().flatten()[:2]
+                mark(f, "toks",
+                     f"lanes={_w.tolist()} "
+                     f"a={_da[_w].tolist()} e={_de[_w].tolist()}")
+                continue
+            if not torch.allclose(trace["raws"][f].float(),
+                                  art["raws"][f], atol=0, rtol=0):
+                mark(f, "raws", "")
+                continue
+            # 9. 이 라운드 기록 KV (지침 ⑨/⑩ — round f 슬롯 슬라이스)
+            Wl = self.config.duet_proxy_total_budget
+            L = self.hf_config.num_hidden_layers
+            kvflat = self.kv_cache.view(2, L, -1,
+                                        *self.kv_cache.shape[-2:])
+            sl_f = step_slot_maps[f][:Wl].to(torch.int64) \
+                .to(self.device)
+            kv_a = kvflat[:, :, sl_f]
+            kv_e = art["kv"][:, :, f * Wl:(f + 1) * Wl]
+            if not torch.equal(kv_a, kv_e):
+                d = (kv_a.float() - kv_e.float()).abs().max()
+                mark(f, "kv", f"absmax={float(d):.3e}")
+                continue
+        # 12. 최종 views
+        R_l = self.split_k2_layout.MQ_LEN
+        v_ref = _PT.build_root_views(pool, R_l, NV)
+        v_ex = art["views"]
+        if not torch.equal(v_ref["valid"], v_ex["valid"]):
+            mark(None, "views_valid",
+                 f"a={v_ref['valid'].tolist()} "
+                 f"e={v_ex['valid'].tolist()}")
+        else:
+            for key in ("tok", "parent_local", "sib_order"):
+                ok = True
+                for r_i in range(R_l):
+                    n_i = int(v_ref["valid"][r_i])
+                    if not torch.equal(v_ref[key][r_i, :n_i],
+                                       v_ex[key][r_i, :n_i]):
+                        ok = False
+                        break
+                if not ok:
+                    mark(None, f"views_{key}", f"root={r_i}")
+                    break
+        if first is not None and st["first"] is None:
+            st["first"] = first
+            print(f"[stage1] FIRST_MISMATCH {first}", flush=True)
+        st["steps"] += 1
+        if st["steps"] % 300 == 0:
+            print(f"[stage1][periodic] steps={st['steps']} "
+                  f"counts={st['counts']}", flush=True)
 
     def _p2tree_rollout(self, duet_proxy, proxy_forked, proxy_fan_out_tensor,
                         tree_args, layout, step_slot_maps,
@@ -2226,7 +2483,15 @@ class DraftRunner(ModelRunner):
             return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
 
         _mc_p2("p2_prepare", _mev_p2prep)
-        _use_exec = os.environ.get("SSD_TREE_EXEC", "0") == "1"
+        _stage1 = os.environ.get("SSD_TREE_STAGE1", "0") == "1"
+        _s1_art = None
+        if _stage1 and _use_arena:
+            _s1_art = self._stage1_exec_shadow(
+                toks, root_piv, glue_rows, rope_base, ctx_len,
+                K_glue_used, step_slot_maps, step_context_lens, dbt,
+                temps, seeds)
+        _use_exec = (os.environ.get("SSD_TREE_EXEC", "0") == "1"
+                     and not _stage1)
         if _use_exec and _use_arena:
             with torch.inference_mode():
                 # 캡처와 동일 모드 (replay·버퍼 갱신의 inference-tensor 규칙)
@@ -2253,6 +2518,7 @@ class DraftRunner(ModelRunner):
                             torch.initial_seed() % (2**31))
                     _p2gen = self._p2_iso_gen
                 _mev_roll = _mr_p2("p2_rollout")
+                _s1_trace = {} if _s1_art is not None else None
                 _ar, eval_log, cell_logits = _PT.run_rollout_arena(
                     toks[:len(seeds)], root_piv,
                     workspace=self._tree_arena_ws,
@@ -2265,12 +2531,31 @@ class DraftRunner(ModelRunner):
                     fanout_policy=cfg.duet_tree_fanout_policy,
                     context_len=ctx_len, sampler_x=cfg.sampler_x,
                     F_x=cfg.async_fan_out, device=self.device,
-                    p2_gen=_p2gen)
+                    p2_gen=_p2gen,
+                    noise_list=(self._s1_noise if _s1_art is not None
+                                else None),
+                    trace_out=_s1_trace)
                 _mc_p2("p2_rollout", _mev_roll)
+                if _s1_art is not None:
+                    _s1_trace["logits"] = [
+                        cell_logits[i * W:(i + 1) * W]
+                        for i in range(K2)]
                 # 1a 경계: 단일 sync로 기존 view/wire 경로에 접속
                 # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/22)
                 _mev_cv2 = _mr_p2("p2_output_convert")
                 pool = _ar.to_pool(len(seeds))
+                if _s1_art is not None:
+                    try:
+                        self._stage1_diff(
+                            _s1_art, _s1_trace, eval_log, _ar, pool,
+                            ctx_len, step_slot_maps, step_context_lens,
+                            dbt, root_piv)
+                    except Exception as _e1:
+                        import traceback as _tb1
+                        if not hasattr(self, "_s1_err"):
+                            self._s1_err = True
+                            print(f"[stage1] diff error: {_e1}\n"
+                                  f"{_tb1.format_exc()}", flush=True)
                 _topo = os.environ.get("SSD_TREE_TOPO_TRACE", "")
                 if _topo:
                     # 23번 단계2: 대표 고정트리 설계용 오프라인 로그
@@ -3036,6 +3321,16 @@ class DraftRunner(ModelRunner):
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)
                 if getattr(self, "_p2exec_stats", None):
                     print(f"[metrics] p2exec stats: {self._p2exec_stats}", flush=True)
+                if getattr(self, "_s1_stats", None):
+                    _s1 = self._s1_stats
+                    print(f"[stage1] steps={_s1['steps']} "
+                          f"compared={_s1['compared']} "
+                          f"skipped={_s1['skipped']} "
+                          f"first_mismatch={_s1['first']} "
+                          f"counts={_s1['counts']}", flush=True)
+                    for _k, _v in sorted(
+                            _s1.get("first_by_item", {}).items()):
+                        print(f"[stage1][first {_k}] {_v}", flush=True)
                 try:
                     from ssd.engine.helpers.cudagraph_helpers import duet_dump
                     duet_dump("draft")

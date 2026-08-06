@@ -96,6 +96,18 @@ class P2TreeExecutor:
         self.view_pcell = self.out_pcell[:R * NV].view(R, NV)
         self.cell_logits = torch.zeros(F * W, vocab_size,
                                        dtype=torch.float32, device=d)
+        # 단계1 진단 버퍼 (in-graph 기록 — replay마다 갱신, 비용 미미)
+        F_, W_, C_ = self.F, self.W, self.C
+        self.dbg_ids = torch.zeros(F_, W_, dtype=torch.int64, device=d)
+        self.dbg_rope = torch.zeros(F_, W_, dtype=torch.int64, device=d)
+        self.dbg_toks = torch.zeros(F_, W_, C_, dtype=torch.int64,
+                                    device=d)
+        self.dbg_raws = torch.zeros(F_, W_, C_, dtype=torch.float32,
+                                    device=d)
+        self.dbg_fan = torch.zeros(F_, W_, dtype=torch.int64, device=d)
+        self.dbg_sel = torch.zeros(F_, W_, dtype=torch.int64, device=d)
+        self.dbg_selv = torch.zeros(F_, W_, dtype=torch.bool, device=d)
+
         # 캡처 호환 상수
         self.ones_w = torch.ones(W, dtype=torch.uint8, device=d)
         self.lane_w = torch.arange(W, device=d)
@@ -244,6 +256,11 @@ class P2TreeExecutor:
                 self.in_rope_base.gather(0, r_of)
                 + ar.depth.gather(0, sel.clamp(min=0)),
                 self.in_rope_base[0].expand(W))
+            self.dbg_sel[f].copy_(sel)
+            self.dbg_selv[f].copy_(sel_valid)
+            self.dbg_ids[f].copy_(ids)
+            self.dbg_rope[f].copy_(rope)
+            self.dbg_fan[f].copy_(fan)
             self._pack_row_mask(wrappers[f], f)
             # ── raw draft forward (capture-시 context 1회 bake)
             set_context(
@@ -263,6 +280,8 @@ class P2TreeExecutor:
                 generator=self.gen,
                 noise=(self.parity_noise[f]
                        if self.parity_noise is not None else None))
+            self.dbg_toks[f].copy_(toks)
+            self.dbg_raws[f].copy_(raws.float())
             # ── 삽입 + [R,NV] 직접 기록
             lane_cell = f * W + self.lane_w
             ar.cell.scatter_(0, sel.clamp(min=0),

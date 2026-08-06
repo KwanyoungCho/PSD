@@ -1365,7 +1365,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                       glue_rows_by_root, rope_base_by_root, K_glue,
                       context_len, sampler_x=None, F_x=None, pad_token=0,
                       fanout_policy="backbone", device=None,
-                      workspace=None, p2_gen=None):
+                      workspace=None, p2_gen=None, noise_list=None,
+                      trace_out=None):
     """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
 
     정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
@@ -1456,7 +1457,18 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         toks, raws = tree_sample_wor(logits, temps_dev, c_tensor,
                                      sampler_x=sampler_x, F=F_x,
                                      assume_pos_temps=True,
-                                     generator=p2_gen)
+                                     generator=p2_gen,
+                                     noise=(noise_list[f]
+                                            if noise_list is not None
+                                            else None))
+        if trace_out is not None:
+            # 단계1 진단: forward별 아티팩트 (호출자 소유 dict)
+            trace_out.setdefault("ids", []).append(input_ids.clone())
+            trace_out.setdefault("rope", []).append(rope.clone())
+            trace_out.setdefault("packed", []).append(packed.clone())
+            trace_out.setdefault("logits", []).append(logits.clone())
+            trace_out.setdefault("toks", []).append(toks.clone())
+            trace_out.setdefault("raws", []).append(raws.clone())
         # --- 자식 삽입 (lane-major, c-minor — CPU append 순서 동일) ---
         lane_cell = f * W + torch.arange(W, device=dev)
         ar.cell.scatter_(0, sel.clamp(min=0),
