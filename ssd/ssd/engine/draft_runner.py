@@ -2063,9 +2063,14 @@ class DraftRunner(ModelRunner):
             # canvas 여분 페이지(p0번째)가 미할당(-1)이면 유효 페이지로
             # 대체 — mask=0이라 내용 무영향(비연속 ID 전제 검증 완료).
             # 단계2: 이 -1 그대로 사용이 hit 하락 주범 클래스로 특정.
+            # canvas 슬롯은 반드시 '유한값 보장' 유효 페이지여야 한다.
+            # 실측(2026-08-06, tests/diag/test_canvas_nan_poison.py):
+            # mask=0이어도 canvas 페이지에 Inf/NaN이 있으면 fa2 출력
+            # 전체가 NaN (산술식 마스킹의 0×inf) — 페이지 -1(OOB
+            # 읽기)은 메모리 내용에 따라 간헐적으로 트리 전체를
+            # 오염 (tri-AB: e0 ΔP2AL −0.325·심저 1.04 vs e1 −0.065).
             _pages_fill = dbt[0, :need_pages].to(torch.int32).clone()
-            if int(_pages_fill[p0]) < 0 and os.environ.get(
-                    "SSD_TREE_CANVAS_SUB", "1") == "1":
+            if int(_pages_fill[p0]) < 0:
                 _pages_fill[p0] = _pages_fill[0]
             if p0 in ex.wrappers:
                 for f in range(F):
