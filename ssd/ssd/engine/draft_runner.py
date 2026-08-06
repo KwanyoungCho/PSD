@@ -1950,6 +1950,19 @@ class DraftRunner(ModelRunner):
             self._p2exec_stats = {}
         self._p2exec_stats[reason] = self._p2exec_stats.get(reason, 0) + 1
 
+    def _ensure_p2_exec(self):
+        if not hasattr(self, "_p2_exec"):
+            from ssd.engine.helpers.p2_tree_executor import \
+                P2TreeExecutor
+            hf = self.hf_config
+            self._p2_exec = P2TreeExecutor(
+                self.model, self.model.compute_logits, self.config,
+                self.device, self.block_size, self.config.max_blocks,
+                hf.vocab_size, hf.num_attention_heads,
+                hf.num_key_value_heads, hf.head_dim,
+                dtype=hf.torch_dtype)
+        return self._p2_exec
+
     def _try_p2_executor(self, toks, root_piv, glue_rows, rope_base,
                          ctx_len, K_glue_used, step_slot_maps,
                          step_context_lens, dbt, temps, seeds):
@@ -1973,17 +1986,7 @@ class DraftRunner(ModelRunner):
                 if self._p2exec_alt_n % alt == 0:
                     self._p2exec_count("alt_forced_fallback")
                     return None
-            if not hasattr(self, "_p2_exec"):
-                from ssd.engine.helpers.p2_tree_executor import \
-                    P2TreeExecutor
-                hf = self.hf_config
-                self._p2_exec = P2TreeExecutor(
-                    self.model, self.model.compute_logits, cfg,
-                    self.device, self.block_size, cfg.max_blocks,
-                    self.hf_config.vocab_size,
-                    hf.num_attention_heads, hf.num_key_value_heads,
-                    hf.head_dim, dtype=hf.torch_dtype)
-            ex = self._p2_exec
+            ex = self._ensure_p2_exec()
             if os.environ.get("SSD_TREE_STAGE1", "0") == "1" \
                     and ex.parity_noise is None:
                 # 단계1: 캡처 전에 noise 버퍼 주소를 graph에 박음
@@ -2152,6 +2155,455 @@ class DraftRunner(ModelRunner):
                     bl[r, d] = ex.cell_logits[pc]
                 cur_local, d = nx, d + 1
         return views, (bt.to(self.device), bl), ex.cell_logits
+
+    # ───────────── P2 상태-랩 (리뷰 지시: 분 단위 반복 비교) ─────────────
+    # SSD_TREE_LAB=1: 실주행에서 대표 P2 진입 상태 N개(태그별)를
+    # 저장한 뒤, 같은 프로세스에서 KV를 복원해 가며 4-arm 사다리를
+    # 같은 noise로 실행·대조한다. 장시간 generation 없이 최초-차이
+    # 지점(호출경로/canvas/캡처/기록)을 분리한다.
+    #   A: run_rollout_arena + 프로덕션 run_model(엔진 CG) forward
+    #   B: run_rollout_arena + 직접 self.model + 정확길이 JIT plan
+    #   C: 실행기 eager run_once (canvas + GPU 기록)
+    #   D: 실행기 graph replay
+    def _lab_active(self):
+        return os.environ.get("SSD_TREE_LAB", "0") == "1" \
+            and not getattr(self, "_lab_done", False)
+
+    def _lab_classify(self, ctx0, p0, dbt_row, slot_f):
+        bs = self.block_size
+        F = self.config.duet_phase2_k
+        W = self.config.duet_proxy_total_budget
+        tags = []
+        if int(dbt_row[p0]) < 0:
+            tags.append("canvas_missing")
+        if (ctx0 + F * W) > p0 * bs:
+            tags.append("crossing")
+        lpl = ctx0 - (p0 - 1) * bs
+        if lpl <= 2 or lpl >= bs - 1:
+            tags.append("page_edge")
+        if not tags:
+            tags.append("normal")
+        return "+".join(tags)
+
+    def _lab_dump(self, toks, root_piv, glue_rows, rope_base, ctx_len,
+                  K_glue_used, step_slot_maps, step_context_lens, dbt,
+                  temps, seeds):
+        import numpy as _np
+        F = self.config.duet_phase2_k
+        W = self.config.duet_proxy_total_budget
+        ctx0 = int(ctx_len)
+        if ctx0 <= 0:
+            return
+        p0 = (ctx0 + self.block_size - 1) // self.block_size
+        dbt_row = dbt[0].detach().to("cpu").clone()
+        slot0 = step_slot_maps[0][:W].detach().to("cpu")
+        if bool((torch.stack([m[:W].detach().cpu()
+                              for m in step_slot_maps[:F]]) < 0).any()):
+            tag = "degenerate"
+        else:
+            tag = self._lab_classify(ctx0, p0, dbt_row, slot0)
+        if not hasattr(self, "_lab_states"):
+            self._lab_states = []
+            self._lab_tag_counts = {}
+        cap_per_tag = int(os.environ.get("SSD_TREE_LAB_PER_TAG", "12"))
+        n_max = int(os.environ.get("SSD_TREE_LAB_N", "40"))
+        self._lab_seen = getattr(self, "_lab_seen", 0) + 1
+        if self._lab_seen >= int(os.environ.get(
+                "SSD_TREE_LAB_MAX_STEPS", "200")) \
+                and len(self._lab_states) >= 8:
+            self._lab_done = True
+            try:
+                self._run_p2_lab()
+            except Exception as _le2:
+                import traceback as _tb2
+                print(f"[lab] ERROR {_le2}\n{_tb2.format_exc()}",
+                      flush=True)
+            return
+        if self._lab_tag_counts.get(tag, 0) >= cap_per_tag:
+            return
+        self._lab_tag_counts[tag] = self._lab_tag_counts.get(tag, 0) + 1
+        L = self.hf_config.num_hidden_layers
+        pages = [int(x) for x in dbt_row[:p0 + 1].tolist() if x >= 0]
+        kvsnap = {pg: self.kv_cache[:, :, pg].detach().to("cpu").clone()
+                  for pg in sorted(set(pages))}
+        st = {
+            "tag": tag, "ctx0": ctx0, "p0": p0,
+            "toks": toks[:len(seeds)].detach().cpu().clone(),
+            "piv": root_piv[:len(seeds)].detach().float().cpu().clone(),
+            "glue": _np.ascontiguousarray(glue_rows).copy(),
+            "rope": (rope_base.detach().cpu().clone()
+                     if torch.is_tensor(rope_base)
+                     else torch.tensor(list(rope_base),
+                                       dtype=torch.int64)),
+            "K_glue": int(K_glue_used),
+            "slot": [m[:W].detach().cpu().clone()
+                     for m in step_slot_maps[:F]],
+            "clen": [c.reshape(-1)[:1].detach().cpu().clone()
+                     for c in step_context_lens[:F]],
+            "dbt": dbt_row, "temps": float(temps.reshape(-1)[0]),
+            "n_seeds": len(seeds), "kv": kvsnap,
+        }
+        st["_pending_live"] = True
+        self._lab_states.append(st)
+        if len(self._lab_states) >= n_max:
+            self._lab_done = True
+            try:
+                self._run_p2_lab()
+            except Exception as _le:
+                import traceback as _tb
+                print(f"[lab] ERROR {_le}\n{_tb.format_exc()}",
+                      flush=True)
+
+    def _lab_restore_kv(self, st):
+        for pg, buf in st["kv"].items():
+            self.kv_cache[:, :, pg].copy_(buf.to(self.device))
+
+    def _lab_noise(self, idx):
+        F = self.config.duet_phase2_k
+        W = self.config.duet_proxy_total_budget
+        V = self.hf_config.vocab_size
+        g = torch.Generator(device=self.device)
+        g.manual_seed(90000 + idx)
+        return [torch.empty(W, V, device=self.device)
+                .exponential_(1, generator=g) for _ in range(F)]
+
+    def _lab_rollout(self, st, noise, forward_fn):
+        from ssd.engine.helpers import p2_tree as _PT
+        cfg = self.config
+        W = cfg.duet_proxy_total_budget
+        K2 = cfg.duet_phase2_k
+        tr = {}
+        ar, ev, cl = _PT.run_rollout_arena(
+            st["toks"].to(self.device), st["piv"].to(self.device),
+            workspace={}, policy=cfg.duet_tree_policy, W=W, F_total=K2,
+            c_tensor=cfg.duet_tree_c_tensor, nv=cfg.duet_tree_nv,
+            beta=cfg.duet_tree_beta, depth_cap=K2,
+            temps=torch.full((W,), st["temps"], device=self.device),
+            forward_fn=forward_fn, glue_rows_by_root=st["glue"],
+            rope_base_by_root=st["rope"].to(self.device),
+            K_glue=st["K_glue"], fanout_policy=cfg.duet_tree_fanout_policy,
+            context_len=st["ctx0"], sampler_x=cfg.sampler_x,
+            F_x=cfg.async_fan_out, device=self.device,
+            noise_list=noise, trace_out=tr)
+        pool = ar.to_pool(st["n_seeds"])
+        views = _PT.build_root_views(pool, W, cfg.duet_tree_nv)
+        lg = torch.stack([t for t in tr["logits"]]) \
+            if "logits" in tr else cl.view(K2, W, -1)
+        return {"logits": lg.float(),
+                "toks": torch.stack(tr["toks"]),
+                "ids0": tr["ids"][0].clone(),
+                "rope0": tr["rope"][0].clone(),
+                "packed0": tr["packed"][0].clone(),
+                "vtok": views["tok"], "vpar": views["parent_local"],
+                "vval": views["valid"],
+                "nonfinite": int((~torch.isfinite(lg)).sum())}
+
+    def _lab_fwd_A(self, st):
+        """프로덕션 arena forward: mask override + run_model(엔진 CG)."""
+        from ssd.engine.helpers import cudagraph_helpers as _CH
+        W = self.config.duet_proxy_total_budget
+        V = self.hf_config.vocab_size
+        layout = self.split_k2_layout
+        dbt_dev = st["dbt"].to(self.device).unsqueeze(0)
+
+        def fwd(f, ids, rope, packed, indptr):
+            _CH.cache["_tree_mask_override"] = {f: (packed, indptr)}
+            set_context(
+                is_prefill=False,
+                slot_mapping=st["slot"][f].to(self.device),
+                context_lens=st["clen"][f].to(torch.int32)
+                .to(self.device),
+                block_tables=dbt_dev,
+                active_mq_len=W,
+                active_wrappers=self.prefill_wrappers_by_layout.get(
+                    layout.name),
+                active_layout=layout,
+                active_cache_hits_list=[1],
+            )
+            logits = self.run_model(
+                ids.to(self.device), rope.to(self.device),
+                is_prefill=False, last_only=False, tree_decode_step=f,
+                cache_hits=torch.ones(1, dtype=torch.int64,
+                                      device=self.device))
+            reset_context()
+            _CH.cache.pop("_tree_mask_override", None)
+            return logits.view(-1, V)[:W].float()
+        return fwd
+
+    def _lab_fwd_B(self, st):
+        """직접 self.model + 정확길이 JIT plan (canvas 없음)."""
+        import numpy as _np
+        import flashinfer
+        W = self.config.duet_proxy_total_budget
+        bs = self.block_size
+        ctx0 = st["ctx0"]
+        dev = self.device
+        ws = torch.empty(96 * 2**20, dtype=torch.uint8, device=dev)
+
+        def fwd(f, ids, rope, packed, indptr):
+            kv_len = ctx0 + f * W + W
+            p = (kv_len + bs - 1) // bs
+            lpl = kv_len - (p - 1) * bs
+            cols = ctx0 + f * W
+            pk = packed.cpu().numpy()
+            bits = _np.unpackbits(pk, bitorder="little")[:W * cols]
+            m = torch.zeros(W, kv_len, dtype=torch.bool)
+            m[:, :cols] = torch.from_numpy(
+                bits.astype(_np.bool_)).view(W, cols)
+            lane = torch.arange(W)
+            m[lane, cols + lane] = True
+            wr = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
+                ws, "NHD")
+            wr.plan(torch.tensor([0, W], dtype=torch.int32, device=dev),
+                    torch.tensor([0, p], dtype=torch.int32, device=dev),
+                    st["dbt"][:p].to(torch.int32).to(dev),
+                    torch.tensor([lpl], dtype=torch.int32, device=dev),
+                    self.hf_config.num_attention_heads,
+                    self.hf_config.num_key_value_heads,
+                    self.hf_config.head_dim, bs,
+                    custom_mask=m.reshape(-1).to(dev),
+                    q_data_type=self.hf_config.torch_dtype,
+                    kv_data_type=self.hf_config.torch_dtype)
+            set_context(
+                is_prefill=False,
+                slot_mapping=st["slot"][f].to(self.device),
+                context_lens=st["clen"][f].to(torch.int32)
+                .to(self.device),
+                block_tables=st["dbt"].to(self.device).unsqueeze(0),
+                active_mq_len=W,
+                active_wrappers={1: wr},
+            )
+            h = self.model(ids.to(dev), rope.to(dev))
+            logits = self.model.compute_logits(h, False)
+            reset_context()
+            return logits.view(-1, self.hf_config.vocab_size)[:W] \
+                .float()
+        return fwd
+
+    def _lab_exec(self, st, noise, replay):
+        """C(eager) / D(replay): 실행기 경로 — 버퍼 채움 공유."""
+        ex = self._ensure_p2_exec()
+        F = ex.F
+        W = ex.W
+        dev = self.device
+        p0 = st["p0"]
+        ex.parity_noise = noise if not hasattr(ex, "parity_noise") \
+            or ex.parity_noise is None else ex.parity_noise
+        for i in range(F):
+            ex.parity_noise[i].copy_(noise[i])
+        ex.in_root_tok.zero_()
+        ex.in_root_piv.zero_()
+        R = st["n_seeds"]
+        ex.in_root_tok[:R].copy_(st["toks"].to(dev))
+        ex.in_root_piv[:R].copy_(st["piv"].to(dev))
+        ex.in_rope_base[:R].copy_(st["rope"][:R].to(dev))
+        gw = st["K_glue"] + 1
+        ex.in_glue.zero_()
+        ex.in_glue[:R, :gw].copy_(
+            torch.from_numpy(st["glue"][:R, :gw]).to(dev))
+        ex.in_glue_w.fill_(gw)
+        ex.in_temps.fill_(st["temps"])
+        ex.in_prefix_len.fill_(st["ctx0"] - gw - W)
+        ex.in_block_tables.zero_()
+        ex.in_block_tables[0, :st["dbt"].numel()].copy_(
+            st["dbt"].to(torch.int32).to(dev))
+        for f in range(F):
+            ex.in_slot[f].copy_(st["slot"][f].to(torch.int32).to(dev))
+            ex.in_ctx_len[f].copy_(st["clen"][f].to(torch.int32)
+                                   .to(dev))
+        need = p0 + 1
+        pf = st["dbt"][:need].to(torch.int32).to(dev).clone()
+        if int(pf[p0]) < 0:
+            pf[p0] = pf[0]
+        if p0 not in ex.wrappers:
+            ex.prepare_bucket(p0)
+        for f in range(F):
+            ex.wrappers[p0][f]._paged_kv_indices_buf[:need].copy_(pf)
+        if not hasattr(ex, "_local_idx"):
+            ex._local_idx = torch.full((ex.arena.capacity,), -1,
+                                       dtype=torch.int64, device=dev)
+        with torch.inference_mode():
+            if replay:
+                if p0 not in ex.graphs:
+                    ex.capture(p0)
+                else:
+                    ex.graphs[p0].replay()
+                torch.cuda.synchronize()
+            else:
+                ex._local_idx.fill_(-1)
+                ex.run_once(p0)
+        K2 = F
+        lg = ex.cell_logits.view(K2, W, -1).float().clone()
+        return {"logits": lg,
+                "toks": ex.dbg_toks.clone(),
+                "ids0": ex.dbg_ids[0].clone(),
+                "rope0": ex.dbg_rope[0].clone(),
+                "packed0": ex.wrappers[p0][0]._custom_mask_buf.clone(),
+                "vtok": ex.view_tok.cpu().clone(),
+                "vpar": ex.view_par.cpu().clone(),
+                "vval": ex.out_valid.cpu().clone(),
+                "nonfinite": int((~torch.isfinite(lg)).sum())}
+
+    def _lab_compare(self, a, b):
+        """쌍 비교 → (first_item, round, absmax) 또는 None."""
+        F = a["logits"].shape[0]
+        for f in range(F):
+            if a["nonfinite"] or b["nonfinite"]:
+                return ("nonfinite", f,
+                        float(a["nonfinite"] + b["nonfinite"]))
+            d = float((a["logits"][f] - b["logits"][f]).abs().max())
+            if d != 0.0:
+                return ("logits", f, d)
+            if not torch.equal(a["toks"][f].cpu(), b["toks"][f].cpu()):
+                return ("toks", f, 0.0)
+        if not torch.equal(a["vval"].cpu(), b["vval"].cpu()):
+            return ("views_valid", -1, 0.0)
+        for r in range(a["vtok"].shape[0]):
+            n = int(a["vval"][r])
+            if not torch.equal(a["vtok"][r, :n].cpu(),
+                               b["vtok"][r, :n].cpu()):
+                return ("views_tok", -1, 0.0)
+        return None
+
+    def _run_p2_lab(self):
+        with torch.inference_mode():
+            self._run_p2_lab_body()
+        print("[lab] 진단 전용 모드 — draft 프로세스 즉시 종료 "
+              "(서빙 계속 비보장: arm A가 엔진 CG 버퍼를 사용)",
+              flush=True)
+        os._exit(0)
+
+    def _run_p2_lab_body(self):
+        import collections
+        print(f"[lab] === P2 상태-랩 시작: {len(self._lab_states)} "
+              f"states, tags={self._lab_tag_counts} ===", flush=True)
+        pairs = ([("A", "A2"), ("B", "B2"), ("A", "B"),
+                  ("B", "C"), ("A", "C")]
+                 if os.environ.get("SSD_TREE_LAB_AB", "0") == "1"
+                 else []) + [("C", "D")]
+        agg = collections.defaultdict(
+            lambda: {"n": 0, "diff": 0, "max": 0.0, "items": {}})
+        for idx, st in enumerate(self._lab_states):
+            if st["tag"] == "degenerate":
+                continue
+            noise = self._lab_noise(idx)
+            res = {}
+            _ab_on = os.environ.get("SSD_TREE_LAB_AB", "0") == "1"
+            def kvsum():
+                t = 0.0
+                for pg in st["kv"]:
+                    t += float(self.kv_cache[:, :, pg].float().sum())
+                return t
+            try:
+                self._lab_restore_kv(st)
+                kv_pre = kvsum()
+                if _ab_on:
+                    res["A"] = self._lab_rollout(st, noise,
+                                                 self._lab_fwd_A(st))
+                self._lab_restore_kv(st)
+                if abs(kvsum() - kv_pre) > 1e-3:
+                    print(f"[lab] state{idx} KV 복원 불일치(A후)",
+                          flush=True)
+                if _ab_on:
+                    res["B"] = self._lab_rollout(st, noise,
+                                                 self._lab_fwd_B(st))
+                self._lab_restore_kv(st)
+                res["C"] = self._lab_exec(st, noise, replay=False)
+                self._lab_restore_kv(st)
+                res["D"] = self._lab_exec(st, noise, replay=True)
+                self._lab_restore_kv(st)
+                if _ab_on:
+                    res["A2"] = self._lab_rollout(
+                        st, noise, self._lab_fwd_A(st))
+                    self._lab_restore_kv(st)
+                    res["B2"] = self._lab_rollout(
+                        st, noise, self._lab_fwd_B(st))
+                    self._lab_restore_kv(st)
+            except Exception as e:
+                import traceback as _tb
+                print(f"[lab] state{idx} tag={st['tag']} arm 실행 "
+                      f"오류: {e}\n{_tb.format_exc()}", flush=True)
+                continue
+            if "liveF0" in st:
+                lv = st["liveF0"].to(self.device)
+                dLC = float((lv - res["C"]["logits"][0]).abs().max())
+                k = ("liveVsC", st["tag"])
+                agg[k]["n"] += 1
+                if dLC != 0.0:
+                    agg[k]["diff"] += 1
+                    agg[k]["max"] = max(agg[k]["max"], dLC)
+            if idx < 3 and _ab_on:
+                ia, ib, ic = res["A"]["ids0"].cpu(), \
+                    res["B"]["ids0"].cpu(), res["C"]["ids0"].cpu()
+                ra, rb, rc = res["A"]["rope0"].cpu(), \
+                    res["B"]["rope0"].cpu(), res["C"]["rope0"].cpu()
+                print(f"[lab][f0-in] st{idx} ids A==B:{torch.equal(ia,ib)} "
+                      f"B==C:{torch.equal(ib,ic)} | rope A==B:"
+                      f"{torch.equal(ra,rb)} B==C:{torch.equal(rb,rc)} "
+                      f"| packedAB=="
+                      f"{torch.equal(res['A']['packed0'].cpu(), res['B']['packed0'].cpu())}",
+                      flush=True)
+                # C mask(f0)를 unpack해 A packed와 직접 대조
+                W_ = self.config.duet_proxy_total_budget
+                ctx0_ = st["ctx0"]
+                canvas_ = (st["p0"] + 1) * self.block_size
+                em = self._s1_unpack(res["C"]["packed0"], W_, canvas_)
+                pkA = res["A"]["packed0"]
+                bitsA = self._s1_unpack(pkA, W_, ctx0_)
+                mA = torch.zeros(W_, canvas_, dtype=torch.uint8,
+                                 device=em.device)
+                mA[:, :ctx0_] = bitsA.to(em.device)
+                lane_ = torch.arange(W_, device=em.device)
+                mA[lane_, ctx0_ + lane_] = 1
+                dmask = int((em != mA).sum())
+                dcols = (em != mA).any(0).nonzero().flatten()[:6] \
+                    .tolist()
+                _sl0 = st["slot"][0]
+                _off0 = (_sl0 % self.block_size).tolist()
+                print(f"[lab][f0-geom] st{idx} ctx0={ctx0_} "
+                      f"plen+gw={int(self._p2_exec.in_prefix_len) + st['K_glue'] + 1} "
+                      f"slot%bs={_off0[:4]}.. clen={int(st['clen'][0])}",
+                      flush=True)
+                print(f"[lab][f0-mask] st{idx} C-vs-A diffbits={dmask} "
+                      f"cols={dcols} exPrefLen="
+                      f"{int(self._p2_exec.in_prefix_len)} "
+                      f"expect={ctx0_ - (st['K_glue'] + 1) - W_}",
+                      flush=True)
+                if "liveF0" in st:
+                    lv = st["liveF0"].to(self.device)
+                    dLC = float((lv - res["C"]["logits"][0]).abs()
+                                .max())
+                    dLA = float((lv - res["A"]["logits"][0]).abs()
+                                .max())
+                    print(f"[lab][f0-live] st{idx} live-vs-C absmax="
+                          f"{dLC:.3e} live-vs-A absmax={dLA:.3e}",
+                          flush=True)
+                la, lb, lc = res["A"]["logits"][0], \
+                    res["B"]["logits"][0], res["C"]["logits"][0]
+                print(f"[lab][f0-lg] st{idx} "
+                      f"AB absmax={float((la-lb).abs().max()):.3e} "
+                      f"mean={float((la-lb).abs().mean()):.3e} | "
+                      f"BC absmax={float((lb-lc).abs().max()):.3e} "
+                      f"mean={float((lb-lc).abs().mean()):.3e} | "
+                      f"AC absmax={float((la-lc).abs().max()):.3e} "
+                      f"mean={float((la-lc).abs().mean()):.3e}",
+                      flush=True)
+            for x, y in pairs:
+                key = (f"{x}vs{y}", st["tag"])
+                agg[key]["n"] += 1
+                fd = self._lab_compare(res[x], res[y])
+                if fd is not None:
+                    agg[key]["diff"] += 1
+                    agg[key]["max"] = max(agg[key]["max"], fd[2])
+                    ik = f"{fd[0]}@f{fd[1]}"
+                    agg[key]["items"][ik] = \
+                        agg[key]["items"].get(ik, 0) + 1
+        print("[lab] ── 쌍별 최초-차이 요약 ──", flush=True)
+        for (pair, tag), v in sorted(agg.items()):
+            print(f"[lab] {pair:6s} {tag:24s} n={v['n']:3d} "
+                  f"diff={v['diff']:3d} max={v['max']:.3e} "
+                  f"items={v['items']}", flush=True)
+        print("[lab] === 완료 ===", flush=True)
 
     # ───────────────────── 단계1 (고정 지침) ─────────────────────
     # 실경로 이중실행 비교: 같은 step의 같은 입력·같은 noise로
@@ -2576,6 +3028,17 @@ class DraftRunner(ModelRunner):
             return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
 
         _mc_p2("p2_prepare", _mev_p2prep)
+        if self._lab_active():
+            try:
+                self._lab_dump(toks, root_piv, glue_rows, rope_base,
+                               ctx_len, K_glue_used, step_slot_maps,
+                               step_context_lens, dbt, temps, seeds)
+            except Exception as _de:
+                import traceback as _dtb
+                if not hasattr(self, "_lab_dump_err"):
+                    self._lab_dump_err = True
+                    print(f"[lab] dump 오류: {_de}\n"
+                          f"{_dtb.format_exc()}", flush=True)
         _stage1 = os.environ.get("SSD_TREE_STAGE1", "0") == "1"
         if _stage1 and hasattr(self, "_s1_stats") \
                 and self._s1_stats["steps"] >= int(
@@ -2636,6 +3099,14 @@ class DraftRunner(ModelRunner):
                                 else None),
                     trace_out=_s1_trace)
                 _mc_p2("p2_rollout", _mev_roll)
+                if self._lab_active() and \
+                        getattr(self, "_lab_states", None) and \
+                        "liveF0" not in self._lab_states[-1] and \
+                        self._lab_states[-1].get("_pending_live"):
+                    W_ = cfg.duet_proxy_total_budget
+                    self._lab_states[-1]["liveF0"] = \
+                        cell_logits[:W_].float().cpu().clone()
+                    self._lab_states[-1].pop("_pending_live")
                 if _s1_art is not None:
                     _s1_trace["logits"] = [
                         cell_logits[i * W:(i + 1) * W]

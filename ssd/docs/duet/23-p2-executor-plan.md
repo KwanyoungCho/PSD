@@ -660,3 +660,31 @@ raw 분모 기반, 페어드 6쌍)
   **miss_p1_terminal_or_ctx ~2배·miss_terminal_mismatch ~2배**로
   국소화 (P1-계 miss 증가 = 이전 스텝 P2 수락 차이가 다음 스텝
   P1 컨텍스트/종단을 바꾸는 궤적 효과). 다음 조사 대상.
+
+## P2 상태-랩 (2026-08-06, 리뷰 지시 — 분 단위 반복 체제)
+
+### 체제
+실주행에서 대표 P2 진입 상태(태그: normal/crossing/canvas_missing/
+page_edge/degenerate)를 저장 → 같은 프로세스에서 KV 완전 복원 +
+동일 noise로 arm들을 재실행·대조. 러너가 랩 완료 마커를 감시해
+즉시 전체 정리(고아 0초 — os._exit 잔재 스핀 문제 해결).
+반복 비용: 엔진 1회 기동(~3분), 가설당 장시간 generation 불필요.
+
+### 하네스 자체의 기하 오류 발견 (중요)
+slot%bs 실측(=plen+gw+lane)으로 **새 KV는 ctx0 '안'(마지막 W열)에
+쓰임**을 확정 — 이전 참조 구현들(discriminator fwd, lab-A/B)이
+가정한 "ctx0 '뒤'에 붙는" 기하가 오류였고, 그것이 lab 대차이
+(mean 1.5)와 과거 '0.125=커널차' 해석의 교란원이었다. 실행기
+_pack_row_mask의 self=plen+gw+f·W+lane이 물리적으로 옳다.
+
+### live-앵커 판정 (32 상태)
+| 쌍 | 결과 |
+|---|---|
+| live(프로덕션 rollout) vs C(exec eager) f0 | **27/32 bit-동일(0.000)**, crossing 8/8 동일; 잔여 5건 absmax=0.125 |
+| C vs D(graph replay) | 28/32 동일; 4건 toks@f0 (logits 0.000) |
+
+**실행기 forward(canvas plan+직접호출+mask+KV)는 같은 상태에서
+프로덕션과 bit-동일**이 다수 확립. 잔여 2건: ①5건 0.125 — 저장
+상태로 재현 가능해져 layer-훅 최초-발산 국소화 대상 ②CvsD toks
+4건 — noise 배선 미세 이슈. (자기재현 A==A2·B==B2·KV복원 검증
+포함 — 랩 결과의 신뢰성 게이트.)
