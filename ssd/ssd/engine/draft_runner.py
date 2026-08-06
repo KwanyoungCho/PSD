@@ -2240,6 +2240,9 @@ class DraftRunner(ModelRunner):
         p0 = (int(ctx_len) + self.block_size - 1) // self.block_size
         if self._s1_stats["steps"] < 30 and p0 in ex.graphs:
             _lg1 = ex.cell_logits.clone()
+            # 2차 replay 전 scratch KV를 1차 직전 상태로 복원 (리뷰:
+            # 진단 경로가 이후 실행에 영향 주지 않도록)
+            kvflat[:, :, slots] = saved
             ex.graphs[p0].replay()
             torch.cuda.synchronize()
             _d = float((ex.cell_logits - _lg1).abs().max())
@@ -2369,7 +2372,8 @@ class DraftRunner(ModelRunner):
                 continue
             dlg = (trace["logits"][f] - art["logits"]
                    [f * W:(f + 1) * W]).abs().max()
-            if float(dlg) != 0.0:
+            _logits_diff = float(dlg) != 0.0
+            if _logits_diff:
                 mark(f, "logits", f"absmax={float(dlg):.3e}")
                 if f == 0 and st.get("eager_probes", 0) < 3:
                     st["eager_probes"] = st.get("eager_probes", 0) + 1
@@ -2388,18 +2392,17 @@ class DraftRunner(ModelRunner):
                     except Exception as _pe:
                         print(f"[stage1][eager-probe] err {_pe}",
                               flush=True)
-                continue
-            if not torch.equal(trace["toks"][f], art["toks"][f]):
+            if not _logits_diff and \
+                    not torch.equal(trace["toks"][f], art["toks"][f]):
                 _da = trace["toks"][f]; _de = art["toks"][f]
                 _w = (_da != _de).any(1).nonzero().flatten()[:2]
                 mark(f, "toks",
                      f"lanes={_w.tolist()} "
                      f"a={_da[_w].tolist()} e={_de[_w].tolist()}")
-                continue
-            if not torch.allclose(trace["raws"][f].float(),
-                                  art["raws"][f], atol=0, rtol=0):
+            if not _logits_diff and \
+                    not torch.allclose(trace["raws"][f].float(),
+                                       art["raws"][f], atol=0, rtol=0):
                 mark(f, "raws", "")
-                continue
             # 9. 이 라운드 기록 KV (지침 ⑨/⑩ — round f 슬롯 슬라이스)
             Wl = self.config.duet_proxy_total_budget
             L = self.hf_config.num_hidden_layers
@@ -2411,8 +2414,9 @@ class DraftRunner(ModelRunner):
             kv_e = art["kv"][:, :, f * Wl:(f + 1) * Wl]
             if not torch.equal(kv_a, kv_e):
                 d = (kv_a.float() - kv_e.float()).abs().max()
-                mark(f, "kv", f"absmax={float(d):.3e}")
-                continue
+                mark(f, "kv", f"absmax={float(d):.3e}"
+                     + (" (logits-diff step)" if _logits_diff
+                        else " (logits-EQUAL step)"))
         # 12. 최종 views
         R_l = self.split_k2_layout.MQ_LEN
         v_ref = _PT.build_root_views(pool, R_l, NV)
