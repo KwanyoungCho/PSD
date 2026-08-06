@@ -558,3 +558,44 @@ miss 종류별 미기록, 인위 지연 반증 미수행.
 - hit ≤1%p: **FAIL** (−4.6%p)
 → **채택 보류.** 실행기는 플래그(SSD_TREE_EXEC) 뒤 주력 후보로 유지.
 hit 원인 규명 + 후처리 ~11ms 제거 후 최종 채택 재판정. sweep 미개시.
+
+## 고정 지침 단계 0-3 진행 기록 (2026-08-06)
+
+### 단계0 (통과): 측정 교정
+5구간 레이블(양 경로)·union 분석기·미설명 ≤5% (4/4 arm)·구경계
+재현 assert·mask 강화(실메서드 — 비활성 lane self-bit 실버그
+발견·수정)·kernel assertion(미니+실형상 bit동일).
+
+### 단계1 (원인 사슬 완전 특정): 같은 입력·같은 noise 실경로 비교
+- 실버그 2건 수정: ①퇴화-스텝(엔진 -1 센티널) 미감지 →
+  arena fallback ②canvas 여분 페이지 미할당(-1)을 wrapper 인덱스로
+  사용 → 유효 페이지 대체(mask=0 무영향)
+- 최초 불일치 잔여 = logits (입력·mask·per-round KV 전부 bit-동일
+  스텝에서 absmax ~0.1): eager-probe로 **exec-eager==exec-graph
+  bit동일 + 둘 다 arena와 동차** → 두 forward 파이프라인(엔진
+  fi_tree_decode CG vs exec 직접 호출)의 상호 ulp 차 (각자 결정적).
+  커널/plan기하/재실행/RNG 전부 직접 측정으로 배제.
+- 파급: near-tie WOR 순서 뒤집힘 → sel 분기 ~1% → 트리 ~1% 상이.
+
+### 단계2 (분류 완성): miss 6종 완전 분해 (미분류 0)
+동일 seed A/B: 초과 miss = **root_absent +58, terminal_mismatch
++28** (hit 갭과 수량 일치). 키=(seq, ctx-id/종단노드, rec토큰) —
+트리 내용은 **verify 수락 결과→다음 키**를 통해서만 hit에 영향.
+canvas-fix 후 순수 exec(fallback 0) hit 0.75 vs arena 0.80 —
+갭의 지배 분류는 "다음 스텝 seeds가 target rec를 커버 못 함".
+
+### 단계3 (타이밍 가설 최종 폐기): 지연 0/5/10/13ms
+| delay | hit | TPS |
+|---|---|---|
+| 0 | 0.73 | 58.98 |
+| 5 | 0.76 | 54.49 |
+| 10 | 0.75 | 53.50 |
+| 13 | 0.74 | 51.34 |
+hit 무반응(방향성 없는 ±0.015), TPS만 지연만큼 하락, taxonomy
+불변 → **"너무 빨라서 hit 하락" 폐기 확정** (캐시 hit은 시간
+조건이 없는 정확 키 일치임과 정합).
+
+### 남은 가설 (단계2 사슬의 '왜')
+ulp-파생 트리 분기(~1%/step)가 verify의 수락 종단·rec 분포를
+바꿔 다음-키 커버리지를 체계적으로 낮춤 — 매크로 수량은 확정,
+미시 메커니즘(왜 중립이 아니라 불리한가)은 미확정.
