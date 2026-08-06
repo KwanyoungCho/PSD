@@ -688,3 +688,17 @@ _pack_row_mask의 self=plen+gw+f·W+lane이 물리적으로 옳다.
 상태로 재현 가능해져 layer-훅 최초-발산 국소화 대상 ②CvsD toks
 4건 — noise 배선 미세 이슈. (자기재현 A==A2·B==B2·KV복원 검증
 포함 — 랩 결과의 신뢰성 게이트.)
+
+### 최초-발산 연산 규명 완료 (2026-08-06, layer-훅)
+0.125 상태들에서 **22층 hidden 전부 bit-동일(최초발산층=None)** —
+차이는 **lm_head GEMM 단 하나** (fp16 2-3 ulp, 두 CUDA graph의
+캡처별 커널 선택). 최신 코드 랩 게이트: live vs exec **34/36
+bit-동일**(crossing 12/12·canvas_missing 12/12 완전동일, normal
+2/36만 lm_head-ulp), eager==replay 36/36.
+
+**결론(확인)**: 실행기 forward 구현은 프로덕션과 동등 — mask/slot/
+page/KV/22층 전부 bit-동일. 잔여 발산원은 lm_head GEMM ulp 하나로
+특정되며, 이는 near-tie WOR에서만 토큰을 뒤집는 최후-자리 차이.
+과거 '구현 동등성 실패' 우려는 참조 하네스 기하 오류가 만든
+교란이었음. 남은 판정(hit 갭이 이 ulp-발산만으로 설명되는지)은
+로드맵대로 e2e smoke 1회 → 최종 캠페인 6런에서.

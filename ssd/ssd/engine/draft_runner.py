@@ -2444,6 +2444,46 @@ class DraftRunner(ModelRunner):
                 "vval": ex.out_valid.cpu().clone(),
                 "nonfinite": int((~torch.isfinite(lg)).sum())}
 
+    def _lab_layer_probe(self, st, idx, dLC):
+        """0.125 상태: run_model-경유(P, 라이브 동일 경로) vs exec(C)
+        f0 1-forward를 layer-훅으로 비교 → 최초 발산 층."""
+        layers = self.model.model.layers
+        caps = {"P": [], "C": []}
+        cur = {"k": None}
+
+        def mk(i):
+            def hook(mod, inp, out):
+                h = out[0] if isinstance(out, tuple) else out
+                caps[cur["k"]].append(h.detach().float().clone())
+            return hook
+
+        hs = [ly.register_forward_hook(mk(i))
+              for i, ly in enumerate(layers)]
+        try:
+            noise = self._lab_noise(idx)
+            self._lab_restore_kv(st)
+            cur["k"] = "P"
+            self._lab_rollout(st, noise, self._lab_fwd_A(st))
+            capsP = caps["P"][:len(layers)]
+            self._lab_restore_kv(st)
+            cur["k"] = "C"
+            self._lab_exec(st, noise, replay=False)
+            capsC = caps["C"][:len(layers)]
+        finally:
+            for h in hs:
+                h.remove()
+        W = self.config.duet_proxy_total_budget
+        first = None
+        for i, (a, b) in enumerate(zip(capsP, capsC)):
+            d = float((a[:W] - b[:W]).abs().max())
+            if d != 0.0 and first is None:
+                first = i
+            if i < 3 or (first is not None and i <= first + 1):
+                print(f"[lab][layer] st{idx} L{i} absmax={d:.3e}",
+                      flush=True)
+        print(f"[lab][layer] st{idx} dLC={dLC:.3e} 최초발산층="
+              f"{first}", flush=True)
+
     def _lab_compare(self, a, b):
         """쌍 비교 → (first_item, round, absmax) 또는 None."""
         F = a["logits"].shape[0]
@@ -2532,6 +2572,13 @@ class DraftRunner(ModelRunner):
                 if dLC != 0.0:
                     agg[k]["diff"] += 1
                     agg[k]["max"] = max(agg[k]["max"], dLC)
+                    if agg[k]["diff"] <= 2:
+                        try:
+                            self._lab_layer_probe(st, idx, dLC)
+                        except Exception as _lpe:
+                            import traceback as _lptb
+                            print(f"[lab][layer] err {_lpe}\n"
+                                  f"{_lptb.format_exc()}", flush=True)
             if idx < 3 and _ab_on:
                 ia, ib, ic = res["A"]["ids0"].cpu(), \
                     res["B"]["ids0"].cpu(), res["C"]["ids0"].cpu()
