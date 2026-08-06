@@ -3236,6 +3236,12 @@ class DraftRunner(ModelRunner):
             draft_layout=_layout_k1)
         if getattr(self, "_tree_views", None) is not None:
             self._invalidate_zero_valid_tree_keys()
+        # 단계3 (고정 지침): 캐시 완성 후 고정 지연 — "너무 빨라서
+        # hit 하락" 가설의 1회성 반증 실험 전용 (sweep 아님)
+        _dly = float(os.environ.get("SSD_TREE_EXEC_DELAY_MS", "0"))
+        if _dly > 0:
+            torch.cuda.synchronize()
+            time.sleep(_dly / 1000.0)
 
 
     def _merge_and_populate_cache(self, draft_args, draft_tokens, draft_logits,
