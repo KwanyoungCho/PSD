@@ -433,6 +433,9 @@ class DraftRunner(ModelRunner):
         # DUET-only: per-seq phase classification (0=miss, 1=phase 1 draft, 2=phase 2 proxy).
         # All zeros for non-DUET — verifier silently accumulates 0s and reports 0 phase rates.
         phase_source = torch.zeros(B, dtype=torch.int64, device=self.device)
+        if os.environ.get("SSD_TREE_STAGE2", "0") == "1" and B == 1 \
+                and hasattr(self, "_s2_pre"):
+            self._stage2_classify(request_keys[0])
         if self.tree_cache_keys.numel() > 0:
             # Vectorized membership against tensor cache
             eq = (request_keys.unsqueeze(1) == self.tree_cache_keys.unsqueeze(0))  # [B,T,3]
@@ -1237,6 +1240,9 @@ class DraftRunner(ModelRunner):
         if _zv.numel():
             self.tree_cache_keys[
                 self._last_n_draft_keys + _zv.to(self.device)] = -1
+        if os.environ.get("SSD_TREE_STAGE2", "0") == "1" \
+                and hasattr(self, "_s2_pre"):
+            self._s2_post = self.tree_cache_keys.clone()
 
     def _tree_backbone_project(self, pool, R, K2, cell_logits,
                                n_roots=None):
@@ -2012,7 +2018,8 @@ class DraftRunner(ModelRunner):
                     _dg_why = "slot"
                 elif bool((_cl_all <= 0).any()):
                     _dg_why = "ctxlen"
-                elif bool((dbt[0, :need_pages] < 0).any()):
+                elif bool((dbt[0, :p0] < 0).any()):
+                    # 실 페이지 -1 = 진짜 퇴화 (canvas 슬롯은 대체)
                     _dg_why = "pages"
             if _dg_why is None and torch.is_tensor(rope_base):
                 if bool((rope_base[:R] < 0).any()):
@@ -2053,11 +2060,16 @@ class DraftRunner(ModelRunner):
                     step_context_lens[f][:1, 0].to(torch.int32)
                     if step_context_lens[f].dim() > 1
                     else step_context_lens[f][:1].to(torch.int32))
+            # canvas 여분 페이지(p0번째)가 미할당(-1)이면 유효 페이지로
+            # 대체 — mask=0이라 내용 무영향(비연속 ID 전제 검증 완료).
+            # 단계2: 이 -1 그대로 사용이 hit 하락 주범 클래스로 특정.
+            _pages_fill = dbt[0, :need_pages].to(torch.int32).clone()
+            if int(_pages_fill[p0]) < 0:
+                _pages_fill[p0] = _pages_fill[0]
             if p0 in ex.wrappers:
                 for f in range(F):
                     ex.wrappers[p0][f]._paged_kv_indices_buf[
-                        :need_pages].copy_(
-                        dbt[0, :need_pages].to(torch.int32))
+                        :need_pages].copy_(_pages_fill)
             _mc_x("p2_prepare", _mev_prep)
             # ── capture(최초) 또는 replay
             _mev_rep = _mr_x("p2_graph_replay")
@@ -2065,8 +2077,7 @@ class DraftRunner(ModelRunner):
                 ex.prepare_bucket(p0)
                 for f in range(F):
                     ex.wrappers[p0][f]._paged_kv_indices_buf[
-                        :need_pages].copy_(
-                        dbt[0, :need_pages].to(torch.int32))
+                        :need_pages].copy_(_pages_fill)
                 ex.capture(p0)       # 캡처 pass 자체가 이 요청을 실행
                 self._p2exec_count("capture")
             else:
@@ -2141,6 +2152,46 @@ class DraftRunner(ModelRunner):
     # executor(그래프)와 arena를 모두 실행, forward별 아티팩트를
     # 지침 순서로 비교해 '최초 불일치'를 특정한다. 서빙은 arena 결과
     # (SSD_TREE_STAGE1=1은 진단 전용 모드).
+    def _stage2_classify(self, req):
+        """단계2: 이 요청이 hit인지, miss라면 어느 단계에서
+        사라졌는지 정확히 한 종류로 분류."""
+        c = self._s2_counts
+        def bump(k):
+            c[k] = c.get(k, 0) + 1
+        pre, post = self._s2_pre, getattr(self, "_s2_post", None)
+        if post is None:
+            post = self.tree_cache_keys
+        nd = self._s2_ndraft
+        req = req.to(pre.device)
+        # 현재 캐시(hit 판정과 동일 대상)에서 exact?
+        cur = self.tree_cache_keys
+        if cur.numel() and bool((cur == req).all(1).any()):
+            hit_idx = int((cur == req).all(1).float().argmax())
+            bump("hit_p1" if hit_idx < nd else "hit_p2")
+            return
+        # miss — 아래 순서로 정확히 1분류
+        if bool((pre == req).all(1).any()):
+            pre_idx = int((pre == req).all(1).float().argmax())
+            if not bool((post == req).all(1).any()):
+                bump("miss_invalidated" if pre_idx >= nd
+                     else "miss_p1_gone")
+            else:
+                bump("miss_unclassified_present")
+            return
+        p2 = pre[nd:]
+        p1 = pre[:nd]
+        if bool((p1[:, 0] == req[0]).any()) is False \
+                and bool((p2[:, 0] == req[0]).any()) is False:
+            bump("miss_other_seq")
+            return
+        if bool((p2[:, 2] == req[2]).any()):
+            bump("miss_terminal_mismatch")
+            return
+        if bool((p1[:, 2] == req[2]).any()):
+            bump("miss_p1_terminal_or_ctx")
+            return
+        bump("miss_root_absent")
+
     def _stage1_init(self):
         if hasattr(self, "_s1_noise"):
             return
@@ -2298,11 +2349,12 @@ class DraftRunner(ModelRunner):
                                    f"e={art['ctx'][f].tolist()}")
                 continue
             p0 = art["p0"]
-            if not torch.equal(art["a_pages"][:p0 + 1].to(torch.int32),
-                               art["pages"]):
+            _ap = art["a_pages"][:p0 + 1].to(torch.int32).clone()
+            if int(_ap[p0]) < 0:
+                _ap[p0] = _ap[0]        # canvas 대체 규약 미러
+            if not torch.equal(_ap, art["pages"]):
                 mark(f, "pages",
-                     f"a={art['a_pages'][:p0 + 1].tolist()} "
-                     f"e={art['pages'].tolist()}")
+                     f"a={_ap.tolist()} e={art['pages'].tolist()}")
                 continue
             cols = cols0 + f * W
             em = self._s1_unpack(art["mask"][f], W, art["canvas"])
@@ -3265,6 +3317,15 @@ class DraftRunner(ModelRunner):
         # Boundary for phase 1 (draft-sourced) vs phase 2 (proxy-sourced) classification
         # in the next hit_cache_and_respond lookup.
         self._last_n_draft_keys = draft_keys.shape[0]
+        if os.environ.get("SSD_TREE_STAGE2", "0") == "1":
+            # 단계2: miss 분류용 스냅샷 (무효화 전 키 + 생성 시점)
+            if not hasattr(self, "_s2_gen"):
+                self._s2_gen = 0
+                self._s2_counts = {}
+            self._s2_gen += 1
+            self._s2_pre = self.tree_cache_keys.clone()
+            self._s2_ndraft = int(self._last_n_draft_keys)
+            self._s2_gen_at = self._s2_gen
         self.tree_cache_tokens = torch.cat([draft_tokens, proxy_tokens], dim=0)
         self.tree_cache_logits = torch.cat([draft_logits, proxy_logits], dim=0)
         if draft_acts is not None and proxy_acts is not None:
@@ -3359,6 +3420,9 @@ class DraftRunner(ModelRunner):
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)
                 if getattr(self, "_p2exec_stats", None):
                     print(f"[metrics] p2exec stats: {self._p2exec_stats}", flush=True)
+                if getattr(self, "_s2_counts", None):
+                    print(f"[stage2] miss taxonomy: {self._s2_counts}",
+                          flush=True)
                 if getattr(self, "_s1_stats", None):
                     _s1 = self._s1_stats
                     print(f"[stage1] steps={_s1['steps']} "
