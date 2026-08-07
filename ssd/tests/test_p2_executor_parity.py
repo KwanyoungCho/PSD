@@ -26,6 +26,13 @@ class _MiniCfg:
     duet_tree_c_tensor = 3
     duet_tree_nv = 8
     duet_tree_beta = 0.5
+    duet_tree_policy = "level"
+    duet_tree_proxy_threshold = 0.01
+    duet_tree_conf_threshold = 0.03
+
+    @property
+    def duet_p2_seed_count(self):
+        return self.duet_tree_root_count
 
 
 class _MiniDraft(nn.Module):
@@ -69,9 +76,12 @@ class TestExecutorModuleParity(unittest.TestCase):
         gc.collect()
         torch.cuda.synchronize()
 
-    def _mk(self, dev, PAGE=64):
+    def _mk(self, dev, PAGE=64, policy="level"):
         V, H, HKV, D = 128, 4, 2, 64
         cfg = _MiniCfg()
+        cfg.duet_tree_policy = policy
+        if policy in ("coverage", "eagle", "adaptive"):
+            cfg.duet_tree_root_count = cfg.duet_proxy_total_budget
         max_blocks = 8
         cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
                             dtype=torch.float16, device=dev)
@@ -85,7 +95,10 @@ class TestExecutorModuleParity(unittest.TestCase):
         g = torch.Generator().manual_seed(7)
         ex.in_root_tok.copy_(torch.randint(0, 100, (R,), generator=g)
                              .to(ex.dev))
-        piv = torch.tensor([.4, .2, .1, .06, .03, .01])
+        if R == 6:
+            piv = torch.tensor([.4, .2, .1, .06, .03, .01])
+        else:
+            piv = torch.linspace(.4, .01, R)
         ex.in_root_piv.copy_(piv.to(ex.dev))
         ex.in_rope_base.fill_(ctx0 - 1)
         gw = ex.F + 1                       # 이 테스트의 실 glue 폭
@@ -126,7 +139,9 @@ class TestExecutorModuleParity(unittest.TestCase):
         ex.run_once(p0)
         ref = {k: getattr(ex, k).clone()
                for k in ("view_tok", "view_par", "view_sib", "view_rawq",
-                         "view_pcell", "out_valid")}
+                         "view_pcell", "out_valid", "out_pq_ref",
+                         "out_pq_cells", "out_u_valid",
+                         "out_backbone_tok", "out_backbone_logits")}
         ref_logits = ex.cell_logits.clone()
         ref_cache = ex.model.cache.clone()
         # ── 캡처 + replay (동일 입력·동일 noise)
@@ -135,7 +150,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         ex.model.cache.zero_()
         for t in ref.values():
             pass
-        g.replay()
+        ex.replay(p0)
         torch.cuda.synchronize()
         for k, v in ref.items():
             got = getattr(ex, k)
@@ -154,7 +169,214 @@ class TestExecutorModuleParity(unittest.TestCase):
         vt = ex.out_valid.cpu()
         self.assertTrue(int(vt.sum()) > ex.R)
         self.assertTrue(bool((vt <= ex.NV).all()))
+        self.assertEqual(tuple(vt.shape), (ex.W,))
+        self.assertTrue(torch.equal(vt[ex.R:],
+                                    torch.zeros(ex.W - ex.R,
+                                                dtype=vt.dtype)))
         del g
+
+    def test_z_coverage_executor_keeps_chain_plus_siblings_for_all_roots(self):
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev, policy="coverage")
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        gN = torch.Generator().manual_seed(44)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(1, generator=gN).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx = torch.full((ex.arena.capacity,), -1,
+                                   dtype=torch.int64, device=dev)
+        ex.run_once(p0)
+        torch.cuda.synchronize()
+
+        self.assertEqual(ex.R, ex.W)
+        self.assertEqual(ex.out_valid.cpu().tolist(), [ex.NV] * ex.W)
+        expected_par = [-1, -1, -1, 0, 0, 0, 3, 6]
+        expected_sib = [0, 1, 2, 0, 1, 2, 0, 0]
+        for r in range(ex.W):
+            self.assertEqual(ex.view_par[r].cpu().tolist(), expected_par)
+            self.assertEqual(ex.view_sib[r].cpu().tolist(), expected_sib)
+        # FlashInfer wrappers own persistent CUDA workspaces.  Release this
+        # deliberately different R=10 fixture before inherited R=6 capture
+        # tests construct their wrappers in the same unittest process.
+        del ex
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def test_z_eagle_executor_capture_and_dynamic_root_depths(self):
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev, policy="eagle")
+        # This synthetic V=128 model is close to uniform (q≈1/128), whereas
+        # the production 32k model's calibrated floor is 0.03.  Use the same
+        # threshold code path at the fixture's probability scale; applying a
+        # model-specific production value here would intentionally make every
+        # synthetic child a leaf and invalidate this topology-diversity test.
+        cfg.duet_tree_proxy_threshold = 0.01
+        cfg.duet_tree_conf_threshold = 0.005
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        # Make root probability differences large enough that the globally
+        # selected later parents are not one mandatory tip per root.
+        ex.in_root_piv.copy_(torch.tensor(
+            [.70, .12, .06, .04, .025, .018, .014, .01, .008, .005],
+            device=dev))
+        gN = torch.Generator().manual_seed(45)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(1, generator=gN).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx = torch.full((ex.arena.capacity,), -1,
+                                   dtype=torch.int64, device=dev)
+        ex.model.cache.zero_()
+        ex._local_idx.fill_(-1)
+        ex.run_once(p0)
+        ref = {k: getattr(ex, k).clone() for k in (
+            "view_tok", "view_par", "view_sib", "view_rawq",
+            "view_pcell", "out_valid", "out_pq_ref", "out_pq_cells",
+            "out_u_valid")}
+        # Every root is evaluated in round zero and therefore has a usable
+        # view, but later depth is allocated by the global score.
+        valid = ex.out_valid.cpu()
+        self.assertTrue(bool((valid >= 1).all()))
+        self.assertGreater(len(set(valid.tolist())), 1)
+
+        ex.model.cache.zero_()
+        ex.capture(p0)
+        ex.model.cache.zero_()
+        ex.replay(p0)
+        torch.cuda.synchronize()
+        for k, v in ref.items():
+            got = getattr(ex, k)
+            if got.dtype.is_floating_point:
+                self.assertTrue(torch.allclose(v, got, atol=1e-3,
+                                               rtol=1e-3), k)
+            else:
+                self.assertTrue(torch.equal(v, got), k)
+        del ex
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def test_z_adaptive_executor_keeps_depth_and_varies_only_width(self):
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev, policy="adaptive")
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        ex.in_root_piv.copy_(torch.tensor(
+            [.70, .12, .06, .04, .025, .018, .014, .01, .008, .005],
+            device=dev))
+        gN = torch.Generator().manual_seed(47)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(1, generator=gN).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx.fill_(-1)
+        ex.run_once(p0)
+        torch.cuda.synchronize()
+        valid = ex.out_valid.cpu()
+        self.assertTrue(bool((valid >= ex.F).all()))
+        self.assertGreater(len(set(valid.tolist())), 1)
+        par = ex.view_par.cpu()
+        sib = ex.view_sib.cpu()
+        for r in range(ex.R):
+            cur = -1
+            depth = 0
+            for _ in range(ex.F):
+                kids = [j for j in range(int(valid[r]))
+                        if int(par[r, j]) == cur and int(sib[r, j]) == 0]
+                self.assertTrue(kids, (r, depth, valid[r].item()))
+                cur = kids[0]
+                depth += 1
+            self.assertEqual(depth, ex.F)
+
+        ref = {k: getattr(ex, k).clone() for k in (
+            "view_tok", "view_par", "view_sib", "view_rawq",
+            "view_pcell", "out_valid", "out_pq_ref", "out_pq_cells",
+            "out_u_valid")}
+        ex.capture(p0)
+        ex.replay(p0)
+        torch.cuda.synchronize()
+        for k, v in ref.items():
+            got = getattr(ex, k)
+            if got.dtype.is_floating_point:
+                self.assertTrue(torch.allclose(v, got, atol=1e-3,
+                                               rtol=1e-3), k)
+            else:
+                self.assertTrue(torch.equal(v, got), k)
+        del ex
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def test_z_eagle_multiple_bucket_graphs_keep_live_local_index(self):
+        """Later bucket capture must not orphan earlier graph state.
+
+        Production warmup captures several page-count buckets up front.  A
+        former capture()-local allocation left every graph writing a
+        different unreachable ``_local_idx`` tensor, while a later attempted
+        global shared tensor broke real-model graph isolation.  Buffers are
+        now retained per bucket and replay selects the matching one.
+        """
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev, policy="eagle")
+        gN = torch.Generator().manual_seed(46)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(1, generator=gN).to(dev)
+            for _ in range(ex.F)]
+        buckets = []
+        local_ptrs = []
+        workspace_ptrs = []
+        for ctx0 in (PAGE + 21, 2 * PAGE + 21):
+            p0 = (ctx0 + PAGE - 1) // PAGE
+            ex.prepare_bucket(p0)
+            workspace_ptrs.append(
+                ex._float_ws_by_bucket[p0].data_ptr())
+            self._fill_inputs(ex, PAGE, ctx0)
+            ex.capture(p0)
+            local_ptrs.append(ex._local_idx.data_ptr())
+            self.assertEqual(
+                ex._local_idx_by_bucket[p0].data_ptr(),
+                ex._local_idx.data_ptr())
+            buckets.append((p0, ctx0))
+        self.assertEqual(len(set(local_ptrs)), len(local_ptrs))
+        self.assertEqual(len(set(workspace_ptrs)), len(workspace_ptrs))
+
+        # Replay the first graph after the second was captured.  Its selected
+        # non-root parents must still map to the local ids emitted in views.
+        p0, ctx0 = buckets[0]
+        self._fill_inputs(ex, PAGE, ctx0)
+        ex.replay(p0)
+        torch.cuda.synchronize()
+        self.assertEqual(ex._local_idx.data_ptr(),
+                         ex._local_idx_by_bucket[p0].data_ptr())
+        for f in range(1, ex.F):
+            sel = ex.dbg_sel[f]
+            valid = ex.dbg_selv[f]
+            if bool(valid.any()):
+                self.assertTrue(bool(
+                    (ex._local_idx.gather(0, sel[valid]) >= 0).all()))
+        del ex
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def test_z_prime_capture_inputs_are_finite_and_active(self):
+        dev = "cuda:0"
+        ex, _cfg, PAGE, _V = self._mk(dev, policy="eagle")
+        p0 = 3
+        ex.prepare_bucket(p0)
+        ex.prime_capture_inputs(p0)
+        self.assertTrue(all(bool((x > 0).all()) for x in ex.in_ctx_len))
+        self.assertTrue(all(bool((x >= 0).all()) for x in ex.in_slot))
+        self.assertTrue(bool(torch.isfinite(ex.in_root_piv).all()))
+        self.assertTrue(bool((ex.in_root_piv > 0).all()))
+        for wr in ex.wrappers[p0]:
+            self.assertTrue(bool((wr._paged_kv_indices_buf >= 0).all()))
 
 
 @unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no fi/cuda")
@@ -307,8 +529,14 @@ class TestExecutorVsArenaSemantics(unittest.TestCase):
         # (18/40 민감성 — 실측 확인) → arena-vs-exec 의미 판정은
         # 분포 지표(인터리브 AL)로 (리뷰12 §7 fallback 규정).
         pe = ex.arena.to_pool(R)
-        ve = PT2.build_root_views(pe, R, NV)
-        self.assertTrue(torch.equal(ve["valid"], ex.out_valid.cpu()))
+        ve = PT2.build_root_views(pe, R, NV,
+                                  cell_logits=ex.cell_logits)
+        self.assertEqual(tuple(ex.out_valid.shape), (W,))
+        self.assertTrue(torch.equal(ve["valid"],
+                                    ex.out_valid[:R].cpu()))
+        self.assertTrue(torch.equal(
+            ex.out_valid[R:].cpu(),
+            torch.zeros(W - R, dtype=ex.out_valid.dtype)))
         for r in range(R):
             n = int(ve["valid"][r])
             for key, exbuf in (("tok", ex.view_tok),
@@ -320,6 +548,53 @@ class TestExecutorVsArenaSemantics(unittest.TestCase):
             self.assertTrue(torch.allclose(
                 ve["raw_q"][r, :n], ex.view_rawq[r, :n].cpu(),
                 atol=1e-5), f"기록기: root {r} raw_q")
+
+        # ── ③ 최종 소비자 계약 exact: parent-q 번호, wire 블록,
+        # cache populate용 backbone까지 CPU arena 기준과 동일해야 한다.
+        for key, got in (("parent_q_ref", ex.out_pq_ref),
+                         ("parent_q_cells", ex.out_pq_cells),
+                         ("u_valid", ex.out_u_valid)):
+            self.assertTrue(torch.equal(ve[key], got[:R].cpu()), key)
+
+        exec_view = {
+            "valid": ex.out_valid, "u_valid": ex.out_u_valid,
+            "tok": ex.view_tok, "parent_local": ex.view_par,
+            "sib_order": ex.view_sib, "parent_q_ref": ex.out_pq_ref,
+        }
+        bt_ref = torch.zeros(R, F, dtype=torch.int64)
+        bl_ref = torch.zeros(R, F, V, dtype=ex.dtype)
+        for r in range(R):
+            wire_ref = PT2.pack_tree_ints(ve, r, NV)
+            wire_gpu = PT2.pack_tree_ints(exec_view, r, NV).cpu()
+            self.assertTrue(torch.equal(wire_ref, wire_gpu),
+                            f"root {r} wire")
+            n = int(ve["valid"][r])
+            first_child = {}
+            for j in range(n):
+                par = int(ve["parent_local"][r, j])
+                if int(ve["sib_order"][r, j]) == 0 \
+                        and par not in first_child:
+                    first_child[par] = j
+            cur = -1
+            for depth in range(F):
+                if cur not in first_child:
+                    break
+                child = first_child[cur]
+                bt_ref[r, depth] = ve["tok"][r, child]
+                qref = int(ve["parent_q_ref"][r, child])
+                pcell = int(ve["parent_q_cells"][r, qref])
+                bl_ref[r, depth] = ex.cell_logits[pcell].cpu().to(ex.dtype)
+                cur = child
+        self.assertTrue(torch.equal(
+            bt_ref, ex.out_backbone_tok[:R].cpu()), "backbone token")
+        self.assertTrue(torch.equal(
+            bl_ref, ex.out_backbone_logits[:R].cpu()), "backbone logits")
+        # Cache/layout consumers use W physical rows.  Non-root tail rows are
+        # deterministic invalid padding, not a shortened R-row payload.
+        self.assertEqual(tuple(ex.view_tok.shape), (W, NV))
+        self.assertTrue(bool((ex.out_valid[R:] == 0).all()))
+        self.assertTrue(bool((ex.out_backbone_tok[R:] == 0).all()))
+        self.assertTrue(bool((ex.out_backbone_logits[R:] == 0).all()))
 
 
 @unittest.skipUnless(HAS_FI and torch.cuda.is_available(), "no fi/cuda")
@@ -346,7 +621,9 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
     def _snap(self, ex):
         out = {k: getattr(ex, k).clone()
                for k in ("view_tok", "view_par", "view_sib",
-                         "view_rawq", "view_pcell", "out_valid")}
+                         "view_rawq", "view_pcell", "out_valid",
+                         "out_pq_ref", "out_pq_cells", "out_u_valid",
+                         "out_backbone_tok", "out_backbone_logits")}
         out["logits"] = ex.cell_logits.clone()
         return out
 
@@ -379,7 +656,7 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
             ex.model.cache.zero_()
             g = ex.capture(p0)
             ex.model.cache.zero_()
-            g.replay()
+            ex.replay(p0)
             torch.cuda.synchronize()
             self._assert_snap(ref, self._snap(ex), f"ctx0={ctx0}")
             del g
@@ -399,7 +676,7 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
         ex.model.cache.zero_()
         g = ex.capture(p0)
         ex.model.cache.zero_()
-        g.replay()
+        ex.replay(p0)
         torch.cuda.synchronize()
         ref = self._snap(ex)
         # 물리 재배치: 논리 page 0,1,2 → 물리 5,3,7 (max_blocks=8)
@@ -412,7 +689,7 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
             phys = kvi.cpu()[pos // PAGE] * PAGE + pos % PAGE
             ex.in_slot[f].copy_(phys.to(torch.int32).to(dev))
         ex.model.cache.zero_()
-        g.replay()
+        ex.replay(p0)
         torch.cuda.synchronize()
         self._assert_snap(ref, self._snap(ex), "page-swap")
         del g
@@ -433,7 +710,7 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
         ex.model.cache.zero_()
         g = ex.capture(p0)
         ex.model.cache.zero_()
-        g.replay()
+        ex.replay(p0)
         torch.cuda.synchronize()
         ref = self._snap(ex)
         for i in range(20):
@@ -451,7 +728,7 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
             # A 입력 복원 → replay == 최초 A
             self._fill_inputs(ex, PAGE, ctx0)
             ex.model.cache.zero_()
-            g.replay()
+            ex.replay(p0)
             torch.cuda.synchronize()
             self._assert_snap(ref, self._snap(ex), f"iter{i}")
         del g
@@ -472,7 +749,7 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
         g = ex.capture(p0)
         SEN = 7.0
         ex.model.cache.fill_(SEN)
-        g.replay()
+        ex.replay(p0)
         torch.cuda.synchronize()
         cache = ex.model.cache
         written = torch.zeros(cache.shape[0] * PAGE,
@@ -492,4 +769,3 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
 
 if __name__ == "__main__":
     unittest.main()
-

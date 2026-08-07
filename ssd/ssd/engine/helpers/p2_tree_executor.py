@@ -15,16 +15,237 @@ compute_logits → WOR 샘플(전용 generator) → 자식 삽입 + [R,Nv] 직�
 - 미지원 조건(비-Llama draft/EAGLE/B>1/temp0/페이지 초과)은 호출측
   arena fallback.
 
-v1 범위: [R,Nv] tok/par/sib/raw_q/parent_cell/valid 를 graph가 직접
-기록. parent-q uniq(U-slot) 매핑만 임시 debug 경로(호출측 소형 CPU
-변환)로 허용 — 리뷰12 §2 단서.
+최종 범위: [W,Nv] tok/par/sib/raw_q/parent_cell/valid, parent-q
+uniq(U-slot) 매핑, chain 호환 backbone token/logits까지 graph가 직접
+기록한다. 실제 root는 앞 R행에만 존재하고 W-R행은 항상 무효인
+padding이다. 이 물리 폭 W 계약은 cache key/layout 폭과 같아야 한다.
+호출측은 고정 출력 버퍼의 view만 넘기며 CPU 변환이 없다.
 """
+import os
 import torch
+import triton
+import triton.language as tl
 
 import flashinfer
 
 from ssd.utils.context import set_context, reset_context
 from ssd.engine.helpers import p2_tree as PT
+
+
+@triton.jit
+def _reset_tree_executor_kernel(
+    parent_idx_ptr, parent_cell_ptr, logpri_ptr, state_ptr, cell_ptr,
+    valid_ptr, anc_ptr, n_ptr, local_idx_ptr,
+    out_tok_ptr, out_par_ptr, out_sib_ptr, out_rawq_ptr, out_pcell_ptr,
+    out_valid_ptr,
+    ARENA_N: tl.constexpr, OUT_N: tl.constexpr, OUT_ROWS: tl.constexpr,
+    BLOCK: tl.constexpr,
+):
+    """Fuse the fixed-address arena/output reset into one launch.
+
+    A CUDA graph removes host launch overhead, but the GPU still executes
+    every captured ``fill_``/``zero_`` as a separate tiny kernel.  These
+    fields have independent, constant reset values and are safe to clear in
+    one bandwidth-light kernel before each four-round rollout.
+    """
+    i = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    am = i < ARENA_N
+    tl.store(parent_idx_ptr + i, -1, mask=am)
+    tl.store(parent_cell_ptr + i, -1, mask=am)
+    tl.store(logpri_ptr + i, float("-inf"), mask=am)
+    tl.store(state_ptr + i, 0, mask=am)
+    tl.store(cell_ptr + i, -1, mask=am)
+    tl.store(valid_ptr + i, 0, mask=am)
+    tl.store(anc_ptr + i, 0, mask=am)
+    tl.store(local_idx_ptr + i, -1, mask=am)
+
+    om = i < OUT_N
+    tl.store(out_tok_ptr + i, 0, mask=om)
+    tl.store(out_par_ptr + i, -1, mask=om)
+    tl.store(out_sib_ptr + i, 0, mask=om)
+    tl.store(out_rawq_ptr + i, 0.0, mask=om)
+    tl.store(out_pcell_ptr + i, -1, mask=om)
+    tl.store(out_valid_ptr + i, 0, mask=i < OUT_ROWS)
+    tl.store(n_ptr, 0, mask=tl.program_id(0) == 0)
+
+
+@triton.jit
+def _insert_tree_children_kernel(
+    # round inputs
+    sel_ptr, sel_valid_ptr, fan_ptr, toks_ptr, rawq_ptr, child_lp_ptr,
+    # arena state
+    tok_ptr, parent_idx_ptr, depth_ptr, root_ptr, sib_ptr, logpri_ptr,
+    arena_rawq_ptr, state_ptr, cell_ptr, valid_ptr, anc_ptr, n_ptr,
+    local_idx_ptr,
+    # fixed output views
+    out_tok_ptr, out_par_ptr, out_sib_ptr, out_rawq_ptr, out_pcell_ptr,
+    out_valid_ptr,
+    # optional backbone-tip state used by non-global policies
+    tip_idx_ptr, tip_depth_ptr,
+    ROUND: tl.constexpr, W: tl.constexpr, R: tl.constexpr,
+    C: tl.constexpr, NV: tl.constexpr, GLOBAL: tl.constexpr,
+):
+    """Insert one sampled round and record root-local views in one launch.
+
+    The old fixed-shape PyTorch expression expanded this tiny W*C operation
+    into scatter/gather/one_hot/cumsum kernels.  One scalar Triton program is
+    intentional here: W<=10 and C<=3 in the supported executor, so serial
+    bookkeeping is far cheaper than launching and synchronising dozens of
+    kernels.  Model forward and sampling stay unchanged.
+    """
+    n0 = tl.load(n_ptr)
+    total_fan = tl.full((), 0, tl.int64)
+
+    # Mark selected parents as expanded and assign their forward-cell ids.
+    for lane in tl.static_range(0, W):
+        sv = tl.load(sel_valid_ptr + lane)
+        parent = tl.load(sel_ptr + lane)
+        tl.store(cell_ptr + parent, ROUND * W + lane, mask=sv)
+        tl.store(state_ptr + parent, 1, mask=sv)
+
+    # Insert children in the exact historical lane-major, then sibling-major
+    # order.  Root-local rank is counted from the pre-round out_valid value;
+    # out_valid itself is updated only after all children, avoiding atomics.
+    for lane in tl.static_range(0, W):
+        sv = tl.load(sel_valid_ptr + lane)
+        parent = tl.load(sel_ptr + lane)
+        nf = tl.load(fan_ptr + lane)
+        root = tl.load(root_ptr + parent, mask=sv, other=0)
+        pdepth = tl.load(depth_ptr + parent, mask=sv, other=0)
+        pcell = tl.load(cell_ptr + parent, mask=sv, other=-1)
+        panc = tl.load(anc_ptr + parent, mask=sv, other=0)
+        parent_local = tl.load(local_idx_ptr + parent, mask=sv, other=-1)
+
+        for child in tl.static_range(0, C):
+            flat = lane * C + child
+            active = sv & (child < nf)
+            slot = n0 + total_fan + child
+            rq = tl.load(rawq_ptr + flat)
+            ok = active & (rq > 0.0)
+
+            tl.store(tok_ptr + slot, tl.load(toks_ptr + flat), mask=active)
+            tl.store(parent_idx_ptr + slot, parent, mask=active)
+            tl.store(depth_ptr + slot, pdepth + 1, mask=active)
+            tl.store(root_ptr + slot, root, mask=active)
+            tl.store(sib_ptr + slot, child, mask=active)
+            tl.store(logpri_ptr + slot, tl.load(child_lp_ptr + flat),
+                     mask=active)
+            tl.store(arena_rawq_ptr + slot, rq, mask=active)
+            tl.store(valid_ptr + slot, ok, mask=active)
+            tl.store(state_ptr + slot, tl.where(ok, 0, 1), mask=active)
+            tl.store(anc_ptr + slot, panc | (1 << pcell), mask=active)
+
+            # Number of accepted children of the same root preceding this
+            # item in lane-major order.  Static bounds make this a tiny
+            # compile-time-unrolled scan and preserve exact view ordering.
+            prior = tl.full((), 0, tl.int64)
+            for prev_lane in tl.static_range(0, W):
+                psv = tl.load(sel_valid_ptr + prev_lane)
+                pp = tl.load(sel_ptr + prev_lane)
+                pnf = tl.load(fan_ptr + prev_lane)
+                proot = tl.load(root_ptr + pp, mask=psv, other=-1)
+                for prev_child in tl.static_range(0, C):
+                    precedes = ((prev_lane < lane) | ((prev_lane == lane)
+                                & (prev_child < child)))
+                    prq = tl.load(rawq_ptr + prev_lane * C + prev_child)
+                    prior += (precedes & psv & (prev_child < pnf)
+                              & (prq > 0.0) & (proot == root)).to(tl.int64)
+
+            local = tl.load(out_valid_ptr + root, mask=ok, other=0) + prior
+            write = ok & (local < NV)
+            dst = root * NV + local
+            tl.store(out_tok_ptr + dst, tl.load(toks_ptr + flat), mask=write)
+            tl.store(out_par_ptr + dst, parent_local, mask=write)
+            tl.store(out_sib_ptr + dst, child, mask=write)
+            tl.store(out_rawq_ptr + dst, rq, mask=write)
+            tl.store(out_pcell_ptr + dst, pcell, mask=write)
+            # Every active slot receives a deterministic local marker, even
+            # if an invalid/overflow child is not exposed in the view.
+            tl.store(local_idx_ptr + slot, tl.where(write, local, -1),
+                     mask=active)
+
+        # The current lane's children occupy a contiguous arena range.
+        if not GLOBAL:
+            is_tip = sv & (parent == tl.load(tip_idx_ptr + root)) & (nf > 0)
+            tl.store(tip_idx_ptr + root, n0 + total_fan, mask=is_tip)
+            old_depth = tl.load(tip_depth_ptr + root, mask=is_tip, other=0)
+            tl.store(tip_depth_ptr + root, old_depth + 1, mask=is_tip)
+        total_fan += nf
+
+    # Commit accepted counts after every local rank has read the old base.
+    for rr in tl.static_range(0, R):
+        accepted = tl.full((), 0, tl.int64)
+        for lane in tl.static_range(0, W):
+            sv = tl.load(sel_valid_ptr + lane)
+            pp = tl.load(sel_ptr + lane)
+            nf = tl.load(fan_ptr + lane)
+            proot = tl.load(root_ptr + pp, mask=sv, other=-1)
+            for child in tl.static_range(0, C):
+                rq = tl.load(rawq_ptr + lane * C + child)
+                accepted += (sv & (child < nf) & (rq > 0.0)
+                             & (proot == rr)).to(tl.int64)
+        old = tl.load(out_valid_ptr + rr)
+        tl.store(out_valid_ptr + rr, old + accepted)
+    tl.store(n_ptr, n0 + total_fan)
+
+
+@triton.jit
+def _finalize_tree_meta_kernel(
+    tok_ptr, par_ptr, sib_ptr, pcell_ptr, valid_ptr,
+    pq_ref_ptr, pq_cells_ptr, u_valid_ptr,
+    backbone_tok_ptr, backbone_pcell_ptr,
+    NV: tl.constexpr, F: tl.constexpr,
+):
+    """One program per root; NV/F are tiny compile-time constants."""
+    r = tl.program_id(0)
+    base = r * NV
+    n = tl.load(valid_ptr + r)
+
+    # Deterministic padding for the fixed-width wire buffers.
+    for j in tl.static_range(0, NV):
+        tl.store(pq_ref_ptr + base + j, -1)
+        tl.store(pq_cells_ptr + base + j, -1)
+
+    # First-occurrence parent-cell numbering (build_root_views contract).
+    u = tl.full((), 0, tl.int64)
+    for j in tl.static_range(0, NV):
+        pc = tl.load(pcell_ptr + base + j)
+        j_valid = j < n
+        seen = tl.full((), 0, tl.int1)
+        ref = u
+        for k in tl.static_range(0, j):
+            same = (k < n) & (tl.load(pcell_ptr + base + k) == pc)
+            seen = seen | same
+            ref = tl.where(same, tl.load(pq_ref_ptr + base + k), ref)
+        is_new = j_valid & ~seen
+        tl.store(pq_cells_ptr + base + u, pc, mask=is_new)
+        tl.store(pq_ref_ptr + base + j,
+                 tl.where(j_valid, ref, -1))
+        u += is_new.to(tl.int64)
+    tl.store(u_valid_ptr + r, u)
+
+    # First-child backbone projection.  Save parent-cell ids; a second,
+    # vocabulary-parallel kernel gathers the corresponding logits.
+    cur = tl.full((), -1, tl.int64)
+    for depth in tl.static_range(0, F):
+        found = tl.full((), 0, tl.int1)
+        child = tl.full((), -1, tl.int64)
+        child_tok = tl.full((), 0, tl.int64)
+        child_pc = tl.full((), -1, tl.int64)
+        for j in tl.static_range(0, NV):
+            take = ((j < n) & ~found
+                    & (tl.load(par_ptr + base + j) == cur)
+                    & (tl.load(sib_ptr + base + j) == 0))
+            child = tl.where(take, j, child)
+            child_tok = tl.where(take, tl.load(tok_ptr + base + j),
+                                 child_tok)
+            child_pc = tl.where(take, tl.load(pcell_ptr + base + j),
+                                child_pc)
+            found = found | take
+        out = r * F + depth
+        tl.store(backbone_tok_ptr + out, child_tok)
+        tl.store(backbone_pcell_ptr + out, child_pc)
+        cur = tl.where(found, child, -2)
 
 
 class P2TreeExecutor:
@@ -42,7 +263,11 @@ class P2TreeExecutor:
         self.H, self.HKV, self.D = num_heads, num_kv_heads, head_dim
         self.dtype = dtype
         self.W = int(config.duet_proxy_total_budget)
-        self.R = int(config.duet_tree_root_count or self.W)
+        # Config owns the canonical active-root rule.  In particular,
+        # confidence mode uses the same automatic R for the selector, eager
+        # reference path, and captured executor; duplicating the old
+        # ``confidence => W`` special case here silently changed topology.
+        self.R = int(config.duet_p2_seed_count)
         self.F = int(config.duet_phase2_k)
         self.C = int(config.duet_tree_c_tensor)
         self.NV = int(config.duet_tree_nv)
@@ -57,6 +282,10 @@ class P2TreeExecutor:
         self.gw_max = gw_max
         self.in_glue = torch.zeros(R, gw_max, dtype=torch.uint8,
                                    device=d)
+        # Persistent pinned staging avoids constructing a short-lived CUDA
+        # tensor from the NumPy glue matrix on every P2 step.
+        self.in_glue_host = torch.empty(R, gw_max, dtype=torch.uint8,
+                                        pin_memory=True)
         # 실 glue 폭 (요청별 상이 — spec 열 정렬에 필요; 내용-구동)
         self.in_glue_w = torch.zeros(1, dtype=torch.int64, device=d)
         self.in_temps = torch.zeros(W, dtype=torch.float32, device=d)
@@ -66,6 +295,8 @@ class P2TreeExecutor:
                            for _ in range(F)]
         self.in_block_tables = torch.zeros(1, max_blocks,
                                            dtype=torch.int32, device=d)
+        self.in_page_ids = torch.empty(max_blocks, dtype=torch.int32,
+                                       device=d)
         # prefix 경계는 버킷 내 요청마다 달라짐 — 캡처에 박히면 안
         # 되는 '내용' (버퍼 구동; python int 슬라이싱 금지)
         self.in_prefix_len = torch.zeros(1, dtype=torch.int64, device=d)
@@ -73,29 +304,50 @@ class P2TreeExecutor:
         self.arena = PT.TreeArena(R + F * W * C, d)
         self.gen = torch.Generator(device=d)
         self.gen.manual_seed(torch.initial_seed() % (2**31))
+        # 출력의 물리 행 수는 root 수 R이 아니라 layout/cache-key 폭 W.
+        # R<W일 때도 소비자는 proxy root id 0..W-1로 뷰를 조회한다.
+        # 앞 R행만 실제 root이고 뒤 W-R행은 valid=0 padding이다.
+        out_r = W
+        self.out_rows = out_r
         # +1 더미 슬롯: 제외 항목 라우팅용 (index-0 충돌 방지 —
         # 중복-scatter 승자미정, tip 버그와 동일 계열; 판별 parity로
         # 발견). view는 [:, :NV]만 소비.
-        self.out_tok = torch.zeros(R * NV + 1, dtype=torch.int64,
+        self.out_tok = torch.zeros(out_r * NV + 1, dtype=torch.int64,
                                    device=d)
-        self.out_par = torch.full((R * NV + 1,), -1, dtype=torch.int64,
+        self.out_par = torch.full((out_r * NV + 1,), -1,
+                                  dtype=torch.int64,
                                   device=d)
-        self.out_sib = torch.zeros(R * NV + 1, dtype=torch.int64,
+        self.out_sib = torch.zeros(out_r * NV + 1, dtype=torch.int64,
                                    device=d)
-        self.out_rawq = torch.zeros(R * NV + 1, dtype=torch.float32,
+        self.out_rawq = torch.zeros(out_r * NV + 1, dtype=torch.float32,
                                     device=d)
-        self.out_pcell = torch.full((R * NV + 1,), -1, dtype=torch.int64,
+        self.out_pcell = torch.full((out_r * NV + 1,), -1,
+                                    dtype=torch.int64,
                                     device=d)
-        self.out_valid = torch.zeros(R, dtype=torch.int64, device=d)
+        self.out_valid = torch.zeros(out_r, dtype=torch.int64, device=d)
 
-        # 소비자용 [R,NV] 뷰 (더미 슬롯 제외)
-        self.view_tok = self.out_tok[:R * NV].view(R, NV)
-        self.view_par = self.out_par[:R * NV].view(R, NV)
-        self.view_sib = self.out_sib[:R * NV].view(R, NV)
-        self.view_rawq = self.out_rawq[:R * NV].view(R, NV)
-        self.view_pcell = self.out_pcell[:R * NV].view(R, NV)
+        # 소비자용 [W,NV] 뷰 (더미 슬롯 제외)
+        self.view_tok = self.out_tok[:out_r * NV].view(out_r, NV)
+        self.view_par = self.out_par[:out_r * NV].view(out_r, NV)
+        self.view_sib = self.out_sib[:out_r * NV].view(out_r, NV)
+        self.view_rawq = self.out_rawq[:out_r * NV].view(out_r, NV)
+        self.view_pcell = self.out_pcell[:out_r * NV].view(out_r, NV)
         self.cell_logits = torch.zeros(F * W, vocab_size,
                                        dtype=torch.float32, device=d)
+        # 최종 소비자 계약도 graph 안에서 직접 생성한다.  이 버퍼들은
+        # replay마다 같은 주소에서 갱신되며, 호출측은 참조만 전달한다.
+        self.out_pq_ref = torch.full((out_r, NV), -1, dtype=torch.int64,
+                                     device=d)
+        self.out_pq_cells = torch.full((out_r, NV), -1,
+                                       dtype=torch.int64,
+                                       device=d)
+        self.out_u_valid = torch.zeros(out_r, dtype=torch.int64, device=d)
+        self.out_backbone_tok = torch.zeros(out_r, F, dtype=torch.int64,
+                                            device=d)
+        self.out_backbone_pcell = torch.full(
+            (out_r, F), -1, dtype=torch.int64, device=d)
+        self.out_backbone_logits = torch.zeros(
+            out_r, F, vocab_size, dtype=dtype, device=d)
         # 단계1 진단 버퍼 (in-graph 기록 — replay마다 갱신, 비용 미미)
         F_, W_, C_ = self.F, self.W, self.C
         self.dbg_ids = torch.zeros(F_, W_, dtype=torch.int64, device=d)
@@ -108,6 +360,17 @@ class P2TreeExecutor:
         self.dbg_sel = torch.zeros(F_, W_, dtype=torch.int64, device=d)
         self.dbg_selv = torch.zeros(F_, W_, dtype=torch.bool, device=d)
 
+        # Arena node -> root-local output index.  CUDA graphs for different
+        # page buckets must not share mutable internal state.  Keep one live
+        # tensor per bucket and point ``_local_idx`` at the bucket being
+        # captured/replayed so diagnostics observe the right graph state.
+        # (A prior single shared tensor made seven pre-captured real-model
+        # graphs intermittently illegal-access; the original per-capture
+        # tensors were safe but became unreachable to the audit.)
+        self._local_idx = torch.full((self.arena.capacity,), -1,
+                                     dtype=torch.int64, device=d)
+        self._local_idx_by_bucket = {}
+
         # 캡처 호환 상수
         self.ones_w = torch.ones(W, dtype=torch.uint8, device=d)
         self.lane_w = torch.arange(W, device=d)
@@ -118,11 +381,27 @@ class P2TreeExecutor:
         # 교체 가능 → eager/replay 동일 noise 주입 비교.
         self.parity_noise = None
         self.wrappers = {}                     # n_pages → [wrapper]*F
-        self._float_ws = torch.empty(128 * 2**20, dtype=torch.uint8,
-                                     device=d)
+        # FlashInfer wrappers keep plan-specific auxiliary state.  Sharing a
+        # single workspace across wrappers of the *same* page shape is safe
+        # because all rounds use the same plan and execute serially.  Sharing
+        # it across different page shapes leaves graph lifetime dependent on
+        # FlashInfer's workspace reuse details.  That was one of two mutable
+        # aliases in the failing all-bucket path.  Isolate it so every graph
+        # remains self-contained regardless of backend implementation.
+        #
+        # Keep one modest FA2 workspace per page bucket.  The production
+        # TinyLlama shape requests about 41 MiB for batch_prefill_tmp_v (the
+        # mini-model tests request much less), so retain a 64 MiB safety
+        # margin while avoiding 7*128 MiB.  The size remains overridable for
+        # future model shapes.
+        self._workspace_bytes = int(os.environ.get(
+            "SSD_TREE_EXEC_WORKSPACE_MB", "64")) * 2**20
+        if self._workspace_bytes <= 0:
+            raise ValueError("SSD_TREE_EXEC_WORKSPACE_MB must be positive")
+        self._float_ws_by_bucket = {}
 
     # ---------- 버킷 준비 ----------
-    def _mk_round_wrapper(self, n_pages_r, canvas_cols):
+    def _mk_round_wrapper(self, n_pages_r, canvas_cols, float_workspace):
         d = self.dev
         W = self.W
         qo = torch.tensor([0, W], dtype=torch.int32, device=d)
@@ -132,7 +411,7 @@ class P2TreeExecutor:
         n_pk = (W * canvas_cols + 7) // 8
         mask_buf = torch.zeros(n_pk, dtype=torch.uint8, device=d)
         wr = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-            self._float_ws, "NHD", backend="fa2", use_cuda_graph=True,
+            float_workspace, "NHD", backend="fa2", use_cuda_graph=True,
             qo_indptr_buf=qo, paged_kv_indptr_buf=kvp,
             paged_kv_indices_buf=kvi, paged_kv_last_page_len_buf=lpl,
             custom_mask_buf=mask_buf,
@@ -150,13 +429,46 @@ class P2TreeExecutor:
         """버킷 = 시작 page 수. round r의 canvas = (p0+1) page 고정
         (전제 검증: p+1 전체-page 0-mask 안전)."""
         F, W = self.F, self.W
+        float_workspace = self._float_ws_by_bucket.get(n_pages0)
+        if float_workspace is None:
+            float_workspace = torch.empty(
+                self._workspace_bytes, dtype=torch.uint8, device=self.dev)
+            self._float_ws_by_bucket[n_pages0] = float_workspace
         wrappers = []
         for f in range(F):
             canvas_pages = n_pages0 + 1
             wrappers.append(self._mk_round_wrapper(
-                canvas_pages, canvas_pages * self.bs))
+                canvas_pages, canvas_pages * self.bs, float_workspace))
         self.wrappers[n_pages0] = wrappers
         return wrappers
+
+    @torch.inference_mode()
+    def prime_capture_inputs(self, n_pages0):
+        """Install a finite, fully-active synthetic request before capture.
+
+        Startup capture previously used constructor-zero state: context
+        length zero, repeated slot zero and no productive tree nodes.  That
+        is not a valid representative of the kernels replayed in service and
+        made all-bucket capture depend on data-degenerate launch behaviour;
+        use production-valid launch geometry instead.
+        KV page 0 is zero-initialized by ModelRunner, so mapping every canvas
+        page to it is finite and safe; the custom mask exposes only the
+        synthetic cells written below.
+        """
+        if n_pages0 not in self.wrappers:
+            self.prepare_bucket(n_pages0)
+        self.in_root_tok.zero_()
+        self.in_root_piv.fill_(1.0 / max(1, self.R))
+        self.in_rope_base.zero_()
+        self.in_glue.zero_()
+        self.in_glue_w.zero_()
+        self.in_temps.fill_(0.7)
+        self.in_prefix_len.zero_()
+        self.in_block_tables.zero_()
+        for f in range(self.F):
+            self.in_slot[f].copy_(f * self.W + self.lane_w)
+            self.in_ctx_len[f].fill_((f + 1) * self.W)
+            self.wrappers[n_pages0][f]._paged_kv_indices_buf.zero_()
 
     # ---------- 본체 (캡처 대상) ----------
     def _pack_row_mask(self, wr, f):
@@ -215,35 +527,80 @@ class P2TreeExecutor:
             1, dtype=torch.int64).to(torch.uint8)
         wr._custom_mask_buf[:packed.numel()].copy_(packed)
 
-    def run_once(self, n_pages0):
-        """캡처 시 1회 트레이스 (replay 의미는 버퍼 내용에 의해)."""
+    def run_once(self, n_pages0, finalize=True):
+        """Execute the fixed-shape P2 body once.
+
+        ``finalize=False`` is used for CUDA graph capture.  The four draft
+        rounds and all inter-round dependencies remain captured, while the
+        final data-dependent row gather is launched immediately after replay.
+        Capturing that last gather caused intermittent graph-only illegal
+        accesses even though the same indices were valid in eager execution.
+        """
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
         ar = self.arena
-        ar.reset()
-        budgets = PT.alloc_root_budgets_gpu(
-            self.in_root_piv, total=F * W, beta=self.cfg.duet_tree_beta,
-            cap=NV)
+        _reset_n = max(ar.capacity, self.out_tok.numel(),
+                       self.out_valid.numel())
+        _reset_tree_executor_kernel[(triton.cdiv(_reset_n, 256),)](
+            ar.parent_idx, ar.parent_cell, ar.logpri, ar.state, ar.cell,
+            ar.valid, ar.anc_bits, ar.n, self._local_idx,
+            self.out_tok, self.out_par, self.out_sib, self.out_rawq,
+            self.out_pcell, self.out_valid,
+            ARENA_N=ar.capacity, OUT_N=self.out_tok.numel(),
+            OUT_ROWS=self.out_valid.numel(), BLOCK=256)
+        policy = getattr(self.cfg, "duet_tree_policy", "level")
+        if policy in ("coverage", "eagle", "adaptive"):
+            # Stored children are not forward cells.  A single parent
+            # forward already samples C ordered WOR children, so retaining
+            # siblings up to NV does not add model calls or change the fixed
+            # F x W CUDA graph shape.
+            budgets = torch.where(
+                self.in_root_piv > 0,
+                torch.full_like(self.in_root_piv, NV, dtype=torch.int64),
+                torch.zeros_like(self.in_root_piv, dtype=torch.int64))
+        else:
+            _beta = (0.5 if policy == "confidence"
+                     else self.cfg.duet_tree_beta)
+            budgets = PT.alloc_root_budgets_gpu(
+                self.in_root_piv, total=F * W, beta=_beta, cap=NV)
         remaining = budgets.clone()
         ar.tok[:R] = self.in_root_tok
         ar.root[:R] = self.arange_R
         ar.logpri[:R] = self.in_root_piv.clamp_min(1e-9) \
             .log().double()
+        # Keep physical roots present for arena/reference index parity.  A
+        # zero P_iv gives them zero child budget, while sanitized token/rope
+        # values keep their fixed-width padding forwards model-safe.
         ar.valid[:R] = True
         ar.n += R
-        self.out_valid.zero_()
-        self.out_par.fill_(-1)
-        self.out_pcell.fill_(-1)
         tip_idx = self.arange_R.clone()
         tip_depth = torch.zeros(R, dtype=torch.int64, device=self.dev)
         self._sel = {}
         wrappers = self.wrappers[n_pages0]
         for f in range(F):
-            sel, sel_valid = PT._arena_select(ar, "level", W, f, F,
-                                              tip_idx, remaining)
+            _global = policy == "eagle"
+            if _global:
+                sel, sel_valid = PT._arena_select_global(
+                    ar, W, f, F, remaining,
+                    future_rounds=F - f - 1, R=R,
+                    proxy_threshold=float(getattr(
+                        self.cfg, "duet_tree_proxy_threshold", 0.0)),
+                    conf_threshold=float(getattr(
+                        self.cfg, "duet_tree_conf_threshold", 0.0)))
+            else:
+                sel, sel_valid = PT._arena_select(
+                    ar, "level", W, f, F, tip_idx, remaining)
             self._sel[f] = (sel, sel_valid)
-            reserve = (F - tip_depth).clamp(min=0)
-            fan = PT._arena_fanout_backbone(ar, sel, sel_valid, tip_idx,
-                                            remaining, reserve, C, R)
+            if _global:
+                fan = PT._arena_fanout_global(
+                    ar, sel, sel_valid, remaining, C, R,
+                    future_rounds=F - f - 1)
+            else:
+                reserve = (F - tip_depth).clamp(min=0)
+                _fanout_fn = (PT._arena_fanout_adaptive
+                              if policy == "adaptive"
+                              else PT._arena_fanout_backbone)
+                fan = _fanout_fn(
+                    ar, sel, sel_valid, tip_idx, remaining, reserve, C, R)
             r_of = torch.where(sel_valid,
                                ar.root.gather(0, sel.clamp(min=0)),
                                torch.zeros_like(sel))
@@ -271,9 +628,11 @@ class P2TreeExecutor:
                 active_mq_len=W,
                 active_wrappers={1: wrappers[f]},
             )
-            hidden = self.model(ids, rope)
-            logits = self.compute_logits(hidden, False)[:W].float()
-            reset_context()
+            try:
+                hidden = self.model(ids, rope)
+                logits = self.compute_logits(hidden, False)[:W].float()
+            finally:
+                reset_context()
             self.cell_logits[f * W:(f + 1) * W] = logits
             toks, raws = PT.tree_sample_wor(
                 logits, self.in_temps, C, assume_pos_temps=True,
@@ -282,84 +641,62 @@ class P2TreeExecutor:
                        if self.parity_noise is not None else None))
             self.dbg_toks[f].copy_(toks)
             self.dbg_raws[f].copy_(raws.float())
-            # ── 삽입 + [R,NV] 직접 기록
-            lane_cell = f * W + self.lane_w
-            ar.cell.scatter_(0, sel.clamp(min=0),
-                             torch.where(sel_valid, lane_cell,
-                                         ar.cell.gather(
-                                             0, sel.clamp(min=0))))
-            ar.state.scatter_(0, sel.clamp(min=0),
-                              torch.where(sel_valid,
-                                          torch.ones_like(sel),
-                                          ar.state.gather(
-                                              0, sel.clamp(min=0))))
-            offs = ar.n + torch.cumsum(fan, 0) - fan
-            cgrid = torch.arange(C, device=self.dev)
-            slot = offs.unsqueeze(1) + cgrid.unsqueeze(0)
-            child_ok = cgrid.unsqueeze(0) < fan.unsqueeze(1)
-            scratch = ar.capacity - 1
-            sl = torch.where(child_ok, slot,
-                             torch.full_like(slot, scratch)).reshape(-1)
+            # ── 삽입 + [R,NV] 직접 기록.  Probability arithmetic remains
+            # in PyTorch to preserve the exact priority values used by the
+            # selector; the integer bookkeeping itself is one tiny kernel.
             par = sel.unsqueeze(1).expand(W, C).reshape(-1)
-            cix = cgrid.unsqueeze(0).expand(W, C).reshape(-1)
             rq = raws.double().reshape(-1)
-            ok_q = (rq > 0) & child_ok.reshape(-1)
-            ar.tok.scatter_(0, sl, toks.reshape(-1))
-            ar.parent_idx.scatter_(0, sl, par)
-            ar.depth.scatter_(0, sl, ar.depth.gather(0, par) + 1)
-            child_root = ar.root.gather(0, par)
-            ar.root.scatter_(0, sl, child_root)
-            ar.sib.scatter_(0, sl, cix)
             lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
-            ar.logpri.scatter_(0, sl, torch.where(
-                ok_q, lp, torch.full_like(lp, float("-inf"))))
-            ar.raw_q.scatter_(0, sl, rq)
-            ar.valid.scatter_(0, sl, ok_q)
-            ar.state.scatter_(0, sl, torch.where(
-                ok_q, torch.zeros_like(sl), torch.ones_like(sl)))
-            parent_cell_of_child = ar.cell.gather(0, par).clamp(min=0)
-            ar.anc_bits.scatter_(
-                0, sl, ar.anc_bits.gather(0, par)
-                | (torch.ones_like(par) << parent_cell_of_child))
-            # [R,NV] 직접 기록: 이 라운드 자식들의 root-local index =
-            # out_valid[root] + (동일 root 내 순번). lane-major 순서
-            # 보존: one_hot cumsum (고정 shape).
-            oh = torch.nn.functional.one_hot(child_root, R).long() \
-                * ok_q.unsqueeze(1).long()
-            rank_in_round = (oh.cumsum(0) - oh)
-            local = (self.out_valid.gather(
-                0, child_root) + (rank_in_round * oh).sum(1))
-            local_c = local.clamp(max=NV - 1)
-            dst = child_root * NV + local_c
-            wmask = ok_q & (local < NV)
-            dst_safe = torch.where(wmask, dst,
-                                   torch.full_like(dst, R * NV))
-            def _w(outbuf, val):
-                flatb = outbuf.view(-1)
-                cur = flatb.gather(0, dst_safe)
-                flatb.scatter_(0, dst_safe,
-                               torch.where(wmask, val, cur))
-            _w(self.out_tok, toks.reshape(-1))
-            _w(self.out_sib, cix)
-            _w(self.out_pcell, ar.cell.gather(0, par))
-            _w(self.out_rawq, rq.float())
-            # parent_local: 부모의 (root,local) — 부모가 root면 -1.
-            # 부모 local은 arena에 없으므로 slot별 local을 arena에
-            # 병기 저장 (sib 필드와 별개 local_idx 텐서).
-            par_local = self._local_idx.gather(0, par)
-            _w(self.out_par, par_local)
-            self._local_idx.scatter_(0, sl, torch.where(
-                wmask, local, torch.full_like(local, -1)))
-            self.out_valid.scatter_add_(0, self.arange_R,
-                                        oh.sum(0))
-            ar.n = ar.n + fan.sum()
-            tip_adv = sel_valid & (sel == tip_idx.gather(0, r_of)) \
-                & (fan > 0)
-            old_tip = tip_idx.gather(0, r_of)
-            delta = torch.where(tip_adv, offs - old_tip,
-                                torch.zeros_like(offs))
-            tip_idx.scatter_add_(0, r_of, delta)
-            tip_depth.scatter_add_(0, r_of, tip_adv.long())
+            _insert_tree_children_kernel[(1,)](
+                sel, sel_valid, fan, toks, rq, lp,
+                ar.tok, ar.parent_idx, ar.depth, ar.root, ar.sib,
+                ar.logpri, ar.raw_q, ar.state, ar.cell, ar.valid,
+                ar.anc_bits, ar.n, self._local_idx,
+                self.out_tok, self.out_par, self.out_sib, self.out_rawq,
+                self.out_pcell, self.out_valid, tip_idx, tip_depth,
+                ROUND=f, W=W, R=R, C=C, NV=NV, GLOBAL=_global)
+
+
+        if not finalize:
+            return
+        if os.environ.get("SSD_TREE_EXEC_SKIP_FINALIZE_DIAG", "0") == "1":
+            # Diagnostic only: keep the captured forward/tree-update body but
+            # make every produced view unservable.  This isolates the two
+            # final Triton metadata kernels without allowing incomplete qref
+            # metadata to reach the verifier.
+            self.out_valid.zero_()
+            self.out_u_valid.zero_()
+        else:
+            self._finalize_outputs()
+
+    def _finalize_outputs(self):
+        """Build parent-q and backbone outputs using fixed-shape GPU ops.
+
+        ``build_root_views`` assigns parent-q ids by first occurrence of a
+        parent cell, then projects the first-child (sib=0) chain.  This is the
+        exact same rule expressed without host readback or data-dependent
+        Python loops, so it can live at the tail of the captured graph.
+        """
+        R, OR, NV, F, V = (self.R, self.out_rows, self.NV,
+                            self.F, self.V)
+        _finalize_tree_meta_kernel[(R,)](
+            self.view_tok, self.view_par, self.view_sib, self.view_pcell,
+            self.out_valid, self.out_pq_ref, self.out_pq_cells,
+            self.out_u_valid, self.out_backbone_tok,
+            self.out_backbone_pcell, NV=NV, F=F)
+        # Gather only the tiny row index with bounded PyTorch indexing.  The
+        # former custom Triton kernel formed ``pc * V + col`` itself and was
+        # the source of intermittent graph-only illegal accesses for Nv=6,
+        # despite every observed ``pc`` being inside [0, F*W).  index_select
+        # is capture-safe, applies the explicit two-sided bound before the
+        # read, and costs one fixed-shape gather in the enclosing graph.
+        pcell = self.out_backbone_pcell
+        valid = (pcell >= 0) & (pcell < F * self.W)
+        safe = pcell.clamp(min=0, max=F * self.W - 1)
+        gathered = self.cell_logits.index_select(
+            0, safe.reshape(-1)).view(OR, F, V)
+        self.out_backbone_logits.copy_(torch.where(
+            valid.unsqueeze(-1), gathered, torch.zeros_like(gathered)))
 
     @torch.inference_mode()
     def capture(self, n_pages0):
@@ -367,17 +704,30 @@ class P2TreeExecutor:
         # inplace 충돌 (엔진 실행 경로 규약; 실기 스모크로 확인)
         if n_pages0 not in self.wrappers:
             self.prepare_bucket(n_pages0)
-        self._local_idx = torch.full((self.arena.capacity,), -1,
-                                     dtype=torch.int64, device=self.dev)
+        local_idx = self._local_idx_by_bucket.get(n_pages0)
+        if local_idx is None:
+            local_idx = torch.full((self.arena.capacity,), -1,
+                                   dtype=torch.int64, device=self.dev)
+            self._local_idx_by_bucket[n_pages0] = local_idx
+        self._local_idx = local_idx
         # 워밍업 ×2 (allocator/커널 준비 — eager)
         for _ in range(2):
-            self._local_idx.fill_(-1)
-            self.run_once(n_pages0)
+            self.run_once(n_pages0, finalize=False)
         torch.cuda.synchronize()
         g = torch.cuda.CUDAGraph()
         g.register_generator_state(self.gen)
         with torch.cuda.graph(g):
-            self._local_idx.fill_(-1)
-            self.run_once(n_pages0)
+            self.run_once(n_pages0, finalize=False)
         self.graphs[n_pages0] = g
         return g
+
+    @torch.inference_mode()
+    def replay(self, n_pages0):
+        """Replay the four-round graph, then finalize dynamic output rows."""
+        self._local_idx = self._local_idx_by_bucket[n_pages0]
+        self.graphs[n_pages0].replay()
+        if os.environ.get("SSD_TREE_EXEC_SYNC_DIAG", "") == "graph":
+            torch.cuda.synchronize()
+        self._finalize_outputs()
+        if os.environ.get("SSD_TREE_EXEC_SYNC_DIAG", "") == "finalize":
+            torch.cuda.synchronize()

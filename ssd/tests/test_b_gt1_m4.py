@@ -52,6 +52,10 @@ def _champion_config(max_num_seqs: int) -> Config:
         duet_phase2_k=4,
         duet_draft_fan_out=2,
         duet_policy="b",
+        # M4 tests the legacy B>1 chain and proxy-gate contract.  Dynamic
+        # P2 tree is now the DUET default, so keep this comparison explicit;
+        # B>1 tree has its own separately gated implementation roadmap.
+        duet_tree_policy="off",
         duet_split_phase1_fan_out_list=[2, 2, 2, 2, 2, 2, 1, 1, 1, 1],
     )
 

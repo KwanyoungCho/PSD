@@ -1,4 +1,4 @@
-"""E1 feasibility — step 2: comparison arms (docs/duet/18 §2).
+"""E1 feasibility — step 2: comparison arms (docs/duet/internal/18 §2).
 
 Per design v6 (§9 E1): feasibility 사전 점검 — 결과는 보고, 판정은
 사용자. 모든 수치는 같은 timing 모델(같은-런 검증 −0.21%, 18번 §1)을

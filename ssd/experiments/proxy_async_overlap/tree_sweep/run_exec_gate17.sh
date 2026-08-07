@@ -35,7 +35,8 @@ TREE=(--llama --size 8
   --gpus 5 --async --spec --duet
   --duet_exit_layer 56 --f 3 --duet_k1 9 --duet_k2 4 --duet_p1_fanout 2
   --duet_p1_fanout_list 2,2,2,2,2,2,1,1,1,1 --duet_p2_budget 10
-  --duet_tree_policy level --duet_tree_nv 8 --duet_tree_beta 0.5)
+  --duet_tree_policy level --duet_tree_nv 8 --duet_tree_beta 0.5
+  --duet_tree_root_count 6)
 
 PORT=14200
 run_one () {

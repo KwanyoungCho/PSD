@@ -309,10 +309,15 @@ COLORS = {
     "verify_setup": ("#969696", ".."),
     "graph_pre": ("#8b1a1a", ""),
     "exit_logits": ("#fdae61", ""),
+    "exit_proxy_launch": ("#fdd0a2", "//"),
+    "exit_proxy_side": ("#fdae61", ""),
     "proxy_compute_send": ("#1b9e77", ""),
     "proxy_compute": ("#66c2a5", ""),
     "proxy_pack": ("#1b9e77", ".."),
     "proxy_send": ("#006d2c", ""),
+    "chain_proxy_graph_replay": ("#2ca25f", ""),
+    "tree_proxy_graph_replay": ("#238b45", ".."),
+    "proxy_send_enqueue": ("#00441b", "//"),
     "graph_post": ("#8073ac", ""),
     "final_logits": ("#fee08b", ""),
     "verify_replay": ("#7a0000", ""),
@@ -409,7 +414,11 @@ def plot_timeline_for_pair(
     # In detail profiling, proxy_compute_send is an outer span that contains
     # proxy_compute/proxy_pack/proxy_send. Hide the outer span in timelines so
     # the useful breakdown is not painted over by the parent bar.
-    detail_proxy_labels = {"proxy_compute", "proxy_pack", "proxy_send"}
+    detail_proxy_labels = {
+        "proxy_compute", "proxy_pack", "proxy_send",
+        "chain_proxy_graph_replay", "tree_proxy_graph_replay",
+        "proxy_send_enqueue",
+    }
     if any(str(e["label"]) in detail_proxy_labels for e in t_win):
         t_win = [e for e in t_win if str(e["label"]) != "proxy_compute_send"]
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# T4 — P2-tree 파라미터 sweep 하네스 (docs/duet/20 로드맵).
+# T4 — P2-tree 파라미터 sweep 하네스 (docs/duet/internal/20 로드맵).
 # 그리드: policy × R(root 수 = budget) × N_v × β. 각 조합 1런 (탐색),
 # 상위 후보만 5-rep 인터리브 verdict (run_tree_verdict.sh — 추후).
 #
-# 오염 가드 (docs/duet/19 이슈): 각 런 전 CPU load·GPU 점유 확인 —
+# 오염 가드 (docs/duet/internal/19 이슈): 각 런 전 CPU load·GPU 점유 확인 —
 # 기준 초과 시 대기 (타 사용자 작업과의 공유 박스 교훈).
 set -uo pipefail
 ROOT="/home/chokwans99/PSD/ssd"

@@ -73,19 +73,27 @@ class Config:
     # duet_proxy_total_budget, and the verifier's per-step K-position
     # allocation scales proportionally (duet_p2_budget_at).
     duet_p2_budget: int | None = None
-    # P2-tree (docs/duet/15 v6, T1 — docs/duet/20). "off" = 기존 체인
-    # 경로 그대로 (T1 hard 게이트: off에서 bit-identical).
-    duet_tree_policy: str = "off"            # off | level | frontier
+    # P2-tree. ``eagle`` is the production research default: all P2 roots are
+    # evaluated first and the remaining fixed-shape rollout lanes are assigned
+    # dynamically from the measured proxy/confidence scores.  ``off`` remains
+    # the bit-identical chain baseline and must be selected explicitly.
+    duet_tree_policy: str = "eagle"          # eagle | off | adaptive | coverage | confidence | level | frontier
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
     duet_tree_nv: int = 8                    # 응답 절단 N_v (T2에서 사용)
     duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
-    # 형상 진단 (docs/duet/21 §4.5): 고정-C 배분은 깊이를 굶긴다 —
+    # 형상 진단 (docs/duet/internal/21 §4.5): 고정-C 배분은 깊이를 굶긴다 —
     # backbone(맏이-사슬 fan1, 깊이 K2 보장) 우선 + 잔여만 형제.
     duet_tree_fanout_policy: str = "backbone"   # backbone | ctensor
     # 이슈 #24 (리뷰 2B): R(예산 받는 root 수)을 W와 분리 — W/CG/예약
     # 불변, P_iv 상위 R root만 예산 (나머지는 뷰 없음 → #14 키 무효화
     # = 명시적 miss). None = 전 seed (R=W, 종전 동작).
     duet_tree_root_count: int | None = None
+    # Post-hoc calibrated expansion floors (docs/duet/internal/27).  These never
+    # delete a sampled node or a cache root: EAGLE-style rollout evaluates
+    # every root once and keeps low-confidence children as verifiable leaves,
+    # but does not spend a later draft forward below an extreme tail node.
+    duet_tree_proxy_threshold: float = 0.01
+    duet_tree_conf_threshold: float = 0.03
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k, K2 <= K1.
@@ -153,16 +161,59 @@ class Config:
         return (self.max_model_len + self.kvcache_block_size - 1) // self.kvcache_block_size
 
     @property
-    def duet_p2_seed_count(self) -> int:
-        """P2 시작 후보(seed) 수 (23번 단계1 — R/W 분리).
-
-        트리 ON + root_count 설정 시 R (선택기가 dedup 후 R개만 취함;
-        나머지 W-R 행은 실행 padding — root/키 미생성). 그 외엔 종전
-        W(total_budget) — 체인 경로 불변."""
+    def duet_p2_active_root_count(self) -> int:
+        """Number of roots that receive the production P2 node budget."""
+        if getattr(self, "duet_tree_policy", "off") in ("eagle", "adaptive"):
+            # EAGLE-style global expansion keeps the root/cache coverage and
+            # forward width as separate concepts.  By default every one of
+            # the W chain roots is retained; an explicit smaller R remains a
+            # supported experiment knob.  R>W is rejected in __post_init__
+            # because round zero must evaluate every root in one W-wide
+            # forward.
+            return (int(self.duet_tree_root_count)
+                    if self.duet_tree_root_count is not None
+                    else self.duet_proxy_total_budget)
+        if getattr(self, "duet_tree_policy", "off") == "coverage":
+            # Coverage is a semantic contract, not a tunable R value: every
+            # root retained by the chain selector must receive a backbone.
+            return self.duet_proxy_total_budget
+        if getattr(self, "duet_tree_policy", "off") == "confidence":
+            width = self.duet_proxy_total_budget
+            k2 = int(self.duet_phase2_k or self.speculate_k)
+            return min(width, max(1, (width * k2) // (k2 + 2)))
         if getattr(self, "duet_tree_policy", "off") != "off" \
                 and self.duet_tree_root_count is not None:
             return int(self.duet_tree_root_count)
         return self.duet_proxy_total_budget
+
+    @property
+    def duet_p2_seed_count(self) -> int:
+        """P2 selector width (23번 단계1 — R/W 분리).
+
+        트리 ON + root_count 설정 시 R (선택기가 dedup 후 R개만 취함;
+        나머지 W-R 행은 실행 padding — root/키 미생성). 그 외엔 종전
+        W(total_budget) — 체인 경로 불변.
+
+        ``SSD_TREE_ROOT_SHADOW`` is a diagnostic-only exception: retain all
+        W ranked roots but still allocate production budget to exactly
+        ``duet_p2_active_root_count`` roots.  This lets one request stream
+        measure whether a real miss matched discarded ranks without changing
+        the active R=6 topology.
+        """
+        # Canonical confidence mode reserves one complete K2-deep backbone
+        # plus two rescue nodes for every active root.  With the production
+        # W=10, K2=4 layout this deterministically selects floor(40/6)=6
+        # roots.  Keeping all ten roots consumed the entire 40-node budget in
+        # backbones and measured no useful branching gain; making R a manual
+        # knob merely rediscovered the same point by sweep.  The selector
+        # still ranks the roots by P_iv, and unused forward lanes expand the
+        # selected roots, so this does not reduce the 4xW model workload.
+        # Legacy level/frontier retain root_count for exact reproduction.
+        if (getattr(self, "duet_tree_policy", "off") == "confidence"
+                and os.environ.get("SSD_TREE_ROOT_SHADOW", "") not in
+                ("", "0")):
+            return self.duet_proxy_total_budget
+        return self.duet_p2_active_root_count
 
     @property
     def duet_proxy_wire_N(self) -> int:
@@ -191,7 +242,11 @@ class Config:
             K_max = self.speculate_k
         # 23번 단계1: 송신량 = seed_count + dedup 여유 (종전 W + 여유
         # = 28 → 트리 R6에선 24). 체인(off)에선 종전과 동일.
-        total_budget = self.duet_p2_seed_count
+        # The shadow diagnostic deliberately keeps the production wire size;
+        # it asks the existing dedup buffer for four additional retained
+        # roots, so target compute/traffic and the top-six candidates stay
+        # unchanged.
+        total_budget = self.duet_p2_active_root_count
         # List-aware Phase 1 dedup loss bound
         _p1_list = self.duet_split_phase1_fan_out_list
         if _split_mode and _p1_list is not None:
@@ -410,9 +465,12 @@ class Config:
                     raise ValueError(
                         f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
                 # P2-tree 노브 검증 (T1.1) — -O 생존형 raise.
-                if self.duet_tree_policy not in ("off", "level", "frontier"):
+                if self.duet_tree_policy not in (
+                        "off", "adaptive", "eagle", "coverage", "confidence", "level",
+                        "frontier"):
                     raise ValueError(
-                        f"duet_tree_policy must be off|level|frontier; "
+                        f"duet_tree_policy must be "
+                        f"off|adaptive|eagle|coverage|confidence|level|frontier; "
                         f"got {self.duet_tree_policy!r}")
                 if self.duet_tree_policy != "off":
                     # D2 pack 가드: 토큰이 비트 0-14를 넘으면 안 됨.
@@ -446,6 +504,35 @@ class Config:
                         raise ValueError(
                             f"duet_tree_root_count must be >= 1; got "
                             f"{self.duet_tree_root_count}")
+                    if not (0.0 <= self.duet_tree_proxy_threshold <= 1.0):
+                        raise ValueError(
+                            "duet_tree_proxy_threshold must be in [0,1]; "
+                            f"got {self.duet_tree_proxy_threshold}")
+                    if not (0.0 <= self.duet_tree_conf_threshold <= 1.0):
+                        raise ValueError(
+                            "duet_tree_conf_threshold must be in [0,1]; "
+                            f"got {self.duet_tree_conf_threshold}")
+                    if (self.duet_tree_policy == "coverage"
+                            and self.duet_tree_root_count is not None):
+                        raise ValueError(
+                            "duet_tree_root_count cannot be set with "
+                            "duet_tree_policy=coverage: coverage keeps all "
+                            "chain roots by definition")
+                    if (self.duet_tree_policy in ("coverage", "adaptive")
+                            and self.duet_tree_nv < self.duet_phase2_k):
+                        raise ValueError(
+                            f"{self.duet_tree_policy} requires "
+                            f"duet_tree_nv >= K2 to keep "
+                            f"the complete chain backbone; got Nv="
+                            f"{self.duet_tree_nv}, K2={self.duet_phase2_k}")
+                    if (self.duet_tree_policy in ("coverage", "adaptive")
+                            and self.duet_tree_nv
+                            > self.duet_phase2_k * self.duet_tree_c_tensor):
+                        raise ValueError(
+                            f"{self.duet_tree_policy} Nv="
+                            f"{self.duet_tree_nv} is not "
+                            f"generatable by K2={self.duet_phase2_k} rounds "
+                            f"and C={self.duet_tree_c_tensor}")
                     # 이슈 #27: tip 의무 lane이 W(=P2 예산)를 초과하면
                     # rollout이 구조적으로 불가 — config에서 조기 차단.
                     if (self.duet_tree_root_count is not None
@@ -466,7 +553,7 @@ class Config:
                         raise ValueError(
                             f"duet_tree_nv+1 ({self.duet_tree_nv + 1}) must "
                             f"be <= P2 budget W ({_w_p2}) — TREE_GLUE row "
-                            f"capacity (docs/duet/20 이슈 #19)")
+                            f"capacity (docs/duet/internal/20 이슈 #19)")
                     # 이슈 #15: 트리 v1 미지원 proxy 게이트 — raw-proxy는
                     # _tree_step_p1p2에 변환 분기가 없고(KeyError),
                     # topm_gather dict-wire는 pack_piv가 없어 트리 셀렉터
@@ -488,7 +575,7 @@ class Config:
             # export is auto-set here. Spawned child processes inherit
             # environ, and the remaining runtime readers keep working
             # unchanged during the transition (read-site consolidation is
-            # deferred; see docs/duet/17).
+            # deferred; see docs/duet/internal/17).
             if _os_cfg.environ.get("SSD_FORCE_SPLIT_K1K2", "0") != "1":
                 _os_cfg.environ["SSD_FORCE_SPLIT_K1K2"] = "1"
             _split_mode = self.duet_phase1_k is not None
@@ -644,7 +731,13 @@ class Config:
             print(f'[Config] DUET-SSD enabled: exit_layer={self.duet_exit_layer}, '
                   f'proxy_top_k={self.duet_proxy_top_k}, '
                   f'draft_fan_out={self.duet_draft_fan_out}, proxy_fan_out={self.duet_proxy_fan_out}, '
-                  f'K1={self.duet_phase1_k}, K2={self.duet_phase2_k}',
+                  f'K1={self.duet_phase1_k}, K2={self.duet_phase2_k}, '
+                  f'P2_W={self.duet_proxy_total_budget}, '
+                  f'tree={self.duet_tree_policy}, '
+                  f'tree_R={self.duet_tree_root_count}, '
+                  f'tree_Nv={self.duet_tree_nv}, '
+                  f'tree_proxy_thr={self.duet_tree_proxy_threshold}, '
+                  f'tree_conf_thr={self.duet_tree_conf_threshold}',
                   flush=True)
 
         assert self.max_num_batched_tokens >= self.max_model_len

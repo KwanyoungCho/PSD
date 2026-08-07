@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T4 sweep — eslab17 전용 (docs/duet/20-21). eslab18 대비 차이:
+# T4 sweep — eslab17 전용 (docs/duet/internal/20-21). eslab18 대비 차이:
 #  - PY = /data2 conda_envs/ssd, ROOT = ~/Parallel_SD/ssd
 #  - model_path = awq_calibrated_autoawq (8-shard), artifact = autoawq_ref_tp4
 #  - CUDA_HOME = ~/cuda129 (flashinfer JIT용 nvcc 12.9 — 이슈: 기본 nvcc 10.1)

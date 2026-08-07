@@ -1,4 +1,4 @@
-"""E1 feasibility — step 1: baseline replay validation (docs/duet/15 §9 E1).
+"""E1 feasibility — step 1: baseline replay validation (docs/duet/internal/15 §9 E1).
 
 Contract (design v6): before any counterfactual tree-policy comparison,
 the replay model must reproduce the champion's measured decode TPS within
@@ -70,7 +70,7 @@ def main():
     print(f"[period model] (champion profile, warmup 제외, ms/step): "
           f"{ {k: round(v, 2) for k, v in period.items()} } n={counts}")
 
-    # E0 토큰 회계: fan_idx+1 = recovery 포함 커밋 토큰 (docs/duet/17 §3
+    # E0 토큰 회계: fan_idx+1 = recovery 포함 커밋 토큰 (docs/duet/internal/17 §3
     # 검증 — 전체 평균 4.086 ≈ 공인 4.108).
     f = glob.glob(os.path.join(E0_DIR, "e0_draft_*.jsonl"))[0]
     req, resp = {}, {}

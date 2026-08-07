@@ -1,4 +1,4 @@
-"""Unit tests for the E0 calibration trace gate (P0 — docs/duet/17 §2).
+"""Unit tests for the E0 calibration trace gate (P0 — docs/duet/internal/17 §2).
 
 CPU-only. The module reads its env gate at import time, so each test
 (re)imports it under a controlled env via importlib.

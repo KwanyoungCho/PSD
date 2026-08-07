@@ -37,7 +37,10 @@ d_anchor = [e for e in draft if e["label"] == "draft_send_response"]
 anchor_kind = "spec_wait/send_response"
 if not t_anchor or not d_anchor:
     # Legacy fallback (older profiles w/o step-boundary labels)
-    t_anchor = [e for e in target if e["label"] == "proxy_compute_send"]
+    t_anchor = [e for e in target if e["label"] == "proxy_send_enqueue"]
+    if not t_anchor:
+        t_anchor = [e for e in target
+                    if e["label"] == "proxy_compute_send"]
     d_anchor = [e for e in draft if e["label"] == "proxy_wait"]
     anchor_kind = "proxy (legacy)"
 N = min(len(t_anchor), len(d_anchor))
@@ -95,6 +98,11 @@ COLORS = {
     "target_postprocess":   ("#feb24c", ".."),   # light orange + dot hatch
     "target_spec_wait":     ("#ffeda0", ""),     # pale yellow (target idle on draft)
     "proxy_compute_send":   ("#fec44f", "xx"),   # gold + cross hatch (handshake marker)
+    "exit_proxy_launch":    ("#fdd0a2", "//"),
+    "exit_proxy_side":      ("#fdae61", ""),
+    "chain_proxy_graph_replay": ("#2ca25f", ""),
+    "tree_proxy_graph_replay":  ("#238b45", ".."),
+    "proxy_send_enqueue":   ("#006d2c", "//"),
     "verify_setup":         ("#525252", "//"),   # dark gray + slash (tiny setup)
     "exit_logits":          ("#969696", ""),     # mid gray
     "final_logits":         ("#cccccc", "//"),   # light gray + slash

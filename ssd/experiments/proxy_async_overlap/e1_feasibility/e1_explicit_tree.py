@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(REPO, "ssd"))
 from ssd.engine.helpers.p2_tree import terminal_mass_dp  # noqa: E402
 import torch  # noqa: E402
 
-LAM = 0.525          # docs/duet/18: λ=0.51~0.54 (최종층)
+LAM = 0.525          # docs/duet/internal/18: λ=0.51~0.54 (최종층)
 D = 4
 
 

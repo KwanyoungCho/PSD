@@ -40,6 +40,25 @@ DUET_JIT_SHORT = os.environ.get("SSD_DUET_JIT_SHORT", "0") == "1"
 # EAGLE path (activation gather/scatter not wired).
 DUET_JIT_SUBSET = os.environ.get("SSD_DUET_JIT_SUBSET", "0") == "1"
 
+
+@dataclasses.dataclass(frozen=True)
+class _P2StepState:
+    """Host-visible P2 dispatch state.
+
+    SGLang keeps IDLE separate from a captured draft input.  DUET still
+    receives its request metadata on CUDA, so we compact the legacy sentinel
+    checks into one small readback and never pass an idle step to either the
+    arena or the P2 graph.
+    """
+
+    ctx_len: int
+    reason: str | None = None
+
+    @property
+    def active(self) -> bool:
+        return self.reason is None
+
+
 class DraftRunner(ModelRunner):
     
     @classmethod
@@ -69,6 +88,11 @@ class DraftRunner(ModelRunner):
             self._reset_tree_cache_tensors()
             self._init_prealloc_buffers()
             self._draft_step_times = []
+            # Start the expensive P2 executor capture as early as possible.
+            # The target ranks are still loading/capturing their own graphs at
+            # this point, so most of this one-time work overlaps engine start
+            # instead of extending the first generation.
+            self._warmup_p2_tree_executor()
             # DUET: capture split-K1/K2 layout CudaGraphs
             # (split_k1_{long,short} + split_k2).
             if self.config.duet_enabled and not self.enforce_eager:
@@ -89,8 +113,94 @@ class DraftRunner(ModelRunner):
                     self.graphs[_layout.graph_key] = _graphs
                     self.graph_bs_list[_layout.graph_key] = _bs
                 print(f'[DUET] Captured FI tree decode CudaGraphs ({len(_layouts_to_capture)} layouts)', flush=True)
+            if init_q is not None:
+                # The parent must not expose the engine until every draft
+                # graph (including the P2 warmup buckets) is ready.  The first
+                # queue item only communicates KV capacity from ModelRunner;
+                # this second item is the actual service-readiness barrier.
+                init_q.put(("draft_ready", os.getpid()))
+                init_q.close()
             print(f'DraftRunner set up, starting draft_loop', flush=True)
             self.draft_loop()
+
+    def _warmup_p2_tree_executor(self):
+        """Capture the production P2 graphs before the first request.
+
+        The executor used to be created lazily on the first P2 rollout.  Its
+        first call therefore compiled the tree kernels and captured a full
+        four-forward graph in the latency-sensitive decode loop (about 1.5 s
+        on the current Llama-1B draft).  At this point initialization is still
+        before ``draft_loop`` and no request owns KV slots, so it is the safe
+        place to capture every reachable page bucket.
+
+        ``SSD_TREE_EXEC_WARMUP=0`` keeps the old lazy behavior for debugging.
+        A comma-separated bucket list (for example ``2,3``) is also accepted;
+        the default ``all`` covers every bucket reachable under max_model_len.
+        """
+        if os.environ.get("SSD_TREE_EXEC", "0") != "1" \
+                or self.config.duet_tree_policy not in (
+                    "level", "confidence", "coverage", "eagle", "adaptive") \
+                or self.config.use_eagle:
+            return
+        setting = os.environ.get("SSD_TREE_EXEC_WARMUP", "all").strip()
+        if setting.lower() in ("0", "off", "false", "none"):
+            return
+
+        ex = self._ensure_p2_exec()
+        # A P2 rollout writes F*W cells and needs one further W-wide canvas.
+        # Restrict warmup to buckets that can occur without crossing the model
+        # length and that have a real + one-canvas page in the block table.
+        remaining = (int(self.config.max_model_len)
+                     - (ex.F + 1) * ex.W)
+        max_p0 = max(0, (remaining + self.block_size - 1)
+                     // self.block_size)
+        max_p0 = min(max_p0, int(self.config.max_blocks) - 1)
+        if setting.lower() == "all":
+            buckets = list(range(1, max_p0 + 1))
+        else:
+            try:
+                buckets = sorted({int(x) for x in setting.split(",")
+                                  if x.strip()})
+            except ValueError as exc:
+                raise RuntimeError(
+                    "SSD_TREE_EXEC_WARMUP must be 'all', 0, or a "
+                    "comma-separated page-bucket list") from exc
+            bad = [x for x in buckets if x < 1 or x > max_p0]
+            if bad:
+                raise RuntimeError(
+                    f"SSD_TREE_EXEC_WARMUP buckets {bad} are outside "
+                    f"the reachable range [1,{max_p0}]")
+
+        import time as _time
+        torch.cuda.synchronize()
+        free0, _ = torch.cuda.mem_get_info(self.device)
+        t0 = _time.perf_counter()
+        # Capture warmups execute the real sampler.  They must not consume the
+        # production RNG sequence merely because more page buckets are
+        # prepared at startup.  Preserve the dedicated generator's state;
+        # replay will advance it normally once real requests begin.
+        rng_state = ex.gen.get_state().clone()
+        try:
+            for p0 in buckets:
+                if p0 not in ex.graphs:
+                    # Capture every page shape from the same valid, finite
+                    # synthetic request.  Constructor-zero buffers contain
+                    # zero context lengths/reused slots and are not a valid
+                    # representative of the kernels replayed in service.
+                    # Capturing several such shapes before the first real
+                    # request was the only path that exercised this invalid
+                    # launch geometry; keep capture representative instead.
+                    ex.prime_capture_inputs(p0)
+                    ex.capture(p0)
+        finally:
+            ex.gen.set_state(rng_state)
+        torch.cuda.synchronize()
+        free1, _ = torch.cuda.mem_get_info(self.device)
+        print(
+            f"[DUET tree] warmed P2 executor buckets={buckets} "
+            f"in {(_time.perf_counter() - t0):.2f}s "
+            f"(reserved delta={(free0 - free1) / 2**20:.1f} MiB)",
+            flush=True)
 
     def draft_async_prefill(self):
         assert self.draft_async and self.is_draft
@@ -459,6 +569,10 @@ class DraftRunner(ModelRunner):
                 if self.tree_cache_valid_k is not None:
                     _hit_valid_k = self.tree_cache_valid_k[_hit_idx]
                     valid_k = torch.where(cache_hits.bool(), _hit_valid_k, valid_k)
+
+            if os.environ.get("SSD_TREE_ROOT_SHADOW", "") not in ("", "0"):
+                self._audit_tree_root_shadow(
+                    request_keys, cache_hits, phase_source)
             
             if self.config.verbose:
                 print(f"[hit_cache_and_respond] Cache hits: {cache_hits.sum().item()}/{B}", flush=True)
@@ -557,7 +671,9 @@ class DraftRunner(ModelRunner):
                 if (_tviews is not None and B == 1
                         and bool(cache_hits[0])
                         and int(phase_source[0]) == 2):
-                    from ssd.engine.helpers.p2_tree import pack_tree_ints
+                    from ssd.engine.helpers.p2_tree import (
+                        pack_tree_ints, parse_tree_ints,
+                        validate_tree_ints)
                     _root = int(idx[0]) - self._last_n_draft_keys
                     _nv = self.config.duet_tree_nv
                     _n_valid = int(_tviews["valid"][_root])
@@ -566,14 +682,22 @@ class DraftRunner(ModelRunner):
                             _tviews["tok"][_root].to(self.device)
                         valid_k[0] = _n_valid
                         _packed_ints = pack_tree_ints(_tviews, _root, _nv)
-                        if int(_packed_ints[0]) != _n_valid:
+                        # One bounded readback replaces the old scalar
+                        # ``int(_packed_ints[0])`` sync.  Reject malformed
+                        # topology before it can enter the async wire and
+                        # strand target TP ranks in different code paths.
+                        _packed_cpu = _packed_ints.detach().cpu()
+                        _parsed = parse_tree_ints(_packed_cpu, _nv)
+                        validate_tree_ints(
+                            _parsed, _nv, self.hf_config.vocab_size)
+                        if int(_parsed["valid"]) != _n_valid:
                             raise RuntimeError(
                                 f"tree serve invariant: pack valid="
-                                f"{int(_packed_ints[0])} != _n_valid="
+                                f"{int(_parsed['valid'])} != _n_valid="
                                 f"{_n_valid} root={_root}")
                         self._tree_wire_ints = _packed_ints.to(self.device)
                         # 1b: pq는 서빙 시 hit root만 gather (선제
-                        # [R,nv,V] 물질화 제거 — docs/duet/22)
+                        # [R,nv,V] 물질화 제거 — docs/duet/internal/22)
                         _pqc = _tviews["parent_q_cells"][_root].clamp(
                             min=0).to(_tviews["cell_logits"].device)
                         self._tree_wire_parent_q = \
@@ -582,10 +706,36 @@ class DraftRunner(ModelRunner):
                                 device=self.device,
                                 dtype=out_logits.dtype).unsqueeze(0)
                         self._tree_hit_root = _root
+                        _trace_prefix = os.environ.get(
+                            "SSD_TREE_TOPO_TRACE", "")
+                        if _trace_prefix:
+                            # Exact P2 cache row selected for this request.
+                            # This is distinct from ``.draft.jsonl`` (all
+                            # generated root views) and ``.walk.jsonl``
+                            # (target acceptance path), and lets an audit
+                            # directly measure root-rank coverage loss.
+                            import json as _json
+                            _vn = int(_parsed["valid"])
+                            with open(_trace_prefix + ".serve.jsonl", "a") \
+                                    as _f:
+                                _f.write(_json.dumps({
+                                    "step": int(self._request_step_id),
+                                    "root_rank": _root,
+                                    "valid": _vn,
+                                    "par": [int(x) for x in
+                                            _parsed["parent_local"][:_vn]],
+                                    "sib": [int(x) for x in
+                                            _parsed["sib_order"][:_vn]],
+                                }) + "\n")
                         # b6-2 (D14): 다음 요청에서 수락 경로 재실체화에
                         # 쓸 서빙 스냅샷 (double buffer — 다음 build가
                         # _tree_views를 덮어써도 유지)
-                        self._tree_served_ints = _packed_ints.clone()
+                        # The next request reconstructs a tiny accepted path
+                        # on the host.  Keep the already-validated CPU copy;
+                        # retaining a live CUDA output here caused repeated
+                        # scalar synchronizations and could observe a reused
+                        # executor buffer while the next replay was running.
+                        self._tree_served_ints = _packed_cpu.clone()
                         self._tree_served_numtok = int(num_tokens[0])
                         # 이슈 #35: staging 소비 가드용 seq 정체 기록
                         self._tree_served_seq = int(request_keys[0, 0])
@@ -688,6 +838,10 @@ class DraftRunner(ModelRunner):
         _mev_dr = _mr_dr("draft_recv_request")
         meta = self.recv_tensor((4,), torch.int64)
         B, K, F, step_id = meta.tolist()
+        # Keep the wire step id for optional topology/cache diagnostics.  It
+        # is deliberately just a Python scalar and has no serving-path CUDA
+        # dependency.
+        self._request_step_id = int(step_id)
         # Announce new step_id + proc=draft. Clear any leftover status from
         # the previous request so spans before hit_cache_and_respond don't
         # inherit it; status will be set explicitly below once known.
@@ -710,7 +864,7 @@ class DraftRunner(ModelRunner):
         off += B * max_blocks
         temps_as_int64 = fused_req[off:off + B]
         off += B
-        if _E0_TRACE:  # E0: 직전 step의 실제 outcome (P0, docs/duet/17 §2)
+        if _E0_TRACE:  # E0: 직전 step의 실제 outcome (P0, docs/duet/internal/17 §2)
             self._e0_step_id = step_id
             _e0.record_draft_request(step_id, cache_keys, temps_as_int64)
         assert off == fused_total
@@ -735,14 +889,14 @@ class DraftRunner(ModelRunner):
             if int(seq_ids[0]) != getattr(self, "_tree_served_seq", -1):
                 _staged = None
             if _a_eff > 0 and _T > 0 and _staged is not None:
+                from ssd.engine.helpers.p2_tree import (
+                    parse_tree_ints, tree_parent_path,
+                    validate_tree_ints)
                 _nv_s = self.config.duet_tree_nv
-                _par = _served[3 + _nv_s:3 + 2 * _nv_s]
-                _path = []
-                _j = _T - 1
-                while _j >= 0:
-                    _path.append(_j)
-                    _j = int(_par[_j])
-                _path.reverse()
+                _served_tree = parse_tree_ints(_served, _nv_s)
+                validate_tree_ints(
+                    _served_tree, _nv_s, self.hf_config.vocab_size)
+                _path = tree_parent_path(_served_tree, _T)
                 _path = _path[:_a_eff]
                 # 이슈 #21: src = staging(글루 시점 gather — 물리블록
                 # 해제와 무관), dst = 현재 dbt의 canonical 슬롯.
@@ -1244,6 +1398,63 @@ class DraftRunner(ModelRunner):
                 and hasattr(self, "_s2_pre"):
             self._s2_post = self.tree_cache_keys.clone()
 
+    def _audit_tree_root_shadow(self, request_keys, cache_hits,
+                                phase_source):
+        """Record whether a live request matched a discarded root key.
+
+        Diagnostic-only and intentionally simple: the request and at most
+        four shadow keys are copied to CPU once.  Unlike a separate R=10 run,
+        this compares the same request trajectory, target recovery token, and
+        cache generation, so a discarded-root match has an unambiguous
+        meaning.
+        """
+        shadow = getattr(self, "_tree_root_shadow_keys", None)
+        if shadow is None or shadow.numel() == 0:
+            return
+        import json as _json
+
+        reqs = request_keys.detach().cpu().tolist()
+        keys = shadow.detach().cpu().tolist()
+        hits = cache_hits.detach().cpu().tolist()
+        phases = phase_source.detach().cpu().tolist()
+        rank0 = int(getattr(self, "_tree_root_shadow_rank0", 0))
+        path = os.environ.get("SSD_TREE_ROOT_SHADOW", "")
+        if path == "1":
+            path = "/tmp/ssd_tree_root_shadow.jsonl"
+        counts = getattr(self, "_tree_root_shadow_counts", None)
+        if counts is None:
+            counts = self._tree_root_shadow_counts = {
+                "requests": 0, "discarded_exact": 0,
+                "same_seq_recovery": 0, "same_seq_terminal": 0,
+            }
+        rows = []
+        for b, req in enumerate(reqs):
+            exact = [rank0 + i for i, key in enumerate(keys)
+                     if req == key]
+            same_sr = [rank0 + i for i, key in enumerate(keys)
+                       if req[0] == key[0] and req[2] == key[2]]
+            same_st = [rank0 + i for i, key in enumerate(keys)
+                       if req[0] == key[0] and req[1] == key[1]]
+            counts["requests"] += 1
+            counts["discarded_exact"] += int(bool(exact))
+            counts["same_seq_recovery"] += int(bool(same_sr))
+            counts["same_seq_terminal"] += int(bool(same_st))
+            rows.append({
+                "step": int(getattr(self, "_request_step_id", -1)),
+                "request": req,
+                "real_hit": bool(hits[b]),
+                "real_phase": int(phases[b]),
+                "discarded_exact_ranks": exact,
+                "same_seq_recovery_ranks": same_sr,
+                "same_seq_terminal_ranks": same_st,
+                "discarded_keys": keys,
+            })
+        with open(path, "a") as f:
+            for row in rows:
+                f.write(_json.dumps(row) + "\n")
+        if counts["requests"] % 100 == 0:
+            print(f"[tree-root-shadow] {counts}", flush=True)
+
     def _tree_backbone_project(self, pool, R, K2, cell_logits,
                                n_roots=None):
         """rollout pool → 체인-호환 populate 입력 [R, K2] (backbone=맏이 사슬).
@@ -1310,10 +1521,10 @@ class DraftRunner(ModelRunner):
         """트리-hit step의 P1/P2 (T3.4-b3-4/-5, 결정④ ⓑⓒ). B=1 전용.
 
         P1: fork 컨텍스트 = [rec(root-종단), 뷰 노드 0..n_valid-1] —
-        fan_idx가 그대로 종단 노드 id 네임스페이스가 된다. CG 불변을
-        위해 MQ 폭은 split_k1_long 그대로 두고 컨텍스트별 fanout을
-        균등-우선 재배분 (F7 예산 재검토 전 v1). fork 행 mask = 조상
-        비트맵 (전 step override), rope = 컨텍스트 depth 기반.
+        fan_idx가 그대로 종단 노드 id 네임스페이스가 된다. Chain
+        backbone에는 short-P1과 같은 후보 수를 먼저 보장하고 남는
+        lane만 sibling 컨텍스트에 배분한다. fork 행 mask = 조상 비트맵
+        (전 step override), rope = 컨텍스트 depth 기반.
         """
         import numpy as _np
         from ssd.engine.helpers import cudagraph_helpers as _CH
@@ -1327,8 +1538,18 @@ class DraftRunner(ModelRunner):
         n_valid = n_rows - 1
         _views = self._tree_views
         _root = self._tree_hit_root
-        par = _views["parent_local"][_root]
-        vtok = _views["tok"][_root]
+        # Read the tiny topology once.  The previous implementation called
+        # int(cuda_tensor[j]) repeatedly while building P1, creating a chain
+        # of hidden device synchronizations on every tree-hit step.
+        _par_t = _views["parent_local"][_root][:n_valid]
+        _sib_t = _views["sib_order"][_root][:n_valid]
+        _raw_t = _views["raw_q"][_root][:n_valid]
+        _tok_t = _views["tok"][_root][:n_valid]
+        _ints_cpu = torch.stack((_par_t, _sib_t, _tok_t)).detach().cpu()
+        par = [int(x) for x in _ints_cpu[0]]
+        sib = [int(x) for x in _ints_cpu[1]]
+        vtok = [int(x) for x in _ints_cpu[2]]
+        raw_q = [float(x) for x in _raw_t.detach().float().cpu()]
 
         # 컨텍스트 topology: depth / 조상 / 뷰-내 자식 토큰(fork 제외 집합)
         depths = [0] * n_valid
@@ -1336,75 +1557,93 @@ class DraftRunner(ModelRunner):
         child_toks = [[] for _ in range(n_rows)]
         depth_ctx = [0] * n_rows              # ctx0(rec)=0, ctx 1+j = 1+depth_j
         for j in range(n_valid):
-            p = int(par[j])
+            p = par[j]
             if p >= 0:
                 depths[j] = depths[p] + 1
                 anc[j] = anc[p] + [p]
-            child_toks[p + 1].append(int(vtok[j]))
+            child_toks[p + 1].append(vtok[j])
             depth_ctx[1 + j] = 1 + depths[j]
 
         # === P1: 노드-fork, K1 forwards ===
         _mev_p1b = _mr("phase1_build")
-        # 이슈 #31 (리뷰2-5): 균등 배분(W1//n_rows)은 rec(최빈 종단
-        # 컨텍스트)에도 소수 lane만 줘 P1 궤적 품질을 깎는다 (verdict
-        # 회계: P1 축 −0.054 tok/step — AL 동률의 주범). 종단질량
-        # prior ∝ a^depth·(1−a)^{자식수} (a = per-depth 수락률 적합
-        # ~0.52 — docs/duet/18 λ·E1 α)로 가중, 바닥 1 lane (전 ctx
-        # 생존), largest-remainder 반올림 (합 = W1, CG 폭 불변).
-        if W1 >= n_rows:
-            # 리뷰3-8의 presib 보정(reach에 (1−A)^sib_order 포함)은
-            # 고정-A '모델'로는 정확하나 **동일-시드 A/B에서 P1AL
-            # 4.13→3.88·P2AL 2.13→1.94 회귀** (2026-08-04, 8×256) —
-            # 실제 둘째-형제 조건부 수락은 λ-할인(18번: a₂≈1−(1−α)^0.52)
-            # 으로 고정-A 예측보다 높아, 미보정형이 우연히 보상한다.
-            # 경험 우선으로 #31 형태 유지; 진짜 교정은 depth/sib별
-            # calibrated prior (T6 부채 — 리뷰3도 동일 제안).
-            _A = 0.52
-            w_ctx = [(_A ** depth_ctx[c])
-                     * ((1.0 - _A) ** len(child_toks[c]))
-                     for c in range(n_rows)]
-            _ws = sum(w_ctx)
-            _extra = W1 - n_rows
-            _quota = [_extra * w / _ws for w in w_ctx]
-            fan_counts = [1 + int(q) for q in _quota]
-            _rem = W1 - sum(fan_counts)
-            _ord = sorted(range(n_rows),
-                          key=lambda c: _quota[c] - int(_quota[c]),
-                          reverse=True)
-            for c in _ord[:_rem]:
-                fan_counts[c] += 1
-        else:
-            fan_counts = [W1 // n_rows + (1 if i < W1 % n_rows else 0)
-                          for i in range(n_rows)]
+        # Preserve the exact short-chain P1 candidate floor along the
+        # first-child backbone, then spend only the surplus on sibling
+        # contexts using cumulative draft confidence.  This removes the
+        # fixed-A terminal heuristic and guarantees that introducing a P2
+        # branch cannot cut a chain context from two candidates to one.
+        from ssd.engine.helpers.p2_tree import allocate_tree_p1_fanouts
+        _chain_floor = list(
+            self.split_k1_short_layout.fan_out_list
+            if self.split_k1_short_layout is not None
+            else self.split_k1_long_layout.fan_out_list[:K1 + 1])
+        # Only K2+1 terminal positions exist on the chain-equivalent P2
+        # backbone, even though the P1 rollout itself has depth K1.
+        _chain_floor = _chain_floor[:self.config.duet_phase2_k + 1]
+        fan_counts = allocate_tree_p1_fanouts(
+            par, sib, raw_q, W1, _chain_floor)
+        if sum(fan_counts) != W1 or len(fan_counts) != n_rows:
+            raise RuntimeError(
+                f"tree P1 allocation invariant: counts={fan_counts}, "
+                f"sum={sum(fan_counts)} W1={W1} n_rows={n_rows}")
+        _node_audit = os.environ.get("SSD_TREE_NODE_AUDIT", "")
+        if _node_audit:
+            # Diagnostic-only proof that P1 does not silently ignore a tree
+            # context.  With the production Nv<=8 and W1=16 every terminal
+            # context must own at least one draft lane.  Keep this outside
+            # normal runs: the JSON trace is intended for short correctness
+            # smokes, never for timing measurements.
+            _uncovered = [i for i, c in enumerate(fan_counts) if c <= 0]
+            self._append_tree_node_audit("p1", {
+                "step": int(getattr(self, "_request_step_id", -1)),
+                "root_rank": int(_root),
+                "tree_nodes": int(n_valid),
+                "contexts": int(n_rows),
+                "fan_counts": [int(x) for x in fan_counts],
+                "depth_by_context": [int(x) for x in depth_ctx],
+                "uncovered_contexts": _uncovered,
+                "all_contexts_drafted": not _uncovered,
+            })
+            if _uncovered:
+                raise RuntimeError(
+                    "tree P1 left contexts without a draft lane: "
+                    f"step={getattr(self, '_request_step_id', -1)} "
+                    f"root={_root} counts={fan_counts}")
         draft_forked_k1, draft_forked_p1_padded, draft_forked_p1_mask = \
             self._select_tree_fork_tokens(glue_logits, fan_counts, child_toks)
         draft_tree_args = self._build_tree_decode_args_for_layout(
             partial_tree_decode_args, draft_forked_k1, _layout_k1,
             cache_hits_list)
-        _ctx_of_row = torch.repeat_interleave(
-            torch.arange(n_rows, dtype=torch.int64),
-            torch.tensor(fan_counts, dtype=torch.int64))
+        _ctx_np = _np.repeat(
+            _np.arange(n_rows, dtype=_np.int64),
+            _np.asarray(fan_counts, dtype=_np.int64))
+        _ctx_of_row = torch.from_numpy(_ctx_np)
         pos0 = int(partial_tree_decode_args["num_tokens"][0]) - 1
-        draft_tree_args["rope_positions"] = torch.tensor(
-            [pos0 + 1 + depth_ctx[int(c)] for c in _ctx_of_row],
-            dtype=torch.int64, device=self.device)
+        _depth_np = _np.asarray(depth_ctx, dtype=_np.int64)
+        draft_tree_args["rope_positions"] = torch.from_numpy(
+            pos0 + 1 + _depth_np[_ctx_np]).to(self.device)
 
         # 전 step packed mask: [prefix+rec | 조상 노드 셀 | 자기 행 체인 셀]
-        base = int(draft_tree_args["positions"][0])   # = pos0 + glue_offset
+        # ``positions[0]`` is analytically pos0+layout.position_count; avoid
+        # synchronizing the CUDA tensor just to recover that scalar.
+        base = pos0 + _layout_k1.position_count
+        _ctx_visible = _np.zeros((n_rows, n_valid), dtype=_np.uint8)
+        for j in range(n_valid):
+            if anc[j]:
+                _ctx_visible[1 + j, _np.asarray(anc[j], dtype=_np.int64)] = 1
+            _ctx_visible[1 + j, j] = 1
+        _row_visible = _ctx_visible[_ctx_np]
+        _rows = _np.arange(W1, dtype=_np.int64)[:, None]
         ov = {}
         for f in range(K1):
             cols = base + (f + 1) * W1
             m = _np.zeros((W1, cols), dtype=_np.uint8)
             m[:, :pos0 + 1] = 1                       # prefix + rec 셀
-            for r in range(W1):
-                c = int(_ctx_of_row[r])
-                if c > 0:
-                    j = c - 1
-                    for a in anc[j]:
-                        m[r, pos0 + 1 + a] = 1
-                    m[r, pos0 + 1 + j] = 1
-                for s in range(f + 1):
-                    m[r, base + s * W1 + r] = 1
+            if n_valid:
+                m[:, pos0 + 1:pos0 + 1 + n_valid] = _row_visible
+            _chain_cols = (base
+                           + _np.arange(f + 1, dtype=_np.int64)[None, :] * W1
+                           + _rows)
+            m[_rows, _chain_cols] = 1
             packed = _np.packbits(m.ravel(), bitorder="little")
             indptr = _np.array([0, len(packed)], dtype=_np.int32)
             ov[f] = (torch.from_numpy(packed).to(self.device),
@@ -1429,7 +1668,6 @@ class DraftRunner(ModelRunner):
         # 선택기의 위치축이 노드 id 축이 된다 (chosen_pos = 노드 id —
         # 형식 불변, v6 §7.5ⓒ). K_rank = n_valid → position_count = n_rows.
         _mev_p2b = _mr("phase2_build")
-        from ssd.engine.helpers.p2_tree import build_root_views
         K2 = self.config.duet_phase2_k
         K_rank = n_valid
         # 23번 단계1: 선택 수 = seed_count (트리 R6; 체인 W) — R/W 분리
@@ -1479,32 +1717,11 @@ class DraftRunner(ModelRunner):
                 _gro[r, 1 + (c - 1)] = 1
         proxy_tree_args["glue_rows_override"] = _gro
         proxy_tree_args["K_glue_override"] = n_valid
-        proxy_tree_args["proxy_piv"] = proxy_piv
-
         _temps_p2 = proxy_tree_args["temps"]
-        _mB, _mK, _mF, _mN = proxy_tree_args["metadata_ints"]
-        _, _srp, _scl, _ssm = self._compute_step_positions_and_slot_maps(
-            proxy_tree_args["positions"],
-            proxy_tree_args["rope_positions"],
-            proxy_tree_args["block_tables"],
-            _mB, _mK, _mF, _mN, _layout_k2.MQ_LEN, layout=_layout_k2)
         _mc("phase2_build", _mev_p2b)
-        pool, _elog, _cell_logits = self._p2tree_rollout(
-            duet_proxy, proxy_forked, proxy_fan_out_tensor,
-            proxy_tree_args, _layout_k2, _ssm, _scl, _temps_p2)
-        _R = _layout_k2.MQ_LEN
-        _nv = self.config.duet_tree_nv
-        if isinstance(pool, dict):
-            # 23번 단계2: 실행기 경로 — views/backbone 직접 반환
-            self._tree_views = pool
-            proxy_tokens, proxy_logits = _elog
-        else:
-            self._tree_views = build_root_views(
-                pool, _R, _nv, cell_logits=_cell_logits)
-            proxy_tokens, proxy_logits = self._tree_backbone_project(
-                pool, _R, K2, _cell_logits,
-                n_roots=(proxy_piv.shape[1] if proxy_piv is not None
-                         else _R))
+        proxy_tokens, proxy_logits = self._run_p2_tree_step(
+            duet_proxy, proxy_forked, proxy_fan_out_tensor, proxy_piv,
+            proxy_tree_args, _layout_k2, _temps_p2)
 
         self._merge_and_populate_cache(
             draft_tree_args, draft_tokens, draft_logits,
@@ -1513,7 +1730,11 @@ class DraftRunner(ModelRunner):
             proxy_layout=_layout_k2,
             draft_layout=_layout_k1,
             draft_fan_idx_override=_ctx_of_row.to(self.device))
-        self._invalidate_zero_valid_tree_keys()
+        if getattr(self, "_p2_skip_step", None) is not None:
+            self.tree_cache_keys[self._last_n_draft_keys:] = -1
+            self._p2_skip_step = None
+        elif getattr(self, "_tree_views", None) is not None:
+            self._invalidate_zero_valid_tree_keys()
 
     def _build_tree_batch(self, partial_tree_decode_args, glue_decode_input_ids):
         if self.config.verbose:
@@ -1950,6 +2171,178 @@ class DraftRunner(ModelRunner):
             self._p2exec_stats = {}
         self._p2exec_stats[reason] = self._p2exec_stats.get(reason, 0) + 1
 
+    def _p2_step_state(self, rope0, step_slot_maps, step_context_lens,
+                       dbt, F, W, root_count=None):
+        """Classify one P2 step with exactly one device-to-host readback.
+
+        ACTIVE inputs must have valid positions, slots, context lengths, and
+        real prefix pages.  The extra attention-canvas page is deliberately
+        excluded here: it is a masked read-only page and is filled with a
+        known-valid page by the executor.  An IDLE/invalid step is skipped by
+        both execution backends; it is never represented by ``-1`` inside a
+        model forward.
+        """
+        ctx = step_context_lens[0].reshape(-1)[0].to(torch.int64)
+        slots = torch.stack([m[:W] for m in step_slot_maps[:F]])
+        ctxs = torch.stack(
+            [c.reshape(-1)[0] for c in step_context_lens[:F]])
+        # R (real roots) and W (captured forward width) are intentionally
+        # different.  Padded root metadata may contain -1, while every one of
+        # the W forward lanes still needs a safe KV slot.
+        real_roots = W if root_count is None else min(int(root_count), W)
+        if torch.is_tensor(rope0):
+            roots_rope = rope0[:real_roots].to(torch.int64)
+        else:
+            roots_rope = torch.tensor(
+                list(rope0)[:real_roots], dtype=torch.int64,
+                device=self.device)
+
+        max_pos = getattr(self, "_p2_rope_limit", None)
+        if max_pos is None:
+            max_pos = int(self.config.max_model_len)
+            model = getattr(self, "model", None)
+            if model is not None:
+                for module in model.modules():
+                    cache = getattr(module, "cos_sin_cache", None)
+                    if cache is not None:
+                        max_pos = min(max_pos, int(cache.shape[0]))
+                        break
+            self._p2_rope_limit = max_pos
+        n_slots = int(self.kv_cache.shape[2] * self.kv_cache.shape[3])
+        n_blocks = int(self.kv_cache.shape[2])
+        page_col = torch.arange(dbt.shape[1], device=dbt.device)
+        need_pages = torch.div(
+            ctx + self.block_size - 1, self.block_size,
+            rounding_mode="floor")
+        real_page = page_col < need_pages
+        bad_page = real_page & ((dbt[0] < 0) | (dbt[0] >= n_blocks))
+
+        flags = torch.stack((
+            torch.tensor(real_roots <= 0, device=ctx.device),
+            ctx <= 0,
+            ((roots_rope < 0) | (roots_rope >= max_pos)).any(),
+            ((slots < 0) | (slots >= n_slots)).any(),
+            ((ctxs <= 0) | (ctxs > max_pos)).any(),
+            bad_page.any(),
+        )).to(torch.int64)
+        snapshot = torch.cat((ctx.reshape(1), flags)).cpu().tolist()
+        reasons = ("no_roots", "ctx", "rope", "slot", "ctxlen", "pages")
+        reason = next((name for name, bad in zip(reasons, snapshot[1:])
+                       if bad), None)
+        return _P2StepState(ctx_len=int(snapshot[0]), reason=reason)
+
+    def _empty_p2_outputs(self, rows, depth):
+        """Persistent P2 skip buffers; cache merge copies from these rows."""
+        shape = (rows, depth, self.hf_config.vocab_size)
+        key = (rows, depth, self.hf_config.torch_dtype)
+        if getattr(self, "_p2_empty_key", None) != key:
+            self._p2_empty_key = key
+            self._p2_empty_tokens = torch.zeros(
+                rows, depth, dtype=torch.int64, device=self.device)
+            self._p2_empty_logits = torch.zeros(
+                shape, dtype=self.hf_config.torch_dtype, device=self.device)
+        else:
+            self._p2_empty_tokens.zero_()
+            self._p2_empty_logits.zero_()
+        return self._p2_empty_tokens, self._p2_empty_logits
+
+    def _p2_persistent_copy(self, name, value):
+        """Copy small P2 metadata into a stable, runner-owned address.
+
+        The scheduler reuses its request tensors and the executor replays a
+        fixed-address CUDA graph.  Keeping positions/page tables/round
+        metadata in ephemeral allocator blocks made the stage1 shadow path
+        allocator-sensitive and could turn a valid context length into an
+        unrelated token/slot value.  SGLang-style graph execution uses
+        persistent input buffers; this helper applies the same ownership
+        rule to the metadata shared by DUET's arena and executor.
+        """
+        if not torch.is_tensor(value):
+            # Pure contract tests use lightweight list stand-ins.  Runtime
+            # metadata is always a CUDA tensor.
+            return value
+        if not hasattr(self, "_p2_meta_buffers"):
+            self._p2_meta_buffers = {}
+        buf = self._p2_meta_buffers.get(name)
+        if buf is None or buf.shape != value.shape \
+                or buf.dtype != value.dtype or buf.device != value.device:
+            buf = torch.empty_like(value)
+            self._p2_meta_buffers[name] = buf
+        buf.copy_(value)
+        return buf
+
+    def _run_p2_tree_step(self, duet_proxy, proxy_forked,
+                          proxy_fan_out_tensor, proxy_piv,
+                          proxy_tree_args, layout, temps):
+        """Single P2 tree dispatch shared by both DUET build paths.
+
+        Keeping state classification, slot derivation, rollout, and output
+        conversion in one place prevents the two call sites from drifting and
+        guarantees exactly one rollout per request.
+        """
+        from ssd.engine.helpers.p2_tree import build_root_views
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr, duet_close as _mc)
+
+        tree_args = dict(proxy_tree_args)
+        tree_args["proxy_piv"] = proxy_piv
+        # Shared request buffers are snapshotted into stable addresses before
+        # any lazy GPU derivation.  The same stable metadata then feeds both
+        # arena and executor; a diagnostic shadow cannot change the live
+        # arena inputs through allocator reuse.
+        for _kk in ("positions", "rope_positions", "block_tables"):
+            if torch.is_tensor(tree_args.get(_kk)):
+                tree_args[_kk] = self._p2_persistent_copy(
+                    f"input_{_kk}", tree_args[_kk])
+        B, K, F, N = tree_args["metadata_ints"]
+        _, _, step_context_lens, step_slot_maps = \
+            self._compute_step_positions_and_slot_maps(
+                tree_args["positions"], tree_args["rope_positions"],
+                tree_args["block_tables"], B, K, F, N, layout.MQ_LEN,
+                layout=layout)
+        step_context_lens = self._p2_persistent_copy(
+            "step_context_lens", step_context_lens)
+        step_slot_maps = self._p2_persistent_copy(
+            "step_slot_maps", step_slot_maps)
+        state = self._p2_step_state(
+            tree_args["rope_positions"], step_slot_maps,
+            step_context_lens, tree_args["block_tables"],
+            self.config.duet_phase2_k, layout.MQ_LEN,
+            root_count=(proxy_piv.shape[1]
+                        if proxy_piv is not None else layout.MQ_LEN))
+        tree_args["_p2_ctx_len"] = state.ctx_len
+
+        rows = layout.MQ_LEN
+        depth = self.config.duet_phase2_k
+        if not state.active:
+            self._p2exec_count(f"p2_skip_{state.reason}")
+            self._p2_skip_step = state.reason
+            self._tree_views = None
+            return self._empty_p2_outputs(rows, depth)
+
+        pool, exec_outputs, cell_logits = self._p2tree_rollout(
+            duet_proxy, proxy_forked, proxy_fan_out_tensor,
+            tree_args, layout, step_slot_maps, step_context_lens, temps)
+        event = _mr("p2_output_convert")
+        try:
+            if pool is None:
+                self._p2exec_count("p2_skip_no_roots")
+                self._p2_skip_step = "no_roots"
+                self._tree_views = None
+                return self._empty_p2_outputs(rows, depth)
+            if isinstance(pool, dict):
+                self._tree_views = pool
+                return exec_outputs
+            self._tree_views = build_root_views(
+                pool, rows, self.config.duet_tree_nv,
+                cell_logits=cell_logits)
+            return self._tree_backbone_project(
+                pool, rows, depth, cell_logits,
+                n_roots=(proxy_piv.shape[1]
+                         if proxy_piv is not None else rows))
+        finally:
+            _mc("p2_output_convert", event)
+
     def _ensure_p2_exec(self):
         if not hasattr(self, "_p2_exec"):
             from ssd.engine.helpers.p2_tree_executor import \
@@ -1966,15 +2359,40 @@ class DraftRunner(ModelRunner):
     def _try_p2_executor(self, toks, root_piv, glue_rows, rope_base,
                          ctx_len, K_glue_used, step_slot_maps,
                          step_context_lens, dbt, temps, seeds):
-        """23번 단계2: 전체-P2 graph 실행기 시도. 미지원/실패 시 None
-        (호출측 arena fallback — 계수 기록)."""
+        """Try the full-P2 graph.
+
+        Unsupported, pre-classified shapes return ``None`` and may use the
+        arena.  Runtime/capture/CUDA failures are fatal: replaying another
+        backend in a potentially poisoned CUDA context is unsafe.
+        """
         import numpy as _np
         cfg = self.config
         R = len(seeds)
         W = cfg.duet_proxy_total_budget
         F = cfg.duet_phase2_k
+        _s1_guard = None
+        if os.environ.get("SSD_TREE_STAGE1", "0") == "1":
+            _s1_guard = ([x.clone() for x in step_context_lens],
+                         [x.clone() for x in step_slot_maps])
+
+        def _s1_check(where):
+            if _s1_guard is None:
+                return
+            for name, before_l, after_l in (
+                    ("ctx", _s1_guard[0], step_context_lens),
+                    ("slot", _s1_guard[1], step_slot_maps)):
+                for f_, (before, after) in enumerate(zip(before_l, after_l)):
+                    if not torch.equal(before, after):
+                        idx = (before != after).reshape(-1) \
+                            .nonzero().flatten()[:8]
+                        raise RuntimeError(
+                            f"P2 executor changed caller {name}[{f_}] "
+                            f"during {where}: idx={idx.tolist()} "
+                            f"before={before.reshape(-1)[idx].tolist()} "
+                            f"after={after.reshape(-1)[idx].tolist()}")
         try:
-            if cfg.use_eagle or cfg.duet_tree_policy != "level" \
+            if cfg.use_eagle or cfg.duet_tree_policy not in (
+                    "level", "confidence", "coverage", "eagle", "adaptive") \
                     or R > W:
                 self._p2exec_count("unsupported_cfg")
                 return None
@@ -1987,6 +2405,7 @@ class DraftRunner(ModelRunner):
                     self._p2exec_count("alt_forced_fallback")
                     return None
             ex = self._ensure_p2_exec()
+            _s1_check("executor init")
             if os.environ.get("SSD_TREE_STAGE1", "0") == "1" \
                     and ex.parity_noise is None:
                 # 단계1: 캡처 전에 noise 버퍼 주소를 graph에 박음
@@ -2005,34 +2424,6 @@ class DraftRunner(ModelRunner):
             if gw > ex.gw_max or R > ex.R:
                 self._p2exec_count("shape_unsupported")
                 return None
-            # 퇴화 스텝 감지 (단계1 발견): 엔진이 P2를 축소/비활성한
-            # 스텝은 -1 센티널(slot/ctx/pages/rope) — 실행기가 이를
-            # 모르고 돌면 쓰레기 트리를 populate (실버그). arena
-            # fallback으로 회피. (소형 GPU sync 1회 — 정확성 우선)
-            _dg_why = None
-            if int(ctx_len) <= 0:
-                _dg_why = "ctx"
-            else:
-                _sl_all = torch.stack(
-                    [m[:ex.W] for m in step_slot_maps[:F]])
-                _cl_all = torch.stack(
-                    [c.reshape(-1)[:1] for c in step_context_lens[:F]])
-                if bool((_sl_all < 0).any()):
-                    _dg_why = "slot"
-                elif bool((_cl_all <= 0).any()):
-                    _dg_why = "ctxlen"
-                elif bool((dbt[0, :p0] < 0).any()):
-                    # 실 페이지 -1 = 진짜 퇴화 (canvas 슬롯은 대체)
-                    _dg_why = "pages"
-            if _dg_why is None and torch.is_tensor(rope_base):
-                if bool((rope_base[:R] < 0).any()):
-                    _dg_why = "rope"
-            elif _dg_why is None and not torch.is_tensor(rope_base):
-                if any(int(x) < 0 for x in rope_base[:R]):
-                    _dg_why = "rope"
-            if _dg_why is not None:
-                self._p2exec_count(f"degenerate_{_dg_why}")
-                return None
             # ── 버퍼 채우기 (host→고정 버퍼; readback 없음)
             from ssd.engine.helpers.cudagraph_helpers import (
                 duet_record as _mr_x, duet_close as _mc_x)
@@ -2041,28 +2432,29 @@ class DraftRunner(ModelRunner):
             if R < ex.R:
                 ex.in_root_tok[R:].zero_()
                 ex.in_root_piv[R:].zero_()
-            ex.in_root_piv[:R].copy_(root_piv[:R].float())
+                ex.in_rope_base[R:].zero_()
+            ex.in_root_piv[:R].copy_(root_piv[:R])
             if torch.is_tensor(rope_base):
                 ex.in_rope_base[:R].copy_(rope_base[:R])
             else:
                 ex.in_rope_base[:R].copy_(
                     torch.tensor(rope_base[:R], dtype=torch.int64,
                                  device=self.device))
-            ex.in_glue.zero_()
-            _g = torch.from_numpy(_np.ascontiguousarray(
-                glue_rows[:R, :gw])).to(self.device)
-            ex.in_glue[:R, :gw].copy_(_g)
+            _g_np = _np.ascontiguousarray(glue_rows[:R, :gw])
+            _np.copyto(ex.in_glue_host[:R, :gw].numpy(), _g_np)
+            ex.in_glue[:R, :gw].copy_(
+                ex.in_glue_host[:R, :gw], non_blocking=True)
             ex.in_glue_w.fill_(gw)
-            ex.in_temps.copy_(temps[:1].expand(ex.W).float())
+            ex.in_temps.copy_(temps[:1].expand(ex.W))
             ex.in_prefix_len.fill_(ctx0 - gw - ex.W)
             ex.in_block_tables[:, :dbt.shape[1]].copy_(dbt[:1])
             for f in range(F):
-                ex.in_slot[f].copy_(step_slot_maps[f][:ex.W]
-                                    .to(torch.int32))
+                ex.in_slot[f].copy_(step_slot_maps[f][:ex.W])
                 ex.in_ctx_len[f].copy_(
-                    step_context_lens[f][:1, 0].to(torch.int32)
+                    step_context_lens[f][:1, 0]
                     if step_context_lens[f].dim() > 1
-                    else step_context_lens[f][:1].to(torch.int32))
+                    else step_context_lens[f][:1])
+            _s1_check("input copies")
             # canvas 여분 페이지(p0번째)가 미할당(-1)이면 유효 페이지로
             # 대체 — mask=0이라 내용 무영향(비연속 ID 전제 검증 완료).
             # 단계2: 이 -1 그대로 사용이 hit 하락 주범 클래스로 특정.
@@ -2072,9 +2464,11 @@ class DraftRunner(ModelRunner):
             # 전체가 NaN (산술식 마스킹의 0×inf) — 페이지 -1(OOB
             # 읽기)은 메모리 내용에 따라 간헐적으로 트리 전체를
             # 오염 (tri-AB: e0 ΔP2AL −0.325·심저 1.04 vs e1 −0.065).
-            _pages_fill = dbt[0, :need_pages].to(torch.int32).clone()
-            if int(_pages_fill[p0]) < 0:
-                _pages_fill[p0] = _pages_fill[0]
+            _pages_fill = ex.in_page_ids[:need_pages]
+            _pages_fill.copy_(dbt[0, :need_pages])
+            _pages_fill[p0:p0 + 1].copy_(torch.where(
+                _pages_fill[p0:p0 + 1] >= 0,
+                _pages_fill[p0:p0 + 1], _pages_fill[:1]))
             if p0 in ex.wrappers:
                 for f in range(F):
                     ex.wrappers[p0][f]._paged_kv_indices_buf[
@@ -2082,20 +2476,53 @@ class DraftRunner(ModelRunner):
             _mc_x("p2_prepare", _mev_prep)
             # ── capture(최초) 또는 replay
             _mev_rep = _mr_x("p2_graph_replay")
-            if p0 not in ex.graphs:
+            if os.environ.get("SSD_TREE_EXEC_EAGER_DIAG", "0") == "1":
+                # Diagnostic only: execute the exact executor body without
+                # CUDA graph capture so CUDA_LAUNCH_BLOCKING can attribute an
+                # illegal access to the individual operation that launches
+                # it.  Production never takes this branch.
+                if p0 not in ex.wrappers:
+                    ex.prepare_bucket(p0)
+                if p0 in ex._local_idx_by_bucket:
+                    ex._local_idx = ex._local_idx_by_bucket[p0]
+                for f in range(F):
+                    ex.wrappers[p0][f]._paged_kv_indices_buf[
+                        :need_pages].copy_(_pages_fill)
+                if not hasattr(ex, "_local_idx"):
+                    ex._local_idx = torch.full(
+                        (ex.arena.capacity,), -1, dtype=torch.int64,
+                        device=self.device)
+                ex._local_idx.fill_(-1)
+                ex.run_once(p0)
+                torch.cuda.synchronize()
+                self._p2exec_count("eager_diag")
+            elif p0 not in ex.graphs:
                 ex.prepare_bucket(p0)
                 for f in range(F):
                     ex.wrappers[p0][f]._paged_kv_indices_buf[
                         :need_pages].copy_(_pages_fill)
                 ex.capture(p0)       # 캡처 pass 자체가 이 요청을 실행
+                ex._finalize_outputs()
                 self._p2exec_count("capture")
             else:
-                ex.graphs[p0].replay()
+                ex.replay(p0)
                 self._p2exec_count("replay")
+            _s1_check("capture/replay")
             _mc_x("p2_graph_replay", _mev_rep)
+            if os.environ.get("SSD_TREE_EXEC_CHECK_PCELL_DIAG", "0") == "1":
+                _pc = ex.out_backbone_pcell.detach().cpu()
+                _bad_pc = (_pc < -1) | (_pc >= ex.F * ex.W)
+                if bool(_bad_pc.any()):
+                    raise RuntimeError(
+                        "P2 executor backbone parent-cell out of range: "
+                        f"min={int(_pc.min())} max={int(_pc.max())} "
+                        f"limit={ex.F * ex.W} values={_pc.tolist()}")
             # ── 출력 → views (임시 debug 변환: uniq-pq만 CPU 소형)
             _mev_cv = _mr_x("p2_output_convert")
             _views = self._exec_outputs_to_views(ex, R)
+            self._trace_p2_executor_views(_views[0], ex, R)
+            self._audit_p2_executor_node_coverage(_views[0], ex, R)
+            _s1_check("output views")
             _mc_x("p2_output_convert", _mev_cv)
             return _views
         except Exception as e:
@@ -2103,58 +2530,276 @@ class DraftRunner(ModelRunner):
             if not hasattr(self, "_p2exec_err_logged"):
                 self._p2exec_err_logged = True
                 import traceback
-                print(f"[p2exec] fallback to arena: {e}\n"
+                print(f"[p2exec] fatal executor failure: {e}\n"
                       f"{traceback.format_exc()}", flush=True)
-            return None
+            raise
 
     def _exec_outputs_to_views(self, ex, R):
-        """[R,Nv] 고정 출력 → 기존 소비자 계약 (views/populate).
-        v1: uniq-pq 매핑·backbone 투영만 CPU 소형 (1 DtoH)."""
-        NV, K2 = ex.NV, self.config.duet_phase2_k
-        ints = torch.stack([ex.view_tok, ex.view_par, ex.view_sib,
-                            ex.view_pcell]).cpu()      # 1 DtoH
-        valid = ex.out_valid.cpu()
-        rawq = ex.view_rawq.cpu()
-        pq_ref = torch.full((ex.R, NV), -1, dtype=torch.int64)
-        pq_cells = torch.full((ex.R, NV), -1, dtype=torch.int64)
-        u_valid = torch.zeros(ex.R, dtype=torch.int64)
-        for r in range(min(R, ex.R)):
-            uniq = {}
-            for j in range(int(valid[r])):
-                pc = int(ints[3][r, j])
-                u = uniq.get(pc)
-                if u is None:
-                    u = len(uniq)
-                    uniq[pc] = u
-                    pq_cells[r, u] = pc
-                    u_valid[r] = u + 1
-                pq_ref[r, j] = u
-        views = {"tok": ints[0], "parent_local": ints[1],
-                 "sib_order": ints[2], "raw_q": rawq,
-                 "valid": valid, "parent_q_ref": pq_ref,
-                 "parent_q_cells": pq_cells, "u_valid": u_valid,
+        """Expose graph-produced [W,Nv] views without host conversion.
+
+        ``R`` is the number of real roots; the cache/layout contract is W
+        physical rows.  Rows R:W must therefore exist and remain invalid.
+        """
+        W = self.config.duet_proxy_total_budget
+        if ex.out_valid.shape[0] != W or ex.view_tok.shape[0] != W \
+                or ex.out_backbone_tok.shape[0] != W:
+            raise RuntimeError(
+                "P2 executor output/layout row mismatch: "
+                f"real_roots={R}, valid={tuple(ex.out_valid.shape)}, "
+                f"view={tuple(ex.view_tok.shape)}, "
+                f"backbone={tuple(ex.out_backbone_tok.shape)}, W={W}")
+        # Data-dependent check is debug-only: production runs use ``-O`` and
+        # must not add a replay-tail GPU→CPU synchronization.
+        if __debug__ and R < W and bool((ex.out_valid[R:] != 0).any()):
+            raise RuntimeError(
+                f"P2 executor produced active padding roots: R={R}, W={W}")
+        views = {"tok": ex.view_tok, "parent_local": ex.view_par,
+                 "sib_order": ex.view_sib, "raw_q": ex.view_rawq,
+                 "valid": ex.out_valid,
+                 "parent_q_ref": ex.out_pq_ref,
+                 "parent_q_cells": ex.out_pq_cells,
+                 "u_valid": ex.out_u_valid,
                  "cell_logits": ex.cell_logits}
-        # backbone 투영 [R, K2] (populate 계약)
-        V = self.hf_config.vocab_size
-        bt = torch.zeros(ex.R, K2, dtype=torch.int64)
-        bl = torch.zeros(ex.R, K2, V, dtype=self.hf_config.torch_dtype,
-                         device=ex.cell_logits.device)
-        for r in range(min(R, ex.R)):
-            # 맏이 사슬: parent -1·sib0 → 그 자식(sib0) ...
-            cur_local, d = -1, 0
-            childs = {}
-            for j in range(int(valid[r])):
-                key = int(ints[1][r, j])
-                if int(ints[2][r, j]) == 0 and key not in childs:
-                    childs[key] = j
-            while d < K2 and cur_local in childs:
-                nx = childs[cur_local]
-                bt[r, d] = ints[0][r, nx]
-                pc = int(ints[3][r, nx])
-                if pc >= 0:
-                    bl[r, d] = ex.cell_logits[pc]
-                cur_local, d = nx, d + 1
-        return views, (bt.to(self.device), bl), ex.cell_logits
+        return views, (ex.out_backbone_tok, ex.out_backbone_logits), \
+            ex.cell_logits
+
+    def _trace_p2_executor_views(self, views, ex, R):
+        """Record the exact root views emitted by the captured executor.
+
+        The historical ``SSD_TREE_TOPO_TRACE`` hook lived only after the
+        eager/arena fallback, so enabling it while ``SSD_TREE_EXEC=1`` wrote
+        target walk records but no matching draft topology.  This diagnostic
+        hook performs one small D2H copy only when the trace env is set and
+        serializes the *post-truncation views actually cached and sent*.
+
+        The flattened ``par/root/depth/sib`` fields retain the old trace
+        schema consumed by ``design_static_tree.py``.  ``roots`` is an
+        easier-to-read root-local representation for direct audits.
+        """
+        prefix = os.environ.get("SSD_TREE_TOPO_TRACE", "")
+        if not prefix:
+            return
+        import json as _json
+
+        nv = int(self.config.duet_tree_nv)
+        valid = views["valid"][:R].detach().to("cpu", torch.int64)
+        par_l = views["parent_local"][:R, :nv].detach().to(
+            "cpu", torch.int64)
+        sib_l = views["sib_order"][:R, :nv].detach().to(
+            "cpu", torch.int64)
+        tok_l = views["tok"][:R, :nv].detach().to(
+            "cpu", torch.int64)
+        rawq_l = views["raw_q"][:R, :nv].detach().float().cpu()
+        piv_l = ex.in_root_piv[:R].detach().float().cpu()
+        root_tok_l = ex.in_root_tok[:R].detach().to("cpu", torch.int64)
+
+        # Old pool-like schema starts with the R physical root nodes.
+        par = [-1] * R
+        root = list(range(R))
+        depth = [0] * R
+        sib = [0] * R
+        roots = []
+        next_global = R
+        for r in range(R):
+            n = int(valid[r])
+            local_to_global = {}
+            r_par, r_sib, r_depth = [], [], []
+            r_tok, r_rawq, r_path_conf, r_score = [], [], [], []
+            for j in range(n):
+                p = int(par_l[r, j])
+                s = int(sib_l[r, j])
+                d = 1 if p < 0 else r_depth[p] + 1
+                q = float(rawq_l[r, j])
+                path_conf = q if p < 0 else r_path_conf[p] * q
+                gp = r if p < 0 else local_to_global[p]
+                local_to_global[j] = next_global
+                next_global += 1
+                par.append(gp)
+                root.append(r)
+                depth.append(d)
+                sib.append(s)
+                r_par.append(p)
+                r_sib.append(s)
+                r_depth.append(d)
+                r_tok.append(int(tok_l[r, j]))
+                r_rawq.append(q)
+                r_path_conf.append(path_conf)
+                r_score.append(float(piv_l[r]) * path_conf)
+            roots.append({
+                "rank": r,
+                "root_tok": int(root_tok_l[r]),
+                "piv": float(piv_l[r]),
+                "valid": n,
+                "par": r_par,
+                "sib": r_sib,
+                "depth": r_depth,
+                # Diagnostic-only score decomposition for the EAGLE-like
+                # global frontier policy.  For node j:
+                #   path_conf[j] = product(raw_q along root -> j)
+                #   score[j] = root proxy P_iv * path_conf[j]
+                # Keeping every factor in the trace makes proxy-vs-draft
+                # dominance auditable without changing the live policy.
+                "tok": r_tok,
+                "raw_q": r_rawq,
+                "path_conf": r_path_conf,
+                "score": r_score,
+            })
+        self._p2_topo_trace_seq = getattr(
+            self, "_p2_topo_trace_seq", 0) + 1
+        with open(prefix + ".draft.jsonl", "a") as _f:
+            _f.write(_json.dumps({
+                "trace_seq": self._p2_topo_trace_seq,
+                "policy": self.config.duet_tree_policy,
+                "n": len(par),
+                "par": par,
+                "root": root,
+                "depth": depth,
+                "sib": sib,
+                "alloc": valid.tolist(),
+                "roots": roots,
+            }) + "\n")
+
+    def _append_tree_node_audit(self, kind, record):
+        """Append one diagnostic tree-coverage record.
+
+        ``SSD_TREE_NODE_AUDIT`` is a file prefix.  This helper deliberately
+        performs ordinary host I/O only when that prefix is set, keeping the
+        production and profiler paths untouched.
+        """
+        prefix = os.environ.get("SSD_TREE_NODE_AUDIT", "")
+        if not prefix:
+            return
+        import json as _json
+        _parent = os.path.dirname(prefix)
+        if _parent:
+            os.makedirs(_parent, exist_ok=True)
+        with open(f"{prefix}.{kind}.jsonl", "a") as _f:
+            _f.write(_json.dumps(record) + "\n")
+
+    def _audit_p2_executor_node_coverage(self, views, ex, R):
+        """Prove that every served P2 edge has the correct draft forward.
+
+        A leaf token is sampled from its parent's logits and therefore does
+        not need another model forward unless it has children.  For every
+        emitted node this audit checks that ``parent_q_cells`` names the
+        exact round/lane where its parent was evaluated.  Consequently every
+        internal node must also appear in the evaluated-node map.  The audit
+        is intentionally D2H-heavy and is enabled only in a short correctness
+        run via ``SSD_TREE_NODE_AUDIT=<prefix>``.
+        """
+        if not os.environ.get("SSD_TREE_NODE_AUDIT", ""):
+            return
+
+        F, W, nv = int(ex.F), int(ex.W), int(ex.NV)
+        sel = torch.stack([ex.dbg_sel[f] for f in range(F)]).detach().cpu()
+        selv = torch.stack(
+            [ex.dbg_selv[f] for f in range(F)]).detach().cpu()
+        fan = torch.stack([ex.dbg_fan[f] for f in range(F)]).detach().cpu()
+        arena_root = ex.arena.root.detach().cpu()
+        arena_local = ex._local_idx.detach().cpu()
+        valid = views["valid"][:R].detach().cpu()
+        par = views["parent_local"][:R, :nv].detach().cpu()
+        # ``view_pcell`` is per emitted node.  ``parent_q_cells`` below is
+        # the compact unique-cell table addressed by ``parent_q_ref``; they
+        # are related but intentionally have different layouts.
+        pcell = ex.view_pcell[:R, :nv].detach().cpu()
+        pqref = views["parent_q_ref"][:R, :nv].detach().cpu()
+        pqcells = views["parent_q_cells"][:R, :nv].detach().cpu()
+        uvalid = ex.out_u_valid[:R].detach().cpu()
+
+        # (root rank, root-local node id) -> evaluated cell.  Local -1 is
+        # the root seed itself.  A cell id f*W+lane identifies one real
+        # draft-model forward inside the four-round captured sequence.
+        evaluated = {}
+        duplicate_evaluations = []
+        round_rows = []
+        for f in range(F):
+            active = 0
+            children = 0
+            for lane in range(W):
+                if not bool(selv[f, lane]):
+                    continue
+                active += 1
+                ai = int(sel[f, lane])
+                key = (int(arena_root[ai]), int(arena_local[ai]))
+                cell = f * W + lane
+                if key in evaluated:
+                    duplicate_evaluations.append(
+                        {"root": key[0], "node": key[1],
+                         "old_cell": evaluated[key], "new_cell": cell})
+                evaluated[key] = cell
+                children += int(fan[f, lane])
+            round_rows.append({
+                "round": f,
+                "active_forwards": active,
+                "sampled_children": children,
+            })
+
+        errors = []
+        roots_summary = []
+        for r in range(R):
+            n = int(valid[r])
+            internal = sorted({int(par[r, j]) for j in range(n)
+                               if int(par[r, j]) >= 0})
+            missing_internal = [j for j in internal
+                                if (r, j) not in evaluated]
+            if n and (r, -1) not in evaluated:
+                errors.append(
+                    f"root {r}: root context was not forward-evaluated")
+            if missing_internal:
+                errors.append(
+                    f"root {r}: internal nodes not evaluated "
+                    f"{missing_internal}")
+            bad_edges = []
+            bad_qrefs = []
+            for j in range(n):
+                parent = int(par[r, j])
+                expected = evaluated.get((r, parent), -1)
+                actual = int(pcell[r, j])
+                if actual != expected:
+                    bad_edges.append({
+                        "node": j, "parent": parent,
+                        "expected_cell": expected, "actual_cell": actual,
+                    })
+                ref = int(pqref[r, j])
+                nu = int(uvalid[r])
+                if ref < 0 or ref >= nu or int(pqcells[r, ref]) != actual:
+                    bad_qrefs.append({
+                        "node": j, "ref": ref, "unique_count": nu,
+                        "cell": actual,
+                        "referenced_cell": (int(pqcells[r, ref])
+                                            if 0 <= ref < nv else None),
+                    })
+            if bad_edges:
+                errors.append(f"root {r}: wrong parent-q cells {bad_edges}")
+            if bad_qrefs:
+                errors.append(f"root {r}: wrong q references {bad_qrefs}")
+            leaves = [j for j in range(n) if j not in set(internal)]
+            roots_summary.append({
+                "rank": r,
+                "nodes": n,
+                "internal_nodes": internal,
+                "leaves": leaves,
+                "internal_nodes_evaluated": not missing_internal,
+                "all_node_tokens_have_parent_logits": not bad_edges,
+                "target_q_mapping_exact": not bad_qrefs,
+            })
+
+        if duplicate_evaluations:
+            errors.append(
+                f"nodes evaluated more than once: {duplicate_evaluations}")
+        record = {
+            "step": int(getattr(self, "_request_step_id", -1)),
+            "rounds": round_rows,
+            "roots": roots_summary,
+            "evaluated_contexts": len(evaluated),
+            "errors": errors,
+            "passed": not errors,
+        }
+        self._append_tree_node_audit("p2", record)
+        if errors:
+            raise RuntimeError(
+                "P2 tree node coverage audit failed: " + "; ".join(errors))
 
     # ───────────── P2 상태-랩 (리뷰 지시: 분 단위 반복 비교) ─────────────
     # SSD_TREE_LAB=1: 실주행에서 대표 P2 진입 상태 N개(태그별)를
@@ -2284,7 +2929,9 @@ class DraftRunner(ModelRunner):
             K_glue=st["K_glue"], fanout_policy=cfg.duet_tree_fanout_policy,
             context_len=st["ctx0"], sampler_x=cfg.sampler_x,
             F_x=cfg.async_fan_out, device=self.device,
-            noise_list=noise, trace_out=tr)
+            noise_list=noise, trace_out=tr,
+            proxy_threshold=cfg.duet_tree_proxy_threshold,
+            conf_threshold=cfg.duet_tree_conf_threshold)
         pool = ar.to_pool(st["n_seeds"])
         views = _PT.build_root_views(pool, W, cfg.duet_tree_nv)
         lg = torch.stack([t for t in tr["logits"]]) \
@@ -2426,8 +3073,9 @@ class DraftRunner(ModelRunner):
             if replay:
                 if p0 not in ex.graphs:
                     ex.capture(p0)
+                    ex._finalize_outputs()
                 else:
-                    ex.graphs[p0].replay()
+                    ex.replay(p0)
                 torch.cuda.synchronize()
             else:
                 ex._local_idx.fill_(-1)
@@ -2725,6 +3373,23 @@ class DraftRunner(ModelRunner):
         scratch KV는 실행 전 저장 → 실행 후 (기록분 스냅샷 뒤) 복원."""
         self._stage1_init()
         self._stage1_fill_noise()
+        _meta_guard_ctx = [x.clone() for x in step_context_lens]
+        _meta_guard_slot = [x.clone() for x in step_slot_maps]
+
+        def _check_meta(stage):
+            for name, before_l, after_l in (
+                    ("ctx", _meta_guard_ctx, step_context_lens),
+                    ("slot", _meta_guard_slot, step_slot_maps)):
+                for f, (before, after) in enumerate(zip(before_l, after_l)):
+                    if not torch.equal(before, after):
+                        where = (before != after).reshape(-1) \
+                            .nonzero().flatten()[:8]
+                        raise RuntimeError(
+                            f"stage1 metadata corruption after {stage}: "
+                            f"{name}[{f}] idx={where.tolist()} "
+                            f"before={before.reshape(-1)[where].tolist()} "
+                            f"after={after.reshape(-1)[where].tolist()}")
+
         W = self.config.duet_proxy_total_budget
         L = self.hf_config.num_hidden_layers
         kvflat = self.kv_cache.view(2, L, -1, *self.kv_cache.shape[-2:])
@@ -2736,8 +3401,10 @@ class DraftRunner(ModelRunner):
                 toks, root_piv, glue_rows, rope_base, ctx_len,
                 K_glue_used, step_slot_maps, step_context_lens, dbt,
                 temps, seeds)
+        _check_meta("executor")
         if r is None:
             kvflat[:, :, slots] = saved
+            _check_meta("fallback KV restore")
             self._s1_stats["skipped"] += 1
             return None
         ex = self._p2_exec
@@ -2748,8 +3415,9 @@ class DraftRunner(ModelRunner):
             # 2차 replay 전 scratch KV를 1차 직전 상태로 복원 (리뷰:
             # 진단 경로가 이후 실행에 영향 주지 않도록)
             kvflat[:, :, slots] = saved
-            ex.graphs[p0].replay()
+            ex.replay(p0)
             torch.cuda.synchronize()
+            _check_meta("selfdiff replay")
             _d = float((ex.cell_logits - _lg1).abs().max())
             k = "exec_selfdiff"
             if _d != 0.0:
@@ -2781,6 +3449,7 @@ class DraftRunner(ModelRunner):
             "p0": p0,
         }
         kvflat[:, :, slots] = saved
+        _check_meta("final KV restore")
         return art
 
     @staticmethod
@@ -2880,23 +3549,8 @@ class DraftRunner(ModelRunner):
             _logits_diff = float(dlg) != 0.0
             if _logits_diff:
                 mark(f, "logits", f"absmax={float(dlg):.3e}")
-                if f == 0 and st.get("eager_probes", 0) < 3:
-                    st["eager_probes"] = st.get("eager_probes", 0) + 1
-                    try:
-                        ex = self._p2_exec
-                        with torch.inference_mode():
-                            ex.run_once(art["p0"])
-                        d_eg = (ex.cell_logits[:W]
-                                - art["logits"][:W]).abs().max()
-                        d_ea = (ex.cell_logits[:W]
-                                - trace["logits"][0]).abs().max()
-                        print(f"[stage1][eager-probe] f0 "
-                              f"graphΔ={float(d_eg):.3e} "
-                              f"arenaΔ={float(d_ea):.3e}",
-                              flush=True)
-                    except Exception as _pe:
-                        print(f"[stage1][eager-probe] err {_pe}",
-                              flush=True)
+                # eager-probe는 제거 (리뷰: KV 미복원으로 서빙 오염 —
+                # 동등 기능은 상태-랩의 C/D arm이 KV 복원 하에 수행)
             if not _logits_diff and \
                     not torch.equal(trace["toks"][f], art["toks"][f]):
                 _da = trace["toks"][f]; _de = art["toks"][f]
@@ -2923,7 +3577,7 @@ class DraftRunner(ModelRunner):
                      + (" (logits-diff step)" if _logits_diff
                         else " (logits-EQUAL step)"))
         # 12. 최종 views
-        R_l = self.split_k2_layout.MQ_LEN
+        R_l = int(root_piv.numel())
         v_ref = _PT.build_root_views(pool, R_l, NV)
         v_ex = art["views"]
         # 응답-조립 산출물: uniq-pq / backbone (이전까지 미비교 —
@@ -2931,42 +3585,46 @@ class DraftRunner(ModelRunner):
         try:
             v_ex_full, (bt_e, bl_e), _cl = \
                 self._exec_outputs_to_views(self._p2_exec, R_l)
-            R_n = self.split_k2_layout.MQ_LEN
+            R_n = R_l
+            _cell_ref = torch.cat(trace["logits"], dim=0)
             v_rf = _PT.build_root_views(pool, R_n, NV,
-                                        cell_logits=None)
+                                        cell_logits=_cell_ref)
             for key in ("parent_q_ref", "parent_q_cells", "u_valid"):
                 if key in v_rf and key in v_ex_full:
                     a_ = v_rf[key]
-                    b_ = v_ex_full[key]
+                    b_ = v_ex_full[key][:R_l]
                     if not torch.equal(a_.cpu(), b_.cpu()):
                         mark(None, f"asm_{key}", "")
                         break
             K2_ = self.config.duet_phase2_k
-            bt_a, _bl_a = None, None
-            bt_a = self._tree_backbone_project(
-                pool, R_n, K2_, None,
-                n_roots=int((root_piv > 0).sum()))[0] \
-                if hasattr(self, "_tree_backbone_project") else None
+            bt_a, bl_a = self._tree_backbone_project(
+                pool, R_n, K2_, _cell_ref,
+                n_roots=int((root_piv > 0).sum())) \
+                if hasattr(self, "_tree_backbone_project") else (None, None)
             if bt_a is not None and not torch.equal(
-                    bt_a.cpu(), bt_e.cpu()):
-                _dr = (bt_a.cpu() != bt_e.cpu()).any(1) \
+                    bt_a.cpu(), bt_e[:R_l].cpu()):
+                _dr = (bt_a.cpu() != bt_e[:R_l].cpu()).any(1) \
                     .nonzero().flatten()[:3].tolist()
                 mark(None, "asm_backbone",
                      f"rows={_dr} a={bt_a.cpu()[_dr].tolist()} "
-                     f"e={bt_e.cpu()[_dr].tolist()}")
+                     f"e={bt_e[:R_l].cpu()[_dr].tolist()}")
+            elif bl_a is not None and not torch.equal(
+                    bl_a.cpu(), bl_e[:R_l].cpu()):
+                mark(None, "asm_backbone_logits", "")
         except Exception as _ae:
             mark(None, "asm_error", str(_ae)[:120])
-        if not torch.equal(v_ref["valid"], v_ex["valid"]):
+        if not torch.equal(v_ref["valid"],
+                           v_ex["valid"][:R_l].cpu()):
             mark(None, "views_valid",
                  f"a={v_ref['valid'].tolist()} "
-                 f"e={v_ex['valid'].tolist()}")
+                 f"e={v_ex['valid'][:R_l].tolist()}")
         else:
             for key in ("tok", "parent_local", "sib_order"):
                 ok = True
                 for r_i in range(R_l):
                     n_i = int(v_ref["valid"][r_i])
                     if not torch.equal(v_ref[key][r_i, :n_i],
-                                       v_ex[key][r_i, :n_i]):
+                                       v_ex[key][r_i, :n_i].cpu()):
                         ok = False
                         break
                 if not ok:
@@ -2985,7 +3643,7 @@ class DraftRunner(ModelRunner):
     def _p2tree_rollout(self, duet_proxy, proxy_forked, proxy_fan_out_tensor,
                         tree_args, layout, step_slot_maps,
                         step_context_lens, temps):
-        """P2-tree rollout 엔진 어댑터 (T1.4b-b — docs/duet/20).
+        """P2-tree rollout 엔진 어댑터 (T1.4b-b — docs/duet/internal/20).
 
         B=1 전용 (v6: B>1 게이트 OFF). run_rollout 코어에 실엔진
         forward_fn을 주입: 셀 그리드 slot/context는 기존 체인 것을
@@ -3005,53 +3663,56 @@ class DraftRunner(ModelRunner):
         W = layout.MQ_LEN
         K2 = cfg.duet_phase2_k
         V = self.hf_config.vocab_size
-        fo = proxy_fan_out_tensor[0].tolist()
+        # _update_phase2_layout_inplace already paid the single fan-out
+        # readback.  Reuse that host list instead of synchronizing again.
+        _fol = layout.fan_out_list
+        fo = _fol[0] if _fol and isinstance(_fol[0], list) else _fol
+        seed_positions = [p for p, count in enumerate(fo)
+                          for _ in range(count)]
         toks = proxy_forked[0]
-        # T6 1a: arena 모드는 seed 토큰 정체가 CPU에 불필요 (glue는 p만
-        # 사용) — per-seed int() 동기화 10회 제거 (리뷰5 pre-구간 지적).
-        # 채택 (2026-08-05 eslab17 게이트: 인터리브 3/3 승 +10.8%,
-        # 토큰축 동등) — 기본 ON, SSD_TREE_ARENA=0으로 구경로 폴백.
-        _arena_pre = os.environ.get("SSD_TREE_ARENA", "1") == "1"
-        seeds, i = [], 0
-        if _arena_pre:
-            for p, c in enumerate(fo):
-                for _ in range(c):
-                    seeds.append((p, None))
-                    i += 1
-        else:
-            for p, c in enumerate(fo):
-                for _ in range(c):
-                    seeds.append((p, int(toks[i])))
-                    i += 1
+        _use_arena = os.environ.get("SSD_TREE_ARENA", "1") == "1"
         # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
         seed_piv = tree_args.get("proxy_piv")
         # 23번 단계1: fan 합은 layout 폭(pad 흡수)이지만 실제 seed는
         # piv 폭 — pad 행은 root로 만들지 않는다 (빈 키는 #14 무효화).
-        if seed_piv is not None and seed_piv.shape[1] < len(seeds):
-            seeds = seeds[:seed_piv.shape[1]]
-        # T6 1a (docs/duet/22): SSD_TREE_ARENA=1이면 GPU 상주 rollout —
-        # piv를 CPU로 내리지 않는다 (pre 구간 sync 제거).
-        _use_arena = os.environ.get("SSD_TREE_ARENA", "1") == "1"
-        if _use_arena:
-            root_piv = (seed_piv[0].float() if seed_piv is not None
-                        else torch.full((len(seeds),), 1e-6,
-                                        device=self.device))
+        if seed_piv is not None and seed_piv.shape[1] < len(seed_positions):
+            seed_positions = seed_positions[:seed_piv.shape[1]]
+        R = len(seed_positions)
+        toks = toks[:R]
+        root_piv = (seed_piv[0, :R].float() if seed_piv is not None
+                    else torch.full((R,), 1e-6, device=self.device))
+        rope0 = tree_args["rope_positions"]
+        if torch.is_tensor(rope0):
+            rope_base = rope0[:R].to(device=self.device, dtype=torch.int64)
         else:
-            root_piv = (seed_piv[0].cpu().float()
-                        if seed_piv is not None
-                        else torch.full((len(seeds),), 1e-6))
+            rope_base = torch.tensor(
+                list(rope0)[:R], dtype=torch.int64, device=self.device)
+
+        # SGLang-style content mask: inactive roots stay in the fixed-shape
+        # buffers but receive safe values and zero budget.  No Python bool,
+        # nonzero(), or device-to-host synchronization is needed here.
+        toks, root_piv, rope_base, _ = _PT.sanitize_root_inputs(
+            toks, root_piv, rope_base, V, int(cfg.max_model_len))
         # 이슈 #24: R-W 분리 — 상위 R root 외에는 piv를 0으로 눌러
         # 예산이 가지 않게 한다 (구조·CG·키 폭은 불변; 무예산 root는
         # 뷰 0 → populate 후 #14 키 무효화 경로로 명시적 miss).
-        _rc = getattr(cfg, "duet_tree_root_count", None)
-        if _rc is not None and _rc < len(seeds):
+        _rc = int(cfg.duet_p2_active_root_count)
+        if _rc is not None and _rc < R:
             _keep = torch.argsort(root_piv, descending=True,
                                   stable=True)[:_rc]
-            _mask_r = torch.zeros(len(seeds), dtype=torch.bool,
+            _mask_r = torch.zeros(R, dtype=torch.bool,
                                   device=root_piv.device)
             _mask_r[_keep] = True
             root_piv = torch.where(_mask_r, root_piv,
                                    torch.zeros_like(root_piv))
+
+        if _use_arena:
+            seeds = [(p, None) for p in seed_positions]
+        else:
+            seed_tokens = toks.cpu().tolist()
+            seeds = list(zip(seed_positions, seed_tokens))
+            root_piv = root_piv.cpu()
+            rope_base = rope_base.cpu().tolist()
         # 글루 가시성/rope base: seed 행의 것 — 체인 step은 위치-prefix,
         # 트리 step은 조상 비트맵 override (T3.4-b3-5)
         _gro = tree_args.get("glue_rows_override")
@@ -3062,16 +3723,13 @@ class DraftRunner(ModelRunner):
             # 이슈 #7 수정: 글루 폭 = 위치축 길이 (vk+1) — K2+1로 자르면
             # vk=K1 step에서 미래 토큰 누출/조기 절단 (stub은 vk=K2라 통과)
             _n_pos = len(fo)
-            glue_rows = _np.zeros((len(seeds), _n_pos), dtype=_np.uint8)
+            glue_rows = _np.zeros((R, _n_pos), dtype=_np.uint8)
             for r, (p, _t) in enumerate(seeds):
                 glue_rows[r, :p + 1] = 1
             K_glue_used = _n_pos - 1
-        rope0 = tree_args["rope_positions"]
-        if _use_arena and torch.is_tensor(rope0):
-            rope_base = rope0[:len(seeds)].to(torch.int64)  # sync 0회
-        else:
-            rope_base = [int(rope0[r]) for r in range(len(seeds))]
-        ctx_len = int(step_context_lens[0][0]) - 0  # chain 빌더 입력과 동일
+        ctx_len = tree_args.get("_p2_ctx_len")
+        if ctx_len is None:  # direct diagnostic callers only
+            ctx_len = int(step_context_lens[0].reshape(-1)[0])
 
         dbt = tree_args["block_tables"]
         cache_hits_list = tree_args.get("cache_hits_list") or [1]
@@ -3097,11 +3755,15 @@ class DraftRunner(ModelRunner):
                 active_layout=layout,
                 active_cache_hits_list=cache_hits_list,
             )
-            logits = self.run_model(
-                input_ids_w.to(self.device), rope_w.to(self.device),
-                is_prefill=False, last_only=False, tree_decode_step=f,
-                cache_hits=tree_args.get("cache_hits"))
-            reset_context()
+            try:
+                logits = self.run_model(
+                    input_ids_w.to(self.device),
+                    rope_w.to(self.device),
+                    is_prefill=False, last_only=False,
+                    tree_decode_step=f,
+                    cache_hits=tree_args.get("cache_hits"))
+            finally:
+                reset_context()   # 예외 시에도 context 누수 방지 (리뷰)
             return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
 
         _mc_p2("p2_prepare", _mev_p2prep)
@@ -3123,10 +3785,52 @@ class DraftRunner(ModelRunner):
             _stage1 = False
         _s1_art = None
         if _stage1 and _use_arena:
+            # The shadow executor must be observational only.  Keep a second
+            # set of sentinels around every live arena input so a bad graph or
+            # diagnostic restore is caught before the production CUDA graph
+            # consumes corrupted metadata.  This is stage1-only and therefore
+            # has no serving-path cost.
+            _s1_live_guard = {
+                "ctx": [x.clone() for x in step_context_lens],
+                "slot": [x.clone() for x in step_slot_maps],
+                "dbt": dbt.clone(),
+                "toks": toks.clone(),
+                "piv": root_piv.clone(),
+                "rope": (rope_base.clone() if torch.is_tensor(rope_base)
+                         else torch.tensor(rope_base, device=self.device)),
+            }
             _s1_art = self._stage1_exec_shadow(
                 toks, root_piv, glue_rows, rope_base, ctx_len,
                 K_glue_used, step_slot_maps, step_context_lens, dbt,
                 temps, seeds)
+            _s1_changed = []
+            for _name, _before, _after in (
+                    ("dbt", _s1_live_guard["dbt"], dbt),
+                    ("toks", _s1_live_guard["toks"], toks),
+                    ("piv", _s1_live_guard["piv"], root_piv),
+                    ("rope", _s1_live_guard["rope"], rope_base)):
+                if not torch.is_tensor(_after):
+                    _after = torch.as_tensor(
+                        _after, device=_before.device,
+                        dtype=_before.dtype)
+                if not torch.equal(_before, _after):
+                    _s1_changed.append(_name)
+            for _name, _before_l, _after_l in (
+                    ("ctx", _s1_live_guard["ctx"], step_context_lens),
+                    ("slot", _s1_live_guard["slot"], step_slot_maps)):
+                for _f, (_before, _after) in enumerate(
+                        zip(_before_l, _after_l)):
+                    if not torch.equal(_before, _after):
+                        _where = (_before != _after).reshape(-1) \
+                            .nonzero().flatten()[:8]
+                        _s1_changed.append(
+                            f"{_name}[{_f}] idx={_where.tolist()} "
+                            f"before={_before.reshape(-1)[_where].tolist()} "
+                            f"after={_after.reshape(-1)[_where].tolist()}")
+            if _s1_changed:
+                raise RuntimeError(
+                    "stage1 shadow mutated live P2 inputs: "
+                    + ",".join(_s1_changed))
         _use_exec = (os.environ.get("SSD_TREE_EXEC", "0") == "1"
                      and not _stage1)
         if _use_exec and _use_arena:
@@ -3174,7 +3878,9 @@ class DraftRunner(ModelRunner):
                                     and hasattr(self, "_s1_noise")
                                     and _s1_art is not None)
                                 else None),
-                    trace_out=_s1_trace)
+                    trace_out=_s1_trace,
+                    proxy_threshold=cfg.duet_tree_proxy_threshold,
+                    conf_threshold=cfg.duet_tree_conf_threshold)
                 _mc_p2("p2_rollout", _mev_roll)
                 if self._lab_active() and \
                         getattr(self, "_lab_states", None) and \
@@ -3189,7 +3895,7 @@ class DraftRunner(ModelRunner):
                         cell_logits[i * W:(i + 1) * W]
                         for i in range(K2)]
                 # 1a 경계: 단일 sync로 기존 view/wire 경로에 접속
-                # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/22)
+                # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/internal/22)
                 _mev_cv2 = _mr_p2("p2_output_convert")
                 pool = _ar.to_pool(len(seeds))
                 if _s1_art is not None:
@@ -3236,7 +3942,9 @@ class DraftRunner(ModelRunner):
                     rope_base_by_root=rope_base, K_glue=K_glue_used,
                     fanout_policy=cfg.duet_tree_fanout_policy,
                     context_len=ctx_len,
-                    sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out)
+                    sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out,
+                    proxy_threshold=cfg.duet_tree_proxy_threshold,
+                    conf_threshold=cfg.duet_tree_conf_threshold)
             _mc_p2("p2_output_convert", _mev_cv2)
         finally:
             _CH.cache.pop("_tree_mask_override", None)
@@ -3405,22 +4113,25 @@ class DraftRunner(ModelRunner):
         B, N = chosen_pos.shape
         assert draft_forked.shape[0] == B, \
             f"draft_forked B={draft_forked.shape[0]} != proxy B={B}"
-        # Invariant: chosen_pos ∈ [0, K_rank] by construction.
-        if __debug__:
-            assert (chosen_pos <= K_rank).all().item(), \
-                f"chosen_pos out of range [0, {K_rank}]: max={chosen_pos.max().item()}"
+        # Never feed wire data directly to CUDA advanced indexing.  The old
+        # range assertion disappeared under ``python -O``; one malformed or
+        # partially-written async payload could therefore turn chosen_pos
+        # into an out-of-range index and kill the draft GPU.  Clamp for the
+        # read and exclude invalid entries from selection without a host sync.
+        pos_valid = (chosen_pos >= 0) & (chosen_pos <= K_rank)
+        safe_pos = chosen_pos.clamp(min=0, max=K_rank)
 
         # in_draft dedup — per-seq membership against that seq's Phase 1
         # candidates. Uniform: all slots real. Non-uniform: mask filters
         # zero-padded slots so chosen_tok=0 doesn't false-match on padding.
         _b_idx = torch.arange(B, device=chosen_pos.device)[:, None]   # [B, 1]
-        df_per_cand = draft_forked[_b_idx, chosen_pos]                # [B, N, max_fo]
+        df_per_cand = draft_forked[_b_idx, safe_pos]                  # [B, N, max_fo]
         eq = (df_per_cand == chosen_tok.unsqueeze(-1))                # [B, N, max_fo]
         if draft_forked_mask is not None:
-            msk = draft_forked_mask[chosen_pos, :]                    # [B, N, max_fo]
+            msk = draft_forked_mask[safe_pos, :]                      # [B, N, max_fo]
             eq = eq & msk
         in_draft = eq.any(-1)                                         # [B, N]
-        valid = ~in_draft                                             # [B, N]
+        valid = pos_valid & ~in_draft                                 # [B, N]
 
         # Pick first total_budget valid per seq (score-sorted preserved).
         rank = valid.to(torch.int64).cumsum(1)                        # [B, N]
@@ -3451,14 +4162,21 @@ class DraftRunner(ModelRunner):
         # 모은다 → 앞 total_budget개 gather (결과 동일, sync 0).
         _ord_take = (~take).to(torch.int8).argsort(dim=1, stable=True)
         _sel_idx = _ord_take[:, :total_budget]                 # [B, budget]
-        taken_pos = chosen_pos.gather(1, _sel_idx)
-        taken_tok = chosen_tok.gather(1, _sel_idx)
+        selected_valid = valid.gather(1, _sel_idx)
+        taken_pos = torch.where(
+            selected_valid, safe_pos.gather(1, _sel_idx),
+            torch.zeros_like(_sel_idx))
+        taken_tok = torch.where(
+            selected_valid, chosen_tok.gather(1, _sel_idx),
+            torch.zeros_like(_sel_idx))
         # T2.1 (P2-tree): 잔존 seed의 P_iv를 토큰과 동일 인덱싱으로 관통
         # (기존 역매칭 브릿지 제거 — 결정 ③ 라이브 값 사용).
         _piv = duet_proxy.get("chosen_piv") if isinstance(duet_proxy, dict) \
             else None
-        taken_piv = _piv.gather(1, _sel_idx) if _piv is not None \
-            else None
+        taken_piv = (torch.where(
+            selected_valid, _piv.gather(1, _sel_idx),
+            torch.zeros_like(_sel_idx, dtype=_piv.dtype))
+            if _piv is not None else None)
 
         # fan_out 동적 재구성 — per seq (length = K_rank+1 per row)
         K_plus_1 = K_rank + 1
@@ -3717,7 +4435,7 @@ class DraftRunner(ModelRunner):
             _e0.record_draft_selector(
                 getattr(self, "_e0_step_id", -1),
                 duet_proxy["chosen_pos"], duet_proxy["chosen_tok"],
-                proxy_forked, proxy_fan_out_tensor)
+                proxy_forked, proxy_fan_out_tensor, proxy_piv)
         _n_seed_real = proxy_forked.shape[1]   # pad 전 실제 seed 수
         if TRACE_SPLIT_K1K2:
             _fol_dbg = proxy_fan_out_tensor.tolist()      # debug-only sync
@@ -3746,37 +4464,9 @@ class DraftRunner(ModelRunner):
         if (self.config.duet_tree_policy != "off" and B == 1
                 and bool((_temps_p2 > 0).all())):
             # === P2-tree rollout (T3.4-b3) — 체인 P2 decode 대체 ===
-            from ssd.engine.helpers.p2_tree import build_root_views
-            _tree_args = dict(proxy_tree_args)
-            _tree_args["proxy_piv"] = proxy_piv
-            _mB, _mK, _mF, _mN = proxy_tree_args["metadata_ints"]
-            _, _srp, _scl, _ssm = self._compute_step_positions_and_slot_maps(
-                proxy_tree_args["positions"],
-                proxy_tree_args["rope_positions"],
-                proxy_tree_args["block_tables"],
-                _mB, _mK, _mF, _mN, _layout_k2.MQ_LEN, layout=_layout_k2)
-            pool, _elog, _cell_logits = self._p2tree_rollout(
-                duet_proxy, proxy_forked, proxy_fan_out_tensor,
-                _tree_args, _layout_k2, _ssm, _scl, _temps_p2)
-            _R = _layout_k2.MQ_LEN
-            _nv = self.config.duet_tree_nv
-            from ssd.engine.helpers.cudagraph_helpers import (
-                duet_record as _mr_cv, duet_close as _mc_cv)
-            _mev_cvB = _mr_cv("p2_output_convert")
-            if isinstance(pool, dict):
-                # 23번 단계2: 실행기 경로 — views/backbone 직접
-                self._tree_views = pool
-                proxy_tokens, proxy_logits = _elog
-            else:
-                self._tree_views = build_root_views(
-                    pool, _R, _nv, cell_logits=_cell_logits)
-                # 체인-호환 populate 입력: backbone [R, K2] 투영
-                proxy_tokens, proxy_logits = \
-                    self._tree_backbone_project(
-                        pool, _R, K2, _cell_logits,
-                        n_roots=(proxy_piv.shape[1]
-                                 if proxy_piv is not None else _R))
-            _mc_cv("p2_output_convert", _mev_cvB)
+            proxy_tokens, proxy_logits = self._run_p2_tree_step(
+                duet_proxy, proxy_forked, proxy_fan_out_tensor, proxy_piv,
+                proxy_tree_args, _layout_k2, _temps_p2)
             proxy_acts = None
         else:
             self._tree_views = None
@@ -3792,7 +4482,10 @@ class DraftRunner(ModelRunner):
             cache_hits_list, draft_acts, proxy_acts,
             proxy_layout=_layout_k2,
             draft_layout=_layout_k1)
-        if getattr(self, "_tree_views", None) is not None:
+        if getattr(self, "_p2_skip_step", None) is not None:
+            self.tree_cache_keys[self._last_n_draft_keys:] = -1
+            self._p2_skip_step = None
+        elif getattr(self, "_tree_views", None) is not None:
             self._invalidate_zero_valid_tree_keys()
         # 단계3 (고정 지침): 캐시 완성 후 고정 지연 — "너무 빨라서
         # hit 하락" 가설의 1회성 반증 실험 전용 (sweep 아님)
@@ -3857,6 +4550,18 @@ class DraftRunner(ModelRunner):
             proxy_args["seq_ids_expanded"].to(torch.int64),
             proxy_k, proxy_args["rec_flat"].to(torch.int64)], dim=1)
 
+        # Same-step root-coverage audit.  In shadow mode the selector retains
+        # W roots while the production allocator still gives nodes only to
+        # the canonical top R.  Save the exact discarded key rows before the
+        # ordinary valid==0 invalidation turns them into -1 sentinels.
+        if os.environ.get("SSD_TREE_ROOT_SHADOW", "") not in ("", "0") \
+                and self.config.duet_tree_policy == "confidence":
+            _active_r = int(self.config.duet_p2_active_root_count)
+            _selector_r = int(self.config.duet_p2_seed_count)
+            self._tree_root_shadow_keys = proxy_keys[
+                _active_r:_selector_r].detach().clone()
+            self._tree_root_shadow_rank0 = _active_r
+
         # Pad draft_tokens / proxy_tokens from per-row K (K1 / K_short) to
         # K_long width so cache row width is uniform. The matched row's
         # valid_k tells consumers (speculator, verify) the meaningful prefix.
@@ -3876,6 +4581,20 @@ class DraftRunner(ModelRunner):
 
         draft_tokens, draft_logits, draft_acts = _pad_to_klong(draft_tokens, draft_logits, draft_acts, draft_row_vk)
         proxy_tokens, proxy_logits, proxy_acts = _pad_to_klong(proxy_tokens, proxy_logits, proxy_acts, proxy_row_vk)
+
+        # Keys and payloads share one row namespace.  A previous R/W bug let
+        # tree root_count=6 produce six payload rows beside ten proxy keys;
+        # later hits could then read the wrong row (or no row) and corrupt the
+        # next tree/P1 context.  Fail at the producer boundary instead.
+        if draft_keys.shape[0] != draft_tokens.shape[0]:
+            raise RuntimeError(
+                "draft cache key/payload row mismatch: "
+                f"keys={draft_keys.shape[0]} payload={draft_tokens.shape[0]}")
+        if proxy_keys.shape[0] != proxy_tokens.shape[0]:
+            raise RuntimeError(
+                "proxy cache key/payload row mismatch: "
+                f"keys={proxy_keys.shape[0]} payload={proxy_tokens.shape[0]} "
+                f"(tree root/output width must equal layout width)")
 
         self.tree_cache_keys = torch.cat([draft_keys, proxy_keys], dim=0)
         # Boundary for phase 1 (draft-sourced) vs phase 2 (proxy-sourced) classification

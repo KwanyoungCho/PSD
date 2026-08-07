@@ -1,10 +1,10 @@
-"""E0 calibration trace gate (P0 — docs/duet/15 §9 E0, docs/duet/17 §2).
+"""E0 calibration trace gate (P0 — docs/duet/internal/15 §9 E0, docs/duet/internal/17 §2).
 
 Standalone, wholesale-removable module. The engine carries only small
 guarded blocks (`if E0_TRACE: e0_trace.record_*`); deleting this file +
 those blocks removes the feature entirely.
 
-User conditions (docs/duet/15 §10 P0, 2026-08-04):
+User conditions (docs/duet/internal/15 §10 P0, 2026-08-04):
 - Gate `SSD_DUET_E0_TRACE=1`, default OFF. NEVER enabled in TPS
   measurement runs (same principle as PROFILE=0); dedicated runs only.
 - OFF cost at call sites = one module-level bool check.
@@ -15,13 +15,13 @@ User conditions (docs/duet/15 §10 P0, 2026-08-04):
 - `SSD_DUET_E0_SUBSAMPLE=N` records every N-th step (default 1 = all).
   `SSD_DUET_E0_DIR` sets the output dir (default ./e0_trace).
 - Drop accounting: queue overflow increments a counter written in the
-  final summary line — E0 hygiene requires drops == 0 (docs/duet/15 §9).
+  final summary line — E0 hygiene requires drops == 0 (docs/duet/internal/15 §9).
 
 Schema (JSONL, one record per line, joined offline on (n_step, seq)):
 - target "wire": full wire candidate set BEFORE dedup with raw P_iv values
   + sufficient statistics for offline temp-matched recomputation (per-pos
   y-logits, exact lse@temp1, top-M exit/draft logits — the wire itself
-  carries no P_iv, so this is the only source; docs/duet/15 E0 ④).
+  carries no P_iv, so this is the only source; docs/duet/internal/15 E0 ④).
 - draft "request": incoming outcome (seq, accepted_len-1, recovery_tok).
 - draft "response": phase_source / valid_k / response tokens.
 - draft "selector": parsed wire (order = rank) + retained P2 seeds after
@@ -53,7 +53,7 @@ class _Writer:
         self._q = queue.Queue(maxsize=8192)
         # Line-buffered: the engine may hard-exit (no atexit) — an unflushed
         # block buffer silently loses the tail (관측: draft 꼬리 ~700 step
-        # 유실, docs/duet/17 이슈 #5). Writes happen on this background
+        # 유실, docs/duet/internal/17 이슈 #5). Writes happen on this background
         # thread, so per-line flush costs nothing on the engine path.
         self._f = open(path, "a", buffering=1)
         self._t = threading.Thread(target=self._loop, daemon=True)
@@ -75,7 +75,7 @@ class _Writer:
             # Heartbeat: the engine hard-exits (atexit unreliable), so the
             # drop counter is persisted periodically — E0 hygiene (drop=0)
             # is verifiable from the last heartbeat even without a clean
-            # close (docs/duet/17 이슈 #5 후속).
+            # close (docs/duet/internal/17 이슈 #5 후속).
             if self.written % 1000 == 0:
                 self._f.write(json.dumps(
                     {"kind": "heartbeat", "written": self.written,
@@ -158,7 +158,7 @@ def record_target_wire(config, exit_logits, logits_q, draft_tokens,
     """Target rank-0, once per spec step, right after the wire is packed.
 
     Sufficient statistics for offline raw AND temp-matched P_iv
-    (docs/duet/15 E0 ④): exact per-position lse@temp1 + y-logits +
+    (docs/duet/internal/15 E0 ④): exact per-position lse@temp1 + y-logits +
     top-M exit/draft logits (temp-matched is top-M-approximate, which
     the design explicitly allows), + exit logit of every wire candidate.
     """
@@ -175,13 +175,20 @@ def record_target_wire(config, exit_logits, logits_q, draft_tokens,
     topm = min(_TOPM, V)
     e_top = exit_view.topk(topm, dim=-1)
     d_top = lq.topk(topm, dim=-1)
+    # Tree Policy-B packs P_iv into bits 15..31 of chosen_tok before the
+    # communication call.  E0 is invoked after that packing, so using the
+    # wire integer as a vocabulary index triggers a device-side gather OOB.
+    # Store and gather with the clean token bits; P_iv itself is already
+    # recorded losslessly enough in the separate ``piv`` field.
+    wire_tok = (chosen_tok & ((1 << 15) - 1)
+                if config.duet_tree_policy != "off" else chosen_tok)
     cand_logit_E = exit_view.gather(
         1, chosen_pos.unsqueeze(-1).expand(-1, -1, V)).gather(
-        2, chosen_tok.unsqueeze(-1)).squeeze(-1)                   # [B, N]
+        2, wire_tok.unsqueeze(-1)).squeeze(-1)                     # [B, N]
     tr._record(
         "wire",
         gpu_tensors=dict(
-            chosen_pos=chosen_pos, chosen_tok=chosen_tok,
+            chosen_pos=chosen_pos, chosen_tok=wire_tok,
             piv=piv_chosen, h=h,
             y_logit_E=y_logit_E, y_logit_D=y_logit_D,
             lse1_E=lse1_E, lse1_D=lse1_D,
@@ -234,14 +241,20 @@ def record_draft_response(step_id, phase_source, valid_k, out_tokens):
 
 
 def record_draft_selector(step_id, chosen_pos, chosen_tok,
-                          proxy_forked, proxy_fan_out):
+                          proxy_forked, proxy_fan_out, proxy_piv=None):
     """Draft, once per tree build: the parsed wire (order = wire rank —
     score-descending) and the retained P2 seeds after P1 dedup, plus the
     per-position fan-out. Dedup survival / original rank of each retained
     seed is reconstructible offline (wire order + selector semantics)."""
+    tensors = dict(chosen_pos=chosen_pos, chosen_tok=chosen_tok,
+                   proxy_forked=proxy_forked,
+                   proxy_fan_out=proxy_fan_out)
+    # New calibration traces are self-contained: the retained root score is
+    # recorded in exactly the same grouped order as ``proxy_forked``.  Older
+    # traces did not have this field and need a target-wire join offline.
+    if proxy_piv is not None:
+        tensors["proxy_piv"] = proxy_piv
     get("draft")._record(
         "selector",
-        gpu_tensors=dict(chosen_pos=chosen_pos, chosen_tok=chosen_tok,
-                         proxy_forked=proxy_forked,
-                         proxy_fan_out=proxy_fan_out),
+        gpu_tensors=tensors,
         step_id=int(step_id))

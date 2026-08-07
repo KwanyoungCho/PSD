@@ -56,6 +56,15 @@ def _diff(a, b):
 
 @unittest.skipUnless(_HAVE_MODELS, "champion model dirs not present")
 class TestOldNewEquivalence(unittest.TestCase):
+    def test_dynamic_tree_is_the_duet_default_and_chain_is_explicit(self):
+        dynamic = _mk({})
+        self.assertEqual(dynamic.duet_tree_policy, "eagle")
+        self.assertEqual(dynamic.duet_p2_seed_count,
+                         dynamic.duet_proxy_total_budget)
+
+        chain = _mk({}, duet_tree_policy="off")
+        self.assertEqual(chain.duet_tree_policy, "off")
+
     def test_env_free_equals_old_env_style(self):
         # Old style: champion scripts exported both envs.
         old = _mk({"SSD_FORCE_SPLIT_K1K2": "1", "SSD_DUET_JIT_SHORT": "1"})

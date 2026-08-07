@@ -99,6 +99,10 @@ class AsyncSendRing:
         offset = 0
         for t in tensors:
             n = t.numel()
+            if offset + n > slot.buf.numel():
+                raise RuntimeError(
+                    f"AsyncSendRing payload overflow: need={offset + n}, "
+                    f"capacity={slot.buf.numel()}")
             slot.buf[offset:offset + n].copy_(t.view(-1), non_blocking=True)
             offset += n
 
@@ -134,4 +138,3 @@ class AsyncSendRing:
         }
         with open(f"{outdir}/proxy_send_ring_stats.json", "w") as f:
             json.dump(out, f)
-

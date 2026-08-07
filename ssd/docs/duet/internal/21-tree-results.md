@@ -1,9 +1,9 @@
 # P2-Tree — 결과 리포트 및 기법 서술 (T5)
 
-> 상태: **작성 중** — 구현 완료(docs/duet/20), E2E 검증 진행.
+> 상태: **작성 중** — 구현 완료(docs/duet/internal/20), E2E 검증 진행.
 > §1–§3은 논문/발표자료에 바로 쓸 수 있도록 자족적으로 서술했다.
 > §4 이후는 sweep/비교 결과가 나오는 대로 채운다.
-> 설계 원문: docs/duet/15 (v6). 구현·이슈 로그: docs/duet/20.
+> 설계 원문: docs/duet/internal/15 (v6). 구현·이슈 로그: docs/duet/internal/20.
 
 ## 1. 기법 개요 — 무엇을 하는 것인가
 
@@ -16,7 +16,7 @@ target이 실제로 회복할 토큰"을 예측해 draft 캐시를 채운다. �
   수 있고 (tree attention), 수락 보행이 첫 기각에서 형제 가지로
   갈아탈 수 있으므로, 같은 노드 예산에서 기대 수락 길이(AL)가
   체인보다 길다. AL은 TPS의 지배 항이다 (E1 실측: 트리화 AL 이득
-  +3.5~3.8%, 형제 상관 λ=0.51~0.54 — docs/duet/18).
+  +3.5~3.8%, 형제 상관 λ=0.51~0.54 — docs/duet/internal/18).
 - **무엇이 어려운가**: (a) 수락-보존(losslessness) — 트리에서 형제를
   순서대로 제안하면 뒤 형제의 제안분포는 앞 형제 기각에 조건화된
   잔차 분포가 되어야 target 분포가 정확히 보존된다. (b) 엔진 통합 —
@@ -118,17 +118,24 @@ AL 우열은 단일런 잡음 범위 — T4 sweep에서 판정.
   693ms/post 194ms (체인 33/13 — eager 80층 ~21×) = 지배 항. →
   **T3.2 CG capture 적용 후 트리 스텝 graph_pre 31.5ms (22× 개선,
   체인 수준)**. CG 경로 안정화까지 이슈 #17(데코레이터 가로채기)·
-  #18(context 상속 3-D 반환) — docs/duet/20 로그.
+  #18(context 상속 3-D 반환) — docs/duet/internal/20 로그.
 - **CG+수정 전체 검증 런 (e2e2_level_cg_full, 4 seqs)**: 무크래시
   완주, 불변 가드 미발화. Decode 17.38 (eager 2.60 → 6.7×; OFF와의
   잔여 격차는 오염 하 draft python 성분 — 한산 창에서 재측정), AL
   3.42, hit 0.82, P2 hit 0.284, P2 수락 길이 1.24.
-- **최종 PROFILE (prof_cg_final)**: 트리 스텝 target 스팬이 체인과
-  동률 — graph_pre 35.8 vs 34.5ms, graph_post 12.0 vs 13.0ms, 보행
+- **최종 PROFILE (prof_cg_final)**: 당시 트리 스텝 target 스팬이 체인과
+  동률로 기록됨 — graph_pre 35.8 vs 34.5ms, graph_post 12.0 vs 13.0ms, 보행
   10.4 vs 11.0ms (**eager 693→35.8ms, 보행 96→10.4ms**). 잔여
   오버헤드는 draft 트리-스텝 빌드 python 성분 (phase1/2_build 각
   ~58ms, 체인 ~7ms; 오염 하 — 후속 최적화 여지). timeline 렌더
   파이프라인 검증 완료 (hit_k1/hit_k2/miss 3종 PNG).
+
+  **2026-08-07 정정**: 위 “동률”은 status-matched K2 비교가 아니었다.
+  최종 분리 profile에서 chain K2는 5행으로 graph_pre 26.55ms, tree K2는
+  주로 9행으로 34.21ms다. +7.66ms는 E10의 행당 1.9ms × 추가 4행과
+  일치한다. 다만 P2 hit가 약 20%이므로 weighted target verify 증가는
+  3-seed 평균 +2.58ms이며, `target full step` +9.66ms의 나머지는 draft
+  응답 대기다. 상세는 24번 §5.
 
 ## 4.5 원인 진단 (2026-08-04 — timeline·판별 런)
 

@@ -49,10 +49,15 @@ COLORS: dict[str, tuple[str, str]] = {
     "verify_setup": ("#969696", ".."),
     "graph_pre": ("#8b1a1a", ""),
     "exit_logits": ("#fdae61", ""),
+    "exit_proxy_launch": ("#fdd0a2", "//"),
+    "exit_proxy_side": ("#fdae61", ""),
     "proxy_compute_send": ("#1b9e77", ""),
     "proxy_compute": ("#66c2a5", ""),
     "proxy_pack": ("#1b9e77", ".."),
     "proxy_send": ("#006d2c", ""),
+    "chain_proxy_graph_replay": ("#2ca25f", ""),
+    "tree_proxy_graph_replay": ("#238b45", ".."),
+    "proxy_send_enqueue": ("#00441b", "//"),
     "graph_post": ("#8073ac", ""),
     "final_logits": ("#fee08b", ""),
     "verify_replay": ("#7a0000", ""),
@@ -90,6 +95,12 @@ COLORS: dict[str, tuple[str, str]] = {
     "phase2_build": ("#a1d99b", ".."),
     "phase2_prep": ("#74c476", "//"),
     "phase2_replay": ("#006d2c", ""),
+    # Whole-P2 dynamic-tree executor.  Distinct entries make the single
+    # continuous replay and the removed per-forward host gaps visible.
+    "p2_prepare": ("#fd8d3c", "//"),
+    "p2_graph_replay": ("#006d2c", ""),
+    "p2_output_convert": ("#756bb1", ".."),
+    "p2_cache_merge": ("#9e9ac8", "\\\\"),
     "merge_cache": ("#bcbddc", "\\\\"),
 }
 
@@ -337,13 +348,30 @@ def list_steps_by_status(
 
 
 def pick_representative_step(
-    target_rows: list[dict], status: str
+    target_rows: list[dict], status: str, draft_rows: list[dict] | None = None
 ) -> int | None:
-    """Pick the median-full_step_ms step for ``status``."""
+    """Pick the median-full_step_ms step for ``status``.
+
+    When the profiler has an event cap, the more verbose draft trace can end
+    before the target trace.  Prefer steps for which the draft response marker
+    is still present; otherwise an apparently valid two-row plot contains an
+    empty draft row and hides precisely the P2 interval it is meant to show.
+    Fall back to the target-only median for legacy/incomplete draft traces.
+    """
     table = list_steps_by_status(target_rows)
     items = table.get(status)
     if not items:
         return None
+    if draft_rows is not None:
+        captured = {
+            int(r["step_id"])
+            for r in draft_rows
+            if r.get("step_id") is not None
+            and r.get("label") == "draft_send_response"
+        }
+        common = [item for item in items if item[0] in captured]
+        if common:
+            items = common
     return items[len(items) // 2][0]
 
 
@@ -757,7 +785,7 @@ def plot_aligned_for_status(
             Corrects CUDA-event clock drift between target and draft GPUs
             on long runs.  See ``compute_causality_shift_ns``.
     """
-    step_id = pick_representative_step(target_rows, status)
+    step_id = pick_representative_step(target_rows, status, draft_rows)
     if step_id is None:
         return None
     tgt, drf = select_step(target_rows, draft_rows, step_id, status_filter=status)

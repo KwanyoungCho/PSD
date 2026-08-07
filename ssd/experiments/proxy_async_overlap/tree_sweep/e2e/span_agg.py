@@ -32,6 +32,8 @@ def agg(rows, tag):
                 break
         if dur is None and "dur_ms" in r:
             dur = r["dur_ms"]
+        if dur is None and "cuda_ms" in r:
+            dur = r["cuda_ms"]
         if dur is None:
             continue
         st = step_status.get(r.get("step_id"), r.get("status") or "?")

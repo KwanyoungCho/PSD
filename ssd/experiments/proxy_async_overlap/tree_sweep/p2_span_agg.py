@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P2 구간 집계기 (리뷰6 교정판 — docs/duet/22).
+"""P2 구간 집계기 (리뷰6 교정판 — docs/duet/internal/22).
 
 교정: hit_k2 스텝은 TREE_GLUE가 phase2_prep/replay 라벨을 공유해
 rollout 4개가 아니라 5개로 세졌다 (pre 음수 증상). phase2_build.start

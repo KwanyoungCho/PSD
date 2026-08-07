@@ -785,3 +785,56 @@ hit −4%p의 원인. 무작위 ulp-궤적이라기엔 terminal-계 miss 3배가
   eslab17 (10.201.135.195:1100, pw 세션 메모), pexpect 헬퍼
   scratchpad/ssh17.py
 - 18번: 비어있음 (GPU5-7 타 사용자 가변)
+
+---
+
+## 재감사 정정 (2026-08-06, W/R 소비자 계약)
+
+사용자가 최신 timeline의 P1/P2 AL을 문제 삼아 생산자부터 cache
+consumer까지 다시 추적한 결과, 이전 인수인계의 품질 판정에는 두 가지
+중대한 문제가 있었다.
+
+1. `run_exec_gate17.sh`와 `run_exec_gate18.sh`, 최신 timeline 실행에서
+   동결 형상인 `--duet_tree_root_count 6`이 빠져 있었다. 따라서 해당
+   실행기는 W=10/R=10으로 동작했고, R6 트리의 집중 예산 효과
+   (기존 반복 실측 P2AL 약 2.1)를 검증한 실행이 아니었다. 두 정식
+   게이트에는 R=6을 명시하도록 수정했다.
+2. 더 근본적으로 R=6 실행 시 executor payload/view/backbone은 R행만
+   반환하지만 cache key/layout은 W=10행을 유지했다. arena 경로는
+   이미 W행(뒤 W-R행 valid=0)을 반환한다. 즉 executor만 key 10행과
+   payload 6행의 row namespace가 달랐다. `P2TreeExecutor`의 소비자
+   출력 전부를 `[W,*]`로 바꾸고 뒤 W-R행을 고정 무효 padding으로
+   만들었다. cache merge에는 key/payload 행 수 fail-fast guard를
+   추가했다.
+
+수정 후 빠른 동일-seed 실엔진 게이트(2×4 prompts, output 128):
+
+| arm | P1 AL | P2 AL | P1 hit | P2 hit | tok/step |
+|---|---:|---:|---:|---:|---:|
+| chain | 4.44 | 2.23 | .537 | .293 | 4.31 |
+| arena R6 | 3.53 | 2.13 | .514 | .246 | 3.68 |
+| executor R6 | 4.07 | 2.10 | .535 | .190 | 4.04 |
+
+이 표는 짧은 smoke라 품질 우열 판정용이 아니다(이번 chain P2AL
+2.23은 장기 anchor 1.76~1.86보다 높은 표본). 여기서의 하드 결론은
+executor P2AL이 arena R6와 0.03 이내로 회복했고, 새 행 수 guard를
+통과했다는 것이다. executor 통계는 capture 2/replay 256이었다.
+
+동일 입력·동일 noise stage1 79스텝에서는 f0~f3 네 라운드가 모두
+비교됐다. 입력/slot/mask/KV가 같은 상태에서도 별도 graph의 lm_head
+fp16 마지막 자리 차이(absmax 0.125)가 있었고, 79개 중 두 step에서
+near-tie 선택이 바뀌어 최종 view/backbone도 달라졌다. 이는 "한 번의
+forward"가 아니라 `[forward→sample→tree update]×4`가 한 CUDA graph
+replay label 안에 들어 있음을 동시에 확인한다. profiler의 P2 막대가
+하나인 이유는 이 전체 replay에 이벤트 하나를 두었기 때문이다.
+
+P1에 대해서도 표현을 정정한다. 모델/K1은 같지만 **실행 경로는
+불변이 아니다**. P2 tree hit 다음 step은 `_tree_step_p1p2`로 들어가
+P1의 고정 폭을 root 종단과 모든 tree-node 종단 컨텍스트에 재배분하고,
+tree 전용 mask/rope/key를 쓴다. 따라서 단일 짧은 run의 aggregate P1
+AL 하락을 executor 버그로 귀속할 수 없고, 일반 P1과 tree-hit 다음
+P1을 분리해 보아야 한다. 최종 채택 전 남은 정확성 항목은 이 P1
+node-fork 경로의 per-context chain parity와 R6 executor hit 재판정이다.
+
+검증: P2 관련 unit 88개, diag 25개 전부 통과. executor는 계속
+`SSD_TREE_EXEC` opt-in이고 최종 품질 게이트 전 기본 ON 금지는 유지한다.

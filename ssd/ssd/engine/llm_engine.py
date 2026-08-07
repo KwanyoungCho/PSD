@@ -14,6 +14,7 @@ from ssd.engine.step import InferenceStep, AutoRegressiveStep, SpecDecodeStep
 from ssd.engine.verifier import Verifier
 
 import atexit
+import threading
 from dataclasses import fields
 from time import perf_counter
 from tqdm.auto import tqdm
@@ -81,6 +82,7 @@ class LLMEngine:
 
         self.ps = []
         self.events = []
+        self._exiting = False
 
         ctx = mp.get_context("spawn")
         self.num_tp_gpus = config.num_gpus if not self.config.draft_async else config.num_gpus - 1
@@ -109,6 +111,11 @@ class LLMEngine:
             self.draft_ps = ctx.Process(
                 target=DraftRunner, args=(config, draft_rank, init_q))
             self.draft_ps.start()
+            self._draft_watch_stop = threading.Event()
+            self._draft_watch_thread = threading.Thread(
+                target=self._watch_draft_process,
+                name="ssd-draft-watchdog", daemon=True)
+            self._draft_watch_thread.start()
             print(
                 f'Draft runner created on rank {draft_rank} (async)!', flush=True)
 
@@ -123,6 +130,17 @@ class LLMEngine:
             except Exception as e:
                 raise RuntimeError(
                     "ERROR: Timed out waiting for draft kv cache size") from e
+
+            try:
+                draft_ready = init_q.get(timeout=300)
+            except Exception as e:
+                raise RuntimeError(
+                    "ERROR: Timed out waiting for draft CUDA graph warmup") from e
+            if not (isinstance(draft_ready, tuple)
+                    and len(draft_ready) == 2
+                    and draft_ready[0] == "draft_ready"):
+                raise RuntimeError(
+                    f"ERROR: Invalid draft readiness message: {draft_ready!r}")
 
             init_q.close()
             self.draft_cfg = DraftRunner.create_draft_config(config)
@@ -144,14 +162,54 @@ class LLMEngine:
 
         print(f"[LLMEngine] finished llm_engine init", flush=True)
 
-        self._exiting = False
         atexit.register(lambda: self.exit(hard=True))
+
+    def _watch_draft_process(self):
+        """Fail the whole engine when the standalone draft worker dies.
+
+        Rank 0 can be blocked inside NCCL when the draft process hits a CUDA
+        assert.  Waiting for normal exception propagation therefore leaves
+        the target workers spinning indefinitely.  A parent-side process
+        watcher does not depend on CUDA/NCCL progress and can tear the run
+        down promptly, matching the fail-fast worker supervision used by
+        high-throughput serving runtimes.
+        """
+        stop = self._draft_watch_stop
+        while not stop.wait(0.5):
+            proc = getattr(self, "draft_ps", None)
+            if proc is None or proc.is_alive():
+                continue
+            if getattr(self, "_exiting", False):
+                return
+            code = proc.exitcode
+            print(
+                f"[LLMEngine] FATAL: draft runner exited unexpectedly "
+                f"(exitcode={code}); terminating target workers",
+                flush=True)
+            workers = list(getattr(self, "ps", ()))
+            for worker in workers:
+                try:
+                    if worker.is_alive():
+                        worker.terminate()
+                except Exception:
+                    pass
+            for worker in workers:
+                try:
+                    worker.join(timeout=1)
+                    if worker.is_alive():
+                        worker.kill()
+                except Exception:
+                    pass
+            os._exit(code if isinstance(code, int) and code > 0 else 1)
 
     def exit(self, hard: bool = True):
         print(f"[LLMEngine] Exiting (hard={hard})", flush=True)
         if getattr(self, "_exiting", False):
             return
         self._exiting = True
+        watch_stop = getattr(self, "_draft_watch_stop", None)
+        if watch_stop is not None:
+            watch_stop.set()
         try:
             from ssd.engine.helpers.cudagraph_helpers import duet_dump
             duet_dump("target_rank0")

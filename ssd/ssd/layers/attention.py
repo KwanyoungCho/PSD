@@ -18,10 +18,17 @@ def store_kvcache_kernel(
     slot_mapping_ptr,
     D: tl.constexpr,
     D_POT: tl.constexpr,
+    N_SLOTS: tl.constexpr,
 ):
     idx = tl.program_id(0)
     slot = tl.load(slot_mapping_ptr + idx)
-    if slot == -1:
+    if slot < 0:
+        # -1 = 정상 padding skip. 그 외 음수(page=-1 유래 -bs..-2)도
+        # 음수 주소 store 방지 (리뷰: 잠재 메모리 오염 결함)
+        return
+    if slot >= N_SLOTS:
+        # A stale/corrupt page table must not turn into an arbitrary global
+        # memory write.  Debug input checks report the bad lane separately.
         return
     offs = tl.arange(0, D_POT)
     mask = offs < D
@@ -40,7 +47,10 @@ def store_kvcache(key: torch.Tensor, value: torch.Tensor, k_cache: torch.Tensor,
     assert k_cache.stride(1) == D and v_cache.stride(1) == D
     assert slot_mapping.numel() == N
     D_POT = triton.next_power_of_2(D)
-    store_kvcache_kernel[(N,)](key, key.stride(0), value, value.stride(0), k_cache, v_cache, slot_mapping, D, D_POT)
+    n_slots = k_cache.shape[0] * k_cache.shape[1]
+    store_kvcache_kernel[(N,)](
+        key, key.stride(0), value, value.stride(0), k_cache, v_cache,
+        slot_mapping, D, D_POT, n_slots)
 
 class Attention(nn.Module):
 
@@ -94,7 +104,7 @@ class Attention(nn.Module):
                                        max_seqlen_k=context.max_seqlen_k, cu_seqlens_k=context.cu_seqlens_k,
                                        softmax_scale=self.scale, causal=True)
         else:
-            # P2-tree TREE_VERIFY (T3.1b, docs/duet/20): 명시 mode — 현행
+            # P2-tree TREE_VERIFY (T3.1b, docs/duet/internal/20): 명시 mode — 현행
             # 암묵 dispatch(cu_seqlens 유무)로는 트리 mask를 표현할 수
             # 없다 (리뷰4). context.tree_verify_wrapper가 설정된 verify
             # 에서만 진입; 미설정이면 기존 경로 완전 불변.

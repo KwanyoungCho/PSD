@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# E2E-2 — 트리 ON 첫 실런 (crash-free + 지표 sanity). docs/duet/20.
+# E2E-2 — 트리 ON 첫 실런 (crash-free + 지표 sanity). docs/duet/internal/20.
 # 사용: bash run_e2e2_tree_on.sh <policy: level|frontier> [label]
 set -u
 ROOT="/home/chokwans99/PSD/ssd"

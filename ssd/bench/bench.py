@@ -116,17 +116,44 @@ def parse_arguments():
     parser.add_argument("--duet_p2_budget", type=int, default=None,
                         help="Direct Phase-2 seed budget (docs/duet/16 Tier-3). "
                              "Default: derived pfo*(K1+1) where pfo = f - p1_fanout.")
-    parser.add_argument("--duet_tree_policy", choices=("off", "level", "frontier"),
-                        default="off",
-                        help="P2-tree rollout policy (docs/duet/15 v6 D1). "
-                             "off = current chain path (default).")
+    parser.add_argument("--duet_tree_policy",
+                        choices=("off", "adaptive", "eagle", "coverage", "confidence", "level",
+                                 "frontier"),
+                        default="eagle",
+                        help="P2-tree rollout policy. adaptive preserves "
+                             "every root's chain-depth path and adds siblings "
+                             "only above the mean cumulative confidence. "
+                             "eagle evaluates every "
+                             "root once, then globally expands the W highest "
+                             "cumulative-confidence children at each round. "
+                             "coverage preserves all "
+                             "chain roots/backbones and adds ordered WOR "
+                             "siblings without extra draft forwards. "
+                             "confidence is the former top-root policy; eagle "
+                             "is the default dynamic policy; off explicitly "
+                             "selects the unchanged chain baseline; level/frontier "
+                             "are legacy reproduction modes.")
     parser.add_argument("--duet_tree_c_tensor", type=int, default=3,
                         help="P2-tree: per-node batched WOR sample width C_tensor.")
     parser.add_argument("--duet_tree_nv", type=int, default=8,
                         help="P2-tree: response truncation N_v (used from T2).")
     parser.add_argument("--duet_tree_fanout_policy", type=str,
                         default="backbone", choices=["backbone", "ctensor"])
-    parser.add_argument("--duet_tree_root_count", type=int, default=None)
+    parser.add_argument("--duet_tree_root_count", type=int, default=None,
+                        help="Number R of P2 roots. eagle defaults to R=W; "
+                             "R must not exceed the P2 forward width W. "
+                             "Legacy level/frontier also honor this override; "
+                             "confidence derives R and coverage keeps R=W.")
+    parser.add_argument("--duet_tree_proxy_threshold", type=float,
+                        default=0.01,
+                        help="EAGLE tree: keep every root's first forward, "
+                             "but do not expand deeper below roots with a "
+                             "smaller calibrated proxy score.")
+    parser.add_argument("--duet_tree_conf_threshold", type=float,
+                        default=0.03,
+                        help="EAGLE tree: keep the sampled child as a leaf, "
+                             "but do not expand deeper below children with "
+                             "smaller calibrated draft confidence.")
     parser.add_argument("--duet_tree_beta", type=float, default=0.5,
                         help="P2-tree: budget allocation exponent (E1 default 0.5).")
 
@@ -319,6 +346,10 @@ def create_llm_kwargs(args, draft_path):
             llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
             llm_kwargs["duet_tree_beta"] = args.duet_tree_beta
             llm_kwargs["duet_tree_fanout_policy"] = args.duet_tree_fanout_policy
+            llm_kwargs["duet_tree_proxy_threshold"] = \
+                args.duet_tree_proxy_threshold
+            llm_kwargs["duet_tree_conf_threshold"] = \
+                args.duet_tree_conf_threshold
             if args.duet_tree_root_count is not None:
                 llm_kwargs["duet_tree_root_count"] = args.duet_tree_root_count
         if args.duet_phase1_k is not None:

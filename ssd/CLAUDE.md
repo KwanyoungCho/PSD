@@ -32,18 +32,16 @@ Three+ separate conda envs are involved:
 
 ## Active workstream
 
-Current branch: **`feat/duet-phase2-hybrid`**. The Phase 2 hybrid redesign
-work is now consolidated under `ssd/docs/duet/`:
+Current branch: **`feat/duet-p2tree-g0`**. The current P2 dynamic-tree
+contract is consolidated under `ssd/docs/duet/`:
 
-- `ssd/docs/duet/01-design.md` — DUET design (Parts 1-4: TreeLayout, Budget
-  Split, Split CG, Rev1 Policy A/B; **Part 5: Phase 2 Hybrid v1** — terminology,
-  5-region scratch, 8 CG buckets, `HybridPhase2Plan`, Step 0..9D progression).
-- `ssd/docs/duet/02-impl-issues.md` — implementation issue tracker (Parts 1-2:
-  v1, Rev1; **Part 3: Phase 2 Hybrid Step 1..9D** + sync fix + per-depth label
-  fix + 9D build hot-path optimization).
-- `ssd/docs/duet/03-results.md` — measured results (Parts 1-4: 8B/7B/Rev1/sweep;
-  **Part 5: Phase 2 Hybrid** — 8B Phase 6 verification + 70B both-AWQ A/B/C
-  comparison + ongoing 9D effect).
+- `ssd/docs/duet/TREE_IMPLEMENTATION.md` — canonical design, exact tree
+  algorithm, CUDA Graph execution, target verification, experiment results,
+  known limitations, and paper-claim boundary.
+- `ssd/docs/duet/README.md` — documentation routing and current policy names.
+- `ssd/docs/duet/internal/` — historical P2-tree notes 15 and 17--29. These
+  contain superseded hypotheses and intermediate conclusions; the existing
+  general DUET documents 01--14 and 16 remain at their original paths.
 - `ssd/docs/quantization/{01-plan,02-impl-issues,03-final-report}.md` —
   AWQ Marlin path (v2) + 34B/70B + draft AWQ measurements (legacy v1 torchao
   history kept for reference).

@@ -1,17 +1,408 @@
-"""T1.2 unit tests — P2-tree 사전 예산 배분 (docs/duet/20).
+"""T1.2 unit tests — P2-tree 사전 예산 배분 (docs/duet/internal/20).
 
 Run from project root (/home/chokwans99/PSD/ssd):
     python -m unittest tests.test_p2_tree_alloc
 """
 import unittest
+from unittest.mock import patch
 
 import torch
 
-from ssd.engine.helpers.p2_tree import alloc_fanouts, alloc_root_budgets
+from ssd.engine.helpers.p2_tree import (
+    alloc_fanouts, alloc_fanouts_global, alloc_policy_root_budgets,
+    alloc_root_budgets)
+from ssd.config import Config
 import ssd.engine.helpers.p2_tree as PT
 
 
+class TestP2ExecutorWarmup(unittest.TestCase):
+    def test_capture_does_not_consume_production_rng(self):
+        """Startup capture may execute sampling, but must be RNG-neutral."""
+        import os
+        from types import SimpleNamespace
+        from ssd.engine.draft_runner import DraftRunner
+
+        gen = torch.Generator().manual_seed(1234)
+        before = gen.get_state().clone()
+        executor = SimpleNamespace(F=3, W=10, gen=gen, graphs={})
+
+        def capture(bucket):
+            # Model the graph warmup's real sampling side effect.
+            torch.rand(4, generator=gen)
+            executor.graphs[bucket] = object()
+
+        executor.capture = capture
+        executor.prime_capture_inputs = lambda bucket: None
+        runner = SimpleNamespace(
+            config=SimpleNamespace(
+                duet_tree_policy="confidence", use_eagle=False,
+                max_model_len=2048, max_blocks=8),
+            block_size=256, device=torch.device("cpu"),
+            _ensure_p2_exec=lambda: executor)
+
+        env = {"SSD_TREE_EXEC": "1", "SSD_TREE_EXEC_WARMUP": "all"}
+        with patch.dict(os.environ, env, clear=False), \
+                patch("torch.cuda.synchronize"), \
+                patch("torch.cuda.mem_get_info", return_value=(8 << 30,
+                                                                16 << 30)):
+            DraftRunner._warmup_p2_tree_executor(runner)
+
+        self.assertEqual(sorted(executor.graphs), list(range(1, 8)))
+        self.assertTrue(torch.equal(before, gen.get_state()))
+
+
+class TestTreeVerifyMaskPacking(unittest.TestCase):
+    def test_flat_little_endian_layout(self):
+        mask = torch.tensor([
+            [1, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+        ], dtype=torch.bool)
+        packed = PT.pack_tree_verify_mask(mask)
+        bits = torch.tensor([
+            (int(packed[i // 8]) >> (i % 8)) & 1
+            for i in range(mask.numel())
+        ], dtype=torch.bool)
+        self.assertTrue(torch.equal(bits, mask.reshape(-1)))
+
+    def test_requires_two_dimensional_cpu_mask(self):
+        with self.assertRaisesRegex(ValueError, "2-D CPU"):
+            PT.pack_tree_verify_mask(torch.ones(8, dtype=torch.bool))
+
+
+class TestTreeWireValidation(unittest.TestCase):
+    @staticmethod
+    def _tree():
+        # Two root siblings share qref 0; node 2 extends node 0 from qref 1.
+        return {
+            "valid": 3,
+            "u_valid": 2,
+            "epoch": 1,
+            "tok": torch.tensor([7, 8, 9, 0]),
+            "parent_local": torch.tensor([-1, -1, 0, 0]),
+            "sib_order": torch.tensor([0, 1, 0, 0]),
+            "parent_q_ref": torch.tensor([0, 0, 1, 0]),
+        }
+
+    def test_valid_topology(self):
+        tree = self._tree()
+        self.assertIs(PT.validate_tree_ints(tree, 4, vocab_size=16), tree)
+
+    def test_parse_and_validate_accepts_shm_list_without_tensor_copy(self):
+        nv = 4
+        buf = [3, 2, 1,
+               7, 8, 9, 0,
+               -1, -1, 0, 0,
+               0, 1, 0, 0,
+               0, 0, 1, 0]
+        tree = PT.parse_tree_ints(buf, nv)
+        self.assertIs(PT.validate_tree_ints(tree, nv, vocab_size=16), tree)
+        self.assertEqual(tree["parent_local"][:3], [-1, -1, 0])
+
+    def test_self_parent_is_rejected(self):
+        tree = self._tree()
+        tree["parent_local"][2] = 2
+        with self.assertRaisesRegex(RuntimeError, "parent invariant"):
+            PT.validate_tree_ints(tree, 4)
+
+    def test_forward_parent_is_rejected(self):
+        tree = self._tree()
+        tree["parent_local"][0] = 2
+        with self.assertRaisesRegex(RuntimeError, "parent invariant"):
+            PT.validate_tree_ints(tree, 4)
+
+    def test_invalid_qref_is_rejected(self):
+        tree = self._tree()
+        tree["parent_q_ref"][2] = 2
+        with self.assertRaisesRegex(RuntimeError, "parent-q ref"):
+            PT.validate_tree_ints(tree, 4)
+
+    def test_sibling_gap_is_rejected(self):
+        tree = self._tree()
+        tree["sib_order"][1] = 3
+        with self.assertRaisesRegex(RuntimeError, "sibling order"):
+            PT.validate_tree_ints(tree, 4)
+
+    def test_siblings_must_share_qref(self):
+        tree = self._tree()
+        tree["parent_q_ref"][1] = 1
+        with self.assertRaisesRegex(RuntimeError, "multiple q refs"):
+            PT.validate_tree_ints(tree, 4)
+
+    def test_token_range_is_rejected(self):
+        tree = self._tree()
+        tree["tok"][1] = 16
+        with self.assertRaisesRegex(RuntimeError, "token out of range"):
+            PT.validate_tree_ints(tree, 4, vocab_size=16)
+
+    def test_parent_path_is_bounded_and_root_ordered(self):
+        tree = self._tree()
+        self.assertEqual(PT.tree_parent_path(tree, 0), [])
+        self.assertEqual(PT.tree_parent_path(tree, 1), [0])
+        self.assertEqual(PT.tree_parent_path(tree, 3), [0, 2])
+        with self.assertRaisesRegex(RuntimeError, "outside"):
+            PT.tree_parent_path(tree, 5)
+
+    def test_parent_path_rejects_cycle_even_without_wire_validation(self):
+        tree = self._tree()
+        tree["parent_local"][2] = 2
+        with self.assertRaisesRegex(RuntimeError, "strictly decreasing"):
+            PT.tree_parent_path(tree, 3)
+
+
+class TestTreeP1Allocation(unittest.TestCase):
+    def test_chain_backbone_floor_is_preserved(self):
+        # backbone 0->2->4->5 plus root siblings 1,3
+        par = [-1, -1, 0, 0, 2, 4]
+        sib = [0, 1, 0, 1, 0, 0]
+        raw = [0.8, 0.2, 0.7, 0.3, 0.6, 0.5]
+        counts = PT.allocate_tree_p1_fanouts(
+            par, sib, raw, total_budget=16,
+            chain_fanouts=[2, 2, 2, 2, 2])
+        # contexts: root=0; backbone nodes 0,2,4,5 -> 1,3,5,6
+        for ctx in (0, 1, 3, 5, 6):
+            self.assertGreaterEqual(counts[ctx], 2)
+        self.assertEqual(sum(counts), 16)
+        # Both non-backbone terminal contexts retain cache coverage.
+        self.assertGreaterEqual(counts[2], 1)
+        self.assertGreaterEqual(counts[4], 1)
+
+    def test_confidence_breaks_surplus_ties(self):
+        counts = PT.allocate_tree_p1_fanouts(
+            [-1, -1], [0, 1], [0.9, 0.1], total_budget=6,
+            chain_fanouts=[1, 1])
+        self.assertEqual(sum(counts), 6)
+        self.assertGreater(counts[1], counts[2])
+
+    def test_invalid_shape_rejected(self):
+        with self.assertRaisesRegex(ValueError, "equal length"):
+            PT.allocate_tree_p1_fanouts(
+                [-1], [], [0.5], 2, [1, 1])
+
+
 class TestRootBudgets(unittest.TestCase):
+    def test_eagle_root_count_defaults_to_width_and_honors_arg(self):
+        cfg = object.__new__(Config)
+        cfg.duet_tree_policy = "eagle"
+        cfg.duet_tree_root_count = None
+        cfg.duet_p2_budget = 10
+        cfg.duet_phase2_k = 4
+        cfg.speculate_k = 13
+        self.assertEqual(cfg.duet_p2_active_root_count, 10)
+        self.assertEqual(cfg.duet_p2_seed_count, 10)
+        cfg.duet_tree_root_count = 7
+        self.assertEqual(cfg.duet_p2_active_root_count, 7)
+        self.assertEqual(cfg.duet_p2_seed_count, 7)
+
+    def test_canonical_confidence_root_count_is_derived(self):
+        cfg = object.__new__(Config)
+        cfg.duet_tree_policy = "confidence"
+        cfg.duet_p2_budget = 10
+        cfg.duet_phase2_k = 4
+        cfg.speculate_k = 13
+        # 4 rounds x width 10, with 4 backbone + 2 rescue nodes/root.
+        self.assertEqual(cfg.duet_p2_active_root_count, 6)
+        self.assertEqual(cfg.duet_p2_seed_count, 6)
+        with patch.dict("os.environ", {"SSD_TREE_ROOT_SHADOW": "1"}):
+            self.assertEqual(cfg.duet_p2_active_root_count, 6)
+            self.assertEqual(cfg.duet_p2_seed_count, 10)
+        # Legacy policies keep their explicit reproduction knob.
+        cfg.duet_tree_policy = "level"
+        cfg.duet_tree_root_count = 7
+        self.assertEqual(cfg.duet_p2_seed_count, 7)
+
+    def test_coverage_policy_keeps_every_live_root(self):
+        cfg = object.__new__(Config)
+        cfg.duet_tree_policy = "coverage"
+        # Even a stale legacy override cannot silently violate the property;
+        # Config validation rejects it in a fully initialized Config.
+        cfg.duet_tree_root_count = 3
+        cfg.duet_p2_budget = 10
+        cfg.duet_phase2_k = 4
+        cfg.speculate_k = 13
+        self.assertEqual(cfg.duet_p2_active_root_count, 10)
+        self.assertEqual(cfg.duet_p2_seed_count, 10)
+
+        piv = torch.tensor([0.7, 0.2, 0.1, 0.0])
+        budgets = alloc_policy_root_budgets(
+            piv, "coverage", total=16, beta=0.5, cap=8)
+        # Stored child count is intentionally larger than the 16 parent
+        # forward cells.  The final zero is a padding/non-live root.
+        self.assertEqual(budgets.tolist(), [8, 8, 8, 0])
+        self.assertGreater(int(budgets.sum()), 16)
+
+    def test_coverage_tree_is_chain_superset_for_all_ten_roots(self):
+        calls = 0
+
+        def sample_fn(sel, fan):
+            nonlocal calls
+            # Distinct first child per (round,lane); siblings are ordered
+            # after it and therefore cannot replace the chain backbone.
+            rows = len(sel)
+            base = 1000 + calls * 100
+            toks = (base + torch.arange(rows).unsqueeze(1) * 3
+                    + torch.arange(3).unsqueeze(0))
+            raw = torch.tensor([[0.6, 0.25, 0.1]]).repeat(rows, 1)
+            calls += 1
+            return toks, raw
+
+        R = W = 10
+        piv = torch.linspace(1.0, 0.1, R)
+        pool, _ = PT.rollout_reference(
+            list(range(10, 20)), piv, None, policy="coverage", W=W,
+            F_total=4, c_tensor=3, nv=8, beta=0.5, depth_cap=4,
+            sample_fn=sample_fn, fanout_policy="backbone")
+        views = PT.build_root_views(pool, R, 8)
+        self.assertEqual(views["valid"].tolist(), [8] * R)
+
+        expected_par = [-1, -1, -1, 0, 0, 0, 3, 6]
+        expected_sib = [0, 1, 2, 0, 1, 2, 0, 0]
+        for r in range(R):
+            self.assertEqual(views["parent_local"][r].tolist(),
+                             expected_par)
+            self.assertEqual(views["sib_order"][r].tolist(), expected_sib)
+            # The canonical first-child chain has four nodes and is retained
+            # unchanged; every other node is an added sibling leaf.
+            chain = []
+            parent = -1
+            for _ in range(4):
+                child = next(j for j, (p, s) in enumerate(zip(
+                    expected_par, expected_sib)) if p == parent and s == 0)
+                chain.append(child)
+                parent = child
+            self.assertEqual(chain, [0, 3, 6, 7])
+
+            q = views["raw_q"][r]
+            prefix = []
+            for j, p in enumerate(expected_par):
+                prefix.append(float(q[j]) * (1.0 if p < 0 else prefix[p]))
+            chain_mass = sum(prefix[j] for j in chain)
+            tree_mass = sum(prefix)
+            self.assertGreater(tree_mass, chain_mass)
+
+    def test_eagle_expands_global_confidence_not_every_root_backbone(self):
+        calls = 0
+
+        def sample_fn(sel, fan):
+            nonlocal calls
+            rows = len(sel)
+            toks = (1000 + calls * 100
+                    + torch.arange(rows).unsqueeze(1) * 3
+                    + torch.arange(3).unsqueeze(0))
+            # The high root's first children dominate the low root even when
+            # local q is equal, because the score begins with root P_iv.
+            raw = torch.tensor([[0.80, 0.15, 0.04]]).repeat(rows, 1)
+            calls += 1
+            return toks, raw
+
+        pool, eval_log = PT.rollout_reference(
+            [10, 11], torch.tensor([0.95, 0.05]), None,
+            policy="eagle", W=2, F_total=4, c_tensor=3, nv=8,
+            beta=0.5, depth_cap=4, sample_fn=sample_fn,
+            fanout_policy="backbone")  # eagle overrides this legacy knob
+        # Round zero evaluates both roots.  Later rounds need not spend a
+        # mandatory lane on the weak root.
+        self.assertEqual(
+            sorted(int(pool.root[i]) for i in eval_log[0][0]), [0, 1])
+        self.assertTrue(any(
+            eval_log[f][0]
+            and all(int(pool.root[i]) == 0 for i in eval_log[f][0])
+            for f in range(1, 4)))
+        views = PT.build_root_views(pool, 2, 8)
+        self.assertGreater(int(views["valid"][0]),
+                           int(views["valid"][1]))
+        self.assertGreaterEqual(int(views["valid"][1]), 1)
+
+    def test_eagle_rejects_more_roots_than_forward_width(self):
+        with self.assertRaisesRegex(ValueError, "R<=W"):
+            PT.rollout_reference(
+                [10, 11, 12], torch.tensor([0.6, 0.3, 0.1]), None,
+                policy="eagle", W=2, F_total=2, c_tensor=2, nv=4,
+                beta=0.5, depth_cap=2,
+                sample_fn=lambda sel, fan: (
+                    torch.ones(len(sel), 2, dtype=torch.int64),
+                    torch.full((len(sel), 2), 0.4)),
+                fanout_policy="backbone")
+
+    def test_calibrated_floors_only_block_later_expansion(self):
+        # Root 0 is below the proxy floor.  Node 3 is below the local-q
+        # floor.  Both roots must still run in round zero and both children
+        # remain valid leaves; only node 4 may receive a later forward.
+        pool = PT.TreePool(8)
+        pool.add(10, -1, -1, 0, 0, 0, float(torch.log(
+            torch.tensor(0.002))), 1.0)
+        pool.add(11, -1, -1, 0, 1, 0, float(torch.log(
+            torch.tensor(0.1))), 1.0)
+        pool.add(20, 0, 0, 1, 0, 0, -7.0, 0.9)    # low proxy root
+        pool.add(21, 1, 1, 1, 1, 0, -7.0, 0.005)  # low confidence
+        pool.add(22, 1, 1, 1, 1, 1, -2.0, 0.2)    # eligible
+        remaining = torch.tensor([4, 4])
+
+        roots = PT.select_nodes_global(
+            pool, 4, 0, 4, remaining, future_rounds=3,
+            proxy_threshold=0.003, conf_threshold=0.01)
+        self.assertEqual(sorted(roots), [0, 1])
+        pool.state[:2] = 1
+        chosen = PT.select_nodes_global(
+            pool, 4, 1, 4, remaining, future_rounds=2,
+            proxy_threshold=0.003, conf_threshold=0.01)
+        self.assertEqual(chosen, [4])
+        self.assertEqual(pool.n, 5)  # floors did not delete either leaf
+
+        ar = PT.TreeArena(8, "cpu")
+        n = pool.n
+        for name, src in (("tok", pool.tok),
+                          ("parent_idx", pool.parent_idx),
+                          ("parent_cell", pool.parent_cell),
+                          ("depth", pool.depth), ("root", pool.root),
+                          ("logpri", pool.logpri), ("raw_q", pool.raw_q),
+                          ("state", pool.state), ("cell", pool.cell)):
+            getattr(ar, name)[:n].copy_(src[:n])
+        ar.valid[:n] = True
+        ar.n.fill_(n)
+        sel, valid = PT._arena_select_global(
+            ar, 4, 1, 4, remaining, future_rounds=2, R=2,
+            proxy_threshold=0.003, conf_threshold=0.01)
+        self.assertEqual(int(valid.sum()), 1)
+        self.assertEqual(int(sel[0]), 4)
+
+    def test_adaptive_preserves_every_backbone_and_only_varies_siblings(self):
+        calls = 0
+
+        def sample_fn(sel, fan):
+            nonlocal calls
+            rows = len(sel)
+            toks = (2000 + calls * 100
+                    + torch.arange(rows).unsqueeze(1) * 3
+                    + torch.arange(3).unsqueeze(0))
+            raw = torch.tensor([[0.80, 0.15, 0.04]]).repeat(rows, 1)
+            calls += 1
+            return toks, raw
+
+        pool, _ = PT.rollout_reference(
+            [10, 11], torch.tensor([0.90, 0.10]), None,
+            policy="adaptive", W=2, F_total=4, c_tensor=3, nv=8,
+            beta=0.5, depth_cap=4, sample_fn=sample_fn,
+            fanout_policy="backbone")
+        views = PT.build_root_views(pool, 2, 8)
+        # Both roots retain a four-token first-child chain.  Only the strong
+        # root receives optional siblings and therefore a wider view.
+        self.assertGreater(int(views["valid"][0]),
+                           int(views["valid"][1]))
+        self.assertEqual(int(views["valid"][1]), 4)
+        for r in range(2):
+            par = views["parent_local"][r]
+            sib = views["sib_order"][r]
+            cur = -1
+            depth = 0
+            while True:
+                kids = [j for j in range(int(views["valid"][r]))
+                        if int(par[j]) == cur and int(sib[j]) == 0]
+                if not kids:
+                    break
+                cur = kids[0]
+                depth += 1
+            self.assertEqual(depth, 4)
+
     def test_sum_and_cap(self):
         piv = torch.tensor([0.5, 0.2, 0.1, 0.05])
         b = alloc_root_budgets(piv, total=40, beta=0.5, cap=8)
@@ -20,6 +411,27 @@ class TestRootBudgets(unittest.TestCase):
         self.assertTrue(bool((b >= 0).all()))
         # cap이 배분을 제한하는 레짐: 상위 root가 cap에 닿는다
         self.assertEqual(int(b[0]), 8)
+
+    def test_confidence_policy_fixes_beta_and_matches_level(self):
+        def sample_fn(sel, fan):
+            rows = len(sel)
+            toks = torch.arange(rows * 3).view(rows, 3) + 100
+            raw = torch.tensor([[0.7, 0.2, 0.1]]).repeat(rows, 1)
+            return toks, raw
+
+        piv = torch.tensor([0.55, 0.25, 0.12, 0.08])
+        a, _ = PT.rollout_reference(
+            [10, 11, 12, 13], piv, None, policy="confidence", W=4,
+            F_total=3, c_tensor=3, nv=6, beta=1.0, depth_cap=3,
+            sample_fn=sample_fn, fanout_policy="backbone")
+        b, _ = PT.rollout_reference(
+            [10, 11, 12, 13], piv, None, policy="level", W=4,
+            F_total=3, c_tensor=3, nv=6, beta=0.5, depth_cap=3,
+            sample_fn=sample_fn, fanout_policy="backbone")
+        for field in ("tok", "parent_idx", "root", "depth", "sib_order"):
+            self.assertEqual(
+                getattr(a, field)[:a.n].tolist(),
+                getattr(b, field)[:b.n].tolist())
 
     def test_beta_zero_uniform(self):
         piv = torch.tensor([0.9, 0.01, 0.01, 0.01])
@@ -54,6 +466,20 @@ class TestRootBudgets(unittest.TestCase):
 
 
 class TestFanouts(unittest.TestCase):
+    def test_global_fanout_reserves_depth_only_for_selected_roots(self):
+        pri = torch.tensor([3.0, 2.0, 1.0])
+        root = torch.tensor([0, 0, 0])
+        # Five slots remain with two future rounds.  Three may be used now;
+        # breadth-first allocation gives one child to every selected parent.
+        f = alloc_fanouts_global(
+            pri, root, torch.tensor([5]), c_tensor=3, future_rounds=2)
+        self.assertEqual(f.tolist(), [1, 1, 1])
+        # One selected parent receives the same three-token fanout.
+        f1 = alloc_fanouts_global(
+            pri[:1], root[:1], torch.tensor([5]), c_tensor=3,
+            future_rounds=2)
+        self.assertEqual(f1.tolist(), [3])
+
     def test_prefix_no_overdraw(self):
         # 리뷰 4차 반례: 같은 root 부모 2, remaining 4, c=3 → 3+1 (초과 금지)
         pri = torch.tensor([2.0, 1.0])
@@ -444,6 +870,21 @@ class TestSelectorPivPassthrough(unittest.TestCase):
             draft_forked, K_rank=4, total_budget=4)
         self.assertEqual(len(out), 2)
 
+    def test_out_of_range_wire_positions_are_excluded_without_oob(self):
+        from ssd.engine.draft_runner import DraftRunner
+        chosen_pos = torch.tensor([[99, -3, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4]])
+        chosen_tok = torch.arange(12).view(1, 12) + 100
+        piv = torch.linspace(1.0, 0.1, 12).view(1, 12)
+        draft_forked = torch.full((1, 5, 2), -1, dtype=torch.int64)
+        result, fan, taken_piv = \
+            DraftRunner._select_proxy_sourced_tokens_unified(
+                {"chosen_pos": chosen_pos, "chosen_tok": chosen_tok,
+                 "chosen_piv": piv},
+                draft_forked, K_rank=4, total_budget=8)
+        self.assertEqual(int(fan.sum()), 8)
+        self.assertTrue(bool((result >= 102).all()))
+        self.assertTrue(bool((taken_piv < 1.0).all()))
+
 
 class TestParentQRefs(unittest.TestCase):
     def test_parent_q_matches_cell_logits(self):
@@ -763,7 +1204,7 @@ class TestBudgetExhaustion(unittest.TestCase):
 
 
 class TestBackboneFanout(unittest.TestCase):
-    """형상 진단(docs/duet/21 §4.5) 수정: backbone-우선 배분의 형상 보장."""
+    """형상 진단(docs/duet/internal/21 §4.5) 수정: backbone-우선 배분의 형상 보장."""
 
     def _run(self, budgets_override, c_tensor, depth_cap=4, W=10, F=4,
              policy="level"):
@@ -847,7 +1288,7 @@ class TestBackboneFanout(unittest.TestCase):
 
 
 class TestReview2Fixes(unittest.TestCase):
-    """리뷰2 수용 (이슈 #27/#28/#33) — docs/duet/20."""
+    """리뷰2 수용 (이슈 #27/#28/#33) — docs/duet/internal/20."""
 
     # --- #33: 비례 water-filling ---
     def test_proportional_after_cap(self):
@@ -1011,6 +1452,142 @@ class TestReview2Fixes(unittest.TestCase):
         self.assertTrue(torch.allclose(a_c, a_g.cpu(), atol=1e-5))
         self.assertTrue(torch.allclose(t_c, t_g.cpu(), atol=1e-5))
         self.assertTrue(torch.allclose(r_c, r_g.cpu(), atol=1e-5))
+
+    def test_fixed_proxy_candidates_are_exact_at_real_width(self):
+        # Exact-width capture is required: padding a global top-k can swap
+        # bit-identical ties even when all probability values are equal.
+        par = [-1, -1, -1, 0, 0, 1, 3, 6]
+        sib = [0, 1, 2, 0, 1, 0, 0, 0]
+        nv, V, wire = len(par), 257, 24
+        for seed in range(10):
+            torch.manual_seed(seed)
+            exit_logits = torch.randn(nv + 1, V, dtype=torch.bfloat16)
+            q_logits = torch.randn(nv, V, dtype=torch.bfloat16)
+            toks = torch.randint(V, (nv,))
+            p = torch.softmax(exit_logits.float(), -1)
+            q = torch.softmax(q_logits.float(), -1)
+            _, term, resid = PT.tree_policy_b_ladder(
+                par, sib, toks, p, q)
+            piv = resid * term.unsqueeze(1)
+            piv[torch.tensor(par) + 1, toks] = 0.0
+            top_v, top_i = piv.flatten().topk(wire)
+            expected_pos = top_i // V
+            expected_tok = PT.pack_piv(top_i % V, top_v)
+            got_pos, got_tok, _ = PT.tree_proxy_candidates_fixed(
+                exit_logits, q_logits, toks,
+                PT.pack_tree_proxy_topology(par, sib, nv), wire, 4)
+            self.assertTrue(torch.equal(expected_pos, got_pos))
+            self.assertTrue(torch.equal(expected_tok, got_tok))
+
+    def test_ladder_dtype_does_not_depend_on_global_default(self):
+        old = torch.get_default_dtype()
+        try:
+            torch.set_default_dtype(torch.bfloat16)
+            PT.warmup_tree_proxy_kernels(
+                torch.zeros(5, 64, dtype=torch.bfloat16),
+                torch.zeros(4, 64, dtype=torch.bfloat16),
+                [-1, -1, -1, 0], [0, 1, 2, 0], wire_n=12)
+        finally:
+            torch.set_default_dtype(old)
+
+    def test_proxy_cudagraph_matches_dynamic_all_valid_widths(self):
+        if not torch.cuda.is_available():
+            self.skipTest("no cuda")
+        # Prefixes are all valid breadth/depth-first trees and exercise root
+        # siblings, non-root siblings, and a depth-four backbone.
+        par8 = [-1, -1, -1, 0, 0, 1, 3, 6]
+        sib8 = [0, 1, 2, 0, 1, 0, 0, 0]
+        V, wire = 257, 24
+        for nv in range(1, 9):
+            graph = PT.TreeProxyCUDAGraph(
+                nv, V, wire, depth_steps=4, dtype=torch.bfloat16,
+                device="cuda")
+            par, sib = par8[:nv], sib8[:nv]
+            graph.prepare_topology(par, sib)
+            for seed in range(3):
+                gen = torch.Generator(device="cuda").manual_seed(
+                    100 * nv + seed)
+                exit_logits = torch.randn(
+                    nv + 1, V, dtype=torch.bfloat16, device="cuda",
+                    generator=gen)
+                q_logits = torch.randn(
+                    nv, V, dtype=torch.bfloat16, device="cuda",
+                    generator=gen)
+                tokens = torch.randint(
+                    V, (nv,), dtype=torch.int64, device="cuda",
+                    generator=gen)
+                expected = PT.tree_proxy_candidates_fixed(
+                    exit_logits, q_logits, tokens,
+                    PT.pack_tree_proxy_topology(
+                        par, sib, nv, device="cuda"),
+                    wire, 4)
+                got = graph.replay(exit_logits, q_logits, tokens)
+                torch.cuda.synchronize()
+                self.assertTrue(torch.equal(expected[0], got[0]),
+                                f"pos nv={nv} seed={seed}")
+                self.assertTrue(torch.equal(expected[1], got[1]),
+                                f"tok nv={nv} seed={seed}")
+
+    def test_chain_proxy_fixed_matches_policy_b_formula(self):
+        K, V, top_k, wire = 4, 257, 6, 24
+        for seed in range(8):
+            torch.manual_seed(seed)
+            exit_logits = torch.randn(K + 1, V, dtype=torch.bfloat16)
+            q_logits = torch.randn(K, V, dtype=torch.bfloat16)
+            tokens = torch.randint(V, (K,))
+
+            p_e = torch.softmax(exit_logits[:K].float(), -1)
+            p_d = torch.softmax(q_logits.float(), -1)
+            idx = tokens[:, None]
+            accept = (p_e.gather(1, idx).squeeze(1)
+                      / (p_d.gather(1, idx).squeeze(1) + 1e-10)).clamp(max=1)
+            residual = (p_e - p_d).clamp(min=0)
+            residual.scatter_(1, idx, 0.0)
+            probs, ids = residual.topk(top_k, -1)
+            probs /= probs.sum(-1, keepdim=True).clamp(min=1e-10)
+            cp = torch.cumprod(accept, 0)
+            h = torch.zeros(K + 1)
+            h[0] = 1 - accept[0]
+            h[1:K] = cp[:-1] * (1 - accept[1:])
+            h[K] = cp[-1]
+            p_last = torch.softmax(exit_logits[K].float(), -1)
+            last_p, last_id = p_last.topk(top_k)
+            last_p /= last_p.sum().clamp(min=1e-10)
+            probs = torch.cat([probs, last_p[None]], 0)
+            ids = torch.cat([ids, last_id[None]], 0)
+            piv = h[:, None] * probs
+            top_v, top_i = piv.flatten().topk(wire)
+            expected_pos = top_i // top_k
+            expected_tok = PT.pack_piv(
+                ids.flatten().gather(0, top_i), top_v)
+
+            got_pos, got_tok, got_v = PT.chain_proxy_candidates_fixed(
+                exit_logits, q_logits, tokens, top_k, wire, True)
+            self.assertTrue(torch.equal(expected_pos, got_pos))
+            self.assertTrue(torch.equal(expected_tok, got_tok))
+            self.assertTrue(torch.equal(top_v, got_v))
+
+    def test_chain_proxy_cudagraph_matches_fixed(self):
+        if not torch.cuda.is_available():
+            self.skipTest("no cuda")
+        K, V, top_k, wire = 4, 257, 6, 24
+        graph = PT.ChainProxyCUDAGraph(
+            K, V, top_k, wire, True, torch.bfloat16, "cuda")
+        for seed in range(4):
+            gen = torch.Generator(device="cuda").manual_seed(seed)
+            exit_logits = torch.randn(
+                K + 1, V, dtype=torch.bfloat16, device="cuda",
+                generator=gen)
+            q_logits = torch.randn(
+                K, V, dtype=torch.bfloat16, device="cuda", generator=gen)
+            tokens = torch.randint(
+                V, (K,), dtype=torch.int64, device="cuda", generator=gen)
+            expected = PT.chain_proxy_candidates_fixed(
+                exit_logits, q_logits, tokens, top_k, wire, True)
+            got = graph.replay(exit_logits, q_logits, tokens)
+            torch.cuda.synchronize()
+            self.assertTrue(torch.equal(expected[0], got[0]))
+            self.assertTrue(torch.equal(expected[1], got[1]))
 
 
 class TestArenaParity(unittest.TestCase):

@@ -35,6 +35,136 @@ class Verifier(VerifierBase):
         self._proxy_send_ring = None
         # Counts every ring.send() call — denominator for slot_wait_rate.
         self._proxy_send_call_count = 0
+        # Target tree Policy-B uses fixed-shape CUDA graphs by default.  The
+        # dynamic topology is copied into persistent buffers before verify;
+        # exit-time work is then one replay instead of dozens of Python GPU
+        # launches.  Keep an explicit off switch for clean fallback A/B.
+        self._chain_proxy_graphs = getattr(
+            self.target_model_runner, "_chain_proxy_graphs_prebuilt", {})
+        self._tree_proxy_graphs = {}
+        self._active_tree_proxy_graph = None
+        _cfg = self.target_model_runner.config
+        _prebuilt = getattr(
+            self.target_model_runner, "_tree_proxy_graphs_prebuilt", None)
+        if _prebuilt is not None:
+            self._tree_proxy_graphs = _prebuilt
+        elif (os.environ.get("SSD_TREE_PROXY_GRAPH", "1") != "0"
+                and getattr(_cfg, "duet_tree_policy", "off") != "off"
+                and self.device.type == "cuda"
+                and getattr(self.target_model_runner, "rank", 0) == 0):
+            from ssd.engine.helpers.p2_tree import TreeProxyCUDAGraph
+            _verify_buckets = sorted(
+                (self.target_model_runner.tree_verify_wrappers or {}).keys())
+            # Proxy top-k must see exactly (valid+1)*V elements.  Padding
+            # to the 4/6/8 target-model bucket preserves values but can
+            # change the ordering of bit-identical ties inside topk.
+            # Capture one tiny metadata envelope per exact valid width.
+            _proxy_widths = range(1, max(_verify_buckets) + 1) \
+                if _verify_buckets else ()
+            for _nv in _proxy_widths:
+                self._tree_proxy_graphs[int(_nv)] = TreeProxyCUDAGraph(
+                    nv=int(_nv),
+                    vocab_size=_cfg.hf_config.vocab_size,
+                    wire_n=_cfg.duet_proxy_wire_N,
+                    depth_steps=_cfg.duet_phase2_k,
+                    dtype=_cfg.hf_config.torch_dtype,
+                    device=self.device)
+            if self._tree_proxy_graphs:
+                print("[DUET tree] captured target proxy graphs lazily "
+                      f"(buckets={sorted(self._tree_proxy_graphs)})",
+                      flush=True)
+        self._warmup_duet_acceptance_kernels()
+
+    def _warmup_duet_acceptance_kernels(self):
+        """Move the common verify softmax/sampling cold start out of step 1.
+
+        Model and tree CUDA graphs are captured during ``ModelRunner`` init,
+        but the temperature>0 acceptance path is ordinary PyTorch code and
+        was first exercised by the first real decode step.  Its one-time
+        softmax/multinomial setup showed up as a 79--86 ms
+        ``verify_sample_accept`` outlier in both chain and tree profiles.
+
+        Warm both DUET widths and both cache-hit branches with synthetic
+        tensors.  Preserve the default CUDA RNG state so enabling DUET does
+        not change the production sampling sequence.  This routine runs only
+        in the rank-0 CUDA verifier; CPU/unit-test constructions are no-ops.
+        """
+        cfg = self.target_model_runner.config
+        if (self.device.type != "cuda"
+                or getattr(self.target_model_runner, "rank", 0) != 0
+                or not getattr(cfg, "duet_enabled", False)
+                or cfg.duet_phase1_k is None):
+            return
+
+        from ssd.utils.verify import verify as _verify
+
+        dev_index = (self.device.index if self.device.index is not None
+                     else torch.cuda.current_device())
+        widths = sorted({int(cfg.duet_phase1_k),
+                         int(cfg.duet_phase2_k)})
+        vocab = int(cfg.hf_config.vocab_size)
+        dtype = cfg.hf_config.torch_dtype
+        # fork_rng restores CPU and the selected CUDA generator even if a
+        # future warmup operation raises.  Synchronize before leaving so all
+        # RNG-consuming kernels have completed before restoration.
+        with torch.random.fork_rng(devices=[dev_index], enabled=True):
+            for k in widths:
+                logits_p = torch.zeros(
+                    1, k + 1, vocab, dtype=dtype, device=self.device)
+                logits_q = torch.zeros(
+                    1, k, vocab, dtype=dtype, device=self.device)
+                speculations = torch.zeros(
+                    1, k + 1, dtype=torch.int64, device=self.device)
+                temperatures = torch.full(
+                    (1,), 0.7, dtype=torch.float32, device=self.device)
+                valid_k = torch.full(
+                    (1,), k, dtype=torch.int64, device=self.device)
+                for cache_hit in (False, True):
+                    _verify(
+                        logits_p=logits_p,
+                        logits_q=logits_q,
+                        speculations=speculations,
+                        temperatures_target=temperatures,
+                        temperatures_draft=temperatures,
+                        cache_hits=torch.full(
+                            (1,), cache_hit, dtype=torch.bool,
+                            device=self.device),
+                        sampler_x=self.sampler_x,
+                        async_fan_out=self.async_fan_out,
+                        # Exercise both the miss and ratio branches even if
+                        # the live short-JIT option treats every row as ratio.
+                        jit_speculate=False,
+                        valid_k=valid_k,
+                    )
+            torch.cuda.synchronize(self.device)
+        torch.cuda.empty_cache()
+        print(f"[DUET] warmed acceptance kernels (K={widths})", flush=True)
+
+    def _send_proxy_wire(self, config, async_pg, draft_rank, *parts):
+        """Send one fixed-schema proxy payload on the shared async path.
+
+        Tree verification used to bypass the chain path's persistent
+        ``AsyncSendRing`` and call blocking ``dist.send`` directly.  That
+        serialized target graph-post behind the proxy message exactly on the
+        steps where tree verification was already wider.  Both chain and tree
+        now use the same transport contract and shutdown accounting.
+        """
+        from ssd.utils.async_helpers.nccl_pack import send_int64
+        if os.environ.get("SSD_ASYNC_PROXY_SEND", "0") != "1":
+            send_int64(async_pg, draft_rank, *parts)
+            return
+        if self._proxy_send_ring is None:
+            from ssd.utils.async_helpers.nccl_pack import AsyncSendRing
+            self._proxy_send_ring = AsyncSendRing(
+                n_slots=2,
+                buf_size=(2 * config.max_num_seqs
+                          * config.duet_proxy_wire_N),
+                device=parts[0].device,
+                pg=async_pg,
+            )
+        self._proxy_send_ring.send(
+            draft_rank, *(part.reshape(-1) for part in parts))
+        self._proxy_send_call_count += 1
 
     def drain_proxy_send_ring(self):
         """Public shutdown hook — llm_engine calls this before joining the
@@ -144,12 +274,24 @@ class Verifier(VerifierBase):
             # T3.4-b4/b5: 트리 응답 감지 (valid>0) — proxy q와 run() 메타
             # 양쪽에서 쓰므로 여기서 한 번 계산.
             _tree_meta_arg = None
+            self._active_tree_proxy_graph = None
             if (getattr(config, "duet_tree_policy", "off") != "off"
                     and getattr(speculate_result, "tree_ints", None)
                     is not None):
                 _ti_row = speculate_result.tree_ints[0]
                 if int(_ti_row[0]) > 0:
                     _tree_meta_arg = _ti_row.tolist()
+                    # Validate on rank 0 before indexing parent_q_ref or
+                    # sending the metadata through SHM to target TP ranks.
+                    # This readback already existed as .tolist().
+                    from ssd.engine.helpers.p2_tree import (
+                        parse_tree_ints, validate_tree_ints)
+                    _nv_t = int(config.duet_tree_nv)
+                    _ti_checked = parse_tree_ints(
+                        torch.tensor(_tree_meta_arg, dtype=torch.int64),
+                        _nv_t)
+                    validate_tree_ints(
+                        _ti_checked, _nv_t, config.hf_config.vocab_size)
                     if _tree_meta_arg[0] != _step_lookahead:
                         raise RuntimeError(
                             f"tree wire invariant: meta valid="
@@ -157,6 +299,20 @@ class Verifier(VerifierBase):
                             f"{_step_lookahead} "
                             f"(valid_k={speculate_result.valid_k.tolist()}, "
                             f"ints={_tree_meta_arg})")
+
+                    # Prepare only tiny fixed-shape topology buffers here,
+                    # while graph_pre has not started.  The exit callback
+                    # then needs no Python topology construction or H2D copy.
+                    self._active_tree_proxy_graph = None
+                    if self._tree_proxy_graphs:
+                        _valid_t = int(_tree_meta_arg[0])
+                        _pg = self._tree_proxy_graphs[_valid_t]
+                        _par_t = _tree_meta_arg[
+                            3 + _nv_t:3 + 2 * _nv_t][:_valid_t]
+                        _sib_t = _tree_meta_arg[
+                            3 + 2 * _nv_t:3 + 3 * _nv_t][:_valid_t]
+                        _pg.prepare_topology(_par_t, _sib_t)
+                        self._active_tree_proxy_graph = _pg
 
             # Slice draft_tokens / logits_q to step_lookahead since target ran
             # only K_short+1 positions on a short-hit step.
@@ -406,6 +562,83 @@ class Verifier(VerifierBase):
 
         path, terminal = tree_verify_walk_tensor(
             ti, p_rows, q_probs, tt, _coin, _mult)
+        _calib = os.environ.get("SSD_TREE_CALIB_TRACE", "")
+        if _calib:
+            # Diagnostic-only post-hoc calibration.  Keep three labels
+            # separate: an unattempted later sibling is not a rejection.
+            # The offline analyzer derives ``expansion_useful`` from the
+            # accepted path: this node must have an accepted child below it.
+            # That is the relevant label because a threshold keeps this node
+            # as a verifiable leaf and only suppresses its later expansion.
+            import json as _json
+            _v = int(ti["valid"])
+            _par = [int(ti["parent_local"][j]) for j in range(_v)]
+            _sib = [int(ti["sib_order"][j]) for j in range(_v)]
+            _tok_cpu = [int(ti["tok"][j]) for j in range(_v)]
+            _tok = torch.tensor(
+                _tok_cpu, dtype=torch.int64, device=q_probs.device)
+            _qref = ti["parent_q_ref"][:_v].to(
+                q_probs.device, torch.int64)
+            _q_node = q_probs[_qref, _tok].detach().float().cpu().tolist()
+            _depth, _path_conf = [0] * _v, [0.0] * _v
+            for _j in range(_v):
+                _p = _par[_j]
+                _depth[_j] = 1 if _p < 0 else _depth[_p] + 1
+                _path_conf[_j] = float(_q_node[_j]) * (
+                    1.0 if _p < 0 else _path_conf[_p])
+
+            _accepted_by_parent = {}
+            _reached_ctx = {-1}
+            _ctx = -1
+            for _j in path:
+                _jj = int(_j)
+                if _par[_jj] != _ctx:
+                    raise RuntimeError(
+                        "tree calibration path/topology mismatch: "
+                        f"node={_jj} parent={_par[_jj]} expected={_ctx}")
+                _accepted_by_parent[_ctx] = _jj
+                _reached_ctx.add(_jj)
+                _ctx = _jj
+
+            _nodes = []
+            _path_set = {int(x) for x in path}
+            for _j in range(_v):
+                _p = _par[_j]
+                _parent_reached = _p in _reached_ctx
+                _winner = _accepted_by_parent.get(_p)
+                _attempted = bool(
+                    _parent_reached and
+                    (_winner is None or _sib[_j] <= _sib[_winner]))
+                _accepted = bool(_winner == _j)
+                _nodes.append({
+                    "node": _j,
+                    "parent": _p,
+                    "sibling": _sib[_j],
+                    "depth": _depth[_j],
+                    "token": _tok_cpu[_j],
+                    "q": float(_q_node[_j]),
+                    "path_conf": float(_path_conf[_j]),
+                    "parent_reached": bool(_parent_reached),
+                    "attempted": _attempted,
+                    "accepted": _accepted,
+                    "rejected": bool(_attempted and not _accepted),
+                    "on_path": bool(_j in _path_set),
+                })
+            self._tree_calib_seq = getattr(self, "_tree_calib_seq", 0) + 1
+            _parent = os.path.dirname(_calib)
+            if _parent:
+                os.makedirs(_parent, exist_ok=True)
+            with open(_calib + ".jsonl", "a") as _f:
+                _f.write(_json.dumps({
+                    "seq": self._tree_calib_seq,
+                    "policy": cfg.duet_tree_policy,
+                    "valid": _v,
+                    "temperature_target": tt,
+                    "temperature_draft": td,
+                    "path": [int(x) for x in path],
+                    "terminal": int(terminal),
+                    "nodes": _nodes,
+                }) + "\n")
         if os.environ.get("SSD_TREE_DIAG", "0") == "1":
             # 판별 진단: 수락이 서브트리 "상한"에 막히는가(예산 문제) vs
             # 깊은 트리에서도 일찍 기각되는가(보행/q 문제)
@@ -465,11 +698,28 @@ class Verifier(VerifierBase):
         인덱스는 tree_meta(CPU 리스트)에서 빌드.
         """
         import torch.distributed as dist
-        from ssd.utils.async_helpers.nccl_pack import send_int64
         from ssd.engine.helpers.p2_tree import pack_piv, tree_policy_b_ladder
         config = self.target_model_runner.config
+        _detail_profile = os.environ.get(
+            "SSD_PROFILE_DUET_DETAIL", "0") == "1"
+        if _detail_profile:
+            from ssd.engine.helpers.cudagraph_helpers import (
+                duet_record as _mr_tree, duet_close as _mc_tree)
+        else:
+            _mr_tree = _mc_tree = None
         if exit_logits is None:
             return
+        if (os.environ.get("SSD_PROXY_STREAM", "0") == "1"
+                or config.duet_exit_replica):
+            # The callback may outlive the default stream dispatch.  Keep the
+            # closure-captured proposal tensors alive until the tree policy
+            # and async send queued on the side stream have consumed them.
+            _cur = torch.cuda.current_stream()
+            exit_logits.record_stream(_cur)
+            if draft_tokens is not None:
+                draft_tokens.record_stream(_cur)
+            if logits_q is not None:
+                logits_q.record_stream(_cur)
         if exit_logits.dim() == 2:
             exit_logits = exit_logits.view(B, vk + 1, -1)
         V = exit_logits.shape[-1]
@@ -478,21 +728,51 @@ class Verifier(VerifierBase):
         par = [int(x) for x in tree_meta[3 + nv:3 + 2 * nv][:valid]]
         sib = [int(x) for x in tree_meta[3 + 2 * nv:3 + 3 * nv][:valid]]
 
+        _proxy_graph = self._active_tree_proxy_graph
+        if _proxy_graph is not None:
+            # These two coarse spans are useful in every timeline profile;
+            # the finer eager fallback labels remain behind DETAIL.
+            from ssd.engine.helpers.cudagraph_helpers import (
+                duet_record as _mr_tree_coarse,
+                duet_close as _mc_tree_coarse)
+            _ev_graph = _mr_tree_coarse(
+                "tree_proxy_graph_replay", parent="exit_proxy_side")
+            chosen_pos, chosen_tok, _top_v = _proxy_graph.replay(
+                exit_logits[0], logits_q[0], draft_tokens[0])
+            _mc_tree_coarse("tree_proxy_graph_replay", _ev_graph)
+            _ev_send = _mr_tree_coarse(
+                "proxy_send_enqueue", parent="exit_proxy_side")
+            Verifier._send_proxy_wire(
+                self, config, async_pg, draft_rank,
+                chosen_pos, chosen_tok)
+            _mc_tree_coarse("proxy_send_enqueue", _ev_send)
+            return
+
         # 리뷰3-9(분포 미러)는 **동일-시드 A/B로 원복** (2026-08-04):
         # temp/sampler_x 반영판은 hit +0.011에 P2AL 2.13→1.94 —
         # 날카로워진 p^E가 wire 후보를 얕은 ctx로 몰아 깊이를 깎았다
         # (tok/step 4.55→4.36 순손실). plain softmax가 체인 proxy와도
         # 일관된 경험적 동작점 — 재도전은 P_iv 랭킹·β·prior 공동
         # recalibration으로만 (T6 부채; 20번 판정표 참조).
+        _ev_softmax = (_mr_tree("tree_proxy_softmax")
+                       if _detail_profile else None)
         p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
         q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
         tokens = draft_tokens[0, :valid].to(p_E.device)
+        if _detail_profile:
+            _mc_tree("tree_proxy_softmax", _ev_softmax)
 
+        _ev_ladder = (_mr_tree("tree_proxy_accept_residual")
+                      if _detail_profile else None)
         _alpha, term, resid = tree_policy_b_ladder(
             par, sib, tokens, p_E, q_rows)
+        if _detail_profile:
+            _mc_tree("tree_proxy_accept_residual", _ev_ladder)
 
         # P_iv(ctx, v) = term(ctx)·resid(ctx, v); 드래프트된 자식 토큰은
         # 후보에서 제외 (fork 네임스페이스와 중복 — 체인 규약 동일).
+        _ev_rank = (_mr_tree("tree_proxy_rank_candidates")
+                    if _detail_profile else None)
         piv_rows = resid * term.unsqueeze(1)                     # [valid+1, V]
         if valid:
             par_t = torch.tensor(par, dtype=torch.int64,
@@ -511,9 +791,17 @@ class Verifier(VerifierBase):
             top_v = torch.cat([top_v, top_v.new_zeros(pad)])
         if getattr(config, "duet_tree_policy", "off") != "off":
             chosen_tok = pack_piv(chosen_tok, top_v)
+        if _detail_profile:
+            _mc_tree("tree_proxy_rank_candidates", _ev_rank)
         dev = self.device
-        send_int64(async_pg, draft_rank,
-                   chosen_pos.to(dev), chosen_tok.to(dev))
+        _ev_send = (_mr_tree("tree_proxy_send")
+                    if _detail_profile else None)
+        Verifier._send_proxy_wire(
+            self,
+            config, async_pg, draft_rank,
+            chosen_pos.to(dev), chosen_tok.to(dev))
+        if _detail_profile:
+            _mc_tree("tree_proxy_send", _ev_send)
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,
@@ -612,6 +900,32 @@ class Verifier(VerifierBase):
             send_int64(async_pg, draft_rank, payload)
             return
 
+        # Fixed-shape B=1 chain fast path.  This covers K1, ordinary K2 and
+        # cache miss (when JIT logits_q is valid).  Tree-hit steps are routed
+        # to _compute_and_send_proxy_tree before reaching this function.
+        # Keeping the whole Policy-B calculation in one CUDA graph removes
+        # the many small launches that appeared as a 4--6 ms proxy bar.
+        _chain_graph = self._chain_proxy_graphs.get(int(K))
+        if (_chain_graph is not None
+                and B == 1
+                and self.jit_speculate
+                and config.duet_policy == "b"
+                and not _E0_TRACE):
+            from ssd.engine.helpers.cudagraph_helpers import (
+                duet_record as _mr_chain, duet_close as _mc_chain)
+            _ev_graph = _mr_chain(
+                "chain_proxy_graph_replay", parent="exit_proxy_side")
+            chosen_pos, chosen_tok, _ = _chain_graph.replay(
+                exit_logits[0], logits_q[0], draft_tokens[0, :K])
+            _mc_chain("chain_proxy_graph_replay", _ev_graph)
+            _ev_send = _mr_chain(
+                "proxy_send_enqueue", parent="exit_proxy_side")
+            Verifier._send_proxy_wire(
+                self, config, async_pg, draft_rank,
+                chosen_pos, chosen_tok)
+            _mc_chain("proxy_send_enqueue", _ev_send)
+            return
+
         _ev_compute = _mr_d("proxy_compute") if _detail_profile else None
         # p_E (early-exit proxy), p_D (draft)
         p_E = torch.softmax(exit_logits[:, :K, :].float(), dim=-1)  # [B, K, V]
@@ -705,7 +1019,7 @@ class Verifier(VerifierBase):
             if _detail_profile:
                 _mc_d("proxy_pack", _ev_pack)
 
-            # ===== E0 calibration trace (P0, docs/duet/17 §2; default OFF —
+            # ===== E0 calibration trace (P0, docs/duet/internal/17 §2; default OFF —
             # dedicated runs only, never TPS measurement) =====
             if _E0_TRACE:
                 _e0.record_target_wire(
@@ -734,26 +1048,10 @@ class Verifier(VerifierBase):
             # use so non-rank-0 processes (which never fire this callback)
             # don't allocate.
             _ev_send = _mr_d("proxy_send") if _detail_profile else None
-            if os.environ.get("SSD_ASYNC_PROXY_SEND", "0") == "1":
-                if self._proxy_send_ring is None:
-                    from ssd.utils.async_helpers.nccl_pack import AsyncSendRing
-                    # Buf = 2 × B_max × wire_N int64 (chosen_pos + chosen_tok
-                    # packed; B_max = config.max_num_seqs, actual send length
-                    # is 2·B·wire_N for the step's B).
-                    # 2 slots is enough at hit-dominated rates (docs/duet/08 §3.2);
-                    # if slot_wait_rate > 1% in Phase 4, bump to 4.
-                    self._proxy_send_ring = AsyncSendRing(
-                        n_slots=2,
-                        buf_size=2 * config.max_num_seqs * config.duet_proxy_wire_N,
-                        device=chosen_pos.device,
-                        pg=async_pg,
-                    )
-                self._proxy_send_ring.send(
-                    draft_rank, chosen_pos.reshape(-1), chosen_tok.reshape(-1))
-                self._proxy_send_call_count += 1
-            else:
-                send_int64(async_pg, draft_rank,
-                           chosen_pos.reshape(-1), chosen_tok.reshape(-1))
+            Verifier._send_proxy_wire(
+                self,
+                config, async_pg, draft_rank,
+                chosen_pos.reshape(-1), chosen_tok.reshape(-1))
             if _detail_profile:
                 _mc_d("proxy_send", _ev_send)
             return

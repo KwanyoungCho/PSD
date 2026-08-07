@@ -163,6 +163,66 @@ def flush_draft_profile():
     _draft_events.clear()
 
 @torch.inference_mode()
+def cg_input_range_check(input_ids, positions, slot_mapping,
+                         context_lens, vocab_size, rope_len,
+                         n_kv_slots, step, active_mask=None):
+    """리뷰 2단계: graph.replay() 직전 입력 범위 검사 (debug 전용,
+    SSD_CG_INPUT_CHECK=1). 위반 시 CUDA graph를 실행하지 않고 CPU
+    RuntimeError로 종료 — GPU context 보존 + 정확한 최초 위반 기록.
+    규약: active lane은 반드시 유효한 slot을 가져야 한다. padding
+    lane만 active_mask=False일 때 slot=-1을 사용할 수 있다. position/
+    token 범위 밖과 ctx<=0도 오류다."""
+    bad = []
+    im, ix = int(input_ids.min()), int(input_ids.max())
+    if im < 0 or ix >= vocab_size:
+        lane = int(((input_ids < 0) | (input_ids >= vocab_size))
+                   .nonzero()[0])
+        bad.append(f"token[min={im},max={ix},V={vocab_size},"
+                   f"lane={lane}]")
+    pm, px = int(positions.min()), int(positions.max())
+    if pm < 0 or px >= rope_len:
+        lane = int(((positions < 0) | (positions >= rope_len))
+                   .nonzero()[0])
+        bad.append(f"pos[min={pm},max={px},rope_len={rope_len},"
+                   f"lane={lane}]")
+    if slot_mapping is not None:
+        sm, sx = int(slot_mapping.min()), int(slot_mapping.max())
+        if active_mask is not None:
+            act = active_mask.to(slot_mapping.device,
+                                 dtype=torch.bool)
+            bad_sl = ((slot_mapping < 0) & act) \
+                | (slot_mapping < -1) | (slot_mapping >= n_kv_slots)
+        else:
+            # mask 미제공 기본: -1은 정상 padding (run_fi의 기존
+            # pad 규약) — < -1 과 상한 초과만 위반
+            bad_sl = (slot_mapping < -1) \
+                | (slot_mapping >= n_kv_slots)
+        if bool(bad_sl.any()):
+            lane = int(bad_sl.nonzero()[0])
+            bad.append(f"slot[min={sm},max={sx},N={n_kv_slots},"
+                       f"lane={lane}]")
+    if context_lens is not None and int(context_lens.min()) <= 0:
+        bad.append(f"ctx[min={int(context_lens.min())}]")
+    if bad:
+        raise RuntimeError(
+            f"[cg-input-check] step={step} 범위 위반: "
+            + " ".join(bad))
+
+
+def _rope_len_of(model_runner):
+    rl = getattr(model_runner, "_cg_rope_len", None)
+    if rl is None:
+        rl = 0
+        for m in model_runner.model.modules():
+            c = getattr(m, "cos_sin_cache", None)
+            if c is not None:
+                rl = int(c.shape[0])
+                break
+        model_runner._cg_rope_len = rl
+    return rl
+
+
+@torch.inference_mode()
 def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, graph_vars, step, cache_hits, hidden_states=None, layout=None):
     # bs != len(input_ids, positions) now in multi-query seting, also need step-dependent mask
     _prep_label = ("phase1_prep" if (layout is not None and (
@@ -453,7 +513,7 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     kv_indptr_cpu, kv_lpl_cpu = cache["plan_cpu_args"][step]
     qo_indptr_cpu = cache["cu_seqlens_q_cpu"]
 
-    # P2-tree (T1.4b, docs/duet/20): per-forward 동적 mask 주입 —
+    # P2-tree (T1.4b, docs/duet/internal/20): per-forward 동적 mask 주입 —
     # rollout 어댑터가 채우는 override. 체인 경로는 키 부재로 무영향.
     _tree_ov = cache.get("_tree_mask_override")
     if _tree_ov is not None and step in _tree_ov:
@@ -528,6 +588,15 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
     graph_vars["positions"][:flat_batch_size] = positions
     graph_vars["slot_mapping"][:flat_batch_size] = get_context().slot_mapping
     graph_vars["context_lens"][:B] = context_lens
+    if os.environ.get("SSD_CG_INPUT_CHECK", "0") == "1":
+        cg_input_range_check(
+            input_ids, positions, get_context().slot_mapping,
+            context_lens,
+            int(model_runner.hf_config.vocab_size),
+            _rope_len_of(model_runner),
+            int(model_runner.kv_cache.shape[2]
+                * model_runner.kv_cache.shape[3]),
+            step)
     if hidden_states is not None and "hidden_states" in graph_vars:
         if hidden_states.shape[0] < flat_batch_size:
             # Pad hidden_states to match padded batch
@@ -1083,9 +1152,53 @@ def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
 # DUET-SSD: Split Verify CudaGraph (pre + post)
 # ============================================================
 
+def update_tree_verify_graph_buffers(wrapper, kv_indices, packed_mask,
+                                     plan_host):
+    """Update only the tensors read by a captured tree-attention graph.
+
+    ``BatchPrefillWithPagedKVCacheWrapper.plan()`` cannot itself be captured.
+    More importantly, calling it immediately before ``CUDAGraph.replay()``
+    cannot change the graph's already-recorded launch geometry; in the old
+    target path it merely recopied these small runtime tensors and then ran
+    the host planner anyway.  The graph is captured for a fixed query bucket,
+    while page count, last-page length, page ids and mask remain ordinary
+    buffer *contents*.  Updating those contents directly is the same contract
+    used by :class:`P2TreeExecutor`.
+
+    ``plan_host`` owns persistent CPU int32 tensors ``kv``, ``last``,
+    ``mask`` and ``klen``.  Keeping them persistent avoids both CUDA scalar
+    assignments and the hidden device-to-host reads inside ``plan()``.
+    """
+    n_blocks = int(plan_host["kv"][1])
+    if n_blocks <= 0:
+        raise ValueError("tree verify requires at least one KV page")
+    if n_blocks > wrapper._paged_kv_indices_buf.numel():
+        raise ValueError(
+            f"tree verify page count {n_blocks} exceeds wrapper capacity "
+            f"{wrapper._paged_kv_indices_buf.numel()}")
+    if packed_mask.numel() > wrapper._custom_mask_buf.numel():
+        raise ValueError(
+            f"tree verify packed mask {packed_mask.numel()} exceeds "
+            f"wrapper capacity {wrapper._custom_mask_buf.numel()}")
+
+    # All copies are enqueued on the current stream before graph replay.
+    # CPU sources are tiny and persistent; the page-id source is already on
+    # the target GPU.  No allocation, plan call, or GPU->CPU synchronization
+    # is performed here.
+    wrapper._paged_kv_indptr_buf.copy_(plan_host["kv"], non_blocking=True)
+    wrapper._paged_kv_last_page_len_buf.copy_(
+        plan_host["last"], non_blocking=True)
+    wrapper._paged_kv_indices_buf[:n_blocks].copy_(
+        kv_indices[:n_blocks], non_blocking=True)
+    wrapper._custom_mask_buf[:packed_mask.numel()].copy_(
+        packed_mask, non_blocking=True)
+    wrapper._mask_indptr_buf.copy_(plan_host["mask"], non_blocking=True)
+    wrapper._kv_lens_buffer.copy_(plan_host["klen"], non_blocking=True)
+
+
 @torch.inference_mode()
 def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
-    """P2-tree verify CG (T3.2 bucket capture — docs/duet/20).
+    """P2-tree verify CG (T3.2 bucket capture — docs/duet/internal/20).
 
     bucket = N_v+1 행 고정, B=1. duet_verify와 동일한 pre/exit/post
     분할이되 attention은 FlashInfer tree wrapper (T3.1의 CG-buf
@@ -1427,8 +1540,11 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         # (local replica) + Policy B + send on a side stream: the CPU
         # dispatch below is hidden behind graph_pre's GPU execution and
         # the side work itself overlaps graph_post. The exit_logits /
-        # proxy_compute_send spans now measure dispatch only (~0).
-        _ev_el = duet_record("exit_logits")
+        # Record dispatch on the default stream and the actual norm + head +
+        # proxy calculation on the side stream.  The old ``exit_logits``
+        # event put both endpoints on the default stream, so a long-looking
+        # bar could be stream contention rather than exit computation.
+        _ev_el = duet_record("exit_proxy_launch")
         flat = orig_bs * k_plus_1
         _replica = getattr(model_runner, "_duet_lm_head_replica", None)
         if duet_proxy_fn is not None and _replica is not None:
@@ -1440,17 +1556,17 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
             _ev_ready.record()  # default stream: fires when graph_pre is done
             with torch.cuda.stream(_es):
                 _es.wait_event(_ev_ready)
+                _ev_side = duet_record("exit_proxy_side")
                 exit_h = (graph_vars["exit_hidden"][:flat]
                           + graph_vars["exit_residual"][:flat])
                 normed = model_runner.model.model.norm(exit_h, None)
                 _el_full = torch.nn.functional.linear(normed, _replica)
                 duet_proxy_fn(_el_full, orig_bs)
+                duet_close("exit_proxy_side", _ev_side)
             _done = torch.cuda.Event()
             _done.record(_es)
             model_runner._duet_exit_done_ev = _done
-        duet_close("exit_logits", _ev_el)
-        _ev = duet_record("proxy_compute_send")
-        duet_close("proxy_compute_send", _ev)
+        duet_close("exit_proxy_launch", _ev_el)
         exit_logits = None
     else:
         # ====== Mid-forward: exit logits (norm + lm_head on exit_hidden) ======
@@ -1483,7 +1599,7 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         # record_stream so the caching allocator does not free them while
         # proxy_stream is still reading. NEVER make default stream wait on
         # proxy_stream (that would defeat the purpose).
-        _ev = duet_record("proxy_compute_send")
+        _ev = duet_record("exit_proxy_launch")
         if duet_proxy_fn is not None:
             _proxy_stream = getattr(model_runner, "_duet_proxy_stream", None)
             if _proxy_stream is None and os.environ.get("SSD_PROXY_STREAM", "0") == "1":
@@ -1503,12 +1619,16 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
                 _ev_data_ready.record()
                 with torch.cuda.stream(_proxy_stream):
                     _proxy_stream.wait_event(_ev_data_ready)
+                    _ev_side = duet_record("exit_proxy_side")
                     duet_proxy_fn(exit_logits, orig_bs)
+                    duet_close("exit_proxy_side", _ev_side)
                 # NO default stream wait_stream(proxy_stream) here — that would
                 # re-serialize (docs/duet/08 §1.3 wrong pattern).
             else:
+                _ev_side = duet_record("exit_proxy_side")
                 duet_proxy_fn(exit_logits, orig_bs)
-        duet_close("proxy_compute_send", _ev)
+                duet_close("exit_proxy_side", _ev_side)
+        duet_close("exit_proxy_launch", _ev)
 
     # ====== graph_post.replay() ======
     _ev = duet_record("graph_post")
@@ -1546,6 +1666,7 @@ PROFILE_DUET = os.environ.get("SSD_PROFILE_DUET", "0") == "1"
 #    open_step_id, open_proc, close_step_id, close_status, close_proc)
 _duet_events = []
 _duet_idx = 0      # monotonic call index (per process)
+_duet_cap_warned = False
 
 # CUDA/CPU anchor (set once per process, lazily on first record)
 _duet_anchor_event = None
@@ -1618,6 +1739,20 @@ def duet_record(label, parent=None):
     """
     if not PROFILE_DUET:
         return None
+    # Long profile runs used to retain every CUDA Event until process exit.
+    # Around 23k live events both chain and tree traces showed an unrelated
+    # 0.8-second stall inside whichever span happened to allocate the next
+    # event.  Timeline profiles need representative steps, not an unbounded
+    # event archive, so allow the run script to stop recording after a safe
+    # window without perturbing the serving path further.
+    global _duet_cap_warned
+    _max_events = int(os.environ.get("SSD_PROFILE_DUET_MAX_EVENTS", "0"))
+    if _max_events > 0 and len(_duet_events) >= _max_events:
+        if not _duet_cap_warned:
+            _duet_cap_warned = True
+            print(f"[duet_profile] event cap {_max_events} reached; "
+                  "later spans are intentionally not recorded", flush=True)
+        return None
     _ensure_duet_anchor()
     ev = torch.cuda.Event(enable_timing=True)
     ev.record()
@@ -1662,12 +1797,14 @@ def duet_close(label, start_handle):
 
 def duet_reset():
     """Reset profiling state — duet_dump/duet_flush call this after writing."""
-    global _duet_idx, _duet_anchor_event, _duet_anchor_cpu_ns, _duet_anchor_device
+    global _duet_idx, _duet_anchor_event, _duet_anchor_cpu_ns, \
+        _duet_anchor_device, _duet_cap_warned
     _duet_events.clear()
     _duet_idx = 0
     _duet_anchor_event = None
     _duet_anchor_cpu_ns = None
     _duet_anchor_device = None
+    _duet_cap_warned = False
     _duet_context["step_id"] = None
     _duet_context["status"] = None
     _duet_context["proc"] = None

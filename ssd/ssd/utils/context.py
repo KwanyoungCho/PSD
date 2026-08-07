@@ -25,7 +25,7 @@ class Context:
     # duplicate tolist() sync at step 0 (the value is already known from
     # _glue_decode's earlier tolist).
     active_cache_hits_list: list | None = None
-    # P2-tree (T3.4-b1, docs/duet/20): 명시 TREE_VERIFY mode — target
+    # P2-tree (T3.4-b1, docs/duet/internal/20): 명시 TREE_VERIFY mode — target
     # verify에서만 세팅; attention이 이 wrapper 경로로 라우팅.
     tree_verify_wrapper: object | None = None
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E0 체인 baseline: 예산 슬롯의 P_iv↔hit 분석 (docs/duet/17 §3.2 ⑥).
+"""E0 체인 baseline: 예산 슬롯의 P_iv↔hit 분석 (docs/duet/internal/17 §3.2 ⑥).
 
 사용: SSD_HF_CACHE=... SSD_DATASET_DIR=... python e0_budget_piv_analysis.py
 """

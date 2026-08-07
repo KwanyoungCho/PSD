@@ -162,7 +162,7 @@ class ModelRunner:
         # cudagraph logic for FlashInfer kernels, need diff wrapper for each batch size we make a graph for 
         if is_draft and config.draft_async:
             self._init_flashinfer_wrappers()
-        # P2-tree (T3.1, docs/duet/20): target rank들도 tree-verify용
+        # P2-tree (T3.1, docs/duet/internal/20): target rank들도 tree-verify용
         # FlashInfer wrapper/workspace 필요 (기존엔 draft 전용 — 리뷰4
         # 확인). tree policy 게이트 — off면 무할당 (OFF 경로 불변).
         self.tree_verify_wrappers = None
@@ -251,7 +251,14 @@ class ModelRunner:
         self._tree_workspace = torch.zeros(
             128 * 1024 * 1024, dtype=torch.uint8, device=self.device)
         self.tree_verify_wrappers = {}
-        for nv_b in sorted({4, 6, nv}):
+        # A valid tree keeps at least the K2-deep backbone (four nodes in the
+        # production shape), so exact 1/2/3-node model graphs would never be
+        # selected.  Use two-node intervals up to Nv and always include the
+        # configured maximum.  For Nv=8 this is {4,6,8}; a future Nv=12 gets
+        # {4,6,8,10,12} instead of padding 7--9 nodes all the way to 12.
+        first_bucket = min(int(self.config.duet_phase2_k), nv)
+        verify_buckets = set(range(first_bucket, nv + 1, 2)) | {nv}
+        for nv_b in sorted(verify_buckets):
             r = nv_b + 1
             w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
                 self._tree_workspace, "NHD", use_cuda_graph=True,
@@ -642,13 +649,19 @@ class ModelRunner:
         if self.verbose:
             print(f'-----WARMING UP {model_type}MODEL----', flush=True)
         self.warmup_model()
+        self._warmup_tree_proxy()
         if self.verbose:
             print(f'-----ALLOCATING {model_type}KV CACHE----', flush=True)
         self.allocate_kv_cache()
+        self._capture_tree_proxy_graphs()
         if init_q is not None:
             # super().__init__() runs warmup and calculates num_kvcache_blocks, pass that up
             init_q.put(self.config.num_kvcache_blocks)
-            init_q.close()
+            # DraftRunner still has layout-specific and P2 CUDA graphs to
+            # capture after this base-class method returns.  Keep the queue
+            # open so it can send a second, real readiness message.  Closing
+            # here made the parent advertise a ready engine while the first
+            # generation was still paying those captures.
 
         if not self.enforce_eager:
             # if not self.is_draft or (self.is_draft and self.config.draft_async and self.config.speculate): 
@@ -905,6 +918,135 @@ class ModelRunner:
         
         self.run(seqs, True, hidden_states=hidden_states)
         torch.cuda.empty_cache()
+
+    def _warmup_tree_proxy(self):
+        """Warm the exact rank-0 tree proxy path before serving traffic.
+
+        The exit replica and its topology-dependent Policy-B kernels are not
+        exercised by the ordinary prefill warmup.  Without this pass the
+        first real P2 tree hit pays lazy softmax/reduction/top-k setup on the
+        request critical path.  Non-tree, draft, and non-rank-0 paths remain
+        untouched.
+        """
+        cfg = self.config
+        if (self.is_draft or self.rank != 0
+                or not getattr(cfg, "duet_enabled", False)
+                or getattr(cfg, "duet_tree_policy", "off") == "off"
+                or not getattr(cfg, "duet_exit_replica", False)
+                or not hasattr(self, "_duet_lm_head_replica")
+                or not self.tree_verify_wrappers):
+            return
+
+        from ssd.engine.helpers.p2_tree import warmup_tree_proxy_kernels
+
+        # Reuse this stream in the live tree callback so stream creation and
+        # allocator ownership are warmed as well as the kernels themselves.
+        stream = getattr(self, "_duet_exit_stream", None)
+        if stream is None:
+            stream = torch.cuda.Stream(device=self.device)
+            self._duet_exit_stream = stream
+
+        # These are the production confidence-tree shapes.  Unknown future
+        # buckets fall back to a breadth-first three-child tree followed by a
+        # first-child backbone, preserving the same kernel classes.
+        templates = {
+            4: [-1, -1, -1, 0],
+            6: [-1, -1, -1, 0, 3, 4],
+            8: [-1, -1, -1, 0, 0, 1, 3, 6],
+        }
+
+        with torch.cuda.stream(stream):
+            for nv in sorted(self.tree_verify_wrappers):
+                par = list(templates.get(int(nv), []))
+                if not par:
+                    par = [-1] * min(3, int(nv))
+                    while len(par) < int(nv):
+                        par.append(max(0, len(par) - 3))
+                sibling_count = {}
+                sib = []
+                for parent in par:
+                    order = sibling_count.get(parent, 0)
+                    sib.append(order)
+                    sibling_count[parent] = order + 1
+
+                r = int(nv) + 1
+                hidden = torch.zeros(
+                    r, self.hf_config.hidden_size,
+                    dtype=self.hf_config.torch_dtype, device=self.device)
+                normed = self.model.model.norm(hidden, None)
+                exit_logits = torch.nn.functional.linear(
+                    normed, self._duet_lm_head_replica)
+                q_logits = torch.zeros(
+                    int(nv), self.hf_config.vocab_size,
+                    dtype=self.hf_config.torch_dtype, device=self.device)
+                # A second pass also warms allocator reuse after the first
+                # shape-specific kernel materialization.
+                for _ in range(2):
+                    warmup_tree_proxy_kernels(
+                        exit_logits, q_logits, par, sib,
+                        cfg.duet_proxy_wire_N)
+        stream.synchronize()
+        # Do not let temporary full-vocab buffers reduce KV-cache sizing.
+        torch.cuda.empty_cache()
+        print(f"[DUET tree] warmed proxy kernels "
+              f"(buckets={sorted(self.tree_verify_wrappers)})", flush=True)
+
+    def _capture_tree_proxy_graphs(self):
+        """Build rank-0 target proxy graphs before the engine is ready.
+
+        Verifier is constructed lazily by ``generate()``.  Capturing these
+        graphs in ``Verifier.__init__`` therefore charged roughly seven
+        seconds to the first request even though the kernels themselves were
+        warmed.  Keep the persistent graph objects on ModelRunner and let
+        every Verifier instance reuse them.  Chain K1/K2 graphs are prepared
+        here as well: cache miss has no tree metadata and previously fell
+        back to many eager Policy-B launches, which produced the long proxy
+        bar seen in miss timelines.
+        """
+        self._tree_proxy_graphs_prebuilt = {}
+        self._chain_proxy_graphs_prebuilt = {}
+        cfg = self.config
+        if (self.is_draft or self.rank != 0
+                or self.device.type != "cuda"
+                or not getattr(cfg, "duet_enabled", False)):
+            return
+
+        from ssd.engine.helpers.p2_tree import (
+            ChainProxyCUDAGraph, TreeProxyCUDAGraph)
+        if (os.environ.get("SSD_CHAIN_PROXY_GRAPH", "1") != "0"
+                and not getattr(cfg, "duet_proxy_on_draft", False)
+                and not getattr(cfg, "duet_exit_topm_gather", False)):
+            widths = sorted({int(cfg.duet_phase1_k),
+                             int(cfg.duet_phase2_k)})
+            pack_scores = getattr(cfg, "duet_tree_policy", "off") != "off"
+            for k in widths:
+                self._chain_proxy_graphs_prebuilt[k] = ChainProxyCUDAGraph(
+                    k=k,
+                    vocab_size=cfg.hf_config.vocab_size,
+                    top_k=cfg.duet_proxy_top_k,
+                    wire_n=cfg.duet_proxy_wire_N,
+                    pack_scores=pack_scores,
+                    dtype=cfg.hf_config.torch_dtype,
+                    device=self.device)
+            print("[DUET] captured target chain proxy graphs "
+                  f"(K={widths})", flush=True)
+
+        if (os.environ.get("SSD_TREE_PROXY_GRAPH", "1") == "0"
+                or getattr(cfg, "duet_tree_policy", "off") == "off"
+                or not self.tree_verify_wrappers):
+            return
+        max_valid = max(self.tree_verify_wrappers)
+        for nv in range(1, int(max_valid) + 1):
+            self._tree_proxy_graphs_prebuilt[nv] = TreeProxyCUDAGraph(
+                nv=nv,
+                vocab_size=cfg.hf_config.vocab_size,
+                wire_n=cfg.duet_proxy_wire_N,
+                depth_steps=cfg.duet_phase2_k,
+                dtype=cfg.hf_config.torch_dtype,
+                device=self.device)
+        print("[DUET tree] captured target proxy graphs "
+              f"(buckets={sorted(self._tree_proxy_graphs_prebuilt)})",
+              flush=True)
 
     def allocate_kv_cache(self):
         print(f'inside allocate_kv_cache -- ', flush=True)
@@ -1221,13 +1363,31 @@ class ModelRunner:
         p^E가 된다. 행 수는 N_v bucket으로 패딩 (slot -1, prefix-only
         mask) — 이후 CG capture와 동일 shape 유지.
         """
-        from ssd.engine.helpers.p2_tree import parse_tree_ints
+        from ssd.engine.helpers.p2_tree import (
+            pack_tree_verify_mask_direct, parse_tree_ints,
+            validate_tree_ints)
         from ssd.engine.helpers.cudagraph_helpers import (
-            duet_record, duet_close, _duet_exit_topm_gather)
+            duet_record, duet_close, _duet_exit_topm_gather,
+            update_tree_verify_graph_buffers)
         cfg = self.config
+        # Include the host-side topology reconstruction and FlashInfer plan
+        # in the target timeline.  Previously this work sat in an unlabeled
+        # gap immediately before graph_pre and was easy to mistake for proxy
+        # communication.
+        _ev_setup = duet_record("verify_setup")
+        _ev_meta = duet_record("tree_verify_meta_cpu")
         nv = int(cfg.duet_tree_nv)
-        ti = parse_tree_ints(
-            torch.tensor(self._duet_tree_meta, dtype=torch.int64), nv)
+        # The SHM command is already an ordinary CPU list.  Re-wrapping it
+        # as a torch tensor allocated storage every tree hit and then all
+        # validation below immediately converted its scalar fields back to
+        # Python ints.  parse/validate intentionally accept both lists and
+        # tensors, so keep this boundary CPU-native.
+        ti = parse_tree_ints(self._duet_tree_meta, nv)
+        # Every TP rank receives the same metadata through SHM and performs
+        # the same check before entering model collectives.  A corrupt tree
+        # therefore fails coherently instead of leaving only rank 0 in the
+        # acceptance path while its peers wait forever.
+        validate_tree_ints(ti, nv, cfg.hf_config.vocab_size)
         valid = int(ti["valid"])
         n_rows = valid + 1
         assert input_ids.shape[0] == n_rows, (
@@ -1248,8 +1408,10 @@ class ModelRunner:
         kv_len = int(context.context_lens[0])
         assert kv_len == pos0 + 1 + valid, (
             f"tree verify kv_len {kv_len} != pos0+1+valid {pos0 + 1 + valid}")
+        duet_close("tree_verify_meta_cpu", _ev_meta)
 
         # bucket 선택 + 행 패딩 (고정 shape — 추후 CG capture 대비)
+        _ev_mask = duet_record("tree_verify_mask_prepare")
         _buckets = sorted(self.tree_verify_wrappers.keys())
         nv_b = next(b for b in _buckets if b + 1 >= n_rows)
         r_b = nv_b + 1
@@ -1270,27 +1432,56 @@ class ModelRunner:
             rope[1:n_rows] = pos0 + 1 + torch.tensor(
                 depths, dtype=positions.dtype, device=positions.device)
 
-        # custom mask [r_b, kv_len]: prefix+rec 공통, 노드 행 += 조상+self
-        m = torch.zeros(r_b, kv_len, dtype=torch.bool)
-        m[:, :pos0 + 1] = True
-        for j in range(valid):
-            r = 1 + j
-            for a in anc[j]:
-                m[r, pos0 + 1 + a] = True
-            m[r, pos0 + 1 + j] = True
-
         bs = self.block_size
         n_blocks = (kv_len + bs - 1) // bs
         kv_indices = context.block_tables[0, :n_blocks].to(torch.int32)
-        kv_indptr = torch.tensor([0, n_blocks], dtype=torch.int32,
-                                 device=self.device)
         last_len = kv_len % bs
         last_len = bs if last_len == 0 else last_len
-        kv_last_page_len = torch.tensor([last_len], dtype=torch.int32,
-                                        device=self.device)
-        qo_indptr = torch.tensor([0, r_b], dtype=torch.int32,
-                                 device=self.device)
+        # FlashInfer plan() copies these three tiny arrays back to the host
+        # to select a kernel schedule.  Creating them on CUDA forced three
+        # needless DtoH synchronizations after mask preparation.  Reuse CPU
+        # buffers by verify width; page ids themselves remain on CUDA.
+        _plan_host = getattr(self, "_tree_verify_plan_host", None)
+        if _plan_host is None:
+            _plan_host = self._tree_verify_plan_host = {}
+        _ph = _plan_host.get(nv_b)
+        if _ph is None:
+            _ph = {
+                "qo": torch.tensor([0, r_b], dtype=torch.int32),
+                "kv": torch.empty(2, dtype=torch.int32),
+                "last": torch.empty(1, dtype=torch.int32),
+                "mask": torch.empty(2, dtype=torch.int32),
+                "klen": torch.empty(1, dtype=torch.int32),
+            }
+            _plan_host[nv_b] = _ph
+        _ph["kv"][0] = 0
+        _ph["kv"][1] = n_blocks
+        _ph["last"][0] = last_len
+        _ph["mask"][0] = 0
+        _ph["mask"][1] = r_b * kv_len
+        _ph["klen"][0] = kv_len
+        qo_indptr = _ph["qo"]
+        kv_indptr = _ph["kv"]
+        kv_last_page_len = _ph["last"]
+        # Batch size is one, so FlashInfer's segmented little-endian packing
+        # is exactly a flat np.packbits.  Supplying it explicitly avoids a
+        # per-step GPU segment_packbits launch inside wrapper.plan().
+        # Keep the packed mask on CPU.  The captured wrapper owns its fixed
+        # GPU mask buffer, so materialising a fresh CUDA tensor here only
+        # added an allocation and a second copy on every P2 hit.
+        _packed_mask = pack_tree_verify_mask_direct(
+            anc, valid, r_b, pos0 + 1, kv_len)
         _tp = max(1, self.num_tp_gpus)     # KV 할당(:896)과 동일한 분모
+        duet_close("tree_verify_mask_prepare", _ev_mask)
+
+        # The replica side stream reads capture-owned exit buffers.  Do not
+        # let the next tree replay overwrite them before the prior callback
+        # has finished; normally this event is already complete and the wait
+        # is a no-op.
+        if getattr(cfg, "duet_exit_replica", False):
+            _prev_done = getattr(self, "_duet_exit_done_ev", None)
+            if _prev_done is not None:
+                torch.cuda.current_stream().wait_event(_prev_done)
 
         # === CG replay 경로 (T3.2 capture 존재 + eager 강제 아님) ===
         _cg = None
@@ -1299,10 +1490,12 @@ class ModelRunner:
         if _cg is not None:
             bufs = _cg["bufs"]
             wcg = _cg["wrapper"]
+            _ev_copy = duet_record("tree_verify_input_copy")
             bufs["input_ids"].copy_(input_ids)
             bufs["rope"].copy_(rope)
             bufs["slot_mapping"].copy_(slot_mapping)
             bufs["context_lens"][0] = kv_len
+            duet_close("tree_verify_input_copy", _ev_copy)
             # 이슈 #18: prepare_decode의 체인-verify context(cu_seqlens_q
             # 설정)가 남아 있으면 lm_head가 [1, rows, V] 3-D를 반환해
             # pad 절단이 무력화된다 (rows=1 관측). eager 분기와 동일하게
@@ -1314,15 +1507,11 @@ class ModelRunner:
                 context_lens=context.context_lens,
                 block_tables=context.block_tables,
             )
-            wcg.plan(
-                qo_indptr, kv_indptr, kv_indices, kv_last_page_len,
-                max(1, self.hf_config.num_attention_heads // _tp),
-                max(1, self.hf_config.num_key_value_heads // _tp),
-                self.hf_config.head_dim, bs,
-                custom_mask=m.flatten().to(self.device),
-                q_data_type=self.hf_config.torch_dtype,
-                kv_data_type=self.hf_config.torch_dtype,
-            )
+            _ev_plan = duet_record("tree_verify_attention_buffers")
+            update_tree_verify_graph_buffers(
+                wcg, kv_indices, _packed_mask, _ph)
+            duet_close("tree_verify_attention_buffers", _ev_plan)
+            duet_close("verify_setup", _ev_setup)
             _ev = duet_record("graph_pre")
             _cg["pre"].replay()
             duet_close("graph_pre", _ev)
@@ -1341,7 +1530,7 @@ class ModelRunner:
                 max(1, self.hf_config.num_attention_heads // _tp),
                 max(1, self.hf_config.num_key_value_heads // _tp),
                 self.hf_config.head_dim, bs,
-                custom_mask=m.flatten().to(self.device),
+                packed_custom_mask=_packed_mask.to(self.device),
                 q_data_type=self.hf_config.torch_dtype,
                 kv_data_type=self.hf_config.torch_dtype,
             )
@@ -1352,6 +1541,7 @@ class ModelRunner:
                 block_tables=context.block_tables,
                 tree_verify_wrapper=w,
             )
+            duet_close("verify_setup", _ev_setup)
 
             # === eager 분할 forward: pre → exit-proxy → post ===
             _ev = duet_record("graph_pre")
@@ -1360,7 +1550,6 @@ class ModelRunner:
             duet_close("graph_pre", _ev)
         exit_layer = cfg.duet_exit_layer
 
-        _ev_el = duet_record("exit_logits")
         duet_proxy_fn = self._duet_proxy_fn
         _replica = getattr(self, "_duet_lm_head_replica", None)
         # 이슈 #12: exit-proxy에는 패딩 행이 새면 안 된다 —
@@ -1368,13 +1557,37 @@ class ModelRunner:
         # n_rows(=valid+1)로 절단해 전달 (collective 참여 shape은 전
         # rank 동일한 n_rows 기준).
         if getattr(cfg, "duet_exit_replica", False):
-            # rank0 전용 replica — rank1+는 exit 계산 없이 post로 (CG와 동일)
+            # Rank-0 replica work belongs on the same side stream as the
+            # chain verifier.  The old tree path ran lm_head + Policy-B +
+            # blocking send inline here, serializing graph_post by ~4ms.
+            # The exit replica runs on a side stream.  Recording both events
+            # on the default stream (the old ``exit_logits`` span) measured
+            # launch/stream contention rather than the actual replica work.
+            # Keep a tiny default-stream launch span and record the real
+            # norm+lm_head+Policy-B+send interval on the side stream itself.
+            _ev_el = duet_record("exit_proxy_launch")
             if duet_proxy_fn is not None and _replica is not None:
-                normed = self.model.model.norm(
-                    (hs + res)[:n_rows], None)
-                exit_logits = torch.nn.functional.linear(normed, _replica)
-                duet_proxy_fn(exit_logits, 1)
+                _es = getattr(self, "_duet_exit_stream", None)
+                if _es is None:
+                    _es = torch.cuda.Stream(device=_replica.device)
+                    self._duet_exit_stream = _es
+                _ready = torch.cuda.Event()
+                _ready.record()
+                with torch.cuda.stream(_es):
+                    _es.wait_event(_ready)
+                    _ev_side = duet_record("exit_proxy_side")
+                    normed = self.model.model.norm(
+                        (hs + res)[:n_rows], None)
+                    exit_logits = torch.nn.functional.linear(
+                        normed, _replica)
+                    duet_proxy_fn(exit_logits, 1)
+                    duet_close("exit_proxy_side", _ev_side)
+                _done = torch.cuda.Event()
+                _done.record(_es)
+                self._duet_exit_done_ev = _done
+            duet_close("exit_proxy_launch", _ev_el)
         else:
+            _ev_el = duet_record("exit_logits")
             normed = self.model.model.norm((hs + res)[:n_rows], None)
             if getattr(cfg, "duet_exit_topm_gather", False):
                 exit_logits = _duet_exit_topm_gather(
@@ -1383,9 +1596,29 @@ class ModelRunner:
                 # 전 rank compute_logits (gather 참여) — rank0만 실값
                 exit_logits = self.model.compute_logits(
                     normed, last_only=False)
+            duet_close("exit_logits", _ev_el)
+            _ev_ps = duet_record("exit_proxy_launch")
             if duet_proxy_fn is not None:
-                duet_proxy_fn(exit_logits, 1)
-        duet_close("exit_logits", _ev_el)
+                _proxy_stream = getattr(self, "_duet_proxy_stream", None)
+                if (_proxy_stream is None
+                        and os.environ.get("SSD_PROXY_STREAM", "0") == "1"):
+                    _proxy_stream = torch.cuda.Stream(device=self.device)
+                    self._duet_proxy_stream = _proxy_stream
+                if _proxy_stream is not None:
+                    if exit_logits is not None and torch.is_tensor(exit_logits):
+                        exit_logits.record_stream(_proxy_stream)
+                    _ready = torch.cuda.Event()
+                    _ready.record()
+                    with torch.cuda.stream(_proxy_stream):
+                        _proxy_stream.wait_event(_ready)
+                        _ev_side = duet_record("exit_proxy_side")
+                        duet_proxy_fn(exit_logits, 1)
+                        duet_close("exit_proxy_side", _ev_side)
+                else:
+                    _ev_side = duet_record("exit_proxy_side")
+                    duet_proxy_fn(exit_logits, 1)
+                    duet_close("exit_proxy_side", _ev_side)
+            duet_close("exit_proxy_launch", _ev_ps)
 
         _ev = duet_record("graph_post")
         if _cg is not None:
