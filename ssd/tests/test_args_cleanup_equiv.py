@@ -8,6 +8,7 @@ CPU-only; needs the champion model dirs (AutoConfig reads config.json).
 Run from project root (/home/chokwans99/PSD/ssd):
     python -m unittest tests.test_args_cleanup_equiv
 """
+import dataclasses
 import os
 import unittest
 
@@ -83,6 +84,16 @@ class TestOldNewEquivalence(unittest.TestCase):
         chain = _mk({}, duet_tree_policy="off")
         self.assertEqual(chain.duet_p2_tree_policy, "off")
         self.assertEqual(chain.duet_tree_policy, "off")
+
+    def test_normalized_config_is_dataclasses_replace_safe(self):
+        original = _mk({}, duet_p1_tree_policy="on",
+                       duet_p2_tree_policy="on")
+        copied = dataclasses.replace(original)
+        self.assertEqual(copied.duet_p1_tree_policy, "on")
+        self.assertEqual(copied.duet_p2_tree_policy, "on")
+        self.assertEqual(copied.duet_tree_policy, "backbone")
+        self.assertEqual(copied.duet_p1_tree_max_nodes, 18)
+        self.assertEqual(copied.duet_p2_tree_max_nodes, 8)
 
     def test_wire_capacity_is_derived_from_phase_maxima(self):
         c = _mk({}, duet_p1_tree_policy="on",

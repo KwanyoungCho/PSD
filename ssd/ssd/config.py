@@ -419,6 +419,12 @@ class Config:
         if _legacy_tree_policy is not None:
             if _legacy_tree_policy == "eagle":
                 self.duet_p2_tree_policy = "on"
+            elif _legacy_tree_policy == "backbone":
+                # ``DraftRunner.create_draft_config`` reconstructs an already
+                # normalized Config via dataclasses.replace().  Treat the
+                # production internal name as an idempotent normalized value,
+                # not as a user-facing legacy policy error.
+                self.duet_p2_tree_policy = "on"
             elif _legacy_tree_policy == "off":
                 self.duet_p2_tree_policy = "off"
             elif _legacy_tree_policy not in (
@@ -435,6 +441,8 @@ class Config:
             # Exact legacy reproduction remains available only when named
             # explicitly by an old experiment.
             self.duet_tree_policy = "eagle"
+        elif _legacy_tree_policy == "backbone":
+            self.duet_tree_policy = "backbone"
         elif _legacy_tree_policy in (
                 "adaptive", "coverage", "confidence", "level", "frontier"):
             self.duet_tree_policy = _legacy_tree_policy
