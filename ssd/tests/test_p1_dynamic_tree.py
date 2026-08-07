@@ -35,10 +35,35 @@ class TestP1UniformRoots(unittest.TestCase):
             [0, 0, 0], [0, 0, 0],
         ])
         probs = torch.softmax(logits, dim=-1)
+        reach = torch.tensor([
+            1.0, probs[0, 5], probs[0, 5] * probs[1, 4]])
         expected = torch.tensor([
             probs[0, 4], probs[0, 3], probs[1, 5], probs[1, 3],
             probs[2, 0], probs[2, 1], 0.0, 0.0])
+        expected[:6] *= reach.repeat_interleave(2)
         self.assertTrue(torch.allclose(out["scores"], expected))
+        self.assertTrue(torch.allclose(out["context_reach"], reach))
+
+    def test_context_reach_discounts_late_roots(self):
+        # The next-token path has probability 0.1 at each edge.  A late root
+        # with the same local confidence must not outrank an early root just
+        # because the old implementation ignored whether its context is
+        # likely to be reached.
+        logits = torch.log(torch.tensor([
+            [.1, .1, .4, .4],
+            [.1, .1, .4, .4],
+            [.1, .1, .4, .4],
+        ]))
+        out = build_uniform_p1_roots(
+            logits, torch.tensor([0, 0, 0]), 1, torch.ones(3),
+            sampler_x=None, async_fan_out=3)
+        self.assertTrue(torch.allclose(
+            out["context_reach"], torch.tensor([1.0, .1, .01]),
+            atol=1e-6))
+        self.assertGreater(float(out["scores"][0]),
+                           float(out["scores"][1]))
+        self.assertGreater(float(out["scores"][1]),
+                           float(out["scores"][2]))
 
     def test_custom_tree_context_visibility_is_repeated_per_root(self):
         logits = torch.arange(15, dtype=torch.float32).view(3, 5)

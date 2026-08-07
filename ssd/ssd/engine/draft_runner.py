@@ -41,8 +41,8 @@ DUET_JIT_SHORT = os.environ.get("SSD_DUET_JIT_SHORT", "0") == "1"
 DUET_JIT_SUBSET = os.environ.get("SSD_DUET_JIT_SUBSET", "0") == "1"
 
 # Fixed-shape policies implemented by P2TreeExecutor.  Keep this centralized:
-# public ``on`` normalizes to ``backbone``, while the other names exist only
-# for exact reproduction of older experiments.
+# public ``on`` normalizes to the internal global selector, while the other
+# names exist only for exact reproduction of older experiments.
 _P2_EXECUTOR_POLICIES = frozenset({
     "level", "confidence", "coverage", "backbone", "eagle", "adaptive",
 })

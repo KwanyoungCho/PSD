@@ -2,10 +2,10 @@
 
 P1 and P2 share the same captured rollout after their roots exist.  P2 roots
 arrive with an early-exit proxy score; P1 instead creates a fixed number of
-uniform candidates at every glue context and uses the draft probability of
-that root token as its initial score.  Every root keeps its first-child
-backbone; captured lanes beyond the root count continue the
-highest-confidence sibling branches.
+uniform candidates at every glue context.  Its initial score is the draft
+probability of reaching that context times the draft probability of the
+alternative root token.  Round zero evaluates every root; later rounds
+globally continue the highest cumulative-confidence children.
 
 This module contains only fixed-shape/GPU-friendly preparation and shape
 selection.  Cache serving and target verification are phase-agnostic and live
@@ -124,19 +124,43 @@ def build_uniform_p1_roots(
     # almost all mass would make a tiny alternative look spuriously certain.
     probs = q_probs_from_logits(
         glue_logits.float(), temps, sampler_x, async_fan_out)
-    root_score = probs.gather(1, root_tok).reshape(-1)
+    # Approximate the probability that verification reaches each context.
+    # context_glue_rows[c] contains context c plus all of its ancestors.  The
+    # direct parent is therefore the largest visible earlier context index.
+    # Multiplying the edge probabilities on that row yields the same reach
+    # factor for chains and for tree-shaped glue without a host traversal.
+    if context_glue_rows is None:
+        reach_rows = torch.tril(torch.ones(
+            p, p, dtype=torch.uint8, device=glue_logits.device))
+    else:
+        if context_glue_rows.ndim != 2 or context_glue_rows.shape[0] != p \
+                or context_glue_rows.shape[1] < p:
+            raise ValueError(
+                "context_glue_rows must be [P,G] with G>=P; got "
+                f"{tuple(context_glue_rows.shape)}")
+        reach_rows = context_glue_rows[:, :p].to(
+            device=glue_logits.device, dtype=torch.uint8)
+    idx = torch.arange(p, device=glue_logits.device, dtype=torch.int64)
+    prior = idx.unsqueeze(0) < idx.unsqueeze(1)
+    parent = torch.where(
+        reach_rows.bool() & prior, idx.unsqueeze(0),
+        torch.zeros((), dtype=torch.int64, device=glue_logits.device)
+    ).amax(dim=1)
+    edge = probs[parent, returned_tokens]
+    edge = edge.clone()
+    edge[0] = 1.0
+    context_reach = torch.exp(
+        reach_rows.to(torch.float32).matmul(edge.clamp_min(1e-30).log()))
+    root_score = (
+        probs.gather(1, root_tok)
+        * context_reach.unsqueeze(1)).reshape(-1)
     root_tok = root_tok.reshape(-1)
     ctx = torch.arange(p, device=glue_logits.device, dtype=torch.int64) \
         .repeat_interleave(roots_per_position)
 
     if context_glue_rows is None:
-        context_glue_rows = torch.tril(torch.ones(
-            p, p, dtype=torch.uint8, device=glue_logits.device))
+        context_glue_rows = reach_rows
     else:
-        if context_glue_rows.ndim != 2 or context_glue_rows.shape[0] != p:
-            raise ValueError(
-                "context_glue_rows must be [P,G]; got "
-                f"{tuple(context_glue_rows.shape)}")
         context_glue_rows = context_glue_rows.to(
             device=glue_logits.device, dtype=torch.uint8)
     root_glue = context_glue_rows.index_select(0, ctx)
@@ -160,6 +184,7 @@ def build_uniform_p1_roots(
         "context_ids": out_ctx,
         "valid": out_valid,
         "glue_rows": out_glue,
+        "context_reach": context_reach,
         "real_roots": real_roots,
         "width": width,
     }
@@ -187,3 +212,6 @@ class P1TreeExecutor(P2TreeExecutor):
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
         self.forward_scale = scale
+        # Both phases use the same production rule: all roots are evaluated
+        # first, then later parents compete globally by cumulative score.
+        self.policy = "eagle"

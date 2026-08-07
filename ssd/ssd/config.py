@@ -79,10 +79,9 @@ class Config:
     # default; P1 is opt-in while its quality/performance gate is finalized.
     duet_p1_tree_policy: str = "off"          # off | on
     duet_p2_tree_policy: str = "on"           # off | on
-    # Deprecated compatibility input for old experiment scripts.  __post_init__
-    # preserves an explicitly requested ``eagle`` run as the legacy global
-    # selector.  New code and documentation must use the phase-specific
-    # fields above; public ``on`` maps to the backbone-preserving policy.
+    # Deprecated compatibility input for old experiment scripts.  New code
+    # and documentation use only the phase-specific on/off controls above;
+    # the internal ``eagle`` name denotes the global confidence selector.
     duet_tree_policy: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
     # Per-phase maximum number of nodes sent for one cache hit.  This is a
@@ -97,7 +96,7 @@ class Config:
     # P1 roots and forward cells are different quantities.  A scale above
     # one preserves every root backbone while leaving captured lanes to
     # continue high-confidence sibling branches in later rounds.
-    duet_p1_tree_forward_scale: float = 1.25
+    duet_p1_tree_forward_scale: float = 1.0
     duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
     # 형상 진단 (docs/duet/internal/21 §4.5): 고정-C 배분은 깊이를 굶긴다 —
     # backbone(맏이-사슬 fan1, 깊이 K2 보장) 우선 + 잔여만 형제.
@@ -451,10 +450,12 @@ class Config:
                 "adaptive", "coverage", "confidence", "level", "frontier"):
             self.duet_tree_policy = _legacy_tree_policy
         else:
-            # Production ``on`` preserves every chain backbone and uses the
-            # remaining response slots for ordered sibling alternatives.
+            # Production ``on`` evaluates every root in round zero, then
+            # globally expands the highest cumulative-confidence frontier.
+            # ``eagle`` remains an implementation-only compatibility name;
+            # the public CLI is simply on/off.
             self.duet_tree_policy = (
-                "backbone" if self.duet_p2_tree_policy == "on" else "off")
+                "eagle" if self.duet_p2_tree_policy == "on" else "off")
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)

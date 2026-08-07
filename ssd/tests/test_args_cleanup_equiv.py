@@ -61,12 +61,12 @@ class TestOldNewEquivalence(unittest.TestCase):
         dynamic = _mk({})
         self.assertEqual(dynamic.duet_p1_tree_policy, "off")
         self.assertEqual(dynamic.duet_p2_tree_policy, "on")
-        self.assertEqual(dynamic.duet_tree_policy, "backbone")
+        self.assertEqual(dynamic.duet_tree_policy, "eagle")
         self.assertEqual(dynamic.duet_p2_seed_count,
                          dynamic.duet_proxy_total_budget)
 
         smaller_r = _mk({}, duet_tree_root_count=6)
-        self.assertEqual(smaller_r.duet_tree_policy, "backbone")
+        self.assertEqual(smaller_r.duet_tree_policy, "eagle")
         self.assertEqual(smaller_r.duet_p2_active_root_count, 6)
 
         chain = _mk({}, duet_p2_tree_policy="off")
@@ -91,7 +91,7 @@ class TestOldNewEquivalence(unittest.TestCase):
         copied = dataclasses.replace(original)
         self.assertEqual(copied.duet_p1_tree_policy, "on")
         self.assertEqual(copied.duet_p2_tree_policy, "on")
-        self.assertEqual(copied.duet_tree_policy, "backbone")
+        self.assertEqual(copied.duet_tree_policy, "eagle")
         self.assertEqual(copied.duet_p1_tree_max_nodes, 18)
         self.assertEqual(copied.duet_p2_tree_max_nodes, 8)
 

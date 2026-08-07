@@ -138,7 +138,7 @@ def parse_arguments():
     parser.add_argument("--duet_p1_roots_per_position", type=int, default=2,
                         help="Uniform number of P1 root candidates per glue position.")
     parser.add_argument("--duet_p1_tree_forward_scale", type=float,
-                        default=1.25,
+                        default=1.0,
                         help="P1 captured forward width / root count. Values above "
                              "1 reserve lanes to continue sibling branches.")
     parser.add_argument("--duet_tree_nv", type=int, default=None,
