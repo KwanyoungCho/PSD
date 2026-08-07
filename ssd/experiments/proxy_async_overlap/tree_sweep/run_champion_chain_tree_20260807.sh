@@ -50,7 +50,9 @@ run_one () {
   local profile=0 detail=0 timeout_len=45m
   local extra=(--duet_tree_policy off)
   local tree_exec=0 tree_arena=0 tree_proxy_graph=0 tree_warmup=0
-  local exit_replica=0 async_proxy_send=0 proxy_stream=0
+  # Shared optimizations stay identical across arms; only the tree executor,
+  # tree proxy graph, and tree page warmup differ.
+  local exit_replica=1 async_proxy_send=1 proxy_stream=0
   if [[ "${kind}" == "profile" ]]; then
     profile=1
     # Match the historical champion timeline.  DETAIL=1 adds dozens of
@@ -68,18 +70,17 @@ run_one () {
     tree_arena=1
     tree_proxy_graph=1
     tree_warmup=all
-    # Current optimized target path: rank 0 computes the tree exit logits
-    # locally and the proxy wire uses the persistent non-blocking buffer.
-    # Both are tree execution optimizations, not changes to the tree policy.
-    exit_replica=1
-    async_proxy_send=1
   fi
 
-  echo "[$(date -Is)] START kind=${kind} arm=${arm} ns=${ns} out=${outlen}" | tee "${dir}/status.txt"
+  echo "[$(date -Is)] START kind=${kind} arm=${arm} ns=${ns} out=${outlen} "\
+"shared_exit_replica=${exit_replica} shared_async_send=${async_proxy_send} "\
+"tree_exec=${tree_exec} tree_proxy_graph=${tree_proxy_graph} "\
+"warmup=${tree_warmup}" | tee "${dir}/status.txt"
   SSD_DIST_PORT="${port}" \
   SSD_PROFILE=0 SSD_PROFILE_DUET="${profile}" \
   SSD_PROFILE_DUET_DETAIL="${detail}" SSD_PROFILE_DIR="${dir}" \
   SSD_TREE_EXEC="${tree_exec}" SSD_TREE_ARENA="${tree_arena}" \
+  SSD_CHAIN_PROXY_GRAPH=1 \
   SSD_TREE_PROXY_GRAPH="${tree_proxy_graph}" \
   SSD_TREE_EXEC_WARMUP="${tree_warmup}" \
   SSD_DUET_EXIT_REPLICA="${exit_replica}" \

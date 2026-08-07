@@ -62,10 +62,14 @@ run_one () {
     cat "${dir}/metrics.txt"
     return 0
   fi
+  local tree_policy=off
   local extra=(--duet_tree_policy off)
-  local exec=0 arena=0 proxy_graph=0 warmup=0 replica=0 async_send=0
+  local exec=0 arena=0 proxy_graph=0 warmup=0
+  # Fair chain/tree comparison: these target/proxy optimizations support both
+  # policies and therefore must not be enabled only for the tree arm.
+  local replica=1 async_send=1
   if [[ "${arm}" == "tree" ]]; then
-    local tree_policy="${TREE_POLICY:-eagle}"
+    tree_policy="${TREE_POLICY:-eagle}"
     extra=(--duet_tree_policy "${tree_policy}"
            --duet_tree_nv 8 --duet_tree_c_tensor 3
            --duet_tree_fanout_policy backbone
@@ -78,15 +82,17 @@ run_one () {
     arena=1
     proxy_graph=1
     warmup="${TREE_WARMUP:-all}"
-    replica=1
-    async_send=1
   fi
-  echo "[$(date -Is)] START ${tag} ${arm} seed=${seed}" | tee "${dir}/status.txt"
+  echo "[$(date -Is)] START ${tag} ${arm} policy=${tree_policy} seed=${seed} "\
+"shared_exit_replica=${replica} shared_async_send=${async_send} "\
+"tree_exec=${exec} tree_proxy_graph=${proxy_graph} warmup=${warmup}" \
+    | tee "${dir}/status.txt"
   SSD_DIST_PORT="${port}" \
   SSD_PROFILE=0 SSD_PROFILE_DUET="${profile}" SSD_PROFILE_DUET_DETAIL=0 \
   SSD_PROFILE_DUET_MAX_EVENTS=12000 SSD_PROFILE_DIR="${dir}" \
   SSD_TREE_EXEC="${exec}" SSD_TREE_ARENA="${arena}" \
-  SSD_TREE_PROXY_GRAPH="${proxy_graph}" SSD_TREE_EXEC_WARMUP="${warmup}" \
+  SSD_CHAIN_PROXY_GRAPH=1 SSD_TREE_PROXY_GRAPH="${proxy_graph}" \
+  SSD_TREE_EXEC_WARMUP="${warmup}" \
   SSD_DUET_EXIT_REPLICA="${replica}" SSD_ASYNC_PROXY_SEND="${async_send}" \
   SSD_PROXY_STREAM=0 \
     timeout --kill-after=30s 45m \

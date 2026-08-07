@@ -688,14 +688,16 @@ Graph를 측정할 때는 반드시 1로 명시한다. `SSD_TREE_ARENA=1`은 지
 chain과 coverage는 위 공통 인자에서 정책 및 tree runtime 환경만 바꾼다.
 
 ```bash
-# bit-identical chain 비교군: tree wire/graph/warmup까지 끈다.
+# chain 비교군: 공통 exit/proxy 최적화는 유지하고 tree 전용 실행만 끈다.
 SSD_TREE_EXEC=0 SSD_TREE_ARENA=0 SSD_TREE_EXEC_WARMUP=0 \
-SSD_TREE_PROXY_GRAPH=0 SSD_DUET_EXIT_REPLICA=0 \
+SSD_CHAIN_PROXY_GRAPH=1 SSD_TREE_PROXY_GRAPH=0 \
+SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
   python -O bench/bench.py <공통 인자> --duet_tree_policy off
 
 # 모든 root의 깊이-4 backbone을 보존하는 tree 비교군
 SSD_TREE_EXEC=1 SSD_TREE_ARENA=1 SSD_TREE_EXEC_WARMUP=all \
-SSD_TREE_PROXY_GRAPH=1 \
+SSD_CHAIN_PROXY_GRAPH=1 SSD_TREE_PROXY_GRAPH=1 \
+SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
   python -O bench/bench.py <공통 인자> --duet_tree_policy coverage \
   --duet_tree_c_tensor 3 --duet_tree_nv 8
 ```
