@@ -354,11 +354,15 @@ class DraftRunner(ModelRunner):
         # PERFORMANCE: pre-allocate constant tensors used every draft step to avoid repeated CUDA mallocs
         from ssd.engine.helpers.tree_layout import create_tree_layout
         K = self.config.speculate_k
+        response_w = int(getattr(
+            self.config, "duet_response_token_width", K))
         d = self.device
 
         # Layout-independent tensors
-        self._arange_kp1 = torch.arange(K + 1, device=d, dtype=torch.int64)
-        self._arange_2kp1 = torch.arange(2 * K + 1, device=d, dtype=torch.int64)
+        self._arange_kp1 = torch.arange(
+            response_w + 1, device=d, dtype=torch.int64)
+        self._arange_2kp1 = torch.arange(
+            2 * response_w + 1, device=d, dtype=torch.int64)
 
         # full_layout: 기존 SSD용 (non-DUET + DUET 비활성)
         self.full_layout = create_tree_layout(
@@ -591,8 +595,14 @@ class DraftRunner(ModelRunner):
         self._tree_hit_nv = None
 
         # Init miss slots with valid random logits so token IDs are in-vocab (fixes B>1 crash)
-        out_logits = torch.empty((B, K, V), dtype=self.hf_config.torch_dtype, device=self.device).uniform_()
-        out_tokens = out_logits.argmax(dim=-1)
+        out_logits = torch.empty(
+            (B, K, V), dtype=self.hf_config.torch_dtype,
+            device=self.device).uniform_()
+        response_w = int(getattr(
+            self.config, "duet_response_token_width", K))
+        out_tokens = torch.zeros(
+            B, response_w, dtype=torch.int64, device=self.device)
+        out_tokens[:, :K] = out_logits.argmax(dim=-1)
         cache_hits = torch.zeros(B, dtype=torch.int64, device=self.device)
         # Per-row valid_k: defaults to K (= K_long for DUET / speculate_k for non-DUET).
         # Phase 4 will override per-row to K_short for proxy-sourced hits.
@@ -1097,7 +1107,9 @@ class DraftRunner(ModelRunner):
             _e0.record_draft_response(
                 getattr(self, "_e0_step_id", -1), phase_source, valid_k,
                 out_tokens[:, :K])
-        # Wire layout matches speculator_async._fused_response: [cache_hits, phase_source, valid_k, out_tokens].
+        # Wire layout matches speculator_async._fused_response: cache/phase/
+        # valid metadata followed by the independently sized token envelope.
+        # Ordinary logits below remain K-wide.
         _fused_parts = [cache_hits.reshape(-1).to(torch.int64),
                         phase_source.reshape(-1),
                         valid_k.reshape(-1).to(torch.int64),

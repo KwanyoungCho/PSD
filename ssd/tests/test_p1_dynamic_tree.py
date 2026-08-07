@@ -79,6 +79,41 @@ class TestP1ShapeBuckets(unittest.TestCase):
             0, 13, split_k1k2=True, K1=9, K2=4,
             mq_p1=28, mq_p2=10, glue_width=14), 14 + 9 * 28)
 
+    def test_two_x_depth_budget_uses_nineteen_context_canvas(self):
+        buckets = p1_context_buckets(9, 4, 18, 8)
+        self.assertEqual(buckets, (10, 19))
+        self.assertEqual(choose_p1_context_bucket(19, buckets), 19)
+        self.assertEqual(compute_megaspec_lookahead(
+            0, 13, split_k1k2=True, K1=9, K2=4,
+            mq_p1=38, mq_p2=10, glue_width=19), 19 + 9 * 38)
+
+
+class TestAsyncResponseEnvelope(unittest.TestCase):
+    def test_token_envelope_widens_without_widening_logits(self):
+        from types import SimpleNamespace
+        from ssd.engine.helpers.p2_tree import tree_wire_ints_len
+        from ssd.engine.speculator_async import SpeculatorAsync
+
+        spec = SpeculatorAsync.__new__(SpeculatorAsync)
+        spec.device = torch.device("cpu")
+        spec.K = 13
+        spec.response_width = 18
+        spec.async_fan_out = 3
+        spec.max_blocks = 8
+        spec.vocab_size = 32
+        spec.draft_dtype = torch.float16
+        spec.config = SimpleNamespace(
+            duet_tree_enabled=True,
+            duet_tree_wire_nodes=18,
+        )
+        spec._alloc_handshake_bufs(2)
+
+        tree_extra = 2 * tree_wire_ints_len(18)
+        self.assertEqual(
+            spec._fused_response.numel(), 3 * 2 + 2 * 18 + tree_extra)
+        self.assertEqual(tuple(spec._logits_q.shape), (2, 13, 32))
+        self.assertEqual(tuple(spec._tree_parent_q.shape), (2, 18, 32))
+
 
 if __name__ == "__main__":
     unittest.main()

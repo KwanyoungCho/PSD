@@ -78,6 +78,11 @@ class SpeculatorAsync(SpeculatorBase):
         self.tokenizer = tokenizer
         self.verbose = verbose
         self.K = lookahead
+        self.response_width = int(getattr(
+            config, "duet_response_token_width", lookahead))
+        if self.response_width < self.K:
+            raise ValueError(
+                f"async response width {self.response_width} < K={self.K}")
 
         # Aligned-timeline (Phase B, docs/duet/06 §4.4): monotonically
         # increasing per-process spec request id. Mirrored on draft via the
@@ -89,7 +94,8 @@ class SpeculatorAsync(SpeculatorBase):
 
         # Pre-allocate speculate() output buffers (avoid torch.tensor(device=cuda) sync)
         self._recovery_buf = torch.empty(1, dtype=torch.int64, device=device)
-        self._speculations_buf = torch.empty(1, lookahead + 1, dtype=torch.int64, device=device)
+        self._speculations_buf = torch.empty(
+            1, self.response_width + 1, dtype=torch.int64, device=device)
 
     def _alloc_handshake_bufs(self, B):
         self._hs_B = B
@@ -103,7 +109,10 @@ class SpeculatorAsync(SpeculatorBase):
         self._num_tokens_buf = torch.empty(B, dtype=torch.int64, device=d)
         self._temps_buf = torch.empty(B, dtype=torch.float32, device=d)
         self._block_tables_buf = torch.full((B, self.max_blocks), -1, dtype=torch.int32, device=d)
-        # Wire layout: [cache_hits (B), phase_source (B), valid_k (B), out_tokens (B*K)].
+        # Wire layout: [cache_hits (B), phase_source (B), valid_k (B),
+        # out_tokens (B*response_width)].  Ordinary logits_q deliberately
+        # remains [B,K,V]: tree hits receive their node-specific q through
+        # the parent-q sidecar instead of widening this expensive tensor.
         # phase_source: 0=miss, 1=phase 1 (draft) hit, 2=phase 2 (proxy) hit. All zeros for non-DUET.
         # valid_k: per-row suffix length (K_long for draft-sourced/miss, K_short for proxy-sourced
         #   in DUET hybrid; uniform K for non-DUET / pre-Phase-4 DUET).
@@ -113,7 +122,9 @@ class SpeculatorAsync(SpeculatorBase):
             _tree_extra = B * tree_wire_ints_len(
                 self.config.duet_tree_wire_nodes)
         self._tree_wire_extra = _tree_extra
-        self._fused_response = torch.empty(3 * B + B * self.K + _tree_extra, dtype=torch.int64, device=d)
+        self._fused_response = torch.empty(
+            3 * B + B * self.response_width + _tree_extra,
+            dtype=torch.int64, device=d)
         self._logits_q = torch.empty(B, self.K, self.vocab_size, dtype=self.draft_dtype, device=d)
         self._tree_parent_q = (torch.empty(
                                            B, self.config.duet_tree_wire_nodes,
@@ -174,7 +185,9 @@ class SpeculatorAsync(SpeculatorBase):
         B = len(seqs)
         if B != self._recovery_buf.shape[0]:
             self._recovery_buf = torch.empty(B, dtype=torch.int64, device=self.device)
-            self._speculations_buf = torch.empty(B, self.K + 1, dtype=torch.int64, device=self.device)
+            self._speculations_buf = torch.empty(
+                B, self.response_width + 1,
+                dtype=torch.int64, device=self.device)
         _rec_cpu = torch.tensor([seq.recovery_token_id for seq in seqs], dtype=torch.int64)
         self._recovery_buf.copy_(_rec_cpu, non_blocking=True)
         self._speculations_buf[:, 0] = self._recovery_buf
@@ -204,8 +217,12 @@ class SpeculatorAsync(SpeculatorBase):
         # here for any direct callers that bypass that path.
         if valid_k is not None and valid_k.numel() > 0:
             vk = _vk_max if _vk_max is not None else int(valid_k.max().item())
-            if vk != self.K:
+            if vk != self.response_width:
                 speculations = speculations[:, :vk + 1].contiguous()
+            # Tree valid_k may exceed the logical chain K.  Its verifier uses
+            # parent_q_logits, so retain the ordinary K-wide logits tensor.
+            # Short chain rows still take the established compact slice.
+            if vk < self.K:
                 logits_q = logits_q[:, :vk, :].contiguous()
 
         if _hit_statuses:
@@ -323,8 +340,9 @@ class SpeculatorAsync(SpeculatorBase):
         cache_hits = self._fused_response[:B]
         phase_source = self._fused_response[B:2 * B]
         valid_k = self._fused_response[2 * B:3 * B]
-        _spec_end = 3 * B + B * self.K
-        speculations = self._fused_response[3 * B:_spec_end].view(B, self.K)
+        _spec_end = 3 * B + B * self.response_width
+        speculations = self._fused_response[3 * B:_spec_end].view(
+            B, self.response_width)
         # T3.4-b2 fix(이슈 #9): speculate()가 SpeculateResult 조립에서
         # 읽도록 self에 스태시 (recv 헬퍼와 함수 스코프가 다름)
         self._tree_ints_step = (self._fused_response[_spec_end:].view(B, -1)

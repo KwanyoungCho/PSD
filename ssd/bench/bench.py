@@ -131,7 +131,7 @@ def parse_arguments():
                         help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_c_tensor", type=int, default=3,
                         help="Dynamic tree: maximum ordered child samples per parent.")
-    parser.add_argument("--duet_p1_tree_max_nodes", type=int, default=13,
+    parser.add_argument("--duet_p1_tree_max_nodes", type=int, default=18,
                         help="Maximum P1 tree nodes sent for one cache hit.")
     parser.add_argument("--duet_p2_tree_max_nodes", type=int, default=8,
                         help="Maximum P2 tree nodes sent for one cache hit.")

@@ -32,13 +32,13 @@ DRAFT_AWQ="${DRAFT_AWQ:-/data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1}"
 
 # Fixed formal-gate configuration.  K1/K2 and the initial P1 fanout match the
 # established chain setup.  A depth-K1 path consumes K1 response nodes (the
-# cache-key root is not counted), so P1 uses the common K1+K2 wire capacity:
-# nine backbone nodes plus four possible alternatives.  P2 retains the
-# already validated response cap of eight nodes.
+# cache-key root is not counted).  P2 uses 2*K2=8 nodes, so P1 uses the same
+# branch-capacity ratio, 2*K1=18.  The token response envelope is independent
+# of the K1+K2 chain-logits width; P2 retains its validated eight-node cap.
 K1="${K1:-9}"
 K2="${K2:-4}"
 P1_ROOTS_PER_POSITION="${P1_ROOTS_PER_POSITION:-2}"
-P1_TREE_MAX_NODES="${P1_TREE_MAX_NODES:-13}"
+P1_TREE_MAX_NODES="${P1_TREE_MAX_NODES:-18}"
 P2_TREE_MAX_NODES="${P2_TREE_MAX_NODES:-8}"
 TREE_PROXY_THRESHOLD="${TREE_PROXY_THRESHOLD:-0.01}"
 TREE_CONF_THRESHOLD="${TREE_CONF_THRESHOLD:-0.03}"

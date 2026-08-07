@@ -88,7 +88,7 @@ class Config:
     # Per-phase maximum number of nodes sent for one cache hit.  This is a
     # fixed buffer/cost bound, not a fixed topology: the nodes and parent
     # relations remain data-dependent.  ``duet_tree_nv`` is a legacy P2 alias.
-    duet_p1_tree_max_nodes: int = 13
+    duet_p1_tree_max_nodes: int = 18
     duet_p2_tree_max_nodes: int = 8
     duet_tree_nv: int | None = None
     # P1 creates this many uniform root candidates at every glue context.
@@ -183,16 +183,29 @@ class Config:
     def duet_tree_wire_nodes(self) -> int:
         """Fixed topology-metadata capacity of one draft response.
 
-        Tokens continue to use the ordinary ``speculate_k`` response tensor.
-        Only the optional tree topology/parent-q sidecar uses this capacity.
-        Keeping these two widths separate prevents enabling P1 trees from
-        changing the established chain message or K1/K2 semantics.
+        This is also the largest dynamic-tree token view and parent-q
+        sidecar.  The ordinary chain logits keep their ``speculate_k`` width;
+        tree-specific tensors grow only when at least one tree phase is on.
         """
         p1 = (int(self.duet_p1_tree_max_nodes)
               if self.duet_p1_tree_policy == "on" else 0)
         p2 = (int(self.duet_p2_tree_max_nodes)
               if self.duet_p2_tree_policy == "on" else 0)
         return max(1, p1, p2)
+
+    @property
+    def duet_response_token_width(self) -> int:
+        """Token slots carried by one async draft response.
+
+        ``speculate_k`` is the logical chain depth (K1+K2 in DUET) and still
+        sizes ordinary draft logits.  A dynamic tree may expose more nodes
+        than that depth without performing more sequential rounds, so its
+        token envelope must be sized independently.  Keeping this property
+        separate avoids inflating chain logits/NCCL traffic by ``V`` while
+        allowing, for example, a K1=9 tree to return 18 candidate nodes.
+        """
+        tree = self.duet_tree_wire_nodes if self.duet_tree_enabled else 0
+        return max(int(self.speculate_k), int(tree))
 
     @property
     def duet_p2_active_root_count(self) -> int:
@@ -580,19 +593,19 @@ class Config:
                         raise ValueError(
                             f"duet_tree_c_tensor must be in [1,8]; "
                             f"got {self.duet_tree_c_tensor}")
-                    # Tree responses use the existing speculate_k token
-                    # tensor.  Unlike the old P2-only rule, the tree is not
-                    # constrained to max(K1,K2); it may use the full response
-                    # capacity (e.g. P1 Nv=13 with K1=9/K2=4).
+                    # Tree response width is independent of sequential draft
+                    # depth.  The fixed int64 token envelope and topology
+                    # sidecar grow to the active phase maximum, while the
+                    # ordinary [K,V] logits wire remains speculate_k wide.
                     for _phase, _enabled, _nodes in (
                             ("P1", self.duet_p1_tree_policy == "on",
                              self.duet_p1_tree_max_nodes),
                             ("P2", self.duet_p2_tree_policy == "on",
                              self.duet_p2_tree_max_nodes)):
-                        if _enabled and not (1 <= _nodes <= self.speculate_k):
+                        if _enabled and not (1 <= _nodes < self.max_model_len):
                             raise ValueError(
                                 f"{_phase} tree max nodes must be in "
-                                f"[1,speculate_k={self.speculate_k}]; "
+                                f"[1,max_model_len={self.max_model_len}); "
                                 f"got {_nodes}")
                     if self.duet_p2_tree_policy == "on" \
                             and self.duet_tree_root_count is not None and \

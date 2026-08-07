@@ -180,8 +180,12 @@ def record_target_wire(config, exit_logits, logits_q, draft_tokens,
     # wire integer as a vocabulary index triggers a device-side gather OOB.
     # Store and gather with the clean token bits; P_iv itself is already
     # recorded losslessly enough in the separate ``piv`` field.
+    tree_enabled = bool(
+        config is not None
+        and (getattr(config, "duet_tree_enabled", False)
+             or getattr(config, "duet_tree_policy", "off") != "off"))
     wire_tok = (chosen_tok & ((1 << 15) - 1)
-                if config.duet_tree_policy != "off" else chosen_tok)
+                if tree_enabled else chosen_tok)
     cand_logit_E = exit_view.gather(
         1, chosen_pos.unsqueeze(-1).expand(-1, -1, V)).gather(
         2, wire_tok.unsqueeze(-1)).squeeze(-1)                     # [B, N]

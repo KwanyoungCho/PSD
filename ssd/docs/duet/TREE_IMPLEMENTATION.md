@@ -63,7 +63,7 @@ seed gate로 다시 확정해야 한다.
 | W | `duet_p2_budget`에서 유도 | 10 | 한 P2 forward가 동시에 평가하는 부모 수 |
 | R | `duet_tree_root_count` | `None` → W | 첫 round에 평가하고 cache에 보존할 root 수 |
 | C | `duet_tree_c_tensor` | 3 | 한 부모에서 한 번에 뽑는 ordered 자식 수 상한 |
-| N1 | `duet_p1_tree_max_nodes` | 13 | P1 root 하나의 응답 node 상한 |
+| N1 | `duet_p1_tree_max_nodes` | 18 | P1 root 하나의 응답 node 상한 |
 | N2 | `duet_p2_tree_max_nodes` | 8 | P2 root 하나의 응답 node 상한 |
 | U1 | `duet_p1_roots_per_position` | 2 | P1 context마다 만드는 시작 root 수 |
 | τproxy | `duet_tree_proxy_threshold` | 0.01 | 이보다 낮은 root 경로의 추가 확장 중단 |
@@ -300,22 +300,24 @@ P1에는 같은 step의 target proxy가 아직 없으므로 P2의 `P_iv`를 사�
    view를 갖는다. 다음 request가 그 key를 hit하면 해당 root의 tree 하나만 공통
    wire로 보내고 target이 lossless 검증한다.
 
-기본 형상에서 context bucket은 10과 14 두 개다. U1=2이므로 P1 forward 폭은
-각각 20과 28, round 수는 K1=9다. 첫 번째는 K1/K2 chain과 P2 tree hit를,
-두 번째는 최대 13-node P1 tree hit의 14 context를 처리한다. 가능한 context 수를
+기본 형상에서 context bucket은 10과 19 두 개다. U1=2이므로 P1 forward 폭은
+각각 20과 38, round 수는 K1=9다. 첫 번째는 K1/K2 chain과 P2 tree hit를,
+두 번째는 최대 18-node P1 tree hit의 19 context를 처리한다. 가능한 context 수를
 모두 별도 full-model graph로 만들지 않고 이 두 coarse canvas에 zero-score padding을
 사용한다.
 
-P1의 `F*W`는 최대 `9*28=252`라 하나의 64-bit 조상 bitmap에 들어가지 않는다.
-현재 구현은 부호 비트를 피한 63-cell word를 여러 개 사용한다. 이 예에서는 네
+P1의 `F*W`는 최대 `9*38=342`라 하나의 64-bit 조상 bitmap에 들어가지 않는다.
+현재 구현은 부호 비트를 피한 63-cell word를 여러 개 사용한다. 이 예에서는 여섯
 word가 필요하며, mask pack과 child insertion kernel이 필요한 word를 자동으로
 선택한다. 따라서 과거 `F*W<=63` 제한은 더 이상 존재하지 않는다.
 
-P1/P2의 node 상한은 서로 독립적이지만 응답 token tensor는 공통
-`speculate_k=K1+K2` 폭이다. `duet_tree_wire_nodes=max(active N1,N2)`로 topology와
-parent-q sidecar를 맞추며 target은 실제 phase와 valid-node 수에 따라 올바른
-bucket을 선택한다. node 상한은 `max(K1,K2)`나 P2 forward 폭 W가 아니라 이 공통
-응답 용량까지만 허용된다.
+P1/P2의 node 상한은 서로 독립적이다. 순차 chain 깊이와 일반 logits 통신은
+`speculate_k=K1+K2=13`을 유지하고, 정수 token 응답 폭은
+`max(speculate_k, active N1, active N2)`로 별도 계산한다.
+`duet_tree_wire_nodes=max(active N1,N2)`는 topology와 tree 전용 parent-q sidecar를
+맞춘다. 따라서 P1 18-node 설정은 chain logits를 18행으로 키우지는 않지만,
+P1 tree hit의 target 검증은 recovery를 포함해 최대 19행이고 tree 전용 parent-q
+버퍼도 18행이다. 이것은 추가 AL과 교환하는 실제 비용이므로 결과에서 함께 잰다.
 
 ---
 
@@ -731,7 +733,7 @@ unset SSD_DUET_PROXY_ON_DRAFT SSD_DUET_EXIT_TOPM_GATHER
   --duet_p2_budget 10 \
   --duet_p1_tree_policy on --duet_p2_tree_policy on \
   --duet_p1_roots_per_position 2 \
-  --duet_p1_tree_max_nodes 13 --duet_p2_tree_max_nodes 8 \
+  --duet_p1_tree_max_nodes 18 --duet_p2_tree_max_nodes 8 \
   --duet_tree_root_count 10 --duet_tree_c_tensor 3 \
   --duet_tree_proxy_threshold 0.01 \
   --duet_tree_conf_threshold 0.03
@@ -760,7 +762,7 @@ SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
   python -O bench/bench.py <공통 인자> \
   --duet_p1_tree_policy on --duet_p2_tree_policy on \
   --duet_p1_roots_per_position 2 \
-  --duet_p1_tree_max_nodes 13 --duet_p2_tree_max_nodes 8 \
+  --duet_p1_tree_max_nodes 18 --duet_p2_tree_max_nodes 8 \
   --duet_tree_c_tensor 3
 ```
 
@@ -795,7 +797,7 @@ SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
 | `--duet_p1_tree_policy` | `off` | P1 chain/dynamic 선택 |
 | `--duet_p2_tree_policy` | `on` | P2 chain/dynamic 선택 |
 | `--duet_p1_roots_per_position` | 2 | P1 context별 균등 시작 후보 수 U1 |
-| `--duet_p1_tree_max_nodes` | 13 | P1 root별 최대 응답 node N1 |
+| `--duet_p1_tree_max_nodes` | 18 | P1 root별 최대 응답 node N1 |
 | `--duet_p2_tree_max_nodes` | 8 | P2 root별 최대 응답 node N2 |
 | `--duet_tree_root_count` | `None` | P2 R; 동적 P2는 기본 R=W |
 | `--duet_tree_c_tensor` | 3 | 부모별 ordered 비복원 자식 상한 C, 허용 1--8 |

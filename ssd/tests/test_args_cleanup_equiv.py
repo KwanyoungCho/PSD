@@ -85,6 +85,15 @@ class TestOldNewEquivalence(unittest.TestCase):
                 duet_p1_tree_max_nodes=12,
                 duet_p2_tree_max_nodes=8)
         self.assertEqual(c.duet_tree_wire_nodes, 12)
+        self.assertEqual(c.duet_response_token_width, 13)
+
+    def test_tree_response_can_exceed_chain_depth(self):
+        c = _mk({}, duet_p1_tree_policy="on",
+                duet_p1_tree_max_nodes=18,
+                duet_p2_tree_max_nodes=8)
+        self.assertEqual(c.speculate_k, 13)
+        self.assertEqual(c.duet_tree_wire_nodes, 18)
+        self.assertEqual(c.duet_response_token_width, 18)
 
     def test_env_free_equals_old_env_style(self):
         # Old style: champion scripts exported both envs.

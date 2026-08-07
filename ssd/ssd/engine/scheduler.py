@@ -24,6 +24,8 @@ class Scheduler:
         self.speculate = config.speculate
         self.F = config.async_fan_out
         self.K = config.speculate_k
+        self.response_width = int(getattr(
+            config, "duet_response_token_width", self.K))
         self.block_size = config.kvcache_block_size
         self.verbose = config.verbose
         self.draft_async = config.draft_async
@@ -136,7 +138,10 @@ class Scheduler:
         async_spec = self.speculate and self.draft_async
         
         if async_spec:
-            target_lookahead_len = self.K + 1
+            # A tree can expose more nodes than the sequential chain depth.
+            # Reserve target scratch for the full response envelope; accepted
+            # path length is still bounded by the phase's draft rounds.
+            target_lookahead_len = self.response_width + 1
             # this will need to allow F_k strat as just sum(self.fan_out_list) when we add that
             if self._split_k1k2:
                 draft_lookahead_len = compute_megaspec_lookahead(

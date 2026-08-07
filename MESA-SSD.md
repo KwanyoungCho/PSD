@@ -83,10 +83,11 @@ P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 3. 첫 P1 forward에서는 모든 실제 root를 평가한다. 그 뒤 `K1-1`번은
    `root q × 경로상의 child q`가 높은 부모를 전체 root에서 선택한다.
 4. root 하나가 보낼 수 있는 node 수는 `duet_p1_tree_max_nodes`로 제한한다.
-   이 값은 기본 13이며 `max(K1,K2)`가 아니라 공통 응답 상한
-   `speculate_k=K1+K2`까지 사용할 수 있다.
+   이 값은 기본 18이다. 순차 draft 깊이 `K1=9`와 응답 node 수는 별도다.
+   깊이 9 경로 하나가 생겨도 같은 비율만큼 대체 가지를 담도록 P2의
+   `K2=4, 최대 8`과 같은 `최대 node/깊이=2`를 적용한다.
 
-기본 동적 P1 예시는 `K1=9`, position당 root 2개, root당 최대 node 13개다.
+기본 동적 P1 예시는 `K1=9`, position당 root 2개, root당 최대 node 18개다.
 일반 10-context step의 실제 root는 20개이며, P1 forward 9번 전체와 그 사이의
 선택·sampling·mask 갱신은 하나의 CUDA Graph replay로 실행된다.
 
@@ -509,7 +510,7 @@ SSD_TREE_PROXY_GRAPH=1 SSD_TREE_EXEC_WARMUP=all \
   "${COMMON[@]}" \
   --duet_p1_tree_policy on --duet_p2_tree_policy on \
   --duet_p1_roots_per_position 2 \
-  --duet_p1_tree_max_nodes 13 --duet_p2_tree_max_nodes 8 \
+  --duet_p1_tree_max_nodes 18 --duet_p2_tree_max_nodes 8 \
   --duet_tree_root_count 10 --duet_tree_c_tensor 3 \
   --duet_tree_proxy_threshold 0.01 \
   --duet_tree_conf_threshold 0.03
@@ -581,7 +582,7 @@ threshold는 node를 삭제하는 값이 아니라 그 아래 추가 확장을 �
 - 최대 node 수가 크면 hit한 root의 coverage/depth가 늘지만 target verify row 비용이
   증가한다.
 
-현재 기준은 C=3, P1 최대 13, P2 최대 8이다. threshold calibration 이후 소수
+현재 기준은 C=3, P1 최대 18, P2 최대 8이다. threshold calibration 이후 소수
 후보만 paired gate로 비교한다.
 
 ### 9.3 K1/K2 자동 분석
