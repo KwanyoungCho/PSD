@@ -353,10 +353,14 @@ page id는 유효한 물리 page로 대체하고 mask로 완전히 차단한다.
 감지해 chain/arena fallback 또는 skip한다.
 
 P2 모든 page bucket의 과거 실모델 비용은 약 7--9초와 1014MiB였다. P1을 켠
-2026-08-07 스모크에서는 P1 context 10/14 × page 1--7 준비가 약 20--28초와
+2026-08-07 스모크에서는 P1 context 10/19 × page 1--7 준비가 약 20--28초와
 약 2.8GiB를 추가했다. P1 graph의 transient capture pool은 공유하지만 page별
 FlashInfer workspace와 persistent 입력/출력은 분리한다. 이 비용은 decode TPS와
 정상 request step에는 포함되지 않지만 cold start와 상주 메모리에는 포함된다.
+P1/P2 graph를 모두 준비한 직후에는 live graph가 참조하지 않는 compiler/warmup
+cache가 수백 MiB 남을 수 있다. 서비스 준비 신호를 보내기 전에 synchronize 후
+`empty_cache()`로 이 미사용분만 반환한다. 실제 graph pool은 유지되며, 24GiB
+GPU에서 첫 prefill이 20MiB를 추가 요청하다 OOM 난 회귀를 막는다.
 
 ### 5.3 kernel 융합
 

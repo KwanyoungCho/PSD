@@ -116,6 +116,22 @@ class DraftRunner(ModelRunner):
                     self.graphs[_layout.graph_key] = _graphs
                     self.graph_bs_list[_layout.graph_key] = _bs
                 print(f'[DUET] Captured FI tree decode CudaGraphs ({len(_layouts_to_capture)} layouts)', flush=True)
+            # P1+P2 all-page capture compiles many shape variants.  Their
+            # live graph pools remain referenced, but compiler/warmup
+            # temporaries can leave hundreds of MiB in the ordinary caching
+            # allocator.  Release only those unused blocks before the first
+            # real prefill; otherwise a 24-GiB draft GPU can have <20 MiB
+            # free and OOM even though the steady-state graph set fits.
+            torch.cuda.synchronize(self.device)
+            free_before, _ = torch.cuda.mem_get_info(self.device)
+            torch.cuda.empty_cache()
+            free_after, _ = torch.cuda.mem_get_info(self.device)
+            released_mib = max(0, free_after - free_before) / (2 ** 20)
+            print(
+                f"[DUET tree] released {released_mib:.1f} MiB of unused "
+                "capture cache before service",
+                flush=True,
+            )
             if init_q is not None:
                 # The parent must not expose the engine until every draft
                 # graph (including the P2 warmup buckets) is ready.  The first
