@@ -38,7 +38,8 @@ def _reset_tree_executor_kernel(
     valid_ptr, anc_ptr, n_ptr, local_idx_ptr,
     out_tok_ptr, out_par_ptr, out_sib_ptr, out_rawq_ptr, out_pcell_ptr,
     out_valid_ptr,
-    ARENA_N: tl.constexpr, OUT_N: tl.constexpr, OUT_ROWS: tl.constexpr,
+    ARENA_N: tl.constexpr, ANC_N: tl.constexpr,
+    OUT_N: tl.constexpr, OUT_ROWS: tl.constexpr,
     BLOCK: tl.constexpr,
 ):
     """Fuse the fixed-address arena/output reset into one launch.
@@ -56,7 +57,7 @@ def _reset_tree_executor_kernel(
     tl.store(state_ptr + i, 0, mask=am)
     tl.store(cell_ptr + i, -1, mask=am)
     tl.store(valid_ptr + i, 0, mask=am)
-    tl.store(anc_ptr + i, 0, mask=am)
+    tl.store(anc_ptr + i, 0, mask=i < ANC_N)
     tl.store(local_idx_ptr + i, -1, mask=am)
 
     om = i < OUT_N
@@ -83,7 +84,8 @@ def _insert_tree_children_kernel(
     # optional backbone-tip state used by non-global policies
     tip_idx_ptr, tip_depth_ptr,
     ROUND: tl.constexpr, W: tl.constexpr, R: tl.constexpr,
-    C: tl.constexpr, NV: tl.constexpr, GLOBAL: tl.constexpr,
+    C: tl.constexpr, NV: tl.constexpr, ANC_WORDS: tl.constexpr,
+    GLOBAL: tl.constexpr,
 ):
     """Insert one sampled round and record root-local views in one launch.
 
@@ -113,7 +115,6 @@ def _insert_tree_children_kernel(
         root = tl.load(root_ptr + parent, mask=sv, other=0)
         pdepth = tl.load(depth_ptr + parent, mask=sv, other=0)
         pcell = tl.load(cell_ptr + parent, mask=sv, other=-1)
-        panc = tl.load(anc_ptr + parent, mask=sv, other=0)
         parent_local = tl.load(local_idx_ptr + parent, mask=sv, other=-1)
 
         for child in tl.static_range(0, C):
@@ -133,7 +134,17 @@ def _insert_tree_children_kernel(
             tl.store(arena_rawq_ptr + slot, rq, mask=active)
             tl.store(valid_ptr + slot, ok, mask=active)
             tl.store(state_ptr + slot, tl.where(ok, 0, 1), mask=active)
-            tl.store(anc_ptr + slot, panc | (1 << pcell), mask=active)
+            safe_pcell = tl.maximum(pcell, 0)
+            pword = safe_pcell // 63
+            pbit = safe_pcell - pword * 63
+            for aw in tl.static_range(0, ANC_WORDS):
+                panc = tl.load(
+                    anc_ptr + parent * ANC_WORDS + aw,
+                    mask=sv, other=0)
+                add = tl.where(aw == pword, 1 << pbit, 0)
+                tl.store(
+                    anc_ptr + slot * ANC_WORDS + aw, panc | add,
+                    mask=active)
 
             # Number of accepted children of the same root preceding this
             # item in lane-major order.  Static bounds make this a tiny
@@ -301,7 +312,8 @@ class P2TreeExecutor:
         # 되는 '내용' (버퍼 구동; python int 슬라이싱 금지)
         self.in_prefix_len = torch.zeros(1, dtype=torch.int64, device=d)
         # ── arena / RNG / 출력
-        self.arena = PT.TreeArena(R + F * W * C, d)
+        self.arena = PT.TreeArena(
+            R + F * W * C, d, max_cells=F * W)
         self.gen = torch.Generator(device=d)
         self.gen.manual_seed(torch.initial_seed() % (2**31))
         # 출력의 물리 행 수는 root 수 R이 아니라 layout/cache-key 폭 W.
@@ -499,13 +511,18 @@ class P2TreeExecutor:
         m = torch.where(in_glue_rng.expand(W, canvas), g_bits, m)
         # 조상 셀: col ∈ [plen+gW, plen+gW+f·W) — 실폭 기준 정렬
         spec_off = g_off - gW
-        anc = ar.anc_bits.gather(0, sel.clamp(min=0)) * sel_valid.long()
+        anc = ar.anc_bits.index_select(0, sel.clamp(min=0)) \
+            * sel_valid.long().unsqueeze(1)
         in_spec = (spec_off >= 0) & (spec_off < f * W) if f else \
             torch.zeros(1, canvas, dtype=torch.bool, device=self.dev)
         if f:
-            a_bits = ((anc.unsqueeze(1)
-                       >> spec_off.clamp(min=0, max=max(f * W - 1, 0)))
-                      & 1).to(torch.uint8)
+            safe_off = spec_off.clamp(min=0, max=max(f * W - 1, 0))
+            a_word = torch.div(
+                safe_off, PT._ANC_WORD_BITS, rounding_mode="floor")
+            a_bit = safe_off.remainder(PT._ANC_WORD_BITS)
+            anc_word = anc.gather(1, a_word.expand(W, canvas))
+            a_bits = ((anc_word >> a_bit.expand(W, canvas)) & 1) \
+                .to(torch.uint8)
             m = torch.where(in_spec.expand(W, canvas), a_bits, m)
         # self 셀: col == plen+gW(실폭)+f·W+lane — 비활성 lane은 0
         # (arena _arena_mask_pack의 `(bits|selfbit)*sel_valid` 규약;
@@ -538,14 +555,16 @@ class P2TreeExecutor:
         """
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
         ar = self.arena
-        _reset_n = max(ar.capacity, self.out_tok.numel(),
+        _reset_n = max(ar.capacity, ar.anc_bits.numel(),
+                       self.out_tok.numel(),
                        self.out_valid.numel())
         _reset_tree_executor_kernel[(triton.cdiv(_reset_n, 256),)](
             ar.parent_idx, ar.parent_cell, ar.logpri, ar.state, ar.cell,
             ar.valid, ar.anc_bits, ar.n, self._local_idx,
             self.out_tok, self.out_par, self.out_sib, self.out_rawq,
             self.out_pcell, self.out_valid,
-            ARENA_N=ar.capacity, OUT_N=self.out_tok.numel(),
+            ARENA_N=ar.capacity, ANC_N=ar.anc_bits.numel(),
+            OUT_N=self.out_tok.numel(),
             OUT_ROWS=self.out_valid.numel(), BLOCK=256)
         policy = getattr(self.cfg, "duet_tree_policy", "level")
         if policy in ("coverage", "eagle", "adaptive"):
@@ -654,7 +673,8 @@ class P2TreeExecutor:
                 ar.anc_bits, ar.n, self._local_idx,
                 self.out_tok, self.out_par, self.out_sib, self.out_rawq,
                 self.out_pcell, self.out_valid, tip_idx, tip_depth,
-                ROUND=f, W=W, R=R, C=C, NV=NV, GLOBAL=_global)
+                ROUND=f, W=W, R=R, C=C, NV=NV,
+                ANC_WORDS=ar.anc_words, GLOBAL=_global)
 
 
         if not finalize:

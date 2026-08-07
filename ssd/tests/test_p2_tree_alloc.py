@@ -15,6 +15,29 @@ from ssd.config import Config
 import ssd.engine.helpers.p2_tree as PT
 
 
+class TestMultiwordAncestry(unittest.TestCase):
+    def test_mask_pack_crosses_63_bit_boundaries(self):
+        max_cells = 145
+        ar = PT.TreeArena(4, "cpu", max_cells=max_cells)
+        self.assertEqual(ar.anc_words, 3)
+        marked = (0, 62, 63, 64, 125, 126, 144)
+        for cell in marked:
+            word, bit = divmod(cell, PT._ANC_WORD_BITS)
+            ar.anc_bits[0, word] |= 1 << bit
+
+        # f=145,W=1 gives 145 previous cells plus the current self cell.
+        packed, _ = PT._arena_mask_pack(
+            145, 1, 0, 2, torch.ones(1, 1, dtype=torch.uint8),
+            ar.anc_bits[:1], torch.ones(1, dtype=torch.bool), "cpu")
+        bits = ((packed.unsqueeze(1) >> torch.arange(8)) & 1) \
+            .to(torch.uint8).reshape(-1)[:147]
+        # col0=glue, col1..145=previous cells, col146=current self.
+        self.assertEqual(int(bits[0]), 1)
+        for cell in range(145):
+            self.assertEqual(int(bits[1 + cell]), int(cell in marked))
+        self.assertEqual(int(bits[146]), 1)
+
+
 class TestP2ExecutorWarmup(unittest.TestCase):
     def test_capture_does_not_consume_production_rng(self):
         """Startup capture may execute sampling, but must be RNG-neutral."""

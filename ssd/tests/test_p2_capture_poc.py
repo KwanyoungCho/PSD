@@ -122,10 +122,15 @@ class MiniP2Executor:
         mb = mask_buf.view(W, canvas)
         mb.zero_()
         mb[:, :CTX] = 1
-        anc = ar.anc_bits.gather(0, sel.clamp(min=0)) * sel_valid.long()
+        anc = ar.anc_bits.index_select(0, sel.clamp(min=0)) \
+            * sel_valid.long().unsqueeze(1)
         if f:                                   # 기존 셀 조상 (f·W 폭)
             shifts = torch.arange(f * W, device=self.dev)
-            bits = ((anc.unsqueeze(1) >> shifts) & 1).to(torch.uint8)
+            word = torch.div(
+                shifts, PT._ANC_WORD_BITS, rounding_mode="floor")
+            bit = shifts.remainder(PT._ANC_WORD_BITS)
+            bits = ((anc.index_select(1, word) >> bit.unsqueeze(0)) & 1) \
+                .to(torch.uint8)
             mb[:, CTX:CTX + f * W] = bits
         lane = self.lane_w
         mb[lane, CTX + f * W + lane] = self.ones_w_u8   # 자기 새 슬롯
@@ -173,10 +178,15 @@ class MiniP2Executor:
         ar.valid.scatter_(0, sl, ok_q)
         ar.state.scatter_(0, sl, torch.where(
             ok_q, torch.zeros_like(sl), torch.ones_like(sl)))
-        ar.anc_bits.scatter_(
-            0, sl, ar.anc_bits.gather(0, par)
-            | (torch.ones_like(par)
-               << ar.cell.gather(0, par).clamp(min=0)))
+        parent_anc = ar.anc_bits.index_select(0, par)
+        parent_cell = ar.cell.gather(0, par).clamp(min=0)
+        word = torch.div(
+            parent_cell, PT._ANC_WORD_BITS, rounding_mode="floor")
+        bit = parent_cell.remainder(PT._ANC_WORD_BITS)
+        child_anc = parent_anc.clone()
+        row = torch.arange(par.numel(), device=par.device)
+        child_anc[row, word] |= torch.ones_like(bit) << bit
+        ar.anc_bits.index_copy_(0, sl, child_anc)
         ar.n = ar.n + fan.sum()
         tip_adv = sel_valid & (sel == tip_idx.gather(0, r_of)) & (fan > 0)
         old_tip = tip_idx.gather(0, r_of)

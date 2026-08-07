@@ -94,8 +94,8 @@ class TestRealPackRowMaskVsArena(unittest.TestCase):
                 sel_valid, ar.root.gather(0, sel.clamp(min=0)),
                 torch.zeros_like(sel))
             glue_sel = ex.in_glue.index_select(0, r_of)[:, :gw_real]
-            anc_sel = ar.anc_bits.gather(0, sel.clamp(min=0)) \
-                * sel_valid.long()
+            anc_sel = ar.anc_bits.index_select(0, sel.clamp(min=0)) \
+                * sel_valid.long().unsqueeze(1)
             packed, _ = _arena_mask_pack(
                 f, W, K_glue, context_len, glue_sel, anc_sel,
                 sel_valid, dev)

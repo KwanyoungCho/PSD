@@ -2017,16 +2017,32 @@ def alloc_root_budgets_gpu(piv: torch.Tensor, total: int, beta: float,
     return base
 
 
-def _arena_get(capacity, dev, workspace=None):
+_ANC_WORD_BITS = 63
+
+
+def ancestry_word_count(max_cells: int) -> int:
+    """Number of signed-int64 words needed for forward-cell ancestry.
+
+    Bit 63 is deliberately unused so PyTorch/Triton signed right shifts keep
+    their previous logical meaning.  The old P2 shape (40 cells) remains one
+    word; wider P1 shapes transparently use more words.
+    """
+    if max_cells < 1:
+        return 1
+    return (int(max_cells) + _ANC_WORD_BITS - 1) // _ANC_WORD_BITS
+
+
+def _arena_get(capacity, dev, workspace=None, max_cells=63):
     """persistent arena (리뷰6 §6): rollout마다 ~15개 텐서 신규 할당
     대신 workspace dict에서 재사용 + reset. workspace=None이면 신규
     (테스트 경로)."""
     if workspace is None:
-        return TreeArena(capacity, dev)
-    key = (capacity, str(dev))
+        return TreeArena(capacity, dev, max_cells=max_cells)
+    nwords = ancestry_word_count(max_cells)
+    key = (capacity, str(dev), nwords)
     ar = workspace.get(key)
     if ar is None:
-        ar = TreeArena(capacity, dev)
+        ar = TreeArena(capacity, dev, max_cells=max_cells)
         workspace[key] = ar
     else:
         ar.reset()
@@ -2035,9 +2051,10 @@ def _arena_get(capacity, dev, workspace=None):
 
 class TreeArena:
     """rollout 상태 전체를 device 텐서로 (22번 v2 — state 필드 명시,
-    조상 bitset은 노드 capacity 폭 int64 1워드, F·W ≤ 63 가드)."""
+    조상 bitset은 signed-int64 63-bit word 여러 개로 저장한다. P2의
+    F·W=40은 기존과 동일한 1-word hot path, 더 넓은 P1만 multi-word)."""
 
-    def __init__(self, capacity: int, device):
+    def __init__(self, capacity: int, device, max_cells: int = 63):
         d = device
         capacity = capacity + 1     # 말단 scratch 슬롯 (무효 쓰기 흡수
         #                             — boolean indexing의 nonzero/DtoH
@@ -2057,7 +2074,10 @@ class TreeArena:
         self.cell = torch.full((capacity,), -1, dtype=torch.int64,
                                device=d)
         self.valid = torch.zeros(capacity, dtype=torch.bool, device=d)
-        self.anc_bits = torch.zeros(capacity, dtype=torch.int64, device=d)
+        self.anc_words = ancestry_word_count(max_cells)
+        self.max_cells = int(max_cells)
+        self.anc_bits = torch.zeros(
+            capacity, self.anc_words, dtype=torch.int64, device=d)
         self.n = torch.zeros((), dtype=torch.int64, device=d)
         self.capacity = capacity
         self.device = d
@@ -2307,7 +2327,10 @@ def _arena_mask_pack(f, W, K_glue, context_len, glue_sel, anc_sel,
         glue_sel * sel_valid.unsqueeze(1).to(torch.uint8)
     spec0 = prefix_len + K_glue + 1
     shifts = torch.arange(spec_w, device=device)
-    bits = ((anc_sel.unsqueeze(1) >> shifts) & 1).to(torch.uint8)
+    word = torch.div(shifts, _ANC_WORD_BITS, rounding_mode="floor")
+    bit = shifts.remainder(_ANC_WORD_BITS)
+    anc_word = anc_sel.index_select(1, word)
+    bits = ((anc_word >> bit.unsqueeze(0)) & 1).to(torch.uint8)
     selfbit = torch.zeros(W, spec_w, dtype=torch.uint8, device=device)
     lane = torch.arange(W, device=device)
     selfbit[lane, f * W + lane] = 1
@@ -2358,8 +2381,6 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         raise NotImplementedError("arena는 backbone/eagle 전용 (T6 1a)")
     if R > W:
         raise ValueError(f"tree rollout: R={R} > W={W} (이슈 #27)")
-    if F_total * W > 63:
-        raise ValueError(f"arena anc bitset 1워드 초과: F·W={F_total*W}")
     dev = torch.device(device) if device is not None \
         else (root_piv.device if torch.is_tensor(root_piv) else "cpu")
     piv = (root_piv if torch.is_tensor(root_piv)
@@ -2374,7 +2395,9 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                                    dtype=torch.int64)).to(dev)
     temps_dev = temps.to(dev)
 
-    ar = _arena_get(R + F_total * W * c_tensor, dev, workspace)
+    ar = _arena_get(
+        R + F_total * W * c_tensor, dev, workspace,
+        max_cells=F_total * W)
     # 예산: CPU 정확판 + 1 sync (교대 A/B 실측 — GPU 무동기판은 ~256
     # 이벤트로 pre +3.4ms의 주범; piv.cpu()는 proxy_wait 직후라 큐가
     # 얕아 ~0.4ms. 패리티는 CPU 함수 그 자체이므로 자명)
@@ -2441,8 +2464,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
             rope_base.gather(0, r_of) + ar.depth.gather(0, sel.clamp(min=0)),
             rope_base[0].expand(W))
         glue_sel = glue_rows.index_select(0, r_of)
-        anc_sel = ar.anc_bits.gather(0, sel.clamp(min=0)) \
-            * sel_valid.long()
+        anc_sel = ar.anc_bits.index_select(0, sel.clamp(min=0)) \
+            * sel_valid.long().unsqueeze(1)
         packed, indptr = _arena_mask_pack(
             f, W, K_glue, context_len, glue_sel, anc_sel, sel_valid, dev)
         logits = forward_fn(f, input_ids, rope, packed, indptr)
@@ -2504,10 +2527,15 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         # 무효(zero-q·scratch) 슬롯은 평가 불가로 마킹 (선택 배제)
         ar.state.scatter_(0, sl, torch.where(
             ok_q, torch.zeros_like(sl), torch.ones_like(sl)))
-        ar.anc_bits.scatter_(
-            0, sl, ar.anc_bits.gather(0, par)
-            | (torch.ones_like(par)
-               << ar.cell.gather(0, par).clamp(min=0)))
+        parent_anc = ar.anc_bits.index_select(0, par)
+        parent_cell = ar.cell.gather(0, par).clamp(min=0)
+        cell_word = torch.div(
+            parent_cell, _ANC_WORD_BITS, rounding_mode="floor")
+        cell_bit = parent_cell.remainder(_ANC_WORD_BITS)
+        child_anc = parent_anc.clone()
+        row = torch.arange(par.numel(), device=dev)
+        child_anc[row, cell_word] |= torch.ones_like(cell_bit) << cell_bit
+        ar.anc_bits.index_copy_(0, sl, child_anc)
         ar.n = ar.n + fan.sum()
         # backbone tip 전진: tip lane의 맏이(c=0). 주의 — pad lane의
         # r_of가 0으로 라우팅되므로 scatter_(중복 승자 미정)는 root0의
