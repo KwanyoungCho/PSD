@@ -40,6 +40,13 @@ DUET_JIT_SHORT = os.environ.get("SSD_DUET_JIT_SHORT", "0") == "1"
 # EAGLE path (activation gather/scatter not wired).
 DUET_JIT_SUBSET = os.environ.get("SSD_DUET_JIT_SUBSET", "0") == "1"
 
+# Fixed-shape policies implemented by P2TreeExecutor.  Keep this centralized:
+# public ``on`` normalizes to ``backbone``, while the other names exist only
+# for exact reproduction of older experiments.
+_P2_EXECUTOR_POLICIES = frozenset({
+    "level", "confidence", "coverage", "backbone", "eagle", "adaptive",
+})
+
 
 @dataclasses.dataclass(frozen=True)
 class _P2StepState:
@@ -2638,10 +2645,10 @@ class DraftRunner(ModelRunner):
         """Run the production P1 dynamic tree as one captured graph.
 
         P1 creates a fixed number of root candidates at every live glue
-        context.  Roots and all later nodes then compete globally by
-        cumulative draft confidence.  The forward/sample/select/mask loop is
-        entirely inside :class:`P1TreeExecutor`; host work here occurs once
-        before replay and never between the K1 draft forwards.
+        context and preserves each root's first-child path through K1.  The
+        forward/sample/select/mask loop is entirely inside
+        :class:`P1TreeExecutor`; host work here occurs once before replay and
+        never between the K1 draft forwards.
 
         Returns ``None`` for the explicitly unsupported B>1/temp=0/near-end
         cases so the caller can retain the established chain path.
@@ -2822,8 +2829,8 @@ class DraftRunner(ModelRunner):
                             f"before={before.reshape(-1)[idx].tolist()} "
                             f"after={after.reshape(-1)[idx].tolist()}")
         try:
-            if cfg.use_eagle or cfg.duet_tree_policy not in (
-                    "level", "confidence", "coverage", "eagle", "adaptive") \
+            if cfg.use_eagle \
+                    or cfg.duet_tree_policy not in _P2_EXECUTOR_POLICIES \
                     or R > W:
                 self._p2exec_count("unsupported_cfg")
                 return None

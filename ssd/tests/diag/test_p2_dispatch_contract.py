@@ -4,11 +4,16 @@ import unittest
 
 import torch
 
-from ssd.engine.draft_runner import DraftRunner, _P2StepState
+from ssd.engine.draft_runner import (
+    DraftRunner, _P2StepState, _P2_EXECUTOR_POLICIES,
+)
 from ssd.engine.helpers.p2_tree import sanitize_root_inputs
 
 
 class TestP2RootContract(unittest.TestCase):
+    def test_public_backbone_policy_is_executor_supported(self):
+        self.assertIn("backbone", _P2_EXECUTOR_POLICIES)
+
     def test_invalid_roots_become_safe_inactive_lanes(self):
         toks = torch.tensor([7, -1, 99, 8])
         piv = torch.tensor([0.7, 0.2, 0.1, float("nan")])
