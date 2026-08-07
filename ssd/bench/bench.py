@@ -116,42 +116,44 @@ def parse_arguments():
     parser.add_argument("--duet_p2_budget", type=int, default=None,
                         help="Direct Phase-2 seed budget (docs/duet/16 Tier-3). "
                              "Default: derived pfo*(K1+1) where pfo = f - p1_fanout.")
+    parser.add_argument("--duet_p1_tree_policy", choices=("off", "on"),
+                        default="off",
+                        help="Enable DUET's dynamic Phase-1 tree.")
+    parser.add_argument("--duet_p2_tree_policy", choices=("off", "on"),
+                        default="on",
+                        help="Enable DUET's dynamic Phase-2 tree.")
+    # Old experiment scripts remain runnable, but this option is intentionally
+    # absent from --help.  New runs use the phase-specific on/off switches.
     parser.add_argument("--duet_tree_policy",
-                        choices=("off", "adaptive", "eagle", "coverage", "confidence", "level",
-                                 "frontier"),
-                        default="eagle",
-                        help="P2-tree rollout policy. adaptive preserves "
-                             "every root's chain-depth path and adds siblings "
-                             "only above the mean cumulative confidence. "
-                             "eagle evaluates every "
-                             "root once, then globally expands the W highest "
-                             "cumulative-confidence children at each round. "
-                             "coverage preserves all "
-                             "chain roots/backbones and adds ordered WOR "
-                             "siblings without extra draft forwards. "
-                             "confidence is the former top-root policy; eagle "
-                             "is the default dynamic policy; off explicitly "
-                             "selects the unchanged chain baseline; level/frontier "
-                             "are legacy reproduction modes.")
+                        choices=("off", "on", "eagle", "adaptive",
+                                 "coverage", "confidence", "level",
+                                 "frontier"), default=None,
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_c_tensor", type=int, default=3,
-                        help="P2-tree: per-node batched WOR sample width C_tensor.")
-    parser.add_argument("--duet_tree_nv", type=int, default=8,
-                        help="P2-tree: response truncation N_v (used from T2).")
+                        help="Dynamic tree: maximum ordered child samples per parent.")
+    parser.add_argument("--duet_p1_tree_max_nodes", type=int, default=13,
+                        help="Maximum P1 tree nodes sent for one cache hit.")
+    parser.add_argument("--duet_p2_tree_max_nodes", type=int, default=8,
+                        help="Maximum P2 tree nodes sent for one cache hit.")
+    parser.add_argument("--duet_p1_roots_per_position", type=int, default=2,
+                        help="Uniform number of P1 root candidates per glue position.")
+    parser.add_argument("--duet_tree_nv", type=int, default=None,
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_fanout_policy", type=str,
                         default="backbone", choices=["backbone", "ctensor"])
     parser.add_argument("--duet_tree_root_count", type=int, default=None,
-                        help="Number R of P2 roots. eagle defaults to R=W; "
+                        help="Number R of P2 roots. Dynamic P2 defaults to R=W; "
                              "R must not exceed the P2 forward width W. "
                              "Legacy level/frontier also honor this override; "
                              "confidence derives R and coverage keeps R=W.")
     parser.add_argument("--duet_tree_proxy_threshold", type=float,
                         default=0.01,
-                        help="EAGLE tree: keep every root's first forward, "
+                        help="Dynamic P2 tree: keep every root's first forward, "
                              "but do not expand deeper below roots with a "
                              "smaller calibrated proxy score.")
     parser.add_argument("--duet_tree_conf_threshold", type=float,
                         default=0.03,
-                        help="EAGLE tree: keep the sampled child as a leaf, "
+                        help="Dynamic tree: keep the sampled child as a leaf, "
                              "but do not expand deeper below children with "
                              "smaller calibrated draft confidence.")
     parser.add_argument("--duet_tree_beta", type=float, default=0.5,
@@ -340,10 +342,27 @@ def create_llm_kwargs(args, draft_path):
         llm_kwargs["duet_jit_short"] = not args.duet_no_jit_short
         if args.duet_p2_budget is not None:
             llm_kwargs["duet_p2_budget"] = args.duet_p2_budget
-        llm_kwargs["duet_tree_policy"] = args.duet_tree_policy
-        if args.duet_tree_policy != "off":
+        llm_kwargs["duet_p1_tree_policy"] = args.duet_p1_tree_policy
+        llm_kwargs["duet_p2_tree_policy"] = args.duet_p2_tree_policy
+        if args.duet_tree_policy is not None:
+            # Deprecated input only.  ``on`` is accepted as a convenience
+            # and normalized to the old internal dynamic selector name.
+            llm_kwargs["duet_tree_policy"] = (
+                "eagle" if args.duet_tree_policy == "on"
+                else args.duet_tree_policy)
+        _any_tree = (args.duet_p1_tree_policy == "on"
+                     or args.duet_p2_tree_policy == "on"
+                     or args.duet_tree_policy not in (None, "off"))
+        if _any_tree:
             llm_kwargs["duet_tree_c_tensor"] = args.duet_tree_c_tensor
-            llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
+            llm_kwargs["duet_p1_tree_max_nodes"] = \
+                args.duet_p1_tree_max_nodes
+            llm_kwargs["duet_p2_tree_max_nodes"] = \
+                args.duet_p2_tree_max_nodes
+            llm_kwargs["duet_p1_roots_per_position"] = \
+                args.duet_p1_roots_per_position
+            if args.duet_tree_nv is not None:
+                llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
             llm_kwargs["duet_tree_beta"] = args.duet_tree_beta
             llm_kwargs["duet_tree_fanout_policy"] = args.duet_tree_fanout_policy
             llm_kwargs["duet_tree_proxy_threshold"] = \

@@ -58,12 +58,33 @@ def _diff(a, b):
 class TestOldNewEquivalence(unittest.TestCase):
     def test_dynamic_tree_is_the_duet_default_and_chain_is_explicit(self):
         dynamic = _mk({})
+        self.assertEqual(dynamic.duet_p1_tree_policy, "off")
+        self.assertEqual(dynamic.duet_p2_tree_policy, "on")
         self.assertEqual(dynamic.duet_tree_policy, "eagle")
         self.assertEqual(dynamic.duet_p2_seed_count,
                          dynamic.duet_proxy_total_budget)
 
-        chain = _mk({}, duet_tree_policy="off")
+        chain = _mk({}, duet_p2_tree_policy="off")
+        self.assertEqual(chain.duet_p2_tree_policy, "off")
         self.assertEqual(chain.duet_tree_policy, "off")
+
+    def test_legacy_tree_names_normalize_to_public_on_off(self):
+        dynamic = _mk({}, duet_p2_tree_policy="off",
+                      duet_tree_policy="eagle", duet_tree_nv=7)
+        self.assertEqual(dynamic.duet_p2_tree_policy, "on")
+        self.assertEqual(dynamic.duet_tree_policy, "eagle")
+        self.assertEqual(dynamic.duet_p2_tree_max_nodes, 7)
+        self.assertEqual(dynamic.duet_tree_nv, 7)
+
+        chain = _mk({}, duet_tree_policy="off")
+        self.assertEqual(chain.duet_p2_tree_policy, "off")
+        self.assertEqual(chain.duet_tree_policy, "off")
+
+    def test_wire_capacity_is_derived_from_phase_maxima(self):
+        c = _mk({}, duet_p1_tree_policy="on",
+                duet_p1_tree_max_nodes=12,
+                duet_p2_tree_max_nodes=8)
+        self.assertEqual(c.duet_tree_wire_nodes, 12)
 
     def test_env_free_equals_old_env_style(self):
         # Old style: champion scripts exported both envs.

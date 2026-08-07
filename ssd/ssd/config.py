@@ -73,13 +73,26 @@ class Config:
     # duet_proxy_total_budget, and the verifier's per-step K-position
     # allocation scales proportionally (duet_p2_budget_at).
     duet_p2_budget: int | None = None
-    # P2-tree. ``eagle`` is the production research default: all P2 roots are
-    # evaluated first and the remaining fixed-shape rollout lanes are assigned
-    # dynamically from the measured proxy/confidence scores.  ``off`` remains
-    # the bit-identical chain baseline and must be selected explicitly.
-    duet_tree_policy: str = "eagle"          # eagle | off | adaptive | coverage | confidence | level | frontier
+    # DUET dynamic trees.  Public policy names deliberately describe whether
+    # *our* method is enabled; they do not expose the name of an external
+    # baseline that inspired part of the selector.  P2 stays enabled by
+    # default, while P1 is opt-in until its full-graph executor is available.
+    duet_p1_tree_policy: str = "off"          # off | on
+    duet_p2_tree_policy: str = "on"           # off | on
+    # Deprecated compatibility input for old experiment scripts.  __post_init__
+    # maps ``eagle`` -> P2 ``on`` and then rewrites this field to the internal
+    # policy understood by the existing P2 implementation.  New code and
+    # documentation must use the phase-specific fields above.
+    duet_tree_policy: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
-    duet_tree_nv: int = 8                    # 응답 절단 N_v (T2에서 사용)
+    # Per-phase maximum number of nodes sent for one cache hit.  This is a
+    # fixed buffer/cost bound, not a fixed topology: the nodes and parent
+    # relations remain data-dependent.  ``duet_tree_nv`` is a legacy P2 alias.
+    duet_p1_tree_max_nodes: int = 13
+    duet_p2_tree_max_nodes: int = 8
+    duet_tree_nv: int | None = None
+    # P1 creates this many uniform root candidates at every glue context.
+    duet_p1_roots_per_position: int = 2
     duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
     # 형상 진단 (docs/duet/internal/21 §4.5): 고정-C 배분은 깊이를 굶긴다 —
     # backbone(맏이-사슬 fan1, 깊이 K2 보장) 우선 + 잔여만 형제.
@@ -159,6 +172,28 @@ class Config:
     @property
     def max_blocks(self):
         return (self.max_model_len + self.kvcache_block_size - 1) // self.kvcache_block_size
+
+    @property
+    def duet_tree_enabled(self) -> bool:
+        """Whether either phase may serve a dynamic tree response."""
+        return (self.duet_p1_tree_policy == "on"
+                or self.duet_p2_tree_policy == "on")
+
+    @property
+    def duet_tree_wire_nodes(self) -> int:
+        """Fixed token/tree capacity of one draft response.
+
+        Chain rows keep their own K1/K2 ``valid_k``.  A tree row may use its
+        phase-specific maximum, while the transport itself stays fixed-shape
+        at the maximum of all reachable response kinds.
+        """
+        k1 = int(self.duet_phase1_k or self.speculate_k)
+        k2 = int(self.duet_phase2_k or self.speculate_k)
+        p1 = (int(self.duet_p1_tree_max_nodes)
+              if self.duet_p1_tree_policy == "on" else 0)
+        p2 = (int(self.duet_p2_tree_max_nodes)
+              if self.duet_p2_tree_policy == "on" else 0)
+        return max(k1, k2, p1, p2)
 
     @property
     def duet_p2_active_root_count(self) -> int:
@@ -345,6 +380,53 @@ class Config:
         return max(1, round(self.duet_p2_budget * (K + 1) / (K_max + 1)))
 
     def __post_init__(self):
+        # Normalize the public phase-specific on/off controls before any
+        # derived DUET property or legacy implementation branch reads them.
+        # Old scripts remain reproducible, but ``eagle`` is never a public
+        # name in the new interface.
+        _legacy_tree_policy = self.duet_tree_policy
+        if self.duet_p1_tree_policy not in ("off", "on"):
+            raise ValueError(
+                "duet_p1_tree_policy must be off|on; got "
+                f"{self.duet_p1_tree_policy!r}")
+        if self.duet_p2_tree_policy not in ("off", "on"):
+            raise ValueError(
+                "duet_p2_tree_policy must be off|on; got "
+                f"{self.duet_p2_tree_policy!r}")
+        if _legacy_tree_policy is not None:
+            if _legacy_tree_policy == "eagle":
+                self.duet_p2_tree_policy = "on"
+            elif _legacy_tree_policy == "off":
+                self.duet_p2_tree_policy = "off"
+            elif _legacy_tree_policy not in (
+                    "adaptive", "coverage", "confidence", "level",
+                    "frontier"):
+                raise ValueError(
+                    "deprecated duet_tree_policy accepts only off|eagle or "
+                    "a legacy reproduction policy; new runs must use "
+                    "duet_p2_tree_policy=off|on")
+        # Existing P2 code consumes this internal selector name.  Legacy
+        # reproduction modes retain their exact implementation only when an
+        # old script explicitly requested one.
+        self.duet_tree_policy = (
+            _legacy_tree_policy
+            if _legacy_tree_policy in (
+                "adaptive", "coverage", "confidence", "level", "frontier")
+            else ("eagle" if self.duet_p2_tree_policy == "on" else "off")
+        )
+        if self.duet_tree_nv is not None:
+            self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
+        self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
+        if self.duet_p1_roots_per_position < 1:
+            raise ValueError(
+                "duet_p1_roots_per_position must be >= 1; got "
+                f"{self.duet_p1_roots_per_position}")
+        if self.duet_p1_tree_max_nodes < 1 \
+                or self.duet_p2_tree_max_nodes < 1:
+            raise ValueError(
+                "duet_p1_tree_max_nodes and duet_p2_tree_max_nodes must be "
+                "positive")
+
         model = self.model 
         assert os.path.isdir(model)
 
