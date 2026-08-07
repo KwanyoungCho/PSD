@@ -76,18 +76,19 @@ class Config:
     # DUET dynamic trees.  Public policy names deliberately describe whether
     # *our* method is enabled; they do not expose the name of an external
     # baseline that inspired part of the selector.  P2 stays enabled by
-    # default, while P1 is opt-in until its full-graph executor is available.
+    # default; P1 is opt-in while its quality/performance gate is finalized.
     duet_p1_tree_policy: str = "off"          # off | on
     duet_p2_tree_policy: str = "on"           # off | on
     # Deprecated compatibility input for old experiment scripts.  __post_init__
-    # maps ``eagle`` -> P2 ``on`` and then rewrites this field to the internal
-    # policy understood by the existing P2 implementation.  New code and
-    # documentation must use the phase-specific fields above.
+    # preserves an explicitly requested ``eagle`` run as the legacy global
+    # selector.  New code and documentation must use the phase-specific
+    # fields above; public ``on`` maps to the backbone-preserving policy.
     duet_tree_policy: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
     # Per-phase maximum number of nodes sent for one cache hit.  This is a
-    # fixed buffer/cost bound, not a fixed topology: the nodes and parent
-    # relations remain data-dependent.  ``duet_tree_nv`` is a legacy P2 alias.
+    # fixed buffer/cost bound.  Tokens remain data-dependent; the default
+    # R=W backbone policy has a deterministic parent layout, while R<W can
+    # assign surplus lanes dynamically.  ``duet_tree_nv`` is a legacy P2 alias.
     duet_p1_tree_max_nodes: int = 18
     duet_p2_tree_max_nodes: int = 8
     duet_tree_nv: int | None = None
@@ -101,10 +102,9 @@ class Config:
     # 불변, P_iv 상위 R root만 예산 (나머지는 뷰 없음 → #14 키 무효화
     # = 명시적 miss). None = 전 seed (R=W, 종전 동작).
     duet_tree_root_count: int | None = None
-    # Post-hoc calibrated expansion floors (docs/duet/internal/27).  These never
-    # delete a sampled node or a cache root: EAGLE-style rollout evaluates
-    # every root once and keeps low-confidence children as verifiable leaves,
-    # but does not spend a later draft forward below an extreme tail node.
+    # Post-hoc calibrated expansion floors (docs/duet/internal/27).  They are
+    # retained for legacy global-policy reproduction and are deliberately not
+    # allowed to prune the production policy's mandatory first-child path.
     duet_tree_proxy_threshold: float = 0.01
     duet_tree_conf_threshold: float = 0.03
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
@@ -221,8 +221,9 @@ class Config:
                     if self.duet_tree_root_count is not None
                     else self.duet_proxy_total_budget)
         if getattr(self, "duet_tree_policy", "off") == "coverage":
-            # Coverage is a semantic contract, not a tunable R value: every
-            # root retained by the chain selector must receive a backbone.
+            # Legacy coverage always keeps every root retained by the chain
+            # selector.  Production backbone mode below still honours an
+            # explicitly configured root count.
             return self.duet_proxy_total_budget
         if getattr(self, "duet_tree_policy", "off") == "confidence":
             width = self.duet_proxy_total_budget
@@ -430,12 +431,18 @@ class Config:
         # Existing P2 code consumes this internal selector name.  Legacy
         # reproduction modes retain their exact implementation only when an
         # old script explicitly requested one.
-        self.duet_tree_policy = (
-            _legacy_tree_policy
-            if _legacy_tree_policy in (
-                "adaptive", "coverage", "confidence", "level", "frontier")
-            else ("eagle" if self.duet_p2_tree_policy == "on" else "off")
-        )
+        if _legacy_tree_policy == "eagle":
+            # Exact legacy reproduction remains available only when named
+            # explicitly by an old experiment.
+            self.duet_tree_policy = "eagle"
+        elif _legacy_tree_policy in (
+                "adaptive", "coverage", "confidence", "level", "frontier"):
+            self.duet_tree_policy = _legacy_tree_policy
+        else:
+            # Production ``on`` preserves every chain backbone and uses the
+            # remaining response slots for ordered sibling alternatives.
+            self.duet_tree_policy = (
+                "backbone" if self.duet_p2_tree_policy == "on" else "off")
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
@@ -570,11 +577,12 @@ class Config:
                         f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
                 # Dynamic-tree knobs — -O 생존형 raise.
                 if self.duet_tree_policy not in (
-                        "off", "adaptive", "eagle", "coverage", "confidence", "level",
-                        "frontier"):
+                        "off", "adaptive", "eagle", "coverage", "backbone",
+                        "confidence", "level", "frontier"):
                     raise ValueError(
                         f"duet_tree_policy must be "
-                        f"off|adaptive|eagle|coverage|confidence|level|frontier; "
+                        f"off|adaptive|eagle|coverage|backbone|confidence|"
+                        f"level|frontier; "
                         f"got {self.duet_tree_policy!r}")
                 if self.duet_tree_enabled:
                     # D2 pack 가드: 토큰이 비트 0-14를 넘으면 안 됨.
@@ -621,6 +629,24 @@ class Config:
                         raise ValueError(
                             "duet_tree_conf_threshold must be in [0,1]; "
                             f"got {self.duet_tree_conf_threshold}")
+                    if (self.duet_p1_tree_policy == "on"
+                            and self.duet_p1_tree_max_nodes
+                            < self.duet_phase1_k):
+                        raise ValueError(
+                            "P1 tree requires duet_p1_tree_max_nodes >= K1 "
+                            "to retain the complete first-child backbone; "
+                            f"got N1={self.duet_p1_tree_max_nodes}, "
+                            f"K1={self.duet_phase1_k}")
+                    if (self.duet_p1_tree_policy == "on"
+                            and self.duet_p1_tree_max_nodes
+                            > self.duet_phase1_k
+                            * self.duet_tree_c_tensor):
+                        raise ValueError(
+                            "P1 tree max nodes are not generatable by the "
+                            "fixed draft rounds and per-parent fanout; got "
+                            f"N1={self.duet_p1_tree_max_nodes}, "
+                            f"K1={self.duet_phase1_k}, "
+                            f"C={self.duet_tree_c_tensor}")
                     if (self.duet_p2_tree_policy == "on"
                             and self.duet_tree_policy == "coverage"
                             and self.duet_tree_root_count is not None):
@@ -629,7 +655,8 @@ class Config:
                             "duet_tree_policy=coverage: coverage keeps all "
                             "chain roots by definition")
                     if (self.duet_p2_tree_policy == "on"
-                            and self.duet_tree_policy in ("coverage", "adaptive")
+                            and self.duet_tree_policy in (
+                                "coverage", "backbone", "adaptive")
                             and self.duet_tree_nv < self.duet_phase2_k):
                         raise ValueError(
                             f"{self.duet_tree_policy} requires "
@@ -637,7 +664,8 @@ class Config:
                             f"the complete chain backbone; got Nv="
                             f"{self.duet_tree_nv}, K2={self.duet_phase2_k}")
                     if (self.duet_p2_tree_policy == "on"
-                            and self.duet_tree_policy in ("coverage", "adaptive")
+                            and self.duet_tree_policy in (
+                                "coverage", "backbone", "adaptive")
                             and self.duet_tree_nv
                             > self.duet_phase2_k * self.duet_tree_c_tensor):
                         raise ValueError(

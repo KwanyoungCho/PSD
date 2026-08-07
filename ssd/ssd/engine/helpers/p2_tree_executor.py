@@ -298,6 +298,36 @@ def _insert_tree_children_parallel_kernel(
 
 
 @triton.jit
+def _advance_backbone_tips_parallel_kernel(
+    sel_ptr, sel_valid_ptr, fan_ptr, root_ptr, n_ptr,
+    tip_idx_ptr, tip_depth_ptr,
+    W: tl.constexpr,
+):
+    """Advance each root's mandatory first-child path after wide insertion.
+
+    One root has at most one selected tip in a round, so these stores do not
+    contend.  ``n_ptr`` still contains the pre-insertion arena length; the
+    commit kernel runs afterwards.
+    """
+    lane = tl.program_id(0)
+    sv = tl.load(sel_valid_ptr + lane)
+    nf = tl.load(fan_ptr + lane)
+    parent = tl.load(sel_ptr + lane)
+    root = tl.load(root_ptr + parent, mask=sv, other=0)
+    old_tip = tl.load(tip_idx_ptr + root, mask=sv, other=-1)
+    is_tip = sv & (nf > 0) & (parent == old_tip)
+
+    prefix = tl.full((), 0, tl.int64)
+    for prev_lane in tl.static_range(0, W):
+        prefix += tl.where(
+            prev_lane < lane, tl.load(fan_ptr + prev_lane), 0)
+    first_child = tl.load(n_ptr) + prefix
+    tl.store(tip_idx_ptr + root, first_child, mask=is_tip)
+    old_depth = tl.load(tip_depth_ptr + root, mask=is_tip, other=0)
+    tl.store(tip_depth_ptr + root, old_depth + 1, mask=is_tip)
+
+
+@triton.jit
 def _commit_tree_children_parallel_kernel(
     sel_ptr, sel_valid_ptr, fan_ptr, rawq_ptr, root_ptr,
     out_valid_ptr, n_ptr,
@@ -478,10 +508,10 @@ class P2TreeExecutor:
                   if phase == "p1" else
                   getattr(config, "duet_p2_tree_max_nodes",
                           getattr(config, "duet_tree_nv", 8))))
-        # P1 exposes only DUET's dynamic selector.  P2 keeps the internal
+        # P1 exposes only DUET's production selector.  P2 keeps the internal
         # legacy names solely so historical parity tests/runs remain
-        # reproducible; the public P2 switch maps ``on`` to ``eagle``.
-        self.policy = ("eagle" if phase == "p1" else
+        # reproducible; the public P2 switch maps ``on`` to ``backbone``.
+        self.policy = ("backbone" if phase == "p1" else
                        getattr(config, "duet_tree_policy", "eagle"))
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
         if R > W:
@@ -775,7 +805,7 @@ class P2TreeExecutor:
             OUT_N=self.out_tok.numel(),
             OUT_ROWS=self.out_valid.numel(), BLOCK=256)
         policy = self.policy
-        if policy in ("coverage", "eagle", "adaptive"):
+        if policy in ("coverage", "backbone", "eagle", "adaptive"):
             # Stored children are not forward cells.  A single parent
             # forward already samples C ordered WOR children, so retaining
             # siblings up to NV does not add model calls or change the fixed
@@ -875,7 +905,7 @@ class P2TreeExecutor:
             par = sel.unsqueeze(1).expand(W, C).reshape(-1)
             rq = raws.double().reshape(-1)
             lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
-            if _global and (W > 10 or ar.anc_words > 1):
+            if W > 10 or ar.anc_words > 1:
                 _mark_selected_parents_kernel[(triton.cdiv(W, 32),)](
                     sel, sel_valid, ar.cell, ar.state,
                     ROUND=f, W=W, BLOCK=32)
@@ -887,6 +917,10 @@ class P2TreeExecutor:
                     self.out_tok, self.out_par, self.out_sib,
                     self.out_rawq, self.out_pcell, self.out_valid,
                     W=W, C=C, NV=NV, ANC_WORDS=ar.anc_words)
+                if not _global:
+                    _advance_backbone_tips_parallel_kernel[(W,)](
+                        sel, sel_valid, fan, ar.root, ar.n,
+                        tip_idx, tip_depth, W=W)
                 _commit_tree_children_parallel_kernel[(R,)](
                     sel, sel_valid, fan, rq, ar.root,
                     self.out_valid, ar.n, W=W, R=R, C=C)

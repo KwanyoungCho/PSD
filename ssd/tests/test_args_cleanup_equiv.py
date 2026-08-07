@@ -60,9 +60,13 @@ class TestOldNewEquivalence(unittest.TestCase):
         dynamic = _mk({})
         self.assertEqual(dynamic.duet_p1_tree_policy, "off")
         self.assertEqual(dynamic.duet_p2_tree_policy, "on")
-        self.assertEqual(dynamic.duet_tree_policy, "eagle")
+        self.assertEqual(dynamic.duet_tree_policy, "backbone")
         self.assertEqual(dynamic.duet_p2_seed_count,
                          dynamic.duet_proxy_total_budget)
+
+        smaller_r = _mk({}, duet_tree_root_count=6)
+        self.assertEqual(smaller_r.duet_tree_policy, "backbone")
+        self.assertEqual(smaller_r.duet_p2_active_root_count, 6)
 
         chain = _mk({}, duet_p2_tree_policy="off")
         self.assertEqual(chain.duet_p2_tree_policy, "off")
@@ -94,6 +98,14 @@ class TestOldNewEquivalence(unittest.TestCase):
         self.assertEqual(c.speculate_k, 13)
         self.assertEqual(c.duet_tree_wire_nodes, 18)
         self.assertEqual(c.duet_response_token_width, 18)
+
+    def test_p1_tree_node_envelope_keeps_a_complete_backbone(self):
+        with self.assertRaisesRegex(ValueError, "N1=8, K1=9"):
+            _mk({}, duet_p1_tree_policy="on",
+                duet_p1_tree_max_nodes=8)
+        with self.assertRaisesRegex(ValueError, "N1=28, K1=9, C=3"):
+            _mk({}, duet_p1_tree_policy="on",
+                duet_p1_tree_max_nodes=28)
 
     def test_env_free_equals_old_env_style(self):
         # Old style: champion scripts exported both envs.

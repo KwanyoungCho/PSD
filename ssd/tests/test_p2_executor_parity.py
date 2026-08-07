@@ -110,7 +110,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         V, H, HKV, D = 128, 4, 2, 64
         cfg = _MiniCfg()
         cfg.duet_tree_policy = policy
-        if policy in ("coverage", "eagle", "adaptive"):
+        if policy in ("coverage", "backbone", "eagle", "adaptive"):
             cfg.duet_tree_root_count = cfg.duet_proxy_total_budget
         max_blocks = 8
         cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
@@ -210,7 +210,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         dev = "cuda:0"
         V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
         cfg = _MiniCfg()
-        cfg.duet_tree_policy = "eagle"
+        cfg.duet_tree_policy = "backbone"
         max_blocks = 8
         cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
                             dtype=torch.float16, device=dev)
@@ -244,12 +244,20 @@ class TestExecutorModuleParity(unittest.TestCase):
         for name, expected in ref.items():
             self.assertTrue(torch.equal(expected, getattr(ex, name)), name)
         vt_p1 = ex.out_valid.cpu()
-        self.assertTrue(bool((vt_p1 >= 1).all()))
-        self.assertTrue(bool((vt_p1 <= ex.NV).all()))
+        self.assertEqual(vt_p1.tolist(), [ex.NV] * ex.W)
+        par = ex.view_par.cpu()
+        sib = ex.view_sib.cpu()
+        for r in range(ex.R):
+            cur = -1
+            for depth in range(ex.F):
+                kids = [j for j in range(int(vt_p1[r]))
+                        if int(par[r, j]) == cur and int(sib[r, j]) == 0]
+                self.assertTrue(kids, (r, depth, vt_p1[r].item()))
+                cur = kids[0]
 
-    def test_z_coverage_executor_keeps_chain_plus_siblings_for_all_roots(self):
+    def test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots(self):
         dev = "cuda:0"
-        ex, cfg, PAGE, V = self._mk(dev, policy="coverage")
+        ex, cfg, PAGE, V = self._mk(dev, policy="backbone")
         ctx0 = PAGE + 21
         p0 = (ctx0 + PAGE - 1) // PAGE
         ex.prepare_bucket(p0)

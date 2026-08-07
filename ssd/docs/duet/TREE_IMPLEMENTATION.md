@@ -22,8 +22,9 @@
    이것이며, 실제 forward가 한 번으로 합쳐진 것은 아니다.
 2. 첫 P2 forward는 proxy가 고른 모든 root를 평가한다. 기본 설정은
    `R=W=10`이며, `R>W`는 첫 round에서 모든 root를 평가할 수 없으므로 거부한다.
-3. 동적 `on` 정책은 root proxy 확률과 지금까지의 draft token 확률의 곱으로
-   경로 우선순위를 정하고, 매 round 전역 상위 부모를 동적으로 선택한다.
+3. production `on` 정책은 chain과 같은 첫-child 주 경로를 모든 root에서 끝까지
+   보존하고, 추가 응답 공간을 ordered sibling에 쓴다. `R<W`인 실험에서는 남는
+   forward lane을 누적 경로 확률이 높은 대체 경로에 동적으로 배정한다.
 4. temperature가 0보다 클 때, 한 부모의 여러 자식은 ordered sampling without
    replacement로 생성되고 target은 이에 맞는 residual ladder로 lossless하게
    검증한다.
@@ -32,9 +33,9 @@
 6. 잘못된 page/slot/position, 비활성 lane, 중복 scatter, graph bucket 공유,
    runtime attention plan 등의 주요 안정성 문제를 수정했다.
 7. target tree verify 준비는 실모델 P2 hit 기준 1.72ms에서 0.99ms로 줄였다.
-8. 같은 고정-shape 실행기를 P1에도 확장했다. P1은 position별 root 수만
-   균등하게 정하고, 첫 forward 이후 부모 선택과 topology는 누적 draft
-   confidence에 따라 동적으로 바뀐다. K1=9의 모든 forward 사이 host 개입이 없다.
+8. 같은 고정-shape 실행기를 P1에도 확장했다. P1은 position별 root 수를
+   균등하게 정하고 각 root에 K1=9 주 경로와 sibling을 만든다. 아홉 번의
+   forward 사이 host 개입은 없고, root별 응답 상한은 18이다.
 9. P1의 `F*W>63` 형상을 위해 조상 관계를 63-bit word 여러 개로 확장했고,
    P1/P2가 서로 다른 최대 node 수를 사용하도록 공통 응답 wire와 target verifier를
    일반화했다.
@@ -47,12 +48,11 @@
 모두 `on`으로 둔다. 과거 `duet_tree_policy` 값들은 저장된 실험의 재현용 내부
 호환 경로로만 남아 있다.
 
-이 변경은 **동적 정책이 이미 모든 workload의 성능 champion이라는 선언이 아니다.**
-저장된 과거 80-prompt 장기 결과에서는 동적 정책이 낮은 확률 root를 너무 일찍
-멈춰 chain보다 P2 기여가 낮았다. 반면 사후 calibration으로 정한 expansion
-threshold는 두 seed에서 P2 AL을 회복시켰다. 현재 기본값은 동적 정책을 더
-발전시키기 위한 연구 선택이며, 논문의 최종 성능 주장은 동일 workload의 다중
-seed gate로 다시 확정해야 한다.
+이 변경은 **tree가 이미 모든 workload의 성능 champion이라는 선언이 아니다.**
+과거 전역 점수 정책은 낮은 확률 root의 주 경로를 끊어 P1/P2 AL과 cache hit을
+크게 낮췄다. 따라서 production `on`은 우선 chain의 깊이와 root coverage를
+보존한다. 그 위에서 sibling이 AL을 얼마나 늘리고 추가 target 검증비를 상쇄하는지는
+동일 workload의 다중 seed gate로 다시 확정해야 한다.
 
 ### 1.3 현재 기본 설정
 
@@ -66,8 +66,8 @@ seed gate로 다시 확정해야 한다.
 | N1 | `duet_p1_tree_max_nodes` | 18 | P1 root 하나의 응답 node 상한 |
 | N2 | `duet_p2_tree_max_nodes` | 8 | P2 root 하나의 응답 node 상한 |
 | U1 | `duet_p1_roots_per_position` | 2 | P1 context마다 만드는 시작 root 수 |
-| τproxy | `duet_tree_proxy_threshold` | 0.01 | 이보다 낮은 root 경로의 추가 확장 중단 |
-| τconf | `duet_tree_conf_threshold` | 0.03 | 이보다 낮은 node의 추가 확장 중단 |
+| τproxy | `duet_tree_proxy_threshold` | 0.01 | legacy 전역 정책 calibration 값; production에는 미적용 |
+| τconf | `duet_tree_conf_threshold` | 0.03 | legacy 전역 정책 calibration 값; production에는 미적용 |
 
 W와 R을 혼동하면 안 된다. W는 모델 forward의 물리 폭이고 R은 의미 있는 root
 수다. 기본은 R=W이며, P2의 첫 forward에서 열 개 root가 모두 실제 평가된다.
@@ -157,16 +157,20 @@ dedup 이전 통신 후보만 늘린다.
 
 ## 4. P2 동적 트리 구성 알고리즘
 
-### 4.1 기존 전역 confidence tree와의 관계
+### 4.1 production 정책: 주 경로 보존 + ordered sibling
 
-핵심은 현재까지 관측한 누적 경로 확률로 전체 leaf를 비교해 다음에 확장할 부모를
-고른다는 점이다. DUET의 기존 draft model, target early-exit proxy,
-temperature>0 sampling과 residual verifier를 유지하면서 topology만 전역
-confidence 우선순위로 선택한다. 공개 CLI에서는 이 정책을 단순히 `on`이라 부른다.
+공개 CLI의 `on`은 각 root의 첫 번째 자식을 K2 round 끝까지 반드시 확장한다.
+따라서 tree가 나쁘더라도 같은 root에서 기존 K2 chain이 제공하던 깊이를 잃지는
+않는다. root별 N2 공간에서 이 K2개 주 경로 node를 먼저 예약하고, 남는
+`N2-K2`개를 주 경로 부모에서 함께 sampled된 두 번째/세 번째 형제에 쓴다.
 
-일반적인 greedy EAGLE처럼 이미 생성한 후보를 점수만 보고 임의로 재정렬하지
-않는다. DUET의 여러 형제는 순서가 제안분포의 일부이므로, 부모별 fanout 수를
-sampling 전에 정하고 그 순서를 끝까지 보존한다.
+이 계약을 추가한 이유는 기존 전역 confidence 실험이 점수가 낮은 root의
+주 경로 자체를 탈락시켜 P1/P2 conditional AL과 다음 cache key coverage를 함께
+무너뜨렸기 때문이다. 그 전역 정책은 명시적 legacy `duet_tree_policy=eagle`
+실험만 재현하며 public `on`에는 사용하지 않는다.
+
+DUET의 형제 순서는 proposal 분포의 일부다. 부모별 fanout은 sampling 전에 정하고
+ordered without-replacement 순서를 target residual verifier까지 그대로 보존한다.
 
 ### 4.2 node 상태와 점수
 
@@ -191,8 +195,8 @@ logpri = log P_proxy(r) + sum log q(x_j | parent_j).
 ```
 
 현재 기본 정책에는 beta, 제곱근, depth bonus를 넣지 않는다. `beta=0.5`는
-과거 confidence root-budget 정책의 매개변수로 남아 있지만 현재 동적 경로
-점수에는 쓰이지 않는다.
+과거 confidence root-budget 정책의 매개변수로 남아 있지만 production
+backbone 점수에는 쓰이지 않는다.
 
 ### 4.3 고정 실행 틀 안의 동적 내용
 
@@ -209,74 +213,66 @@ root별 저장 가능 node 수는 N2다.
 
 각 round `f = 0,...,F-1`은 다음 순서로 실행한다.
 
-1. **확장 후보 만들기**
-   유효하고 아직 확장하지 않았으며 `depth == f`, `depth < F`인 node만 후보가
-   된다. `f=0`에서는 모든 root가 후보다. `f>0`에서는 root proxy와 node의
-   `raw_q`가 각각 정적 threshold 이상이어야 한다.
-2. **root별 남은 view 공간 예약**
-   root가 이후 round에도 최소한 한 node를 보관할 여지를 남기도록 남은 N2와
-   future round 수로 quota를 계산한다. 이 제약 때문에 전역 점수가 높더라도 한
-   root가 모든 W lane을 무제한 독점할 수는 없다.
-3. **전역 부모 선택**
-   후보를 `logpri` 내림차순, 동률은 기존 순서로 안정 정렬한다. root quota를
-   통과한 전역 상위 W개를 이번 forward 부모로 정한다.
-4. **fanout 결정**
-   token을 뽑기 전에 각 부모가 보관할 자식 수를 정한다. 첫 pass에서 가능한
-   선택 부모마다 한 자식을 배정하고, 남은 root budget이 있으면 동일한 전역
-   우선순위로 두 번째, 세 번째 형제를 배정한다. 상한은 C다.
-5. **forward 입력 준비**
+1. **주 경로 tip 예약**
+   각 root에서 직전 round의 첫 번째 자식을 현재 tip으로 기억한다. 남은 node
+   공간이 있는 모든 tip은 이번 forward에서 반드시 한 lane을 받는다.
+2. **추가 부모 선택**
+   `R<W`이면 의무 tip을 넣고도 lane이 남는다. 이때 유효하고 아직 확장하지 않은
+   같은 depth의 node를 `logpri` 내림차순, 동률은 기존 순서로 안정 정렬해 남은
+   lane을 채운다. 기본 `R=W=10`에서는 모든 lane이 열 root의 tip에 쓰이므로
+   대체 가지를 다시 forward하는 추가 lane은 없다.
+3. **fanout 결정**
+   token을 뽑기 전에 각 부모가 보관할 자식 수를 정한다. tip의 첫 자식과 남은
+   round의 주 경로 공간을 먼저 예약하고, root별 N2 여유를 두 번째/세 번째
+   ordered sibling에 배정한다. 상한은 C다.
+4. **forward 입력 준비**
    lane의 input id는 선택된 부모 node의 token이고, rope position은
    `root_rope_base + parent_depth`다. attention은 공통 prefix, 해당 root의
    glue context, 부모의 조상 forward cell과 자기 자신만 볼 수 있도록 packed
    mask에 직접 기록한다.
-6. **draft forward와 분포 계산**
+5. **draft forward와 분포 계산**
    실제 draft transformer를 W 폭으로 한 번 실행한다. logits에 draft
    temperature와 `sampler_x`를 적용한 `q`를 만든다.
-7. **ordered without-replacement sampling**
+6. **ordered without-replacement sampling**
    각 token의 `E_v ~ Exp(1)`을 만들고 `q_v / E_v` 상위 C개를 고른다. 이
    exponential race는 같은 분포에서 순차 비복원 추출한 순서와 같다. 선택된
    token의 확률은 형제 제거 후 재정규화한 값이 아니라 원래 `q_v`인 `raw_q`로
    저장한다.
-8. **자식 삽입**
+7. **자식 삽입**
    앞서 정한 fanout만큼 lane-major, sibling-major 순서로 자식을 arena와
    `[R,N2]` 출력 view에 기록한다. 자식 점수는
    `parent.logpri + log(child.raw_q)`다.
 
-중요한 현재 제한은 round-synchronous라는 점이다. round f에서는 정확히
-depth f인 node만 고른다. 이때 탈락한 depth-f node가 더 늦은 round에 다시
-등장하는 일반 priority queue는 아니다. 이 제약은 고정 4-round Graph를 단순하게
-유지하지만, 낮은 proxy root의 깊이를 너무 일찍 끊는 원인이 될 수 있다.
+현재 구현은 round-synchronous다. round f에서는 정확히 depth f인 node만 고른다.
+`R<W`에서 이번 round에 선택되지 않은 대체 node가 더 늦은 round에 다시 등장하는
+일반 priority queue는 아니다. 다만 root별 첫-child tip은 이 경쟁에서 제외되지
+않으므로 기본 chain 깊이는 보존된다.
 
-### 4.5 threshold의 의미
+### 4.5 threshold의 현재 상태
 
-기본값 `proxy=0.01`, `confidence=0.03`은 node 자체를 삭제하지 않는다.
+`proxy=0.01`, `confidence=0.03` calibration과 적용 코드는 legacy 전역 정책의
+재현을 위해 남아 있다. production backbone 정책은 AL 회귀를 막기 위해 이
+threshold로 주 경로를 자르지 않으며, 현재 기본 `R=W` 형상에서는 두 값이 부모
+선택을 바꾸지 않는다. 향후 threshold를 다시 적용하려면 첫 자식은 무조건
+보존하고 **추가 sibling 또는 R<W의 추가 lane만** 줄여야 한다.
 
-- 모든 root는 첫 forward에서 평가된다.
-- 낮은 confidence로 이미 생성된 token은 target이 검증할 leaf로 남는다.
-- threshold는 그 leaf 아래에 다음 draft forward를 더 쓰지 않게 할 뿐이다.
+### 4.6 기본 P2 형상의 정확한 topology
 
-사후 trace에서 proxy<0.01인 root 슬롯은 41.46%였지만 실제 hit 기여는 3.906%,
-confidence<0.03인 확장 후보는 37.25%였지만 전체 유용 확장 기여는 1.279%였다.
-이 통계를 다른 exit layer, 모델, temperature나 dataset에 그대로 옮기지 말고
-calibration 도구로 다시 정해야 한다.
+기본 `W=R=10,F=4,C=3,N2=8`에서는 root마다 fanout이 `[3,3,1,1]`이다.
+첫 형제만 따라가면 깊이 4 chain이 되고, 앞 두 부모에는 각각 두 개의 대체
+sibling이 붙어 총 8 node가 된다. token id와 확률은 매 replay 달라지지만 이
+기본 형상의 parent layout은 고정이다. 이것은 CUDA Graph의 제한이 아니라
+`R=W`에서 모든 root의 chain 깊이를 보존하기로 한 정책 결과다.
 
-### 4.6 `coverage`와의 차이
-
-`coverage`는 모든 root에 깊이 4의 첫-child backbone을 강제하고 남은 Nv를
-형제로 채운다. 기본 `W=R=10,F=4,C=3,Nv=8`에서는 보통 root마다
-`[3,3,1,1]`의 고정 view가 나온다. 이는 CUDA Graph의 한계가 아니라 정책의
-결과다.
-
-동적 `on` 정책은 첫 root forward만 보장하고 이후 부모는 전역 경로 점수로 고른다.
-그래서 높은 확률 root에 더 많은 node를 줄 수 있지만, 낮은 확률 root가 실제
-hit했을 때 view가 chain보다 얕을 수 있다. 이것이 동적 정책의 현재 핵심 품질
-문제이며, coverage를 재현 비교군으로 삭제하지 않은 이유다.
+완전 전역 동적 parent 선택은 더 유연하지만, 현재 formal gate에서 주 경로를
+잘라 품질이 크게 하락했다. 따라서 다시 도입하려면 “모든 root의 K2 backbone”을
+hard constraint로 둔 별도 정책이어야 한다.
 
 ### 4.7 P1 동적 tree specialization
 
 P1에는 같은 step의 target proxy가 아직 없으므로 P2의 `P_iv`를 사용할 수 없다.
-대신 시작 후보를 만드는 부분만 균등하게 하고, 첫 forward 이후에는 P2와 같은
-전역 동적 확장을 사용한다.
+대신 시작 후보를 만드는 부분을 균등하게 하고, 각 시작 root에서 P2와 같은
+첫-child 주 경로 보존 정책을 사용한다.
 
 1. **현재 context 집합**
    일반 응답에서는 recovery와 chain token들, 이전 tree hit에서는 recovery와
@@ -292,9 +288,9 @@ P1에는 같은 step의 target proxy가 아직 없으므로 P2의 `P_iv`를 사�
    모든 실제 root를 반드시 평가한다. 캡처 폭은 `context_bucket*U1`이고 실제
    context가 bucket보다 적으면 나머지 root는 score 0인 안전 padding이다.
 4. **이후 K1-1 rounds**
-   `q(root|context) * product q(child|parent)`를 누적 점수로 사용해 모든 root의
-   현재-depth 부모를 전역 비교한다. P1에는 proxy threshold를 적용하지 않으며,
-   공통 confidence threshold는 이미 생성된 leaf를 버리지 않고 추가 확장만 막는다.
+   각 root의 첫-child tip을 반드시 확장한다. 현재 기본 P1 캡처도 `R=W`이므로
+   모든 lane이 tip에 쓰이고, sibling은 같은 tip forward에서 추가 model call 없이
+   함께 뽑는다. P1에는 proxy threshold를 적용하지 않는다.
 5. **응답 view와 cache key**
    각 시작 root는 `(sequence, context id, root token)` key와 최대 N1개의 node
    view를 갖는다. 다음 request가 그 key를 hit하면 해당 root의 tree 하나만 공통
@@ -318,6 +314,10 @@ P1/P2의 node 상한은 서로 독립적이다. 순차 chain 깊이와 일반 lo
 맞춘다. 따라서 P1 18-node 설정은 chain logits를 18행으로 키우지는 않지만,
 P1 tree hit의 target 검증은 recovery를 포함해 최대 19행이고 tree 전용 parent-q
 버퍼도 18행이다. 이것은 추가 AL과 교환하는 실제 비용이므로 결과에서 함께 잰다.
+
+기본 P1 `K1=9,C=3,N1=18`에서는 root마다 아홉 개의 첫-child 주 경로와 아홉
+개의 sibling 공간을 갖는다. 따라서 N1=9는 분기 없이 chain만 담아 잘못된
+설정이며, Config는 `N1<K1` 또는 생성 불가능한 `N1>K1*C`를 시작 전에 거부한다.
 
 ---
 
@@ -550,6 +550,29 @@ pre-tree ancestor `e29c4b6`과 현재 `off`를 같은 짧은 workload에서 비�
 
 공통 latency 차이는 0.04ms였다. 과거 80+ TPS headline과 최근 수치는 서버 부하,
 prompt 수와 output 길이가 다르므로 tree 공통 코드 회귀 증거가 아니다.
+
+### 8.6 P1/P2 전역 선택 formal gate와 정책 폐기
+
+P1을 추가한 뒤 public `on`을 전역 누적점수 선택에 연결한 첫 formal gate는
+명확한 실패였다. 4 datasets × 20 prompts, output 384, profiler off 조건의
+대표 결과는 다음과 같다.
+
+| server/seed | arm | TPS | tok/step | cache hit | P1 hit | P1AL | P2 hit | P2AL |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| eslab18/42 | chain | 75.24 | 4.10 | 0.82 | 0.568 | 4.10 | 0.256 | 1.86 |
+| eslab18/42 | P1 global | 35.04 | 2.60 | 0.71 | 0.376 | 1.92 | 0.335 | 1.40 |
+| eslab18/42 | P2 global | 57.80 | 3.48 | 0.76 | 0.449 | 4.10 | 0.312 | 1.00 |
+| eslab17/123 | chain | 77.73 | 3.97 | 0.82 | 0.566 | 3.98 | 0.250 | 1.68 |
+| eslab17/123 | P1 global | 37.15 | 2.55 | 0.71 | 0.373 | 1.83 | 0.333 | 1.40 |
+| eslab17/123 | P2 global | 62.96 | 3.44 | 0.76 | 0.447 | 4.05 | 0.312 | 1.02 |
+| eslab17/123 | P1+P2 global | 33.70 | 2.43 | 0.62 | 0.315 | 2.11 | 0.304 | 0.91 |
+
+원인은 node 상한이 아니었다. 첫 round 뒤 전체 후보를 점수로만 경쟁시키면서
+root의 첫-child tip도 탈락했고, P1은 보장돼야 할 깊이 9를, P2는 깊이 4를
+잃었다. 이에 public `on`을 backbone-preserving 정책으로 교체했다. P1 N1=18은
+`9 backbone + 최대 9 sibling`, P2 N2=8은 `4 backbone + 최대 4 sibling`의
+응답 공간이다. 위 표는 새 정책의 성능 결과가 아니라 폐기한 정책의 반례이며,
+새 정책은 별도 paired gate로 다시 측정해야 한다.
 
 ---
 
@@ -809,16 +832,17 @@ SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
 | `--duet_p2_tree_max_nodes` | 8 | P2 root별 최대 응답 node N2 |
 | `--duet_tree_root_count` | `None` | P2 R; 동적 P2는 기본 R=W |
 | `--duet_tree_c_tensor` | 3 | 부모별 ordered 비복원 자식 상한 C, 허용 1--8 |
-| `--duet_tree_proxy_threshold` | 0.01 | root를 삭제하지 않고 낮은 root의 후속 확장만 중단 |
-| `--duet_tree_conf_threshold` | 0.03 | leaf를 삭제하지 않고 낮은-q node의 후속 확장만 중단 |
-| `--duet_tree_fanout_policy` | `backbone` | 과거 정책 재현용; 현재 동적 경로는 global fanout 사용 |
+| `--duet_tree_proxy_threshold` | 0.01 | legacy 전역 정책용; production backbone에는 현재 미적용 |
+| `--duet_tree_conf_threshold` | 0.03 | legacy 전역 정책용; production backbone에는 현재 미적용 |
+| `--duet_tree_fanout_policy` | `backbone` | 첫-child 깊이 보존 후 sibling 배정 |
 | `--duet_tree_beta` | 0.5 | 과거 root-budget 재현용; 현재 동적 점수에는 사용 안 함 |
 
 Config는 다음을 시작 전에 거부한다.
 
 - `K1+K2 != k`, `K2>K1`
 - `R>W`
-- phase별 최대 node 수>`speculate_k`
+- `P1 max nodes<K1`, `P1 max nodes>K1*C`
+- backbone P2에서 `P2 max nodes<K2` 또는 `P2 max nodes>K2*C`
 - vocabulary>32768인 packed P_iv wire
 - tree와 `SSD_DUET_PROXY_ON_DRAFT=1` 또는
   `SSD_DUET_EXIT_TOPM_GATHER=1`의 조합
@@ -899,12 +923,13 @@ verify mask/row bucket, key와 commit path를 `[B,...]` 고정 buffer로 분리�
 
 ### 13.3 동적 정책의 다음 품질 개선
 
-현재 가장 큰 문제는 전역 score 자체보다 depth-synchronous 선택과 root별 최소
-깊이의 부재다. 다음 후보는 무작정 parameter sweep이 아니라 다음 두 정책의
-paired ablation이다.
+root별 최소 깊이의 부재는 production backbone 계약으로 해결했다. 다음 후보는
+무작정 parameter sweep이 아니라 이 계약을 유지하는 두 정책의 paired
+ablation이다.
 
-1. 낮은 proxy root도 최소 depth 2까지 보장하고 이후만 전역 선택
-2. round별 depth 제한을 완화한 고정-capacity deferred frontier
+1. 첫-child 주 경로는 항상 보존하고, 추가 sibling 수만 사후 calibration된
+   proxy/confidence threshold로 동적으로 줄이기
+2. `R<W`의 남는 lane에서만 round별 depth 제한을 완화한 fixed-capacity frontier
 
 두 방식 모두 모든 root의 cache key는 보존하고, sampling 전 fanout 결정 및
 ordered residual 규약을 유지해야 한다. 판정은 P2AL이 아니라 P2 contribution,
@@ -921,11 +946,10 @@ P1 비회귀, tok/step과 wall TPS를 함께 사용한다.
 
 ### 13.5 P1 tree
 
-P1 동적 tree의 코드·CUDA Graph·multiword ancestry·공통 wire 배선은 완료됐다.
-2026-08-07 실모델 짧은 스모크(8 prompts, output 64)는 end-to-end 종료했고 P1
-hit 0.517, conditional AL 3.68을 기록했다. 이 작은 표본은 기능 검증일 뿐 chain
-대비 품질 또는 TPS 우위를 뜻하지 않는다. 다음 성능 실험은 P1만 on, P2만 on,
-둘 다 on의 세 분해 arm을 충분한 prompt/길이와 순서 회전으로 비교해야 한다.
+P1 tree의 코드·CUDA Graph·multiword ancestry·공통 wire 배선은 완료됐다. 과거
+전역 선택 스모크와 formal 수치는 새 backbone-preserving 정책의 성능 근거로
+재사용하지 않는다. 다음 성능 실험은 P1만 on, P2만 on, 둘 다 on의 세 분해 arm을
+충분한 prompt/길이와 순서 회전으로 다시 비교해야 한다.
 
 ---
 
@@ -933,8 +957,8 @@ hit 0.517, conditional AL 3.68을 기록했다. 이 작은 표본은 기능 검�
 
 현재 증거로 주장할 수 있는 내용:
 
-- 고정 CUDA Graph shape 안에서도 token과 topology가 replay마다 달라지는 동적
-  tree를 구현할 수 있다.
+- 고정 CUDA Graph shape 안에서도 token과 (`R<W`에서는) 선택 부모가 replay마다
+  달라지는 tree를 구현할 수 있다.
 - P1/P2의 phase 내부 forward 사이 host 개입을 제거하면서 temperature>0 ordered
   residual sampling과 lossless target verification을 유지했다.
 - sibling branch가 실제 accepted path에 쓰이며 특정 gate에서 P2AL/P2 기여를
@@ -945,7 +969,7 @@ hit 0.517, conditional AL 3.68을 기록했다. 이 작은 표본은 기능 검�
 
 아직 주장하면 안 되는 내용:
 
-- 현재 동적 정책이 모든 dataset에서 chain 또는 과거 coverage보다 빠르다.
+- 현재 backbone-preserving 정책이 모든 dataset에서 chain보다 빠르다.
 - 두 seed threshold 결과가 일반적인 optimal threshold다.
 - 짧은 smoke의 TPS/AL이 논문 최종 성능이다.
 - all-page warmup과 상주 메모리 비용이 0이다.
@@ -997,8 +1021,9 @@ target/draft p50 및 startup memory를 함께 보고한다.
 8. EAGLE식 전역 경로 점수 정책을 구현하고 장기 반례를 확인했다.
 9. 사후 calibration으로 낮은 확률 leaf의 확장만 멈추는 threshold를 도입했다.
 10. tree update kernel과 target verify 준비를 최적화했다.
-11. 연구 방향 결정에 따라 전역 confidence 동적 정책을 P2 기본 경로로 전환하고
-    이 문서를 현재 단일 기준으로 확정했다. chain과 coverage는 비교/회귀용으로
-    보존한다.
+11. 전역 confidence 정책을 P2 기본 경로로 전환했으나 장기 및 P1/P2 formal
+    gate에서 root 주 경로를 끊는 품질 반례를 확인했다.
 12. P1 동적 tree, multiword ancestry, phase별 공통 wire와 full-P1 CUDA Graph를
     추가하고 공개 CLI를 P1/P2 `off|on`으로 정리했다.
+13. public `on`을 backbone-preserving 정책으로 교체하고 P1 N1=18(9+9),
+    P2 N2=8(4+4)의 깊이 보존 계약을 코드와 CUDA parity 테스트로 고정했다.

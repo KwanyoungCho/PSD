@@ -282,7 +282,7 @@ def alloc_policy_root_budgets(piv: torch.Tensor, policy: str, total: int,
     The draw identities are deliberately not inputs.  Budget/topology is
     fixed before WOR sampling, preserving the lossless verifier contract.
     """
-    if policy in ("coverage", "eagle", "adaptive"):
+    if policy in ("coverage", "backbone", "eagle", "adaptive"):
         return torch.where(
             piv > 0,
             torch.full_like(piv, int(cap), dtype=torch.int64),
@@ -1132,7 +1132,9 @@ def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
     # ``confidence`` is the canonical, low-knob policy.  Like EAGLE-2 it
     # advances level-synchronously and ranks candidates by cumulative path
     # confidence.  Legacy ``level`` remains as an exact compatibility name.
-    if policy in ("level", "confidence", "coverage", "eagle", "adaptive"):
+    if policy in (
+            "level", "confidence", "coverage", "backbone", "eagle",
+            "adaptive"):
         elig = elig & (pool.depth[:n] == fwd)
     idx = torch.nonzero(elig).flatten()
     if idx.numel() == 0:
@@ -1318,7 +1320,8 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
                         and i == tip_idx[int(pool.root[i])]:
                     tip_idx[int(pool.root[i])] = child
         eval_log.append((sel, fan))
-    requested = (R * nv if policy in ("coverage", "eagle", "adaptive")
+    requested = (R * nv if policy in (
+        "coverage", "backbone", "eagle", "adaptive")
                  else F_total * W)
     pool.alloc_stats = _alloc_stats(pool, budgets, R, requested=requested)
     return pool, eval_log
@@ -1516,7 +1519,8 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                   f"cpu_sync={(_t4-_t3)*1e3:.2f} "
                   f"pool={(_t5-_t4)*1e3:.2f}", flush=True)
         eval_log.append((sel, fan[:n_sel]))
-    requested = (R * nv if policy in ("coverage", "eagle", "adaptive")
+    requested = (R * nv if policy in (
+        "coverage", "backbone", "eagle", "adaptive")
                  else F_total * W)
     pool.alloc_stats = _alloc_stats(pool, budgets, R, requested=requested)
     if os.environ.get("SSD_TREE_ALLOC_CHECK", "0") == "1":
@@ -2165,7 +2169,7 @@ def _arena_select(ar: TreeArena, policy, W, f, depth_cap, tip_idx,
     idxs = torch.arange(cap, device=dev)
     elig = (idxs < ar.n) & (ar.state == 0) & (ar.depth < depth_cap) \
         & ar.valid
-    if policy in ("level", "confidence", "coverage"):
+    if policy in ("level", "confidence", "coverage", "backbone"):
         elig = elig & (ar.depth == f)
     # 합성키 1회 정렬: mand에 +1000 오프셋 (logpri ∈ (-100, 0] 범위 —
     # float64 정밀 손실 없음; 그룹 내 상대 순서 = logpri 순 보존 =
@@ -2420,7 +2424,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         piv.cpu(), policy, total=F_total * W, beta=beta, cap=nv).to(
             dev, non_blocking=True)
     ar._budgets = budgets
-    ar._requested = (R * nv if policy in ("coverage", "eagle", "adaptive")
+    ar._requested = (R * nv if policy in (
+        "coverage", "backbone", "eagle", "adaptive")
                      else F_total * W)
     remaining = budgets.clone()
     # CPU 경로와 동일 정밀도: f32 log 후 double 확장 (리뷰6 —

@@ -71,7 +71,7 @@ P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 
 - `--duet_p1_tree_policy off`: 기존 위치별 fanout chain을 그대로 사용한다.
 - `--duet_p1_tree_policy on`: 각 현재 context에서 같은 수의 시작 후보를 만들고,
-  이후에는 누적 draft confidence가 높은 노드를 전역적으로 확장한다.
+  각 root의 깊이 K1 첫-child 경로를 보존하면서 sibling 대안을 함께 만든다.
 
 동적 P1의 시작 단계는 다음과 같다.
 
@@ -80,12 +80,13 @@ P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 2. 각 context에서 `duet_p1_roots_per_position`개 후보를 만든다. 이미 반환된 다음
    token은 coverage 중복을 피하기 위해 후보에서 제외하지만, 선택한 후보의 점수는
    제외 후 재정규화 확률이 아니라 원래 draft 분포 `q(x|context)`다.
-3. 첫 P1 forward에서는 모든 실제 root를 평가한다. 그 뒤 `K1-1`번은
-   `root q × 경로상의 child q`가 높은 부모를 전체 root에서 선택한다.
+3. 첫 P1 forward에서는 모든 실제 root를 평가한다. 그 뒤 `K1-1`번도 각 root의
+   첫-child tip을 반드시 평가해 기존 chain의 깊이 9를 보존한다. sibling token은
+   같은 forward의 ordered sampling에서 얻으므로 별도 draft forward가 필요 없다.
 4. root 하나가 보낼 수 있는 node 수는 `duet_p1_tree_max_nodes`로 제한한다.
    이 값은 기본 18이다. 순차 draft 깊이 `K1=9`와 응답 node 수는 별도다.
-   깊이 9 경로 하나가 생겨도 같은 비율만큼 대체 가지를 담도록 P2의
-   `K2=4, 최대 8`과 같은 `최대 node/깊이=2`를 적용한다.
+   깊이 9 주 경로와 최대 9개 sibling을 담도록 P2의 `K2=4, 최대 8`과 같은
+   `최대 node/깊이=2`를 적용한다. 9로 두면 chain만 담고 분기는 하나도 못 담는다.
 
 기본 동적 P1 예시는 `K1=9`, position당 root 2개, root당 최대 node 18개다.
 일반 10-context step의 실제 root는 20개이며, P1 forward 9번 전체와 그 사이의
@@ -175,11 +176,12 @@ draft forward다.
 
 ---
 
-## 6. P2 동적 tree 정책
+## 6. P2 tree 정책
 
-P2 동적 tree는 `--duet_p2_tree_policy on`으로 켠다. DUET의 draft model과
-temperature>0 residual verifier를 유지하고, 다음에 확장할 부모를 누적확률로
-선택한다. 외부 기법 이름은 공개 정책 이름으로 사용하지 않는다.
+P2 tree는 `--duet_p2_tree_policy on`으로 켠다. DUET의 draft model과
+temperature>0 residual verifier를 유지하면서, 모든 proxy root의 기존 K2 chain
+깊이를 먼저 보존하고 남는 응답 node를 ordered sibling에 쓴다. 외부 기법 이름은
+공개 정책 이름으로 사용하지 않는다.
 
 ### 6.1 기호
 
@@ -213,24 +215,25 @@ score(r,x_1...x_d)
 log_score = log P_proxy(root) + sum(log q(child|parent))
 ```
 
-를 계산한다. 현재 동적 정책에는 beta, proxy 제곱근, depth bonus를 넣지 않는다.
+를 계산한다. 이 점수는 `R<W`에서 남는 forward lane에 넣을 대체 부모의 순위를
+정할 때 사용한다. 기본 `R=W=10`에서는 모든 lane이 열 root의 의무 주 경로에
+쓰인다. beta, proxy 제곱근, depth bonus는 넣지 않는다.
 
 ### 6.3 round별 동작
 
 각 P2 round는 다음 순서다.
 
-1. 아직 확장하지 않은 현재 depth의 node를 후보로 만든다.
-2. 첫 round에서는 R개 root를 모두 평가한다.
-3. 이후 round에서는 누적 경로 점수가 높은 부모를 전체 root에서 W개까지 고른다.
-4. root별 N2 공간과 남은 round를 고려해 한 root가 모든 lane을 독점하지 않도록
-   quota를 적용한다.
-5. token을 뽑기 전에 각 부모의 fanout을 결정한다. 먼저 부모마다 첫 자식을
-   배정하고, 여유가 있는 높은 점수 부모에 두 번째와 세 번째 형제를 배정한다.
-6. W개 부모를 한 번의 draft forward로 평가한다.
-7. 선택된 자식을 arena와 root-local `[R,N2]` view에 기록한다.
+1. 첫 round에서는 R개 root를 모두 평가한다.
+2. 이후 round에서는 각 root의 첫 번째 자식 tip을 의무 부모로 예약한다.
+3. `R<W`이면 남는 lane만 누적 경로 점수가 높은 대체 부모에 배정한다.
+4. token을 뽑기 전에 향후 주 경로 node를 먼저 예약하고, N2의 남은 공간을
+   두 번째와 세 번째 ordered sibling에 배정한다.
+5. W개 부모를 한 번의 draft forward로 평가한다.
+6. 선택된 자식을 arena와 root-local `[R,N2]` view에 기록한다.
 
-CUDA Graph의 shape는 항상 `F×W`로 고정이지만, 각 lane의 부모, token, fanout,
-mask와 topology는 입력 확률에 따라 매 replay 달라진다.
+CUDA Graph의 shape는 항상 `F×W`로 고정이다. token과 확률은 매 replay 달라지고,
+`R<W`에서는 대체 lane의 부모도 달라진다. 기본 `R=W,F=4,C=3,N2=8`의 parent
+layout은 root마다 `[3,3,1,1]`: 깊이 4 주 경로와 네 sibling으로 고정된다.
 
 ### 6.4 ordered sampling without replacement
 
@@ -247,6 +250,10 @@ q_v / E_v
 형제의 수와 순서는 sampling 전에 확정되며 target verifier까지 그대로 유지된다.
 sampling 결과를 본 다음 마음에 드는 자식만 남기면 proposal 분포가 바뀌므로
 허용하지 않는다.
+
+이전의 완전 전역 선택 구현은 root의 주 경로도 점수 경쟁에서 탈락시켰다.
+formal gate에서 P1AL 약 4.0→1.8--2.1, P2AL 약 1.7--1.9→0.9--1.4로 하락해
+폐기했다. 현재 정책은 먼저 이 품질 회귀를 구조적으로 막는 기준선이다.
 
 ### 6.5 expansion threshold
 
@@ -564,6 +571,9 @@ W는 P2 forward 폭이고 R은 실제 root 수다. 현재는 cache coverage를 �
 
 #### Proxy threshold와 confidence threshold
 
+calibration 도구와 threshold 적용은 과거 전역 선택 정책의 재현을 위해 남아 있다.
+현재 production backbone 정책에는 두 threshold가 적용되지 않는다. 다시 사용할
+때는 주 경로를 자르지 않고 추가 sibling 또는 `R<W`의 추가 lane에만 적용해야 한다.
 새 모델/temperature/exit layer에서는 threshold 0/0으로 trace를 수집하고 실제
 사후 hit와 accepted child를 라벨로 threshold를 다시 계산한다.
 
