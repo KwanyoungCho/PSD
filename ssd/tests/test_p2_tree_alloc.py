@@ -1074,6 +1074,16 @@ class TestTreeWire(unittest.TestCase):
         self.assertEqual(int(z.abs().sum()), 0)
         self.assertEqual(z.numel(), tree_wire_ints_len(NV))
 
+        # A smaller phase-local view can ride in a larger shared P1/P2 wire.
+        wire_nv = 13
+        buf = pack_tree_ints(v, 0, wire_nv)
+        got = parse_tree_ints(buf, wire_nv)
+        self.assertEqual(got["valid"], int(v["valid"][0]))
+        self.assertEqual(got["tok"][:NV].tolist(), v["tok"][0].tolist())
+        self.assertEqual(got["tok"][NV:].tolist(), [0] * (wire_nv - NV))
+        self.assertEqual(got["parent_local"][NV:].tolist(),
+                         [0] * (wire_nv - NV))
+
 
 class TestVerifyRows(unittest.TestCase):
     def test_rows_and_mask(self):

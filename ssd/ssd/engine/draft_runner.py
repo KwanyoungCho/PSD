@@ -497,6 +497,9 @@ class DraftRunner(ModelRunner):
         self._tree_wire_ints = None
         self._tree_wire_parent_q = None
         self._tree_hit_root = None
+        self._tree_hit_views = None
+        self._tree_hit_phase = None
+        self._tree_hit_nv = None
 
         # Init miss slots with valid random logits so token IDs are in-vocab (fixes B>1 crash)
         out_logits = torch.empty((B, K, V), dtype=self.hf_config.torch_dtype, device=self.device).uniform_()
@@ -662,34 +665,43 @@ class DraftRunner(ModelRunner):
                 out_logits[sel, :_cache_w] = self.tree_cache_logits[idx[sel]]
                 if self.config.use_eagle:
                     out_activations[sel, :_cache_w] = self.tree_cache_activations[idx[sel]]
-                # === T3.4-b3: P2-tree hit 서빙 (B=1) — 뷰가 체인 행을 대체.
+                # Dynamic-tree hit serving (B=1).  P1 and P2 have separate
+                # executor/view buffers but share one max-padded wire.
                 # out_tokens = 뷰 노드(생성 순서), valid_k = 유효 노드 수 →
                 # 기존 extend/prepare 기계가 트리 행을 그대로 나른다 (창 =
                 # [rec]+뷰, scratch 셀 선형 — 리뷰4 row 계약). topology와
                 # parent_q는 wire 트리 블록(b2 스플라이스)으로 동승.
-                _tviews = getattr(self, "_tree_views", None)
+                _phase = int(phase_source[0]) if B == 1 else 0
+                _tviews = (getattr(self, "_p1_tree_views", None)
+                           if _phase == 1 else
+                           getattr(self, "_tree_views", None))
                 if (_tviews is not None and B == 1
                         and bool(cache_hits[0])
-                        and int(phase_source[0]) == 2):
+                        and _phase in (1, 2)):
                     from ssd.engine.helpers.p2_tree import (
                         pack_tree_ints, parse_tree_ints,
                         validate_tree_ints)
-                    _root = int(idx[0]) - self._last_n_draft_keys
-                    _nv = self.config.duet_tree_nv
+                    _root = (int(idx[0]) if _phase == 1 else
+                             int(idx[0]) - self._last_n_draft_keys)
+                    _phase_nv = (self.config.duet_p1_tree_max_nodes
+                                 if _phase == 1 else
+                                 self.config.duet_p2_tree_max_nodes)
+                    _wire_nv = self.config.duet_tree_wire_nodes
                     _n_valid = int(_tviews["valid"][_root])
                     if _n_valid > 0:
-                        out_tokens[0, :_nv] = \
-                            _tviews["tok"][_root].to(self.device)
+                        out_tokens[0, :_phase_nv] = \
+                            _tviews["tok"][_root, :_phase_nv].to(self.device)
                         valid_k[0] = _n_valid
-                        _packed_ints = pack_tree_ints(_tviews, _root, _nv)
+                        _packed_ints = pack_tree_ints(
+                            _tviews, _root, _wire_nv)
                         # One bounded readback replaces the old scalar
                         # ``int(_packed_ints[0])`` sync.  Reject malformed
                         # topology before it can enter the async wire and
                         # strand target TP ranks in different code paths.
                         _packed_cpu = _packed_ints.detach().cpu()
-                        _parsed = parse_tree_ints(_packed_cpu, _nv)
+                        _parsed = parse_tree_ints(_packed_cpu, _wire_nv)
                         validate_tree_ints(
-                            _parsed, _nv, self.hf_config.vocab_size)
+                            _parsed, _wire_nv, self.hf_config.vocab_size)
                         if int(_parsed["valid"]) != _n_valid:
                             raise RuntimeError(
                                 f"tree serve invariant: pack valid="
@@ -700,12 +712,18 @@ class DraftRunner(ModelRunner):
                         # [R,nv,V] 물질화 제거 — docs/duet/internal/22)
                         _pqc = _tviews["parent_q_cells"][_root].clamp(
                             min=0).to(_tviews["cell_logits"].device)
-                        self._tree_wire_parent_q = \
-                            _tviews["cell_logits"].index_select(
-                                0, _pqc).to(
-                                device=self.device,
-                                dtype=out_logits.dtype).unsqueeze(0)
+                        _pq_live = _tviews["cell_logits"].index_select(
+                            0, _pqc).to(device=self.device,
+                                       dtype=out_logits.dtype)
+                        self._tree_wire_parent_q = torch.zeros(
+                            1, _wire_nv, self.hf_config.vocab_size,
+                            dtype=out_logits.dtype, device=self.device)
+                        self._tree_wire_parent_q[0, :_phase_nv] = \
+                            _pq_live[:_phase_nv]
                         self._tree_hit_root = _root
+                        self._tree_hit_views = _tviews
+                        self._tree_hit_phase = _phase
+                        self._tree_hit_nv = _phase_nv
                         _trace_prefix = os.environ.get(
                             "SSD_TREE_TOPO_TRACE", "")
                         if _trace_prefix:
@@ -720,6 +738,7 @@ class DraftRunner(ModelRunner):
                                     as _f:
                                 _f.write(_json.dumps({
                                     "step": int(self._request_step_id),
+                                    "phase": _phase,
                                     "root_rank": _root,
                                     "valid": _vn,
                                     "par": [int(x) for x in
@@ -892,7 +911,7 @@ class DraftRunner(ModelRunner):
                 from ssd.engine.helpers.p2_tree import (
                     parse_tree_ints, tree_parent_path,
                     validate_tree_ints)
-                _nv_s = self.config.duet_tree_nv
+                _nv_s = self.config.duet_tree_wire_nodes
                 _served_tree = parse_tree_ints(_served, _nv_s)
                 validate_tree_ints(
                     _served_tree, _nv_s, self.hf_config.vocab_size)
@@ -994,11 +1013,11 @@ class DraftRunner(ModelRunner):
                         phase_source.reshape(-1),
                         valid_k.reshape(-1).to(torch.int64),
                         out_tokens.reshape(-1).to(torch.int64)]
-        if self.config.duet_tree_policy != "off":
+        if self.config.duet_tree_enabled:
             # T3.4-b2: 트리 블록 동승 (max-padded — hit 없으면 zero 블록,
             # 크기·호출 순서 불변). 뷰 내용 채움은 respond 경로(b3).
             _tb = getattr(self, "_tree_wire_ints", None)
-            _nv = self.config.duet_tree_nv
+            _nv = self.config.duet_tree_wire_nodes
             from ssd.engine.helpers.p2_tree import tree_wire_ints_len
             if _tb is None:
                 _tb = torch.zeros(B * tree_wire_ints_len(_nv),
@@ -1009,10 +1028,10 @@ class DraftRunner(ModelRunner):
         _mev_ds = _mr_s("draft_send_response")
         dist.send(fused_response, dst=0, group=self.async_pg)
         dist.send(out_logits[:, :K, :].contiguous(), dst=0, group=self.async_pg)
-        if self.config.duet_tree_policy != "off":
+        if self.config.duet_tree_enabled:
             _pq = getattr(self, "_tree_wire_parent_q", None)
             if _pq is None:
-                _pq = torch.zeros(B, self.config.duet_tree_nv,
+                _pq = torch.zeros(B, self.config.duet_tree_wire_nodes,
                                   self.hf_config.vocab_size,
                                   dtype=out_logits.dtype, device=self.device)
             dist.send(_pq.contiguous(), dst=0, group=self.async_pg)
@@ -2157,7 +2176,7 @@ class DraftRunner(ModelRunner):
         wire_N = self.config.duet_proxy_wire_N
         chosen_pos = buf[:B * wire_N].view(B, wire_N)
         chosen_tok = buf[B * wire_N:2 * B * wire_N].view(B, wire_N)
-        if self.config.duet_tree_policy != "off":
+        if self.config.duet_tree_enabled:
             # T2.0 (v6 D2): dedup **이전** 단일 지점에서 unpack —
             # selector/캐시/rollout에는 순수 토큰만 흘린다.
             from ssd.engine.helpers.p2_tree import unpack_piv

@@ -167,7 +167,7 @@ class ModelRunner:
         # 확인). tree policy 게이트 — off면 무할당 (OFF 경로 불변).
         self.tree_verify_wrappers = None
         if (not is_draft) and getattr(config, "duet_enabled", False) \
-                and getattr(config, "duet_tree_policy", "off") != "off":
+                and getattr(config, "duet_tree_enabled", False):
             self._init_tree_verify_wrappers()
         
         if self.verbose: print(f'INSIDE MODEL RUNNER INIT, DRAFT={is_draft}', flush=True)
@@ -244,20 +244,17 @@ class ModelRunner:
         (B=1 — v6: B>1은 tree 게이트 OFF).
         """
         import flashinfer
-        nv = int(self.config.duet_tree_nv)
-        rows = nv + 1                          # +1 = recovery/bonus 행
+        nv = int(self.config.duet_tree_wire_nodes)
         max_blocks = (self.config.max_model_len + self.block_size - 1) \
             // self.block_size
         self._tree_workspace = torch.zeros(
             128 * 1024 * 1024, dtype=torch.uint8, device=self.device)
         self.tree_verify_wrappers = {}
-        # A valid tree keeps at least the K2-deep backbone (four nodes in the
-        # production shape), so exact 1/2/3-node model graphs would never be
-        # selected.  Use two-node intervals up to Nv and always include the
-        # configured maximum.  For Nv=8 this is {4,6,8}; a future Nv=12 gets
-        # {4,6,8,10,12} instead of padding 7--9 nodes all the way to 12.
-        first_bucket = min(int(self.config.duet_phase2_k), nv)
-        verify_buckets = set(range(first_bucket, nv + 1, 2)) | {nv}
+        # Both phases share these fixed-shape target buckets.  Small trees
+        # pad to four rows; larger capacities add every second width and the
+        # exact maximum (e.g. Nv=13 -> {4,6,8,10,12,13}).
+        from ssd.engine.helpers.p1_tree import tree_node_buckets
+        verify_buckets = tree_node_buckets(nv)
         for nv_b in sorted(verify_buckets):
             r = nv_b + 1
             w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
@@ -700,8 +697,8 @@ class ModelRunner:
                              else f' (K2==K1, k2 SKIPPED)'),
                           flush=True)
                     # T3.2: P2-tree verify bucket capture (policy != off)
-                    if getattr(self.config, "duet_tree_policy", "off") \
-                            != "off" and getattr(
+                    if getattr(self.config, "duet_tree_enabled", False) \
+                            and getattr(
                                 self, "tree_verify_wrappers", None):
                         from ssd.engine.helpers.cudagraph_helpers import (
                             capture_tree_verify_cudagraph)
@@ -931,7 +928,7 @@ class ModelRunner:
         cfg = self.config
         if (self.is_draft or self.rank != 0
                 or not getattr(cfg, "duet_enabled", False)
-                or getattr(cfg, "duet_tree_policy", "off") == "off"
+                or not getattr(cfg, "duet_tree_enabled", False)
                 or not getattr(cfg, "duet_exit_replica", False)
                 or not hasattr(self, "_duet_lm_head_replica")
                 or not self.tree_verify_wrappers):
@@ -1018,7 +1015,11 @@ class ModelRunner:
                 and not getattr(cfg, "duet_exit_topm_gather", False)):
             widths = sorted({int(cfg.duet_phase1_k),
                              int(cfg.duet_phase2_k)})
-            pack_scores = getattr(cfg, "duet_tree_policy", "off") != "off"
+            # One proxy wire schema for all requests.  A P1-tree hit also
+            # needs scores even when P2 tree generation is disabled, so
+            # chain and tree callbacks both pack them whenever either phase
+            # can produce a tree.
+            pack_scores = getattr(cfg, "duet_tree_enabled", False)
             for k in widths:
                 self._chain_proxy_graphs_prebuilt[k] = ChainProxyCUDAGraph(
                     k=k,
@@ -1032,7 +1033,7 @@ class ModelRunner:
                   f"(K={widths})", flush=True)
 
         if (os.environ.get("SSD_TREE_PROXY_GRAPH", "1") == "0"
-                or getattr(cfg, "duet_tree_policy", "off") == "off"
+                or not getattr(cfg, "duet_tree_enabled", False)
                 or not self.tree_verify_wrappers):
             return
         max_valid = max(self.tree_verify_wrappers)
@@ -1376,7 +1377,7 @@ class ModelRunner:
         # communication.
         _ev_setup = duet_record("verify_setup")
         _ev_meta = duet_record("tree_verify_meta_cpu")
-        nv = int(cfg.duet_tree_nv)
+        nv = int(cfg.duet_tree_wire_nodes)
         # The SHM command is already an ordinary CPU list.  Re-wrapping it
         # as a torch tensor allocated storage every tree hit and then all
         # validation below immediately converted its scalar fields back to

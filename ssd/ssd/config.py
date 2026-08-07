@@ -181,19 +181,18 @@ class Config:
 
     @property
     def duet_tree_wire_nodes(self) -> int:
-        """Fixed token/tree capacity of one draft response.
+        """Fixed topology-metadata capacity of one draft response.
 
-        Chain rows keep their own K1/K2 ``valid_k``.  A tree row may use its
-        phase-specific maximum, while the transport itself stays fixed-shape
-        at the maximum of all reachable response kinds.
+        Tokens continue to use the ordinary ``speculate_k`` response tensor.
+        Only the optional tree topology/parent-q sidecar uses this capacity.
+        Keeping these two widths separate prevents enabling P1 trees from
+        changing the established chain message or K1/K2 semantics.
         """
-        k1 = int(self.duet_phase1_k or self.speculate_k)
-        k2 = int(self.duet_phase2_k or self.speculate_k)
         p1 = (int(self.duet_p1_tree_max_nodes)
               if self.duet_p1_tree_policy == "on" else 0)
         p2 = (int(self.duet_p2_tree_max_nodes)
               if self.duet_p2_tree_policy == "on" else 0)
-        return max(k1, k2, p1, p2)
+        return max(1, p1, p2)
 
     @property
     def duet_p2_active_root_count(self) -> int:
@@ -546,7 +545,7 @@ class Config:
                 if self.duet_p2_budget is not None and self.duet_p2_budget < 1:
                     raise ValueError(
                         f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
-                # P2-tree 노브 검증 (T1.1) — -O 생존형 raise.
+                # Dynamic-tree knobs — -O 생존형 raise.
                 if self.duet_tree_policy not in (
                         "off", "adaptive", "eagle", "coverage", "confidence", "level",
                         "frontier"):
@@ -554,11 +553,11 @@ class Config:
                         f"duet_tree_policy must be "
                         f"off|adaptive|eagle|coverage|confidence|level|frontier; "
                         f"got {self.duet_tree_policy!r}")
-                if self.duet_tree_policy != "off":
+                if self.duet_tree_enabled:
                     # D2 pack 가드: 토큰이 비트 0-14를 넘으면 안 됨.
                     if self.hf_config.vocab_size > 32768:
                         raise ValueError(
-                            f"P2-tree pack requires vocab_size <= 32768 "
+                            f"DUET tree pack requires vocab_size <= 32768 "
                             f"(D2 — token bits 0-14); got "
                             f"{self.hf_config.vocab_size}")
                     if self.duet_tree_fanout_policy not in (
@@ -571,17 +570,22 @@ class Config:
                         raise ValueError(
                             f"duet_tree_c_tensor must be in [1,8]; "
                             f"got {self.duet_tree_c_tensor}")
-                    if not (4 <= self.duet_tree_nv <= 10):
-                        raise ValueError(
-                            f"duet_tree_nv must be in [4,10]; "
-                            f"got {self.duet_tree_nv}")
-                    # b3 서빙 계약: 뷰가 응답 out_tokens[K_max] 폭에 실림.
-                    _k_max = max(self.duet_phase1_k, self.duet_phase2_k)
-                    if self.duet_tree_nv > _k_max:
-                        raise ValueError(
-                            f"duet_tree_nv ({self.duet_tree_nv}) must be "
-                            f"<= max(K1,K2)={_k_max} (response wire width)")
-                    if self.duet_tree_root_count is not None and \
+                    # Tree responses use the existing speculate_k token
+                    # tensor.  Unlike the old P2-only rule, the tree is not
+                    # constrained to max(K1,K2); it may use the full response
+                    # capacity (e.g. P1 Nv=13 with K1=9/K2=4).
+                    for _phase, _enabled, _nodes in (
+                            ("P1", self.duet_p1_tree_policy == "on",
+                             self.duet_p1_tree_max_nodes),
+                            ("P2", self.duet_p2_tree_policy == "on",
+                             self.duet_p2_tree_max_nodes)):
+                        if _enabled and not (1 <= _nodes <= self.speculate_k):
+                            raise ValueError(
+                                f"{_phase} tree max nodes must be in "
+                                f"[1,speculate_k={self.speculate_k}]; "
+                                f"got {_nodes}")
+                    if self.duet_p2_tree_policy == "on" \
+                            and self.duet_tree_root_count is not None and \
                             self.duet_tree_root_count < 1:
                         raise ValueError(
                             f"duet_tree_root_count must be >= 1; got "
@@ -594,20 +598,23 @@ class Config:
                         raise ValueError(
                             "duet_tree_conf_threshold must be in [0,1]; "
                             f"got {self.duet_tree_conf_threshold}")
-                    if (self.duet_tree_policy == "coverage"
+                    if (self.duet_p2_tree_policy == "on"
+                            and self.duet_tree_policy == "coverage"
                             and self.duet_tree_root_count is not None):
                         raise ValueError(
                             "duet_tree_root_count cannot be set with "
                             "duet_tree_policy=coverage: coverage keeps all "
                             "chain roots by definition")
-                    if (self.duet_tree_policy in ("coverage", "adaptive")
+                    if (self.duet_p2_tree_policy == "on"
+                            and self.duet_tree_policy in ("coverage", "adaptive")
                             and self.duet_tree_nv < self.duet_phase2_k):
                         raise ValueError(
                             f"{self.duet_tree_policy} requires "
                             f"duet_tree_nv >= K2 to keep "
                             f"the complete chain backbone; got Nv="
                             f"{self.duet_tree_nv}, K2={self.duet_phase2_k}")
-                    if (self.duet_tree_policy in ("coverage", "adaptive")
+                    if (self.duet_p2_tree_policy == "on"
+                            and self.duet_tree_policy in ("coverage", "adaptive")
                             and self.duet_tree_nv
                             > self.duet_phase2_k * self.duet_tree_c_tensor):
                         raise ValueError(
@@ -617,7 +624,8 @@ class Config:
                             f"and C={self.duet_tree_c_tensor}")
                     # 이슈 #27: tip 의무 lane이 W(=P2 예산)를 초과하면
                     # rollout이 구조적으로 불가 — config에서 조기 차단.
-                    if (self.duet_tree_root_count is not None
+                    if (self.duet_p2_tree_policy == "on"
+                            and self.duet_tree_root_count is not None
                             and self.duet_tree_root_count
                             > self.duet_proxy_total_budget):
                         # 리뷰9-2: p2_budget 명시 여부와 무관하게 유효
@@ -631,7 +639,8 @@ class Config:
                     # forward — 글루 행(nv+1)이 W를 넘으면 못 싣는다
                     # (R8+nv8 sweep 크래시; assert는 -O로 제거됨).
                     _w_p2 = self.duet_proxy_total_budget
-                    if self.duet_tree_nv + 1 > _w_p2:
+                    if (self.duet_p2_tree_policy == "on"
+                            and self.duet_tree_nv + 1 > _w_p2):
                         raise ValueError(
                             f"duet_tree_nv+1 ({self.duet_tree_nv + 1}) must "
                             f"be <= P2 budget W ({_w_p2}) — TREE_GLUE row "
@@ -642,12 +651,12 @@ class Config:
                     # 계약(P_iv 관통)을 깨뜨린다. 지원 전까지 명시 차단.
                     if self.duet_proxy_on_draft:
                         raise ValueError(
-                            "duet_tree_policy != off is not supported with "
+                            "DUET dynamic trees are not supported with "
                             "SSD_DUET_PROXY_ON_DRAFT=1 (v1 — raw-proxy 변환 "
                             "분기 미구현)")
                     if self.duet_exit_topm_gather:
                         raise ValueError(
-                            "duet_tree_policy != off is not supported with "
+                            "DUET dynamic trees are not supported with "
                             "SSD_DUET_EXIT_TOPM_GATHER=1 (v1 — dict-wire에 "
                             "P_iv pack 미구현)")
 

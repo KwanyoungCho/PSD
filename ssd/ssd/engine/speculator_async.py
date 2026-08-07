@@ -108,13 +108,15 @@ class SpeculatorAsync(SpeculatorBase):
         # valid_k: per-row suffix length (K_long for draft-sourced/miss, K_short for proxy-sourced
         #   in DUET hybrid; uniform K for non-DUET / pre-Phase-4 DUET).
         _tree_extra = 0
-        if getattr(self.config, "duet_tree_policy", "off") != "off":
+        if getattr(self.config, "duet_tree_enabled", False):
             from ssd.engine.helpers.p2_tree import tree_wire_ints_len
-            _tree_extra = B * tree_wire_ints_len(self.config.duet_tree_nv)
+            _tree_extra = B * tree_wire_ints_len(
+                self.config.duet_tree_wire_nodes)
         self._tree_wire_extra = _tree_extra
         self._fused_response = torch.empty(3 * B + B * self.K + _tree_extra, dtype=torch.int64, device=d)
         self._logits_q = torch.empty(B, self.K, self.vocab_size, dtype=self.draft_dtype, device=d)
-        self._tree_parent_q = (torch.empty(B, self.config.duet_tree_nv,
+        self._tree_parent_q = (torch.empty(
+                                           B, self.config.duet_tree_wire_nodes,
                                            self.vocab_size, dtype=self.draft_dtype, device=d)
                                if _tree_extra else None)
         self._extend_counts = torch.zeros(B, dtype=torch.int64, device=d)

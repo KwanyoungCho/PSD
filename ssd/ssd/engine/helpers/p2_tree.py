@@ -1693,8 +1693,14 @@ def tree_wire_ints_len(nv: int) -> int:
 
 
 def pack_tree_ints(view, hit_root: int, nv: int) -> torch.Tensor:
-    """hit root의 뷰를 고정 길이 int64 블록으로. hit_root<0 → 전부 0
-    (miss/P1 step — max-padded 규약상 크기는 동일)."""
+    """Pack one root into a common fixed-width topology sidecar.
+
+    ``view`` may have a smaller phase-local width than ``nv`` (for example,
+    P2 has eight nodes while the shared P1/P2 wire has thirteen).  The live
+    prefix is copied and the remainder stays zero-padded.  This keeps one
+    collective shape without forcing either executor to allocate the other
+    phase's larger output tensors.
+    """
     dev = (view["valid"].device
            if torch.is_tensor(view["valid"]) else torch.device("cpu"))
     out = torch.zeros(tree_wire_ints_len(nv), dtype=torch.int64,
@@ -1702,14 +1708,23 @@ def pack_tree_ints(view, hit_root: int, nv: int) -> torch.Tensor:
     if hit_root < 0:
         return out
     r = hit_root
-    out[0] = view["valid"][r]
+    view_nv = int(view["tok"].shape[1])
+    copy_n = min(view_nv, int(nv))
+    valid = view["valid"][r]
+    if __debug__ and int(valid) > copy_n:
+        raise RuntimeError(
+            f"tree view valid={int(valid)} exceeds pack width {copy_n}")
+    out[0] = valid
     out[1] = view["u_valid"][r]
     out[2] = 1                                   # epoch/버전 자리 (T2.4)
     o = 3
-    out[o:o + nv] = view["tok"][r]
-    out[o + nv:o + 2 * nv] = view["parent_local"][r]
-    out[o + 2 * nv:o + 3 * nv] = view["sib_order"][r]
-    out[o + 3 * nv:o + 4 * nv] = view["parent_q_ref"][r]
+    out[o:o + copy_n] = view["tok"][r, :copy_n]
+    out[o + nv:o + nv + copy_n] = \
+        view["parent_local"][r, :copy_n]
+    out[o + 2 * nv:o + 2 * nv + copy_n] = \
+        view["sib_order"][r, :copy_n]
+    out[o + 3 * nv:o + 3 * nv + copy_n] = \
+        view["parent_q_ref"][r, :copy_n]
     return out
 
 

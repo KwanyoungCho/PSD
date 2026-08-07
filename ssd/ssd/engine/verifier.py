@@ -49,7 +49,7 @@ class Verifier(VerifierBase):
         if _prebuilt is not None:
             self._tree_proxy_graphs = _prebuilt
         elif (os.environ.get("SSD_TREE_PROXY_GRAPH", "1") != "0"
-                and getattr(_cfg, "duet_tree_policy", "off") != "off"
+                and getattr(_cfg, "duet_tree_enabled", False)
                 and self.device.type == "cuda"
                 and getattr(self.target_model_runner, "rank", 0) == 0):
             from ssd.engine.helpers.p2_tree import TreeProxyCUDAGraph
@@ -275,7 +275,7 @@ class Verifier(VerifierBase):
             # 양쪽에서 쓰므로 여기서 한 번 계산.
             _tree_meta_arg = None
             self._active_tree_proxy_graph = None
-            if (getattr(config, "duet_tree_policy", "off") != "off"
+            if (getattr(config, "duet_tree_enabled", False)
                     and getattr(speculate_result, "tree_ints", None)
                     is not None):
                 _ti_row = speculate_result.tree_ints[0]
@@ -286,12 +286,21 @@ class Verifier(VerifierBase):
                     # This readback already existed as .tolist().
                     from ssd.engine.helpers.p2_tree import (
                         parse_tree_ints, validate_tree_ints)
-                    _nv_t = int(config.duet_tree_nv)
+                    _nv_t = int(config.duet_tree_wire_nodes)
                     _ti_checked = parse_tree_ints(
                         torch.tensor(_tree_meta_arg, dtype=torch.int64),
                         _nv_t)
                     validate_tree_ints(
                         _ti_checked, _nv_t, config.hf_config.vocab_size)
+                    _phase_t = int(speculate_result.phase_source[0]) \
+                        if speculate_result.phase_source is not None else 0
+                    _phase_cap = (int(config.duet_p1_tree_max_nodes)
+                                  if _phase_t == 1 else
+                                  int(config.duet_p2_tree_max_nodes))
+                    if int(_tree_meta_arg[0]) > _phase_cap:
+                        raise RuntimeError(
+                            f"tree valid={int(_tree_meta_arg[0])} exceeds "
+                            f"phase {_phase_t} cap={_phase_cap}")
                     if _tree_meta_arg[0] != _step_lookahead:
                         raise RuntimeError(
                             f"tree wire invariant: meta valid="
@@ -321,7 +330,7 @@ class Verifier(VerifierBase):
                 # 트리 step: 노드 j의 제안분포 q = 부모 셀 logits —
                 # parent_q_ref로 gather (backbone 캐시 행 logits_q는
                 # 트리 노드의 q가 아니다). α̂ = min(1, p^E/q_parent).
-                _nv_t = int(config.duet_tree_nv)
+                _nv_t = int(config.duet_tree_wire_nodes)
                 _pq_ref = speculate_result.tree_ints[
                     0, 3 + 3 * _nv_t:3 + 4 * _nv_t][:_step_lookahead]
                 logits_q = speculate_result.parent_q_logits[
@@ -343,7 +352,7 @@ class Verifier(VerifierBase):
                 # 리뷰3-10: target temp=0 + 트리 미정의 — draft측 WOR
                 # 게이트와 동일하게 명시 차단 (조용한 오분포 금지).
                 raise NotImplementedError(
-                    "P2-tree requires target temperature > 0 "
+                    "DUET dynamic tree requires target temperature > 0 "
                     "(temp-0 tree verify is gated; use chain policy)")
 
             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead,
@@ -541,7 +550,7 @@ class Verifier(VerifierBase):
         from ssd.engine.helpers.p2_tree import (
             parse_tree_ints, tree_verify_walk_tensor, q_probs_from_logits)
         cfg = self.target_model_runner.config
-        nv = int(cfg.duet_tree_nv)
+        nv = int(cfg.duet_tree_wire_nodes)
         ti = parse_tree_ints(speculate_result.tree_ints[0].cpu(), nv)
         pq = speculate_result.parent_q_logits[0].float()         # [nv, V] GPU
         td = float(temperatures_draft[0])
@@ -723,7 +732,7 @@ class Verifier(VerifierBase):
         if exit_logits.dim() == 2:
             exit_logits = exit_logits.view(B, vk + 1, -1)
         V = exit_logits.shape[-1]
-        nv = int(config.duet_tree_nv)
+        nv = int(config.duet_tree_wire_nodes)
         valid = int(tree_meta[0])
         par = [int(x) for x in tree_meta[3 + nv:3 + 2 * nv][:valid]]
         sib = [int(x) for x in tree_meta[3 + 2 * nv:3 + 3 * nv][:valid]]
@@ -789,7 +798,7 @@ class Verifier(VerifierBase):
             chosen_pos = torch.cat([chosen_pos, chosen_pos.new_zeros(pad)])
             chosen_tok = torch.cat([chosen_tok, chosen_tok.new_zeros(pad)])
             top_v = torch.cat([top_v, top_v.new_zeros(pad)])
-        if getattr(config, "duet_tree_policy", "off") != "off":
+        if getattr(config, "duet_tree_enabled", False):
             chosen_tok = pack_piv(chosen_tok, top_v)
         if _detail_profile:
             _mc_tree("tree_proxy_rank_candidates", _ev_rank)
@@ -1011,7 +1020,7 @@ class Verifier(VerifierBase):
             _, top_idx = P_iv.flatten(1).topk(wire_N, dim=-1)                 # [B, wire_N]
             chosen_pos = top_idx // top_k                                     # [B, wire_N], ∈ [0, K]
             chosen_tok = correction_topk_ids.flatten(1).gather(1, top_idx)    # [B, wire_N]
-            if config.duet_tree_policy != "off":
+            if config.duet_tree_enabled:
                 # T2.0 (v6 D2): 라이브 P_iv를 wire에 동승 (양자화 pack).
                 from ssd.engine.helpers.p2_tree import pack_piv
                 _piv_chosen = P_iv.flatten(1).gather(1, top_idx)
