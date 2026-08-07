@@ -2409,6 +2409,11 @@ class DraftRunner(ModelRunner):
             self._p2exec_stats = {}
         self._p2exec_stats[reason] = self._p2exec_stats.get(reason, 0) + 1
 
+    def _p1exec_count(self, reason):
+        if not hasattr(self, "_p1exec_stats"):
+            self._p1exec_stats = {}
+        self._p1exec_stats[reason] = self._p1exec_stats.get(reason, 0) + 1
+
     def _p2_step_state(self, rope0, step_slot_maps, step_context_lens,
                        dbt, F, W, root_count=None):
         """Classify one P2 step with exactly one device-to-host readback.
@@ -2581,6 +2586,7 @@ class DraftRunner(ModelRunner):
         finally:
             _mc("p2_output_convert", event)
 
+    @torch.inference_mode()
     def _run_p1_tree_step(self, partial_tree_decode_args, glue_logits,
                           gd_for_fork, context_glue_rows,
                           context_depth, cache_hits_list):
@@ -2600,6 +2606,7 @@ class DraftRunner(ModelRunner):
         B, contexts, _ = glue_logits.shape
         if B != 1 or not bool((partial_tree_decode_args["temperatures"] > 0)
                               .all()):
+            self._p1exec_count("chain_fallback_batch_or_temperature")
             return None
 
         from ssd.engine.helpers.p1_tree import (
@@ -2631,8 +2638,10 @@ class DraftRunner(ModelRunner):
         final_ctx = ctx0 + (ex.F - 1) * ex.W
         dbt = partial_tree_decode_args["dbt"]
         if final_ctx > int(self.config.max_model_len):
+            self._p1exec_count("chain_fallback_model_length")
             return None
         if (final_ctx - 1) // self.block_size >= dbt.shape[1]:
+            self._p1exec_count("chain_fallback_block_table")
             return None
         positions = (first_base + ex.lane_w.unsqueeze(0)
                      + torch.arange(ex.F, device=self.device,
@@ -2643,11 +2652,13 @@ class DraftRunner(ModelRunner):
         step_slots = (block_ids * self.block_size
                       + positions.remainder(self.block_size)).to(torch.int32)
         if bool((step_slots < 0).any()):
+            self._p1exec_count("chain_fallback_unallocated_slot")
             return None
 
         p0 = (ctx0 + self.block_size - 1) // self.block_size
         need_pages = p0 + 1
         if p0 < 1 or need_pages > dbt.shape[1]:
+            self._p1exec_count("chain_fallback_page_bucket")
             return None
 
         event = _mr("p1_prepare")
@@ -2683,8 +2694,10 @@ class DraftRunner(ModelRunner):
         if p0 not in ex.graphs:
             ex.capture(p0)
             ex._finalize_outputs()
+            self._p1exec_count("capture")
         else:
             ex.replay(p0)
+            self._p1exec_count("replay")
         _mc("p1_graph_replay", event)
 
         views = {
@@ -2728,6 +2741,7 @@ class DraftRunner(ModelRunner):
                 dtype=hf.torch_dtype)
         return self._p2_exec
 
+    @torch.inference_mode()
     def _try_p2_executor(self, toks, root_piv, glue_rows, rope_base,
                          ctx_len, K_glue_used, step_slot_maps,
                          step_context_lens, dbt, temps, seeds):
@@ -5096,6 +5110,8 @@ class DraftRunner(ModelRunner):
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)
                 if getattr(self, "_p2exec_stats", None):
                     print(f"[metrics] p2exec stats: {self._p2exec_stats}", flush=True)
+                if getattr(self, "_p1exec_stats", None):
+                    print(f"[metrics] p1exec stats: {self._p1exec_stats}", flush=True)
                 if getattr(self, "_s2_counts", None):
                     print(f"[stage2] miss taxonomy: {self._s2_counts}",
                           flush=True)
