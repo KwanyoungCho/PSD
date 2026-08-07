@@ -20,10 +20,12 @@ early-exit 정보를 다음 draft cache를 준비하는 데 사용한다.
 - P1은 proxy가 오기 전의 시간을 사용하고, P2는 proxy가 도착한 뒤 target과
   남은 시간을 겹쳐 사용한다.
 - cache miss에서는 기존 lossless speculative decoding 경로로 복구한다.
-- P2는 동일한 proxy root 위에 chain 또는 동적 tree continuation을 만들 수 있다.
+- P1과 P2는 서로 독립적으로 chain 또는 동적 tree continuation을 만들 수 있다.
 
-현재 연구의 기본 P2 정책은 동적 `eagle` tree이고, 기존 chain은
-`duet_tree_policy=off` 비교군으로 완전히 유지한다.
+공개 설정은 두 단계 모두 `off|on`만 사용한다. 현재 코드 기본값은 P1 `off`,
+P2 `on`이지만, 새 실험은 비교 대상을 명확히 하기 위해 두 값을 항상 명시한다.
+기존 chain은 `--duet_p1_tree_policy off --duet_p2_tree_policy off`로 완전히
+유지된다.
 
 ---
 
@@ -37,7 +39,7 @@ target GPU 0--3
         |                               다음 cache root
         v
 draft GPU 4
-  P1 chain 생성 -------- proxy 대기 -------- P2 chain 또는 동적 tree 생성
+  P1 chain/tree 생성 ---- proxy 대기 -------- P2 chain/tree 생성
         |                                      |
         +---------------- cache ---------------+
                                                |
@@ -65,13 +67,28 @@ cache hit에는 timeout이나 “너무 일찍 만들면 무효” 같은 조건
 
 ## 3. P1: proxy 도착 전 draft
 
-P1은 target 정보 없이 실행하는 기존 chain 경로다.
+P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 
-- 깊이는 `K1`이다.
-- 위치별 fanout은 `duet_p1_fanout_list`로 지정한다.
-- 기본 실험 설정은 `K1=9`, fanout
-  `2,2,2,2,2,2,1,1,1,1`이다.
-- P1 sampling과 cache key 생성은 tree 도입 전 경로를 유지한다.
+- `--duet_p1_tree_policy off`: 기존 위치별 fanout chain을 그대로 사용한다.
+- `--duet_p1_tree_policy on`: 각 현재 context에서 같은 수의 시작 후보를 만들고,
+  이후에는 누적 draft confidence가 높은 노드를 전역적으로 확장한다.
+
+동적 P1의 시작 단계는 다음과 같다.
+
+1. 일반 chain 응답이면 `K1+1` 또는 `K2+1`개의 현재 context를 사용한다. 이전
+   tree가 hit했다면 recovery와 그 tree node가 context가 된다.
+2. 각 context에서 `duet_p1_roots_per_position`개 후보를 만든다. 이미 반환된 다음
+   token은 coverage 중복을 피하기 위해 후보에서 제외하지만, 선택한 후보의 점수는
+   제외 후 재정규화 확률이 아니라 원래 draft 분포 `q(x|context)`다.
+3. 첫 P1 forward에서는 모든 실제 root를 평가한다. 그 뒤 `K1-1`번은
+   `root q × 경로상의 child q`가 높은 부모를 전체 root에서 선택한다.
+4. root 하나가 보낼 수 있는 node 수는 `duet_p1_tree_max_nodes`로 제한한다.
+   이 값은 기본 13이며 `max(K1,K2)`가 아니라 공통 응답 상한
+   `speculate_k=K1+K2`까지 사용할 수 있다.
+
+기본 동적 P1 예시는 `K1=9`, position당 root 2개, root당 최대 node 13개다.
+일반 10-context step의 실제 root는 20개이며, P1 forward 9번 전체와 그 사이의
+선택·sampling·mask 갱신은 하나의 CUDA Graph replay로 실행된다.
 
 P1의 주 목적은 proxy를 기다리는 시간을 실제 draft 계산으로 채우는 것이다.
 P1이 너무 짧으면 draft가 proxy를 기다리고, 너무 길면 proxy가 도착한 뒤에도
@@ -141,7 +158,7 @@ reject:
 
 ## 5. P2 chain 정책
 
-`--duet_tree_policy off`가 기존 chain 경로다.
+`--duet_p2_tree_policy off`가 기존 P2 chain 경로다.
 
 1. proxy `P_iv` 상위 W개 root를 선택한다.
 2. 첫 P2 forward에서 W개 root를 동시에 평가한다.
@@ -152,17 +169,16 @@ reject:
 기본 실험 설정은 `W=10`, `K2=4`다. 이때 model workload는 네 번의 W-wide
 draft forward다.
 
-chain은 tree 도입 전 P1/P2 semantics와 KV pool을 보존하며, 동적 tree의 품질과
-속도를 판단할 기준선이다. 새 실험에서는 기본 정책이 `eagle`로 바뀌었으므로
-chain 실행 시 `--duet_tree_policy off`를 반드시 명시한다.
+전체 chain 기준선은 P1/P2를 모두 `off`로 둔다. P1만 또는 P2만 tree로 켜는
+분해 실험도 가능하므로, 한 개의 공용 tree switch로 두 단계를 묶지 않는다.
 
 ---
 
 ## 6. P2 동적 tree 정책
 
-현재 기본 정책은 `--duet_tree_policy eagle`이다. 이것은 별도 EAGLE draft
-model을 켜는 `--eagle` 옵션과 다르다. DUET의 draft model과 temperature>0
-residual verifier를 유지하고, 다음에 확장할 부모를 누적확률로 선택한다.
+P2 동적 tree는 `--duet_p2_tree_policy on`으로 켠다. DUET의 draft model과
+temperature>0 residual verifier를 유지하고, 다음에 확장할 부모를 누적확률로
+선택한다. 외부 기법 이름은 공개 정책 이름으로 사용하지 않는다.
 
 ### 6.1 기호
 
@@ -172,7 +188,7 @@ residual verifier를 유지하고, 다음에 확장할 부모를 누적확률로
 | W | 10 | P2 forward 한 번의 부모 lane 수 |
 | F=K2 | 4 | P2 forward round 수 |
 | C | 3 | 한 부모에서 동시에 뽑는 형제 수 상한 |
-| Nv | 8 | root 하나가 target에 보내는 node 수 상한 |
+| N2 | 8 | root 하나가 target에 보내는 P2 node 수 상한 |
 
 기본은 `R=W`다. 첫 P2 forward에서 모든 root를 실제로 평가해야 하므로 현재
 구현은 `R>W`를 거부한다.
@@ -205,12 +221,12 @@ log_score = log P_proxy(root) + sum(log q(child|parent))
 1. 아직 확장하지 않은 현재 depth의 node를 후보로 만든다.
 2. 첫 round에서는 R개 root를 모두 평가한다.
 3. 이후 round에서는 누적 경로 점수가 높은 부모를 전체 root에서 W개까지 고른다.
-4. root별 Nv 공간과 남은 round를 고려해 한 root가 모든 lane을 독점하지 않도록
+4. root별 N2 공간과 남은 round를 고려해 한 root가 모든 lane을 독점하지 않도록
    quota를 적용한다.
 5. token을 뽑기 전에 각 부모의 fanout을 결정한다. 먼저 부모마다 첫 자식을
    배정하고, 여유가 있는 높은 점수 부모에 두 번째와 세 번째 형제를 배정한다.
 6. W개 부모를 한 번의 draft forward로 평가한다.
-7. 선택된 자식을 arena와 root-local `[R,Nv]` view에 기록한다.
+7. 선택된 자식을 arena와 root-local `[R,N2]` view에 기록한다.
 
 CUDA Graph의 shape는 항상 `F×W`로 고정이지만, 각 lane의 부모, token, fanout,
 mask와 topology는 입력 확률에 따라 매 replay 달라진다.
@@ -294,25 +310,26 @@ SSD_TREE_EXEC=0
 SSD_TREE_ARENA=0
 SSD_TREE_PROXY_GRAPH=0
 SSD_TREE_EXEC_WARMUP=0
---duet_tree_policy off
+--duet_p1_tree_policy off
+--duet_p2_tree_policy off
 ```
 
 chain proxy graph는 공통 최적화이므로 `SSD_CHAIN_PROXY_GRAPH=1`을 유지한다.
 
 ### 7.3 동적 tree 전용 최적화
 
-#### 전체 P2 CUDA Graph
+#### 전체 P1/P2 CUDA Graph
 
-tree의 네 P2 forward와 그 사이의 작업을 하나의 graph로 캡처한다.
+각 phase의 모든 forward와 그 사이의 작업을 phase별 graph 하나로 캡처한다.
 
 ```text
 [부모 선택 -> fanout -> input/rope/mask -> draft forward
- -> logits -> ordered sampling -> node 삽입] × 4
+ -> logits -> ordered sampling -> node 삽입] × K1 또는 K2
 ```
 
 따라서 forward 사이 Python, GPU→CPU readback, runtime attention plan과 tensor
-allocation이 없다. timeline에서 P2가 막대 하나로 보이지만 내부에 draft forward
-네 번이 들어 있다.
+allocation이 없다. timeline에서 P1/P2가 각각 막대 하나로 보이지만 내부에는
+각각 9번/4번의 실제 draft forward가 들어 있다.
 
 #### 고정 GPU arena와 융합 kernel
 
@@ -329,9 +346,11 @@ FlashInfer plan과 CUDA Graph를 가능한 page bucket별로 요청 전에 만�
 SSD_TREE_EXEC_WARMUP=all
 ```
 
-이 warmup은 steady-state decode 시간에는 들어가지 않지만 현재 실모델에서 약
-7.18초와 약 1GiB의 시작 비용이 있었다. 서비스 cold-start 및 총 메모리에는
-별도로 기록해야 한다.
+이 warmup은 steady-state decode 시간에는 들어가지 않는다. P1을 함께 켜면
+context 폭 10/14와 모든 page bucket을 추가로 준비한다. 2026-08-07 실모델
+스모크에서는 P2 약 1.0GiB, P1 약 2.8GiB의 추가 예약과 P1 약 20--28초의 시작
+비용이 관측됐다. P1 page/context graph는 서로 동시에 실행되지 않으므로 transient
+capture pool을 공유하지만, FlashInfer plan workspace는 page별로 분리한다.
 
 #### target tree verify 준비 최적화
 
@@ -352,7 +371,8 @@ SSD_TREE_EXEC=1
 SSD_TREE_ARENA=1
 SSD_TREE_PROXY_GRAPH=1
 SSD_TREE_EXEC_WARMUP=all
---duet_tree_policy eagle
+--duet_p1_tree_policy on
+--duet_p2_tree_policy on
 ```
 
 `SSD_TREE_ARENA=1`은 executor가 사전에 지원하지 않는 shape를 분류했을 때 참조
@@ -416,7 +436,8 @@ SMOKE_AUDIT=0 \
 bash experiments/proxy_async_overlap/tree_sweep/run_eagle_global_gate_20260807.sh
 ```
 
-스크립트의 기본 tree 정책은 `eagle`이다. 실행 순서는 다음과 같다.
+스크립트는 tree arm에서 P1/P2를 모두 `on`으로 명시한다. 파일명에는 과거
+실험명이 남아 있지만 공개 정책 값에는 사용하지 않는다. 실행 순서는 다음과 같다.
 
 1. 짧은 tree smoke
 2. seed 42: chain -> tree
@@ -467,17 +488,18 @@ COMMON=(
 )
 ```
 
-chain:
+전체 chain:
 
 ```bash
 SSD_DIST_PORT=16211 \
 SSD_TREE_EXEC=0 SSD_TREE_ARENA=0 \
 SSD_TREE_PROXY_GRAPH=0 SSD_TREE_EXEC_WARMUP=0 \
 /home/chokwans99/anaconda3/envs/ssd/bin/python -O bench/bench.py \
-  "${COMMON[@]}" --duet_tree_policy off
+  "${COMMON[@]}" \
+  --duet_p1_tree_policy off --duet_p2_tree_policy off
 ```
 
-동적 tree:
+P1+P2 동적 tree:
 
 ```bash
 SSD_DIST_PORT=16212 \
@@ -485,14 +507,17 @@ SSD_TREE_EXEC=1 SSD_TREE_ARENA=1 \
 SSD_TREE_PROXY_GRAPH=1 SSD_TREE_EXEC_WARMUP=all \
 /home/chokwans99/anaconda3/envs/ssd/bin/python -O bench/bench.py \
   "${COMMON[@]}" \
-  --duet_tree_policy eagle --duet_tree_root_count 10 \
-  --duet_tree_c_tensor 3 --duet_tree_nv 8 \
+  --duet_p1_tree_policy on --duet_p2_tree_policy on \
+  --duet_p1_roots_per_position 2 \
+  --duet_p1_tree_max_nodes 13 --duet_p2_tree_max_nodes 8 \
+  --duet_tree_root_count 10 --duet_tree_c_tensor 3 \
   --duet_tree_proxy_threshold 0.01 \
   --duet_tree_conf_threshold 0.03
 ```
 
-`--eagle`은 별도의 greedy EAGLE draft model 옵션이므로 위 DUET tree 실행에
-추가하지 않는다.
+phase 분해에는 위 명령에서 P1 또는 P2 하나만 `off`로 바꾼다. 과거
+`--duet_tree_policy`/`--duet_tree_nv`는 재현용 deprecated 입력일 뿐 새 실험에는
+사용하지 않는다.
 
 ---
 
@@ -549,15 +574,15 @@ python tools/duet_calibration/analyze_thresholds.py --input /path/to/trace.jsonl
 threshold는 node를 삭제하는 값이 아니라 그 아래 추가 확장을 멈추는 값으로
 해석해야 한다.
 
-#### C와 Nv
+#### C와 phase별 최대 node 수
 
 - C가 크면 한 부모의 대체 형제를 더 만들 수 있지만 sampling/update 비용과
   저장 후보 수가 늘어난다.
-- Nv가 크면 hit한 root의 coverage/depth가 늘지만 target verify row 비용이
+- 최대 node 수가 크면 hit한 root의 coverage/depth가 늘지만 target verify row 비용이
   증가한다.
 
-현재 기준은 C=3, Nv=8이다. threshold calibration 이후 `(C,Nv)` 소수 후보만
-paired gate로 비교한다.
+현재 기준은 C=3, P1 최대 13, P2 최대 8이다. threshold calibration 이후 소수
+후보만 paired gate로 비교한다.
 
 ### 9.3 K1/K2 자동 분석
 
@@ -582,7 +607,7 @@ chain/tree 비교에서 전체 AL 하나만 보면 원인을 알 수 없다. 최
 | P1 | hit rate, conditional accepted length, `hit*(AL+1)` |
 | P2 | hit rate, conditional accepted length, `hit*(AL+1)` |
 | 속도 | decode TPS, target step p50, draft step p50 |
-| P2 executor | replay/capture/fallback/error 수 |
+| P1/P2 executor | phase별 replay/capture/fallback/error 수 |
 | target | verify 준비, graph pre/post, proxy 계산/전송, accept/recovery |
 | startup | tree all-page warmup 시간과 메모리 |
 
@@ -603,10 +628,10 @@ chain/tree 비교에서 전체 AL 하나만 보면 원인을 알 수 없다. 최
 - batch size B=1
 - target/draft temperature>0
 - Llama 계열 draft
-- R≤W
-- `F*W≤63`인 단일 64-bit ancestry
+- P2는 R≤W; P1은 실제 root 수에 맞춘 고정 canvas를 자동 선택
+- ancestry는 63-cell word 여러 개를 사용하므로 `F*W>63`도 지원
 - vocabulary≤32768인 packed P_iv wire
-- `Nv≤max(K1,K2)`, `Nv+1≤W`
+- phase별 최대 node 수≤`speculate_k`; `max(K1,K2)`나 P2 W에는 묶이지 않음
 
 B>1과 temperature=0은 현재 chain fallback을 사용한다. temperature=0 tree는
 ordered residual sampling이 아니라 별도의 greedy top-C proposal과 argmax verifier가
@@ -621,7 +646,8 @@ ordered residual sampling이 아니라 별도의 greedy top-C proposal과 argmax
 | CLI와 기본 정책 | `ssd/bench/bench.py` |
 | Config 및 제약 | `ssd/ssd/config.py` |
 | proxy 점수, dynamic selection, WOR, verify helper | `ssd/ssd/engine/helpers/p2_tree.py` |
-| 전체 P2 CUDA Graph 실행기 | `ssd/ssd/engine/helpers/p2_tree_executor.py` |
+| P1 root/context와 실행기 specialization | `ssd/ssd/engine/helpers/p1_tree.py` |
+| 공통 P1/P2 CUDA Graph 실행기 | `ssd/ssd/engine/helpers/p2_tree_executor.py` |
 | P1/P2 dispatch, cache/view | `ssd/ssd/engine/draft_runner.py` |
 | target tree row와 KV | `ssd/ssd/engine/model_runner.py` |
 | target residual verification | `ssd/ssd/engine/verifier.py` |

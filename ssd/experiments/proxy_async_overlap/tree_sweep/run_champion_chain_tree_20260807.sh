@@ -48,7 +48,7 @@ run_one () {
   local dir="${OUT}/${kind}_${arm}"
   local log="${dir}/run.log"
   local profile=0 detail=0 timeout_len=45m
-  local extra=(--duet_tree_policy off)
+  local extra=(--duet_p1_tree_policy off --duet_p2_tree_policy off)
   local tree_exec=0 tree_arena=0 tree_proxy_graph=0 tree_warmup=0
   # Shared optimizations stay identical across arms; only the tree executor,
   # tree proxy graph, and tree page warmup differ.
@@ -61,8 +61,10 @@ run_one () {
     timeout_len=35m
   fi
   if [[ "${arm}" == "tree" ]]; then
-    extra=(--duet_tree_policy eagle --duet_tree_root_count 10
-           --duet_tree_nv 8 --duet_tree_c_tensor 3
+    extra=(--duet_p1_tree_policy on --duet_p2_tree_policy on
+           --duet_p1_roots_per_position 2
+           --duet_p1_tree_max_nodes 13 --duet_p2_tree_max_nodes 8
+           --duet_tree_root_count 10 --duet_tree_c_tensor 3
            --duet_tree_proxy_threshold 0.01
            --duet_tree_conf_threshold 0.03
            --duet_tree_fanout_policy backbone)
@@ -92,7 +94,7 @@ run_one () {
   local rc=$?
   echo "EXIT:${rc}" >>"${log}"
   echo "[$(date -Is)] END kind=${kind} arm=${arm} rc=${rc}" | tee -a "${dir}/status.txt"
-  grep -E "Final Decode Throughput|Avg Tokens per step \(incl recovery\)|Avg Phase [12].*Hit Rate|Avg Phase [12] Accepted Len|Avg target time per full step|Avg target verify time|Avg draft step time|p2exec stats" "${log}" | tee "${dir}/metrics.txt" || true
+  grep -E "Final Decode Throughput|Avg Tokens per step \(incl recovery\)|Avg Phase [12].*Hit Rate|Avg Phase [12] Accepted Len|Avg target time per full step|Avg target verify time|Avg draft step time|p[12]exec stats" "${log}" | tee "${dir}/metrics.txt" || true
   return "${rc}"
 }
 

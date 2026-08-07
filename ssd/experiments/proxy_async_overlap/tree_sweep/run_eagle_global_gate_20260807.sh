@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# One-policy gate for the DUET P2 tree.  The default follows the current
-# research path: dynamic global-confidence ``eagle``.  Coverage/adaptive are
-# explicit ablation policies through TREE_POLICY.
+# Canonical gate for DUET's phase-specific dynamic trees.  The historical
+# filename is retained so existing automation keeps working; public policy
+# names are now only P1/P2 off|on.
 #
 # Order is intentional: one tiny correctness smoke, one final three-seed
 # chain/tree comparison with order rotation, then one short timeline per arm.
@@ -62,20 +62,25 @@ run_one () {
     cat "${dir}/metrics.txt"
     return 0
   fi
-  local tree_policy=off
-  local extra=(--duet_tree_policy off)
+  local p1_policy=off p2_policy=off
+  local extra=(--duet_p1_tree_policy off --duet_p2_tree_policy off)
   local exec=0 arena=0 proxy_graph=0 warmup=0
   # Fair chain/tree comparison: these target/proxy optimizations support both
   # policies and therefore must not be enabled only for the tree arm.
   local replica=1 async_send=1
   if [[ "${arm}" == "tree" ]]; then
-    tree_policy="${TREE_POLICY:-eagle}"
-    extra=(--duet_tree_policy "${tree_policy}"
-           --duet_tree_nv 8 --duet_tree_c_tensor 3
+    p1_policy="${P1_TREE_POLICY:-on}"
+    p2_policy="${P2_TREE_POLICY:-on}"
+    extra=(--duet_p1_tree_policy "${p1_policy}"
+           --duet_p2_tree_policy "${p2_policy}"
+           --duet_p1_roots_per_position "${P1_ROOTS_PER_POSITION:-2}"
+           --duet_p1_tree_max_nodes "${P1_TREE_MAX_NODES:-13}"
+           --duet_p2_tree_max_nodes "${P2_TREE_MAX_NODES:-8}"
+           --duet_tree_c_tensor 3
            --duet_tree_fanout_policy backbone
            --duet_tree_proxy_threshold "${TREE_PROXY_THRESHOLD:-0.01}"
            --duet_tree_conf_threshold "${TREE_CONF_THRESHOLD:-0.03}")
-    if [[ "${tree_policy}" != "coverage" ]]; then
+    if [[ "${p2_policy}" == "on" ]]; then
       extra+=(--duet_tree_root_count 10)
     fi
     exec=1
@@ -83,7 +88,8 @@ run_one () {
     proxy_graph=1
     warmup="${TREE_WARMUP:-all}"
   fi
-  echo "[$(date -Is)] START ${tag} ${arm} policy=${tree_policy} seed=${seed} "\
+  echo "[$(date -Is)] START ${tag} ${arm} p1_tree=${p1_policy} "\
+"p2_tree=${p2_policy} seed=${seed} "\
 "shared_exit_replica=${replica} shared_async_send=${async_send} "\
 "tree_exec=${exec} tree_proxy_graph=${proxy_graph} warmup=${warmup}" \
     | tee "${dir}/status.txt"
@@ -102,7 +108,7 @@ run_one () {
   local rc=$?
   echo "EXIT:${rc}" >>"${log}"
   echo "[$(date -Is)] END ${tag} ${arm} rc=${rc}" | tee -a "${dir}/status.txt"
-  grep -E "Final Decode Throughput|Avg Tokens per step \(incl recovery\)|Avg Phase [12].*Hit Rate|Avg Phase [12] Accepted Len|Avg target time per full step|Avg target verify time|Avg draft step time|p2exec stats" "${log}" >"${dir}/metrics.txt" || true
+  grep -E "Final Decode Throughput|Avg Tokens per step \(incl recovery\)|Avg Phase [12].*Hit Rate|Avg Phase [12] Accepted Len|Avg target time per full step|Avg target verify time|Avg draft step time|p[12]exec stats" "${log}" >"${dir}/metrics.txt" || true
   cat "${dir}/metrics.txt"
   return "${rc}"
 }
