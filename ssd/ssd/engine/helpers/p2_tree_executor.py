@@ -201,6 +201,128 @@ def _insert_tree_children_kernel(
 
 
 @triton.jit
+def _mark_selected_parents_kernel(
+    sel_ptr, sel_valid_ptr, cell_ptr, state_ptr,
+    ROUND: tl.constexpr, W: tl.constexpr, BLOCK: tl.constexpr,
+):
+    """Scalable parent marking used by wide/multiword P1 shapes."""
+    lane = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    live = lane < W
+    sv = tl.load(sel_valid_ptr + lane, mask=live, other=0)
+    parent = tl.load(sel_ptr + lane, mask=live, other=0)
+    tl.store(cell_ptr + parent, ROUND * W + lane, mask=live & sv)
+    tl.store(state_ptr + parent, 1, mask=live & sv)
+
+
+@triton.jit
+def _insert_tree_children_parallel_kernel(
+    sel_ptr, sel_valid_ptr, fan_ptr, toks_ptr, rawq_ptr, child_lp_ptr,
+    tok_ptr, parent_idx_ptr, depth_ptr, root_ptr, sib_ptr, logpri_ptr,
+    arena_rawq_ptr, state_ptr, cell_ptr, valid_ptr, anc_ptr, n_ptr,
+    local_idx_ptr,
+    out_tok_ptr, out_par_ptr, out_sib_ptr, out_rawq_ptr, out_pcell_ptr,
+    out_valid_ptr,
+    W: tl.constexpr, C: tl.constexpr, NV: tl.constexpr,
+    ANC_WORDS: tl.constexpr,
+):
+    """One program per possible child for P1-scale fixed shapes.
+
+    The P2 scalar kernel intentionally unrolls the complete W*C bookkeeping
+    because W<=10.  Doing that for P1 W=20,F=9 made ptxas spend minutes on a
+    huge program.  This kernel keeps identical lane-major ordering while
+    parallelizing children; the following count kernel commits per-root sizes.
+    """
+    flat = tl.program_id(0)
+    lane = flat // C
+    child = flat - lane * C
+    sv = tl.load(sel_valid_ptr + lane)
+    nf = tl.load(fan_ptr + lane)
+    active = sv & (child < nf)
+    parent = tl.load(sel_ptr + lane)
+    root = tl.load(root_ptr + parent, mask=sv, other=0)
+
+    n0 = tl.load(n_ptr)
+    prefix = tl.full((), 0, tl.int64)
+    for prev_lane in tl.static_range(0, W):
+        prefix += tl.where(prev_lane < lane,
+                           tl.load(fan_ptr + prev_lane), 0)
+    slot = n0 + prefix + child
+    rq = tl.load(rawq_ptr + flat)
+    ok = active & (rq > 0.0)
+    pdepth = tl.load(depth_ptr + parent, mask=sv, other=0)
+    pcell = tl.load(cell_ptr + parent, mask=sv, other=-1)
+    parent_local = tl.load(local_idx_ptr + parent, mask=sv, other=-1)
+
+    tl.store(tok_ptr + slot, tl.load(toks_ptr + flat), mask=active)
+    tl.store(parent_idx_ptr + slot, parent, mask=active)
+    tl.store(depth_ptr + slot, pdepth + 1, mask=active)
+    tl.store(root_ptr + slot, root, mask=active)
+    tl.store(sib_ptr + slot, child, mask=active)
+    tl.store(logpri_ptr + slot, tl.load(child_lp_ptr + flat), mask=active)
+    tl.store(arena_rawq_ptr + slot, rq, mask=active)
+    tl.store(valid_ptr + slot, ok, mask=active)
+    tl.store(state_ptr + slot, tl.where(ok, 0, 1), mask=active)
+
+    safe_pcell = tl.maximum(pcell, 0)
+    pword = safe_pcell // 63
+    pbit = safe_pcell - pword * 63
+    for aw in tl.static_range(0, ANC_WORDS):
+        inherited = tl.load(
+            anc_ptr + parent * ANC_WORDS + aw, mask=sv, other=0)
+        add = tl.where(aw == pword, 1 << pbit, 0)
+        tl.store(anc_ptr + slot * ANC_WORDS + aw, inherited | add,
+                 mask=active)
+
+    # Root-local rank is the old count plus valid children of this root that
+    # precede ``flat`` in lane-major/sibling-major order.
+    prior = tl.full((), 0, tl.int64)
+    for prev in tl.static_range(0, W * C):
+        pl = prev // C
+        pc = prev - pl * C
+        psv = tl.load(sel_valid_ptr + pl)
+        pnf = tl.load(fan_ptr + pl)
+        pp = tl.load(sel_ptr + pl)
+        proot = tl.load(root_ptr + pp, mask=psv, other=-1)
+        prq = tl.load(rawq_ptr + prev)
+        prior += ((prev < flat) & psv & (pc < pnf) & (prq > 0.0)
+                  & (proot == root)).to(tl.int64)
+    local = tl.load(out_valid_ptr + root, mask=ok, other=0) + prior
+    write = ok & (local < NV)
+    dst = root * NV + local
+    tl.store(out_tok_ptr + dst, tl.load(toks_ptr + flat), mask=write)
+    tl.store(out_par_ptr + dst, parent_local, mask=write)
+    tl.store(out_sib_ptr + dst, child, mask=write)
+    tl.store(out_rawq_ptr + dst, rq, mask=write)
+    tl.store(out_pcell_ptr + dst, pcell, mask=write)
+    tl.store(local_idx_ptr + slot, tl.where(write, local, -1), mask=active)
+
+
+@triton.jit
+def _commit_tree_children_parallel_kernel(
+    sel_ptr, sel_valid_ptr, fan_ptr, rawq_ptr, root_ptr,
+    out_valid_ptr, n_ptr,
+    W: tl.constexpr, R: tl.constexpr, C: tl.constexpr,
+):
+    """Commit per-root accepted counts and total arena slots after insertion."""
+    rr = tl.program_id(0)
+    accepted = tl.full((), 0, tl.int64)
+    total_fan = tl.full((), 0, tl.int64)
+    for lane in tl.static_range(0, W):
+        sv = tl.load(sel_valid_ptr + lane)
+        nf = tl.load(fan_ptr + lane)
+        pp = tl.load(sel_ptr + lane)
+        proot = tl.load(root_ptr + pp, mask=sv, other=-1)
+        total_fan += nf
+        for child in tl.static_range(0, C):
+            rq = tl.load(rawq_ptr + lane * C + child)
+            accepted += (sv & (child < nf) & (rq > 0.0)
+                         & (proot == rr)).to(tl.int64)
+    old = tl.load(out_valid_ptr + rr)
+    tl.store(out_valid_ptr + rr, old + accepted)
+    tl.store(n_ptr, tl.load(n_ptr) + total_fan, mask=rr == 0)
+
+
+@triton.jit
 def _finalize_tree_meta_kernel(
     tok_ptr, par_ptr, sib_ptr, pcell_ptr, valid_ptr,
     pq_ref_ptr, pq_cells_ptr, u_valid_ptr,
@@ -263,7 +385,9 @@ class P2TreeExecutor:
     def __init__(self, model, compute_logits_fn, config, device,
                  block_size, max_blocks, vocab_size,
                  num_heads, num_kv_heads, head_dim,
-                 dtype=torch.float16):
+                 dtype=torch.float16, *, phase="p2", width=None,
+                 root_count=None, depth=None, max_nodes=None,
+                 glue_width=None):
         self.model = model
         self.compute_logits = compute_logits_fn
         self.cfg = config
@@ -273,23 +397,46 @@ class P2TreeExecutor:
         self.V = vocab_size
         self.H, self.HKV, self.D = num_heads, num_kv_heads, head_dim
         self.dtype = dtype
-        self.W = int(config.duet_proxy_total_budget)
+        if phase not in ("p1", "p2"):
+            raise ValueError(f"dynamic tree phase must be p1|p2; got {phase}")
+        self.phase = phase
+        self.W = int(width if width is not None
+                     else config.duet_proxy_total_budget)
         # Config owns the canonical active-root rule.  In particular,
         # confidence mode uses the same automatic R for the selector, eager
         # reference path, and captured executor; duplicating the old
         # ``confidence => W`` special case here silently changed topology.
-        self.R = int(config.duet_p2_seed_count)
-        self.F = int(config.duet_phase2_k)
+        self.R = int(root_count if root_count is not None
+                     else config.duet_p2_seed_count)
+        self.F = int(depth if depth is not None else config.duet_phase2_k)
         self.C = int(config.duet_tree_c_tensor)
-        self.NV = int(config.duet_tree_nv)
+        self.NV = int(
+            max_nodes if max_nodes is not None
+            else (getattr(config, "duet_p1_tree_max_nodes",
+                          getattr(config, "duet_tree_nv", 8))
+                  if phase == "p1" else
+                  getattr(config, "duet_p2_tree_max_nodes",
+                          getattr(config, "duet_tree_nv", 8))))
+        # P1 exposes only DUET's dynamic selector.  P2 keeps the internal
+        # legacy names solely so historical parity tests/runs remain
+        # reproducible; the public P2 switch maps ``on`` to ``eagle``.
+        self.policy = ("eagle" if phase == "p1" else
+                       getattr(config, "duet_tree_policy", "eagle"))
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
+        if R > W:
+            raise ValueError(
+                f"{phase} dynamic tree requires roots R<=forward width W; "
+                f"got R={R}, W={W}")
         d = device
         # ── 입력 고정 버퍼 (replay 전 host가 내용 갱신)
         self.in_root_tok = torch.zeros(R, dtype=torch.int64, device=d)
         self.in_root_piv = torch.zeros(R, dtype=torch.float32, device=d)
         self.in_rope_base = torch.zeros(R, dtype=torch.int64, device=d)
-        gw_max = max(int(getattr(config, "duet_phase1_k", None) or F),
-                     int(getattr(config, "duet_phase2_k", F))) + 1
+        gw_max = int(glue_width) if glue_width is not None else (
+            max(int(getattr(config, "duet_phase1_k", None) or F),
+                int(getattr(config, "duet_phase2_k", F)),
+                int(getattr(config, "duet_p1_tree_max_nodes", F)),
+                int(getattr(config, "duet_p2_tree_max_nodes", F))) + 1)
         self.gw_max = gw_max
         self.in_glue = torch.zeros(R, gw_max, dtype=torch.uint8,
                                    device=d)
@@ -566,7 +713,7 @@ class P2TreeExecutor:
             ARENA_N=ar.capacity, ANC_N=ar.anc_bits.numel(),
             OUT_N=self.out_tok.numel(),
             OUT_ROWS=self.out_valid.numel(), BLOCK=256)
-        policy = getattr(self.cfg, "duet_tree_policy", "level")
+        policy = self.policy
         if policy in ("coverage", "eagle", "adaptive"):
             # Stored children are not forward cells.  A single parent
             # forward already samples C ordered WOR children, so retaining
@@ -601,8 +748,9 @@ class P2TreeExecutor:
                 sel, sel_valid = PT._arena_select_global(
                     ar, W, f, F, remaining,
                     future_rounds=F - f - 1, R=R,
-                    proxy_threshold=float(getattr(
-                        self.cfg, "duet_tree_proxy_threshold", 0.0)),
+                    proxy_threshold=(
+                        0.0 if self.phase == "p1" else float(getattr(
+                            self.cfg, "duet_tree_proxy_threshold", 0.0))),
                     conf_threshold=float(getattr(
                         self.cfg, "duet_tree_conf_threshold", 0.0)))
             else:
@@ -666,15 +814,31 @@ class P2TreeExecutor:
             par = sel.unsqueeze(1).expand(W, C).reshape(-1)
             rq = raws.double().reshape(-1)
             lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
-            _insert_tree_children_kernel[(1,)](
-                sel, sel_valid, fan, toks, rq, lp,
-                ar.tok, ar.parent_idx, ar.depth, ar.root, ar.sib,
-                ar.logpri, ar.raw_q, ar.state, ar.cell, ar.valid,
-                ar.anc_bits, ar.n, self._local_idx,
-                self.out_tok, self.out_par, self.out_sib, self.out_rawq,
-                self.out_pcell, self.out_valid, tip_idx, tip_depth,
-                ROUND=f, W=W, R=R, C=C, NV=NV,
-                ANC_WORDS=ar.anc_words, GLOBAL=_global)
+            if _global and (W > 10 or ar.anc_words > 1):
+                _mark_selected_parents_kernel[(triton.cdiv(W, 32),)](
+                    sel, sel_valid, ar.cell, ar.state,
+                    ROUND=f, W=W, BLOCK=32)
+                _insert_tree_children_parallel_kernel[(W * C,)](
+                    sel, sel_valid, fan, toks, rq, lp,
+                    ar.tok, ar.parent_idx, ar.depth, ar.root, ar.sib,
+                    ar.logpri, ar.raw_q, ar.state, ar.cell, ar.valid,
+                    ar.anc_bits, ar.n, self._local_idx,
+                    self.out_tok, self.out_par, self.out_sib,
+                    self.out_rawq, self.out_pcell, self.out_valid,
+                    W=W, C=C, NV=NV, ANC_WORDS=ar.anc_words)
+                _commit_tree_children_parallel_kernel[(R,)](
+                    sel, sel_valid, fan, rq, ar.root,
+                    self.out_valid, ar.n, W=W, R=R, C=C)
+            else:
+                _insert_tree_children_kernel[(1,)](
+                    sel, sel_valid, fan, toks, rq, lp,
+                    ar.tok, ar.parent_idx, ar.depth, ar.root, ar.sib,
+                    ar.logpri, ar.raw_q, ar.state, ar.cell, ar.valid,
+                    ar.anc_bits, ar.n, self._local_idx,
+                    self.out_tok, self.out_par, self.out_sib, self.out_rawq,
+                    self.out_pcell, self.out_valid, tip_idx, tip_depth,
+                    ROUND=f, W=W, R=R, C=C, NV=NV,
+                    ANC_WORDS=ar.anc_words, GLOBAL=_global)
 
 
         if not finalize:

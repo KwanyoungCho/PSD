@@ -16,13 +16,18 @@ except Exception:
     HAS_FI = False
 
 from ssd.utils.context import get_context
+from ssd.engine.helpers.p1_tree import P1TreeExecutor
 from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
 
 
 class _MiniCfg:
     duet_proxy_total_budget = 10
     duet_tree_root_count = 6
+    duet_phase1_k = 9
     duet_phase2_k = 4
+    duet_p1_roots_per_position = 2
+    duet_p1_tree_max_nodes = 13
+    duet_p2_tree_max_nodes = 8
     duet_tree_c_tensor = 3
     duet_tree_nv = 8
     duet_tree_beta = 0.5
@@ -174,6 +179,48 @@ class TestExecutorModuleParity(unittest.TestCase):
                                     torch.zeros(ex.W - ex.R,
                                                 dtype=vt.dtype)))
         del g
+
+    def test_p1_multiword_executor_eager_equals_replay(self):
+        """Champion P1 shape (F9,W20) crosses the old 63-cell limit."""
+        dev = "cuda:0"
+        V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
+        cfg = _MiniCfg()
+        cfg.duet_tree_policy = "eagle"
+        max_blocks = 8
+        cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
+                            dtype=torch.float16, device=dev)
+        model = _MiniDraft(V, H, HKV, D, cache, dev)
+        ex = P1TreeExecutor(
+            model, model.logits_fn, cfg, dev, PAGE, max_blocks,
+            V, H, HKV, D, context_bucket=10)
+        self.assertEqual((ex.F, ex.W, ex.R), (9, 20, 20))
+        self.assertEqual(ex.arena.anc_words, 3)
+
+        ctx0 = 2 * PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        gN = torch.Generator().manual_seed(330)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(1, generator=gN).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx = torch.full((ex.arena.capacity,), -1,
+                                   dtype=torch.int64, device=dev)
+        ex.model.cache.zero_()
+        ex.run_once(p0)
+        ref = {k: getattr(ex, k).clone() for k in (
+            "view_tok", "view_par", "view_sib", "out_valid",
+            "out_pq_ref", "out_pq_cells")}
+        ex.model.cache.zero_()
+        ex.capture(p0)
+        ex.model.cache.zero_()
+        ex.replay(p0)
+        torch.cuda.synchronize()
+        for name, expected in ref.items():
+            self.assertTrue(torch.equal(expected, getattr(ex, name)), name)
+        vt_p1 = ex.out_valid.cpu()
+        self.assertTrue(bool((vt_p1 >= 1).all()))
+        self.assertTrue(bool((vt_p1 <= ex.NV).all()))
 
     def test_z_coverage_executor_keeps_chain_plus_siblings_for_all_roots(self):
         dev = "cuda:0"
