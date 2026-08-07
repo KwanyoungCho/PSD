@@ -574,6 +574,24 @@ root의 첫-child tip도 탈락했고, P1은 보장돼야 할 깊이 9를, P2는
 응답 공간이다. 위 표는 새 정책의 성능 결과가 아니라 폐기한 정책의 반례이며,
 새 정책은 별도 paired gate로 다시 측정해야 한다.
 
+### 8.7 backbone 정책 실모델 기능 gate
+
+commit `9551466`, eslab17, 4 datasets × 2 prompts, output 64의 짧은
+P1+P2 smoke 결과:
+
+| TPS | tok/step | cache hit | P1 hit | P1AL | P2 hit | P2AL | draft step |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 54.42 | 4.04 | 0.77 | 0.529 | 4.01 | 0.243 | 2.03 | 70.63ms |
+
+P1 executor와 P2 executor는 각각 136회 replay했고 runtime capture, fallback,
+error는 0이었다. 직전 smoke에서는 warmup 허용 정책 목록에 `backbone`이 빠져
+P2 graph를 첫 요청 중 capture했고, 그 한 번의 비용이 8-prompt 평균에 섞여
+draft 232.24ms/TPS 17.53으로 보였다. warmup 목록을 runtime dispatch와 같은
+단일 상수로 통일한 뒤 위 값으로 회복했다.
+
+이 표는 실행기 배선과 AL 붕괴 해소를 확인하는 기능 gate다. 표본이 너무 작으므로
+chain 대비 TPS 또는 품질 우위의 formal 근거로 사용하지 않는다.
+
 ---
 
 ## 9. Timeline 해석
@@ -636,6 +654,10 @@ warmup에서 분리한다.
   access가 났다. bucket별 독립 fixed-address state로 분리했다.
 - graph capture용 RNG와 기본 generator가 섞이던 문제를 전용 등록 generator로
   분리했다.
+- 정규화된 `backbone` Config를 draft용 `dataclasses.replace()`가 다시 검증하지
+  못하던 비멱등 초기화 오류를 수정했다.
+- runtime P2 허용 목록과 all-page warmup 목록에 `backbone`이 빠져 각각 fallback과
+  첫 요청 중 capture가 발생하던 배선 오류를 공통 정책 상수로 통일했다.
 - `assert` 기반 runtime guard는 Python `-O`에서 사라지므로 외부 입력 계약은
   `ValueError`/`RuntimeError`로 바꿨다.
 
@@ -1027,3 +1049,5 @@ target/draft p50 및 startup memory를 함께 보고한다.
     추가하고 공개 CLI를 P1/P2 `off|on`으로 정리했다.
 13. public `on`을 backbone-preserving 정책으로 교체하고 P1 N1=18(9+9),
     P2 N2=8(4+4)의 깊이 보존 계약을 코드와 CUDA parity 테스트로 고정했다.
+14. 실모델 초기화에서 Config clone, P2 graph dispatch, all-page warmup의 새 정책
+    누락을 찾아 수정하고 P1/P2 모두 runtime replay만 수행함을 확인했다.

@@ -92,6 +92,10 @@ P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 일반 10-context step의 실제 root는 20개이며, P1 forward 9번 전체와 그 사이의
 선택·sampling·mask 갱신은 하나의 CUDA Graph replay로 실행된다.
 
+여기서 `root 20개`, `root당 node 18개`, `target verify 최대 19행`은 서로 다른
+수치다. 20은 10개 context×시작 후보 2개, 18은 선택된 root 하나의
+`9단계 주 경로+최대 9 sibling`, 19는 recovery 1행까지 포함한 target 입력이다.
+
 P1의 주 목적은 proxy를 기다리는 시간을 실제 draft 계산으로 채우는 것이다.
 P1이 너무 짧으면 draft가 proxy를 기다리고, 너무 길면 proxy가 도착한 뒤에도
 P1이 끝나지 않아 P2 시작이 늦어진다. 따라서 K1은 acceptance만 보고 정하지
