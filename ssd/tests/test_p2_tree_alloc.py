@@ -1636,6 +1636,25 @@ class TestReview2Fixes(unittest.TestCase):
             self.assertTrue(torch.equal(expected_tok, got_tok))
             self.assertTrue(torch.equal(top_v, got_v))
 
+    def test_chain_shaped_tree_proxy_matches_chain_policy(self):
+        """C=1 tree must preserve the established chain root ranking."""
+        K, V, top_k, wire = 4, 257, 14, 24
+        topology = PT.pack_tree_proxy_topology(
+            [-1, 0, 1, 2], [0, 0, 0, 0], K)
+        for seed in range(8):
+            torch.manual_seed(seed)
+            exit_logits = torch.randn(K + 1, V, dtype=torch.bfloat16)
+            q_logits = torch.randn(K, V, dtype=torch.bfloat16)
+            tokens = torch.randint(V, (K,))
+            chain = PT.chain_proxy_candidates_fixed(
+                exit_logits, q_logits, tokens, top_k, wire, True)
+            tree = PT.tree_proxy_candidates_fixed(
+                exit_logits, q_logits, tokens, topology, wire, K, top_k)
+            self.assertTrue(torch.equal(chain[0], tree[0]), seed)
+            self.assertTrue(torch.equal(chain[1], tree[1]), seed)
+            self.assertTrue(torch.allclose(
+                chain[2], tree[2], atol=2e-7, rtol=2e-6), seed)
+
     def test_chain_proxy_cudagraph_matches_fixed(self):
         if not torch.cuda.is_available():
             self.skipTest("no cuda")

@@ -71,6 +71,7 @@ class Verifier(VerifierBase):
                     vocab_size=_cfg.hf_config.vocab_size,
                     wire_n=_cfg.duet_proxy_wire_N,
                     depth_steps=_tree_depth_steps,
+                    top_k=_cfg.duet_proxy_top_k,
                     dtype=_cfg.hf_config.torch_dtype,
                     device=self.device)
             if self._tree_proxy_graphs:
@@ -782,21 +783,28 @@ class Verifier(VerifierBase):
         if _detail_profile:
             _mc_tree("tree_proxy_accept_residual", _ev_ladder)
 
-        # P_iv(ctx, v) = term(ctx)·resid(ctx, v); 드래프트된 자식 토큰은
-        # 후보에서 제외 (fork 네임스페이스와 중복 — 체인 규약 동일).
+        # Preserve the chain Policy-B score scale: remove already-drafted
+        # children, keep top-k per context, renormalize that retained set,
+        # and only then rank contexts on the common wire.  Ranking the full
+        # vocabulary here changes roots even for a C=1 chain-shaped tree.
         _ev_rank = (_mr_tree("tree_proxy_rank_candidates")
                     if _detail_profile else None)
-        piv_rows = resid * term.unsqueeze(1)                     # [valid+1, V]
+        correction = resid.clone()
         if valid:
             par_t = torch.tensor(par, dtype=torch.int64,
                                  device=p_E.device)
-            piv_rows[par_t + 1, tokens] = 0.0
+            correction[par_t + 1, tokens] = 0.0
+        ctx_k = min(int(config.duet_proxy_top_k), V)
+        correction_prob, correction_id = correction.topk(ctx_k, dim=-1)
+        correction_prob = correction_prob / correction_prob.sum(
+            -1, keepdim=True).clamp(min=1e-10)
+        piv = correction_prob * term.unsqueeze(1)
         wire_N = config.duet_proxy_wire_N
-        flat = piv_rows.flatten()
+        flat = piv.flatten()
         k = min(wire_N, flat.numel())
         top_v, top_i = flat.topk(k)
-        chosen_pos = (top_i // V).to(torch.int64)
-        chosen_tok = (top_i % V).to(torch.int64)
+        chosen_pos = (top_i // ctx_k).to(torch.int64)
+        chosen_tok = correction_id.flatten().gather(0, top_i).to(torch.int64)
         if k < wire_N:                       # pad (드묾)
             pad = wire_N - k
             chosen_pos = torch.cat([chosen_pos, chosen_pos.new_zeros(pad)])

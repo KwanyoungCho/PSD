@@ -722,8 +722,17 @@ def tree_policy_b_ladder_fixed(tokens, p_rows, q_rows, child,
 
 
 def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
-                                wire_n: int, depth_steps: int):
-    """Fixed-shape, capture-safe tree proxy candidate computation."""
+                                wire_n: int, depth_steps: int,
+                                top_k: int | None = None):
+    """Fixed-shape, capture-safe tree proxy candidate computation.
+
+    ``top_k`` preserves the established chain Policy-B score scale: each
+    terminal context first keeps and renormalizes its top-k correction
+    candidates, then contexts compete for the shared wire.  Ranking the full
+    vocabulary directly is not chain-equivalent even for a one-child tree,
+    because contexts with different top-k retained mass receive different
+    relative scales.
+    """
     p_rows = torch.softmax(exit_logits.float(), dim=-1)
     q_rows = torch.softmax(q_logits.float(), dim=-1)
     _alpha, term, resid = tree_policy_b_ladder_fixed(
@@ -731,21 +740,43 @@ def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
         topology["child"], topology["child_valid"],
         topology["par"], topology["sib"], topology["node_valid"],
         depth_steps)
-    piv_rows = resid * term.unsqueeze(1)
-    V = piv_rows.shape[-1]
+    V = resid.shape[-1]
     n = tokens.shape[0]
-    flat_ext = torch.cat([piv_rows.reshape(-1), piv_rows.new_zeros(1)])
     exclude_idx = ((topology["par"] + 1).clamp(min=0, max=n) * V
                    + tokens.clamp(min=0, max=V - 1))
-    exclude_idx = torch.where(
+    if top_k is None:
+        # Legacy/full-vocabulary reference used by analysis tests.  Keep its
+        # exact arithmetic available; production always supplies top_k.
+        piv_rows = resid * term.unsqueeze(1)
+        flat_ext = torch.cat([
+            piv_rows.reshape(-1), piv_rows.new_zeros(1)])
+        exclude = torch.where(
+            topology["node_valid"], exclude_idx,
+            torch.full_like(exclude_idx, piv_rows.numel()))
+        flat_ext.scatter_(0, exclude, 0.0)
+        flat = flat_ext[:-1]
+        k = min(int(wire_n), flat.numel())
+        top_v, top_i = flat.topk(k)
+        chosen_pos = (top_i // V).to(torch.int64)
+        chosen_tok = pack_piv((top_i % V).to(torch.int64), top_v)
+        return chosen_pos, chosen_tok, top_v
+
+    flat_ext = torch.cat([resid.reshape(-1), resid.new_zeros(1)])
+    exclude = torch.where(
         topology["node_valid"], exclude_idx,
-        torch.full_like(exclude_idx, piv_rows.numel()))
-    flat_ext.scatter_(0, exclude_idx, 0.0)
-    flat = flat_ext[:-1]
-    k = min(int(wire_n), flat.numel())
-    top_v, top_i = flat.topk(k)
-    chosen_pos = (top_i // V).to(torch.int64)
-    chosen_tok = pack_piv((top_i % V).to(torch.int64), top_v)
+        torch.full_like(exclude_idx, resid.numel()))
+    flat_ext.scatter_(0, exclude, 0.0)
+    correction = flat_ext[:-1].view(n + 1, V)
+    ctx_k = min(int(top_k), V)
+    correction_prob, correction_id = correction.topk(ctx_k, dim=-1)
+    correction_prob = correction_prob / correction_prob.sum(
+        -1, keepdim=True).clamp(min=1e-10)
+    piv = correction_prob * term.unsqueeze(1)
+    k = min(int(wire_n), piv.numel())
+    top_v, top_i = piv.reshape(-1).topk(k)
+    chosen_pos = (top_i // ctx_k).to(torch.int64)
+    chosen_id = correction_id.reshape(-1).gather(0, top_i)
+    chosen_tok = pack_piv(chosen_id.to(torch.int64), top_v)
     return chosen_pos, chosen_tok, top_v
 
 
@@ -754,11 +785,12 @@ class TreeProxyCUDAGraph:
 
     @torch.inference_mode()
     def __init__(self, nv: int, vocab_size: int, wire_n: int,
-                 depth_steps: int, dtype, device):
+                 depth_steps: int, dtype, device, top_k: int | None = None):
         self.nv = int(nv)
         self.V = int(vocab_size)
         self.wire_n = int(wire_n)
         self.depth_steps = int(depth_steps)
+        self.top_k = (None if top_k is None else int(top_k))
         self.device = torch.device(device)
         self.in_exit = torch.zeros(
             self.nv + 1, self.V, dtype=dtype, device=self.device)
@@ -779,7 +811,8 @@ class TreeProxyCUDAGraph:
             for _ in range(2):
                 tree_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
-                    self.topology, self.wire_n, self.depth_steps)
+                    self.topology, self.wire_n, self.depth_steps,
+                    self.top_k)
         warm.synchronize()
         # Capture failures leave CUDA's graph/RNG bookkeeping unusable for
         # ordinary eager execution in this process.  Synchronize explicitly
@@ -790,7 +823,8 @@ class TreeProxyCUDAGraph:
             self.out_pos, self.out_tok, self.out_piv = \
                 tree_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
-                    self.topology, self.wire_n, self.depth_steps)
+                    self.topology, self.wire_n, self.depth_steps,
+                    self.top_k)
 
     @torch.inference_mode()
     def prepare_topology(self, par, sib):

@@ -1054,6 +1054,7 @@ class ModelRunner:
                 vocab_size=cfg.hf_config.vocab_size,
                 wire_n=cfg.duet_proxy_wire_N,
                 depth_steps=tree_depth_steps,
+                top_k=cfg.duet_proxy_top_k,
                 dtype=cfg.hf_config.torch_dtype,
                 device=self.device)
         print("[DUET tree] captured target proxy graphs "

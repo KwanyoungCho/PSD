@@ -6,6 +6,7 @@
 단계 — 이 테스트는 실행기 '모듈'의 캡처-등가성을 고정한다.)
 """
 import unittest
+from unittest import mock
 import torch
 import torch.nn as nn
 
@@ -16,6 +17,7 @@ except Exception:
     HAS_FI = False
 
 from ssd.utils.context import get_context
+from ssd.engine.helpers import p2_tree as PT
 from ssd.engine.helpers.p1_tree import P1TreeExecutor
 from ssd.engine.helpers.p2_tree_executor import (
     P2TreeExecutor,
@@ -38,6 +40,8 @@ class _MiniCfg:
     duet_tree_policy = "level"
     duet_tree_proxy_threshold = 0.01
     duet_tree_conf_threshold = 0.03
+    sampler_x = None
+    async_fan_out = 3
 
     @property
     def duet_p2_seed_count(self):
@@ -206,6 +210,26 @@ class TestExecutorModuleParity(unittest.TestCase):
                                     torch.zeros(ex.W - ex.R,
                                                 dtype=vt.dtype)))
         del g
+
+    def test_executor_passes_sampler_rescaling_to_wor(self):
+        """Captured sampling and target verification must use the same q."""
+        dev = "cuda:0"
+        ex, cfg, PAGE, _ = self._mk(dev, policy="backbone")
+        cfg.sampler_x = 0.7
+        cfg.async_fan_out = 3
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        ex._local_idx = torch.full(
+            (ex.arena.capacity,), -1, dtype=torch.int64, device=dev)
+        with mock.patch.object(
+                PT, "tree_sample_wor", wraps=PT.tree_sample_wor) as sample:
+            ex.run_once(p0)
+        self.assertEqual(sample.call_count, ex.F)
+        for call in sample.call_args_list:
+            self.assertEqual(call.kwargs["sampler_x"], 0.7)
+            self.assertEqual(call.kwargs["F"], 3)
 
     def test_p1_multiword_executor_eager_equals_replay(self):
         """P1 preserves roots and reallocates surplus lanes globally."""

@@ -145,7 +145,13 @@ run_one () {
     warmup="${TREE_WARMUP:-all}"
   fi
   if [[ "${p2_policy}" == "on" ]]; then
-    p2_exec=1
+    # Diagnostic-only override for chain-degenerate semantic isolation.
+    # Production and every ordinary sweep retain the captured executor.
+    p2_exec="${P2_EXEC_OVERRIDE:-1}"
+    if [[ "${p2_exec}" != "0" && "${p2_exec}" != "1" ]]; then
+      echo "P2_EXEC_OVERRIDE must be 0 or 1; got ${p2_exec}" >&2
+      return 2
+    fi
   fi
 
   local extra=(
@@ -182,6 +188,7 @@ run_one () {
     echo "tree_c=${TREE_C}"
     echo "p2_width=${P2_WIDTH}"
     echo "p2_root_count=${P2_ROOT_COUNT}"
+    echo "p2_executor=${p2_exec}"
     echo "p1_fanout_list=${P1_FANOUT_LIST}"
     echo "p1_chain_forward_cells=$((16 * K1))"
     echo "p1_tree_forward_width_chain_context=${P1_FORWARD_WIDTH_CHAIN}"
