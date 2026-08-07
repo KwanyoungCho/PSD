@@ -179,8 +179,7 @@ class DraftRunner(ModelRunner):
         the default ``all`` covers every bucket reachable under max_model_len.
         """
         if os.environ.get("SSD_TREE_EXEC", "0") != "1" \
-                or self.config.duet_tree_policy not in (
-                    "level", "confidence", "coverage", "eagle", "adaptive") \
+                or self.config.duet_tree_policy not in _P2_EXECUTOR_POLICIES \
                 or self.config.use_eagle:
             return
         setting = os.environ.get("SSD_TREE_EXEC_WARMUP", "all").strip()
