@@ -883,7 +883,7 @@ class P2TreeExecutor:
             valid.unsqueeze(-1), gathered, torch.zeros_like(gathered)))
 
     @torch.inference_mode()
-    def capture(self, n_pages0):
+    def capture(self, n_pages0, graph_pool=None):
         # inference_mode 필수 — 실모델 호출이 autograd에 추적되면
         # inplace 충돌 (엔진 실행 경로 규약; 실기 스모크로 확인)
         if n_pages0 not in self.wrappers:
@@ -900,7 +900,13 @@ class P2TreeExecutor:
         torch.cuda.synchronize()
         g = torch.cuda.CUDAGraph()
         g.register_generator_state(self.gen)
-        with torch.cuda.graph(g):
+        # Multiple page/context variants are mutually exclusive at replay
+        # time.  Their captured model intermediates may therefore share one
+        # CUDA graph memory pool; persistent inputs/outputs are allocated
+        # outside capture and never alias this pool.  Without sharing, P1's
+        # two context widths x seven page shapes reserved about 3.1 GiB on a
+        # 24 GiB draft GPU and starved the established chain graphs.
+        with torch.cuda.graph(g, pool=graph_pool):
             self.run_once(n_pages0, finalize=False)
         self.graphs[n_pages0] = g
         return g

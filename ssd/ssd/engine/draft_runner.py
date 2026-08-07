@@ -239,6 +239,10 @@ class DraftRunner(ModelRunner):
         free0, _ = torch.cuda.mem_get_info(self.device)
         t0 = _time.perf_counter()
         captured = {}
+        # All P1 executor variants are replayed serially and expose their
+        # results through persistent buffers allocated before capture.  Share
+        # only their transient graph allocations across context/page shapes.
+        graph_pool = None
         for context_bucket in contexts:
             ex = self._ensure_p1_exec(context_bucket)
             # Capture every page-table shape.  The synthetic capture maps
@@ -263,10 +267,13 @@ class DraftRunner(ModelRunner):
                 for p0 in pages:
                     if p0 not in ex.graphs:
                         ex.prime_capture_inputs(p0)
-                        ex.capture(p0)
+                        graph = ex.capture(p0, graph_pool=graph_pool)
+                        if graph_pool is None:
+                            graph_pool = graph.pool()
             finally:
                 ex.gen.set_state(rng_state)
             captured[context_bucket] = pages
+        self._p1_exec_graph_pool = graph_pool
         torch.cuda.synchronize()
         free1, _ = torch.cuda.mem_get_info(self.device)
         print(
