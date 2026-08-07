@@ -1948,6 +1948,45 @@ class TestArenaParityHardening(unittest.TestCase):
             self.assertEqual(sel_t[f][:n_sel].tolist(), sel_cpu,
                              f"f={f}: near-tie 선택 순서 불일치")
 
+    def test_mandatory_backbones_keep_root_lane_order(self):
+        """C=1,R=W must keep root r in lane r on every round."""
+        R = W = 4
+        F = 3
+        # Deliberately reverse score order so score sorting would visibly
+        # permute lanes after the first round.
+        piv = torch.tensor([0.01, 0.05, 0.2, 0.7])
+        glue = torch.ones(R, 2, dtype=torch.uint8)
+
+        def fwd(_f, ids, _rope, _packed, _indptr):
+            logits = torch.full((W, 32), -20.0)
+            logits[torch.arange(W), (ids + 1) % 32] = 20.0
+            return logits
+
+        kwargs = dict(
+            policy="backbone", W=W, F_total=F, c_tensor=1, nv=F,
+            beta=0.5, depth_cap=F, K_glue=1, context_len=64,
+            pad_token=0, fanout_policy="backbone",
+            temps=torch.full((W,), 0.8))
+        torch.manual_seed(17)
+        pool, log, _ = PT.run_rollout(
+            [3, 7, 11, 15], piv, forward_fn=fwd,
+            glue_rows_by_root=glue, rope_base_by_root=[20] * R, **kwargs)
+        torch.manual_seed(17)
+        ar, trace, _ = PT.run_rollout_arena(
+            [3, 7, 11, 15], piv, forward_fn=fwd,
+            glue_rows_by_root=glue, rope_base_by_root=[20] * R,
+            device="cpu", **kwargs)
+
+        expected_roots = list(range(R))
+        sel_gpu, valid_gpu, _ = trace
+        for f in range(F):
+            sel_cpu, _ = log[f]
+            self.assertEqual(
+                [int(pool.root[i]) for i in sel_cpu], expected_roots)
+            self.assertTrue(bool(valid_gpu[f].all()))
+            self.assertEqual(
+                ar.root.gather(0, sel_gpu[f]).tolist(), expected_roots)
+
     def test_true_zero_q_support_exhaustion(self):
         # -inf logits → 정확히 0 확률 (리뷰6: 종전 -30은 1.9e-22 양수)
         import numpy as _np

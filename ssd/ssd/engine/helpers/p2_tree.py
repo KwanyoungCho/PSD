@@ -1187,9 +1187,13 @@ def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
         return ranked[:W]
     mand_set = set(mand)
     rest = [i for i in ranked if i not in mand_set]
-    # 의무 tip 먼저 (priority 순 유지), 잔여 lane은 우선순위 rescue
-    mand_ranked = [i for i in ranked if i in mand_set]
-    return (mand_ranked + rest)[:W]
+    # Root backbone rows keep their root order.  This is more than a
+    # deterministic tie-break: with C=1 and R=W it makes the tree rollout
+    # exactly degenerate to the established chain layout (root r remains in
+    # lane r in every round).  Only surplus lanes are ranked by path score.
+    # Reordering mandatory tips by score needlessly changed the physical KV
+    # lane of every root on every round and broke that equivalence contract.
+    return (mand + rest)[:W]
 
 
 def select_nodes_global(pool: TreePool, W: int, fwd: int, depth_cap: int,
@@ -2221,18 +2225,22 @@ def _arena_select(ar: TreeArena, policy, W, f, depth_cap, tip_idx,
         & ar.valid
     if policy in ("level", "confidence", "coverage", "backbone"):
         elig = elig & (ar.depth == f)
-    # 합성키 1회 정렬: mand에 +1000 오프셋 (logpri ∈ (-100, 0] 범위 —
-    # float64 정밀 손실 없음; 그룹 내 상대 순서 = logpri 순 보존 =
-    # CPU의 2단(order→mand-first) 결과와 동일. 런치 수 절감 (v1 실측:
-    # eager 커널 오버헤드가 병목).
+    # One sort, with two explicit groups:
+    #   1) mandatory backbone tips in root order (root 0, 1, ...),
+    #   2) surplus candidates in descending path score.
+    # The first rule preserves exact chain lane/KV placement at C=1,R=W;
+    # the second keeps dynamic score-based branching for spare lanes.
     mand_slot = torch.zeros(cap, dtype=torch.bool, device=dev)
     if tip_idx is not None:
         t = tip_idx.clamp(min=0)
         t_ok = (tip_idx >= 0) & (remaining > 0) & elig.gather(0, t)
         mand_slot.scatter_(0, t, t_ok)
     base = ar.logpri.float().double()      # CPU 비교 정밀도(f32) 고정
-    key = torch.where(elig, base + mand_slot.double() * 1000.0,
-                      torch.full_like(base, float("-inf")))
+    mandatory_key = 1000.0 - ar.root.double()
+    key = torch.where(
+        elig,
+        torch.where(mand_slot, mandatory_key, base),
+        torch.full_like(base, float("-inf")))
     final = torch.argsort(key, descending=True, stable=True)
     elig_o = elig.gather(0, final)
     sel = final[:W]
