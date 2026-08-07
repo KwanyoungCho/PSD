@@ -213,7 +213,8 @@ class Config:
     @property
     def duet_p2_active_root_count(self) -> int:
         """Number of roots that receive the production P2 node budget."""
-        if getattr(self, "duet_tree_policy", "off") in ("eagle", "adaptive"):
+        if getattr(self, "duet_tree_policy", "off") in (
+                "eagle", "hybrid", "adaptive"):
             # EAGLE-style global expansion keeps the root/cache coverage and
             # forward width as separate concepts.  By default every one of
             # the W chain roots is retained; an explicit smaller R remains a
@@ -431,7 +432,7 @@ class Config:
             elif _legacy_tree_policy == "off":
                 self.duet_p2_tree_policy = "off"
             elif _legacy_tree_policy not in (
-                    "adaptive", "coverage", "confidence", "level",
+                    "hybrid", "adaptive", "coverage", "confidence", "level",
                     "frontier"):
                 raise ValueError(
                     "deprecated duet_tree_policy accepts only off|eagle or "
@@ -447,15 +448,15 @@ class Config:
         elif _legacy_tree_policy == "backbone":
             self.duet_tree_policy = "backbone"
         elif _legacy_tree_policy in (
-                "adaptive", "coverage", "confidence", "level", "frontier"):
+                "hybrid", "adaptive", "coverage", "confidence", "level",
+                "frontier"):
             self.duet_tree_policy = _legacy_tree_policy
         else:
-            # Production ``on`` evaluates every root in round zero, then
-            # globally expands the highest cumulative-confidence frontier.
-            # ``eagle`` remains an implementation-only compatibility name;
-            # the public CLI is simply on/off.
+            # Production ``on`` gives every root a two-token depth floor,
+            # then globally expands the highest cumulative-confidence
+            # frontier.  The public CLI remains simply on/off.
             self.duet_tree_policy = (
-                "eagle" if self.duet_p2_tree_policy == "on" else "off")
+                "hybrid" if self.duet_p2_tree_policy == "on" else "off")
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
@@ -594,7 +595,7 @@ class Config:
                         f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
                 # Dynamic-tree knobs — -O 생존형 raise.
                 if self.duet_tree_policy not in (
-                        "off", "adaptive", "eagle", "coverage", "backbone",
+                        "off", "hybrid", "adaptive", "eagle", "coverage", "backbone",
                         "confidence", "level", "frontier"):
                     raise ValueError(
                         f"duet_tree_policy must be "

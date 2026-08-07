@@ -203,9 +203,9 @@ class TestTreeP1Allocation(unittest.TestCase):
 
 
 class TestRootBudgets(unittest.TestCase):
-    def test_eagle_root_count_defaults_to_width_and_honors_arg(self):
+    def test_global_root_count_defaults_to_width_and_honors_arg(self):
         cfg = object.__new__(Config)
-        cfg.duet_tree_policy = "eagle"
+        cfg.duet_tree_policy = "hybrid"
         cfg.duet_tree_root_count = None
         cfg.duet_p2_budget = 10
         cfg.duet_phase2_k = 4
@@ -334,6 +334,42 @@ class TestRootBudgets(unittest.TestCase):
         self.assertGreater(int(views["valid"][0]),
                            int(views["valid"][1]))
         self.assertGreaterEqual(int(views["valid"][1]), 1)
+
+    def test_hybrid_guarantees_depth_two_then_expands_globally(self):
+        calls = 0
+
+        def sample_fn(sel, fan):
+            nonlocal calls
+            rows = len(sel)
+            toks = (2000 + calls * 100
+                    + torch.arange(rows).unsqueeze(1) * 3
+                    + torch.arange(3).unsqueeze(0))
+            raw = torch.tensor([[0.80, 0.15, 0.04]]).repeat(rows, 1)
+            calls += 1
+            return toks, raw
+
+        pool, eval_log = PT.rollout_reference(
+            [10, 11], torch.tensor([0.95, 0.05]), None,
+            policy="hybrid", W=2, F_total=4, c_tensor=3, nv=8,
+            beta=0.5, depth_cap=4, sample_fn=sample_fn,
+            fanout_policy="backbone")
+        # Both roots own a mandatory tip in rounds zero and one.  Only after
+        # reaching depth two may the stronger root consume all forward lanes.
+        for f in (0, 1):
+            self.assertEqual(
+                sorted(int(pool.root[i]) for i in eval_log[f][0]), [0, 1])
+        self.assertTrue(any(
+            eval_log[f][0]
+            and all(int(pool.root[i]) == 0 for i in eval_log[f][0])
+            for f in (2, 3)))
+        views = PT.build_root_views(pool, 2, 8)
+        for r in range(2):
+            n = int(views["valid"][r])
+            depth = [0] * n
+            for j in range(n):
+                p = int(views["parent_local"][r, j])
+                depth[j] = 1 if p < 0 else depth[p] + 1
+            self.assertGreaterEqual(max(depth), 2)
 
     def test_eagle_rejects_more_roots_than_forward_width(self):
         with self.assertRaisesRegex(ValueError, "R<=W"):

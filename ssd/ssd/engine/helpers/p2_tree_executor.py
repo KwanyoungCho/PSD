@@ -805,7 +805,8 @@ class P2TreeExecutor:
             OUT_N=self.out_tok.numel(),
             OUT_ROWS=self.out_valid.numel(), BLOCK=256)
         policy = self.policy
-        if policy in ("coverage", "backbone", "eagle", "adaptive"):
+        if policy in ("coverage", "backbone", "eagle", "hybrid",
+                      "adaptive"):
             # Stored children are not forward cells.  A single parent
             # forward already samples C ordered WOR children, so retaining
             # siblings up to NV does not add model calls or change the fixed
@@ -833,8 +834,10 @@ class P2TreeExecutor:
         tip_depth = torch.zeros(R, dtype=torch.int64, device=self.dev)
         self._sel = {}
         wrappers = self.wrappers[n_pages0]
+        hybrid_floor = min(2, F)
         for f in range(F):
-            _global = policy == "eagle"
+            _global = (policy == "eagle"
+                       or (policy == "hybrid" and f >= hybrid_floor))
             if _global:
                 sel, sel_valid = PT._arena_select_global(
                     ar, W, f, F, remaining,
@@ -853,12 +856,17 @@ class P2TreeExecutor:
                     ar, sel, sel_valid, remaining, C, R,
                     future_rounds=F - f - 1)
             else:
-                reserve = (F - tip_depth).clamp(min=0)
-                _fanout_fn = (PT._arena_fanout_adaptive
-                              if policy == "adaptive"
-                              else PT._arena_fanout_backbone)
-                fan = _fanout_fn(
-                    ar, sel, sel_valid, tip_idx, remaining, reserve, C, R)
+                if policy == "hybrid":
+                    r_sel = ar.root.gather(0, sel.clamp(min=0))
+                    is_tip = sel_valid & (sel == tip_idx.gather(0, r_sel))
+                    fan = (is_tip & (remaining.gather(0, r_sel) > 0)).long()
+                else:
+                    reserve = (F - tip_depth).clamp(min=0)
+                    _fanout_fn = (PT._arena_fanout_adaptive
+                                  if policy == "adaptive"
+                                  else PT._arena_fanout_backbone)
+                    fan = _fanout_fn(
+                        ar, sel, sel_valid, tip_idx, remaining, reserve, C, R)
             r_of = torch.where(sel_valid,
                                ar.root.gather(0, sel.clamp(min=0)),
                                torch.zeros_like(sel))

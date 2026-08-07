@@ -111,7 +111,8 @@ class TestExecutorModuleParity(unittest.TestCase):
         V, H, HKV, D = 128, 4, 2, 64
         cfg = _MiniCfg()
         cfg.duet_tree_policy = policy
-        if policy in ("coverage", "backbone", "eagle", "adaptive"):
+        if policy in ("coverage", "backbone", "eagle", "hybrid",
+                      "adaptive"):
             cfg.duet_tree_root_count = cfg.duet_proxy_total_budget
         max_blocks = 8
         cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
@@ -334,6 +335,56 @@ class TestExecutorModuleParity(unittest.TestCase):
         valid = ex.out_valid.cpu()
         self.assertTrue(bool((valid >= 1).all()))
         self.assertGreater(len(set(valid.tolist())), 1)
+
+        ex.model.cache.zero_()
+        ex.capture(p0)
+        ex.model.cache.zero_()
+        ex.replay(p0)
+        torch.cuda.synchronize()
+        for k, v in ref.items():
+            got = getattr(ex, k)
+            if got.dtype.is_floating_point:
+                self.assertTrue(torch.allclose(v, got, atol=1e-3,
+                                               rtol=1e-3), k)
+            else:
+                self.assertTrue(torch.equal(v, got), k)
+        del ex
+        import gc
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def test_z_hybrid_executor_depth_floor_and_capture_parity(self):
+        dev = "cuda:0"
+        ex, cfg, PAGE, V = self._mk(dev, policy="hybrid")
+        cfg.duet_tree_conf_threshold = 0.005
+        ctx0 = PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        ex.in_root_piv.copy_(torch.tensor(
+            [.70, .12, .06, .04, .025, .018, .014, .01, .008, .005],
+            device=dev))
+        gN = torch.Generator().manual_seed(48)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(1, generator=gN).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx = torch.full((ex.arena.capacity,), -1,
+                                   dtype=torch.int64, device=dev)
+        ex.model.cache.zero_()
+        ex.run_once(p0)
+        ref = {k: getattr(ex, k).clone() for k in (
+            "view_tok", "view_par", "view_sib", "view_rawq",
+            "view_pcell", "out_valid", "out_pq_ref", "out_pq_cells",
+            "out_u_valid")}
+        valid = ex.out_valid.cpu()
+        par = ex.view_par.cpu()
+        for r in range(ex.R):
+            n = int(valid[r])
+            depth = [0] * n
+            for j in range(n):
+                p = int(par[r, j])
+                depth[j] = 1 if p < 0 else depth[p] + 1
+            self.assertGreaterEqual(max(depth), 2)
 
         ex.model.cache.zero_()
         ex.capture(p0)

@@ -282,7 +282,7 @@ def alloc_policy_root_budgets(piv: torch.Tensor, policy: str, total: int,
     The draw identities are deliberately not inputs.  Budget/topology is
     fixed before WOR sampling, preserving the lossless verifier contract.
     """
-    if policy in ("coverage", "backbone", "eagle", "adaptive"):
+    if policy in ("coverage", "backbone", "eagle", "hybrid", "adaptive"):
         return torch.where(
             piv > 0,
             torch.full_like(piv, int(cap), dtype=torch.int64),
@@ -1134,6 +1134,7 @@ def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
     # confidence.  Legacy ``level`` remains as an exact compatibility name.
     if policy in (
             "level", "confidence", "coverage", "backbone", "eagle",
+            "hybrid",
             "adaptive"):
         elig = elig & (pool.depth[:n] == fwd)
     idx = torch.nonzero(elig).flatten()
@@ -1236,11 +1237,12 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
     반환: (pool, eval_log) — eval_log[f] = (선택 인덱스, fanout) 기록.
     """
     R = len(root_toks)
-    if policy == "eagle":
+    if policy in ("eagle", "hybrid"):
         # All roots are evaluated at depth zero.  Later levels compete
-        # globally by cumulative root-proxy x path-draft confidence; no root
-        # owns a mandatory full-depth lane.
-        fanout_policy = "ctensor"
+        # globally by cumulative root-proxy x path-draft confidence. Hybrid
+        # keeps backbone handling only for its first two rounds.
+        if policy == "eagle":
+            fanout_policy = "ctensor"
         if R > W:
             raise ValueError(
                 f"eagle tree rollout requires R<=W so every root is "
@@ -1263,8 +1265,11 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
         pool.add(root_toks[r], -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
     eval_log = []
     tip_idx = list(range(R))                      # backbone tip (root부터)
+    hybrid_floor = min(2, F_total)
     for f in range(F_total):
-        if policy == "eagle":
+        global_round = (policy == "eagle"
+                        or (policy == "hybrid" and f >= hybrid_floor))
+        if global_round:
             sel = select_nodes_global(
                 pool, W, f, depth_cap, remaining,
                 future_rounds=F_total - f - 1,
@@ -1281,22 +1286,25 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
             continue
         pri = pool.logpri[torch.tensor(sel)]
         roots = pool.root[torch.tensor(sel)]
-        if fanout_policy == "backbone":
-            reserve = torch.tensor(
-                [max(0, depth_cap - int(pool.depth[tip_idx[r]]))
-                 for r in range(R)], dtype=torch.int64)
-            is_tip = torch.tensor(
-                [sel[k] == tip_idx[int(roots[k])] for k in range(len(sel))],
-                dtype=torch.bool)
-            _fanout_fn = (alloc_fanouts_adaptive
-                          if policy == "adaptive"
-                          else alloc_fanouts_backbone)
-            fan = _fanout_fn(pri, roots, remaining, reserve,
-                             is_tip, c_tensor)
-        elif policy == "eagle":
+        if global_round:
             fan = alloc_fanouts_global(
                 pri, roots, remaining, c_tensor,
                 future_rounds=F_total - f - 1)
+        elif fanout_policy == "backbone":
+            is_tip = torch.tensor(
+                [sel[k] == tip_idx[int(roots[k])] for k in range(len(sel))],
+                dtype=torch.bool)
+            if policy == "hybrid":
+                fan = is_tip.long() * (remaining[roots] > 0).long()
+            else:
+                reserve = torch.tensor(
+                    [max(0, depth_cap - int(pool.depth[tip_idx[r]]))
+                     for r in range(R)], dtype=torch.int64)
+                _fanout_fn = (alloc_fanouts_adaptive
+                              if policy == "adaptive"
+                              else alloc_fanouts_backbone)
+                fan = _fanout_fn(pri, roots, remaining, reserve,
+                                 is_tip, c_tensor)
         else:
             fan = alloc_fanouts(pri, roots, remaining, c_tensor)
         # 예산 소진 반영 (draw 전 확정 — D10)
@@ -1316,12 +1324,12 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
                          + float(torch.log(torch.clamp(raws[k][c], min=1e-9))),
                          float(raws[k][c]))
                 # backbone 연장: tip의 맏이(c=0)가 새 tip
-                if fanout_policy == "backbone" and c == 0 \
+                if not global_round and fanout_policy == "backbone" and c == 0 \
                         and i == tip_idx[int(pool.root[i])]:
                     tip_idx[int(pool.root[i])] = child
         eval_log.append((sel, fan))
     requested = (R * nv if policy in (
-        "coverage", "backbone", "eagle", "adaptive")
+        "coverage", "backbone", "eagle", "hybrid", "adaptive")
                  else F_total * W)
     pool.alloc_stats = _alloc_stats(pool, budgets, R, requested=requested)
     return pool, eval_log
@@ -1378,8 +1386,9 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     fanout 0 (자식 무시; RNG는 소비 — 고정 shape 유지).
     """
     R = len(root_toks)
-    if policy == "eagle":
-        fanout_policy = "ctensor"
+    if policy in ("eagle", "hybrid"):
+        if policy == "eagle":
+            fanout_policy = "ctensor"
         if R > W:
             raise ValueError(
                 f"eagle tree rollout requires R<=W so every root is "
@@ -1404,8 +1413,11 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     node_root = list(range(R))
     node_depth = [0] * R
     node_logpri = [float(x) for x in logpiv.tolist()]
+    hybrid_floor = min(2, F_total)
     for f in range(F_total):
-        if policy == "eagle":
+        global_round = (policy == "eagle"
+                        or (policy == "hybrid" and f >= hybrid_floor))
+        if global_round:
             sel = select_nodes_global(
                 pool, W, f, depth_cap, remaining,
                 future_rounds=F_total - f - 1,
@@ -1423,22 +1435,26 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
         if n_sel:
             pri = torch.tensor([node_logpri[i] for i in sel])
             roots = torch.tensor([node_root[i] for i in sel])
-            if fanout_policy == "backbone":
-                reserve = torch.tensor(
-                    [max(0, depth_cap - tip_depth[r]) for r in range(R)],
-                    dtype=torch.int64)
-                is_tip = torch.tensor(
-                    [sel[k] == tip_idx[node_root[sel[k]]]
-                     for k in range(n_sel)], dtype=torch.bool)
-                _fanout_fn = (alloc_fanouts_adaptive
-                              if policy == "adaptive"
-                              else alloc_fanouts_backbone)
-                fan[:n_sel] = _fanout_fn(
-                    pri, roots, remaining, reserve, is_tip, c_tensor)
-            elif policy == "eagle":
+            if global_round:
                 fan[:n_sel] = alloc_fanouts_global(
                     pri, roots, remaining, c_tensor,
                     future_rounds=F_total - f - 1)
+            elif fanout_policy == "backbone":
+                is_tip = torch.tensor(
+                    [sel[k] == tip_idx[node_root[sel[k]]]
+                     for k in range(n_sel)], dtype=torch.bool)
+                if policy == "hybrid":
+                    fan[:n_sel] = (is_tip.long()
+                                   * (remaining[roots] > 0).long())
+                else:
+                    reserve = torch.tensor(
+                        [max(0, depth_cap - tip_depth[r]) for r in range(R)],
+                        dtype=torch.int64)
+                    _fanout_fn = (alloc_fanouts_adaptive
+                                  if policy == "adaptive"
+                                  else alloc_fanouts_backbone)
+                    fan[:n_sel] = _fanout_fn(
+                        pri, roots, remaining, reserve, is_tip, c_tensor)
             else:
                 fan[:n_sel] = alloc_fanouts(pri, roots, remaining, c_tensor)
             fan_l = fan[:n_sel].tolist()
@@ -1507,7 +1523,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                 node_root.append(node_root[i])
                 node_depth.append(node_depth[i] + 1)
                 node_logpri.append(lp)
-                if fanout_policy == "backbone" and c == 0 \
+                if not global_round and fanout_policy == "backbone" and c == 0 \
                         and i == tip_idx[node_root[i]]:
                     tip_idx[node_root[i]] = child
                     tip_depth[node_root[i]] = node_depth[i] + 1
@@ -1520,7 +1536,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                   f"pool={(_t5-_t4)*1e3:.2f}", flush=True)
         eval_log.append((sel, fan[:n_sel]))
     requested = (R * nv if policy in (
-        "coverage", "backbone", "eagle", "adaptive")
+        "coverage", "backbone", "eagle", "hybrid", "adaptive")
                  else F_total * W)
     pool.alloc_stats = _alloc_stats(pool, budgets, R, requested=requested)
     if os.environ.get("SSD_TREE_ALLOC_CHECK", "0") == "1":
@@ -2390,8 +2406,9 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
     (sel [F,W], sel_valid [F,W], fan [F,W]) device 텐서.
     """
     R = len(root_toks)
-    if policy == "eagle":
-        fanout_policy = "ctensor"
+    if policy in ("eagle", "hybrid"):
+        if policy == "eagle":
+            fanout_policy = "ctensor"
         if R > W:
             raise ValueError(
                 f"eagle tree rollout requires R<=W so every root is "
@@ -2425,7 +2442,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
             dev, non_blocking=True)
     ar._budgets = budgets
     ar._requested = (R * nv if policy in (
-        "coverage", "backbone", "eagle", "adaptive")
+        "coverage", "backbone", "eagle", "hybrid", "adaptive")
                      else F_total * W)
     remaining = budgets.clone()
     # CPU 경로와 동일 정밀도: f32 log 후 double 확장 (리뷰6 —
@@ -2444,9 +2461,12 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
     tip_depth = torch.zeros(R, dtype=torch.int64, device=dev)
     sel_tr, val_tr, fan_tr = [], [], []
     cell_logits = None
+    hybrid_floor = min(2, F_total)
     for f in range(F_total):
-        _tips = None if policy == "eagle" else tip_idx
-        if policy == "eagle":
+        global_round = (policy == "eagle"
+                        or (policy == "hybrid" and f >= hybrid_floor))
+        _tips = None if global_round else tip_idx
+        if global_round:
             sel, sel_valid = _arena_select_global(
                 ar, W, f, depth_cap, remaining,
                 future_rounds=F_total - f - 1, R=R,
@@ -2458,13 +2478,18 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         else:
             sel, sel_valid = _arena_select(ar, policy, W, f, depth_cap,
                                            _tips, remaining)
-            reserve = (depth_cap - tip_depth).clamp(min=0)
-            _fanout_fn = (_arena_fanout_adaptive
-                          if policy == "adaptive"
-                          else _arena_fanout_backbone)
-            fan = _fanout_fn(
-                ar, sel, sel_valid, tip_idx, remaining, reserve,
-                c_tensor, R)
+            if policy == "hybrid":
+                r_sel = ar.root.gather(0, sel.clamp(min=0))
+                is_tip = sel_valid & (sel == tip_idx.gather(0, r_sel))
+                fan = (is_tip & (remaining.gather(0, r_sel) > 0)).long()
+            else:
+                reserve = (depth_cap - tip_depth).clamp(min=0)
+                _fanout_fn = (_arena_fanout_adaptive
+                              if policy == "adaptive"
+                              else _arena_fanout_backbone)
+                fan = _fanout_fn(
+                    ar, sel, sel_valid, tip_idx, remaining, reserve,
+                    c_tensor, R)
         r_of = torch.where(
             sel_valid, ar.root.gather(0, sel.clamp(min=0)),
             torch.zeros_like(sel))
@@ -2561,7 +2586,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         # r_of가 0으로 라우팅되므로 scatter_(중복 승자 미정)는 root0의
         # tip을 낡은 값으로 덮을 수 있다. tip은 root당 최대 1 lane
         # 이므로 델타 scatter_add(나머지는 +0)로 중복-안전하게 갱신.
-        if policy != "eagle":
+        if not global_round:
             tip_adv = sel_valid & (sel == tip_idx.gather(0, r_of)) \
                 & (fan > 0)
             old_tip = tip_idx.gather(0, r_of)

@@ -44,7 +44,8 @@ DUET_JIT_SUBSET = os.environ.get("SSD_DUET_JIT_SUBSET", "0") == "1"
 # public ``on`` normalizes to the internal global selector, while the other
 # names exist only for exact reproduction of older experiments.
 _P2_EXECUTOR_POLICIES = frozenset({
-    "level", "confidence", "coverage", "backbone", "eagle", "adaptive",
+    "level", "confidence", "coverage", "backbone", "eagle", "hybrid",
+    "adaptive",
 })
 
 
