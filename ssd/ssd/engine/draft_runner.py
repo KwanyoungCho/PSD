@@ -64,10 +64,25 @@ class DraftRunner(ModelRunner):
     @classmethod
     def create_draft_config(cls, cfg: Config) -> Config:
         """Create a draft config from the main config without instantiating DraftRunner."""
+        # The ordinary async runner can devote 80% of post-model free memory
+        # to KV.  With both dynamic phases enabled, however, all-page P1 and
+        # P2 graph pools add about 3.8 GiB *after* KV sizing.  Keeping the old
+        # 80% leaves only a few MiB on a 24-GiB GPU and makes the first real
+        # prefill intermittently OOM.  Reserve another 5% for that graph set.
+        # This changes capacity only; B=1/max_len=2048 needs a tiny fraction
+        # of the remaining thousands of draft KV blocks.
+        both_dynamic_trees = (
+            cfg.draft_async
+            and getattr(cfg, "duet_p1_tree_policy", "off") == "on"
+            and getattr(cfg, "duet_p2_tree_policy", "off") == "on"
+        )
+        draft_memory_utilization = (
+            0.75 if (not cfg.draft_async or both_dynamic_trees) else 0.8
+        )
         draft_cfg = dataclasses.replace(
             cfg,
             model=cfg.draft,
-            gpu_memory_utilization = (0.75 if not cfg.draft_async else 0.8), # REMAINING SPACE if not draft_async
+            gpu_memory_utilization=draft_memory_utilization,
             tokenizer_path=cfg.model if cfg.use_eagle else None,
             d_model_target=cfg.hf_config.hidden_size if cfg.use_eagle and cfg.hf_config else None,
             enforce_eager=cfg.enforce_eager,

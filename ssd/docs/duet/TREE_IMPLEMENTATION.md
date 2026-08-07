@@ -360,7 +360,11 @@ FlashInfer workspace와 persistent 입력/출력은 분리한다. 이 비용은 
 P1/P2 graph를 모두 준비한 직후에는 live graph가 참조하지 않는 compiler/warmup
 cache가 수백 MiB 남을 수 있다. 서비스 준비 신호를 보내기 전에 synchronize 후
 `empty_cache()`로 이 미사용분만 반환한다. 실제 graph pool은 유지되며, 24GiB
-GPU에서 첫 prefill이 20MiB를 추가 요청하다 OOM 난 회귀를 막는다.
+GPU에서 실제 반환량이 0일 수도 있으므로 이것만 메모리 안전장치로 보지 않는다.
+P1과 P2 tree를 동시에 켠 draft는 KV 자동 할당 비율을 80%에서 75%로 낮춰 약
+1GiB의 명시적 graph/prefill 여유를 먼저 확보한다. B=1, max length 2048에서는
+남은 KV block이 요구량보다 훨씬 많으며, chain/P1-only/P2-only 용량은 바꾸지
+않는다.
 
 ### 5.3 kernel 융합
 

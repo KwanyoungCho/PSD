@@ -61,6 +61,35 @@ class TestP1UniformRoots(unittest.TestCase):
 
 
 class TestP1ShapeBuckets(unittest.TestCase):
+    def test_both_trees_reserve_draft_graph_headroom(self):
+        import dataclasses
+        from ssd.engine.draft_runner import DraftRunner
+
+        @dataclasses.dataclass
+        class _Cfg:
+            model: str = "target"
+            draft: str = "draft"
+            draft_async: bool = True
+            duet_p1_tree_policy: str = "off"
+            duet_p2_tree_policy: str = "off"
+            gpu_memory_utilization: float = 0.7
+            tokenizer_path: str | None = None
+            d_model_target: int | None = None
+            use_eagle: bool = False
+            hf_config: object | None = None
+            enforce_eager: bool = False
+
+        chain = DraftRunner.create_draft_config(_Cfg())
+        p1_only = DraftRunner.create_draft_config(
+            _Cfg(duet_p1_tree_policy="on"))
+        both = DraftRunner.create_draft_config(_Cfg(
+            duet_p1_tree_policy="on", duet_p2_tree_policy="on"))
+        sync = DraftRunner.create_draft_config(_Cfg(draft_async=False))
+        self.assertEqual(chain.gpu_memory_utilization, 0.8)
+        self.assertEqual(p1_only.gpu_memory_utilization, 0.8)
+        self.assertEqual(both.gpu_memory_utilization, 0.75)
+        self.assertEqual(sync.gpu_memory_utilization, 0.75)
+
     def test_buckets_cover_chain_and_tree_contexts(self):
         buckets = p1_context_buckets(9, 4, 13, 8)
         self.assertIn(10, buckets)  # K1 chain contexts
