@@ -56,7 +56,7 @@ DRAFT_AWQ="${DRAFT_AWQ:-/data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1}"
 K1="${K1:-9}"
 K2="${K2:-4}"
 P1_ROOTS_PER_POSITION="${P1_ROOTS_PER_POSITION:-2}"
-P1_TREE_FORWARD_SCALE="${P1_TREE_FORWARD_SCALE:-1.0}"
+P1_TREE_FORWARD_SCALE="${P1_TREE_FORWARD_SCALE:-1.25}"
 P1_TREE_MAX_NODES="${P1_TREE_MAX_NODES:-$((2 * K1))}"
 P2_TREE_MAX_NODES="${P2_TREE_MAX_NODES:-$((2 * K2))}"
 P2_WIDTH="${P2_WIDTH:-10}"
@@ -98,7 +98,7 @@ COMMON=(--llama --size 8
   --input_len 512 --all --max_model_len 2048
   --draft_path "${DRAFT_PATH}"
   --quant_awq_draft --quant_awq_draft_artifact "${DRAFT_AWQ}"
-  --gpus 5 --async --spec --duet
+  --gpus 5 --async --spec --k "$((K1 + K2))" --duet
   --duet_exit_layer 56 --f 3 --duet_k1 "${K1}" --duet_k2 "${K2}"
   --duet_p1_fanout 2
   --duet_p1_fanout_list "${P1_FANOUT_LIST}"

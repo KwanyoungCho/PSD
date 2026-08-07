@@ -18,8 +18,8 @@ RUN_OUTLEN="${RUN_OUTLEN:-192}"
 
 if [[ -z "${SWEEP_SPECS:-}" ]]; then
   echo "SWEEP_SPECS is required; example:" >&2
-  echo "  p1k7:7:4:14:8:3:1.25:10:p1_tree;"\
-"p2k5:9:5:18:10:3:1.25:15:p2_tree" >&2
+  echo "  p1k7:7:4:14:8:3:1.0:10:chain,p1_tree;"\
+"p2k5:9:5:18:10:3:1.0:10:chain,p2_tree" >&2
   exit 2
 fi
 

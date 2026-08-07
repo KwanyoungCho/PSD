@@ -508,9 +508,10 @@ class P2TreeExecutor:
                   if phase == "p1" else
                   getattr(config, "duet_p2_tree_max_nodes",
                           getattr(config, "duet_tree_nv", 8))))
-        # P1 and P2 share the production global selector.  P2 keeps internal
-        # legacy names solely so historical parity tests remain reproducible.
-        self.policy = ("eagle" if phase == "p1" else
+        # P1 lacks the target-side proxy needed to rank unrelated roots, so
+        # it keeps a root backbone plus dynamically ranked surplus lanes. P2
+        # uses the global selector; internal legacy names remain for tests.
+        self.policy = ("backbone" if phase == "p1" else
                        getattr(config, "duet_tree_policy", "eagle"))
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
         if R > W:

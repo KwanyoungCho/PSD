@@ -29,7 +29,7 @@ class _MiniCfg:
     duet_phase1_k = 9
     duet_phase2_k = 4
     duet_p1_roots_per_position = 2
-    duet_p1_tree_forward_scale = 1.0
+    duet_p1_tree_forward_scale = 1.25
     duet_p1_tree_max_nodes = 13
     duet_p2_tree_max_nodes = 8
     duet_tree_c_tensor = 3
@@ -207,12 +207,11 @@ class TestExecutorModuleParity(unittest.TestCase):
         del g
 
     def test_p1_multiword_executor_eager_equals_replay(self):
-        """P1 evaluates every root, then reallocates depth globally."""
+        """P1 preserves roots and reallocates surplus lanes globally."""
         dev = "cuda:0"
         V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
         cfg = _MiniCfg()
-        cfg.duet_tree_policy = "eagle"
-        cfg.duet_tree_conf_threshold = 0.005
+        cfg.duet_tree_policy = "backbone"
         max_blocks = 8
         cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
                             dtype=torch.float16, device=dev)
@@ -220,8 +219,8 @@ class TestExecutorModuleParity(unittest.TestCase):
         ex = P1TreeExecutor(
             model, model.logits_fn, cfg, dev, PAGE, max_blocks,
             V, H, HKV, D, context_bucket=10)
-        self.assertEqual((ex.F, ex.W, ex.R), (9, 20, 20))
-        self.assertEqual(ex.arena.anc_words, 3)
+        self.assertEqual((ex.F, ex.W, ex.R), (9, 25, 20))
+        self.assertEqual(ex.arena.anc_words, 4)
 
         ctx0 = 2 * PAGE + 21
         p0 = (ctx0 + PAGE - 1) // PAGE
@@ -246,10 +245,17 @@ class TestExecutorModuleParity(unittest.TestCase):
         for name, expected in ref.items():
             self.assertTrue(torch.equal(expected, getattr(ex, name)), name)
         vt_p1 = ex.out_valid.cpu()
-        self.assertTrue(bool((vt_p1[:ex.R] >= 1).all()))
-        self.assertGreater(len(set(vt_p1[:ex.R].tolist())), 1)
+        self.assertEqual(vt_p1[:ex.R].tolist(), [ex.NV] * ex.R)
+        self.assertEqual(vt_p1[ex.R:].tolist(), [0] * (ex.W - ex.R))
         par = ex.view_par.cpu()
         sib = ex.view_sib.cpu()
+        for r in range(ex.R):
+            cur = -1
+            for depth in range(ex.F):
+                kids = [j for j in range(int(vt_p1[r]))
+                        if int(par[r, j]) == cur and int(sib[r, j]) == 0]
+                self.assertTrue(kids, (r, depth, vt_p1[r].item()))
+                cur = kids[0]
         expanded_sibling = False
         for r in range(ex.R):
             n = int(vt_p1[r])
