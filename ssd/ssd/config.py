@@ -452,11 +452,13 @@ class Config:
                 "frontier"):
             self.duet_tree_policy = _legacy_tree_policy
         else:
-            # Production ``on`` gives every root a two-token depth floor,
-            # then globally expands the highest cumulative-confidence
-            # frontier.  The public CLI remains simply on/off.
+            # Production ``on`` preserves one complete path for every root.
+            # This is the only policy that retained conditional acceptance
+            # quality in the fixed-root paired gates; siblings sampled by
+            # each forward remain dynamic.  Global and two-depth hybrid
+            # selectors remain internal reproduction arms.
             self.duet_tree_policy = (
-                "hybrid" if self.duet_p2_tree_policy == "on" else "off")
+                "backbone" if self.duet_p2_tree_policy == "on" else "off")
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
