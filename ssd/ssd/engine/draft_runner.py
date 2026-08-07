@@ -1216,11 +1216,12 @@ class DraftRunner(ModelRunner):
         K = valid_k if valid_k is not None else self.config.speculate_k
         pos_offset = -1 if self.config.use_eagle else 0
         positions_start = (num_tokens - 1 + pos_offset).unsqueeze(-1)
-        # arange(K+1) — sliced from cached _arange_kp1 (which is K_long+1 wide)
-        if valid_k is not None and valid_k != self.config.speculate_k:
-            arange_kp1 = self._arange_kp1[:K + 1]
-        else:
-            arange_kp1 = self._arange_kp1
+        # _arange_kp1 is sized for the largest possible tree response, not
+        # necessarily speculate_k.  Always slice to this request's K+1.
+        # In particular, a dynamic tree can validly contain exactly K chain
+        # nodes while the backing buffer is wider; using the whole buffer
+        # then mismatches the [B,K+1] batch index below.
+        arange_kp1 = self._arange_kp1[:K + 1]
         positions_grid = positions_start + arange_kp1
 
         # Calculate block indices and offsets for ALL positions
@@ -2114,7 +2115,8 @@ class DraftRunner(ModelRunner):
             # Packed layout: rec at cu_seqlens_q[b] + n_ext[b], spec follows
             cu_q = glue_decode_ctxt["cu_seqlens_q"]
             rec_offsets = cu_q[:-1].long() + extend_counts.long()  # [B]
-            extract_idx = rec_offsets.unsqueeze(1) + self._arange_kp1.unsqueeze(0)  # [B, K+1]
+            extract_idx = rec_offsets.unsqueeze(1) \
+                + self._arange_kp1[:K + 1].unsqueeze(0)  # [B, K+1]
             flat_idx = extract_idx.flatten()
             glue_decode_logits = glue_decode_logits_flat[flat_idx].view(B, K + 1, -1)
             if glue_prenorm is not None:

@@ -17,7 +17,10 @@ except Exception:
 
 from ssd.utils.context import get_context
 from ssd.engine.helpers.p1_tree import P1TreeExecutor
-from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
+from ssd.engine.helpers.p2_tree_executor import (
+    P2TreeExecutor,
+    _gather_backbone_logits,
+)
 
 
 class _MiniCfg:
@@ -80,6 +83,28 @@ class TestExecutorModuleParity(unittest.TestCase):
         import gc
         gc.collect()
         torch.cuda.synchronize()
+
+    def test_backbone_logit_gather_bounds_and_tail(self):
+        """Invalid parent cells must zero-fill without any out-of-bounds read.
+
+        Use a vocabulary width that is not divisible by the Triton block so
+        both row and final-column masks are exercised.
+        """
+        dev = "cuda:0"
+        vocab = 1031
+        source = torch.arange(7 * vocab, dtype=torch.float32,
+                              device=dev).view(7, vocab)
+        parent_cells = torch.tensor(
+            [[-1, 0, 6], [7, 100, 3]], dtype=torch.int64, device=dev)
+        out = torch.empty(2, 3, vocab, dtype=torch.float16, device=dev)
+        _gather_backbone_logits(source, parent_cells, out)
+        torch.cuda.synchronize()
+
+        expected = torch.zeros_like(out)
+        expected[0, 1] = source[0].to(out.dtype)
+        expected[0, 2] = source[6].to(out.dtype)
+        expected[1, 2] = source[3].to(out.dtype)
+        self.assertTrue(torch.equal(expected, out))
 
     def _mk(self, dev, PAGE=64, policy="level"):
         V, H, HKV, D = 128, 4, 2, 64

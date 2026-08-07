@@ -87,6 +87,33 @@ class TestP1ShapeBuckets(unittest.TestCase):
             0, 13, split_k1k2=True, K1=9, K2=4,
             mq_p1=38, mq_p2=10, glue_width=19), 19 + 9 * 38)
 
+    def test_glue_positions_slice_wide_response_buffer(self):
+        """A response buffer wider than K must not widen a K-node glue."""
+        from types import SimpleNamespace
+        from ssd.engine.draft_runner import DraftRunner
+
+        runner = DraftRunner.__new__(DraftRunner)
+        runner.config = SimpleNamespace(speculate_k=13, use_eagle=False)
+        runner.device = torch.device("cpu")
+        runner.block_size = 256
+        runner._arange_kp1 = torch.arange(19, dtype=torch.int64)
+        dbt = torch.arange(8, dtype=torch.int32).view(1, 8)
+        num_tokens = torch.tensor([512], dtype=torch.int64)
+
+        # Regression case from the real-model P1=18 smoke: n_valid happened
+        # to equal speculate_k (13), while the backing buffer had 19 slots.
+        for valid_k in (13, 18):
+            ctxt = runner.prepare_glue_decode_ctxt(
+                num_tokens=num_tokens,
+                input_ids=torch.zeros(valid_k + 1, dtype=torch.int64),
+                dbt=dbt,
+                B=1,
+                valid_k=valid_k,
+            )
+            self.assertEqual(ctxt["positions"].numel(), valid_k + 1)
+            self.assertEqual(ctxt["slot_map"].numel(), valid_k + 1)
+            self.assertEqual(ctxt["max_seqlen_q"], valid_k + 1)
+
 
 class TestAsyncResponseEnvelope(unittest.TestCase):
     def test_token_envelope_widens_without_widening_logits(self):

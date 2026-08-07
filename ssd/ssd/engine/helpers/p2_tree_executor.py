@@ -381,6 +381,67 @@ def _finalize_tree_meta_kernel(
         cur = tl.where(found, child, -2)
 
 
+@triton.jit
+def _gather_backbone_logits_kernel(
+    cell_logits_ptr, backbone_pcell_ptr, backbone_logits_ptr,
+    SRC_ROWS: tl.constexpr, OUT_ROWS: tl.constexpr,
+    V: tl.constexpr, BLOCK: tl.constexpr,
+):
+    """Gather selected vocabulary rows directly into the persistent output.
+
+    There must be no full-vocabulary intermediate here.  P1 can expose more
+    response nodes than its chain depth (for example 18 nodes at K1=9), so a
+    PyTorch ``index_select`` followed by ``where`` temporarily materializes
+    multiple [OUT_ROWS, V] float32 tensors and can exhaust a 24-GiB draft
+    GPU after CUDA-graph warmup.
+
+    The source row is checked on both sides *before* the load.  Invalid and
+    padded backbone rows are written as zero.  A two-dimensional launch also
+    keeps row/column arithmetic independent, avoiding the unchecked flattened
+    ``pc * V + col`` implementation that was previously unsafe in graph use.
+    """
+    row = tl.program_id(0)
+    col = tl.program_id(1) * BLOCK + tl.arange(0, BLOCK)
+    col_ok = col < V
+    pc = tl.load(backbone_pcell_ptr + row, mask=row < OUT_ROWS, other=-1)
+    src_ok = (pc >= 0) & (pc < SRC_ROWS)
+    value = tl.load(
+        cell_logits_ptr + pc * V + col,
+        mask=col_ok & src_ok,
+        other=0.0,
+    )
+    tl.store(
+        backbone_logits_ptr + row * V + col,
+        value,
+        mask=(row < OUT_ROWS) & col_ok,
+    )
+
+
+def _gather_backbone_logits(cell_logits, backbone_pcell,
+                            backbone_logits):
+    """Launch the bounded, allocation-free backbone-logit gather."""
+    src_rows, vocab = cell_logits.shape
+    out_rows = backbone_pcell.numel()
+    if backbone_logits.numel() != out_rows * vocab:
+        raise RuntimeError(
+            "backbone logit gather shape mismatch: "
+            f"pcell={tuple(backbone_pcell.shape)} "
+            f"out={tuple(backbone_logits.shape)} vocab={vocab}")
+    block = 1024
+    _gather_backbone_logits_kernel[
+        (out_rows, triton.cdiv(vocab, block))
+    ](
+        cell_logits,
+        backbone_pcell,
+        backbone_logits,
+        SRC_ROWS=src_rows,
+        OUT_ROWS=out_rows,
+        V=vocab,
+        BLOCK=block,
+        num_warps=8,
+    )
+
+
 class P2TreeExecutor:
     def __init__(self, model, compute_logits_fn, config, device,
                  block_size, max_blocks, vocab_size,
@@ -868,19 +929,14 @@ class P2TreeExecutor:
             self.out_valid, self.out_pq_ref, self.out_pq_cells,
             self.out_u_valid, self.out_backbone_tok,
             self.out_backbone_pcell, NV=NV, F=F)
-        # Gather only the tiny row index with bounded PyTorch indexing.  The
-        # former custom Triton kernel formed ``pc * V + col`` itself and was
-        # the source of intermittent graph-only illegal accesses for Nv=6,
-        # despite every observed ``pc`` being inside [0, F*W).  index_select
-        # is capture-safe, applies the explicit two-sided bound before the
-        # read, and costs one fixed-shape gather in the enclosing graph.
-        pcell = self.out_backbone_pcell
-        valid = (pcell >= 0) & (pcell < F * self.W)
-        safe = pcell.clamp(min=0, max=F * self.W - 1)
-        gathered = self.cell_logits.index_select(
-            0, safe.reshape(-1)).view(OR, F, V)
-        self.out_backbone_logits.copy_(torch.where(
-            valid.unsqueeze(-1), gathered, torch.zeros_like(gathered)))
+        # One bounded gather writes directly to the persistent fp16/bf16
+        # buffer.  This avoids the former index_select + where path's large
+        # float32 temporaries (OOM at P1 K1=9/max_nodes=18).
+        _gather_backbone_logits(
+            self.cell_logits,
+            self.out_backbone_pcell,
+            self.out_backbone_logits,
+        )
 
     @torch.inference_mode()
     def capture(self, n_pages0, graph_pool=None):
