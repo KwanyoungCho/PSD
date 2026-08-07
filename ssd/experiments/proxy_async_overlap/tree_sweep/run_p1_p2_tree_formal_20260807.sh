@@ -8,7 +8,13 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-PY="${PY:-/home/chokwans99/anaconda3/envs/ssd/bin/python}"
+if [[ -z "${PY:-}" ]]; then
+  if [[ -x /home/chokwans99/anaconda3/envs/ssd/bin/python ]]; then
+    PY=/home/chokwans99/anaconda3/envs/ssd/bin/python
+  else
+    PY=/data2/chokwans99/conda_envs/ssd/bin/python
+  fi
+fi
 OUT="${OUT:-${ROOT}/experiments/proxy_async_overlap/tree_sweep/p1_p2_tree_formal_20260807}"
 SERVER_LABEL="${SERVER_LABEL:-$(hostname -s)}"
 GPU_SET="${GPU_SET:-0,1,2,3,4}"
@@ -25,8 +31,20 @@ export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}"
 export SSD_FORCE_SPLIT_K1K2=1
 export SSD_DUET_JIT_SHORT=1
 
-MODEL_PATH="${MODEL_PATH:-/data2/chokwans99/awq_calibrated/layerskip_llama2_70b}"
-TARGET_AWQ="${TARGET_AWQ:-/data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_tp4}"
+if [[ -z "${MODEL_PATH:-}" ]]; then
+  if [[ -f /data2/chokwans99/awq_calibrated/layerskip_llama2_70b/config.json ]]; then
+    MODEL_PATH=/data2/chokwans99/awq_calibrated/layerskip_llama2_70b
+  else
+    MODEL_PATH=/data2/chokwans99/awq_calibrated_autoawq/layerskip_llama2_70b
+  fi
+fi
+if [[ -z "${TARGET_AWQ:-}" ]]; then
+  if [[ -f /data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_tp4.rank0.awq.pt ]]; then
+    TARGET_AWQ=/data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_tp4
+  else
+    TARGET_AWQ=/data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_ref_tp4
+  fi
+fi
 DRAFT_PATH="${DRAFT_PATH:-/data2/chokwans99/awq_calibrated/tinyllama_1b}"
 DRAFT_AWQ="${DRAFT_AWQ:-/data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1}"
 
@@ -38,12 +56,26 @@ DRAFT_AWQ="${DRAFT_AWQ:-/data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1}"
 K1="${K1:-9}"
 K2="${K2:-4}"
 P1_ROOTS_PER_POSITION="${P1_ROOTS_PER_POSITION:-2}"
-P1_TREE_MAX_NODES="${P1_TREE_MAX_NODES:-18}"
-P2_TREE_MAX_NODES="${P2_TREE_MAX_NODES:-8}"
+P1_TREE_MAX_NODES="${P1_TREE_MAX_NODES:-$((2 * K1))}"
+P2_TREE_MAX_NODES="${P2_TREE_MAX_NODES:-$((2 * K2))}"
+TREE_C="${TREE_C:-3}"
 TREE_PROXY_THRESHOLD="${TREE_PROXY_THRESHOLD:-0.01}"
 TREE_CONF_THRESHOLD="${TREE_CONF_THRESHOLD:-0.03}"
 RUN_NS="${RUN_NS:-20}"
 RUN_OUTLEN="${RUN_OUTLEN:-384}"
+
+# Preserve the established schedule ratio while making its length match K1.
+# K1=9 reproduces 2,2,2,2,2,2,1,1,1,1.  Callers may override it exactly.
+if [[ -z "${P1_FANOUT_LIST:-}" ]]; then
+  _fan_n=$((K1 + 1))
+  _fan_twos=$(((3 * _fan_n + 4) / 5))
+  P1_FANOUT_LIST=""
+  for ((_i = 0; _i < _fan_n; _i++)); do
+    _v=1
+    if ((_i < _fan_twos)); then _v=2; fi
+    P1_FANOUT_LIST+="${P1_FANOUT_LIST:+,}${_v}"
+  done
+fi
 
 # Production path only.  Explicitly clear every diagnostic that can alter the
 # token path, synchronize the GPU, or write per-step traces.
@@ -62,7 +94,7 @@ COMMON=(--llama --size 8
   --gpus 5 --async --spec --duet
   --duet_exit_layer 56 --f 3 --duet_k1 "${K1}" --duet_k2 "${K2}"
   --duet_p1_fanout 2
-  --duet_p1_fanout_list 2,2,2,2,2,2,1,1,1,1
+  --duet_p1_fanout_list "${P1_FANOUT_LIST}"
   --duet_p2_budget 10)
 
 arm_order () {
@@ -115,7 +147,7 @@ run_one () {
     --duet_p1_roots_per_position "${P1_ROOTS_PER_POSITION}"
     --duet_p1_tree_max_nodes "${P1_TREE_MAX_NODES}"
     --duet_p2_tree_max_nodes "${P2_TREE_MAX_NODES}"
-    --duet_tree_c_tensor 3
+    --duet_tree_c_tensor "${TREE_C}"
     --duet_tree_fanout_policy backbone
     --duet_tree_proxy_threshold "${TREE_PROXY_THRESHOLD}"
     --duet_tree_conf_threshold "${TREE_CONF_THRESHOLD}"
@@ -138,6 +170,8 @@ run_one () {
     echo "p1_roots_per_position=${P1_ROOTS_PER_POSITION}"
     echo "p1_tree_max_nodes=${P1_TREE_MAX_NODES}"
     echo "p2_tree_max_nodes=${P2_TREE_MAX_NODES}"
+    echo "tree_c=${TREE_C}"
+    echo "p1_fanout_list=${P1_FANOUT_LIST}"
     echo "p1_chain_forward_cells=$((16 * K1))"
     echo "p1_tree_forward_cells_chain_context=$((10 * P1_ROOTS_PER_POSITION * K1))"
     echo "p1_tree_forward_cells_max_tree_context=$(((P1_TREE_MAX_NODES + 1) * P1_ROOTS_PER_POSITION * K1))"
