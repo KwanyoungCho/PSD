@@ -12,6 +12,7 @@ def compute_megaspec_lookahead(
     K2: int = 0,
     mq_p1: int = 0,
     mq_p2: int = 0,
+    glue_width: int = 0,
 ) -> int:
     """Per-step draft KV slot reservation for the scheduler.
 
@@ -26,7 +27,10 @@ def compute_megaspec_lookahead(
         because Phase 1's outputs (tokens/logits) are already extracted into
         result tensors before Phase 2 begins, and Phase 2's custom attention
         mask only reads its own slice. Required reservation is therefore
-        glue + max(K1*mq_p1, K2*mq_p2), not K_long * MQ_LEN_full.
+        max(chain glue, tree glue) + max(K1*mq_p1, K2*mq_p2), not
+        K_long * MQ_LEN_full.  ``glue_width`` is zero for the legacy chain
+        path and the common P1/P2 response width when either dynamic tree is
+        enabled.
 
         This matters because the old K_long * MQ_LEN_full formula over-reserves
         by a factor of ~5× for typical (dfo, pfo, K1, K2) — pushing the
@@ -39,7 +43,8 @@ def compute_megaspec_lookahead(
         # Either pass can dominate depending on (dfo, pfo) — pfo > dfo cases
         # (e.g., dfo=1, pfo=3) push K2*mq_p2 above K1*mq_p1 even at K2 ≤ K1.
         # Reserve the worst-case footprint of the two.
-        return (K1 + 1) + max(K1 * mq_p1, K2 * mq_p2)
+        return max(K1 + 1, int(glue_width)) + max(
+            K1 * mq_p1, K2 * mq_p2)
     return K + 1 + K * MQ_LEN
 
 @torch.inference_mode()

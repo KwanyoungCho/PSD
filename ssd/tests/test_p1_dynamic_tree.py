@@ -6,6 +6,8 @@ import torch
 from ssd.engine.helpers.p1_tree import (
     build_uniform_p1_roots, choose_p1_context_bucket,
     p1_context_buckets)
+from ssd.utils.async_helpers.async_spec_helpers import (
+    compute_megaspec_lookahead)
 
 
 class TestP1UniformRoots(unittest.TestCase):
@@ -32,10 +34,7 @@ class TestP1UniformRoots(unittest.TestCase):
             [1, 1, 1], [1, 1, 1],
             [0, 0, 0], [0, 0, 0],
         ])
-        masked = logits.clone()
-        masked[0, 5] = float("-inf")
-        masked[1, 4] = float("-inf")
-        probs = torch.softmax(masked, dim=-1)
+        probs = torch.softmax(logits, dim=-1)
         expected = torch.tensor([
             probs[0, 4], probs[0, 3], probs[1, 5], probs[1, 3],
             probs[2, 0], probs[2, 1], 0.0, 0.0])
@@ -65,15 +64,21 @@ class TestP1ShapeBuckets(unittest.TestCase):
     def test_buckets_cover_chain_and_tree_contexts(self):
         buckets = p1_context_buckets(9, 4, 13, 8)
         self.assertIn(10, buckets)  # K1 chain contexts
-        self.assertIn(5, buckets)   # K2 chain contexts
         self.assertIn(14, buckets)  # max P1 tree + recovery
-        self.assertIn(9, buckets)   # max P2 tree + recovery
-        self.assertEqual(choose_p1_context_bucket(8, buckets), 9)
+        self.assertEqual(buckets, (10, 14))
+        self.assertEqual(choose_p1_context_bucket(5, buckets), 10)
+        self.assertEqual(choose_p1_context_bucket(8, buckets), 10)
         self.assertEqual(choose_p1_context_bucket(10, buckets), 10)
         with self.assertRaises(ValueError):
             choose_p1_context_bucket(15, buckets)
 
+    def test_scheduler_reserves_common_tree_glue_and_p1_canvas(self):
+        # Champion-like P1: 14 contexts * 2 roots, 9 rounds.  The dynamic
+        # P1 canvas dominates P2 and the 14-row tree glue exceeds K1+1.
+        self.assertEqual(compute_megaspec_lookahead(
+            0, 13, split_k1k2=True, K1=9, K2=4,
+            mq_p1=28, mq_p2=10, glue_width=14), 14 + 9 * 28)
+
 
 if __name__ == "__main__":
     unittest.main()
-

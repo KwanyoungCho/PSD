@@ -93,6 +93,7 @@ class DraftRunner(ModelRunner):
             # this point, so most of this one-time work overlaps engine start
             # instead of extending the first generation.
             self._warmup_p2_tree_executor()
+            self._warmup_p1_tree_executors()
             # DUET: capture split-K1/K2 layout CudaGraphs
             # (split_k1_{long,short} + split_k2).
             if self.config.duet_enabled and not self.enforce_eager:
@@ -106,6 +107,8 @@ class DraftRunner(ModelRunner):
                     _layouts_to_capture.append(self.split_k1_short_layout)
                 if self.split_k2_layout is not None:
                     _layouts_to_capture.append(self.split_k2_layout)
+                if getattr(self, "tree_glue_layout", None) is not None:
+                    _layouts_to_capture.append(self.tree_glue_layout)
                 for _layout in _layouts_to_capture:
                     _gv, _pool, _graphs, _bs = capture_fi_tree_decode_cudagraph(self, layout=_layout)
                     self.graph_vars[_layout.graph_key] = _gv
@@ -198,6 +201,76 @@ class DraftRunner(ModelRunner):
         free1, _ = torch.cuda.mem_get_info(self.device)
         print(
             f"[DUET tree] warmed P2 executor buckets={buckets} "
+            f"in {(_time.perf_counter() - t0):.2f}s "
+            f"(reserved delta={(free0 - free1) / 2**20:.1f} MiB)",
+            flush=True)
+
+    def _ensure_p1_exec(self, context_bucket):
+        if not hasattr(self, "_p1_execs"):
+            self._p1_execs = {}
+        context_bucket = int(context_bucket)
+        ex = self._p1_execs.get(context_bucket)
+        if ex is None:
+            from ssd.engine.helpers.p1_tree import P1TreeExecutor
+            hf = self.hf_config
+            ex = P1TreeExecutor(
+                self.model, self.model.compute_logits, self.config,
+                self.device, self.block_size, self.config.max_blocks,
+                hf.vocab_size, hf.num_attention_heads,
+                hf.num_key_value_heads, hf.head_dim,
+                context_bucket=context_bucket, dtype=hf.torch_dtype)
+            self._p1_execs[context_bucket] = ex
+        return ex
+
+    def _warmup_p1_tree_executors(self):
+        """Capture every reachable P1 context/page canvas before service."""
+        if self.config.duet_p1_tree_policy != "on" or self.config.use_eagle:
+            return
+        setting = os.environ.get("SSD_TREE_EXEC_WARMUP", "all").strip()
+        if setting.lower() in ("0", "off", "false", "none"):
+            return
+        from ssd.engine.helpers.p1_tree import p1_context_buckets
+        contexts = p1_context_buckets(
+            self.config.duet_phase1_k, self.config.duet_phase2_k,
+            self.config.duet_p1_tree_max_nodes,
+            self.config.duet_p2_tree_max_nodes)
+        import time as _time
+        torch.cuda.synchronize()
+        free0, _ = torch.cuda.mem_get_info(self.device)
+        t0 = _time.perf_counter()
+        captured = {}
+        for context_bucket in contexts:
+            ex = self._ensure_p1_exec(context_bucket)
+            # Capture every page-table shape.  The synthetic capture maps
+            # the masked canvas to page zero, so this is safe even when a
+            # particular (context,width) combination cannot occur near the
+            # model-length boundary.  It also guarantees no first-hit
+            # capture appears in a later timeline.
+            max_p0 = int(self.config.max_blocks) - 1
+            if setting.lower() == "all":
+                pages = list(range(1, max_p0 + 1))
+            else:
+                pages = sorted({int(x) for x in setting.split(",")
+                                if x.strip()})
+                bad = [x for x in pages if x < 1 or x > max_p0]
+                if bad:
+                    raise RuntimeError(
+                        f"P1 executor warmup buckets {bad} outside "
+                        f"reachable [1,{max_p0}] for context="
+                        f"{context_bucket}")
+            rng_state = ex.gen.get_state().clone()
+            try:
+                for p0 in pages:
+                    if p0 not in ex.graphs:
+                        ex.prime_capture_inputs(p0)
+                        ex.capture(p0)
+            finally:
+                ex.gen.set_state(rng_state)
+            captured[context_bucket] = pages
+        torch.cuda.synchronize()
+        free1, _ = torch.cuda.mem_get_info(self.device)
+        print(
+            f"[DUET tree] warmed P1 executors contexts={captured} "
             f"in {(_time.perf_counter() - t0):.2f}s "
             f"(reserved delta={(free0 - free1) / 2**20:.1f} MiB)",
             flush=True)
@@ -307,6 +380,7 @@ class DraftRunner(ModelRunner):
             self.split_k1_long_layout = None
             self.split_k1_short_layout = None
             self.split_k2_layout = None
+            self.tree_glue_layout = None
             K1 = self.config.duet_phase1_k
             K2 = self.config.duet_phase2_k
             # Hard check (assert is stripped under python -O).
@@ -371,6 +445,14 @@ class DraftRunner(ModelRunner):
                 fan_out_list_miss=list(_p2_list),
                 K=K2, device=d, position_count=K_rank_max + 1,
             )
+            if self.config.duet_tree_enabled:
+                _tree_glue_w = self.config.duet_tree_wire_nodes + 1
+                self.tree_glue_layout = create_tree_layout(
+                    name="tree_glue",
+                    fan_out_list=[_tree_glue_w],
+                    fan_out_list_miss=[_tree_glue_w],
+                    K=1, device=d, position_count=1,
+                )
             _short_str = (
                 f'split_k1_short MQ={self.split_k1_short_layout.MQ_LEN} '
                 f'(K=K1={K1}, pos={K2+1}), '
@@ -1013,7 +1095,10 @@ class DraftRunner(ModelRunner):
                         phase_source.reshape(-1),
                         valid_k.reshape(-1).to(torch.int64),
                         out_tokens.reshape(-1).to(torch.int64)]
-        if self.config.duet_tree_enabled:
+        _tree_enabled = getattr(
+            self.config, "duet_tree_enabled",
+            getattr(self.config, "duet_tree_policy", "off") != "off")
+        if _tree_enabled:
             # T3.4-b2: 트리 블록 동승 (max-padded — hit 없으면 zero 블록,
             # 크기·호출 순서 불변). 뷰 내용 채움은 respond 경로(b3).
             _tb = getattr(self, "_tree_wire_ints", None)
@@ -1028,7 +1113,7 @@ class DraftRunner(ModelRunner):
         _mev_ds = _mr_s("draft_send_response")
         dist.send(fused_response, dst=0, group=self.async_pg)
         dist.send(out_logits[:, :K, :].contiguous(), dst=0, group=self.async_pg)
-        if self.config.duet_tree_enabled:
+        if _tree_enabled:
             _pq = getattr(self, "_tree_wire_parent_q", None)
             if _pq is None:
                 _pq = torch.zeros(B, self.config.duet_tree_wire_nodes,
@@ -1317,11 +1402,11 @@ class DraftRunner(ModelRunner):
         cache_hits_list = cache_hits.tolist()
         num_tokens = partial_tree_decode_args["num_tokens"]
         V = self.hf_config.vocab_size
-        _layout = self.split_k2_layout
+        _layout = self.tree_glue_layout
         W = _layout.MQ_LEN
 
         _root = self._tree_hit_root
-        _views = self._tree_views
+        _views = self._tree_hit_views
         par = _views["parent_local"][_root]
         n_valid = int(_views["valid"][_root])
         n_rows = n_valid + 1
@@ -1340,6 +1425,23 @@ class DraftRunner(ModelRunner):
             if p >= 0:
                 depth[j] = depth[p] + 1
                 anc[j] = anc[p] + [p]
+
+        # Reuse this exact context description for P1 root construction.
+        # ctx 0 is recovery; ctx 1+j is tree node j after its ancestors.
+        context_rows = torch.zeros(
+            n_rows, n_rows, dtype=torch.uint8, device=self.device)
+        context_rows[0, 0] = 1
+        context_depth = torch.zeros(
+            n_rows, dtype=torch.int64, device=self.device)
+        for j in range(n_valid):
+            context_rows[1 + j, 0] = 1
+            if anc[j]:
+                context_rows[1 + j, 1 + torch.tensor(
+                    anc[j], dtype=torch.int64, device=self.device)] = 1
+            context_rows[1 + j, 1 + j] = 1
+            context_depth[1 + j] = 1 + depth[j]
+        self._p1_context_glue_rows = context_rows
+        self._p1_context_depth = context_depth
 
         ctxt = self.prepare_glue_decode_ctxt(
             num_tokens=num_tokens, input_ids=glue_decode_input_ids,
@@ -1406,13 +1508,18 @@ class DraftRunner(ModelRunner):
         return glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, 1
 
     def _invalidate_zero_valid_tree_keys(self):
-        """이슈 #14: valid==0 root는 서빙 실체(뷰)가 없다 — zero backbone
-        행이 체인 응답으로 나가면 q가 실제 제안분포가 아니게 되어 수락
-        보존이 깨진다. 키를 -1로 무효화해 hit 자체를 봉쇄 (miss → JIT)."""
-        _zv = (self._tree_views["valid"] == 0).nonzero().flatten()
-        if _zv.numel():
-            self.tree_cache_keys[
-                self._last_n_draft_keys + _zv.to(self.device)] = -1
+        """Invalidate cache roots that have no servable dynamic-tree view."""
+        _p1 = getattr(self, "_p1_tree_views", None)
+        if _p1 is not None:
+            _zv1 = (_p1["valid"] == 0).nonzero().flatten()
+            if _zv1.numel():
+                self.tree_cache_keys[_zv1.to(self.device)] = -1
+        _p2 = getattr(self, "_tree_views", None)
+        if _p2 is not None:
+            _zv2 = (_p2["valid"] == 0).nonzero().flatten()
+            if _zv2.numel():
+                self.tree_cache_keys[
+                    self._last_n_draft_keys + _zv2.to(self.device)] = -1
         if os.environ.get("SSD_TREE_STAGE2", "0") == "1" \
                 and hasattr(self, "_s2_pre"):
             self._s2_post = self.tree_cache_keys.clone()
@@ -1534,8 +1641,105 @@ class DraftRunner(ModelRunner):
             mask[c, :fan_counts[c]] = True
         return flat.view(1, -1), padded, mask
 
+    def _tree_step_p1p2_dynamic(self, partial_tree_decode_args,
+                                glue_logits, gd_for_fork,
+                                cache_hits, cache_hits_list, dbt,
+                                proxy_recv_work, proxy_buf):
+        """Continue a tree-hit request with captured dynamic P1 and P2."""
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr, duet_close as _mc)
+        import numpy as _np
+
+        p1 = self._run_p1_tree_step(
+            partial_tree_decode_args, glue_logits, gd_for_fork,
+            self._p1_context_glue_rows, self._p1_context_depth,
+            cache_hits_list)
+        if p1 is None:
+            raise RuntimeError(
+                "P1 tree hit reached an unsupported dynamic-P1 shape; "
+                "the request should have been gated before tree serving")
+
+        event = _mr("proxy_wait")
+        proxy_recv_work.wait()
+        _mc("proxy_wait", event)
+        B = partial_tree_decode_args["num_tokens"].shape[0]
+        K = self.config.speculate_k
+        duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
+        if duet_proxy["chosen_pos"].dim() == 1:
+            duet_proxy = {
+                "chosen_pos": duet_proxy["chosen_pos"].unsqueeze(0),
+                "chosen_tok": duet_proxy["chosen_tok"].unsqueeze(0),
+                **({"chosen_piv": duet_proxy["chosen_piv"].unsqueeze(0)}
+                   if "chosen_piv" in duet_proxy else {}),
+            }
+
+        event = _mr("phase2_build")
+        n_rows = glue_logits.shape[1]
+        n_valid = n_rows - 1
+        total_budget = self.config.duet_p2_seed_count
+        selected = self._select_proxy_sourced_tokens_unified(
+            duet_proxy, p1["padded_roots"], K_rank=n_valid,
+            total_budget=total_budget,
+            draft_forked_mask=p1["root_mask"])
+        if len(selected) == 3:
+            proxy_forked, proxy_fan_out_tensor, proxy_piv = selected
+        else:
+            proxy_forked, proxy_fan_out_tensor = selected
+            proxy_piv = None
+        W2 = self.split_k2_layout.MQ_LEN
+        if proxy_forked.shape[1] < W2:
+            pad = W2 - proxy_forked.shape[1]
+            proxy_forked = torch.cat([
+                proxy_forked,
+                torch.zeros(1, pad, dtype=proxy_forked.dtype,
+                            device=proxy_forked.device)], dim=1)
+            proxy_fan_out_tensor = proxy_fan_out_tensor.clone()
+            proxy_fan_out_tensor[:, -1] += pad
+        layout_k2 = self._update_phase2_layout_inplace(
+            proxy_fan_out_tensor, n_valid)
+        proxy_args = self._build_tree_decode_args_for_layout(
+            partial_tree_decode_args, proxy_forked,
+            layout_k2, cache_hits_list)
+
+        seed_ctx = torch.repeat_interleave(
+            torch.arange(n_rows, dtype=torch.int64,
+                         device=self.device),
+            proxy_fan_out_tensor[0])
+        pos0 = int(partial_tree_decode_args["num_tokens"][0]) - 1
+        proxy_args["rope_positions"] = (
+            pos0 + 1 + self._p1_context_depth.index_select(0, seed_ctx))
+        glue_rows = self._p1_context_glue_rows.index_select(
+            0, seed_ctx).detach().cpu().numpy().astype(_np.uint8, copy=False)
+        proxy_args["glue_rows_override"] = glue_rows
+        proxy_args["K_glue_override"] = n_valid
+        _mc("phase2_build", event)
+
+        temps_p2 = proxy_args["temps"]
+        if (self.config.duet_p2_tree_policy == "on" and B == 1
+                and bool((temps_p2 > 0).all())):
+            proxy_tokens, proxy_logits = self._run_p2_tree_step(
+                duet_proxy, proxy_forked, proxy_fan_out_tensor,
+                proxy_piv, proxy_args, layout_k2, temps_p2)
+            proxy_acts = None
+        else:
+            self._tree_views = None
+            proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
+                proxy_args, layout=layout_k2)
+
+        self._merge_and_populate_cache(
+            p1["args"], p1["tokens"], p1["logits"],
+            proxy_args, proxy_tokens, proxy_logits,
+            cache_hits_list, None, proxy_acts,
+            proxy_layout=layout_k2,
+            draft_layout=self.split_k1_long_layout,
+            draft_fan_idx_override=p1["context_ids"])
+        if getattr(self, "_p2_skip_step", None) is not None:
+            self.tree_cache_keys[self._last_n_draft_keys:] = -1
+            self._p2_skip_step = None
+        self._invalidate_zero_valid_tree_keys()
+
     def _tree_step_p1p2(self, partial_tree_decode_args, glue_logits,
-                        cache_hits, cache_hits_list, dbt,
+                        gd_for_fork, cache_hits, cache_hits_list, dbt,
                         proxy_recv_work, proxy_buf):
         """트리-hit step의 P1/P2 (T3.4-b3-4/-5, 결정④ ⓑⓒ). B=1 전용.
 
@@ -1545,6 +1749,11 @@ class DraftRunner(ModelRunner):
         lane만 sibling 컨텍스트에 배분한다. fork 행 mask = 조상 비트맵
         (전 step override), rope = 컨텍스트 depth 기반.
         """
+        if self.config.duet_p1_tree_policy == "on":
+            return self._tree_step_p1p2_dynamic(
+                partial_tree_decode_args, glue_logits, gd_for_fork,
+                cache_hits, cache_hits_list, dbt,
+                proxy_recv_work, proxy_buf)
         import numpy as _np
         from ssd.engine.helpers import cudagraph_helpers as _CH
         from ssd.engine.helpers.cudagraph_helpers import (
@@ -1555,7 +1764,7 @@ class DraftRunner(ModelRunner):
         W1 = _layout_k1.MQ_LEN
         n_rows = glue_logits.shape[1]
         n_valid = n_rows - 1
-        _views = self._tree_views
+        _views = self._tree_hit_views
         _root = self._tree_hit_root
         # Read the tiny topology once.  The previous implementation called
         # int(cuda_tensor[j]) repeatedly while building P1, creating a chain
@@ -2176,7 +2385,10 @@ class DraftRunner(ModelRunner):
         wire_N = self.config.duet_proxy_wire_N
         chosen_pos = buf[:B * wire_N].view(B, wire_N)
         chosen_tok = buf[B * wire_N:2 * B * wire_N].view(B, wire_N)
-        if self.config.duet_tree_enabled:
+        _tree_enabled = getattr(
+            self.config, "duet_tree_enabled",
+            getattr(self.config, "duet_tree_policy", "off") != "off")
+        if _tree_enabled:
             # T2.0 (v6 D2): dedup **이전** 단일 지점에서 unpack —
             # selector/캐시/rollout에는 순수 토큰만 흘린다.
             from ssd.engine.helpers.p2_tree import unpack_piv
@@ -2361,6 +2573,140 @@ class DraftRunner(ModelRunner):
                          if proxy_piv is not None else rows))
         finally:
             _mc("p2_output_convert", event)
+
+    def _run_p1_tree_step(self, partial_tree_decode_args, glue_logits,
+                          gd_for_fork, context_glue_rows,
+                          context_depth, cache_hits_list):
+        """Run the production P1 dynamic tree as one captured graph.
+
+        P1 creates a fixed number of root candidates at every live glue
+        context.  Roots and all later nodes then compete globally by
+        cumulative draft confidence.  The forward/sample/select/mask loop is
+        entirely inside :class:`P1TreeExecutor`; host work here occurs once
+        before replay and never between the K1 draft forwards.
+
+        Returns ``None`` for the explicitly unsupported B>1/temp=0/near-end
+        cases so the caller can retain the established chain path.
+        """
+        if self.config.duet_p1_tree_policy != "on":
+            return None
+        B, contexts, _ = glue_logits.shape
+        if B != 1 or not bool((partial_tree_decode_args["temperatures"] > 0)
+                              .all()):
+            return None
+
+        from ssd.engine.helpers.p1_tree import (
+            build_uniform_p1_roots, choose_p1_context_bucket,
+            p1_context_buckets)
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr, duet_close as _mc)
+
+        buckets = p1_context_buckets(
+            self.config.duet_phase1_k, self.config.duet_phase2_k,
+            self.config.duet_p1_tree_max_nodes,
+            self.config.duet_p2_tree_max_nodes)
+        context_bucket = choose_p1_context_bucket(contexts, buckets)
+        ex = self._ensure_p1_exec(context_bucket)
+        pfo = int(self.config.duet_p1_roots_per_position)
+        real_roots = contexts * pfo
+        roots = build_uniform_p1_roots(
+            glue_logits[0], gd_for_fork[0], pfo,
+            partial_tree_decode_args["temperatures"][:1].expand(contexts),
+            sampler_x=self.config.sampler_x,
+            async_fan_out=self.config.async_fan_out,
+            root_width=ex.W, context_glue_rows=context_glue_rows)
+        if int(roots["real_roots"]) != real_roots:
+            raise RuntimeError("P1 root count changed during construction")
+
+        num_tokens0 = int(partial_tree_decode_args["num_tokens"][0])
+        first_base = num_tokens0 - 1 + contexts
+        ctx0 = first_base + ex.W
+        final_ctx = ctx0 + (ex.F - 1) * ex.W
+        dbt = partial_tree_decode_args["dbt"]
+        if final_ctx > int(self.config.max_model_len):
+            return None
+        if (final_ctx - 1) // self.block_size >= dbt.shape[1]:
+            return None
+        positions = (first_base + ex.lane_w.unsqueeze(0)
+                     + torch.arange(ex.F, device=self.device,
+                                    dtype=torch.int64).unsqueeze(1) * ex.W)
+        block_idx = torch.div(positions, self.block_size,
+                              rounding_mode="floor")
+        block_ids = dbt[0][block_idx]
+        step_slots = (block_ids * self.block_size
+                      + positions.remainder(self.block_size)).to(torch.int32)
+        if bool((step_slots < 0).any()):
+            return None
+
+        p0 = (ctx0 + self.block_size - 1) // self.block_size
+        need_pages = p0 + 1
+        if p0 < 1 or need_pages > dbt.shape[1]:
+            return None
+
+        event = _mr("p1_prepare")
+        ex.in_root_tok.copy_(roots["tokens"])
+        ex.in_root_piv.copy_(roots["scores"])
+        root_ctx = roots["context_ids"].to(torch.int64)
+        depth = context_depth.to(self.device, torch.int64)
+        ex.in_rope_base.copy_(
+            num_tokens0 + depth.index_select(0, root_ctx))
+        ex.in_glue.zero_()
+        ex.in_glue[:, :contexts].copy_(roots["glue_rows"])
+        ex.in_glue_w.fill_(contexts)
+        ex.in_temps.copy_(
+            partial_tree_decode_args["temperatures"][:1].expand(ex.W))
+        ex.in_prefix_len.fill_(num_tokens0 - 1)
+        ex.in_block_tables.copy_(dbt[:1])
+        for f in range(ex.F):
+            ex.in_slot[f].copy_(step_slots[f])
+            ex.in_ctx_len[f].fill_(ctx0 + f * ex.W)
+        pages = ex.in_page_ids[:need_pages]
+        pages.copy_(dbt[0, :need_pages])
+        pages[p0:p0 + 1].copy_(torch.where(
+            pages[p0:p0 + 1] >= 0,
+            pages[p0:p0 + 1], pages[:1]))
+        if p0 not in ex.wrappers:
+            ex.prepare_bucket(p0)
+        for f in range(ex.F):
+            ex.wrappers[p0][f]._paged_kv_indices_buf[
+                :need_pages].copy_(pages)
+        _mc("p1_prepare", event)
+
+        event = _mr("p1_graph_replay")
+        if p0 not in ex.graphs:
+            ex.capture(p0)
+            ex._finalize_outputs()
+        else:
+            ex.replay(p0)
+        _mc("p1_graph_replay", event)
+
+        views = {
+            "tok": ex.view_tok[:real_roots],
+            "parent_local": ex.view_par[:real_roots],
+            "sib_order": ex.view_sib[:real_roots],
+            "raw_q": ex.view_rawq[:real_roots],
+            "valid": ex.out_valid[:real_roots],
+            "parent_q_ref": ex.out_pq_ref[:real_roots],
+            "parent_q_cells": ex.out_pq_cells[:real_roots],
+            "u_valid": ex.out_u_valid[:real_roots],
+            "cell_logits": ex.cell_logits,
+        }
+        self._p1_tree_views = views
+        draft_args = {
+            "seq_ids_expanded": partial_tree_decode_args["seq_ids"][:1]
+                .expand(real_roots),
+            "rec_flat": roots["tokens"][:real_roots],
+        }
+        return {
+            "args": draft_args,
+            "tokens": ex.out_backbone_tok[:real_roots],
+            "logits": ex.out_backbone_logits[:real_roots],
+            "padded_roots": roots["tokens"][:real_roots].view(
+                1, contexts, pfo),
+            "root_mask": None,
+            "context_ids": roots["context_ids"][:real_roots],
+            "views": views,
+        }
 
     def _ensure_p2_exec(self):
         if not hasattr(self, "_p2_exec"):
@@ -4323,7 +4669,7 @@ class DraftRunner(ModelRunner):
                 B_glue = self._tree_glue_decode(
                     partial_tree_decode_args, glue_decode_input_ids)
             return self._tree_step_p1p2(
-                partial_tree_decode_args, glue_logits, cache_hits,
+                partial_tree_decode_args, glue_logits, gd_for_fork, cache_hits,
                 cache_hits_list, dbt, proxy_recv_work, proxy_buf)
         glue_logits, gd_for_fork, cache_hits, cache_hits_list, dbt, B_glue = \
             self._glue_decode(partial_tree_decode_args, glue_decode_input_ids)
@@ -4354,31 +4700,50 @@ class DraftRunner(ModelRunner):
         # Glue is sized to position_count (= K1+1 long / K2+1 short); slice
         # both glue_logits and gd_for_fork before passing.
         _pc = _layout_k1.position_count
-        _is_uniform = all(
-            f == _layout_k1.fan_out_list[0] for f in _layout_k1.fan_out_list
-        )
-        if _is_uniform:
-            # Uniform Phase 1: 3D [B, P, dfo] direct. No padded/mask needed
-            # (all slots real, mask=None signals all-real to selector).
-            draft_forked_full = self._select_draft_sourced_tokens(
-                glue_logits, gd_for_fork, _layout_k1.fan_out_list[0])
-            draft_forked_k1 = draft_forked_full[:, :_pc, :].contiguous()
-            draft_forked_p1_padded = draft_forked_k1   # same as 3D form
-            draft_forked_p1_mask = None                # all-real
+        self._p1_tree_views = None
+        _draft_fan_idx_override = None
+        _ctx_rows = torch.tril(torch.ones(
+            _pc, _pc, dtype=torch.uint8, device=self.device))
+        _ctx_depth = torch.arange(
+            _pc, dtype=torch.int64, device=self.device)
+        _p1_dynamic = self._run_p1_tree_step(
+            partial_tree_decode_args,
+            glue_logits[:, :_pc, :].contiguous(),
+            gd_for_fork[:, :_pc].contiguous(),
+            _ctx_rows, _ctx_depth, cache_hits_list)
+        if _p1_dynamic is not None:
+            draft_tree_args = _p1_dynamic["args"]
+            draft_tokens = _p1_dynamic["tokens"]
+            draft_logits = _p1_dynamic["logits"]
+            draft_acts = None
+            draft_forked_p1_padded = _p1_dynamic["padded_roots"]
+            draft_forked_p1_mask = _p1_dynamic["root_mask"]
+            _draft_fan_idx_override = _p1_dynamic["context_ids"]
         else:
-            # Non-uniform Phase 1: perpos selector returns 3-tuple.
-            # flat is for Phase 1 decode, padded/mask are for Policy B dedup.
-            (draft_forked_k1, draft_forked_p1_padded,
-             draft_forked_p1_mask) = self._select_draft_sourced_tokens_perpos(
-                glue_logits[:, :_pc, :].contiguous(),
-                gd_for_fork[:, :_pc].contiguous(),
-                _layout_k1.fan_out_list,
-            )
-        draft_tree_args = self._build_tree_decode_args_for_layout(
-            partial_tree_decode_args, draft_forked_k1, _layout_k1, cache_hits_list)
+            _is_uniform = all(
+                f == _layout_k1.fan_out_list[0]
+                for f in _layout_k1.fan_out_list)
+            if _is_uniform:
+                draft_forked_full = self._select_draft_sourced_tokens(
+                    glue_logits, gd_for_fork,
+                    _layout_k1.fan_out_list[0])
+                draft_forked_k1 = draft_forked_full[
+                    :, :_pc, :].contiguous()
+                draft_forked_p1_padded = draft_forked_k1
+                draft_forked_p1_mask = None
+            else:
+                (draft_forked_k1, draft_forked_p1_padded,
+                 draft_forked_p1_mask) = \
+                    self._select_draft_sourced_tokens_perpos(
+                        glue_logits[:, :_pc, :].contiguous(),
+                        gd_for_fork[:, :_pc].contiguous(),
+                        _layout_k1.fan_out_list)
+            draft_tree_args = self._build_tree_decode_args_for_layout(
+                partial_tree_decode_args, draft_forked_k1,
+                _layout_k1, cache_hits_list)
+            draft_tokens, draft_logits, draft_acts = self._decode_tree(
+                draft_tree_args, layout=_layout_k1)
         _mc("phase1_build", _mev_p1b)
-        draft_tokens, draft_logits, draft_acts = self._decode_tree(
-            draft_tree_args, layout=_layout_k1)
 
         # === Wait for proxy from target ===
         # Batch 1d: proxy_wait is I/O (NCCL recv) that fires BEFORE the
@@ -4500,11 +4865,13 @@ class DraftRunner(ModelRunner):
             proxy_tree_args, proxy_tokens, proxy_logits,
             cache_hits_list, draft_acts, proxy_acts,
             proxy_layout=_layout_k2,
-            draft_layout=_layout_k1)
+            draft_layout=_layout_k1,
+            draft_fan_idx_override=_draft_fan_idx_override)
         if getattr(self, "_p2_skip_step", None) is not None:
             self.tree_cache_keys[self._last_n_draft_keys:] = -1
             self._p2_skip_step = None
-        elif getattr(self, "_tree_views", None) is not None:
+        if (getattr(self, "_p1_tree_views", None) is not None
+                or getattr(self, "_tree_views", None) is not None):
             self._invalidate_zero_valid_tree_keys()
         # 단계3 (고정 지침): 캐시 완성 후 고정 지연 — "너무 빨라서
         # hit 하락" 가설의 1회성 반증 실험 전용 (sweep 아님)

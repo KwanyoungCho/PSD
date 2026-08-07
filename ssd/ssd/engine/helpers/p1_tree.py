@@ -31,15 +31,15 @@ def p1_context_buckets(k1: int, k2: int,
                        p2_max_nodes: int) -> tuple[int, ...]:
     """Reachable glue-context buckets for P1.
 
-    Chain responses contribute K1+1/K2+1 contexts.  A previous tree response
-    contributes valid_nodes+1 and is rounded to the same two-node buckets used
-    by target verification.  The result is config-derived; users do not tune
-    a second bucket list.
+    Use only two coarse canvases in the champion shape: one covers both chain
+    widths and every P2 tree, and the optional larger one covers a P1 tree.
+    Capturing one executor for every possible valid-node count would multiply
+    full-model CUDA graphs and their FlashInfer workspace for no semantic
+    gain; inactive roots already have a safe zero-score representation.
     """
-    vals = {int(k1) + 1, int(k2) + 1}
-    for cap in (int(p1_max_nodes), int(p2_max_nodes)):
-        vals.update(n + 1 for n in tree_node_buckets(cap))
-    return tuple(sorted(vals))
+    common = max(int(k1) + 1, int(k2) + 1, int(p2_max_nodes) + 1)
+    largest = max(common, int(p1_max_nodes) + 1)
+    return tuple(sorted({common, largest}))
 
 
 def choose_p1_context_bucket(actual_contexts: int,
@@ -115,8 +115,12 @@ def build_uniform_p1_roots(
     elif temps.shape != (p,):
         raise ValueError(
             f"temperatures must be scalar or [{p}]; got {tuple(temps.shape)}")
+    # Candidate exclusion is a coverage rule, not a probability
+    # renormalization.  Score the selected alternative under the original
+    # draft distribution; otherwise a context whose returned token owns
+    # almost all mass would make a tiny alternative look spuriously certain.
     probs = q_probs_from_logits(
-        masked.float(), temps, sampler_x, async_fan_out)
+        glue_logits.float(), temps, sampler_x, async_fan_out)
     root_score = probs.gather(1, root_tok).reshape(-1)
     root_tok = root_tok.reshape(-1)
     ctx = torch.arange(p, device=glue_logits.device, dtype=torch.int64) \
@@ -177,4 +181,3 @@ class P1TreeExecutor(P2TreeExecutor):
             glue_width=int(context_bucket))
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
-

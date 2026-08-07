@@ -54,13 +54,28 @@ class Scheduler:
                 self._sk_mq_p1 = int(sum(_p1_list))
             else:
                 self._sk_mq_p1 = int(config.duet_draft_fan_out) * (self._sk_K1 + 1)
+            if getattr(config, "duet_p1_tree_policy", "off") == "on":
+                # A P1 tree response exposes recovery + every tree node as a
+                # fresh context.  Each gets the fixed roots-per-position
+                # quota, so reserve the largest captured P1 forward canvas.
+                self._sk_mq_p1 = max(
+                    self._sk_mq_p1,
+                    (int(config.duet_p1_tree_max_nodes) + 1)
+                    * int(config.duet_p1_roots_per_position))
             _K_rank_max = self._sk_K1 if self._sk_K1 >= self._sk_K2 else self._sk_K2
             self._sk_mq_p2 = int(config.duet_proxy_total_budget)  # Tier-3 single source
+            self._sk_glue_width = max(
+                self._sk_K1 + 1, self._sk_K2 + 1,
+                (int(config.duet_p1_tree_max_nodes) + 1
+                 if config.duet_p1_tree_policy == "on" else 0),
+                (int(config.duet_p2_tree_max_nodes) + 1
+                 if config.duet_p2_tree_policy == "on" else 0))
         else:
             self._sk_K1 = 0
             self._sk_K2 = 0
             self._sk_mq_p1 = 0
             self._sk_mq_p2 = 0
+            self._sk_glue_width = 0
 
         self.waiting: deque[Sequence] = deque()
         self.running: deque[Sequence] = deque()
@@ -129,6 +144,7 @@ class Scheduler:
                     split_k1k2=True,
                     K1=self._sk_K1, K2=self._sk_K2,
                     mq_p1=self._sk_mq_p1, mq_p2=self._sk_mq_p2,
+                    glue_width=self._sk_glue_width,
                 )
             else:
                 draft_lookahead_len = compute_megaspec_lookahead(self.MQ_LEN, self.K)
@@ -362,4 +378,3 @@ class Scheduler:
                 self.block_manager.deallocate(seq)
                 self.draft_block_manager.deallocate(seq)
                 self.running.remove(seq)
-    

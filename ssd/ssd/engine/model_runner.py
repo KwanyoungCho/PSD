@@ -358,6 +358,13 @@ class ModelRunner:
                 K_rank_max = max(K1_cfg_split, K2_cfg_split)   # = K1
                 _p2_mq = self.config.duet_proxy_total_budget  # Tier-3 single source
                 _layout_specs.append(("split_k2", _p2_mq))
+                if self.config.duet_tree_enabled:
+                    # One generic glue materialization graph serves both P1
+                    # and P2 tree hits.  Its rows are recovery + the common
+                    # maximum number of tree nodes; live rows are masked and
+                    # the tail uses slot=-1.
+                    _layout_specs.append((
+                        "tree_glue", self.config.duet_tree_wire_nodes + 1))
                 for layout_name, layout_mq_len in _layout_specs:
                     l_cu = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
                     l_kv_indptr = torch.empty(max_bs + 1, dtype=torch.int32, device=self.device)
@@ -1037,12 +1044,16 @@ class ModelRunner:
                 or not self.tree_verify_wrappers):
             return
         max_valid = max(self.tree_verify_wrappers)
+        tree_depth_steps = max(
+            int(cfg.duet_phase2_k),
+            (int(cfg.duet_phase1_k)
+             if cfg.duet_p1_tree_policy == "on" else 0))
         for nv in range(1, int(max_valid) + 1):
             self._tree_proxy_graphs_prebuilt[nv] = TreeProxyCUDAGraph(
                 nv=nv,
                 vocab_size=cfg.hf_config.vocab_size,
                 wire_n=cfg.duet_proxy_wire_N,
-                depth_steps=cfg.duet_phase2_k,
+                depth_steps=tree_depth_steps,
                 dtype=cfg.hf_config.torch_dtype,
                 device=self.device)
         print("[DUET tree] captured target proxy graphs "

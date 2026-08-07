@@ -61,12 +61,16 @@ class Verifier(VerifierBase):
             # Capture one tiny metadata envelope per exact valid width.
             _proxy_widths = range(1, max(_verify_buckets) + 1) \
                 if _verify_buckets else ()
+            _tree_depth_steps = max(
+                int(_cfg.duet_phase2_k),
+                (int(_cfg.duet_phase1_k)
+                 if _cfg.duet_p1_tree_policy == "on" else 0))
             for _nv in _proxy_widths:
                 self._tree_proxy_graphs[int(_nv)] = TreeProxyCUDAGraph(
                     nv=int(_nv),
                     vocab_size=_cfg.hf_config.vocab_size,
                     wire_n=_cfg.duet_proxy_wire_N,
-                    depth_steps=_cfg.duet_phase2_k,
+                    depth_steps=_tree_depth_steps,
                     dtype=_cfg.hf_config.torch_dtype,
                     device=self.device)
             if self._tree_proxy_graphs:
@@ -914,7 +918,7 @@ class Verifier(VerifierBase):
         # to _compute_and_send_proxy_tree before reaching this function.
         # Keeping the whole Policy-B calculation in one CUDA graph removes
         # the many small launches that appeared as a 4--6 ms proxy bar.
-        _chain_graph = self._chain_proxy_graphs.get(int(K))
+        _chain_graph = getattr(self, "_chain_proxy_graphs", {}).get(int(K))
         if (_chain_graph is not None
                 and B == 1
                 and self.jit_speculate
@@ -1020,7 +1024,10 @@ class Verifier(VerifierBase):
             _, top_idx = P_iv.flatten(1).topk(wire_N, dim=-1)                 # [B, wire_N]
             chosen_pos = top_idx // top_k                                     # [B, wire_N], ∈ [0, K]
             chosen_tok = correction_topk_ids.flatten(1).gather(1, top_idx)    # [B, wire_N]
-            if config.duet_tree_enabled:
+            _tree_enabled = getattr(
+                config, "duet_tree_enabled",
+                getattr(config, "duet_tree_policy", "off") != "off")
+            if _tree_enabled:
                 # T2.0 (v6 D2): 라이브 P_iv를 wire에 동승 (양자화 pack).
                 from ssd.engine.helpers.p2_tree import pack_piv
                 _piv_chosen = P_iv.flatten(1).gather(1, top_idx)

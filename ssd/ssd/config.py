@@ -292,6 +292,16 @@ class Config:
             _K2p1 = (self.duet_phase2_k + 1) if self.duet_phase2_k is not None else self.speculate_k + 1
             p1_sum_full = self.duet_draft_fan_out * _K1p1
             p1_sum_short = self.duet_draft_fan_out * _K2p1
+        if self.duet_p1_tree_policy == "on":
+            _ctx_max = max(
+                int(self.duet_phase1_k or self.speculate_k) + 1,
+                int(self.duet_phase2_k or self.speculate_k) + 1,
+                int(self.duet_p1_tree_max_nodes) + 1,
+                (int(self.duet_p2_tree_max_nodes) + 1
+                 if self.duet_p2_tree_policy == "on" else 0))
+            p1_sum_tree = _ctx_max * int(
+                self.duet_p1_roots_per_position)
+            p1_sum_full = max(p1_sum_full, p1_sum_tree)
         buffer = max(p1_sum_full, p1_sum_short) + 2
         return total_budget + buffer
 
@@ -635,16 +645,10 @@ class Config:
                             f"({self.duet_tree_root_count}) must be <= "
                             f"W ({self.duet_proxy_total_budget}) — "
                             f"tip 의무 lane > W (이슈 #27)")
-                    # 이슈 #19: TREE_GLUE는 split_k2 CG(W=P2 예산)의 W-폭
-                    # forward — 글루 행(nv+1)이 W를 넘으면 못 싣는다
-                    # (R8+nv8 sweep 크래시; assert는 -O로 제거됨).
-                    _w_p2 = self.duet_proxy_total_budget
-                    if (self.duet_p2_tree_policy == "on"
-                            and self.duet_tree_nv + 1 > _w_p2):
-                        raise ValueError(
-                            f"duet_tree_nv+1 ({self.duet_tree_nv + 1}) must "
-                            f"be <= P2 budget W ({_w_p2}) — TREE_GLUE row "
-                            f"capacity (docs/duet/internal/20 이슈 #19)")
+                    # Tree-hit materialization now has its own common-width
+                    # layout (max active phase nodes + recovery).  The old
+                    # split_k2-width restriction ``P2 nodes + 1 <= W`` no
+                    # longer applies: response capacity is the only bound.
                     # 이슈 #15: 트리 v1 미지원 proxy 게이트 — raw-proxy는
                     # _tree_step_p1p2에 변환 분기가 없고(KeyError),
                     # topm_gather dict-wire는 pack_piv가 없어 트리 셀렉터
@@ -765,6 +769,19 @@ class Config:
                 p1_sum_short = dfo * _K2p1
                 p1_max = dfo
 
+            if self.duet_p1_tree_policy == "on":
+                _ctx_max = max(
+                    self.duet_phase1_k + 1,
+                    self.duet_phase2_k + 1,
+                    self.duet_p1_tree_max_nodes + 1,
+                    (self.duet_p2_tree_max_nodes + 1
+                     if self.duet_p2_tree_policy == "on" else 0))
+                p1_sum_full = max(
+                    p1_sum_full,
+                    _ctx_max * self.duet_p1_roots_per_position)
+                p1_max = max(p1_max,
+                             self.duet_p1_roots_per_position)
+
             buffer = max(p1_sum_full, p1_sum_short) + 2
             wire_N = total_budget + buffer
             per_pos_min = total_budget + p1_max + 2
@@ -824,9 +841,11 @@ class Config:
                   f'draft_fan_out={self.duet_draft_fan_out}, proxy_fan_out={self.duet_proxy_fan_out}, '
                   f'K1={self.duet_phase1_k}, K2={self.duet_phase2_k}, '
                   f'P2_W={self.duet_proxy_total_budget}, '
-                  f'tree={self.duet_tree_policy}, '
+                  f'P1_tree={self.duet_p1_tree_policy}, '
+                  f'P2_tree={self.duet_p2_tree_policy}, '
                   f'tree_R={self.duet_tree_root_count}, '
-                  f'tree_Nv={self.duet_tree_nv}, '
+                  f'P1_tree_nodes={self.duet_p1_tree_max_nodes}, '
+                  f'P2_tree_nodes={self.duet_p2_tree_max_nodes}, '
                   f'tree_proxy_thr={self.duet_tree_proxy_threshold}, '
                   f'tree_conf_thr={self.duet_tree_conf_threshold}',
                   flush=True)
