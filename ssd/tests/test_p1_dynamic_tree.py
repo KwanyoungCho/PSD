@@ -7,7 +7,7 @@ from ssd.engine.helpers.p1_tree import (
     build_uniform_p1_roots, choose_p1_context_bucket,
     p1_context_buckets)
 from ssd.utils.async_helpers.async_spec_helpers import (
-    compute_megaspec_lookahead)
+    compute_megaspec_lookahead, compute_tree_forward_width)
 
 
 class TestP1UniformRoots(unittest.TestCase):
@@ -115,6 +115,17 @@ class TestP1ShapeBuckets(unittest.TestCase):
         self.assertEqual(compute_megaspec_lookahead(
             0, 13, split_k1k2=True, K1=9, K2=4,
             mq_p1=38, mq_p2=10, glue_width=19), 19 + 9 * 38)
+
+    def test_wide_p1_canvas_reservation_crosses_page_safely(self):
+        # N1=18 exposes 19 contexts.  Two roots per context gives R=38,
+        # while scale=1.25 replays W=48 cells for each of the nine rounds.
+        # Reserving the old R-only footprint under-allocates near a 256-token
+        # page boundary.
+        width = compute_tree_forward_width(19 * 2, 1.25)
+        self.assertEqual(width, 48)
+        self.assertEqual(compute_megaspec_lookahead(
+            0, 13, split_k1k2=True, K1=9, K2=4,
+            mq_p1=width, mq_p2=10, glue_width=19), 19 + 9 * 48)
 
     def test_glue_positions_slice_wide_response_buffer(self):
         """A response buffer wider than K must not widen a K-node glue."""

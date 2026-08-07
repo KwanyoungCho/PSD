@@ -56,13 +56,20 @@ DRAFT_AWQ="${DRAFT_AWQ:-/data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1}"
 K1="${K1:-9}"
 K2="${K2:-4}"
 P1_ROOTS_PER_POSITION="${P1_ROOTS_PER_POSITION:-2}"
+P1_TREE_FORWARD_SCALE="${P1_TREE_FORWARD_SCALE:-1.25}"
 P1_TREE_MAX_NODES="${P1_TREE_MAX_NODES:-$((2 * K1))}"
 P2_TREE_MAX_NODES="${P2_TREE_MAX_NODES:-$((2 * K2))}"
+P2_WIDTH="${P2_WIDTH:-10}"
+P2_ROOT_COUNT="${P2_ROOT_COUNT:-10}"
 TREE_C="${TREE_C:-3}"
 TREE_PROXY_THRESHOLD="${TREE_PROXY_THRESHOLD:-0.01}"
 TREE_CONF_THRESHOLD="${TREE_CONF_THRESHOLD:-0.03}"
 RUN_NS="${RUN_NS:-20}"
 RUN_OUTLEN="${RUN_OUTLEN:-384}"
+P1_FORWARD_WIDTH_CHAIN="$(${PY} -c \
+  "import math; print(math.ceil(10 * ${P1_ROOTS_PER_POSITION} * ${P1_TREE_FORWARD_SCALE}))")"
+P1_FORWARD_WIDTH_MAX="$(${PY} -c \
+  "import math; print(math.ceil((${P1_TREE_MAX_NODES} + 1) * ${P1_ROOTS_PER_POSITION} * ${P1_TREE_FORWARD_SCALE}))")"
 
 # Preserve the established schedule ratio while making its length match K1.
 # K1=9 reproduces 2,2,2,2,2,2,1,1,1,1.  Callers may override it exactly.
@@ -95,7 +102,7 @@ COMMON=(--llama --size 8
   --duet_exit_layer 56 --f 3 --duet_k1 "${K1}" --duet_k2 "${K2}"
   --duet_p1_fanout 2
   --duet_p1_fanout_list "${P1_FANOUT_LIST}"
-  --duet_p2_budget 10)
+  --duet_p2_budget "${P2_WIDTH}")
 
 arm_order () {
   case "$1" in
@@ -145,6 +152,7 @@ run_one () {
     --duet_p1_tree_policy "${p1_policy}"
     --duet_p2_tree_policy "${p2_policy}"
     --duet_p1_roots_per_position "${P1_ROOTS_PER_POSITION}"
+    --duet_p1_tree_forward_scale "${P1_TREE_FORWARD_SCALE}"
     --duet_p1_tree_max_nodes "${P1_TREE_MAX_NODES}"
     --duet_p2_tree_max_nodes "${P2_TREE_MAX_NODES}"
     --duet_tree_c_tensor "${TREE_C}"
@@ -153,7 +161,7 @@ run_one () {
     --duet_tree_conf_threshold "${TREE_CONF_THRESHOLD}"
   )
   if [[ "${p2_policy}" == "on" ]]; then
-    extra+=(--duet_tree_root_count 10)
+    extra+=(--duet_tree_root_count "${P2_ROOT_COUNT}")
   fi
 
   local port=$((16600 + (seed % 100) * 10 + ordinal))
@@ -168,14 +176,19 @@ run_one () {
     echo "p1_policy=${p1_policy}"
     echo "p2_policy=${p2_policy}"
     echo "p1_roots_per_position=${P1_ROOTS_PER_POSITION}"
+    echo "p1_tree_forward_scale=${P1_TREE_FORWARD_SCALE}"
     echo "p1_tree_max_nodes=${P1_TREE_MAX_NODES}"
     echo "p2_tree_max_nodes=${P2_TREE_MAX_NODES}"
     echo "tree_c=${TREE_C}"
+    echo "p2_width=${P2_WIDTH}"
+    echo "p2_root_count=${P2_ROOT_COUNT}"
     echo "p1_fanout_list=${P1_FANOUT_LIST}"
     echo "p1_chain_forward_cells=$((16 * K1))"
-    echo "p1_tree_forward_cells_chain_context=$((10 * P1_ROOTS_PER_POSITION * K1))"
-    echo "p1_tree_forward_cells_max_tree_context=$(((P1_TREE_MAX_NODES + 1) * P1_ROOTS_PER_POSITION * K1))"
-    echo "p2_forward_cells=$((10 * K2))"
+    echo "p1_tree_forward_width_chain_context=${P1_FORWARD_WIDTH_CHAIN}"
+    echo "p1_tree_forward_width_max_tree_context=${P1_FORWARD_WIDTH_MAX}"
+    echo "p1_tree_forward_cells_chain_context=$((P1_FORWARD_WIDTH_CHAIN * K1))"
+    echo "p1_tree_forward_cells_max_tree_context=$((P1_FORWARD_WIDTH_MAX * K1))"
+    echo "p2_forward_cells=$((P2_WIDTH * K2))"
     echo "numseqs_per_dataset=${RUN_NS}"
     echo "output_len=${RUN_OUTLEN}"
   } >"${dir}/run_meta.env"
@@ -184,7 +197,8 @@ run_one () {
 
   echo "[$(date -Is)] START server=${SERVER_LABEL} arm=${arm} seed=${seed} "\
 "P1=${p1_policy} P2=${p2_policy} K1=${K1} K2=${K2} "\
-"P1roots=${P1_ROOTS_PER_POSITION} P1nodes=${P1_TREE_MAX_NODES} "\
+"P1roots=${P1_ROOTS_PER_POSITION} P1scale=${P1_TREE_FORWARD_SCALE} "\
+"P1nodes=${P1_TREE_MAX_NODES} P2R/W=${P2_ROOT_COUNT}/${P2_WIDTH} "\
 "P2nodes=${P2_TREE_MAX_NODES}" | tee "${dir}/status.txt"
 
   SSD_DIST_PORT="${port}" \

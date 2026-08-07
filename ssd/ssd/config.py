@@ -94,6 +94,10 @@ class Config:
     duet_tree_nv: int | None = None
     # P1 creates this many uniform root candidates at every glue context.
     duet_p1_roots_per_position: int = 2
+    # P1 roots and forward cells are different quantities.  A scale above
+    # one preserves every root backbone while leaving captured lanes to
+    # continue high-confidence sibling branches in later rounds.
+    duet_p1_tree_forward_scale: float = 1.25
     duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
     # 형상 진단 (docs/duet/internal/21 §4.5): 고정-C 배분은 깊이를 굶긴다 —
     # backbone(맏이-사슬 fan1, 깊이 K2 보장) 우선 + 잔여만 형제.
@@ -458,6 +462,10 @@ class Config:
             raise ValueError(
                 "duet_p1_roots_per_position must be >= 1; got "
                 f"{self.duet_p1_roots_per_position}")
+        if not (1.0 <= self.duet_p1_tree_forward_scale <= 2.0):
+            raise ValueError(
+                "duet_p1_tree_forward_scale must be in [1,2]; got "
+                f"{self.duet_p1_tree_forward_scale}")
         if self.duet_p1_tree_max_nodes < 1 \
                 or self.duet_p2_tree_max_nodes < 1:
             raise ValueError(

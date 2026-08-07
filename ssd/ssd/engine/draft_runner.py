@@ -2679,7 +2679,7 @@ class DraftRunner(ModelRunner):
             partial_tree_decode_args["temperatures"][:1].expand(contexts),
             sampler_x=self.config.sampler_x,
             async_fan_out=self.config.async_fan_out,
-            root_width=ex.W, context_glue_rows=context_glue_rows)
+            root_width=ex.R, context_glue_rows=context_glue_rows)
         if int(roots["real_roots"]) != real_roots:
             raise RuntimeError("P1 root count changed during construction")
 

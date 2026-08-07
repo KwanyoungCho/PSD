@@ -3,8 +3,9 @@
 P1 and P2 share the same captured rollout after their roots exist.  P2 roots
 arrive with an early-exit proxy score; P1 instead creates a fixed number of
 uniform candidates at every glue context and uses the draft probability of
-that root token as its initial score.  All later parents compete globally by
-cumulative draft confidence.
+that root token as its initial score.  Every root keeps its first-child
+backbone; captured lanes beyond the root count continue the
+highest-confidence sibling branches.
 
 This module contains only fixed-shape/GPU-friendly preparation and shape
 selection.  Cache serving and target verification are phase-agnostic and live
@@ -16,6 +17,8 @@ import torch
 
 from ssd.engine.helpers.p2_tree import q_probs_from_logits
 from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
+from ssd.utils.async_helpers.async_spec_helpers import (
+    compute_tree_forward_width)
 
 
 def tree_node_buckets(max_nodes: int, first: int = 4) -> tuple[int, ...]:
@@ -170,14 +173,17 @@ class P1TreeExecutor(P2TreeExecutor):
                  num_heads, num_kv_heads, head_dim,
                  *, context_bucket: int, dtype=torch.float16):
         pfo = int(config.duet_p1_roots_per_position)
-        width = int(context_bucket) * pfo
+        root_count = int(context_bucket) * pfo
+        scale = float(config.duet_p1_tree_forward_scale)
+        width = compute_tree_forward_width(root_count, scale)
         super().__init__(
             model, compute_logits_fn, config, device,
             block_size, max_blocks, vocab_size,
             num_heads, num_kv_heads, head_dim, dtype=dtype,
-            phase="p1", width=width, root_count=width,
+            phase="p1", width=width, root_count=root_count,
             depth=int(config.duet_phase1_k),
             max_nodes=int(config.duet_p1_tree_max_nodes),
             glue_width=int(context_bucket))
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
+        self.forward_scale = scale

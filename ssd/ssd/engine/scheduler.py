@@ -8,7 +8,8 @@ from ssd.config import Config
 from ssd.engine.sequence import Sequence, SequenceStatus
 from ssd.engine.block_manager import BlockManager
 
-from ssd.utils.async_helpers.async_spec_helpers import compute_megaspec_lookahead
+from ssd.utils.async_helpers.async_spec_helpers import (
+    compute_megaspec_lookahead, compute_tree_forward_width)
 
 class Scheduler:
 
@@ -59,11 +60,23 @@ class Scheduler:
             if getattr(config, "duet_p1_tree_policy", "off") == "on":
                 # A P1 tree response exposes recovery + every tree node as a
                 # fresh context.  Each gets the fixed roots-per-position
-                # quota, so reserve the largest captured P1 forward canvas.
-                self._sk_mq_p1 = max(
-                    self._sk_mq_p1,
-                    (int(config.duet_p1_tree_max_nodes) + 1)
+                # quota.  The executor may deliberately use a wider canvas
+                # so high-confidence sibling branches can continue; reserve
+                # that exact largest captured width, not just the root count.
+                _p1_context_cap = max(
+                    self._sk_K1 + 1,
+                    self._sk_K2 + 1,
+                    int(config.duet_p2_tree_max_nodes) + 1,
+                    int(config.duet_p1_tree_max_nodes) + 1,
+                )
+                _p1_root_cap = (
+                    _p1_context_cap
                     * int(config.duet_p1_roots_per_position))
+                _p1_forward_width = compute_tree_forward_width(
+                    _p1_root_cap,
+                    float(config.duet_p1_tree_forward_scale))
+                self._sk_mq_p1 = max(
+                    self._sk_mq_p1, _p1_forward_width)
             _K_rank_max = self._sk_K1 if self._sk_K1 >= self._sk_K2 else self._sk_K2
             self._sk_mq_p2 = int(config.duet_proxy_total_budget)  # Tier-3 single source
             self._sk_glue_width = max(

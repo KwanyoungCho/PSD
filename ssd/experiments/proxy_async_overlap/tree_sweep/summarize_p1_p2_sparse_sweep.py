@@ -58,6 +58,8 @@ def one_run(log: Path) -> dict[str, object] | None:
         "n1": meta.get("p1_tree_max_nodes", "?"),
         "n2": meta.get("p2_tree_max_nodes", "?"),
         "c": meta.get("tree_c", "?"),
+        "p1_scale": meta.get("p1_tree_forward_scale", "?"),
+        "p2_width": meta.get("p2_width", "?"),
         "p1exec": "p1exec stats:" in text,
         "p2exec": "p2exec stats:" in text,
         "fallback": "fallback" in text or "unsupported_cfg" in text,
@@ -73,7 +75,8 @@ def main() -> None:
             if (row := one_run(log)) is not None]
     numeric = list(PATTERNS)
     header = ["kind", "label", "arm", "seed", "k1", "k2", "n1", "n2",
-              "c", *numeric, "p1exec", "p2exec", "fallback"]
+              "c", "p1_scale", "p2_width", *numeric,
+              "p1exec", "p2exec", "fallback"]
     print("\t".join(header))
 
     def emit(kind: str, row: dict[str, object]) -> None:

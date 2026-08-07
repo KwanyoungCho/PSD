@@ -1,6 +1,22 @@
+import math
+
 import torch
 from ssd.config import Config
 from transformers import AutoTokenizer
+
+
+def compute_tree_forward_width(root_count: int, scale: float) -> int:
+    """Return the fixed forward canvas used by a dynamic tree executor.
+
+    Keep this calculation shared by the executor and scheduler.  If the
+    scheduler reserves only ``root_count`` cells while the executor replays a
+    wider canvas, page-boundary requests can expose unallocated KV slots.
+    """
+    if root_count < 1:
+        raise ValueError(f"root_count must be positive; got {root_count}")
+    if scale < 1.0:
+        raise ValueError(f"scale must be at least one; got {scale}")
+    return max(int(root_count), math.ceil(int(root_count) * float(scale)))
 
 @torch.inference_mode()
 def compute_megaspec_lookahead(

@@ -137,6 +137,10 @@ def parse_arguments():
                         help="Maximum P2 tree nodes sent for one cache hit.")
     parser.add_argument("--duet_p1_roots_per_position", type=int, default=2,
                         help="Uniform number of P1 root candidates per glue position.")
+    parser.add_argument("--duet_p1_tree_forward_scale", type=float,
+                        default=1.25,
+                        help="P1 captured forward width / root count. Values above "
+                             "1 reserve lanes to continue sibling branches.")
     parser.add_argument("--duet_tree_nv", type=int, default=None,
                         help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_fanout_policy", type=str,
@@ -361,6 +365,8 @@ def create_llm_kwargs(args, draft_path):
                 args.duet_p2_tree_max_nodes
             llm_kwargs["duet_p1_roots_per_position"] = \
                 args.duet_p1_roots_per_position
+            llm_kwargs["duet_p1_tree_forward_scale"] = \
+                args.duet_p1_tree_forward_scale
             if args.duet_tree_nv is not None:
                 llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
             llm_kwargs["duet_tree_beta"] = args.duet_tree_beta
