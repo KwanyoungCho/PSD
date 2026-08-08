@@ -22,7 +22,7 @@ class TestP1UniformRoots(unittest.TestCase):
         ids = torch.randint(0, 31, (4, 5), generator=g)
         for sampler_x in (None, 0.6, 1.4):
             full = q_probs_from_logits(
-                logits, temps, sampler_x=sampler_x, F=3)
+                logits.clone(), temps, sampler_x=sampler_x, F=3)
             selected = selected_q_probs_from_logits(
                 logits, temps, ids, sampler_x=sampler_x, F=3)
             self.assertTrue(torch.allclose(

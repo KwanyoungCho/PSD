@@ -1056,6 +1056,11 @@ def selected_q_probs_from_logits(logits: torch.Tensor,
             "source_rows must match token_ids; got "
             f"{tuple(source_rows.shape)} vs {tuple(token_ids.shape)}")
     scaled = logits.float()
+    # Tensor.float() aliases an already-float32 input.  Root scoring receives
+    # float32 tensors in unit/diagnostic paths and must not temperature-scale
+    # the caller's glue logits in place.
+    if scaled is logits:
+        scaled = scaled.clone()
     scaled.div_(temperatures.to(
         device=logits.device, dtype=torch.float32).reshape(-1, 1))
     log_z = torch.logsumexp(scaled, dim=-1, keepdim=True)
