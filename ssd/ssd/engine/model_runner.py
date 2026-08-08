@@ -250,33 +250,66 @@ class ModelRunner:
         self._tree_workspace = torch.zeros(
             128 * 1024 * 1024, dtype=torch.uint8, device=self.device)
         self.tree_verify_wrappers = {}
-        # Both phases share these fixed-shape target buckets.  Small trees
-        # pad to four rows; larger capacities add every second width and the
-        # exact maximum (e.g. Nv=13 -> {4,6,8,10,12,13}).
-        from ssd.engine.helpers.p1_tree import tree_node_buckets
-        verify_buckets = tree_node_buckets(nv)
-        for nv_b in sorted(verify_buckets):
+        # Production backbone generation fills the configured per-root cap.
+        # Capture only the active phase caps; intermediate valid counts pad
+        # to the next cap (and the rare support-exhaustion shape can use the
+        # same bucket).  Capturing every even node count multiplied by every
+        # page count wastes several GiB once each graph gets the isolated
+        # FlashInfer state required for correctness.
+        verify_buckets = set()
+        if self.config.duet_p1_tree_policy == "on":
+            verify_buckets.add(int(self.config.duet_p1_tree_max_nodes))
+        if self.config.duet_p2_tree_policy == "on":
+            verify_buckets.add(int(self.config.duet_p2_tree_max_nodes))
+        if not verify_buckets:
+            verify_buckets.add(nv)
+
+        def _new_wrapper(nv_b, workspace, page_capacity):
             r = nv_b + 1
             w = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
-                self._tree_workspace, "NHD", use_cuda_graph=True,
+                workspace, "NHD", backend="fa2", use_cuda_graph=True,
                 qo_indptr_buf=torch.empty(2, dtype=torch.int32,
                                           device=self.device),
                 paged_kv_indptr_buf=torch.empty(2, dtype=torch.int32,
                                                 device=self.device),
-                paged_kv_indices_buf=torch.empty(max_blocks,
-                                                 dtype=torch.int32,
-                                                 device=self.device),
+                paged_kv_indices_buf=torch.empty(
+                    page_capacity, dtype=torch.int32, device=self.device),
                 paged_kv_last_page_len_buf=torch.empty(
                     1, dtype=torch.int32, device=self.device),
                 custom_mask_buf=torch.empty(
-                    r * self.config.max_model_len, dtype=torch.uint8,
-                    device=self.device),
+                    (r * page_capacity * self.block_size + 7) // 8,
+                    dtype=torch.uint8, device=self.device),
                 mask_indptr_buf=torch.empty(2, dtype=torch.int32,
                                             device=self.device),
             )
-            w._kv_lens_buffer = torch.empty(1, dtype=torch.int32,
-                                            device=self.device)
-            self.tree_verify_wrappers[nv_b] = w
+            w._kv_lens_buffer = torch.empty(
+                1, dtype=torch.int32, device=self.device)
+            return w
+
+        for nv_b in sorted(verify_buckets):
+            self.tree_verify_wrappers[nv_b] = _new_wrapper(
+                nv_b, self._tree_workspace, max_blocks)
+
+        # A captured FlashInfer graph also closes over plan-specific
+        # auxiliary workspace contents.  Sharing a wrapper/workspace across
+        # page shapes made later captures silently corrupt earlier graphs.
+        # Keep one modest workspace per (node,page) graph, matching the
+        # isolation rule already used by P2TreeExecutor.
+        graph_ws_mb = int(os.environ.get(
+            "SSD_TREE_VERIFY_WORKSPACE_MB", "64"))
+        if graph_ws_mb <= 0:
+            raise ValueError("SSD_TREE_VERIFY_WORKSPACE_MB must be positive")
+        self._tree_verify_graph_workspaces = {}
+        self.tree_verify_graph_wrappers = {}
+        for nv_b in sorted(verify_buckets):
+            for n_pages in range(1, max_blocks + 1):
+                key = (int(nv_b), int(n_pages))
+                ws = torch.empty(
+                    graph_ws_mb * 2**20, dtype=torch.uint8,
+                    device=self.device)
+                self._tree_verify_graph_workspaces[key] = ws
+                self.tree_verify_graph_wrappers[key] = _new_wrapper(
+                    int(nv_b), ws, int(n_pages))
 
     def _init_flashinfer_wrappers(self):
         """Initialize FlashInfer wrappers for draft async mode."""
