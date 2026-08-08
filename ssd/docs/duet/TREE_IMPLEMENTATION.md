@@ -254,7 +254,7 @@ page를 가리키고 mask가 0인 padding으로 남는다.
    저장한다.
 6. **자식 삽입**
    앞서 정한 fanout만큼 lane-major, sibling-major 순서로 자식을 arena와
-   `[R,N2]` 출력 view에 기록한다. 자식 점수는
+   phase-local `[R,N1]` 또는 `[R,N2]` 출력 view에 기록한다. 자식 점수는
    `parent.logpri + log(child.raw_q)`다.
 
 현재 구현은 round-synchronous다. round f에서는 정확히 depth f인 node만 고른다.

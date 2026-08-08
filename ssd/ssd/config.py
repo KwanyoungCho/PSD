@@ -107,9 +107,9 @@ class Config:
     # 불변, P_iv 상위 R root만 예산 (나머지는 뷰 없음 → #14 키 무효화
     # = 명시적 miss). None = 전 seed (R=W, 종전 동작).
     duet_tree_root_count: int | None = None
-    # Post-hoc calibrated expansion floors (docs/duet/internal/27).  They are
-    # retained for legacy global-policy reproduction and are deliberately not
-    # allowed to prune the production policy's mandatory first-child path.
+    # Post-hoc calibrated expansion floors (docs/duet/internal/27).  Round
+    # zero ignores them so every root/cache key is retained; later dynamic
+    # rounds use them only to stop spending forwards below tail nodes.
     duet_tree_proxy_threshold: float = 0.01
     duet_tree_conf_threshold: float = 0.03
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
@@ -228,8 +228,8 @@ class Config:
                     else self.duet_proxy_total_budget)
         if getattr(self, "duet_tree_policy", "off") == "coverage":
             # Legacy coverage always keeps every root retained by the chain
-            # selector.  Production backbone mode below still honours an
-            # explicitly configured root count.
+            # selector.  The remaining reproduction modes below still honour
+            # an explicitly configured root count.
             return self.duet_proxy_total_budget
         if getattr(self, "duet_tree_policy", "off") == "confidence":
             width = self.duet_proxy_total_budget
