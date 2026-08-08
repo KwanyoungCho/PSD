@@ -1,24 +1,34 @@
 #!/usr/bin/env python3
-"""Calibrate static DUET P2-tree expansion thresholds from real outcomes.
+"""Calibrate static DUET P1/P2 dynamic-tree expansion thresholds.
 
 This tool deliberately calibrates *expansion* floors, not token deletion:
 
-* proxy floor: every retained P2 root is still evaluated once; only a later
-  forward below a low-proxy root is suppressed;
-* confidence floor: the sampled node remains a verifiable leaf; only a later
-  forward below a low-q node is suppressed.
+* P2 proxy floor: every retained P2 root is still evaluated once; only a
+  later forward below a low-proxy root is suppressed;
+* P1 start floor: the phase-1 counterpart — a root below the floor keeps its
+  round-zero children as verifiable leaves but receives no deeper forwards;
+* confidence floor (both phases): the sampled node remains a verifiable
+  leaf; only a later forward below a low-q node is suppressed.
 
 Inputs
 ------
-Proxy labels are reconstructed from one or more E0 trace directories.  New
-traces contain ``proxy_piv`` in the draft selector record and are therefore
-self-contained.  For historical traces without it, the script joins the
-target wire by step/order.
+P2 proxy labels are reconstructed from one or more E0 trace directories.
+New traces contain ``proxy_piv`` in the draft selector record and are
+therefore self-contained.  For historical traces without it, the script
+joins the target wire by step/order.
 
-Confidence labels come from one or more ``SSD_TREE_CALIB_TRACE`` JSONL files.
-The useful label is whether an accepted child continued below a node.  Merely
-accepting the node itself is not counted as a loss because the production
-floor keeps that node as a leaf.
+Confidence labels come from one or more ``SSD_TREE_CALIB_TRACE`` JSONL
+files.  Records carry a ``phase`` field, so one collection run yields both
+the P1 and the P2 confidence axis.  The useful label is whether an accepted
+child continued below a node.  Merely accepting the node itself is not
+counted as a loss because the production floor keeps that node as a leaf.
+
+P1 start labels come from ``SSD_TREE_TOPO_TRACE`` files: ``.draft.jsonl``
+holds every built root's start score (the exact value compared against the
+floor), and the ``.serve.jsonl``/``.walk.jsonl`` pair labels each served
+tree with its accepted depth.  A start floor only suppresses depth>=2
+expansion, so the loss label is a served tree whose accepted path reached
+depth two or deeper.
 
 The script reports both a near-lossless ``safe`` recommendation and a more
 useful ``balanced`` recommendation.  The latter is the normal serving
@@ -41,6 +51,11 @@ DEFAULT_PROXY_THRESHOLDS = (
 )
 DEFAULT_CONF_THRESHOLDS = (
     0.001, 0.003, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2,
+)
+# P1 start scores are ``context reach * root q`` products and live on a
+# smaller scale than P2 target proxies, so the scan starts lower.
+DEFAULT_START_THRESHOLDS = (
+    0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1,
 )
 
 
@@ -288,6 +303,7 @@ def load_confidence_nodes(paths: list[Path]) -> tuple[int, list[dict]]:
                 continue
             records += 1
             policy = rec.get("policy", "unknown")
+            phase = int(rec.get("phase", 0))
             accepted_child_parents = {
                 int(node["parent"])
                 for node in rec["nodes"] if node.get("on_path", False)
@@ -295,6 +311,7 @@ def load_confidence_nodes(paths: list[Path]) -> tuple[int, list[dict]]:
             for node in rec["nodes"]:
                 row = dict(node)
                 row["policy"] = policy
+                row["phase"] = phase
                 row["source"] = str(path)
                 row["expansion_useful"] = (
                     int(node["node"]) in accepted_child_parents)
@@ -302,6 +319,76 @@ def load_confidence_nodes(paths: list[Path]) -> tuple[int, list[dict]]:
     if not records:
         raise ValueError("no confidence records with a 'nodes' field found")
     return records, nodes
+
+
+def load_p1_start_data(
+        prefixes: list[Path]) -> tuple[list[float], list[dict]]:
+    """Return (every built P1 root's start score, served P1 tree rows).
+
+    The first list is the population the floor filters (occupancy); the
+    second carries the loss label: a served tree whose accepted path reached
+    depth >= 2 would lose those tokens under a floor above its start score.
+    """
+    from analyze_tree_outcomes import load_tree_pairs
+
+    all_scores: list[float] = []
+    for prefix in prefixes:
+        draft_path = Path(str(prefix) + ".draft.jsonl")
+        if not draft_path.exists():
+            raise FileNotFoundError(draft_path)
+        for rec in _jsonl(draft_path):
+            if int(rec.get("phase", 0)) != 1:
+                continue
+            for root in rec["roots"]:
+                all_scores.append(float(root["piv"]))
+    served = []
+    for row in load_tree_pairs(prefixes):
+        if int(row["phase"]) != 1:
+            continue
+        if row["root_start_score"] is None:
+            raise ValueError("P1 serve record lacks root_start_score")
+        served.append({
+            "score": float(row["root_start_score"]),
+            "deep": int(row["accepted"]) >= 2,
+        })
+    if not all_scores:
+        raise ValueError("topo trace contains no phase-1 draft roots")
+    if not served:
+        raise ValueError("topo trace contains no served phase-1 trees")
+    return all_scores, served
+
+
+def start_table(all_scores: list[float], served: list[dict],
+                thresholds: tuple[float, ...]) -> list[dict]:
+    """Scan start floors against the built-root population.
+
+    ``deep_rate`` is the unconditional per-built-root probability that this
+    root was served *and* accepted to depth >= 2 — the same per-slot
+    realization semantics as the P2 proxy ``hit_rate``, so the proxy risk
+    limits transfer.  The served-conditional rate is kept as a column for
+    reading, not for the decision.
+    """
+    total_deep = sum(bool(x["deep"]) for x in served)
+    rows = []
+    for threshold in thresholds:
+        low_all = sum(1 for s in all_scores if s < threshold)
+        low = [x for x in served if x["score"] < threshold]
+        deep = sum(bool(x["deep"]) for x in low)
+        rows.append({
+            "threshold": threshold,
+            "n": low_all,
+            "total_n": len(all_scores),
+            "occupancy": low_all / len(all_scores) if all_scores else 0.0,
+            "served_n": len(low),
+            "served_total": len(served),
+            "deep": deep,
+            "total_deep": total_deep,
+            "deep_rate": deep / low_all if low_all else 0.0,
+            "deep_rate_upper95": wilson_upper(deep, low_all),
+            "deep_rate_served": deep / len(low) if low else 0.0,
+            "deep_contribution": deep / total_deep if total_deep else 0.0,
+        })
+    return rows
 
 
 def proxy_table(slots: list[dict], thresholds: tuple[float, ...]) -> list[dict]:
@@ -376,6 +463,18 @@ def choose_confidence(rows: list[dict], criteria: RiskCriteria) -> dict | None:
     return max(good, key=lambda x: x["threshold"], default=None)
 
 
+def choose_start(rows: list[dict], criteria: RiskCriteria) -> dict | None:
+    # The P1 start floor is a root-level filter with the same per-slot
+    # realization semantics as the P2 proxy floor, so it reuses the proxy
+    # risk limits against the built-root population.
+    good = [r for r in rows
+            if r["n"] >= criteria.minimum_tail_count
+            and r["deep_contribution"] <= criteria.proxy_hit_contribution_max
+            and r["deep_rate_upper95"]
+            <= criteria.proxy_hit_rate_upper95_max]
+    return max(good, key=lambda x: x["threshold"], default=None)
+
+
 def pct(x: float) -> str:
     return f"{100.0 * x:.3f}%"
 
@@ -398,17 +497,29 @@ def main(argv: list[str] | None = None) -> int:
         help="one or more E0 run/e0 directories used for proxy outcomes")
     ap.add_argument("--confidence", type=Path, nargs="+", required=True,
                     help="confidence JSONL files or directories")
-    ap.add_argument("--depth-cap", type=int, default=4)
+    ap.add_argument("--depth-cap", type=int, default=4,
+                    help="P2 rounds; only nodes with depth < cap can expand")
+    ap.add_argument("--topo-prefix", type=Path, nargs="*", default=[],
+                    help="SSD_TREE_TOPO_TRACE prefixes (.draft/.serve/.walk) "
+                         "enabling the P1 start axis; omit for legacy "
+                         "P2-only calibration")
+    ap.add_argument("--p1-depth-cap", type=int, default=9,
+                    help="P1 rounds (K1); only nodes with depth < cap "
+                         "can expand")
     ap.add_argument("--risk-profile", choices=tuple(RISK_PROFILES),
                     default="balanced")
     ap.add_argument("--proxy-thresholds", type=parse_thresholds,
                     default=DEFAULT_PROXY_THRESHOLDS)
     ap.add_argument("--confidence-thresholds", type=parse_thresholds,
                     default=DEFAULT_CONF_THRESHOLDS)
+    ap.add_argument("--start-thresholds", type=parse_thresholds,
+                    default=DEFAULT_START_THRESHOLDS)
     ap.add_argument("--min-proxy-slots", type=int, default=10000)
     ap.add_argument("--min-proxy-hits", type=int, default=100)
     ap.add_argument("--min-confidence-candidates", type=int, default=1000)
     ap.add_argument("--min-useful-expansions", type=int, default=100)
+    ap.add_argument("--min-p1-roots", type=int, default=10000)
+    ap.add_argument("--min-p1-deep-trees", type=int, default=100)
     ap.add_argument("--json-out", type=Path)
     ap.add_argument("--config-out", type=Path,
                     help="write sourceable TREE_*_THRESHOLD assignments")
@@ -428,16 +539,29 @@ def main(argv: list[str] | None = None) -> int:
 
     slots, trace_notes = load_proxy_slots(e0_dirs)
     records, nodes = load_confidence_nodes(args.confidence)
+    # Phase-split confidence: phase==1 nodes come from served P1 trees; any
+    # other value (2, or 0 in historical P2-only traces) is the P2 axis.
+    nodes_p1 = [x for x in nodes if int(x.get("phase", 0)) == 1]
+    nodes_p2 = [x for x in nodes if int(x.get("phase", 0)) != 1]
     proxy = proxy_table(slots, args.proxy_thresholds)
-    confidence = confidence_table(nodes, args.depth_cap,
+    confidence = confidence_table(nodes_p2, args.depth_cap,
                                   args.confidence_thresholds)
+    p1_enabled = bool(args.topo_prefix)
+    p1_confidence = (confidence_table(nodes_p1, args.p1_depth_cap,
+                                      args.confidence_thresholds)
+                     if p1_enabled else [])
+    if p1_enabled:
+        p1_scores, p1_served = load_p1_start_data(args.topo_prefix)
+        p1_start = start_table(p1_scores, p1_served, args.start_thresholds)
+    else:
+        p1_scores, p1_served, p1_start = [], [], []
 
     data_warnings = list(trace_notes)
     proxy_hits = sum(int(x["hit"]) for x in slots)
     confidence_candidates = confidence[0]["candidate_n"] if confidence else 0
     useful_expansions = confidence[0]["total_useful"] if confidence else 0
     enough = True
-    checks = (
+    checks = [
         (len(slots) >= args.min_proxy_slots,
          f"proxy slots {len(slots)} < {args.min_proxy_slots}"),
         (proxy_hits >= args.min_proxy_hits,
@@ -448,7 +572,25 @@ def main(argv: list[str] | None = None) -> int:
         (useful_expansions >= args.min_useful_expansions,
          f"useful expansions {useful_expansions} "
          f"< {args.min_useful_expansions}"),
-    )
+    ]
+    p1_conf_candidates = p1_confidence[0]["candidate_n"] \
+        if p1_confidence else 0
+    p1_useful = p1_confidence[0]["total_useful"] if p1_confidence else 0
+    p1_deep_trees = p1_start[0]["total_deep"] if p1_start else 0
+    if p1_enabled:
+        checks += [
+            (len(p1_scores) >= args.min_p1_roots,
+             f"P1 built roots {len(p1_scores)} < {args.min_p1_roots}"),
+            (p1_deep_trees >= args.min_p1_deep_trees,
+             f"P1 deep-accepted trees {p1_deep_trees} "
+             f"< {args.min_p1_deep_trees}"),
+            (p1_conf_candidates >= args.min_confidence_candidates,
+             f"P1 confidence candidates {p1_conf_candidates} "
+             f"< {args.min_confidence_candidates}"),
+            (p1_useful >= args.min_useful_expansions,
+             f"P1 useful expansions {p1_useful} "
+             f"< {args.min_useful_expansions}"),
+        ]
     for ok, message in checks:
         if not ok:
             enough = False
@@ -458,15 +600,26 @@ def main(argv: list[str] | None = None) -> int:
     for name, criteria in RISK_PROFILES.items():
         p_rec = choose_proxy(proxy, criteria) if enough else None
         q_rec = choose_confidence(confidence, criteria) if enough else None
+        s_rec = (choose_start(p1_start, criteria)
+                 if enough and p1_enabled else None)
+        q1_rec = (choose_confidence(p1_confidence, criteria)
+                  if enough and p1_enabled else None)
         recommendations[name] = {
             "proxy_min": p_rec["threshold"] if p_rec else None,
             "confidence_min": q_rec["threshold"] if q_rec else None,
+            "p1_start_min": s_rec["threshold"] if s_rec else None,
+            "p1_confidence_min": q1_rec["threshold"] if q1_rec else None,
         }
 
     selected = recommendations[args.risk_profile]
     print(f"[data] proxy slots={len(slots)} hits={proxy_hits}; "
           f"confidence records={records} nodes={len(nodes)} "
-          f"expandable={confidence_candidates} useful={useful_expansions}")
+          f"(P1 {len(nodes_p1)} / P2 {len(nodes_p2)}) "
+          f"P2 expandable={confidence_candidates} useful={useful_expansions}")
+    if p1_enabled:
+        print(f"[data] P1 built roots={len(p1_scores)} "
+              f"served trees={len(p1_served)} deep trees={p1_deep_trees}; "
+              f"P1 expandable={p1_conf_candidates} useful={p1_useful}")
     for note in data_warnings:
         print(f"[note] {note}")
 
@@ -477,36 +630,71 @@ def main(argv: list[str] | None = None) -> int:
               f"{pct(r['hit_rate']):>8}  {pct(r['hit_rate_upper95']):>7}  "
               f"{pct(r['hit_contribution']):>16}")
 
-    print("\n[confidence: q below threshold, expandable nodes only]")
-    print("threshold  occupancy  useful  upper95  useful-contrib  "
-          "on-path  attempted  accept|attempt")
-    for r in confidence:
-        print(f"{r['threshold']:9g}  {pct(r['occupancy']):>9}  "
-              f"{pct(r['expansion_use_rate']):>7}  "
-              f"{pct(r['expansion_use_upper95']):>7}  "
-              f"{pct(r['expansion_use_contribution']):>14}  "
-              f"{pct(r['on_path_rate']):>7}  "
-              f"{r['attempted_n']:9d}  "
-              f"{pct(r['attempt_accept_rate']):>14}")
+    def _print_confidence(rows, title):
+        print(f"\n[{title}: q below threshold, expandable nodes only]")
+        print("threshold  occupancy  useful  upper95  useful-contrib  "
+              "on-path  attempted  accept|attempt")
+        for r in rows:
+            print(f"{r['threshold']:9g}  {pct(r['occupancy']):>9}  "
+                  f"{pct(r['expansion_use_rate']):>7}  "
+                  f"{pct(r['expansion_use_upper95']):>7}  "
+                  f"{pct(r['expansion_use_contribution']):>14}  "
+                  f"{pct(r['on_path_rate']):>7}  "
+                  f"{r['attempted_n']:9d}  "
+                  f"{pct(r['attempt_accept_rate']):>14}")
+
+    _print_confidence(confidence, "P2 confidence")
+    if p1_enabled:
+        print("\n[P1 start: built-root score below threshold]")
+        print("threshold  occupancy  deep-rate  upper95  deep-contrib  "
+              "served-n  deep|served")
+        for r in p1_start:
+            print(f"{r['threshold']:9g}  {pct(r['occupancy']):>9}  "
+                  f"{pct(r['deep_rate']):>9}  "
+                  f"{pct(r['deep_rate_upper95']):>7}  "
+                  f"{pct(r['deep_contribution']):>12}  "
+                  f"{r['served_n']:8d}  "
+                  f"{pct(r['deep_rate_served']):>11}")
+        _print_confidence(p1_confidence, "P1 confidence")
 
     print("\n[static recommendations]")
     for name in ("safe", "balanced"):
         rec = recommendations[name]
-        print(f"{name:8s} proxy={rec['proxy_min']} "
-              f"confidence={rec['confidence_min']}")
+        line = (f"{name:8s} proxy={rec['proxy_min']} "
+                f"confidence={rec['confidence_min']}")
+        if p1_enabled:
+            line += (f" p1_start={rec['p1_start_min']} "
+                     f"p1_confidence={rec['p1_confidence_min']}")
+        print(line)
     print(f"selected profile = {args.risk_profile}")
+    if p1_enabled and enough:
+        for axis in ("p1_start_min", "p1_confidence_min"):
+            if selected[axis] is None:
+                # P1's production default is 0.0; "no floor passes the risk
+                # limits" is a valid calibration answer, not missing data.
+                print(f"[note] {axis}: no candidate passed the risk "
+                      "limits; recommending 0.0 (keep unfiltered)")
+                selected[axis] = 0.0
 
     result = {
         "data": {
             "e0_dirs": [str(x) for x in e0_dirs],
             "confidence_inputs": [str(x) for x in args.confidence],
+            "topo_prefixes": [str(x) for x in args.topo_prefix],
             "proxy_slots": len(slots),
             "proxy_hits": proxy_hits,
             "confidence_records": records,
             "confidence_nodes": len(nodes),
+            "confidence_nodes_p1": len(nodes_p1),
             "confidence_candidates": confidence_candidates,
             "useful_expansions": useful_expansions,
+            "p1_built_roots": len(p1_scores),
+            "p1_served_trees": len(p1_served),
+            "p1_deep_trees": p1_deep_trees,
+            "p1_confidence_candidates": p1_conf_candidates,
+            "p1_useful_expansions": p1_useful,
             "depth_cap": args.depth_cap,
+            "p1_depth_cap": args.p1_depth_cap,
             "sufficient": enough,
             "notes": data_warnings,
         },
@@ -514,6 +702,8 @@ def main(argv: list[str] | None = None) -> int:
                      for name, value in RISK_PROFILES.items()},
         "proxy": proxy,
         "confidence": confidence,
+        "p1_start": p1_start,
+        "p1_confidence": p1_confidence,
         "recommendations": recommendations,
         "selected_profile": args.risk_profile,
         "recommendation": selected,
@@ -524,17 +714,28 @@ def main(argv: list[str] | None = None) -> int:
 
     has_rec = (selected["proxy_min"] is not None
                and selected["confidence_min"] is not None)
+    if p1_enabled:
+        has_rec = has_rec and (selected["p1_start_min"] is not None
+                               and selected["p1_confidence_min"] is not None)
     if args.config_out:
         if not enough or not has_rec:
             print("[warning] config not written: data/recommendation gate failed",
                   file=sys.stderr)
         else:
             args.config_out.parent.mkdir(parents=True, exist_ok=True)
-            args.config_out.write_text(
-                "# Generated by analyze_threshold_calibration.py\n"
-                f"# risk_profile={args.risk_profile}\n"
-                f"TREE_PROXY_THRESHOLD={selected['proxy_min']:.9g}\n"
-                f"TREE_CONF_THRESHOLD={selected['confidence_min']:.9g}\n")
+            # Variable names match run_p1_p2_tree_formal_20260807.sh inputs.
+            lines = [
+                "# Generated by analyze_thresholds.py",
+                f"# risk_profile={args.risk_profile}",
+                f"TREE_PROXY_THRESHOLD={selected['proxy_min']:.9g}",
+                f"TREE_CONF_THRESHOLD={selected['confidence_min']:.9g}",
+            ]
+            if p1_enabled:
+                lines += [
+                    f"P1_START_THRESHOLD={selected['p1_start_min']:.9g}",
+                    f"P1_CONF_THRESHOLD={selected['p1_confidence_min']:.9g}",
+                ]
+            args.config_out.write_text("\n".join(lines) + "\n")
             print(f"config written: {args.config_out}")
 
     if args.strict and (not enough or not has_rec):
