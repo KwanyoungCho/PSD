@@ -969,13 +969,24 @@ class TestExecutorMandatoryParity(TestExecutorModuleParity):
         ref = self._snap(ex)
         # 물리 재배치: 논리 page 0,1,2 → 물리 5,3,7 (max_blocks=8)
         kvi = torch.tensor([5, 3, 7], dtype=torch.int32, device=dev)
+        # 99c7b55 이후 실행기는 continuation cell의 페이지를
+        # in_block_tables에서 유도한다 — 교체 계약은 (wrapper kvi,
+        # in_slot, in_block_tables) 3요소 동시 갱신이다 (프로덕션
+        # fill은 매 스텝 dbt로 셋 다 갱신).
+        ex.in_block_tables[0, :p0 + 1].copy_(kvi)
+        first_base = ctx0 - ex.round_ends[0]
         for f in range(ex.F):
             ex.wrappers[p0][f]._paged_kv_indices_buf[:p0 + 1] \
                 .copy_(kvi)
-            base = ctx0 + f * ex.W
-            pos = base + torch.arange(ex.W)
+            # a11f382 compact 기하: round f 셀의 논리 위치 =
+            # first_base + round_offsets[f] + lane (폭 wf)
+            wf = ex.round_widths[f]
+            pos = first_base + ex.round_offsets[f] \
+                + torch.arange(wf)
             phys = kvi.cpu()[pos // PAGE] * PAGE + pos % PAGE
-            ex.in_slot[f].copy_(phys.to(torch.int32).to(dev))
+            ex.in_slot[f].zero_()
+            ex.in_slot[f][:wf].copy_(
+                phys.to(torch.int32).to(dev))
         ex.model.cache.zero_()
         ex.replay(p0)
         torch.cuda.synchronize()
