@@ -153,6 +153,27 @@ class TestOldNewEquivalence(unittest.TestCase):
         with self.assertRaises(ValueError):
             _mk({}, duet_phase1_k=4, duet_phase2_k=9)
 
+    def test_even_k1_is_valid_when_all_shape_inputs_agree(self):
+        c = _mk(
+            {}, speculate_k=12, duet_phase1_k=8, duet_phase2_k=4,
+            duet_split_phase1_fan_out_list=[2, 2, 2, 2, 2, 2, 1, 1, 1],
+            duet_p1_tree_policy="on", duet_p2_tree_policy="on",
+            duet_p1_tree_max_nodes=16, duet_p2_tree_max_nodes=8,
+            duet_p2_budget=10, duet_tree_root_count=10)
+        self.assertEqual(c.speculate_k, 12)
+        self.assertEqual(c.duet_phase1_k, 8)
+        self.assertEqual(len(c.duet_split_phase1_fan_out_list), 9)
+
+    def test_stale_total_k_is_rejected_with_value_error(self):
+        # This must remain a real exception under ``python -O``.  The old
+        # assert disappeared in production and produced misleading reports
+        # that even K1 values did not work.
+        with self.assertRaisesRegex(ValueError, "Omit --k"):
+            _mk(
+                {}, speculate_k=13, duet_phase1_k=8, duet_phase2_k=4,
+                duet_split_phase1_fan_out_list=
+                [2, 2, 2, 2, 2, 2, 1, 1, 1])
+
     def test_missing_k1k2_early_raise(self):
         with self.assertRaises(ValueError):
             _mk({}, duet_phase1_k=None, duet_phase2_k=None,

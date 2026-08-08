@@ -579,13 +579,28 @@ class Config:
                     f"got K1={self.duet_phase1_k}, K2={self.duet_phase2_k}"
                 )
             if self.duet_phase1_k is not None:
-                assert self.duet_phase1_k > 0, f"duet_phase1_k must be > 0, got {self.duet_phase1_k}"
-                assert self.duet_phase2_k > 0, f"duet_phase2_k must be > 0, got {self.duet_phase2_k}"
-                assert self.duet_phase1_k + self.duet_phase2_k == self.speculate_k, (
-                    f"duet_phase1_k + duet_phase2_k must equal speculate_k; "
-                    f"got K1={self.duet_phase1_k} + K2={self.duet_phase2_k} != "
-                    f"speculate_k={self.speculate_k}"
-                )
+                # Runtime shape contracts must survive ``python -O``.  The
+                # former asserts disappeared in production and let a stale
+                # ``--k`` size response/logit buffers differently from
+                # K1/K2.  Changing K1=9 to K1=8 while leaving ``--k 13`` was
+                # one concrete way to enter that corrupt configuration.
+                if self.duet_phase1_k <= 0:
+                    raise ValueError(
+                        "duet_phase1_k must be > 0; got "
+                        f"{self.duet_phase1_k}")
+                if self.duet_phase2_k <= 0:
+                    raise ValueError(
+                        "duet_phase2_k must be > 0; got "
+                        f"{self.duet_phase2_k}")
+                if (self.duet_phase1_k + self.duet_phase2_k
+                        != self.speculate_k):
+                    raise ValueError(
+                        "duet_phase1_k + duet_phase2_k must equal "
+                        "speculate_k; got "
+                        f"K1={self.duet_phase1_k} + "
+                        f"K2={self.duet_phase2_k} != "
+                        f"speculate_k={self.speculate_k}. Omit --k so "
+                        "bench.py derives it, or set --k to K1+K2.")
                 # Tier-3: early fail (moved up from DraftRunner init; the
                 # runner check stays as defense). -O 생존형 raise.
                 if self.duet_phase2_k > self.duet_phase1_k:
