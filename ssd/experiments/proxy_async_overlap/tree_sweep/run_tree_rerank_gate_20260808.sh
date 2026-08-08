@@ -43,13 +43,26 @@ case "${STAGE}" in
   final)
     : "${P1_WINNER:?set P1_WINNER to the screened P1 verification cap}"
     : "${P2_WINNER:?set P2_WINNER to the screened P2 verification cap}"
-    # Baseline and selected rerank are separate directories but use the same
-    # three seeds.  Compare paired per-seed deltas, not pooled single runs.
-    run_case both_baseline both "${FINAL_SEEDS:-42,123,2024}" \
-      "${FINAL_NS:-5}" "${FINAL_OUTLEN:-256}" 18 8
-    run_case both_rerank both "${FINAL_SEEDS:-42,123,2024}" \
-      "${FINAL_NS:-5}" "${FINAL_OUTLEN:-256}" \
-      "${P1_WINNER}" "${P2_WINNER}"
+    # Interleave baseline/candidate within every seed, and rotate order, so a
+    # long-lived server load trend cannot masquerade as a rerank speedup.
+    IFS=',' read -r -a _final_seeds <<<"${FINAL_SEEDS:-42,123,2024}"
+    _order=0
+    for _seed in "${_final_seeds[@]}"; do
+      if ((_order % 2 == 0)); then
+        run_case both_baseline both "${_seed}" \
+          "${FINAL_NS:-5}" "${FINAL_OUTLEN:-256}" 18 8
+        run_case both_rerank both "${_seed}" \
+          "${FINAL_NS:-5}" "${FINAL_OUTLEN:-256}" \
+          "${P1_WINNER}" "${P2_WINNER}"
+      else
+        run_case both_rerank both "${_seed}" \
+          "${FINAL_NS:-5}" "${FINAL_OUTLEN:-256}" \
+          "${P1_WINNER}" "${P2_WINNER}"
+        run_case both_baseline both "${_seed}" \
+          "${FINAL_NS:-5}" "${FINAL_OUTLEN:-256}" 18 8
+      fi
+      _order=$((_order + 1))
+    done
     ;;
   *)
     echo "STAGE must be screen or final; got ${STAGE}" >&2
