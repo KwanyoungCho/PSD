@@ -55,6 +55,36 @@ python tools/duet_calibration/analyze_tree_outcomes.py \
 counterfactual TPS와 완전히 같은 값으로 해석하면 안 된다. 그래도 정책이 실제로
 대체 가지를 사용했는지 확인하는 가장 직접적인 지표다.
 
+### 생성 node와 target 전송 node 상한 분리
+
+넓은 tree는 그대로 생성하되 cache hit 뒤 target에 보낼 부분트리만 줄일 후보를
+같은 trace에서 계산할 수 있다.
+
+```bash
+python tools/duet_calibration/analyze_tree_outcomes.py \
+  --trace-prefix "$TRACE" --e0-dir "$E0" \
+  --rerank-caps 6,8,10,12,14,16,18 \
+  --json-out "$(dirname "$TRACE")/outcomes_rerank.json"
+```
+
+`rerank_cap_estimate`에는 phase/cap별 평균 전송 node, node 감소율, 관측된 accepted
+node 보존율과 전체 accepted path 보존율이 나온다. DUET는 조상뿐 아니라 선택된
+형제보다 앞선 비복원 형제도 함께 남기는 lossless closure를 적용한다. 최소한
+accepted-node 보존율 99%, full-path 보존율 98%를 만족하는 가장 작은 cap을 첫
+실모델 후보로 삼고, 바로 위 cap과 기존 동일-cap 기준만 비교한다.
+
+이 사후 수치는 candidate screening이다. 실제 실행에서 rejected proposal을
+제거하면 이후 residual RNG 궤적도 달라지므로 counterfactual AL을 정확히
+재현하지 않는다. 최종값은 다음 CLI로 profiler-OFF paired run에서 확인한다.
+
+```text
+--duet_p1_tree_max_nodes 18 --duet_p1_tree_verify_nodes 14
+--duet_p2_tree_max_nodes 8  --duet_p2_tree_verify_nodes 8
+```
+
+첫 값은 draft 검색/생성 상한, 두 번째 값은 hit 뒤 target 전송/검증 상한이다.
+둘이 같으면 rerank를 완전히 우회해 기존 동작을 그대로 재현한다.
+
 ## 1. K1/K2 latency 균형 찾기
 
 프로젝트의 `ssd` 디렉터리에서 실행한다.

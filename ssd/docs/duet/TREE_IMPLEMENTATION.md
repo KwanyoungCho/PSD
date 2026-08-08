@@ -41,6 +41,10 @@
    63-bit word 여러 개로 확장했고,
    P1/P2가 서로 다른 최대 node 수를 사용하도록 공통 응답 wire와 target verifier를
    일반화했다.
+10. Draft가 검색하는 tree 폭과 cache hit 뒤 target에 보내는 폭을 분리했다.
+    누적 confidence rerank가 조상과 앞선 비복원 형제를 함께 보존하며, P1
+    18개 생성/14개 전송 설정은 동일 생성 tree 대비 3-seed 평균 TPS를 6.5%
+    높였다. 현재 P2 8개 생성에서는 8개 전송을 유지한다.
 
 ### 1.2 기본값 변경의 정확한 의미
 
@@ -65,8 +69,10 @@
 | W | `duet_p2_budget`에서 유도 | 10 | 한 P2 forward가 동시에 평가하는 부모 수 |
 | R | `duet_tree_root_count` | `None` → W | 첫 round에 평가하고 cache에 보존할 root 수 |
 | C | `duet_tree_c_tensor` | 3 | 한 부모에서 한 번에 뽑는 ordered 자식 수 상한 |
-| N1 | `duet_p1_tree_max_nodes` | 18 | P1 root 하나의 응답 node 상한 |
-| N2 | `duet_p2_tree_max_nodes` | 8 | P2 root 하나의 응답 node 상한 |
+| G1 | `duet_p1_tree_max_nodes` | 18 | P1 root 하나를 검색·생성할 node 상한 |
+| M1 | `duet_p1_tree_verify_nodes` | G1 | hit 뒤 target에 보낼 P1 node 상한 |
+| G2 | `duet_p2_tree_max_nodes` | 8 | P2 root 하나를 검색·생성할 node 상한 |
+| M2 | `duet_p2_tree_verify_nodes` | G2 | hit 뒤 target에 보낼 P2 node 상한 |
 | U1 | `duet_p1_roots_per_position` | 2 | P1 context마다 만드는 시작 root 수 |
 | W1 | P1 fanout 합×`duet_p1_tree_forward_scale` | 1.0 | P1 round 1 이후 계산 폭; round 0 폭은 실제 root 수 |
 | τroot,P2 | `duet_tree_proxy_threshold` | 0.01 | P2의 round 1 이후 proxy 시작점수 threshold |
@@ -332,6 +338,10 @@ bucket은 K2 short/miss 경로, 10-context bucket은 K1 chain/P2-tree 범위,
 별도 graph로 만들지는 않고, 위 세 개의 의미 있는 경계 사이만 zero-score
 padding한다.
 
+검증 상한 M1을 생성 상한 G1보다 작게 두면 세 번째 bucket은 `M1+1` context로
+줄어든다. 예를 들어 G1/M1=18/14이면 `[5,10,15]` context와 최대 round-0 폭
+30을 준비하며, tree 생성 view 자체는 계속 18-node다.
+
 P1의 compact cell 수는 위 세 bucket에서 각각 90, 148, 166이다.
 최대 166 cell은 하나의 64-bit 조상 bitmap에 들어가지 않으므로,
 현재 구현은 부호 비트를 피한 63-cell word 세 개를 사용한다.
@@ -351,6 +361,55 @@ P1 tree hit의 target 검증은 recovery를 포함해 최대 19행이고 tree �
 낮은 점수 root는 round 0의 leaf만 남을 수 있고, 높은 점수 root는 여러 sibling
 branch가 N1까지 채워질 수 있다. Config는 N1을 순차 깊이와 결합하지 않고 양수인
 고정 응답 용량으로만 검증한다.
+
+### 4.8 생성 폭과 target 검증 폭의 분리
+
+동적 tree는 많은 후보를 생성해야 좋은 가지를 찾을 수 있지만, 찾은 후보를 모두
+target에 보내야 하는 것은 아니다. 현재 구현은 phase별로 두 상한을 분리한다.
+
+- `tree_max_nodes=G`: draft가 각 cache root 아래에서 검색하고 cache에 보존할 최대
+  node 수
+- `tree_verify_nodes=M`: 실제 cache hit 뒤 target에 보낼 최대 node 수 (`M<=G`)
+
+`M=G`는 기존 경로와 bit-for-bit 같은 fast path다. `M<G`이면 hit한 root 하나의
+node를 다음 누적 confidence로 순위화한다.
+
+```text
+path_conf(node) = product of q(child | parent) along the root-to-node path
+```
+
+EAGLE-2도 넓게 생성한 후보의 누적 draft confidence를 사용해 최종 draft-token
+예산만큼 다시 고른다([공식 EAGLE 구현의 `topK_genrate`](https://github.com/SafeAILab/EAGLE/blob/main/eagle/model/cnets.py),
+[SGLang speculative decoding 문서](https://github.com/sgl-project/sglang/blob/main/docs_new/docs/advanced_features/speculative_decoding.mdx)).
+다만 DUET의 temperature>0 보행에는 추가 제약이 있다.
+한 부모의 형제는 순서가 있는 비복원 proposal이므로, 형제 2를 남기려면 형제
+0과 1도 함께 남겨야 한다. 또한 node를 남기려면 모든 조상도 필요하다. 따라서
+DUET rerank는 점수가 높은 node를 방문하되 다음 closure 전체가 M 안에 들어올
+때만 채택한다.
+
+```text
+closure(node) = 모든 조상 + 각 조상 단계에서 선택 형제까지의 앞선 형제
+```
+
+최종 node는 원래 생성 순서로 다시 정렬하고 parent id와 parent-q reference를
+compact index로 바꾼다. 이 규약은 다음을 동시에 보장한다.
+
+1. parent-before-child 및 ordered-sibling 검증 순서 보존
+2. 선택 node의 proposal 분포와 target residual ladder 일치
+3. 기존 생성 폭 G와 cache-key/root coverage 보존
+4. target tree verify row, parent-q 통신 행, 다음 P1 context/root 수 감소
+
+마지막 효과가 중요하다. 예를 들어 P1 tree hit에서 G1=18, M1=14이면 target은
+recovery를 포함해 최대 15행만 검증하고, 다음 P1의 context도 최대 15개다.
+position당 root가 2개면 다음 첫 draft forward는 최대 30행이다. 기존 M1=18의
+19 context·38행보다 작다. 반면 **현재 step에서 G1=18 tree를 생성하는 계산은
+그대로다.** 이것은 생성 알고리즘 축소가 아니라 hit 이후 불필요한 검증과 다음
+step 입력 확대를 막는 최종 선택 단계다.
+
+단순 top-M은 사용하지 않는다. 조상이나 앞선 형제를 빼면 topology가 연결되지
+않거나 temperature>0의 lossless sampling 의미가 달라진다. 실제 구현은
+`rerank_tree_indices`의 closure 검사, compact parent/q-ref remap, target wire
+validation과 회귀 테스트로 이 계약을 고정한다.
 
 ---
 
@@ -934,6 +993,44 @@ replay하고 runtime capture/fallback 없이 종료했다. 4 prompt/output 64의
 run에서 P1AL 4.13, P2AL 2.79였으며, 작은 표본의 TPS는 성능 판정에 사용하지
 않는다. 원 로그는 `both_final_smoke_20260808`에 있다.
 
+### 8.17 Hit-time final tree rerank
+
+생성 폭과 target 전송 폭을 분리한 commit `3219f71`에서 과거 실제 hit trace와
+새 실모델 gate를 수행했다. 상세 raw 설정과 표는
+[`tree_rerank_gate_20260808/RESULTS.md`](../../experiments/proxy_async_overlap/tree_sweep/tree_rerank_gate_20260808/RESULTS.md)에
+기록한다.
+
+기존 P1 trace 159 hit은 137건이 18-node full tree였지만 실제 accepted path는
+평균 3.45 node였다. lossless-closed 사후 선택에서 cap 14는 전송 node를 21.6%
+줄이면서 관측 accepted node 99.64%, full path 98.74%를 보존했다. cap 12는
+node를 32.4% 줄였지만 full-path 보존이 95.60%라 공격적인 후보로 분류했다.
+P2 trace 65 hit의 cap 7은 node를 11.2% 줄이고 full path 98.46%를 보존했다.
+
+짧은 phase별 live gate에서는 P1 14가 P1 12보다 token/step이 높으면서 비슷한
+TPS를 냈다. 반면 현재 P2 G2=8에서 cap 7은 verify 약 1.2ms를 줄였어도 TPS가
+63.82→61.82로 낮아 기각했다.
+
+최종 3-seed, seed당 20 prompt, output 256, profiler-OFF combined-tree gate는
+P1 `18/18→18/14`, P2 `8/8` 고정 비교다.
+
+| metric | 18/18 baseline | P1 18/14 | delta |
+|---|---:|---:|---:|
+| TPS | 54.53 | 58.07 | +6.50% (3/3 seed 양수) |
+| token/step | 3.957 | 3.920 | -0.93% |
+| target full step | 76.06ms | 70.99ms | -5.06ms |
+| target verify | 61.75ms | 55.80ms | -5.95ms |
+| draft step | 69.81ms | 66.28ms | -3.53ms |
+| total cache hit | 0.803 | 0.803 | 동일 |
+| P1 hit / conditional AL | 0.562 / 3.803 | 0.546 / 3.850 | -0.017 / +0.047 |
+| P2 hit / conditional AL | 0.240 / 1.993 | 0.258 / 1.937 | +0.018 / -0.057 |
+
+따라서 P1 14는 현재 workload의 **throughput 설정**으로 채택할 수 있다. 전체
+cache hit과 conditional AL은 평균적으로 보존됐지만 token/step이 0.9% 낮고 P1
+hit도 1.7%p 낮으므로 quality-equivalent라고 주장하지 않는다. Config 기본은
+verify cap 생략 시 generation cap과 같게 유지한다. P2 7도 현재 기본값으로
+채택하지 않는다. P1 16은 사후 trace에서 full path 100%를 보존한 보수적 후보지만
+live gate 전이므로 이번 성능 결론에 포함하지 않는다.
+
 ---
 
 ## 9. Timeline 해석
@@ -1197,6 +1294,8 @@ SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
 | `--duet_p1_tree_forward_scale` | 1.0 | P1 W/R; 1에서도 round 1부터 전역 동적 선택 |
 | `--duet_p1_tree_max_nodes` | 18 | P1 root별 최대 응답 node N1 |
 | `--duet_p2_tree_max_nodes` | 8 | P2 root별 최대 응답 node N2 |
+| `--duet_p1_tree_verify_nodes` | P1 max | P1 hit 뒤 target에 보낼 lossless-closed node 상한 M1 |
+| `--duet_p2_tree_verify_nodes` | P2 max | P2 hit 뒤 target에 보낼 lossless-closed node 상한 M2 |
 | `--duet_tree_root_count` | `None` | P2 R; 동적 P2는 기본 R=W |
 | `--duet_tree_c_tensor` | 3 | 부모별 ordered 비복원 자식 상한 C, 허용 1--8 |
 | `--duet_tree_proxy_threshold` | 0.01 | P2 round 1 이후 proxy 시작점수 threshold |
@@ -1211,6 +1310,7 @@ Config는 다음을 시작 전에 거부한다.
 - `K1+K2 != k`, `K2>K1`
 - `R>W`
 - P1/P2 max nodes가 1 미만이거나 model length 이상인 경우
+- phase별 verify nodes가 1 미만이거나 해당 max nodes보다 큰 경우
 - 명시적으로 과거 backbone P2를 재현할 때 `N2<K2` 또는 `N2>K2*C`
 - vocabulary>32768인 packed P_iv wire
 - tree와 `SSD_DUET_PROXY_ON_DRAFT=1` 또는

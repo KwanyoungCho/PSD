@@ -404,6 +404,23 @@ tree payload는 B=1 계약이므로, B>1 요청에서 이전 B=1 tree row가 우
 Topology readback과 valid-node 수 readback도 한 번으로 합쳤고, parent 분포는
 임시 tensor 없이 고정 staging buffer로 직접 gather한다.
 
+#### 넓게 생성하고 필요한 부분트리만 검증
+
+Draft 검색 node 수와 target 전송 node 수는 별도로 설정할 수 있다.
+
+```text
+--duet_p1_tree_max_nodes 18 --duet_p1_tree_verify_nodes 14
+--duet_p2_tree_max_nodes 8  --duet_p2_tree_verify_nodes 8
+```
+
+`max_nodes`는 cache root마다 draft가 생성해 두는 tree 폭이고,
+`verify_nodes`는 실제 hit 뒤 target에 보내는 상한이다. 후자가 더 작으면 누적
+draft confidence로 node를 다시 고른다. DUET의 temperature>0 비복원 검증을
+보존하기 위해 선택 node의 모든 조상과 앞선 형제를 함께 남기므로 단순 top-N과
+다르다. P1 18→14는 target 검증을 recovery 포함 최대 19→15행으로 줄이고,
+다음 P1 첫 forward의 최대 root 수도 position당 2개 기준 38→30행으로 줄인다.
+현재 step의 18-node 검색 계산 자체는 유지된다.
+
 #### page bucket 사전 준비
 
 FlashInfer plan과 CUDA Graph를 가능한 page bucket별로 요청 전에 만든다.
@@ -585,6 +602,7 @@ SSD_TREE_PROXY_GRAPH=1 SSD_TREE_EXEC_WARMUP=all \
   --duet_p1_roots_per_position 2 \
   --duet_p1_tree_forward_scale 1.0 \
   --duet_p1_tree_max_nodes 18 --duet_p2_tree_max_nodes 8 \
+  --duet_p1_tree_verify_nodes 14 --duet_p2_tree_verify_nodes 8 \
   --duet_tree_root_count 10 --duet_tree_c_tensor 3 \
   --duet_tree_proxy_threshold 0.01 \
   --duet_tree_conf_threshold 0.03 \
@@ -710,8 +728,9 @@ node 수만 송신한다. fused metadata가 먼저 도착하므로 추가 handsh
 - 최대 node 수가 크면 hit한 root의 coverage/depth가 늘지만 target verify row 비용이
   증가한다.
 
-현재 기준은 C=3, P1 최대 18, P2 최대 8이다. threshold calibration 이후 소수
-후보만 paired gate로 비교한다.
+현재 생성 기준은 C=3, P1 최대 18, P2 최대 8이다. 생성 폭과 별도로 phase별
+`tree_verify_nodes`를 둘 수 있으며, 실제 hit trace의 accepted-path 보존율로 후보를
+줄인 뒤 paired gate로 비교한다. 동일 값은 기존 동작을 정확히 재현한다.
 
 ### 9.3 K1/K2 자동 분석
 
