@@ -283,6 +283,22 @@ class TestExecutorModuleParity(unittest.TestCase):
         torch.cuda.synchronize()
         for name, expected in ref.items():
             self.assertTrue(torch.equal(expected, getattr(ex, name)), name)
+        # Every served node must resolve its parent-q reference to one of the
+        # cells that a live variable-width round actually evaluated.  Eager
+        # versus replay parity alone would not catch two paths agreeing on an
+        # invalid/padding cell id.
+        active_cells = set()
+        for f, wf in enumerate(ex.round_widths):
+            active_cells.update(range(f * ex.W, f * ex.W + wf))
+        for r in range(ex.R):
+            valid = int(ex.out_valid[r])
+            unique = int(ex.out_u_valid[r])
+            refs = ex.out_pq_ref[r, :valid].cpu().tolist()
+            cells = ex.out_pq_cells[r, :unique].cpu().tolist()
+            self.assertTrue(all(c in active_cells for c in cells), r)
+            self.assertTrue(all(0 <= qref < unique for qref in refs), r)
+            parent_cells = ex.view_pcell[r, :valid].cpu().tolist()
+            self.assertEqual(parent_cells, [cells[qref] for qref in refs])
         # Variable query widths must not renumber physical forward cells.
         # Parent-q and ancestry masks use the fixed max-width stride even
         # though later rounds only execute the chain-sized prefix.

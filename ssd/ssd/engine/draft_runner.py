@@ -2736,6 +2736,7 @@ class DraftRunner(ModelRunner):
         from ssd.engine.helpers.cudagraph_helpers import (
             duet_record as _mr, duet_close as _mc)
 
+        _ev_root = _mr("p1_root_build")
         buckets = p1_context_buckets(
             self.config.duet_phase1_k, self.config.duet_phase2_k,
             self.config.duet_p1_tree_max_nodes,
@@ -2752,16 +2753,20 @@ class DraftRunner(ModelRunner):
             root_width=ex.R, context_glue_rows=context_glue_rows)
         if int(roots["real_roots"]) != real_roots:
             raise RuntimeError("P1 root count changed during construction")
+        _mc("p1_root_build", _ev_root)
 
+        _ev_slot = _mr("p1_slot_prepare")
         num_tokens0 = int(partial_tree_decode_args["num_tokens"][0])
         first_base = num_tokens0 - 1 + contexts
         ctx0 = first_base + ex.W
         final_ctx = ctx0 + (ex.F - 1) * ex.W
         dbt = partial_tree_decode_args["dbt"]
         if final_ctx > int(self.config.max_model_len):
+            _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_model_length")
             return None
         if (final_ctx - 1) // self.block_size >= dbt.shape[1]:
+            _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_block_table")
             return None
         positions = (first_base + ex.lane_w.unsqueeze(0)
@@ -2773,14 +2778,17 @@ class DraftRunner(ModelRunner):
         step_slots = (block_ids * self.block_size
                       + positions.remainder(self.block_size)).to(torch.int32)
         if bool((step_slots < 0).any()):
+            _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_unallocated_slot")
             return None
 
         p0 = (ctx0 + self.block_size - 1) // self.block_size
         need_pages = p0 + 1
         if p0 < 1 or need_pages > dbt.shape[1]:
+            _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_page_bucket")
             return None
+        _mc("p1_slot_prepare", _ev_slot)
 
         event = _mr("p1_prepare")
         ex.in_root_tok.copy_(roots["tokens"])
