@@ -929,6 +929,11 @@ P2AL은 `+0.11`(`+6.3%`), tok/step은 `+2.0%`지만 hit은 `-1.5%p`, TPS는
 기본 `on`은 tree 연구 기본값이지 TPS 우위 주장으로 해석하지 않는다. 원 로그는
 `p2_final_gate_20260808`에 있다.
 
+마지막 P1(N1=15)+P2(N2=8) 동시 실모델 smoke는 두 executor가 각각 68회
+replay하고 runtime capture/fallback 없이 종료했다. 4 prompt/output 64의 기능
+run에서 P1AL 4.13, P2AL 2.79였으며, 작은 표본의 TPS는 성능 판정에 사용하지
+않는다. 원 로그는 `both_final_smoke_20260808`에 있다.
+
 ---
 
 ## 9. Timeline 해석
