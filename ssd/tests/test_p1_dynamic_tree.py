@@ -3,6 +3,8 @@ import unittest
 
 import torch
 
+from ssd.engine.draft_runner import _should_run_p2_tree
+
 from ssd.engine.helpers.p1_tree import (
     build_uniform_p1_roots, choose_p1_context_bucket,
     p1_context_buckets)
@@ -173,6 +175,22 @@ class TestP1ShapeBuckets(unittest.TestCase):
             0, 13, split_k1k2=True, K1=9, K2=4,
             mq_p1=16, mq_p2=10, glue_width=19,
             cells_p1=38 + 8 * 16, cells_p2=4 * 10), 19 + 166)
+
+    def test_p1_only_never_dispatches_p2_tree(self):
+        class _Cfg:
+            # The legacy aggregate is deliberately non-off when only P1 is
+            # enabled.  Phase dispatch must ignore it.
+            duet_tree_policy = "dynamic"
+            duet_p1_tree_policy = "on"
+            duet_p2_tree_policy = "off"
+
+        temps = torch.tensor([0.7])
+        self.assertFalse(_should_run_p2_tree(_Cfg(), 1, temps))
+        _Cfg.duet_p2_tree_policy = "on"
+        self.assertTrue(_should_run_p2_tree(_Cfg(), 1, temps))
+        self.assertFalse(_should_run_p2_tree(_Cfg(), 2, temps))
+        self.assertFalse(_should_run_p2_tree(
+            _Cfg(), 1, torch.tensor([0.0])))
 
     def test_wide_p1_canvas_reservation_crosses_page_safely(self):
         # N1=18 exposes 19 contexts.  Two roots per context gives R=38,

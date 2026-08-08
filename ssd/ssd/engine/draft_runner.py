@@ -49,6 +49,20 @@ _P2_EXECUTOR_POLICIES = frozenset({
 })
 
 
+def _should_run_p2_tree(config, batch_size, temperatures):
+    """Return whether this *phase-2* step may use the tree executor.
+
+    ``duet_tree_policy`` is a legacy aggregate implementation selector and is
+    non-off when either phase is enabled.  It must not decide phase dispatch:
+    doing so made a P1-only run execute P2 trees on ordinary steps while the
+    tree-hit path correctly kept P2 as a chain.  Keep the phase-local public
+    switch as the single source of truth.
+    """
+    return (getattr(config, "duet_p2_tree_policy", "off") == "on"
+            and int(batch_size) == 1
+            and bool((temperatures > 0).all()))
+
+
 @dataclasses.dataclass(frozen=True)
 class _P2StepState:
     """Host-visible P2 dispatch state.
@@ -1837,8 +1851,7 @@ class DraftRunner(ModelRunner):
         _mc("phase2_build", event)
 
         temps_p2 = proxy_args["temps"]
-        if (self.config.duet_p2_tree_policy == "on" and B == 1
-                and bool((temps_p2 > 0).all())):
+        if _should_run_p2_tree(self.config, B, temps_p2):
             proxy_tokens, proxy_logits = self._run_p2_tree_step(
                 duet_proxy, proxy_forked, proxy_fan_out_tensor,
                 proxy_piv, proxy_args, layout_k2, temps_p2)
@@ -5094,8 +5107,7 @@ class DraftRunner(ModelRunner):
             partial_tree_decode_args, proxy_forked, _layout_k2, cache_hits_list)
         _mc("phase2_build", _mev_p2b)
         _temps_p2 = proxy_tree_args["temps"]
-        if (self.config.duet_tree_policy != "off" and B == 1
-                and bool((_temps_p2 > 0).all())):
+        if _should_run_p2_tree(self.config, B, _temps_p2):
             # === P2-tree rollout (T3.4-b3) — 체인 P2 decode 대체 ===
             proxy_tokens, proxy_logits = self._run_p2_tree_step(
                 duet_proxy, proxy_forked, proxy_fan_out_tensor, proxy_piv,
