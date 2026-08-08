@@ -71,7 +71,7 @@ P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 
 - `--duet_p1_tree_policy off`: 기존 위치별 fanout chain을 그대로 사용한다.
 - `--duet_p1_tree_policy on`: 각 현재 context에서 같은 수의 시작 후보를 만들고,
-  각 root의 깊이 K1 첫-child 경로를 보존하면서 sibling 대안을 함께 만든다.
+  첫 forward에서 모두 평가한 뒤 누적 점수가 높은 자식을 전역적으로 확장한다.
 
 동적 P1의 시작 단계는 다음과 같다.
 
@@ -80,21 +80,24 @@ P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 2. 각 context에서 `duet_p1_roots_per_position`개 후보를 만든다. 이미 반환된 다음
    token은 coverage 중복을 피하기 위해 후보에서 제외하지만, 선택한 후보의 점수는
    제외 후 재정규화 확률이 아니라 원래 draft 분포 `q(x|context)`다.
-3. 첫 P1 forward에서는 모든 실제 root를 평가한다. 그 뒤 `K1-1`번도 각 root의
-   첫-child tip을 반드시 평가해 기존 chain의 깊이 9를 보존한다. sibling token은
-   같은 forward의 ordered sampling에서 얻으므로 별도 draft forward가 필요 없다.
+3. P1 root의 초기 점수는 `해당 context까지 도달할 확률 × q(root|context)`다.
+   첫 P1 forward에서는 모든 실제 root를 평가한다. 이후 `K1-1`번은 앞 round에서
+   생성한 모든 자식 중 이 초기 점수와 경로 confidence의 누적 곱이 높은 W개를
+   다음 부모로 선택한다. P2와 같은 전역 동적 선택이며 proxy score만 없다.
 4. root 하나가 보낼 수 있는 node 수는 `duet_p1_tree_max_nodes`로 제한한다.
-   이 값은 기본 18이다. 순차 draft 깊이 `K1=9`와 응답 node 수는 별도다.
-   깊이 9 주 경로와 최대 9개 sibling을 담도록 P2의 `K2=4, 최대 8`과 같은
-   `최대 node/깊이=2`를 적용한다. 9로 두면 chain만 담고 분기는 하나도 못 담는다.
+   이 값은 기본 18이며 항상 채우는 수가 아니라 root별 고정 응답 상한이다.
+   순차 draft round `K1=9`와 응답 node 수는 독립적이고, 모든 root에 깊이 9를
+   강제하지 않는다.
 
 기본 동적 P1 예시는 `K1=9`, position당 root 2개, root당 최대 node 18개다.
 일반 10-context step의 실제 root는 20개이며, P1 forward 9번 전체와 그 사이의
 선택·sampling·mask 갱신은 하나의 CUDA Graph replay로 실행된다.
 
-여기서 `root 20개`, `root당 node 18개`, `target verify 최대 19행`은 서로 다른
-수치다. 20은 10개 context×시작 후보 2개, 18은 선택된 root 하나의
-`9단계 주 경로+최대 9 sibling`, 19는 recovery 1행까지 포함한 target 입력이다.
+기본 P1 forward 폭은 root 수와 같은 W=R=20이다. 첫 forward 뒤에는 최대
+`R×C=60`개 자식이 생기므로, 추가 폭 없이도 그중 상위 20개를 다음 부모로 골라
+동적 topology를 만들 수 있다. `root 20개`, `root당 최대 node 18개`,
+`target verify 최대 19행`은 각각 시작 후보 수, 응답 용량, recovery 포함 검증
+입력으로 서로 다른 수치다.
 
 P1의 주 목적은 proxy를 기다리는 시간을 실제 draft 계산으로 채우는 것이다.
 P1이 너무 짧으면 draft가 proxy를 기다리고, 너무 길면 proxy가 도착한 뒤에도
@@ -183,9 +186,9 @@ draft forward다.
 ## 6. P2 tree 정책
 
 P2 tree는 `--duet_p2_tree_policy on`으로 켠다. DUET의 draft model과
-temperature>0 residual verifier를 유지하면서, 모든 proxy root의 기존 K2 chain
-깊이를 먼저 보존하고 남는 응답 node를 ordered sibling에 쓴다. 외부 기법 이름은
-공개 정책 이름으로 사용하지 않는다.
+temperature>0 residual verifier를 유지하면서, 첫 forward에서 모든 proxy root를
+평가하고 이후 forward의 부모를 누적 proxy×confidence 점수로 전역 선택한다.
+외부 기법 이름은 공개 정책 이름으로 사용하지 않는다.
 
 ### 6.1 기호
 
@@ -219,25 +222,26 @@ score(r,x_1...x_d)
 log_score = log P_proxy(root) + sum(log q(child|parent))
 ```
 
-를 계산한다. 이 점수는 `R<W`에서 남는 forward lane에 넣을 대체 부모의 순위를
-정할 때 사용한다. 기본 `R=W=10`에서는 모든 lane이 열 root의 의무 주 경로에
-쓰인다. beta, proxy 제곱근, depth bonus는 넣지 않는다.
+를 계산한다. 첫 round 뒤 생성된 모든 자식이 이 점수로 경쟁하며 기본 `R=W=10`
+에서도 상위 W개만 다음 forward 부모가 된다. beta, proxy 제곱근, depth bonus는
+넣지 않는다.
 
 ### 6.3 round별 동작
 
 각 P2 round는 다음 순서다.
 
 1. 첫 round에서는 R개 root를 모두 평가한다.
-2. 이후 round에서는 각 root의 첫 번째 자식 tip을 의무 부모로 예약한다.
-3. `R<W`이면 남는 lane만 누적 경로 점수가 높은 대체 부모에 배정한다.
-4. token을 뽑기 전에 향후 주 경로 node를 먼저 예약하고, N2의 남은 공간을
-   두 번째와 세 번째 ordered sibling에 배정한다.
-5. W개 부모를 한 번의 draft forward로 평가한다.
-6. 선택된 자식을 arena와 root-local `[R,N2]` view에 기록한다.
+2. 이후 round에서는 직전 depth에서 생성된 모든 미확장 자식을 누적 점수로
+   정렬해 상위 W개를 선택한다. root별 의무 깊이는 없다.
+3. token을 뽑기 전에 선택 부모의 점수와 root별 남은 N2 용량으로 fanout을
+   결정한다. 부모당 상한은 C다.
+4. W개 부모를 한 번의 draft forward로 평가한다.
+5. ordered 비복원 자식을 arena와 root-local `[R,N2]` view에 기록한다.
 
 CUDA Graph의 shape는 항상 `F×W`로 고정이다. token과 확률은 매 replay 달라지고,
-`R<W`에서는 대체 lane의 부모도 달라진다. 기본 `R=W,F=4,C=3,N2=8`의 parent
-layout은 root마다 `[3,3,1,1]`: 깊이 4 주 경로와 네 sibling으로 고정된다.
+부모 index, rope와 attention mask도 device 값으로 달라진다. 기본
+`R=W,F=4,C=3,N2=8`에서도 round 1부터 최대 30개 자식 중 10개를 고르므로 parent
+layout과 root별 깊이/node 수가 동적이다.
 
 ### 6.4 ordered sampling without replacement
 
@@ -255,9 +259,10 @@ q_v / E_v
 sampling 결과를 본 다음 마음에 드는 자식만 남기면 proposal 분포가 바뀌므로
 허용하지 않는다.
 
-이전의 완전 전역 선택 구현은 root의 주 경로도 점수 경쟁에서 탈락시켰다.
-formal gate에서 P1AL 약 4.0→1.8--2.1, P2AL 약 1.7--1.9→0.9--1.4로 하락해
-폐기했다. 현재 정책은 먼저 이 품질 회귀를 구조적으로 막는 기준선이다.
+P1 도입 직후의 전역 선택 formal에서 큰 AL 하락이 관측됐지만, 그 실행은 이후
+수정된 graph 입력·page·plan/workspace 버그가 남아 있던 코드였다. 따라서 해당
+수치를 정책 반례로 사용하지 않는다. 현재 P2는 P1 도입 전 전역 알고리즘을
+복원했고 P1도 같은 코드를 사용한다.
 
 ### 6.5 expansion threshold
 
@@ -359,7 +364,7 @@ SSD_TREE_EXEC_WARMUP=all
 ```
 
 이 warmup은 steady-state decode 시간에는 들어가지 않는다. P1을 함께 켜면
-context 폭 10/14와 모든 page bucket을 추가로 준비한다. 2026-08-07 실모델
+context 폭 10/19와 모든 page bucket을 추가로 준비한다. 2026-08-07 실모델
 스모크에서는 P2 약 1.0GiB, P1 약 2.8GiB의 추가 예약과 P1 약 20--28초의 시작
 비용이 관측됐다. P1 page/context graph는 서로 동시에 실행되지 않으므로 transient
 capture pool을 공유하지만, FlashInfer plan workspace는 page별로 분리한다.
@@ -521,6 +526,7 @@ SSD_TREE_PROXY_GRAPH=1 SSD_TREE_EXEC_WARMUP=all \
   "${COMMON[@]}" \
   --duet_p1_tree_policy on --duet_p2_tree_policy on \
   --duet_p1_roots_per_position 2 \
+  --duet_p1_tree_forward_scale 1.0 \
   --duet_p1_tree_max_nodes 18 --duet_p2_tree_max_nodes 8 \
   --duet_tree_root_count 10 --duet_tree_c_tensor 3 \
   --duet_tree_proxy_threshold 0.01 \
@@ -575,9 +581,9 @@ W는 P2 forward 폭이고 R은 실제 root 수다. 현재는 cache coverage를 �
 
 #### Proxy threshold와 confidence threshold
 
-calibration 도구와 threshold 적용은 과거 전역 선택 정책의 재현을 위해 남아 있다.
-현재 production backbone 정책에는 두 threshold가 적용되지 않는다. 다시 사용할
-때는 주 경로를 자르지 않고 추가 sibling 또는 `R<W`의 추가 lane에만 적용해야 한다.
+production dynamic 정책은 round 0에서 모든 root를 평가하므로 threshold가 root나
+cache key를 삭제하지 않는다. round 1 이후 P2에는 proxy/confidence threshold가,
+P1에는 confidence threshold만 적용돼 낮은 점수 leaf 아래의 추가 forward를 막는다.
 새 모델/temperature/exit layer에서는 threshold 0/0으로 trace를 수집하고 실제
 사후 hit와 accepted child를 라벨로 threshold를 다시 계산한다.
 
@@ -646,7 +652,7 @@ chain/tree 비교에서 전체 AL 하나만 보면 원인을 알 수 없다. 최
 - P2는 R≤W; P1은 실제 root 수에 맞춘 고정 canvas를 자동 선택
 - ancestry는 63-cell word 여러 개를 사용하므로 `F*W>63`도 지원
 - vocabulary≤32768인 packed P_iv wire
-- phase별 최대 node 수≤`speculate_k`; `max(K1,K2)`나 P2 W에는 묶이지 않음
+- phase별 최대 node 수는 `speculate_k`, `max(K1,K2)`나 P2 W와 독립적인 응답 상한
 
 B>1과 temperature=0은 현재 chain fallback을 사용한다. temperature=0 tree는
 ordered residual sampling이 아니라 별도의 greedy top-C proposal과 argmax verifier가
