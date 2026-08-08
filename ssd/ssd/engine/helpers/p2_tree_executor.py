@@ -523,6 +523,23 @@ class P2TreeExecutor:
                 raise ValueError(
                     f"{phase} round zero must evaluate all R={self.R} "
                     f"roots; got width {self.round_widths[0]}")
+        # Physical forward cells are packed by the actual per-round query
+        # width.  The previous variable-width P1 kept a max-W stride for cell
+        # ids but bounded the ancestor-mask region by f*current_width.  Those
+        # two coordinate systems disagree (for example 20,16,16 at f=2:
+        # self starts at 40 while only 32 ancestor columns are visible), which
+        # can silently hide a selected parent's KV.  One prefix-sum coordinate
+        # system is both correct and smaller; fixed-width P2 remains f*W.
+        _offset = 0
+        _offsets = []
+        _ends = []
+        for _wf in self.round_widths:
+            _offsets.append(_offset)
+            _offset += int(_wf)
+            _ends.append(_offset)
+        self.round_offsets = tuple(_offsets)
+        self.round_ends = tuple(_ends)
+        self.total_cells = int(_offset)
         self.C = int(config.duet_tree_c_tensor)
         self.NV = int(
             max_nodes if max_nodes is not None
@@ -575,7 +592,7 @@ class P2TreeExecutor:
         self.in_prefix_len = torch.zeros(1, dtype=torch.int64, device=d)
         # ── arena / RNG / 출력
         self.arena = PT.TreeArena(
-            R + F * W * C, d, max_cells=F * W)
+            R + self.total_cells * C, d, max_cells=self.total_cells)
         self.gen = torch.Generator(device=d)
         self.gen.manual_seed(torch.initial_seed() % (2**31))
         # 출력의 물리 행 수는 root 수 R이 아니라 layout/cache-key 폭 W.
@@ -606,7 +623,7 @@ class P2TreeExecutor:
         self.view_sib = self.out_sib[:out_r * NV].view(out_r, NV)
         self.view_rawq = self.out_rawq[:out_r * NV].view(out_r, NV)
         self.view_pcell = self.out_pcell[:out_r * NV].view(out_r, NV)
-        self.cell_logits = torch.zeros(F * W, vocab_size,
+        self.cell_logits = torch.zeros(self.total_cells, vocab_size,
                                        dtype=torch.float32, device=d)
         # 최종 소비자 계약도 graph 안에서 직접 생성한다.  이 버퍼들은
         # replay마다 같은 주소에서 갱신되며, 호출측은 참조만 전달한다.
@@ -648,6 +665,10 @@ class P2TreeExecutor:
         # 캡처 호환 상수
         self.ones_w = torch.ones(W, dtype=torch.uint8, device=d)
         self.lane_w = torch.arange(W, device=d)
+        self.round_offsets_t = torch.tensor(
+            self.round_offsets, dtype=torch.int64, device=d)
+        self.round_widths_t = torch.tensor(
+            self.round_widths, dtype=torch.int64, device=d)
         self.arange_R = torch.arange(R, device=d)
         self.graphs = {}                       # n_pages → CUDAGraph
         # 결정적 parity 모드 (리뷰12 §3): round별 [W,V] 고정 noise
@@ -767,8 +788,8 @@ class P2TreeExecutor:
             wf = self.round_widths[f]
             self.in_slot[f].zero_()
             self.in_slot[f][:wf].copy_(
-                f * self.W + self.lane_w[:wf])
-            self.in_ctx_len[f].fill_((f + 1) * self.W)
+                self.round_offsets[f] + self.lane_w[:wf])
+            self.in_ctx_len[f].fill_(self.round_ends[f])
             self.wrappers[n_pages0][f]._paged_kv_indices_buf.zero_()
 
     # ---------- 본체 (캡처 대상) ----------
@@ -798,14 +819,17 @@ class P2TreeExecutor:
             .gather(1, g_idx.expand(W, canvas)) \
             * sel_valid.unsqueeze(1).to(torch.uint8)
         m = torch.where(in_glue_rng.expand(W, canvas), g_bits, m)
-        # 조상 셀: col ∈ [plen+gW, plen+gW+f·W) — 실폭 기준 정렬
+        # 조상 셀: col ∈ [plen+gW, plen+gW+round_offset[f]).
+        # offset is the exact number of cells evaluated by earlier rounds.
         spec_off = g_off - gW
         anc = ar.anc_bits.index_select(0, sel.clamp(min=0)) \
             * sel_valid.long().unsqueeze(1)
-        in_spec = (spec_off >= 0) & (spec_off < f * W) if f else \
+        prior_cells = self.round_offsets[f]
+        in_spec = (spec_off >= 0) & (spec_off < prior_cells) if f else \
             torch.zeros(1, canvas, dtype=torch.bool, device=self.dev)
         if f:
-            safe_off = spec_off.clamp(min=0, max=max(f * W - 1, 0))
+            safe_off = spec_off.clamp(
+                min=0, max=max(prior_cells - 1, 0))
             a_word = torch.div(
                 safe_off, PT._ANC_WORD_BITS, rounding_mode="floor")
             a_bit = safe_off.remainder(PT._ANC_WORD_BITS)
@@ -813,15 +837,12 @@ class P2TreeExecutor:
             a_bits = ((anc_word >> a_bit.expand(W, canvas)) & 1) \
                 .to(torch.uint8)
             m = torch.where(in_spec.expand(W, canvas), a_bits, m)
-        # self 셀: col == plen+gW(실폭)+f·W+lane — 비활성 lane은 0
+        # self 셀: col == plen+gW(실폭)+round_offset[f]+lane
         # (arena _arena_mask_pack의 `(bits|selfbit)*sel_valid` 규약;
         # 단계0 강화 mask 대조가 잡은 최초 불일치 — 비활성 lane
         # self=1은 valid-lane logits에는 무영향이나 mask bytes exact
         # 계약 위반)
-        # Cell ids retain the fixed physical stride ``self.W`` even when P1
-        # continuation rounds execute fewer rows.  This keeps ancestry and
-        # output parent-cell ids stable without computing inactive rows.
-        self_col = (plen + gW + f * self.W
+        self_col = (plen + gW + self.round_offsets[f]
                     + self.lane_w[:W].unsqueeze(1))  # [W,1]
         is_self = col.unsqueeze(0) == self_col        # [W, canvas]
         m = torch.where(is_self,
@@ -974,7 +995,7 @@ class P2TreeExecutor:
                 logits = self.compute_logits(hidden, False)[:wf].float()
             finally:
                 reset_context()
-            cell_base = f * W
+            cell_base = self.round_offsets[f]
             self.cell_logits[cell_base:cell_base + wf] = logits
             toks, raws = PT.tree_sample_wor(
                 logits, self.in_temps[:wf], C, assume_pos_temps=True,

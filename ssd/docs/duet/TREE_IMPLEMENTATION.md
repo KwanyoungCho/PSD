@@ -37,7 +37,8 @@
    균등하게 정하고 context reach×root 확률을 초기 점수로 사용한 뒤 P2와 같은
    전역 선택을 한다. 아홉 번의 forward 사이 host 개입은 없고, root별 응답
    상한은 18이다.
-9. P1의 `F*W>63` 형상을 위해 조상 관계를 63-bit word 여러 개로 확장했고,
+9. P1의 compact forward cell 수가 63을 넘는 형상을 위해 조상 관계를
+   63-bit word 여러 개로 확장했고,
    P1/P2가 서로 다른 최대 node 수를 사용하도록 공통 응답 wire와 target verifier를
    일반화했다.
 
@@ -227,8 +228,9 @@ CUDA Graph가 요구하는 것은 tensor shape, 주소와 연산 순서가 고�
 `F × W = 4 × 10`개의 부모 lane을 갖는다. P1은 round별 shape를 미리 캡처해
 `[모든 root 수, chain fanout 합, ..., chain fanout 합]`을 사용한다. 각 shape는
 고정이지만 lane에 들어가는 부모, fanout, token과 attention mask는 replay마다
-달라진다. 물리 KV canvas는 가장 넓은 round의 stride를 유지하고 계산하지 않는
-hole은 mask 0으로 둔다.
+달라진다. P1의 물리 KV cell id는 round별 실제 폭의 prefix sum으로
+배치한다. 예를 들어 `[20,16,16]`은 offset `[0,20,36]`을 사용하며,
+폭 20의 hole을 매 round에 두지 않는다.
 
 ### 4.4 round별 절차
 
@@ -330,10 +332,11 @@ bucket은 K2 short/miss 경로, 10-context bucket은 K1 chain/P2-tree 범위,
 별도 graph로 만들지는 않고, 위 세 개의 의미 있는 경계 사이만 zero-score
 padding한다.
 
-P1의 물리 cell stride 기준 `F*W`는 최대 `9*38=342`라 하나의 64-bit 조상 bitmap에 들어가지 않는다.
-현재 구현은 부호 비트를 피한 63-cell word를 여러 개 사용한다. 이 예에서는 여섯
-word가 필요하며, mask pack과 child insertion kernel이 필요한 word를 자동으로
-선택한다. 따라서 과거 `F*W<=63` 제한은 더 이상 존재하지 않는다.
+P1의 compact cell 수는 위 세 bucket에서 각각 90, 148, 166이다.
+최대 166 cell은 하나의 64-bit 조상 bitmap에 들어가지 않으므로,
+현재 구현은 부호 비트를 피한 63-cell word 세 개를 사용한다.
+mask pack과 child insertion kernel이 cell id에 맞는 word를 자동으로 선택하며,
+과거의 단일-word 제한은 더 이상 존재하지 않는다.
 
 P1/P2의 node 상한은 서로 독립적이다. 순차 chain 깊이와 일반 logits 통신은
 `speculate_k=K1+K2=13`을 유지하고, 정수 token 응답 폭은
@@ -773,10 +776,19 @@ tree contexts:  [34,15,15,15,15,15,15,15]
 
 15는 임의의 새 knob가 아니라 위 P1 fanout 목록의 합이다. 따라서 첫 round의 모든
 cache-key root coverage를 유지하고, 이후에는 기존 chain과 같은 폭의 모델 계산을
-누적점수 상위 부모에 재배분한다. KV/ancestry cell id는 최대 root 폭 stride를
-유지하고 실제 query, attention wrapper, sampling과 insertion kernel만 round 폭으로
-줄인다. 서로 다른 query 폭의 FlashInfer plan workspace는 공유하지 않고, 같은 폭의
+누적점수 상위 부모에 재배분한다. KV/ancestry cell id, slot, context
+length와 attention mask는 모두 round 실제 폭의 prefix sum을 사용한다.
+서로 다른 query 폭의 FlashInfer plan workspace는 공유하지 않고, 같은 폭의
 직렬 round끼리만 공유한다.
+
+변경 직후 최초 구현에는 정확성 오류가 있었다. self cell은 최대 root 폭
+stride로 배치하면서 조상 mask 범위는 현재 round 폭으로 계산해, 선택된
+부모의 KV가 보이지 않을 수 있었다. 예를 들어 `[20,16,16]`의 세 번째
+round에서 self id는 40부터인데 조상 범위는 32에서 끝났다. 현재는
+offset `[0,20,36]`의 하나의 compact 좌표계로 slot·cell·ancestor·mask를 모두
+일치시켰고, 별도로 다시 구성한 packed-mask 바이트 테스트로 고정했다.
+따라서 아래 K1=8 스모크의 P1AL 2.90은 과거 경로의 기능/시간 기록일 뿐,
+현 정책의 품질 근거로 사용하지 않는다.
 
 K1=8/K2=4, P1/P2 모두 on, 모든 page 사전 capture, profiler/trace off인 8-prompt
 실모델 기능 스모크는 P1/P2 각 304 replay, runtime capture/fallback/error 0으로
@@ -1159,7 +1171,7 @@ temperature, profiler 유무와 raw 분모를 함께 남긴다. 같은 seed의 �
 - target/draft temperature > 0
 - Llama 계열 draft와 production P1/P2 executor
 - P2 R≤W, 현재 기본 R=W=10; P1은 실제 roots≤captured width
-- multiword 63-bit ancestry (`F*W>63` 지원)
+- multiword 63-bit ancestry (compact forward cell이 63을 넘는 형상 지원)
 - vocabulary≤32768인 P_iv token pack
 - phase별 `on`이 동일한 최적화 CUDA Graph 실행기 사용
 

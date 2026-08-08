@@ -166,6 +166,14 @@ class TestP1ShapeBuckets(unittest.TestCase):
             0, 13, split_k1k2=True, K1=9, K2=4,
             mq_p1=38, mq_p2=10, glue_width=19), 19 + 9 * 38)
 
+    def test_variable_width_p1_reserves_compact_cell_sum(self):
+        # K1=9, largest P1 context: round widths [38,16x8] = 166.
+        # P2 is only 4x10=40, so the exact P1 footprint dominates.
+        self.assertEqual(compute_megaspec_lookahead(
+            0, 13, split_k1k2=True, K1=9, K2=4,
+            mq_p1=16, mq_p2=10, glue_width=19,
+            cells_p1=38 + 8 * 16, cells_p2=4 * 10), 19 + 166)
+
     def test_wide_p1_canvas_reservation_crosses_page_safely(self):
         # N1=18 exposes 19 contexts.  Two roots per context gives R=38,
         # while scale=1.25 replays W=48 cells for each of the nine rounds.

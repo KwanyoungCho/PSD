@@ -739,7 +739,8 @@ chain/tree 비교에서 전체 AL 하나만 보면 원인을 알 수 없다. 최
 - target/draft temperature>0
 - Llama 계열 draft
 - P2는 R≤W; P1은 실제 root 수에 맞춘 고정 canvas를 자동 선택
-- ancestry는 63-cell word 여러 개를 사용하므로 `F*W>63`도 지원
+- ancestry는 63-cell word 여러 개를 사용하므로 compact forward
+  cell 수가 63을 넘는 P1/P2 형상도 지원
 - vocabulary≤32768인 packed P_iv wire
 - phase별 최대 node 수는 `speculate_k`, `max(K1,K2)`나 P2 W와 독립적인 응답 상한
 

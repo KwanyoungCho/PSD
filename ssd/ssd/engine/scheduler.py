@@ -57,12 +57,14 @@ class Scheduler:
                 self._sk_mq_p1 = int(sum(_p1_list))
             else:
                 self._sk_mq_p1 = int(config.duet_draft_fan_out) * (self._sk_K1 + 1)
+            self._sk_cells_p1 = self._sk_K1 * self._sk_mq_p1
             if getattr(config, "duet_p1_tree_policy", "off") == "on":
                 # A P1 tree response exposes recovery + every tree node as a
                 # fresh context.  Each gets the fixed roots-per-position
-                # quota.  The executor may deliberately use a wider canvas
-                # so high-confidence sibling branches can continue; reserve
-                # that exact largest captured width, not just the root count.
+                # quota in round zero; later rounds use the chain-sized
+                # continuation budget.  Reserve the executor's compact
+                # prefix-sum footprint rather than K1 copies of the widest
+                # root round.
                 _p1_context_cap = max(
                     self._sk_K1 + 1,
                     self._sk_K2 + 1,
@@ -72,13 +74,17 @@ class Scheduler:
                 _p1_root_cap = (
                     _p1_context_cap
                     * int(config.duet_p1_roots_per_position))
-                _p1_forward_width = compute_tree_forward_width(
+                _p1_cont_width = min(
                     _p1_root_cap,
-                    float(config.duet_p1_tree_forward_scale))
-                self._sk_mq_p1 = max(
-                    self._sk_mq_p1, _p1_forward_width)
+                    compute_tree_forward_width(
+                        self._sk_mq_p1,
+                        float(config.duet_p1_tree_forward_scale)))
+                self._sk_cells_p1 = (_p1_root_cap
+                                     + max(0, self._sk_K1 - 1)
+                                     * _p1_cont_width)
             _K_rank_max = self._sk_K1 if self._sk_K1 >= self._sk_K2 else self._sk_K2
             self._sk_mq_p2 = int(config.duet_proxy_total_budget)  # Tier-3 single source
+            self._sk_cells_p2 = self._sk_K2 * self._sk_mq_p2
             self._sk_glue_width = max(
                 self._sk_K1 + 1, self._sk_K2 + 1,
                 (int(config.duet_p1_tree_max_nodes) + 1
@@ -90,6 +96,8 @@ class Scheduler:
             self._sk_K2 = 0
             self._sk_mq_p1 = 0
             self._sk_mq_p2 = 0
+            self._sk_cells_p1 = 0
+            self._sk_cells_p2 = 0
             self._sk_glue_width = 0
 
         self.waiting: deque[Sequence] = deque()
@@ -163,6 +171,8 @@ class Scheduler:
                     K1=self._sk_K1, K2=self._sk_K2,
                     mq_p1=self._sk_mq_p1, mq_p2=self._sk_mq_p2,
                     glue_width=self._sk_glue_width,
+                    cells_p1=self._sk_cells_p1,
+                    cells_p2=self._sk_cells_p2,
                 )
             else:
                 draft_lookahead_len = compute_megaspec_lookahead(self.MQ_LEN, self.K)

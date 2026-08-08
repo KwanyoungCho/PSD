@@ -29,6 +29,8 @@ def compute_megaspec_lookahead(
     mq_p1: int = 0,
     mq_p2: int = 0,
     glue_width: int = 0,
+    cells_p1: int = 0,
+    cells_p2: int = 0,
 ) -> int:
     """Per-step draft KV slot reservation for the scheduler.
 
@@ -37,9 +39,9 @@ def compute_megaspec_lookahead(
         Total = K + 1 + K * MQ_LEN.
 
     Split-K1/K2 path (SSD_FORCE_SPLIT_K1K2=1, DUET only):
-        Phase 1 (K1 forwards × mq_p1) writes [base..base + K1*mq_p1).
-        Phase 2 (K2 forwards × mq_p2) starts at the SAME base and writes
-        [base..base + K2*mq_p2), overlapping Phase 1's region. This is safe
+        Phase 1 writes ``cells_p1`` compact cells (or K1*mq_p1 for a fixed
+        width). Phase 2 likewise writes ``cells_p2`` (or K2*mq_p2) starting
+        at the SAME base, overlapping Phase 1's region. This is safe
         because Phase 1's outputs (tokens/logits) are already extracted into
         result tensors before Phase 2 begins, and Phase 2's custom attention
         mask only reads its own slice. Required reservation is therefore
@@ -55,12 +57,15 @@ def compute_megaspec_lookahead(
     """
     if split_k1k2:
         # K2 ≤ K1 invariant (docs/duet/04-split-k1k2-design.md), so K_step = K1.
-        # Phase 1 footprint = K1 * mq_p1, Phase 2 footprint = K2 * mq_p2.
+        # Phase 1/2 default to fixed-width footprints.  Dynamic P1 can pass
+        # the exact root_width + continuation_width*(K1-1) compact footprint.
         # Either pass can dominate depending on (dfo, pfo) — pfo > dfo cases
         # (e.g., dfo=1, pfo=3) push K2*mq_p2 above K1*mq_p1 even at K2 ≤ K1.
         # Reserve the worst-case footprint of the two.
+        p1_footprint = int(cells_p1) if cells_p1 else K1 * mq_p1
+        p2_footprint = int(cells_p2) if cells_p2 else K2 * mq_p2
         return max(K1 + 1, int(glue_width)) + max(
-            K1 * mq_p1, K2 * mq_p2)
+            p1_footprint, p2_footprint)
     return K + 1 + K * MQ_LEN
 
 @torch.inference_mode()

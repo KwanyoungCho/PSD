@@ -291,7 +291,8 @@ class TestExecutorModuleParity(unittest.TestCase):
         # invalid/padding cell id.
         active_cells = set()
         for f, wf in enumerate(ex.round_widths):
-            active_cells.update(range(f * ex.W, f * ex.W + wf))
+            active_cells.update(range(
+                ex.round_offsets[f], ex.round_offsets[f] + wf))
         for r in range(ex.R):
             valid = int(ex.out_valid[r])
             unique = int(ex.out_u_valid[r])
@@ -301,16 +302,50 @@ class TestExecutorModuleParity(unittest.TestCase):
             self.assertTrue(all(0 <= qref < unique for qref in refs), r)
             parent_cells = ex.view_pcell[r, :valid].cpu().tolist()
             self.assertEqual(parent_cells, [cells[qref] for qref in refs])
-        # Variable query widths must not renumber physical forward cells.
-        # Parent-q and ancestry masks use the fixed max-width stride even
-        # though later rounds only execute the chain-sized prefix.
+        # Variable query widths use one compact prefix-sum coordinate system
+        # for KV slots, ancestor bits, masks, and parent-q cells.
+        self.assertEqual(ex.round_offsets, (0, 20, 36, 52, 68,
+                                            84, 100, 116, 132))
+        self.assertEqual(ex.total_cells, 148)
         for f, wf in enumerate(ex.round_widths):
             sel, sel_valid = ex._sel[f]
             if bool(sel_valid.any()):
                 got = ex.arena.cell.index_select(0, sel[sel_valid]).cpu()
-                expected = (f * ex.W
+                expected = (ex.round_offsets[f]
                             + torch.arange(wf, device=dev)[sel_valid]).cpu()
                 self.assertTrue(torch.equal(got, expected), f"round {f}")
+        # Decode every packed FlashInfer mask independently.  This catches the
+        # former mixed-coordinate bug where self cells used f*max_width while
+        # the ancestor range ended at f*current_width, hiding valid parents.
+        plen = int(ex.in_prefix_len)
+        glue_w = int(ex.in_glue_w)
+        for f, wf in enumerate(ex.round_widths):
+            wr = ex.wrappers[p0][f]
+            canvas = int(wr._canvas_cols)
+            sel, sel_valid = ex._sel[f]
+            expected_bits = []
+            for lane in range(wf):
+                row = [0] * canvas
+                row[:plen] = [1] * plen
+                if bool(sel_valid[lane]):
+                    parent = int(sel[lane])
+                    root = int(ex.arena.root[parent])
+                    glue = ex.in_glue[root, :glue_w].cpu().tolist()
+                    row[plen:plen + glue_w] = glue
+                    for cell in range(ex.round_offsets[f]):
+                        word, bit = divmod(cell, PT._ANC_WORD_BITS)
+                        row[plen + glue_w + cell] = (
+                            int(ex.arena.anc_bits[parent, word]) >> bit) & 1
+                    row[plen + glue_w + ex.round_offsets[f] + lane] = 1
+                expected_bits.extend(row)
+            expected_bytes = []
+            expected_bits.extend(
+                [0] * ((-len(expected_bits)) % 8))
+            for i in range(0, len(expected_bits), 8):
+                expected_bytes.append(sum(
+                    bit << j for j, bit in enumerate(expected_bits[i:i + 8])))
+            got = wr._custom_mask_buf[:len(expected_bytes)].cpu().tolist()
+            self.assertEqual(got, expected_bytes, f"mask round {f}")
         vt_p1 = ex.out_valid.cpu()
         # Round zero covers every root, but later rounds are not obliged to
         # keep one full-depth path per root.  Unequal root priors therefore

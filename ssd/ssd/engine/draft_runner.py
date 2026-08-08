@@ -2758,8 +2758,8 @@ class DraftRunner(ModelRunner):
         _ev_slot = _mr("p1_slot_prepare")
         num_tokens0 = int(partial_tree_decode_args["num_tokens"][0])
         first_base = num_tokens0 - 1 + contexts
-        ctx0 = first_base + ex.W
-        final_ctx = ctx0 + (ex.F - 1) * ex.W
+        ctx0 = first_base + ex.round_ends[0]
+        final_ctx = first_base + ex.total_cells
         dbt = partial_tree_decode_args["dbt"]
         if final_ctx > int(self.config.max_model_len):
             _mc("p1_slot_prepare", _ev_slot)
@@ -2769,15 +2769,18 @@ class DraftRunner(ModelRunner):
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_block_table")
             return None
-        positions = (first_base + ex.lane_w.unsqueeze(0)
-                     + torch.arange(ex.F, device=self.device,
-                                    dtype=torch.int64).unsqueeze(1) * ex.W)
-        block_idx = torch.div(positions, self.block_size,
+        positions = (first_base + ex.round_offsets_t.unsqueeze(1)
+                     + ex.lane_w.unsqueeze(0))
+        active_lanes = ex.lane_w.unsqueeze(0) \
+            < ex.round_widths_t.unsqueeze(1)
+        safe_positions = torch.where(
+            active_lanes, positions, torch.full_like(positions, first_base))
+        block_idx = torch.div(safe_positions, self.block_size,
                               rounding_mode="floor")
         block_ids = dbt[0][block_idx]
         step_slots = (block_ids * self.block_size
-                      + positions.remainder(self.block_size)).to(torch.int32)
-        if bool((step_slots < 0).any()):
+                      + safe_positions.remainder(self.block_size)).to(torch.int32)
+        if bool(((step_slots < 0) & active_lanes).any()):
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_unallocated_slot")
             return None
@@ -2787,6 +2790,10 @@ class DraftRunner(ModelRunner):
         if p0 < 1 or need_pages > dbt.shape[1]:
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_page_bucket")
+            return None
+        if final_ctx > need_pages * self.block_size:
+            _mc("p1_slot_prepare", _ev_slot)
+            self._p1exec_count("chain_fallback_multi_canvas_page")
             return None
         _mc("p1_slot_prepare", _ev_slot)
 
@@ -2806,7 +2813,7 @@ class DraftRunner(ModelRunner):
         ex.in_block_tables.copy_(dbt[:1])
         for f in range(ex.F):
             ex.in_slot[f].copy_(step_slots[f])
-            ex.in_ctx_len[f].fill_(ctx0 + f * ex.W)
+            ex.in_ctx_len[f].fill_(first_base + ex.round_ends[f])
         pages = ex.in_page_ids[:need_pages]
         pages.copy_(dbt[0, :need_pages])
         pages[p0:p0 + 1].copy_(torch.where(
@@ -3250,6 +3257,8 @@ class DraftRunner(ModelRunner):
             return
 
         F, W, nv = int(ex.F), int(ex.W), int(ex.NV)
+        round_widths = tuple(int(x) for x in ex.round_widths)
+        round_offsets = tuple(int(x) for x in ex.round_offsets)
         sel = torch.stack([ex.dbg_sel[f] for f in range(F)]).detach().cpu()
         selv = torch.stack(
             [ex.dbg_selv[f] for f in range(F)]).detach().cpu()
@@ -3274,21 +3283,22 @@ class DraftRunner(ModelRunner):
         uvalid = ex.out_u_valid[:R].detach().cpu()
 
         # (root rank, root-local node id) -> evaluated cell.  Local -1 is
-        # the root seed itself.  A cell id f*W+lane identifies one real
-        # draft-model forward inside the four-round captured sequence.
+        # the root seed itself.  Cell ids use compact per-round prefix sums.
         evaluated = {}
+        cell_to_round_lane = {}
         duplicate_evaluations = []
         round_rows = []
         for f in range(F):
             active = 0
             children = 0
-            for lane in range(W):
+            for lane in range(round_widths[f]):
                 if not bool(selv[f, lane]):
                     continue
                 active += 1
                 ai = int(sel[f, lane])
                 key = (int(arena_root[ai]), int(arena_local[ai]))
-                cell = f * W + lane
+                cell = round_offsets[f] + lane
+                cell_to_round_lane[cell] = (f, lane)
                 if key in evaluated:
                     duplicate_evaluations.append(
                         {"root": key[0], "node": key[1],
@@ -3343,8 +3353,8 @@ class DraftRunner(ModelRunner):
                 # implementation of the selector.  This catches a valid-
                 # looking topology whose token/raw-q rows were scattered from
                 # the wrong forward lane or sibling slot.
-                if 0 <= actual < F * W:
-                    af, lane = divmod(actual, W)
+                if actual in cell_to_round_lane:
+                    af, lane = cell_to_round_lane[actual]
                     sibling = int(sib[r, j])
                     if sibling < 0 or sibling >= int(ex.C):
                         bad_samples.append({
