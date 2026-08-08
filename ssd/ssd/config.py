@@ -149,11 +149,14 @@ class Config:
     # Post-hoc calibrated expansion floors (docs/duet/internal/27).  Round
     # zero ignores them so every root/cache key is retained; later dynamic
     # rounds use them only to stop spending forwards below tail nodes.
-    # Shared root/start expansion floor.  P2 supplies an early-exit proxy
-    # prior; P1 supplies glue context-reach * alternative-root q.  Both keep
-    # round-zero roots/children and only suppress deeper expansion.
+    # P2 expansion floors.  P1 has a different score source and scale, so it
+    # must not silently inherit thresholds calibrated on early-exit proxy
+    # scores.  All variants keep round-zero roots/children and only suppress
+    # deeper expansion.
     duet_tree_proxy_threshold: float = 0.01
     duet_tree_conf_threshold: float = 0.03
+    duet_p1_tree_start_threshold: float = 0.0
+    duet_p1_tree_conf_threshold: float = 0.0
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # Constraint: K1 + K2 == speculate_k, K2 <= K1.
@@ -666,6 +669,14 @@ class Config:
                         raise ValueError(
                             "duet_tree_conf_threshold must be in [0,1]; "
                             f"got {self.duet_tree_conf_threshold}")
+                    if not (0.0 <= self.duet_p1_tree_start_threshold <= 1.0):
+                        raise ValueError(
+                            "duet_p1_tree_start_threshold must be in [0,1]; "
+                            f"got {self.duet_p1_tree_start_threshold}")
+                    if not (0.0 <= self.duet_p1_tree_conf_threshold <= 1.0):
+                        raise ValueError(
+                            "duet_p1_tree_conf_threshold must be in [0,1]; "
+                            f"got {self.duet_p1_tree_conf_threshold}")
                     if (self.duet_p2_tree_policy == "on"
                             and self.duet_tree_policy == "coverage"
                             and self.duet_tree_root_count is not None):
@@ -907,6 +918,8 @@ class Config:
                   f'tree_R={self.duet_tree_root_count}, '
                   f'P1_tree_nodes={self.duet_p1_tree_max_nodes}, '
                   f'P2_tree_nodes={self.duet_p2_tree_max_nodes}, '
+                  f'P1_start_thr={self.duet_p1_tree_start_threshold}, '
+                  f'P1_conf_thr={self.duet_p1_tree_conf_threshold}, '
                   f'tree_proxy_thr={self.duet_tree_proxy_threshold}, '
                   f'tree_conf_thr={self.duet_tree_conf_threshold}',
                   flush=True)

@@ -568,7 +568,9 @@ SSD_TREE_PROXY_GRAPH=1 SSD_TREE_EXEC_WARMUP=all \
   --duet_p1_tree_max_nodes 18 --duet_p2_tree_max_nodes 8 \
   --duet_tree_root_count 10 --duet_tree_c_tensor 3 \
   --duet_tree_proxy_threshold 0.01 \
-  --duet_tree_conf_threshold 0.03
+  --duet_tree_conf_threshold 0.03 \
+  --duet_p1_tree_start_threshold 0.0 \
+  --duet_p1_tree_conf_threshold 0.0
 ```
 
 phase 분해에는 위 명령에서 P1 또는 P2 하나만 `off`로 바꾼다. 과거

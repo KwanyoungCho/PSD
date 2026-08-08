@@ -68,8 +68,10 @@
 | N2 | `duet_p2_tree_max_nodes` | 8 | P2 root 하나의 응답 node 상한 |
 | U1 | `duet_p1_roots_per_position` | 2 | P1 context마다 만드는 시작 root 수 |
 | W1 | P1 fanout 합×`duet_p1_tree_forward_scale` | 1.0 | P1 round 1 이후 계산 폭; round 0 폭은 실제 root 수 |
-| τroot | `duet_tree_proxy_threshold` | 0.01 | P1/P2의 round 1 이후 시작점수 threshold |
-| τconf | `duet_tree_conf_threshold` | 0.03 | P1/P2의 round 1 이후 확장 threshold |
+| τroot,P2 | `duet_tree_proxy_threshold` | 0.01 | P2의 round 1 이후 proxy 시작점수 threshold |
+| τconf,P2 | `duet_tree_conf_threshold` | 0.03 | P2의 round 1 이후 확장 threshold |
+| τroot,P1 | `duet_p1_tree_start_threshold` | 0.0 | P1의 round 1 이후 glue-derived 시작점수 threshold |
+| τconf,P1 | `duet_p1_tree_conf_threshold` | 0.0 | P1의 round 1 이후 확장 threshold |
 
 W와 R을 혼동하면 안 된다. W는 모델 forward의 물리 폭이고 R은 의미 있는 root
 수다. 기본은 R=W이며, P2의 첫 forward에서 열 개 root가 모두 실제 평가된다.
@@ -1001,7 +1003,9 @@ unset SSD_DUET_PROXY_ON_DRAFT SSD_DUET_EXIT_TOPM_GATHER
   --duet_p1_tree_max_nodes 18 --duet_p2_tree_max_nodes 8 \
   --duet_tree_root_count 10 --duet_tree_c_tensor 3 \
   --duet_tree_proxy_threshold 0.01 \
-  --duet_tree_conf_threshold 0.03
+  --duet_tree_conf_threshold 0.03 \
+  --duet_p1_tree_start_threshold 0.0 \
+  --duet_p1_tree_conf_threshold 0.0
 ```
 
 논문 script에는 P1/P2 정책을 둘 다 명시해 실행 시점의 기본값 변화와 무관하게
@@ -1067,8 +1071,10 @@ SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
 | `--duet_p2_tree_max_nodes` | 8 | P2 root별 최대 응답 node N2 |
 | `--duet_tree_root_count` | `None` | P2 R; 동적 P2는 기본 R=W |
 | `--duet_tree_c_tensor` | 3 | 부모별 ordered 비복원 자식 상한 C, 허용 1--8 |
-| `--duet_tree_proxy_threshold` | 0.01 | P1/P2 round 1 이후 시작점수 확장 threshold |
-| `--duet_tree_conf_threshold` | 0.03 | P1/P2 round 1 이후 child 확장 threshold |
+| `--duet_tree_proxy_threshold` | 0.01 | P2 round 1 이후 proxy 시작점수 threshold |
+| `--duet_tree_conf_threshold` | 0.03 | P2 round 1 이후 child 확장 threshold |
+| `--duet_p1_tree_start_threshold` | 0.0 | P1 round 1 이후 glue-derived 시작점수 threshold |
+| `--duet_p1_tree_conf_threshold` | 0.0 | P1 round 1 이후 child 확장 threshold |
 | `--duet_tree_fanout_policy` | `backbone` | 과거 정책 재현용; production dynamic은 전역 fanout 사용 |
 | `--duet_tree_beta` | 0.5 | 과거 root-budget 재현용; 현재 동적 점수에는 사용 안 함 |
 

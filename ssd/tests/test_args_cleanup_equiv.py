@@ -94,6 +94,8 @@ class TestOldNewEquivalence(unittest.TestCase):
         self.assertEqual(copied.duet_tree_policy, "dynamic")
         self.assertEqual(copied.duet_p1_tree_max_nodes, 18)
         self.assertEqual(copied.duet_p2_tree_max_nodes, 8)
+        self.assertEqual(copied.duet_p1_tree_start_threshold, 0.0)
+        self.assertEqual(copied.duet_p1_tree_conf_threshold, 0.0)
 
     def test_wire_capacity_is_derived_from_phase_maxima(self):
         c = _mk({}, duet_p1_tree_policy="on",

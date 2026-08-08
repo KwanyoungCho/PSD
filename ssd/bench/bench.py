@@ -153,15 +153,23 @@ def parse_arguments():
                              "confidence derives R and coverage keeps R=W.")
     parser.add_argument("--duet_tree_proxy_threshold", type=float,
                         default=0.01,
-                        help="Dynamic P1/P2 tree: keep every root's first "
+                        help="Dynamic P2 tree: keep every root's first "
                              "forward, but do not expand deeper below roots "
-                             "with a smaller calibrated start score "
-                             "(P1=glue reach*root q, P2=proxy score).")
+                             "with a smaller calibrated proxy score.")
     parser.add_argument("--duet_tree_conf_threshold", type=float,
                         default=0.03,
-                        help="Dynamic tree: keep the sampled child as a leaf, "
+                        help="Dynamic P2 tree: keep the sampled child as a leaf, "
                              "but do not expand deeper below children with "
                              "smaller calibrated draft confidence.")
+    parser.add_argument("--duet_p1_tree_start_threshold", type=float,
+                        default=0.0,
+                        help="Dynamic P1 tree: minimum glue-reach*root-q start "
+                             "score for expansion after round zero. Default 0 "
+                             "keeps P1 unfiltered until phase-specific calibration.")
+    parser.add_argument("--duet_p1_tree_conf_threshold", type=float,
+                        default=0.0,
+                        help="Dynamic P1 tree: minimum local draft confidence "
+                             "for expansion after round zero. Default 0.")
     parser.add_argument("--duet_tree_beta", type=float, default=0.5,
                         help="P2-tree: budget allocation exponent (E1 default 0.5).")
 
@@ -377,6 +385,10 @@ def create_llm_kwargs(args, draft_path):
                 args.duet_tree_proxy_threshold
             llm_kwargs["duet_tree_conf_threshold"] = \
                 args.duet_tree_conf_threshold
+            llm_kwargs["duet_p1_tree_start_threshold"] = \
+                args.duet_p1_tree_start_threshold
+            llm_kwargs["duet_p1_tree_conf_threshold"] = \
+                args.duet_p1_tree_conf_threshold
             if args.duet_tree_root_count is not None:
                 llm_kwargs["duet_tree_root_count"] = args.duet_tree_root_count
         if args.duet_phase1_k is not None:

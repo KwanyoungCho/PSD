@@ -900,6 +900,16 @@ class P2TreeExecutor:
             _global = (policy in ("dynamic", "eagle")
                        or (policy == "hybrid" and f >= hybrid_floor))
             if _global:
+                if self.phase == "p1":
+                    start_threshold = float(getattr(
+                        self.cfg, "duet_p1_tree_start_threshold", 0.0))
+                    conf_threshold = float(getattr(
+                        self.cfg, "duet_p1_tree_conf_threshold", 0.0))
+                else:
+                    start_threshold = float(getattr(
+                        self.cfg, "duet_tree_proxy_threshold", 0.0))
+                    conf_threshold = float(getattr(
+                        self.cfg, "duet_tree_conf_threshold", 0.0))
                 sel, sel_valid = PT._arena_select_global(
                     ar, wf, f, F, remaining,
                     future_rounds=F - f - 1, R=R,
@@ -910,10 +920,8 @@ class P2TreeExecutor:
                     # root floor decides whether that one-level tree is worth
                     # extending.  Treating P1 as threshold-free made roots
                     # with vanishing start probability grow almost to NV.
-                    proxy_threshold=float(getattr(
-                        self.cfg, "duet_tree_proxy_threshold", 0.0)),
-                    conf_threshold=float(getattr(
-                        self.cfg, "duet_tree_conf_threshold", 0.0)))
+                    proxy_threshold=start_threshold,
+                    conf_threshold=conf_threshold)
             else:
                 sel, sel_valid = PT._arena_select(
                     ar, "level", wf, f, F, tip_idx, remaining)

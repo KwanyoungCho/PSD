@@ -42,6 +42,8 @@ class _MiniCfg:
     duet_tree_policy = "level"
     duet_tree_proxy_threshold = 0.01
     duet_tree_conf_threshold = 0.03
+    duet_p1_tree_start_threshold = 0.01
+    duet_p1_tree_conf_threshold = 0.03
     sampler_x = None
     async_fan_out = 3
 
@@ -239,7 +241,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
         cfg = _MiniCfg()
         cfg.duet_tree_policy = "dynamic"
-        cfg.duet_tree_conf_threshold = 0.005
+        cfg.duet_p1_tree_conf_threshold = 0.005
         max_blocks = 8
         cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
                             dtype=torch.float16, device=dev)

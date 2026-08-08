@@ -7,6 +7,11 @@ EAGLE식 전역 확장에서 다음 두 값을 정적 기본값으로 사용한�
 - `duet_tree_proxy_threshold = 0.01`
 - `duet_tree_conf_threshold = 0.03`
 
+이 절의 값은 2026-08-07 P2 calibration과 당시 P1 공유-threshold 실험을
+기록한 역사적 결과다. 현재 production 설정은 score source가 다른 P1을
+`duet_p1_tree_start_threshold`/`duet_p1_tree_conf_threshold`로 분리하며,
+P1 기본값은 충분한 phase-specific calibration 전까지 `0/0`이다.
+
 두 값은 토큰이나 cache root를 삭제하는 기준이 아니다. 모든 P2 root는
 첫 forward를 그대로 받고, 이미 뽑은 자식도 검증 가능한 leaf로 남는다.
 threshold보다 작은 경우에만 그 root/자식 **아래의 다음 draft forward를
