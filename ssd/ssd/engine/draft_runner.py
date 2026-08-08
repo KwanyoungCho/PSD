@@ -2765,6 +2765,17 @@ class DraftRunner(ModelRunner):
             "cell_logits": ex.cell_logits,
         }
         self._p1_tree_views = views
+        # Correctness-only tracing.  P1 previously reused the production
+        # executor but had no equivalent of P2's topology/node audit, which
+        # made an AL regression impossible to localize beyond aggregate
+        # metrics.  Keep every D2H/file operation behind the existing debug
+        # environment variables.
+        self._trace_tree_executor_views(
+            views, ex, real_roots, phase=1,
+            root_context_ids=roots["context_ids"][:real_roots],
+            context_reach=roots["context_reach"])
+        self._audit_tree_executor_node_coverage(
+            views, ex, real_roots, phase=1)
         draft_args = {
             "seq_ids_expanded": partial_tree_decode_args["seq_ids"][:1]
                 .expand(real_roots),
@@ -2959,8 +2970,9 @@ class DraftRunner(ModelRunner):
             # ── 출력 → views (임시 debug 변환: uniq-pq만 CPU 소형)
             _mev_cv = _mr_x("p2_output_convert")
             _views = self._exec_outputs_to_views(ex, R)
-            self._trace_p2_executor_views(_views[0], ex, R)
-            self._audit_p2_executor_node_coverage(_views[0], ex, R)
+            self._trace_tree_executor_views(_views[0], ex, R, phase=2)
+            self._audit_tree_executor_node_coverage(
+                _views[0], ex, R, phase=2)
             _s1_check("output views")
             _mc_x("p2_output_convert", _mev_cv)
             return _views
@@ -3002,8 +3014,10 @@ class DraftRunner(ModelRunner):
         return views, (ex.out_backbone_tok, ex.out_backbone_logits), \
             ex.cell_logits
 
-    def _trace_p2_executor_views(self, views, ex, R):
-        """Record the exact root views emitted by the captured executor.
+    def _trace_tree_executor_views(self, views, ex, R, *, phase,
+                                   root_context_ids=None,
+                                   context_reach=None):
+        """Record the exact root views emitted by either captured executor.
 
         The historical ``SSD_TREE_TOPO_TRACE`` hook lived only after the
         eager/arena fallback, so enabling it while ``SSD_TREE_EXEC=1`` wrote
@@ -3020,7 +3034,12 @@ class DraftRunner(ModelRunner):
             return
         import json as _json
 
-        nv = int(self.config.duet_tree_nv)
+        if phase not in (1, 2):
+            raise ValueError(f"tree trace phase must be 1 or 2; got {phase}")
+        # P1 and P2 intentionally have different response capacities.  The
+        # legacy ``duet_tree_nv`` aliases only P2 and silently truncated P1
+        # diagnostics when P1 max_nodes > P2 max_nodes.
+        nv = int(ex.NV)
         valid = views["valid"][:R].detach().to("cpu", torch.int64)
         par_l = views["parent_local"][:R, :nv].detach().to(
             "cpu", torch.int64)
@@ -3083,18 +3102,27 @@ class DraftRunner(ModelRunner):
                 "path_conf": r_path_conf,
                 "score": r_score,
             })
-        self._p2_topo_trace_seq = getattr(
-            self, "_p2_topo_trace_seq", 0) + 1
+        _seq_attr = f"_p{phase}_topo_trace_seq"
+        _trace_seq = getattr(self, _seq_attr, 0) + 1
+        setattr(self, _seq_attr, _trace_seq)
+        _ctx_ids = (None if root_context_ids is None else
+                    root_context_ids[:R].detach().to(
+                        "cpu", torch.int64).tolist())
+        _ctx_reach = (None if context_reach is None else
+                      context_reach.detach().float().cpu().tolist())
         with open(prefix + ".draft.jsonl", "a") as _f:
             _f.write(_json.dumps({
-                "trace_seq": self._p2_topo_trace_seq,
-                "policy": self.config.duet_tree_policy,
+                "trace_seq": _trace_seq,
+                "phase": phase,
+                "policy": ex.policy,
                 "n": len(par),
                 "par": par,
                 "root": root,
                 "depth": depth,
                 "sib": sib,
                 "alloc": valid.tolist(),
+                "root_context_ids": _ctx_ids,
+                "context_reach": _ctx_reach,
                 "roots": roots,
             }) + "\n")
 
@@ -3115,8 +3143,8 @@ class DraftRunner(ModelRunner):
         with open(f"{prefix}.{kind}.jsonl", "a") as _f:
             _f.write(_json.dumps(record) + "\n")
 
-    def _audit_p2_executor_node_coverage(self, views, ex, R):
-        """Prove that every served P2 edge has the correct draft forward.
+    def _audit_tree_executor_node_coverage(self, views, ex, R, *, phase):
+        """Prove that every served P1/P2 edge has the correct draft forward.
 
         A leaf token is sampled from its parent's logits and therefore does
         not need another model forward unless it has children.  For every
@@ -3138,6 +3166,13 @@ class DraftRunner(ModelRunner):
         arena_local = ex._local_idx.detach().cpu()
         valid = views["valid"][:R].detach().cpu()
         par = views["parent_local"][:R, :nv].detach().cpu()
+        sib = views["sib_order"][:R, :nv].detach().cpu()
+        tok = views["tok"][:R, :nv].detach().cpu()
+        rawq = views["raw_q"][:R, :nv].detach().float().cpu()
+        sampled_tok = torch.stack(
+            [ex.dbg_toks[f] for f in range(F)]).detach().cpu()
+        sampled_rawq = torch.stack(
+            [ex.dbg_raws[f] for f in range(F)]).detach().float().cpu()
         # ``view_pcell`` is per emitted node.  ``parent_q_cells`` below is
         # the compact unique-cell table addressed by ``parent_q_ref``; they
         # are related but intentionally have different layouts.
@@ -3191,6 +3226,7 @@ class DraftRunner(ModelRunner):
                     f"{missing_internal}")
             bad_edges = []
             bad_qrefs = []
+            bad_samples = []
             for j in range(n):
                 parent = int(par[r, j])
                 expected = evaluated.get((r, parent), -1)
@@ -3209,10 +3245,44 @@ class DraftRunner(ModelRunner):
                         "referenced_cell": (int(pqcells[r, ref])
                                             if 0 <= ref < nv else None),
                     })
+                # A response node is exactly one ordered sample from the
+                # logits produced when its parent was evaluated.  Check this
+                # against the live real-model debug buffers, not a copied
+                # implementation of the selector.  This catches a valid-
+                # looking topology whose token/raw-q rows were scattered from
+                # the wrong forward lane or sibling slot.
+                if 0 <= actual < F * W:
+                    af, lane = divmod(actual, W)
+                    sibling = int(sib[r, j])
+                    if sibling < 0 or sibling >= int(ex.C):
+                        bad_samples.append({
+                            "node": j, "reason": "sibling_out_of_range",
+                            "sibling": sibling,
+                        })
+                    else:
+                        expected_tok = int(sampled_tok[af, lane, sibling])
+                        expected_q = float(sampled_rawq[af, lane, sibling])
+                        actual_tok = int(tok[r, j])
+                        actual_q = float(rawq[r, j])
+                        if (actual_tok != expected_tok
+                                or abs(actual_q - expected_q) > 1e-7):
+                            bad_samples.append({
+                                "node": j, "parent_cell": actual,
+                                "round": af, "lane": lane,
+                                "sibling": sibling,
+                                "token": actual_tok,
+                                "expected_token": expected_tok,
+                                "raw_q": actual_q,
+                                "expected_raw_q": expected_q,
+                            })
             if bad_edges:
                 errors.append(f"root {r}: wrong parent-q cells {bad_edges}")
             if bad_qrefs:
                 errors.append(f"root {r}: wrong q references {bad_qrefs}")
+            if bad_samples:
+                errors.append(
+                    f"root {r}: emitted nodes do not match sampled draft "
+                    f"outputs {bad_samples}")
             leaves = [j for j in range(n) if j not in set(internal)]
             roots_summary.append({
                 "rank": r,
@@ -3222,6 +3292,7 @@ class DraftRunner(ModelRunner):
                 "internal_nodes_evaluated": not missing_internal,
                 "all_node_tokens_have_parent_logits": not bad_edges,
                 "target_q_mapping_exact": not bad_qrefs,
+                "sampled_token_and_q_exact": not bad_samples,
             })
 
         if duplicate_evaluations:
@@ -3235,10 +3306,12 @@ class DraftRunner(ModelRunner):
             "errors": errors,
             "passed": not errors,
         }
-        self._append_tree_node_audit("p2", record)
+        record["phase"] = int(phase)
+        self._append_tree_node_audit(f"p{phase}", record)
         if errors:
             raise RuntimeError(
-                "P2 tree node coverage audit failed: " + "; ".join(errors))
+                f"P{phase} tree node coverage audit failed: "
+                + "; ".join(errors))
 
     # ───────────── P2 상태-랩 (리뷰 지시: 분 단위 반복 비교) ─────────────
     # SSD_TREE_LAB=1: 실주행에서 대표 P2 진입 상태 N개(태그별)를

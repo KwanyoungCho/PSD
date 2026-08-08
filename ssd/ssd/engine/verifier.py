@@ -676,9 +676,13 @@ class Verifier(VerifierBase):
             _v = int(ti["valid"])
             with open(_topo + ".walk.jsonl", "a") as _f:
                 _f.write(_json.dumps({
+                    "phase": (int(speculate_result.phase_source[0])
+                              if speculate_result.phase_source is not None
+                              else 0),
                     "par": [int(ti["parent_local"][j]) for j in range(_v)],
                     "sib": [int(ti["sib_order"][j]) for j in range(_v)],
                     "path": [int(x) for x in path],
+                    "accepted_len": len(path),
                     "term": term_node,
                 }) + "\n")
         return [suffix], [terminal], term_node, path

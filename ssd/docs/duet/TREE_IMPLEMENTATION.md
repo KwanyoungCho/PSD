@@ -609,6 +609,50 @@ draft 232.24ms/TPS 17.53으로 보였다. warmup 목록을 runtime dispatch와 �
 이 표는 당시 backbone 실행기 배선과 warmup 누락 수정을 확인한 역사적 기능
 gate다. 현재 dynamic 정책의 TPS 또는 품질 근거로 사용하지 않는다.
 
+### 8.8 현재 P1 dynamic 실경로 진단과 3-seed 짧은 gate (2026-08-08)
+
+P1만 `on`, P2는 `off`로 두고 chain/P1-tree를 같은 서버에서 seed별로 순서
+회전했다. 각 arm은 네 dataset에서 4 prompt씩, output 128이며 profiler는
+껐다. 원 로그는
+`experiments/proxy_async_overlap/tree_sweep/p1_quality_debug_20260808/`에 있다.
+
+| seed | arm | P1 hit | P1AL | tok/step | TPS | target verify | draft step |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 42 | chain | 0.531 | 3.55 | 3.67 | 71.16 | 46.92 ms | 45.17 ms |
+| 42 | P1 dynamic | 0.529 | 3.52 | 3.71 | 52.09 | 58.92 ms | 67.25 ms |
+| 123 | chain | 0.502 | 3.58 | 3.62 | 70.63 | 46.56 ms | 44.15 ms |
+| 123 | P1 dynamic | 0.546 | 4.40 | 4.19 | 56.90 | 59.31 ms | 71.36 ms |
+| 2024 | chain | 0.498 | 3.77 | 3.70 | 72.70 | 46.43 ms | 43.89 ms |
+| 2024 | P1 dynamic | 0.499 | 3.92 | 3.83 | 54.41 | 58.16 ms | 66.65 ms |
+| 평균 | chain | 0.510 | 3.633 | 3.663 | 71.50 | 46.64 ms | 44.40 ms |
+| 평균 | P1 dynamic | 0.525 | 3.947 | 3.910 | 54.47 | 58.80 ms | 68.42 ms |
+
+평균 P1AL은 `+0.313`(`+8.6%`), P1 hit는 `+1.43%p`, tok/step은
+`+6.7%`였다. 따라서 과거의 P1AL 1.8--2.1 붕괴는 현재 코드에서 재현되지
+않았다. seed 42의 `-0.03`처럼 짧은 stochastic run 하나는 반대 방향일 수
+있으므로, “모든 seed의 표본 평균이 반드시 증가한다”는 판정 규칙은 사용하지
+않는다.
+
+별도의 real-model audit는 P1 생성 71 step의 모든 1,618 root view를 검사했다.
+각 node token과 raw draft 확률이 실제 forward lane의 ordered sample과 exact,
+parent cell과 target parent-q reference도 exact였고 누락/중복/OOB는 0건이었다.
+34번의 실제 P1 tree hit에서 수락된 116 edge 중 sibling 1/2가 11번 사용돼
+대체 가지가 실제 수락 경로에 기여했다. 진단 결과는
+`p1_output_exact_20260808/smoke_nodes.p1.jsonl`과 topology trace에 있다.
+
+다만 현재 전역 동적 정책은 모든 root의 first-child chain을 깊이 K1까지 강제
+포함하지 않는다. 따라서 같은 root/noise에서 chain proposal의 strict superset인
+정책은 아니며, per-hit/per-seed 수학적 non-regression을 주장할 수 없다. 그
+보장이 필요하면 mandatory first-child backbone을 유지하고 남는 forward lane만
+전역 점수로 배분하는 별도 정책이 필요하다. 이는 현재 “P1/P2 동일 global
+dynamic” 정책과 다른 알고리즘 변경이다.
+
+토큰 품질과 별개로 이 P1 형상은 아직 성능 채택에 실패했다. 평균 target verify는
+`+12.16 ms`, draft step은 `+24.02 ms`, TPS는 `-23.8%`다. chain P1의 16-lane
+forward 대신 일반 hit에서 20 lane, 최대 P1-tree hit 뒤에는 38 lane을 9 round
+실행하고, target도 최대 9개가 아닌 18개 node를 검증하기 때문이다. P1 tree는
+기본값으로 승격하지 않고 폭/재귀 context 비용을 줄이는 설계가 선행되어야 한다.
+
 ---
 
 ## 9. Timeline 해석
