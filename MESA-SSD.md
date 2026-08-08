@@ -575,6 +575,49 @@ phase 분해에는 위 명령에서 P1 또는 P2 하나만 `off`로 바꾼다. �
 `--duet_tree_policy`/`--duet_tree_nv`는 재현용 deprecated 입력일 뿐 새 실험에는
 사용하지 않는다.
 
+### 8.5 RTX PRO 6000 Blackwell(sm_120) 실행
+
+RTX PRO 6000에서는 현재 설치된 `sgl-kernel` attention이 sm_120을 지원하지
+않으므로 일반 prefill/decode/chain verify도 FlashInfer로 실행한다. 동적 tree만
+FlashInfer로 바꾸는 설정이 아니라, target과 draft의 일반 attention까지 포함한
+B6000 호환 경로다. 다른 GPU에서는 기본 `auto`가 기존 `sgl-kernel`을 그대로
+선택하므로 기존 champion 경로의 latency에 영향을 주지 않는다.
+
+```bash
+export CUDA_VISIBLE_DEVICES=6,7,5       # target TP2 / draft 1GPU
+export SSD_CUDA_ARCH=12.0
+export TORCH_CUDA_ARCH_LIST=12.0
+export SSD_ATTN_BACKEND=auto            # sm_120 -> flashinfer
+export SSD_CHAIN_PROXY_GRAPH=1
+export SSD_DUET_EXIT_REPLICA=1
+export SSD_ASYNC_PROXY_SEND=1
+export SSD_PROXY_STREAM=0
+```
+
+문제 분리 시에만 `SSD_ATTN_BACKEND=flashinfer`로 강제한다.
+`SSD_ATTN_BACKEND=sgl`은 sm_120에서 지원되지 않는 attention kernel을 실행하므로
+B6000 실험에는 사용하지 않는다.
+
+B6000 경로의 CUDA Graph에는 두 가지 안전 규약이 적용된다.
+
+1. 캡처와 재생은 query 폭별로 동일한 FlashInfer wrapper/plan buffer를 사용한다.
+   다른 이름의 wrapper를 재계획하면 graph가 warmup 당시 page 정보로 실행되어
+   crash 없이도 logits와 accepted length를 훼손할 수 있다.
+2. batch graph bucket은 실제 입력 buffer 행 수 이하만 만든다. 예를 들어 B=1의
+   decode buffer가 2행이면 1·2 bucket만 만들며, 4·8 bucket을 계획하지 않는다.
+
+수정 후 layerskip Llama-2-70B fp16 target TP2 + TinyLlama fp16 draft의 실제 모델
+smoke에서 다음을 확인했다.
+
+- `K1=7, K2=4`: decode 77.27 tok/s, tokens/step 5.25, P1 AL 5.00,
+  P2 AL 2.00, 정상 코드 출력
+- `K1=10, K2=5`: 원래 GPU 배치(6·7/5)에서 정상 종료, P1 AL 9.00,
+  P2 AL 5.00, tokens/step 6.00
+
+두 번째 수치는 16-token 기능 smoke이므로 TPS 비교값으로 사용하지 않는다. 의미는
+K1 짝수도 정상이며, 과거 오류가 K1 parity가 아니라 FlashInfer graph 준비
+오배선이었다는 확인이다.
+
 ---
 
 ## 9. 새 설정에서 찾아야 하는 파라미터

@@ -4,6 +4,7 @@ import triton
 import triton.language as tl
 
 from sgl_kernel.flash_attn import flash_attn_varlen_func, flash_attn_with_kvcache
+from ssd.layers.fi_attn import get_fi_backend, use_flashinfer_attention
 from ssd.utils.context import get_context
 
 
@@ -94,15 +95,36 @@ class Attention(nn.Module):
         if self.k_cache.numel() and self.v_cache.numel():
             store_kvcache(k, v, self.k_cache, self.v_cache, context.slot_mapping)
 
-        if context.is_prefill:
-            if context.block_tables is not None:
-                k, v = k_cache, v_cache
+        # Blackwell sm_120 is not supported by the installed sgl attention
+        # kernels.  Keep the existing path everywhere else and switch only
+        # the dense attention calls; tree-specific FlashInfer wrappers below
+        # are unchanged.
+        use_fi = use_flashinfer_attention(q.device)
+        fi_backend = get_fi_backend(q.device) if use_fi else None
 
-            k, v = k.view(-1, self.num_kv_heads, self.head_dim), v.view(-1, self.num_kv_heads, self.head_dim)
-            o = flash_attn_varlen_func(q, k, v,
-                                       max_seqlen_q=context.max_seqlen_q, cu_seqlens_q=context.cu_seqlens_q,
-                                       max_seqlen_k=context.max_seqlen_k, cu_seqlens_k=context.cu_seqlens_k,
-                                       softmax_scale=self.scale, causal=True)
+        if context.is_prefill:
+            if use_fi:
+                if context.block_tables is not None:
+                    o = fi_backend.run_paged(q, k_cache, v_cache)
+                else:
+                    k = k.view(-1, self.num_kv_heads, self.head_dim)
+                    v = v.view(-1, self.num_kv_heads, self.head_dim)
+                    o = fi_backend.run_ragged(q, k, v)
+            else:
+                if context.block_tables is not None:
+                    k, v = k_cache, v_cache
+
+                k = k.view(-1, self.num_kv_heads, self.head_dim)
+                v = v.view(-1, self.num_kv_heads, self.head_dim)
+                o = flash_attn_varlen_func(
+                    q, k, v,
+                    max_seqlen_q=context.max_seqlen_q,
+                    cu_seqlens_q=context.cu_seqlens_q,
+                    max_seqlen_k=context.max_seqlen_k,
+                    cu_seqlens_k=context.cu_seqlens_k,
+                    softmax_scale=self.scale,
+                    causal=True,
+                )
         else:
             # P2-tree TREE_VERIFY (T3.1b, docs/duet/internal/20): 명시 mode — 현행
             # 암묵 dispatch(cu_seqlens 유무)로는 트리 mask를 표현할 수
@@ -128,11 +150,21 @@ class Attention(nn.Module):
 
             if verify_or_glue:
                 assert context.context_lens is not None
-                o = flash_attn_with_kvcache(q, k_cache, v_cache,
-                                        cache_seqlens=context.context_lens, page_table=context.block_tables,
-                                        softmax_scale=self.scale, causal=True,
-                                        cu_seqlens_q=context.cu_seqlens_q, max_seqlen_q=context.max_seqlen_q,
-                                        )
+                if use_fi:
+                    if fi_backend.cg_cur is not None:
+                        o = fi_backend.cg_cur.run(q, k_cache, v_cache)
+                    else:
+                        o = fi_backend.run_paged(q, k_cache, v_cache)
+                else:
+                    o = flash_attn_with_kvcache(
+                        q, k_cache, v_cache,
+                        cache_seqlens=context.context_lens,
+                        page_table=context.block_tables,
+                        softmax_scale=self.scale,
+                        causal=True,
+                        cu_seqlens_q=context.cu_seqlens_q,
+                        max_seqlen_q=context.max_seqlen_q,
+                    )
 
             elif tree_decode:
                 if self.only_prefill_wrapper is not None:
@@ -150,11 +182,20 @@ class Attention(nn.Module):
                     prefill_wrapper = wrappers[wrapper_bs]
                 o = prefill_wrapper.run(q, (self.k_cache, self.v_cache))
             else: # single query decode
-                q = q.unsqueeze(1)
-                o = flash_attn_with_kvcache(q, k_cache, v_cache,
-                                            cache_seqlens=context.context_lens, page_table=context.block_tables,
-                                            softmax_scale=self.scale, causal=True,
-                                            )
+                if use_fi:
+                    if fi_backend.cg_cur is not None:
+                        o = fi_backend.cg_cur.run(q, k_cache, v_cache)
+                    else:
+                        o = fi_backend.run_decode(q, k_cache, v_cache)
+                else:
+                    q = q.unsqueeze(1)
+                    o = flash_attn_with_kvcache(
+                        q, k_cache, v_cache,
+                        cache_seqlens=context.context_lens,
+                        page_table=context.block_tables,
+                        softmax_scale=self.scale,
+                        causal=True,
+                    )
 
         o = o.view(-1, self.num_heads * self.head_dim)
         return o

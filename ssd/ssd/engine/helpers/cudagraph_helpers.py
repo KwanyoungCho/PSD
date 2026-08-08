@@ -7,6 +7,43 @@ from ssd.engine.helpers.mask_helpers import get_custom_mask
 from time import perf_counter
 
 
+def _fi_plan_graph(model_runner, name, bs_list, max_num_blocks, qlen, bs,
+                   block_tables, context_lens, causal=True, qo_src=None):
+    """Plan the optional sm_120 FlashInfer wrapper before capture/replay."""
+    from ssd.layers.fi_attn import (
+        get_fi_backend,
+        use_flashinfer_attention,
+    )
+    if not use_flashinfer_attention(model_runner.device):
+        return None
+    backend = get_fi_backend(model_runner.device)
+    wrapper = backend.cg_get(name, bs_list, max_num_blocks, qlen)
+    attn = model_runner._first_attn_module()
+    wrapper.plan(
+        bs,
+        block_tables,
+        context_lens,
+        model_runner.block_size,
+        attn.num_heads,
+        attn.num_kv_heads,
+        attn.head_dim,
+        attn.scale,
+        model_runner.hf_config.torch_dtype,
+        causal=causal,
+        qo_src=qo_src,
+    )
+    return wrapper
+
+
+def _fi_prepare_capture_lens(model_runner, context_lens) -> bool:
+    """Give FlashInfer a valid nonempty KV shape during graph capture."""
+    from ssd.layers.fi_attn import use_flashinfer_attention
+    if not use_flashinfer_attention(model_runner.device):
+        return False
+    context_lens.fill_(model_runner.config.max_model_len)
+    return True
+
+
 ## RUN CUDAGRAPHS
 @torch.inference_mode()
 def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_vars,
@@ -76,6 +113,17 @@ def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_va
         torch.cuda.synchronize()
         _t0 = perf_counter()
 
+    _fi_plan_graph(
+        model_runner,
+        f"cg_verify_kp{k_plus_1}",
+        model_runner.graph_bs_list[bucket],
+        model_runner.max_num_blocks,
+        k_plus_1,
+        wrapper_bs,
+        graph_vars["block_tables"][:wrapper_bs],
+        graph_vars["context_lens"][:wrapper_bs],
+        causal=True,
+    )
     _vr_label = "draft_glue_replay" if model_runner.is_draft else "verify_replay"
     _ev_vr = duet_record(_vr_label)
     graph.replay()
@@ -127,6 +175,17 @@ def run_decode_cudagraph(model_runner, input_ids, positions, last_only, graph_va
         graph_vars["block_tables"][:flat_batch_size,
                                 :context.block_tables.size(1)] = context.block_tables
 
+    _fi_plan_graph(
+        model_runner,
+        "decode",
+        model_runner.graph_bs_list["decode"],
+        model_runner.max_num_blocks,
+        1,
+        flat_batch_size,
+        graph_vars["block_tables"][:flat_batch_size],
+        graph_vars["context_lens"][:flat_batch_size],
+        causal=False,
+    )
     graph.replay()
 
     outputs = graph_vars["outputs"][:flat_batch_size]
@@ -691,9 +750,8 @@ def capture_cudagraph(model_runner):
             graph_bs_list.append(N)
             graph_bs_list.sort()
     else:
-        graph_bs_list = [1, 2, 4, 8] + list(range(16, max_bs + 1, 16))
-        if max_bs % 16 != 0:
-            graph_bs_list.append(max_bs)
+        from ssd.layers.fi_attn import graph_batch_sizes
+        graph_bs_list = graph_batch_sizes(max_bs)
 
     graphs = {}
     graph_pool = None
@@ -714,6 +772,18 @@ def capture_cudagraph(model_runner):
         graph = torch.cuda.CUDAGraph()
         set_context(
             False, slot_mapping=slot_mapping[:bs], context_lens=context_lens[:bs], block_tables=block_tables[:bs], is_jit=is_jit)
+        if _fi_prepare_capture_lens(model_runner, context_lens[:bs]):
+            _fi_plan_graph(
+                model_runner,
+                "decode",
+                graph_bs_list,
+                max_num_blocks,
+                1,
+                bs,
+                block_tables[:bs],
+                context_lens[:bs],
+                causal=False,
+            )
         if is_eagle_draft:
             outputs[:bs] = model_runner.model(
                 input_ids[:bs], positions[:bs], hidden_states[:bs])    # warmup
@@ -818,6 +888,19 @@ def capture_verify_cudagraph(model_runner, k_plus_1=None):
             max_seqlen_q=k_plus_1,
         )
 
+        if _fi_prepare_capture_lens(model_runner, context_lens[:bs]):
+            _fi_plan_graph(
+                model_runner,
+                f"cg_verify_kp{k_plus_1}",
+                all_N,
+                model_runner.max_num_blocks,
+                k_plus_1,
+                bs,
+                block_tables[:bs],
+                context_lens[:bs],
+                causal=True,
+            )
+
         # warmup
         model_out = model_runner.model(
             input_ids[:bs * k_plus_1], positions[:bs * k_plus_1])
@@ -904,6 +987,18 @@ def run_glue_decode_cudagraph(model_runner, input_ids, positions, last_only, gra
     if hidden_states is not None and "eagle_hidden_states" in graph_vars:
         graph_vars["eagle_hidden_states"][:orig_flat] = hidden_states
 
+    _fi_plan_graph(
+        model_runner,
+        "glue",
+        model_runner.graph_bs_list["glue_decode"],
+        model_runner.max_num_blocks,
+        two_kp1,
+        wrapper_bs,
+        graph_vars["block_tables"][:wrapper_bs],
+        graph_vars["context_lens"][:wrapper_bs],
+        causal=True,
+        qo_src=graph_vars["cu_seqlens_q"][:wrapper_bs + 1],
+    )
     graph.replay()
 
     outputs = graph_vars["outputs"][:orig_flat]
@@ -967,6 +1062,20 @@ def capture_glue_decode_cudagraph(model_runner):
             context_lens=context_lens[:bs],
             block_tables=block_tables[:bs],
         )
+
+        if _fi_prepare_capture_lens(model_runner, context_lens[:bs]):
+            _fi_plan_graph(
+                model_runner,
+                "glue",
+                graph_bs_list,
+                max_num_blocks,
+                two_kp1,
+                bs,
+                block_tables[:bs],
+                context_lens[:bs],
+                causal=True,
+                qo_src=cu,
+            )
 
         if eagle_hs is not None:
             outputs[:flat] = model_runner.model(input_ids[:flat], positions[:flat], eagle_hs[:flat])
@@ -1354,6 +1463,20 @@ def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
             max_seqlen_q=k_plus_1,
         )
 
+        if _fi_prepare_capture_lens(model_runner, context_lens[:bs]):
+            from ssd.layers.fi_attn import duet_graph_name
+            _fi_plan_graph(
+                model_runner,
+                duet_graph_name(k_plus_1),
+                all_N,
+                model_runner.max_num_blocks,
+                k_plus_1,
+                bs,
+                block_tables[:bs],
+                context_lens[:bs],
+                causal=True,
+            )
+
         # --- graph_pre: layers [0, exit_layer] ---
         hs, res = model_runner.model(
             input_ids[:flat], positions[:flat], end_layer=exit_layer + 1)
@@ -1543,6 +1666,18 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         _prev_done = getattr(model_runner, "_duet_exit_done_ev", None)
         if _prev_done is not None:
             torch.cuda.current_stream().wait_event(_prev_done)
+    from ssd.layers.fi_attn import duet_graph_name
+    _fi_plan_graph(
+        model_runner,
+        duet_graph_name(k_plus_1),
+        model_runner.graph_bs_list[bucket],
+        model_runner.max_num_blocks,
+        k_plus_1,
+        bs,
+        graph_vars["block_tables"][:bs],
+        graph_vars["context_lens"][:bs],
+        causal=True,
+    )
     _ev = duet_record("graph_pre")
     graph_pre.replay()
     duet_close("graph_pre", _ev)

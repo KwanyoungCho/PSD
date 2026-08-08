@@ -509,6 +509,9 @@ class ModelRunner:
         target_path = getattr(config, 'tokenizer_path', None)
         target_hidden_size = getattr(config, 'd_model_target', None)
         load_model(self.model, config.model, target_path=target_path, target_hidden_size=target_hidden_size)
+        # Inference only.  On sm_120 this also prevents torch.compile from
+        # attempting an AOTAutograd backward trace through in-place RMSNorm.
+        self.model.requires_grad_(False)
 
         # --- AWQ W4A16 path (plan v2 — see INT8-WEIGHT-ONLY-PLAN-v2.md) ---
         # Runs identically for target and draft; the QuantConfig instance
@@ -1215,6 +1218,72 @@ class ModelRunner:
         temperatures = torch.tensor(temperatures, dtype=torch.float32, pin_memory=True).cuda(non_blocking=True)
         return temperatures
 
+    def _first_attn_module(self):
+        """Return one attention layer for TP-local head geometry."""
+        cached = getattr(self, "_attn_mod", None)
+        if cached is not None:
+            return cached
+        from ssd.layers.attention import Attention
+        for module in self.model.modules():
+            if isinstance(module, Attention):
+                self._attn_mod = module
+                return module
+        raise RuntimeError("model has no SSD Attention module")
+
+    def _plan_flashinfer_dense_attention(self, is_prefill: bool) -> None:
+        """Plan the sm_120 eager attention wrapper once per model call."""
+        from ssd.layers.fi_attn import (
+            get_fi_backend,
+            use_flashinfer_attention,
+        )
+        if not use_flashinfer_attention(self.device):
+            return
+
+        context = get_context()
+        attn = self._first_attn_module()
+        backend = get_fi_backend(self.device)
+        backend.cg_cur = None
+        common = (
+            attn.num_heads,
+            attn.num_kv_heads,
+            attn.head_dim,
+            attn.scale,
+            self.hf_config.torch_dtype,
+        )
+        if is_prefill:
+            if context.block_tables is not None:
+                kv_lens = (
+                    context.cu_seqlens_k[1:] - context.cu_seqlens_k[:-1]
+                ).to(torch.int32)
+                backend.plan_paged(
+                    context.cu_seqlens_q,
+                    context.block_tables,
+                    kv_lens,
+                    self.block_size,
+                    *common,
+                )
+            else:
+                backend.plan_prefill_ragged(
+                    context.cu_seqlens_q,
+                    context.cu_seqlens_k,
+                    *common,
+                )
+        elif context.cu_seqlens_q is not None:
+            backend.plan_paged(
+                context.cu_seqlens_q,
+                context.block_tables,
+                context.context_lens,
+                self.block_size,
+                *common,
+            )
+        else:
+            backend.plan_decode(
+                context.block_tables,
+                context.context_lens,
+                self.block_size,
+                *common,
+            )
+
     def eager_tree_decode_plan(self, input_ids, positions, step, cache_hits):
         """Plan FlashInfer for tree decode in eager mode"""
         assert self.is_draft and self.config.draft_async, "ERROR in eager_tree_decode_plan: not a draft async model"
@@ -1268,6 +1337,8 @@ class ModelRunner:
         if is_prefill or self.enforce_eager:
             if is_tree_decode:
                 self.eager_tree_decode_plan(input_ids, positions, tree_decode_step, cache_hits)
+            else:
+                self._plan_flashinfer_dense_attention(is_prefill)
             
             if self.config.use_eagle: 
                 if self.is_draft:
