@@ -45,6 +45,19 @@ bash tools/duet_timeline/plot.sh PROFILE_DIR \
   --step-id 120 --out PROFILE_DIR/timeline_step120.png
 ```
 
+한 상태의 중앙값 한 장만으로 run의 분산을 숨기지 않으려면 p25/p50/p75 대표
+step을 함께 만든다.
+
+```bash
+python tools/duet_timeline/plot_representatives.py PROFILE_DIR
+```
+
+각 `hit_k1`, `hit_k2`, `miss` 상태에서 target full-step duration의
+p25/p50/p75를 고르며, draft response marker까지 저장된 step만 사용한다. 결과는
+개별 PNG 9장, 선택 근거 `representatives.tsv`, 3×3
+`timeline_representatives_contact_sheet.png`다. 행은 cache 상태, 열은 duration
+quantile이다. 기존 JSON은 변경하지 않는다.
+
 ## Proxy 구간 숫자 요약
 
 ```bash

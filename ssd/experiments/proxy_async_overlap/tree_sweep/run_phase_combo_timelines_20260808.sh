@@ -121,6 +121,8 @@ run_arm () {
     "${log}" >"${dir}/metrics.txt" || true
   "${PY}" bench/plot_duet_aligned_timeline.py "${dir}" --causality-shift \
     >"${dir}/plot.log" 2>&1
+  "${PY}" tools/duet_timeline/plot_representatives.py "${dir}" \
+    >"${dir}/representatives.log" 2>&1
   "${PY}" tools/duet_timeline/summarize_proxy.py "${dir}" \
     >"${dir}/proxy_summary.txt" 2>&1 || true
   find "${dir}" -maxdepth 1 -name 'timeline_*.png' -printf '%f\n' \
