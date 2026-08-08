@@ -650,6 +650,17 @@ class P2TreeExecutor:
         self.dbg_fan = torch.zeros(F_, W_, dtype=torch.int64, device=d)
         self.dbg_sel = torch.zeros(F_, W_, dtype=torch.int64, device=d)
         self.dbg_selv = torch.zeros(F_, W_, dtype=torch.bool, device=d)
+        # These mirrors exist only for deterministic parity and explicit
+        # topology/node diagnostics.  Copying seven tiny tensors every round
+        # added 63 captured kernels to a K1=9 production replay even though
+        # no serving consumer reads them.  The tensors stay allocated so a
+        # diagnostic graph has stable addresses, but ordinary graphs omit all
+        # mirror writes.
+        self.debug_buffers_enabled = any(os.environ.get(name, "") not in
+                                         ("", "0") for name in (
+            "SSD_TREE_STAGE1", "SSD_TREE_NODE_AUDIT",
+            "SSD_TREE_EXEC_EAGER_DIAG", "SSD_TREE_EXEC_CHECK_PCELL_DIAG",
+        ))
 
         # Arena node -> root-local output index.  CUDA graphs for different
         # page buckets must not share mutable internal state.  Keep one live
@@ -909,10 +920,12 @@ class P2TreeExecutor:
         tip_idx = self.arange_R.clone()
         tip_depth = torch.zeros(R, dtype=torch.int64, device=self.dev)
         self._sel = {}
+        record_debug = (self.debug_buffers_enabled
+                        or self.parity_noise is not None)
         # Only validity controls whether diagnostic tail lanes are consumed.
         # Clear it once for variable-width P1; P2 keeps its historical
         # zero-extra-kernel hot path because every round fills the full W.
-        if any(wf != W for wf in self.round_widths):
+        if record_debug and any(wf != W for wf in self.round_widths):
             self.dbg_selv.zero_()
         wrappers = self.wrappers[n_pages0]
         hybrid_floor = min(2, F)
@@ -975,11 +988,12 @@ class P2TreeExecutor:
                 self.in_rope_base.gather(0, r_of)
                 + ar.depth.gather(0, sel.clamp(min=0)),
                 self.in_rope_base[0].expand(wf))
-            self.dbg_sel[f, :wf].copy_(sel)
-            self.dbg_selv[f, :wf].copy_(sel_valid)
-            self.dbg_ids[f, :wf].copy_(ids)
-            self.dbg_rope[f, :wf].copy_(rope)
-            self.dbg_fan[f, :wf].copy_(fan)
+            if record_debug:
+                self.dbg_sel[f, :wf].copy_(sel)
+                self.dbg_selv[f, :wf].copy_(sel_valid)
+                self.dbg_ids[f, :wf].copy_(ids)
+                self.dbg_rope[f, :wf].copy_(rope)
+                self.dbg_fan[f, :wf].copy_(fan)
             self._pack_row_mask(wrappers[f], f)
             # ── raw draft forward (capture-시 context 1회 bake)
             set_context(
@@ -1004,8 +1018,9 @@ class P2TreeExecutor:
                 generator=self.gen,
                 noise=(self.parity_noise[f][:wf]
                        if self.parity_noise is not None else None))
-            self.dbg_toks[f, :wf].copy_(toks)
-            self.dbg_raws[f, :wf].copy_(raws.float())
+            if record_debug:
+                self.dbg_toks[f, :wf].copy_(toks)
+                self.dbg_raws[f, :wf].copy_(raws.float())
             # ── 삽입 + [R,NV] 직접 기록.  Probability arithmetic remains
             # in PyTorch to preserve the exact priority values used by the
             # selector; the integer bookkeeping itself is one tiny kernel.

@@ -128,6 +128,9 @@ class TestExecutorModuleParity(unittest.TestCase):
         model = _MiniDraft(V, H, HKV, D, cache, dev)
         ex = P2TreeExecutor(model, model.logits_fn, cfg, dev,
                             PAGE, max_blocks, V, H, HKV, D)
+        # Test graphs intentionally inspect the diagnostic mirrors.  Serving
+        # graphs leave these writes disabled to avoid 7*F tiny kernels.
+        ex.debug_buffers_enabled = True
         return ex, cfg, PAGE, V
 
     def _fill_inputs(self, ex, PAGE, ctx0):
@@ -261,6 +264,7 @@ class TestExecutorModuleParity(unittest.TestCase):
             model, model.logits_fn, cfg, dev, PAGE, max_blocks,
             V, H, HKV, D, context_bucket=10,
             materialize_backbone_logits=False)
+        ex.debug_buffers_enabled = True
         self.assertEqual((ex.F, ex.W, ex.R), (9, 20, 20))
         self.assertEqual(ex.round_widths, (20,) + (16,) * 8)
         self.assertEqual(ex.arena.anc_words, 3)
