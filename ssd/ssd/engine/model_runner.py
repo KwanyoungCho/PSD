@@ -295,8 +295,15 @@ class ModelRunner:
         # page shapes made later captures silently corrupt earlier graphs.
         # Keep one modest workspace per (node,page) graph, matching the
         # isolation rule already used by P2TreeExecutor.
+        # FlashInfer's temporary storage grows with the verify query width.
+        # 64 MiB is sufficient for the P2 shapes used so far (<= 10 nodes),
+        # but a P1 tree with 18 nodes requests about 82 MiB on Llama-2-70B.
+        # Keep the smaller allocation for P2-only service and raise the
+        # default only for the wider P1 bucket.  The environment override is
+        # intentionally retained for other models whose requirement differs.
+        default_graph_ws_mb = 96 if max(verify_buckets) > 10 else 64
         graph_ws_mb = int(os.environ.get(
-            "SSD_TREE_VERIFY_WORKSPACE_MB", "64"))
+            "SSD_TREE_VERIFY_WORKSPACE_MB", str(default_graph_ws_mb)))
         if graph_ws_mb <= 0:
             raise ValueError("SSD_TREE_VERIFY_WORKSPACE_MB must be positive")
         self._tree_verify_graph_workspaces = {}
