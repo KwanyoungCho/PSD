@@ -115,14 +115,32 @@ def build_uniform_p1_roots(
         raise ValueError(
             f"root_width {width} cannot hold {real_roots} uniform roots")
 
-    masked = glue_logits.clone()
     # Same exclusion contract as the chain P1 selector: at context j, the
     # already returned next token lives at returned_tokens[j+1].  The final
-    # context has no next returned token to exclude.
+    # context has no next returned token to exclude.  Asking for U+1 tokens
+    # and dropping the one excluded id is mathematically identical to
+    # cloning the full [P,V] logits and scattering -inf, while avoiding that
+    # multi-megabyte allocation/copy on every P1 step.
+    vocab = int(glue_logits.shape[1])
+    if p > 1 and roots_per_position >= vocab:
+        raise ValueError(
+            f"roots_per_position={roots_per_position} must be < "
+            f"vocab={vocab} when a returned token is excluded")
+    candidate_k = min(vocab, roots_per_position + 1)
+    candidates = glue_logits.topk(candidate_k, dim=-1).indices
+    excluded = torch.full(
+        (p,), -1, dtype=returned_tokens.dtype, device=glue_logits.device)
     if p > 1:
-        masked[:-1].scatter_(
-            1, returned_tokens[1:].view(-1, 1), float("-inf"))
-    root_tok = masked.topk(roots_per_position, dim=-1).indices
+        excluded[:-1].copy_(returned_tokens[1:])
+    candidate_pos = torch.arange(
+        candidate_k, dtype=torch.int64, device=glue_logits.device) \
+        .expand(p, candidate_k)
+    kept_pos = torch.where(
+        candidates != excluded.unsqueeze(1), candidate_pos,
+        torch.full_like(candidate_pos, candidate_k))
+    chosen_pos = kept_pos.topk(
+        roots_per_position, dim=-1, largest=False, sorted=True).values
+    root_tok = candidates.gather(1, chosen_pos)
 
     temps = temperatures.to(device=glue_logits.device, dtype=torch.float32)
     if temps.numel() == 1:

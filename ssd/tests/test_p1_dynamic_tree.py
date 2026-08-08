@@ -109,6 +109,20 @@ class TestP1UniformRoots(unittest.TestCase):
                 2, torch.ones(3), sampler_x=None, async_fan_out=3,
                 root_width=5)
 
+    def test_root_selection_excludes_returned_without_mutating_logits(self):
+        logits = torch.tensor([
+            [9.0, 8.0, 7.0, 6.0, 5.0],
+            [5.0, 6.0, 7.0, 8.0, 9.0],
+        ])
+        before = logits.clone()
+        # row0 excludes returned[1]=0, so its next two choices are 1 and 2;
+        # the final row excludes nothing and keeps 4 and 3.
+        out = build_uniform_p1_roots(
+            logits, torch.tensor([4, 0]), 2, torch.ones(2),
+            sampler_x=None, async_fan_out=3)
+        self.assertEqual(out["tokens"].tolist(), [1, 2, 4, 3])
+        self.assertTrue(torch.equal(logits, before))
+
     def test_persistent_output_buffers_are_reused(self):
         logits = torch.arange(18, dtype=torch.float32).view(3, 6)
         buffers = {
