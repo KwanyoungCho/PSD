@@ -124,12 +124,15 @@ class Config:
     # old ``eagle`` spelling remains only for exact experiment reproduction.
     duet_tree_policy: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
-    # Per-phase maximum number of nodes sent for one cache hit.  This is a
-    # fixed buffer/cost bound, not a forced topology size.  Tokens, parents,
-    # and valid node counts remain data-dependent.  ``duet_tree_nv`` is a
-    # legacy P2 alias.
+    # Per-phase maximum number of nodes generated for each cache root.  The
+    # optional verify-node limits below perform an EAGLE-style final rerank
+    # only after the matching root is known.  Separating the two quantities
+    # lets the draft search a wider tree without forcing the target to verify
+    # every generated node.  ``duet_tree_nv`` is a legacy P2 generation alias.
     duet_p1_tree_max_nodes: int = 18
     duet_p2_tree_max_nodes: int = 8
+    duet_p1_tree_verify_nodes: int | None = None
+    duet_p2_tree_verify_nodes: int | None = None
     duet_tree_nv: int | None = None
     # P1 creates this many uniform root candidates at every glue context.
     duet_p1_roots_per_position: int = 2
@@ -237,9 +240,9 @@ class Config:
         sidecar.  The ordinary chain logits keep their ``speculate_k`` width;
         tree-specific tensors grow only when at least one tree phase is on.
         """
-        p1 = (int(self.duet_p1_tree_max_nodes)
+        p1 = (int(self.duet_p1_tree_verify_nodes)
               if self.duet_p1_tree_policy == "on" else 0)
-        p2 = (int(self.duet_p2_tree_max_nodes)
+        p2 = (int(self.duet_p2_tree_verify_nodes)
               if self.duet_p2_tree_policy == "on" else 0)
         return max(1, p1, p2)
 
@@ -361,8 +364,8 @@ class Config:
             _ctx_max = max(
                 int(self.duet_phase1_k or self.speculate_k) + 1,
                 int(self.duet_phase2_k or self.speculate_k) + 1,
-                int(self.duet_p1_tree_max_nodes) + 1,
-                (int(self.duet_p2_tree_max_nodes) + 1
+                int(self.duet_p1_tree_verify_nodes) + 1,
+                (int(self.duet_p2_tree_verify_nodes) + 1
                  if self.duet_p2_tree_policy == "on" else 0))
             p1_sum_tree = _ctx_max * int(
                 self.duet_p1_roots_per_position)
@@ -466,6 +469,12 @@ class Config:
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
+        if self.duet_p1_tree_verify_nodes is None:
+            self.duet_p1_tree_verify_nodes = int(
+                self.duet_p1_tree_max_nodes)
+        if self.duet_p2_tree_verify_nodes is None:
+            self.duet_p2_tree_verify_nodes = int(
+                self.duet_p2_tree_max_nodes)
         if self.duet_p1_roots_per_position < 1:
             raise ValueError(
                 "duet_p1_roots_per_position must be >= 1; got "
@@ -479,6 +488,15 @@ class Config:
             raise ValueError(
                 "duet_p1_tree_max_nodes and duet_p2_tree_max_nodes must be "
                 "positive")
+        for _phase, _verify, _generated in (
+                ("P1", self.duet_p1_tree_verify_nodes,
+                 self.duet_p1_tree_max_nodes),
+                ("P2", self.duet_p2_tree_verify_nodes,
+                 self.duet_p2_tree_max_nodes)):
+            if not (1 <= int(_verify) <= int(_generated)):
+                raise ValueError(
+                    f"{_phase} tree verify nodes must be in "
+                    f"[1, generated={int(_generated)}]; got {_verify}")
 
         model = self.model 
         assert os.path.isdir(model)
@@ -844,8 +862,8 @@ class Config:
                 _ctx_max = max(
                     self.duet_phase1_k + 1,
                     self.duet_phase2_k + 1,
-                    self.duet_p1_tree_max_nodes + 1,
-                    (self.duet_p2_tree_max_nodes + 1
+                    self.duet_p1_tree_verify_nodes + 1,
+                    (self.duet_p2_tree_verify_nodes + 1
                      if self.duet_p2_tree_policy == "on" else 0))
                 p1_sum_full = max(
                     p1_sum_full,
@@ -916,8 +934,10 @@ class Config:
                   f'P2_tree={self.duet_p2_tree_policy}, '
                   f'tree_selector={self.duet_tree_policy}, '
                   f'tree_R={self.duet_tree_root_count}, '
-                  f'P1_tree_nodes={self.duet_p1_tree_max_nodes}, '
-                  f'P2_tree_nodes={self.duet_p2_tree_max_nodes}, '
+                  f'P1_tree_nodes={self.duet_p1_tree_max_nodes}/'
+                  f'{self.duet_p1_tree_verify_nodes}(gen/verify), '
+                  f'P2_tree_nodes={self.duet_p2_tree_max_nodes}/'
+                  f'{self.duet_p2_tree_verify_nodes}(gen/verify), '
                   f'P1_start_thr={self.duet_p1_tree_start_threshold}, '
                   f'P1_conf_thr={self.duet_p1_tree_conf_threshold}, '
                   f'tree_proxy_thr={self.duet_tree_proxy_threshold}, '

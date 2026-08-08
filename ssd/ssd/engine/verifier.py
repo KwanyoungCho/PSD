@@ -299,9 +299,9 @@ class Verifier(VerifierBase):
                         _ti_checked, _nv_t, config.hf_config.vocab_size)
                     _phase_t = int(speculate_result.phase_source[0]) \
                         if speculate_result.phase_source is not None else 0
-                    _phase_cap = (int(config.duet_p1_tree_max_nodes)
+                    _phase_cap = (int(config.duet_p1_tree_verify_nodes)
                                   if _phase_t == 1 else
-                                  int(config.duet_p2_tree_max_nodes))
+                                  int(config.duet_p2_tree_verify_nodes))
                     if int(_tree_meta_arg[0]) > _phase_cap:
                         raise RuntimeError(
                             f"tree valid={int(_tree_meta_arg[0])} exceeds "

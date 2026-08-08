@@ -363,8 +363,8 @@ class SpeculatorAsync(SpeculatorBase):
             from ssd.engine.helpers.p2_tree import tree_response_logit_rows
             _, _pq_rows = tree_response_logit_rows(
                 _tree_valid, _tree_phase, self.K,
-                self.config.duet_p1_tree_max_nodes,
-                self.config.duet_p2_tree_max_nodes)
+                self.config.duet_p1_tree_verify_nodes,
+                self.config.duet_p2_tree_verify_nodes)
             _pq_dst = self._tree_parent_q[:, :_pq_rows]
             if not _pq_dst.is_contiguous():
                 raise RuntimeError("tree parent-q receive view must be contiguous")

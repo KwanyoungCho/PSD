@@ -104,6 +104,24 @@ class TestOldNewEquivalence(unittest.TestCase):
         self.assertEqual(c.duet_tree_wire_nodes, 12)
         self.assertEqual(c.duet_response_token_width, 13)
 
+    def test_verify_cap_is_separate_from_generated_tree_width(self):
+        c = _mk({}, duet_p1_tree_policy="on",
+                duet_p1_tree_max_nodes=18,
+                duet_p2_tree_max_nodes=8,
+                duet_p1_tree_verify_nodes=12,
+                duet_p2_tree_verify_nodes=7)
+        self.assertEqual(c.duet_p1_tree_max_nodes, 18)
+        self.assertEqual(c.duet_p2_tree_max_nodes, 8)
+        self.assertEqual(c.duet_tree_wire_nodes, 12)
+        # Ordinary K1+K2 chain responses still need 13 token slots.
+        self.assertEqual(c.duet_response_token_width, 13)
+
+    def test_verify_cap_cannot_exceed_generated_nodes(self):
+        with self.assertRaisesRegex(ValueError, "verify nodes"):
+            _mk({}, duet_p1_tree_policy="on",
+                duet_p1_tree_max_nodes=12,
+                duet_p1_tree_verify_nodes=13)
+
     def test_tree_response_can_exceed_chain_depth(self):
         c = _mk({}, duet_p1_tree_policy="on",
                 duet_p1_tree_max_nodes=18,

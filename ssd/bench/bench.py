@@ -132,9 +132,15 @@ def parse_arguments():
     parser.add_argument("--duet_tree_c_tensor", type=int, default=3,
                         help="Dynamic tree: maximum ordered child samples per parent.")
     parser.add_argument("--duet_p1_tree_max_nodes", type=int, default=18,
-                        help="Maximum P1 tree nodes sent for one cache hit.")
+                        help="Maximum P1 tree nodes generated per cache root.")
     parser.add_argument("--duet_p2_tree_max_nodes", type=int, default=8,
-                        help="Maximum P2 tree nodes sent for one cache hit.")
+                        help="Maximum P2 tree nodes generated per cache root.")
+    parser.add_argument("--duet_p1_tree_verify_nodes", type=int, default=None,
+                        help="Maximum P1 tree nodes reranked and sent on a hit. "
+                             "Default: all generated P1 nodes.")
+    parser.add_argument("--duet_p2_tree_verify_nodes", type=int, default=None,
+                        help="Maximum P2 tree nodes reranked and sent on a hit. "
+                             "Default: all generated P2 nodes.")
     parser.add_argument("--duet_p1_roots_per_position", type=int, default=2,
                         help="Uniform number of P1 root candidates per glue position.")
     parser.add_argument("--duet_p1_tree_forward_scale", type=float,
@@ -373,6 +379,12 @@ def create_llm_kwargs(args, draft_path):
                 args.duet_p1_tree_max_nodes
             llm_kwargs["duet_p2_tree_max_nodes"] = \
                 args.duet_p2_tree_max_nodes
+            if args.duet_p1_tree_verify_nodes is not None:
+                llm_kwargs["duet_p1_tree_verify_nodes"] = \
+                    args.duet_p1_tree_verify_nodes
+            if args.duet_p2_tree_verify_nodes is not None:
+                llm_kwargs["duet_p2_tree_verify_nodes"] = \
+                    args.duet_p2_tree_verify_nodes
             llm_kwargs["duet_p1_roots_per_position"] = \
                 args.duet_p1_roots_per_position
             llm_kwargs["duet_p1_tree_forward_scale"] = \

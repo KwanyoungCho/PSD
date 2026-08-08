@@ -11,8 +11,97 @@ import numpy as np
 import math
 import os
 import torch
+from collections import defaultdict
 
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
+
+
+def rerank_tree_indices(parent_local, sibling_order, raw_q,
+                        max_nodes: int) -> list[int]:
+    """Select a confidence-ranked, lossless-safe subtree.
+
+    EAGLE-2 ranks final draft nodes by cumulative draft confidence.  DUET's
+    temperature>0 verifier has one extra constraint: siblings are ordered
+    samples without replacement.  Retaining sibling ``s`` therefore also
+    requires siblings ``0..s-1`` from the same parent, in addition to every
+    ancestor.  Otherwise the retained token was not sampled from the proposal
+    distribution used by the verifier.
+
+    Candidates are visited by descending cumulative path confidence.  A
+    candidate is admitted only when its complete prerequisite closure fits in
+    ``max_nodes``.  The result is returned in original generation order, which
+    preserves parent-before-child and sibling order on the response wire.
+    """
+    par = [int(x) for x in parent_local]
+    sib = [int(x) for x in sibling_order]
+    q = [float(x) for x in raw_q]
+    n = len(par)
+    if len(sib) != n or len(q) != n:
+        raise ValueError("tree rerank inputs must have equal length")
+    cap = int(max_nodes)
+    if cap < 1:
+        raise ValueError(f"tree rerank max_nodes must be positive; got {cap}")
+
+    siblings = defaultdict(dict)
+    path_conf = [0.0] * n
+    for j, (p, s, qj) in enumerate(zip(par, sib, q)):
+        if p < -1 or p >= j:
+            raise ValueError(
+                f"tree rerank parent invariant failed at {j}: {p}")
+        if s < 0 or s in siblings[p]:
+            raise ValueError(
+                f"tree rerank sibling invariant failed at {j}: "
+                f"parent={p}, sibling={s}")
+        siblings[p][s] = j
+        qj = qj if math.isfinite(qj) and qj > 0.0 else 0.0
+        path_conf[j] = qj * (1.0 if p < 0 else path_conf[p])
+    for p, group in siblings.items():
+        if sorted(group) != list(range(len(group))):
+            raise ValueError(
+                "tree rerank requires contiguous sibling order: "
+                f"parent={p}, orders={sorted(group)}")
+    if cap >= n:
+        return list(range(n))
+
+    closure_cache = {}
+
+    def _closure(node):
+        cached = closure_cache.get(node)
+        if cached is not None:
+            return cached
+        need = set()
+        j = node
+        while j >= 0:
+            p = par[j]
+            for order in range(sib[j] + 1):
+                prior = siblings[p].get(order)
+                if prior is None:
+                    raise ValueError(
+                        "tree rerank requires contiguous sibling order: "
+                        f"parent={p}, missing={order}")
+                need.add(prior)
+            j = p
+        closure_cache[node] = need
+        return need
+
+    selected = set()
+    ranked = sorted(range(n), key=lambda j: (-path_conf[j], j))
+    for j in ranked:
+        expanded = selected | _closure(j)
+        if len(expanded) <= cap:
+            selected = expanded
+
+    # The confidence pass can leave a hole only when every remaining node has
+    # a prerequisite group larger than the free capacity.  Try generation
+    # order as a deterministic best-effort fill; never violate the hard cap.
+    if len(selected) < cap:
+        for j in range(n):
+            expanded = selected | _closure(j)
+            if len(expanded) <= cap:
+                selected = expanded
+            if len(selected) == cap:
+                break
+    return sorted(selected)
 
 
 def filter_unservable_tree_matches(match: torch.Tensor,

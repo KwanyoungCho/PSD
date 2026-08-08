@@ -9,7 +9,8 @@ from ssd.engine.helpers.p1_tree import (
     build_uniform_p1_roots, choose_p1_context_bucket,
     p1_context_buckets)
 from ssd.engine.helpers.p2_tree import (
-    q_probs_from_logits, selected_q_probs_from_logits)
+    q_probs_from_logits, rerank_tree_indices,
+    selected_q_probs_from_logits)
 from ssd.utils.async_helpers.async_spec_helpers import (
     compute_megaspec_lookahead, compute_tree_forward_width)
 
@@ -141,6 +142,93 @@ class TestP1UniformRoots(unittest.TestCase):
             self.assertEqual(out[name].data_ptr(), buf.data_ptr(), name)
         self.assertEqual(out["valid"].tolist(),
                          [True] * 6 + [False, False])
+
+
+class TestTreeHitRerank(unittest.TestCase):
+    def test_keeps_ancestors_and_prior_wor_siblings(self):
+        # Node 2 is the highest-confidence child, but it is sibling order 2.
+        # Lossless DUET must retain siblings 0 and 1 before it.  Node 4 also
+        # requires parent node 0.
+        par = [-1, -1, -1, 0, 0, 3]
+        sib = [0, 1, 2, 0, 1, 0]
+        raw = [0.05, 0.10, 0.80, 0.9, 0.8, 0.9]
+        keep = rerank_tree_indices(par, sib, raw, 4)
+        self.assertEqual(keep, [0, 1, 2, 3])
+
+    def test_descendant_selection_is_parent_closed_and_remappable(self):
+        par = [-1, -1, 0, 2, 3, 1]
+        sib = [0, 1, 0, 0, 0, 0]
+        raw = [0.9, 0.2, 0.9, 0.9, 0.9, 0.9]
+        keep = rerank_tree_indices(par, sib, raw, 4)
+        self.assertEqual(keep, [0, 2, 3, 4])
+        remap = {old: new for new, old in enumerate(keep)}
+        compact_par = [(-1 if par[old] < 0 else remap[par[old]])
+                       for old in keep]
+        self.assertEqual(compact_par, [-1, 0, 1, 2])
+
+    def test_equal_or_larger_cap_is_exact_identity(self):
+        par = [-1, -1, 0]
+        sib = [0, 1, 0]
+        raw = [0.4, 0.3, 0.9]
+        self.assertEqual(
+            rerank_tree_indices(par, sib, raw, 3), [0, 1, 2])
+        self.assertEqual(
+            rerank_tree_indices(par, sib, raw, 9), [0, 1, 2])
+
+    def test_rejects_noncontiguous_sibling_order(self):
+        with self.assertRaises(ValueError):
+            rerank_tree_indices([-1], [1], [0.5], 1)
+
+    def test_serving_compaction_remaps_parent_and_parent_q(self):
+        from types import SimpleNamespace
+        from ssd.engine.draft_runner import DraftRunner
+
+        wire = 4
+        stub = SimpleNamespace(
+            config=SimpleNamespace(
+                duet_p1_tree_max_nodes=6,
+                duet_p2_tree_max_nodes=6,
+                duet_p1_tree_verify_nodes=4,
+                duet_p2_tree_verify_nodes=4,
+                duet_tree_wire_nodes=wire),
+            hf_config=SimpleNamespace(vocab_size=100),
+            device=torch.device("cpu"))
+        stub._tree_compact_view = {
+            "tok": torch.zeros(1, wire, dtype=torch.int64),
+            "parent_local": torch.full((1, wire), -1, dtype=torch.int64),
+            "sib_order": torch.zeros(1, wire, dtype=torch.int64),
+            "raw_q": torch.zeros(1, wire),
+            "valid": torch.zeros(1, dtype=torch.int64),
+            "parent_q_ref": torch.full((1, wire), -1,
+                                       dtype=torch.int64),
+            "parent_q_cells": torch.full((1, wire), -1,
+                                         dtype=torch.int64),
+            "u_valid": torch.zeros(1, dtype=torch.int64),
+            "selected_old": torch.zeros(wire, dtype=torch.int64),
+        }
+        views = {
+            "tok": torch.tensor([[10, 11, 12, 13, 14, 15]]),
+            "parent_local": torch.tensor([[-1, -1, -1, 0, 0, 3]]),
+            "sib_order": torch.tensor([[0, 1, 2, 0, 1, 0]]),
+            "raw_q": torch.tensor([[.05, .10, .80, .90, .80, .90]]),
+            "valid": torch.tensor([6]),
+            "parent_q_ref": torch.tensor([[0, 0, 0, 1, 1, 2]]),
+            "parent_q_cells": torch.tensor([[10, 20, 30, -1, -1, -1]]),
+            "u_valid": torch.tensor([3]),
+            "cell_logits": torch.zeros(31, 100),
+        }
+        compact, root, _, _, parsed, original = \
+            DraftRunner._rerank_tree_hit_view(stub, views, 0, 1)
+        self.assertEqual(root, 0)
+        self.assertEqual(original, 6)
+        self.assertEqual(parsed["valid"], 4)
+        self.assertEqual(compact["tok"][0].tolist(), [10, 11, 12, 13])
+        self.assertEqual(
+            compact["parent_local"][0].tolist(), [-1, -1, -1, 0])
+        self.assertEqual(compact["sib_order"][0].tolist(), [0, 1, 2, 0])
+        self.assertEqual(compact["parent_q_ref"][0].tolist(), [0, 0, 0, 1])
+        self.assertEqual(
+            compact["parent_q_cells"][0].tolist(), [10, 20, -1, -1])
 
 
 class TestP1ShapeBuckets(unittest.TestCase):

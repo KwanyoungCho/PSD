@@ -154,6 +154,122 @@ def load_tree_pairs(prefixes: list[Path]) -> list[dict]:
     return rows
 
 
+def _safe_rerank_indices(par: list[int], sib: list[int],
+                         raw_q: list[float], cap: int) -> list[int]:
+    """Offline mirror of p2_tree.rerank_tree_indices.
+
+    Keep this script standalone (it is often run on archived traces without a
+    model environment), but preserve the production rule: every selected node
+    brings its ancestors and all earlier ordered-WOR siblings.
+    """
+    n = len(par)
+    if cap >= n:
+        return list(range(n))
+    groups = defaultdict(dict)
+    conf = [0.0] * n
+    for j, (p, s, q) in enumerate(zip(par, sib, raw_q)):
+        groups[p][s] = j
+        conf[j] = max(0.0, float(q)) * (
+            1.0 if p < 0 else conf[p])
+
+    def closure(node: int) -> set[int]:
+        need = set()
+        while node >= 0:
+            parent = par[node]
+            for order in range(sib[node] + 1):
+                need.add(groups[parent][order])
+            node = parent
+        return need
+
+    chosen = set()
+    for node in sorted(range(n), key=lambda j: (-conf[j], j)):
+        expanded = chosen | closure(node)
+        if len(expanded) <= cap:
+            chosen = expanded
+    if len(chosen) < cap:
+        for node in range(n):
+            expanded = chosen | closure(node)
+            if len(expanded) <= cap:
+                chosen = expanded
+            if len(chosen) == cap:
+                break
+    return sorted(chosen)
+
+
+def summarize_rerank_caps(prefixes: list[Path], caps: list[int]) -> dict:
+    """Estimate useful final-verify caps from already collected hit traces.
+
+    This is an observed-path retention diagnostic, not a counterfactual AL:
+    removing a rejected proposal changes the later residual RNG trajectory.
+    It is nevertheless a cheap way to reject caps that discard many nodes
+    which the target actually accepted before running live A/B tests.
+    """
+    rows = []
+    for prefix in prefixes:
+        drafts = {}
+        for rec in _jsonl(Path(str(prefix) + ".draft.jsonl")):
+            phase = int(rec.get("phase") or 2)
+            drafts[(int(rec["trace_seq"]), phase)] = rec
+        serves = list(_jsonl(Path(str(prefix) + ".serve.jsonl")))
+        walks = list(_jsonl(Path(str(prefix) + ".walk.jsonl")))
+        if len(serves) != len(walks):
+            raise ValueError(f"{prefix}: incomplete serve/walk trace")
+        for serve, walk in zip(serves, walks):
+            phase = int(serve.get("phase") or walk.get("phase") or 2)
+            step = int(serve["step"])
+            root_rank = int(serve["root_rank"])
+            draft = drafts.get((step - 1, phase))
+            if draft is None or root_rank >= len(draft["roots"]):
+                raise ValueError(
+                    f"{prefix}: cannot join served step={step}, "
+                    f"phase={phase}, root={root_rank} to draft trace")
+            root = draft["roots"][root_rank]
+            valid = int(serve["valid"])
+            par = [int(x) for x in root["par"][:valid]]
+            sib = [int(x) for x in root["sib"][:valid]]
+            if par != [int(x) for x in serve["par"][:valid]] \
+                    or sib != [int(x) for x in serve["sib"][:valid]]:
+                raise ValueError(
+                    f"{prefix}: joined draft/serve topology differs at "
+                    f"step={step}, phase={phase}, root={root_rank}")
+            rows.append({
+                "phase": phase, "valid": valid, "par": par, "sib": sib,
+                "raw_q": [float(x) for x in root["raw_q"][:valid]],
+                "path": [int(x) for x in walk.get("path", [])],
+            })
+
+    result = {}
+    for phase in sorted({r["phase"] for r in rows}):
+        phase_rows = [r for r in rows if r["phase"] == phase]
+        accepted_total = sum(len(r["path"]) for r in phase_rows)
+        one_phase = {}
+        for cap in caps:
+            sent = retained = full = 0
+            for row in phase_rows:
+                keep = set(_safe_rerank_indices(
+                    row["par"], row["sib"], row["raw_q"], cap))
+                sent += len(keep)
+                prefix_len = 0
+                for node in row["path"]:
+                    if node not in keep:
+                        break
+                    prefix_len += 1
+                retained += prefix_len
+                full += int(prefix_len == len(row["path"]))
+            original_sent = sum(r["valid"] for r in phase_rows)
+            one_phase[str(cap)] = {
+                "trees": len(phase_rows),
+                "mean_verify_nodes": sent / len(phase_rows),
+                "verify_node_reduction": (
+                    1.0 - sent / original_sent if original_sent else 0.0),
+                "observed_accepted_nodes_retained": (
+                    retained / accepted_total if accepted_total else 1.0),
+                "observed_full_paths_retained": full / len(phase_rows),
+            }
+        result[f"p{phase}"] = one_phase
+    return result
+
+
 def _draft_e0_paths(inputs: list[Path]) -> list[Path]:
     out = []
     for value in inputs:
@@ -261,6 +377,10 @@ def main(argv: list[str] | None = None) -> int:
         "--e0-dir", type=Path, nargs="+",
         help="optional E0 directories/files containing P1 root records")
     ap.add_argument("--json-out", type=Path)
+    ap.add_argument(
+        "--rerank-caps",
+        help="comma-separated final verification caps; also joins the draft "
+             "trace and reports observed accepted-path retention")
     args = ap.parse_args(argv)
 
     rows = load_tree_pairs(args.trace_prefix)
@@ -273,6 +393,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.e0_dir:
         result["p1_root_prediction"] = summarize_p1_roots(
             load_p1_root_outcomes(args.e0_dir))
+    if args.rerank_caps:
+        caps = sorted({int(x) for x in args.rerank_caps.split(",") if x})
+        if not caps or min(caps) < 1:
+            ap.error("--rerank-caps must contain positive integers")
+        result["rerank_cap_estimate"] = summarize_rerank_caps(
+            args.trace_prefix, caps)
 
     rendered = json.dumps(result, indent=2, sort_keys=True)
     print(rendered)

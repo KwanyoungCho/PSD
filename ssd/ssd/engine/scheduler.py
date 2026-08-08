@@ -68,8 +68,8 @@ class Scheduler:
                 _p1_context_cap = max(
                     self._sk_K1 + 1,
                     self._sk_K2 + 1,
-                    int(config.duet_p2_tree_max_nodes) + 1,
-                    int(config.duet_p1_tree_max_nodes) + 1,
+                    int(config.duet_p2_tree_verify_nodes) + 1,
+                    int(config.duet_p1_tree_verify_nodes) + 1,
                 )
                 _p1_root_cap = (
                     _p1_context_cap
@@ -87,9 +87,9 @@ class Scheduler:
             self._sk_cells_p2 = self._sk_K2 * self._sk_mq_p2
             self._sk_glue_width = max(
                 self._sk_K1 + 1, self._sk_K2 + 1,
-                (int(config.duet_p1_tree_max_nodes) + 1
+                (int(config.duet_p1_tree_verify_nodes) + 1
                  if config.duet_p1_tree_policy == "on" else 0),
-                (int(config.duet_p2_tree_max_nodes) + 1
+                (int(config.duet_p2_tree_verify_nodes) + 1
                  if config.duet_p2_tree_policy == "on" else 0))
         else:
             self._sk_K1 = 0

@@ -285,8 +285,8 @@ class DraftRunner(ModelRunner):
         from ssd.engine.helpers.p1_tree import p1_context_buckets
         contexts = p1_context_buckets(
             self.config.duet_phase1_k, self.config.duet_phase2_k,
-            self.config.duet_p1_tree_max_nodes,
-            self.config.duet_p2_tree_max_nodes)
+            self.config.duet_p1_tree_verify_nodes,
+            self.config.duet_p2_tree_verify_nodes)
         import time as _time
         torch.cuda.synchronize()
         free0, _ = torch.cuda.mem_get_info(self.device)
@@ -427,11 +427,39 @@ class DraftRunner(ModelRunner):
         self._arange_2kp1 = torch.arange(
             2 * response_w + 1, device=d, dtype=torch.int64)
         self._tree_wire_parent_q_buf = None
+        self._tree_compact_view = None
         if getattr(self.config, "duet_tree_enabled", False):
+            _tree_wire_n = int(self.config.duet_tree_wire_nodes)
             self._tree_wire_parent_q_buf = torch.empty(
-                1, int(self.config.duet_tree_wire_nodes),
+                1, _tree_wire_n,
                 int(self.hf_config.vocab_size),
                 dtype=self.hf_config.torch_dtype, device=d)
+            # Hit-time EAGLE-style reranking writes one compact root into
+            # these fixed buffers.  They are needed only when search width and
+            # verification width differ; keeping them persistent avoids a set
+            # of tiny CUDA allocations on every tree hit.
+            if (int(self.config.duet_p1_tree_verify_nodes)
+                    < int(self.config.duet_p1_tree_max_nodes)
+                    or int(self.config.duet_p2_tree_verify_nodes)
+                    < int(self.config.duet_p2_tree_max_nodes)):
+                self._tree_compact_view = {
+                    "tok": torch.zeros(1, _tree_wire_n, dtype=torch.int64,
+                                       device=d),
+                    "parent_local": torch.full(
+                        (1, _tree_wire_n), -1, dtype=torch.int64, device=d),
+                    "sib_order": torch.zeros(
+                        1, _tree_wire_n, dtype=torch.int64, device=d),
+                    "raw_q": torch.zeros(
+                        1, _tree_wire_n, dtype=torch.float32, device=d),
+                    "valid": torch.zeros(1, dtype=torch.int64, device=d),
+                    "parent_q_ref": torch.full(
+                        (1, _tree_wire_n), -1, dtype=torch.int64, device=d),
+                    "parent_q_cells": torch.full(
+                        (1, _tree_wire_n), -1, dtype=torch.int64, device=d),
+                    "u_valid": torch.zeros(1, dtype=torch.int64, device=d),
+                    "selected_old": torch.zeros(
+                        _tree_wire_n, dtype=torch.int64, device=d),
+                }
 
         # full_layout: 기존 SSD용 (non-DUET + DUET 비활성)
         self.full_layout = create_tree_layout(
@@ -651,6 +679,118 @@ class DraftRunner(ModelRunner):
 
         return spec_activations
 
+    def _rerank_tree_hit_view(self, views, root: int, phase: int):
+        """Return the one-root view actually sent to target verification.
+
+        Generation and verification limits are intentionally separate.  The
+        executor may search a wider tree for every cache root, but once the
+        matching root is known this method keeps only the highest cumulative-
+        confidence subtree that satisfies DUET's parent and ordered-sibling
+        prerequisites.  Default equal limits take the old zero-copy path.
+
+        Returns ``(served_view, served_root, packed_gpu, packed_cpu,
+        parsed_cpu, original_valid)``.
+        """
+        from ssd.engine.helpers.p2_tree import (
+            pack_tree_ints, parse_tree_ints, rerank_tree_indices,
+            validate_tree_ints)
+
+        generated_cap = int(
+            self.config.duet_p1_tree_max_nodes if phase == 1 else
+            self.config.duet_p2_tree_max_nodes)
+        verify_cap = int(
+            self.config.duet_p1_tree_verify_nodes if phase == 1 else
+            self.config.duet_p2_tree_verify_nodes)
+        wire_cap = int(self.config.duet_tree_wire_nodes)
+
+        # The equal-limit case is the established production fast path.  Pack
+        # and validate exactly once, as before reranking was introduced.
+        if verify_cap == generated_cap:
+            packed = pack_tree_ints(views, root, wire_cap)
+            packed_cpu = packed.detach().cpu()
+            parsed = parse_tree_ints(packed_cpu, wire_cap)
+            validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
+            return views, root, packed, packed_cpu, parsed, int(parsed["valid"])
+
+        if self._tree_compact_view is None:
+            raise RuntimeError("tree compact buffers were not preallocated")
+
+        # Read the generated topology at its own width.  This is the same one
+        # mandatory synchronization used to validate a tree before sending;
+        # raw_q is copied after that stream completion and is only a few dozen
+        # bytes for the supported caps.
+        full_packed = pack_tree_ints(views, root, generated_cap)
+        full_cpu = full_packed.detach().cpu()
+        full = parse_tree_ints(full_cpu, generated_cap)
+        validate_tree_ints(
+            full, generated_cap, self.hf_config.vocab_size)
+        original_valid = int(full["valid"])
+        raw_cpu = views["raw_q"][root, :original_valid] \
+            .detach().float().cpu().tolist()
+        keep = rerank_tree_indices(
+            full["parent_local"][:original_valid],
+            full["sib_order"][:original_valid], raw_cpu, verify_cap)
+        n = len(keep)
+        if n < 1 or n > verify_cap:
+            raise RuntimeError(
+                f"tree rerank produced invalid size {n} for cap {verify_cap}")
+
+        old_to_new = {old: new for new, old in enumerate(keep)}
+        compact_parent = []
+        compact_sibling = []
+        original_refs = []
+        for old in keep:
+            old_parent = int(full["parent_local"][old])
+            compact_parent.append(
+                -1 if old_parent < 0 else old_to_new[old_parent])
+            compact_sibling.append(int(full["sib_order"][old]))
+            original_refs.append(int(full["parent_q_ref"][old]))
+        unique_refs = []
+        ref_map = {}
+        compact_refs = []
+        for ref in original_refs:
+            if ref not in ref_map:
+                ref_map[ref] = len(unique_refs)
+                unique_refs.append(ref)
+            compact_refs.append(ref_map[ref])
+        u_valid = len(unique_refs)
+
+        out = self._tree_compact_view
+        out["tok"].zero_()
+        out["parent_local"].fill_(-1)
+        out["sib_order"].zero_()
+        out["raw_q"].zero_()
+        out["parent_q_ref"].fill_(-1)
+        out["parent_q_cells"].fill_(-1)
+        out["valid"].fill_(n)
+        out["u_valid"].fill_(u_valid)
+        out["selected_old"][:n].copy_(torch.tensor(
+            keep, dtype=torch.int64, device=self.device))
+        selected = out["selected_old"][:n]
+        out["tok"][0, :n].copy_(
+            views["tok"][root].index_select(0, selected))
+        out["raw_q"][0, :n].copy_(
+            views["raw_q"][root].index_select(0, selected))
+        out["parent_local"][0, :n].copy_(torch.tensor(
+            compact_parent, dtype=torch.int64, device=self.device))
+        out["sib_order"][0, :n].copy_(torch.tensor(
+            compact_sibling, dtype=torch.int64, device=self.device))
+        out["parent_q_ref"][0, :n].copy_(torch.tensor(
+            compact_refs, dtype=torch.int64, device=self.device))
+        original_qref = torch.tensor(
+            unique_refs, dtype=torch.int64, device=self.device)
+        out["parent_q_cells"][0, :u_valid].copy_(
+            views["parent_q_cells"][root].index_select(0, original_qref))
+        # Full-vocabulary logits stay in the executor-owned persistent matrix;
+        # only tiny row ids above are compacted.
+        out["cell_logits"] = views["cell_logits"]
+
+        packed = pack_tree_ints(out, 0, wire_cap)
+        packed_cpu = packed.detach().cpu()
+        parsed = parse_tree_ints(packed_cpu, wire_cap)
+        validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
+        return out, 0, packed, packed_cpu, parsed, original_valid
+
     def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None):
         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
         # Draft model now returns full target vocab size logits (after d2t expansion)
@@ -857,25 +997,17 @@ class DraftRunner(ModelRunner):
                         out_activations[sel, :_cache_w] = \
                             self.tree_cache_activations[idx[sel]]
                 if _tree_payload_hit:
-                    from ssd.engine.helpers.p2_tree import (
-                        pack_tree_ints, parse_tree_ints,
-                        validate_tree_ints)
-                    _root = (int(idx[0]) if _phase == 1 else
-                             int(idx[0]) - self._last_n_draft_keys)
-                    _phase_nv = (self.config.duet_p1_tree_max_nodes
-                                 if _phase == 1 else
-                                 self.config.duet_p2_tree_max_nodes)
-                    _wire_nv = self.config.duet_tree_wire_nodes
-                    # Pack first, then use the already-required validation
-                    # readback as the sole source of the data-dependent row
-                    # count.  Reading ``valid[root]`` separately introduced
-                    # an additional GPU->CPU synchronization on every hit.
-                    _packed_ints = pack_tree_ints(
-                        _tviews, _root, _wire_nv)
-                    _packed_cpu = _packed_ints.detach().cpu()
-                    _parsed = parse_tree_ints(_packed_cpu, _wire_nv)
-                    validate_tree_ints(
-                        _parsed, _wire_nv, self.hf_config.vocab_size)
+                    _source_root = (int(idx[0]) if _phase == 1 else
+                                    int(idx[0])
+                                    - self._last_n_draft_keys)
+                    _source_views = _tviews
+                    (_tviews, _root, _packed_ints, _packed_cpu, _parsed,
+                     _original_valid) = self._rerank_tree_hit_view(
+                         _source_views, _source_root, _phase)
+                    _phase_nv = (
+                        self.config.duet_p1_tree_verify_nodes
+                        if _phase == 1 else
+                        self.config.duet_p2_tree_verify_nodes)
                     _n_valid = int(_parsed["valid"])
                     if _n_valid > 0:
                         out_tokens[0, :_phase_nv] = \
@@ -918,20 +1050,23 @@ class DraftRunner(ModelRunner):
                             _vn = int(_parsed["valid"])
 
                             def _trace_root_scalar(name):
-                                value = _tviews.get(name)
-                                if value is None or _root >= value.numel():
+                                value = _source_views.get(name)
+                                if (value is None
+                                        or _source_root >= value.numel()):
                                     return None
-                                return float(value.reshape(-1)[_root])
+                                return float(
+                                    value.reshape(-1)[_source_root])
 
-                            _root_ctx = _tviews.get("root_context_ids")
+                            _root_ctx = _source_views.get("root_context_ids")
                             _root_ctx = (None if _root_ctx is None else
-                                         int(_root_ctx.reshape(-1)[_root]))
+                                         int(_root_ctx.reshape(-1)[
+                                             _source_root]))
                             with open(_trace_prefix + ".serve.jsonl", "a") \
                                     as _f:
                                 _f.write(_json.dumps({
                                     "step": int(self._request_step_id),
                                     "phase": _phase,
-                                    "root_rank": _root,
+                                    "root_rank": _source_root,
                                     "root_context_id": _root_ctx,
                                     "root_start_score": _trace_root_scalar(
                                         "root_score"),
@@ -939,6 +1074,7 @@ class DraftRunner(ModelRunner):
                                         "root_context_reach"),
                                     "root_local_q": _trace_root_scalar(
                                         "root_local_q"),
+                                    "generated_valid": _original_valid,
                                     "valid": _vn,
                                     "par": [int(x) for x in
                                             _parsed["parent_local"][:_vn]],
@@ -1249,8 +1385,8 @@ class DraftRunner(ModelRunner):
                 if self._tree_served_ints is not None else 1
             _, _pq_rows = tree_response_logit_rows(
                 _valid_tree, self._tree_hit_phase, K,
-                self.config.duet_p1_tree_max_nodes,
-                self.config.duet_p2_tree_max_nodes)
+                self.config.duet_p1_tree_verify_nodes,
+                self.config.duet_p2_tree_verify_nodes)
             # Metadata was sent first, so the target posts the same exact
             # valid-row receive.  Do not send the unused phase-cap tail: P1
             # root thresholding deliberately produces many shallow trees.
@@ -2753,8 +2889,8 @@ class DraftRunner(ModelRunner):
         _ev_root = _mr("p1_root_build")
         buckets = p1_context_buckets(
             self.config.duet_phase1_k, self.config.duet_phase2_k,
-            self.config.duet_p1_tree_max_nodes,
-            self.config.duet_p2_tree_max_nodes)
+            self.config.duet_p1_tree_verify_nodes,
+            self.config.duet_p2_tree_verify_nodes)
         context_bucket = choose_p1_context_bucket(contexts, buckets)
         ex = self._ensure_p1_exec(context_bucket)
         pfo = int(self.config.duet_p1_roots_per_position)

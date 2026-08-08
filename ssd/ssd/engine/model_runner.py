@@ -258,9 +258,9 @@ class ModelRunner:
         # FlashInfer state required for correctness.
         verify_buckets = set()
         if self.config.duet_p1_tree_policy == "on":
-            verify_buckets.add(int(self.config.duet_p1_tree_max_nodes))
+            verify_buckets.add(int(self.config.duet_p1_tree_verify_nodes))
         if self.config.duet_p2_tree_policy == "on":
-            verify_buckets.add(int(self.config.duet_p2_tree_max_nodes))
+            verify_buckets.add(int(self.config.duet_p2_tree_verify_nodes))
         if not verify_buckets:
             verify_buckets.add(nv)
 
