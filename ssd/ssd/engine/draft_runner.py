@@ -2763,7 +2763,15 @@ class DraftRunner(ModelRunner):
             partial_tree_decode_args["temperatures"][:1].expand(contexts),
             sampler_x=self.config.sampler_x,
             async_fan_out=self.config.async_fan_out,
-            root_width=ex.R, context_glue_rows=context_glue_rows)
+            root_width=ex.R, context_glue_rows=context_glue_rows,
+            output_buffers={
+                "tokens": ex.in_root_tok,
+                "scores": ex.in_root_piv,
+                "context_ids": ex.in_root_context_ids,
+                "valid": ex.in_root_valid,
+                "glue_rows": ex.in_glue[:, :contexts],
+                "context_reach": ex.in_context_reach[:contexts],
+            })
         if int(roots["real_roots"]) != real_roots:
             raise RuntimeError("P1 root count changed during construction")
         _mc("p1_root_build", _ev_root)
@@ -2811,14 +2819,10 @@ class DraftRunner(ModelRunner):
         _mc("p1_slot_prepare", _ev_slot)
 
         event = _mr("p1_prepare")
-        ex.in_root_tok.copy_(roots["tokens"])
-        ex.in_root_piv.copy_(roots["scores"])
         root_ctx = roots["context_ids"].to(torch.int64)
         depth = context_depth.to(self.device, torch.int64)
         ex.in_rope_base.copy_(
             num_tokens0 + depth.index_select(0, root_ctx))
-        ex.in_glue.zero_()
-        ex.in_glue[:, :contexts].copy_(roots["glue_rows"])
         ex.in_glue_w.fill_(contexts)
         ex.in_temps.copy_(
             partial_tree_decode_args["temperatures"][:1].expand(ex.W))

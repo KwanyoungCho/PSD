@@ -77,6 +77,7 @@ def build_uniform_p1_roots(
     async_fan_out: int,
     root_width: int | None = None,
     context_glue_rows: torch.Tensor | None = None,
+    output_buffers: dict[str, torch.Tensor] | None = None,
 ) -> dict[str, torch.Tensor | int]:
     """Build uniform P1 roots and their initial confidence on device.
 
@@ -89,6 +90,10 @@ def build_uniform_p1_roots(
             the tail is finite zero-score padding and never produces a view.
         context_glue_rows: optional ``[P,G]`` visibility rows.  Chain inputs
             default to a lower-triangular visibility matrix.
+        output_buffers: optional persistent tensors named ``tokens``,
+            ``scores``, ``context_ids``, ``valid``, ``glue_rows`` and
+            ``context_reach``.  Production passes executor-owned buffers so
+            root preparation does not allocate and then copy the same data.
 
     Returns fixed-address-friendly tensors ``tokens/scores/context_ids/valid``
     of length ``root_width`` plus root-specific glue rows.
@@ -183,26 +188,42 @@ def build_uniform_p1_roots(
             device=glue_logits.device, dtype=torch.uint8)
     root_glue = context_glue_rows.index_select(0, ctx)
 
-    out_tok = torch.zeros(width, dtype=torch.int64, device=glue_logits.device)
-    out_score = torch.zeros(
-        width, dtype=torch.float32, device=glue_logits.device)
-    out_ctx = torch.zeros(width, dtype=torch.int64, device=glue_logits.device)
-    out_valid = torch.zeros(width, dtype=torch.bool, device=glue_logits.device)
-    out_glue = torch.zeros(
-        width, root_glue.shape[1], dtype=torch.uint8,
-        device=glue_logits.device)
+    output_buffers = output_buffers or {}
+
+    def _buffer(name, shape, dtype):
+        out = output_buffers.get(name)
+        if out is None:
+            return torch.zeros(shape, dtype=dtype, device=glue_logits.device)
+        if tuple(out.shape) != tuple(shape) or out.dtype != dtype \
+                or out.device != glue_logits.device:
+            raise ValueError(
+                f"P1 root output buffer {name} must be "
+                f"shape={tuple(shape)} dtype={dtype} "
+                f"device={glue_logits.device}; got shape={tuple(out.shape)} "
+                f"dtype={out.dtype} device={out.device}")
+        out.zero_()
+        return out
+
+    out_tok = _buffer("tokens", (width,), torch.int64)
+    out_score = _buffer("scores", (width,), torch.float32)
+    out_ctx = _buffer("context_ids", (width,), torch.int64)
+    out_valid = _buffer("valid", (width,), torch.bool)
+    out_glue = _buffer(
+        "glue_rows", (width, root_glue.shape[1]), torch.uint8)
+    out_reach = _buffer("context_reach", (p,), torch.float32)
     out_tok[:real_roots] = root_tok
     out_score[:real_roots] = root_score
     out_ctx[:real_roots] = ctx
     out_valid[:real_roots] = True
     out_glue[:real_roots] = root_glue
+    out_reach.copy_(context_reach)
     return {
         "tokens": out_tok,
         "scores": out_score,
         "context_ids": out_ctx,
         "valid": out_valid,
         "glue_rows": out_glue,
-        "context_reach": context_reach,
+        "context_reach": out_reach,
         "real_roots": real_roots,
         "width": width,
     }
@@ -284,6 +305,16 @@ class P1TreeExecutor(P2TreeExecutor):
         self.forward_scale = scale
         self.continuation_width = continuation_width
         self.chain_forward_width = chain_width
+        # Persistent root-preparation outputs.  They are populated on the
+        # caller stream immediately before graph replay and are also the
+        # executor's fixed graph inputs, removing a second set of allocations
+        # and HBM copies from every P1 step.
+        self.in_root_context_ids = torch.zeros(
+            root_count, dtype=torch.int64, device=device)
+        self.in_root_valid = torch.zeros(
+            root_count, dtype=torch.bool, device=device)
+        self.in_context_reach = torch.zeros(
+            int(context_bucket), dtype=torch.float32, device=device)
         # P1 and P2 intentionally share one expansion algorithm.  P1's
         # in_root_piv contains context-reach * root-token probability, which
         # occupies the same ranking role as P2's target proxy prior.

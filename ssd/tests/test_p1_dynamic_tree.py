@@ -109,6 +109,25 @@ class TestP1UniformRoots(unittest.TestCase):
                 2, torch.ones(3), sampler_x=None, async_fan_out=3,
                 root_width=5)
 
+    def test_persistent_output_buffers_are_reused(self):
+        logits = torch.arange(18, dtype=torch.float32).view(3, 6)
+        buffers = {
+            "tokens": torch.empty(8, dtype=torch.int64),
+            "scores": torch.empty(8, dtype=torch.float32),
+            "context_ids": torch.empty(8, dtype=torch.int64),
+            "valid": torch.empty(8, dtype=torch.bool),
+            "glue_rows": torch.empty(8, 3, dtype=torch.uint8),
+            "context_reach": torch.empty(3, dtype=torch.float32),
+        }
+        out = build_uniform_p1_roots(
+            logits, torch.tensor([0, 1, 2]), 2, torch.ones(3),
+            sampler_x=None, async_fan_out=3, root_width=8,
+            output_buffers=buffers)
+        for name, buf in buffers.items():
+            self.assertEqual(out[name].data_ptr(), buf.data_ptr(), name)
+        self.assertEqual(out["valid"].tolist(),
+                         [True] * 6 + [False, False])
+
 
 class TestP1ShapeBuckets(unittest.TestCase):
     def test_both_trees_reserve_draft_graph_headroom(self):
