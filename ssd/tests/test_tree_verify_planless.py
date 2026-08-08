@@ -1,9 +1,9 @@
-"""Target tree-verify CUDA graph page-canvas equivalence.
+"""Target tree-verify CUDA graph page-bucket equivalence.
 
 FlashInfer plan output is launch geometry, not mutable tensor content.  A
-graph must therefore be captured per page count.  Within that bucket we use a
-full-last-page canvas and zero-mask the tail.  This test compares that captured
-canvas execution against an exact-length eager attention run.
+graph must therefore be captured per page count.  The final page length, page
+ids and mask remain exact runtime values.  This test compares that captured
+execution against an exact-length eager attention run.
 """
 import unittest
 
@@ -23,7 +23,7 @@ from ssd.engine.helpers.cudagraph_helpers import (
 @unittest.skipUnless(HAS_FLASHINFER and torch.cuda.is_available(),
                      "CUDA FlashInfer is required")
 class TestTreeVerifyPlanless(unittest.TestCase):
-    def test_page_specific_canvas_graph_matches_exact_eager(self):
+    def test_page_specific_graph_matches_exact_eager(self):
         dev = torch.device("cuda:0")
         page, rows, max_pages = 16, 7, 5
         h, hkv, dim = 4, 2, 64
@@ -57,7 +57,6 @@ class TestTreeVerifyPlanless(unittest.TestCase):
 
         for n_pages, last_len in ((1, 1), (2, page - 1), (3, page)):
             kv_len = (n_pages - 1) * page + last_len
-            canvas_len = n_pages * page
             page_ids = torch.arange(
                 n_pages - 1, -1, -1, dtype=torch.int32, device=dev)
             mask = torch.zeros(rows, kv_len, dtype=torch.bool)
@@ -67,14 +66,9 @@ class TestTreeVerifyPlanless(unittest.TestCase):
                 mask[row, prefix:min(kv_len, prefix + row + 1)] = True
             packed_cpu = torch.from_numpy(np.packbits(
                 mask.numpy().reshape(-1), bitorder="little"))
-            canvas_mask = torch.zeros(rows, canvas_len, dtype=torch.bool)
-            canvas_mask[:, :kv_len] = mask
-            canvas_packed = torch.from_numpy(np.packbits(
-                canvas_mask.numpy().reshape(-1), bitorder="little"))
-
             # Capture with page-count-specific launch geometry and a full
-            # final page.  Dynamic page ids and mask contents are installed
-            # exactly as production does immediately before replay.
+            # representative final page.  The real final length, page ids
+            # and mask are installed immediately before replay.
             wrapper.plan(
                 qo.to(dev),
                 torch.tensor([0, n_pages], dtype=torch.int32, device=dev),
@@ -82,7 +76,7 @@ class TestTreeVerifyPlanless(unittest.TestCase):
                 torch.tensor([page], dtype=torch.int32, device=dev),
                 h, hkv, dim, page,
                 custom_mask=torch.zeros(
-                    rows * canvas_len, dtype=torch.bool, device=dev),
+                    rows * n_pages * page, dtype=torch.bool, device=dev),
                 q_data_type=torch.float16, kv_data_type=torch.float16)
             out.copy_(wrapper.run(q, cache))
             torch.cuda.synchronize()
@@ -91,29 +85,29 @@ class TestTreeVerifyPlanless(unittest.TestCase):
                 out.copy_(wrapper.run(q, cache))
             host = {
                 "kv": torch.tensor([0, n_pages], dtype=torch.int32),
-                "last": torch.tensor([page], dtype=torch.int32),
-                "mask": torch.tensor([0, rows * canvas_len],
+                "last": torch.tensor([last_len], dtype=torch.int32),
+                "mask": torch.tensor([0, rows * kv_len],
                                      dtype=torch.int32),
-                "klen": torch.tensor([canvas_len], dtype=torch.int32),
+                "klen": torch.tensor([kv_len], dtype=torch.int32),
             }
             update_tree_verify_graph_buffers(
-                wrapper, page_ids, canvas_packed, host)
+                wrapper, page_ids, packed_cpu, host)
             graph.replay()
             torch.cuda.synchronize()
-            canvas_out = out.clone()
+            graph_out = out.clone()
 
             eager.plan(
                 qo, host["kv"], page_ids,
-                torch.tensor([last_len], dtype=torch.int32),
+                host["last"],
                 h, hkv, dim, page,
                 packed_custom_mask=packed_cpu.to(dev),
                 q_data_type=torch.float16, kv_data_type=torch.float16)
             exact_out = eager.run(q, cache)
             torch.cuda.synchronize()
             self.assertTrue(
-                torch.allclose(canvas_out, exact_out, atol=2e-3, rtol=2e-3),
+                torch.allclose(graph_out, exact_out, atol=2e-3, rtol=2e-3),
                 f"n_pages={n_pages}, last={last_len}, "
-                f"max_diff={(canvas_out - exact_out).abs().max().item()}")
+                f"max_diff={(graph_out - exact_out).abs().max().item()}")
 
 
 if __name__ == "__main__":

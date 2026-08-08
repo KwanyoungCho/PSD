@@ -1204,10 +1204,10 @@ def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
     launch geometry from the KV page shape.  Rewriting its buffers after a
     graph was captured does *not* rewrite that launch geometry, so a graph
     captured with one page cannot safely serve a three-page request.  Capture
-    every reachable page count once.  Within a page bucket the last page is a
-    full-page canvas and the packed mask hides columns beyond the real
-    ``kv_len``; this keeps shape/launch fixed while token values and topology
-    remain dynamic.
+    every reachable page count once.  Page ids, the final page's real length,
+    and mask contents remain runtime buffer values.  In particular, do not
+    expose the unwritten tail of the final page as a canvas: masked garbage
+    can still poison fused attention arithmetic.
     """
     config = model_runner.config
     hf_config = config.hf_config
