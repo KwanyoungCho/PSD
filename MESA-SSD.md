@@ -355,6 +355,13 @@ arena reset, child 삽입, root-local view 기록과 metadata 구성을 작은 T
 kernel로 융합했다. boolean indexing의 숨은 synchronization과 중복 scatter를
 사용하지 않는다.
 
+Tree hit에서는 chain용 전체-vocabulary backbone logits를 만들거나 cache에서
+복사하지 않는다. 실제 tree node의 부모 분포만 executor의 고정 buffer에서
+모아 보내며, phase 상한까지 padding하지 않고 실제 valid node 행만 전송한다.
+staging tensor도 매 hit마다 새로 할당하지 않고 시작할 때 한 번 만든다. 현재
+tree payload는 B=1 계약이므로, B>1 요청에서 이전 B=1 tree row가 우연히 key와
+일치하면 chain payload로 오독하지 않고 miss로 처리한다.
+
 #### page bucket 사전 준비
 
 FlashInfer plan과 CUDA Graph를 가능한 page bucket별로 요청 전에 만든다.

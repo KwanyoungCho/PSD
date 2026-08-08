@@ -182,6 +182,23 @@ class TestP1ShapeBuckets(unittest.TestCase):
 
 
 class TestAsyncResponseEnvelope(unittest.TestCase):
+    def test_batched_lookup_cannot_downgrade_tree_rows_to_chain(self):
+        from ssd.engine.helpers.p2_tree import \
+            filter_unservable_tree_matches
+
+        match = torch.tensor([[True, True, False],
+                              [False, True, True]])
+        kinds = torch.tensor([False, True, False])
+        self.assertTrue(torch.equal(
+            filter_unservable_tree_matches(match, kinds, 2),
+            torch.tensor([[True, False, False],
+                          [False, False, True]])))
+        # A B=1 response can carry the topology/parent-q sidecar and keeps
+        # the exact original match matrix.
+        self.assertIs(filter_unservable_tree_matches(match, kinds, 1), match)
+        with self.assertRaises(ValueError):
+            filter_unservable_tree_matches(match, kinds[:2], 2)
+
     def test_logit_payloads_are_mutually_exclusive(self):
         from ssd.engine.helpers.p2_tree import tree_response_logit_rows
 

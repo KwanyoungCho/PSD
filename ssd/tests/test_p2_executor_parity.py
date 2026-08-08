@@ -244,7 +244,8 @@ class TestExecutorModuleParity(unittest.TestCase):
         model = _MiniDraft(V, H, HKV, D, cache, dev)
         ex = P1TreeExecutor(
             model, model.logits_fn, cfg, dev, PAGE, max_blocks,
-            V, H, HKV, D, context_bucket=10)
+            V, H, HKV, D, context_bucket=10,
+            materialize_backbone_logits=False)
         self.assertEqual((ex.F, ex.W, ex.R), (9, 20, 20))
         self.assertEqual(ex.arena.anc_words, 3)
 
@@ -263,7 +264,12 @@ class TestExecutorModuleParity(unittest.TestCase):
         ex._local_idx = torch.full((ex.arena.capacity,), -1,
                                    dtype=torch.int64, device=dev)
         ex.model.cache.zero_()
+        # Production dynamic-tree serving consumes cell_logits through the
+        # exact parent-q sidecar.  Its old chain-projection tensor must not be
+        # gathered just to be discarded on a tree hit.
+        ex.out_backbone_logits.fill_(17)
         ex.run_once(p0)
+        self.assertTrue(bool((ex.out_backbone_logits == 17).all()))
         ref = {k: getattr(ex, k).clone() for k in (
             "view_tok", "view_par", "view_sib", "out_valid",
             "out_pq_ref", "out_pq_cells")}

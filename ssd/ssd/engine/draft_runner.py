@@ -256,7 +256,8 @@ class DraftRunner(ModelRunner):
                 self.device, self.block_size, self.config.max_blocks,
                 hf.vocab_size, hf.num_attention_heads,
                 hf.num_key_value_heads, hf.head_dim,
-                context_bucket=context_bucket, dtype=hf.torch_dtype)
+                context_bucket=context_bucket, dtype=hf.torch_dtype,
+                materialize_backbone_logits=False)
             self._p1_execs[context_bucket] = ex
         return ex
 
@@ -380,6 +381,12 @@ class DraftRunner(ModelRunner):
         self.tree_cache_tokens = None
         self.tree_cache_logits = None
         self.tree_cache_activations = None
+        # Exact per-row payload kind.  A B=1 dynamic-tree cache row cannot be
+        # downgraded to an ordinary chain response in a later B>1 request:
+        # production tree executors intentionally do not materialize the
+        # unused chain-projection logits.  Such rows are treated as misses
+        # when the response shape cannot carry a tree.
+        self.tree_cache_is_tree = None
         # DUET: keys[:_last_n_draft_keys] = phase 1 (draft-sourced),
         # keys[_last_n_draft_keys:] = phase 2 (proxy-sourced). 0 = non-DUET / not yet populated.
         self._last_n_draft_keys = 0
@@ -401,6 +408,12 @@ class DraftRunner(ModelRunner):
             response_w + 1, device=d, dtype=torch.int64)
         self._arange_2kp1 = torch.arange(
             2 * response_w + 1, device=d, dtype=torch.int64)
+        self._tree_wire_parent_q_buf = None
+        if getattr(self.config, "duet_tree_enabled", False):
+            self._tree_wire_parent_q_buf = torch.empty(
+                1, int(self.config.duet_tree_wire_nodes),
+                int(self.hf_config.vocab_size),
+                dtype=self.hf_config.torch_dtype, device=d)
 
         # full_layout: 기존 SSD용 (non-DUET + DUET 비활성)
         self.full_layout = create_tree_layout(
@@ -690,6 +703,10 @@ class DraftRunner(ModelRunner):
             # Vectorized membership against tensor cache
             eq = (request_keys.unsqueeze(1) == self.tree_cache_keys.unsqueeze(0))  # [B,T,3]
             match = torch.all(eq, dim=2)  # [B,T]
+            from ssd.engine.helpers.p2_tree import \
+                filter_unservable_tree_matches
+            match = filter_unservable_tree_matches(
+                match, self.tree_cache_is_tree, B)
             cache_hits = match.any(dim=1)  # [B]
 
             if self.config.duet_enabled and self._last_n_draft_keys > 0:
@@ -796,12 +813,6 @@ class DraftRunner(ModelRunner):
                 # pads to K_max < K_long). Copy first cache_row_width cols, leave
                 # the rest zero — valid_k tells consumers the meaningful prefix.
                 _cache_w = self.tree_cache_tokens.shape[1]
-                # tokens [T,K]
-                out_tokens[sel, :_cache_w] = self.tree_cache_tokens[idx[sel]]
-                # logits [T,K+1,V]
-                out_logits[sel, :_cache_w] = self.tree_cache_logits[idx[sel]]
-                if self.config.use_eagle:
-                    out_activations[sel, :_cache_w] = self.tree_cache_activations[idx[sel]]
                 # Dynamic-tree hit serving (B=1).  P1 and P2 have separate
                 # executor/view buffers but share one max-padded wire.
                 # out_tokens = 뷰 노드(생성 순서), valid_k = 유효 노드 수 →
@@ -812,9 +823,22 @@ class DraftRunner(ModelRunner):
                 _tviews = (getattr(self, "_p1_tree_views", None)
                            if _phase == 1 else
                            getattr(self, "_tree_views", None))
-                if (_tviews is not None and B == 1
-                        and bool(cache_hits[0])
-                        and _phase in (1, 2)):
+                _tree_payload_hit = (
+                    _tviews is not None and B == 1
+                    and bool(cache_hits[0]) and _phase in (1, 2))
+                if not _tree_payload_hit:
+                    # Ordinary chain response.  Dynamic-tree hits replace
+                    # tokens with the view and send parent-q instead, so
+                    # copying their large chain-projection q cache here was
+                    # pure memory traffic.
+                    out_tokens[sel, :_cache_w] = \
+                        self.tree_cache_tokens[idx[sel]]
+                    out_logits[sel, :_cache_w] = \
+                        self.tree_cache_logits[idx[sel]]
+                    if self.config.use_eagle:
+                        out_activations[sel, :_cache_w] = \
+                            self.tree_cache_activations[idx[sel]]
+                if _tree_payload_hit:
                     from ssd.engine.helpers.p2_tree import (
                         pack_tree_ints, parse_tree_ints,
                         validate_tree_ints)
@@ -847,16 +871,20 @@ class DraftRunner(ModelRunner):
                         self._tree_wire_ints = _packed_ints.to(self.device)
                         # 1b: pq는 서빙 시 hit root만 gather (선제
                         # [R,nv,V] 물질화 제거 — docs/duet/internal/22)
-                        _pqc = _tviews["parent_q_cells"][_root].clamp(
-                            min=0).to(_tviews["cell_logits"].device)
+                        _pqc = _tviews["parent_q_cells"][
+                            _root, :_n_valid].clamp(min=0).to(
+                                _tviews["cell_logits"].device)
                         _pq_live = _tviews["cell_logits"].index_select(
                             0, _pqc).to(device=self.device,
                                        dtype=out_logits.dtype)
-                        self._tree_wire_parent_q = torch.zeros(
-                            1, _wire_nv, self.hf_config.vocab_size,
-                            dtype=out_logits.dtype, device=self.device)
-                        self._tree_wire_parent_q[0, :_phase_nv] = \
-                            _pq_live[:_phase_nv]
+                        if self._tree_wire_parent_q_buf is None:
+                            raise RuntimeError(
+                                "tree parent-q staging buffer was not "
+                                "preallocated")
+                        self._tree_wire_parent_q = \
+                            self._tree_wire_parent_q_buf
+                        self._tree_wire_parent_q[0, :_n_valid].copy_(
+                            _pq_live)
                         self._tree_hit_root = _root
                         self._tree_hit_views = _tviews
                         self._tree_hit_phase = _phase
@@ -2819,7 +2847,8 @@ class DraftRunner(ModelRunner):
                 self.device, self.block_size, self.config.max_blocks,
                 hf.vocab_size, hf.num_attention_heads,
                 hf.num_key_value_heads, hf.head_dim,
-                dtype=hf.torch_dtype)
+                dtype=hf.torch_dtype,
+                materialize_backbone_logits=False)
         return self._p2_exec
 
     @torch.inference_mode()
@@ -5161,6 +5190,14 @@ class DraftRunner(ModelRunner):
             self._s2_gen_at = self._s2_gen
         self.tree_cache_tokens = torch.cat([draft_tokens, proxy_tokens], dim=0)
         self.tree_cache_logits = torch.cat([draft_logits, proxy_logits], dim=0)
+        _p1_tree_rows = getattr(self, "_p1_tree_views", None) is not None
+        _p2_tree_rows = getattr(self, "_tree_views", None) is not None
+        self.tree_cache_is_tree = torch.cat([
+            torch.full((draft_keys.shape[0],), _p1_tree_rows,
+                       dtype=torch.bool, device=self.device),
+            torch.full((proxy_keys.shape[0],), _p2_tree_rows,
+                       dtype=torch.bool, device=self.device),
+        ])
         if draft_acts is not None and proxy_acts is not None:
             self.tree_cache_activations = torch.cat([draft_acts, proxy_acts], dim=0)
         else:

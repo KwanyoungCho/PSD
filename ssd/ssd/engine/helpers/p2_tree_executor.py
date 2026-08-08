@@ -478,7 +478,7 @@ class P2TreeExecutor:
                  num_heads, num_kv_heads, head_dim,
                  dtype=torch.float16, *, phase="p2", width=None,
                  root_count=None, depth=None, max_nodes=None,
-                 glue_width=None):
+                 glue_width=None, materialize_backbone_logits=True):
         self.model = model
         self.compute_logits = compute_logits_fn
         self.cfg = config
@@ -488,6 +488,12 @@ class P2TreeExecutor:
         self.V = vocab_size
         self.H, self.HKV, self.D = num_heads, num_kv_heads, head_dim
         self.dtype = dtype
+        # Dynamic-tree serving sends parent-q rows gathered from cell_logits;
+        # the chain-projection q tensor is not consumed.  Keep it available
+        # by default for standalone parity/reference users, while production
+        # runners disable its large [roots, depth, vocab] gather.
+        self.materialize_backbone_logits = bool(
+            materialize_backbone_logits)
         if phase not in ("p1", "p2"):
             raise ValueError(f"dynamic tree phase must be p1|p2; got {phase}")
         self.phase = phase
@@ -1001,11 +1007,12 @@ class P2TreeExecutor:
         # One bounded gather writes directly to the persistent fp16/bf16
         # buffer.  This avoids the former index_select + where path's large
         # float32 temporaries (OOM at P1 K1=9/max_nodes=18).
-        _gather_backbone_logits(
-            self.cell_logits,
-            self.out_backbone_pcell,
-            self.out_backbone_logits,
-        )
+        if self.materialize_backbone_logits:
+            _gather_backbone_logits(
+                self.cell_logits,
+                self.out_backbone_pcell,
+                self.out_backbone_logits,
+            )
 
     @torch.inference_mode()
     def capture(self, n_pages0, graph_pool=None):

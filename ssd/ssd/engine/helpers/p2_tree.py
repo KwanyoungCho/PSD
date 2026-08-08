@@ -15,6 +15,27 @@ import torch
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
 
 
+def filter_unservable_tree_matches(match: torch.Tensor,
+                                   cache_is_tree: torch.Tensor | None,
+                                   batch_size: int) -> torch.Tensor:
+    """Remove B=1-only tree cache rows from a wider-batch lookup.
+
+    Dynamic-tree production rows deliberately omit chain-projection logits.
+    They therefore must never be served through the ordinary B>1 payload.
+    The returned tensor may alias ``match`` for B=1/no-metadata cases and is
+    otherwise a new boolean tensor, keeping the cache lookup source intact.
+    """
+    if int(batch_size) == 1 or cache_is_tree is None:
+        return match
+    if match.ndim != 2 or cache_is_tree.ndim != 1 \
+            or match.shape[1] != cache_is_tree.numel():
+        raise ValueError(
+            "tree cache match metadata shape mismatch: "
+            f"match={tuple(match.shape)} tree={tuple(cache_is_tree.shape)}")
+    return match & ~cache_is_tree.to(
+        device=match.device, dtype=torch.bool).unsqueeze(0)
+
+
 def tree_response_logit_rows(tree_valid: int, phase_source: int,
                              chain_rows: int, p1_cap: int,
                              p2_cap: int) -> tuple[int, int]:

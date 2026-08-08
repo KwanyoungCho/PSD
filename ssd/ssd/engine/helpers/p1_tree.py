@@ -203,7 +203,8 @@ class P1TreeExecutor(P2TreeExecutor):
     def __init__(self, model, compute_logits_fn, config, device,
                  block_size, max_blocks, vocab_size,
                  num_heads, num_kv_heads, head_dim,
-                 *, context_bucket: int, dtype=torch.float16):
+                 *, context_bucket: int, dtype=torch.float16,
+                 materialize_backbone_logits=True):
         pfo = int(config.duet_p1_roots_per_position)
         root_count = int(context_bucket) * pfo
         scale = float(config.duet_p1_tree_forward_scale)
@@ -215,7 +216,8 @@ class P1TreeExecutor(P2TreeExecutor):
             phase="p1", width=width, root_count=root_count,
             depth=int(config.duet_phase1_k),
             max_nodes=int(config.duet_p1_tree_max_nodes),
-            glue_width=int(context_bucket))
+            glue_width=int(context_bucket),
+            materialize_backbone_logits=materialize_backbone_logits)
         # Three context buckets remove substantial live-lane padding, but a
         # generic 64 MiB FlashInfer workspace for every one of seven page
         # shapes would exhaust the 24 GiB production draft GPU.  The real

@@ -402,6 +402,19 @@ block-table zero-fill, dtype 변환, canvas clone도 제거했다.
 모델 forward 외에 동적 선택과 비복원 sampling이 쓰는 GPU 계산이 chain보다
 여전히 약 2.5--3ms 많다는 뜻이다.
 
+동적 tree hit은 기존 chain 투영 logits를 사용하지 않는다. target이 실제로
+검증할 각 node의 부모 분포는 executor의 `cell_logits`에서 `parent_q_cells`로
+직접 모은다. 따라서 production P1/P2 executor는 과거 호환용
+`[root,depth,vocab]` backbone logits gather를 생략한다. 서빙할 때도 cache의
+chain logits/token 복사를 먼저 한 뒤 tree payload로 덮어쓰지 않으며, 미리 만든
+고정 staging buffer에 **실제 valid node 수만큼** parent-q를 모아 그 행만
+전송한다. 얕은 P1 tree를 phase 최대 N1행으로 pad해 보내지 않는다.
+
+이 최적화는 B=1 tree wire의 계약이다. B>1 요청은 아직 tree payload를 담지
+못하므로, 직전 B=1에서 생성한 dynamic-tree cache row를 chain row로 잘못 읽지
+않고 miss/JIT 경로로 보낸다. 반대로 실제 chain으로 생성된 cache row는 B>1에서
+계속 정상 hit할 수 있다.
+
 ### 5.4 RNG 계약
 
 Graph는 P2 전용 CUDA generator를 등록해 사용한다. replay마다 generator state가
