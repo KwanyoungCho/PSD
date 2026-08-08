@@ -540,6 +540,15 @@ class P2TreeExecutor:
         self.round_offsets = tuple(_offsets)
         self.round_ends = tuple(_ends)
         self.total_cells = int(_offset)
+        # The preplanned attention canvas must cover every compact cell that
+        # follows round zero.  Production P2 and the current K1=9 P1 shape
+        # happen to fit that suffix in one 256-token page, but larger K/F or
+        # smaller page sizes do not.  Keep page count a shape constant so the
+        # same executor remains graph-capturable without silently falling
+        # back when a future configuration crosses that boundary.
+        _continuation_cells = self.total_cells - self.round_ends[0]
+        self.canvas_extra_pages = max(
+            1, (_continuation_cells + self.bs - 1) // self.bs)
         self.C = int(config.duet_tree_c_tensor)
         self.NV = int(
             max_nodes if max_nodes is not None
@@ -744,8 +753,12 @@ class P2TreeExecutor:
         return wr
 
     def prepare_bucket(self, n_pages0):
-        """버킷 = 시작 page 수. round r의 canvas = (p0+1) page 고정
-        (전제 검증: p+1 전체-page 0-mask 안전)."""
+        """Prepare one fixed start-page bucket.
+
+        The suffix canvas is conservatively sized for the worst alignment of
+        round zero.  Masked tail pages may alias a finite valid page, but all
+        pages containing live cells must be real request pages.
+        """
         F, W = self.F, self.W
         float_workspace = self._float_ws_by_bucket.get(n_pages0)
         if float_workspace is None:
@@ -758,7 +771,7 @@ class P2TreeExecutor:
         # narrower continuation rounds must not alias plan workspaces.
         int_workspace_by_width = {}
         for f in range(F):
-            canvas_pages = n_pages0 + 1
+            canvas_pages = n_pages0 + self.canvas_extra_pages
             wf = self.round_widths[f]
             pair = int_workspace_by_width.get(wf, (None, None))
             wr = self._mk_round_wrapper(

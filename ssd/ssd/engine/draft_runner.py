@@ -304,7 +304,8 @@ class DraftRunner(ModelRunner):
             # particular (context,width) combination cannot occur near the
             # model-length boundary.  It also guarantees no first-hit
             # capture appears in a later timeline.
-            max_p0 = int(self.config.max_blocks) - 1
+            max_p0 = (int(self.config.max_blocks)
+                      - int(ex.canvas_extra_pages))
             if setting.lower() == "all":
                 pages = list(range(1, max_p0 + 1))
             else:
@@ -2807,14 +2808,10 @@ class DraftRunner(ModelRunner):
             return None
 
         p0 = (ctx0 + self.block_size - 1) // self.block_size
-        need_pages = p0 + 1
+        need_pages = p0 + int(ex.canvas_extra_pages)
         if p0 < 1 or need_pages > dbt.shape[1]:
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_page_bucket")
-            return None
-        if final_ctx > need_pages * self.block_size:
-            _mc("p1_slot_prepare", _ev_slot)
-            self._p1exec_count("chain_fallback_multi_canvas_page")
             return None
         _mc("p1_slot_prepare", _ev_slot)
 
@@ -2833,9 +2830,13 @@ class DraftRunner(ModelRunner):
             ex.in_ctx_len[f].fill_(first_base + ex.round_ends[f])
         pages = ex.in_page_ids[:need_pages]
         pages.copy_(dbt[0, :need_pages])
-        pages[p0:p0 + 1].copy_(torch.where(
-            pages[p0:p0 + 1] >= 0,
-            pages[p0:p0 + 1], pages[:1]))
+        # Pages that hold live compact cells were already checked through
+        # step_slots above.  Only the masked alignment tail may still be -1;
+        # map that tail to a finite page because FA2 can propagate NaN/Inf
+        # from a masked OOB page (0*Inf is not finite).
+        pages[p0:need_pages].copy_(torch.where(
+            pages[p0:need_pages] >= 0,
+            pages[p0:need_pages], pages[:1]))
         if p0 not in ex.wrappers:
             ex.prepare_bucket(p0)
         for f in range(ex.F):

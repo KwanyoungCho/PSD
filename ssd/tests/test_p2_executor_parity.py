@@ -160,12 +160,14 @@ class TestExecutorModuleParity(unittest.TestCase):
             base = first_base + ex.round_offsets[f]
             pos = base + torch.arange(W)
             pos[wf:] = first_base
-            ex.in_slot[f].copy_((pos % ((p0 + 1) * PAGE))
+            canvas_pages = p0 + ex.canvas_extra_pages
+            ex.in_slot[f].copy_((pos % (canvas_pages * PAGE))
                                 .to(torch.int32).to(ex.dev))
             ex.in_ctx_len[f].fill_(first_base + ex.round_ends[f])
             wr = ex.wrappers[p0][f]
-            wr._paged_kv_indices_buf[:p0 + 1].copy_(
-                torch.arange(p0 + 1, dtype=torch.int32, device=ex.dev))
+            wr._paged_kv_indices_buf[:canvas_pages].copy_(
+                torch.arange(canvas_pages, dtype=torch.int32,
+                             device=ex.dev))
         return p0
 
     def test_eager_equals_replay_with_fixed_noise(self):
@@ -247,12 +249,10 @@ class TestExecutorModuleParity(unittest.TestCase):
     def test_p1_dynamic_executor_eager_equals_replay(self):
         """P1 evaluates every root, then reallocates lanes globally."""
         dev = "cuda:0"
-        # The production draft cache uses 256-token pages.  P1 has 128
-        # compact continuation cells after its first round, so a 64-token
-        # synthetic page would require two extra canvas pages and exercise a
-        # deliberately unsupported runner fallback instead of this executor
-        # parity path.
-        V, H, HKV, D, PAGE = 128, 4, 2, 64, 256
+        # A 64-token page forces the 128-cell continuation to span two extra
+        # canvas pages.  This is the regression case for larger future K/F
+        # shapes; eager and captured execution must remain identical.
+        V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
         cfg = _MiniCfg()
         cfg.duet_tree_policy = "dynamic"
         cfg.duet_p1_tree_conf_threshold = 0.005
@@ -268,6 +268,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         self.assertEqual((ex.F, ex.W, ex.R), (9, 20, 20))
         self.assertEqual(ex.round_widths, (20,) + (16,) * 8)
         self.assertEqual(ex.arena.anc_words, 3)
+        self.assertEqual(ex.canvas_extra_pages, 2)
 
         ctx0 = 2 * PAGE + 21
         p0 = (ctx0 + PAGE - 1) // PAGE
