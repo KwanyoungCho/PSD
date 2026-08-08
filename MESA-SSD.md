@@ -108,6 +108,13 @@ P1이 너무 짧으면 draft가 proxy를 기다리고, 너무 길면 proxy가 �
 P1이 끝나지 않아 P2 시작이 늦어진다. 따라서 K1은 acceptance만 보고 정하지
 않고 `P1 완료 시각 - proxy 도착 시각`이 0에 가까운 값으로 정한다.
 
+현재 P1 dynamic은 기능 구현과 CUDA Graph 실행은 완료됐지만 production
+champion은 아니다. commit `0dc9e9d`의 3-seed P1-only gate에서 P1AL은 평균
+`+1.3%`였지만 P1 hit와 tok/step이 각각 `-1.53%p`, `-0.8%`였고 TPS는
+68.4→43.2로 내려갔다. 일반 context의 20-vs-16 draft lane, tree-hit 뒤 최대
+38 lane, target의 최대 18-node 검증이 실제 모델 계산이기 때문이다. 따라서 새
+실험의 안전한 기준선은 P1 `off`이며, P1 `on`은 정책 연구 arm으로 취급한다.
+
 ---
 
 ## 4. Target early-exit proxy

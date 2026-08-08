@@ -716,6 +716,43 @@ local confidence threshold는 `raw_q`만 보므로 낮은 root prior 뒤에 q≈
 proxy와 같은 root threshold에 연결했다. 값 자체의 calibration은 phase별 score
 분포가 다를 수 있으므로 paired quality/TPS gate에서 다시 확인해야 한다.
 
+### 8.10 P1 root threshold·설정 수정 후 3-seed 판정 (commit 0dc9e9d)
+
+P1-only 설정이 내부 selector를 `off`로 만들고, draft Config 재생성에서는 반대로
+P2까지 켤 수 있던 정규화 결함을 수정했다. 로그에서 target/draft 모두
+`P1_tree=on, P2_tree=off, tree_selector=dynamic`임을 확인한 뒤, eslab17/18에
+seed를 나눠 각 seed의 chain/P1-tree 순서를 회전했다. 각 run은 네 dataset ×
+4 prompt, output 128, profiler off이며 threshold는 기본 `root=0.01`,
+`confidence=0.03`이다. 원 로그는
+`p1_policy_gate_0dc9e9d_eslab17/`과
+`p1_policy_gate_0dc9e9d_eslab18/`에 있다.
+
+| arm 평균 | TPS | tok/step | cache hit | P1 hit | P1AL | P1 기여 | target verify | draft step |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| chain | 68.38 | 3.643 | 0.807 | 0.520 | 3.537 | 2.363 | 48.04 ms | 46.74 ms |
+| P1 dynamic | 43.21 | 3.613 | 0.777 | 0.504 | 3.583 | 2.312 | 63.44 ms | 80.07 ms |
+| tree-chain | -25.17 | -0.030 | -3.00%p | -1.53%p | +0.047 | -0.051 | +15.39 ms | +33.33 ms |
+
+P1AL만 보면 `+1.3%`지만 시작 key를 맞히는 비율이 내려 P1의 전체 step 기여는
+감소했고 tok/step도 `-0.8%`였다. 세 seed 중 P1AL은 하나에서 감소하고 둘에서
+증가했으므로, 시작점수 threshold가 conditional AL의 단조 증가를 보장하지도
+않는다. 이 결과에서 현재 P1 dynamic은 품질·속도 어느 쪽도 production 채택
+기준을 통과하지 못한다.
+
+남은 시간 차이는 더 이상 주로 Python/통신 임시 작업이 아니다. 일반 long
+context에서 chain P1은 16 lane이지만 균등 `2 roots/context` P1은 20 lane을
+9 round 실행한다. 이전 P1-tree hit 뒤에는 최대 19 context×2=38 lane까지
+늘어난다. target도 chain의 최대 9 proposal 대신 P1 tree의 실제 최대 18 node를
+검증한다. 모든 context root를 유지하고, 모든 root를 round 0에 평가하며,
+tree-hit context에도 같은 정책을 재귀 적용한다는 현재 의미를 보존하면 이 모델
+row 수는 kernel 융합으로 제거할 수 없다.
+
+따라서 다음 단계는 threshold 숫자 sweep이 아니라 목표 제약의 선택이다. chain과
+비슷한 latency가 우선이면 (a) chain과 같은 16개 물리 root budget 안에서 시작
+후보를 고르거나, (b) tree-hit 다음 P1은 재귀 tree 대신 chain으로 제한하거나,
+(c) target 검증 node cap을 줄여야 한다. 세 선택 모두 “모든 root/context를
+그대로 유지”하는 현재 정책과는 다른 알고리즘이므로 자동으로 적용하지 않는다.
+
 ---
 
 ## 9. Timeline 해석
