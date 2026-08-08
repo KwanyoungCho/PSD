@@ -15,6 +15,37 @@ import torch
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
 
 
+def tree_response_logit_rows(tree_valid: int, phase_source: int,
+                             chain_rows: int, p1_cap: int,
+                             p2_cap: int) -> tuple[int, int]:
+    """Return ``(ordinary_q_rows, parent_q_rows)`` for one B=1 response.
+
+    The two logit payloads are mutually exclusive.  A chain/miss response
+    needs the ordinary K-wide q tensor, while a dynamic-tree response uses
+    only its parent-q sidecar.  Sending both unconditionally made tree-enabled
+    DUET transfer ``K + max(N1,N2)`` full-vocabulary rows on every request,
+    including misses.  The fused metadata is received first, so both peers
+    can deterministically choose the same following NCCL payload.
+    """
+    tree_valid = int(tree_valid)
+    phase_source = int(phase_source)
+    chain_rows = int(chain_rows)
+    if tree_valid <= 0:
+        return chain_rows, 0
+    if phase_source == 1:
+        cap = int(p1_cap)
+    elif phase_source == 2:
+        cap = int(p2_cap)
+    else:
+        raise ValueError(
+            "active dynamic tree requires phase_source 1 or 2; "
+            f"got phase={phase_source}, valid={tree_valid}")
+    if tree_valid > cap:
+        raise ValueError(
+            f"tree valid={tree_valid} exceeds phase {phase_source} cap={cap}")
+    return 0, cap
+
+
 def pack_tree_verify_mask(mask: torch.Tensor) -> torch.Tensor:
     """Pack a B=1 target tree mask in FlashInfer's little-endian layout.
 

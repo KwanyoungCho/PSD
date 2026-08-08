@@ -117,10 +117,11 @@ class TestP1ShapeBuckets(unittest.TestCase):
 
     def test_buckets_cover_chain_and_tree_contexts(self):
         buckets = p1_context_buckets(9, 4, 13, 8)
+        self.assertIn(5, buckets)   # K2 short-chain contexts
         self.assertIn(10, buckets)  # K1 chain contexts
         self.assertIn(14, buckets)  # max P1 tree + recovery
-        self.assertEqual(buckets, (10, 14))
-        self.assertEqual(choose_p1_context_bucket(5, buckets), 10)
+        self.assertEqual(buckets, (5, 10, 14))
+        self.assertEqual(choose_p1_context_bucket(5, buckets), 5)
         self.assertEqual(choose_p1_context_bucket(8, buckets), 10)
         self.assertEqual(choose_p1_context_bucket(10, buckets), 10)
         with self.assertRaises(ValueError):
@@ -135,7 +136,7 @@ class TestP1ShapeBuckets(unittest.TestCase):
 
     def test_two_x_depth_budget_uses_nineteen_context_canvas(self):
         buckets = p1_context_buckets(9, 4, 18, 8)
-        self.assertEqual(buckets, (10, 19))
+        self.assertEqual(buckets, (5, 10, 19))
         self.assertEqual(choose_p1_context_bucket(19, buckets), 19)
         self.assertEqual(compute_megaspec_lookahead(
             0, 13, split_k1k2=True, K1=9, K2=4,
@@ -181,6 +182,20 @@ class TestP1ShapeBuckets(unittest.TestCase):
 
 
 class TestAsyncResponseEnvelope(unittest.TestCase):
+    def test_logit_payloads_are_mutually_exclusive(self):
+        from ssd.engine.helpers.p2_tree import tree_response_logit_rows
+
+        self.assertEqual(
+            tree_response_logit_rows(0, 0, 13, 18, 8), (13, 0))
+        self.assertEqual(
+            tree_response_logit_rows(14, 1, 13, 18, 8), (0, 18))
+        self.assertEqual(
+            tree_response_logit_rows(7, 2, 13, 18, 8), (0, 8))
+        with self.assertRaises(ValueError):
+            tree_response_logit_rows(9, 2, 13, 18, 8)
+        with self.assertRaises(ValueError):
+            tree_response_logit_rows(1, 0, 13, 18, 8)
+
     def test_token_envelope_widens_without_widening_logits(self):
         from types import SimpleNamespace
         from ssd.engine.helpers.p2_tree import tree_wire_ints_len

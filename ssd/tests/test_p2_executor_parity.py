@@ -277,6 +277,26 @@ class TestExecutorModuleParity(unittest.TestCase):
         self.assertTrue(bool((vt_p1 >= 1).all()))
         self.assertGreater(len(set(vt_p1.tolist())), 1)
 
+    def test_round_wrappers_share_only_same_page_plan_workspace(self):
+        """Identical serial round plans should not allocate F private 8MiB buffers."""
+        dev = "cuda:0"
+        ex, _, PAGE, _ = self._mk(dev, policy="dynamic")
+        ex.prepare_bucket(2)
+        same_page = ex.wrappers[2]
+        self.assertTrue(all(
+            w._int_workspace_buffer.data_ptr()
+            == same_page[0]._int_workspace_buffer.data_ptr()
+            for w in same_page))
+        self.assertTrue(all(
+            w._pin_memory_int_workspace_buffer.data_ptr()
+            == same_page[0]._pin_memory_int_workspace_buffer.data_ptr()
+            for w in same_page))
+
+        ex.prepare_bucket(3)
+        self.assertNotEqual(
+            ex.wrappers[2][0]._int_workspace_buffer.data_ptr(),
+            ex.wrappers[3][0]._int_workspace_buffer.data_ptr())
+
     def test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots(self):
         dev = "cuda:0"
         ex, cfg, PAGE, V = self._mk(dev, policy="backbone")

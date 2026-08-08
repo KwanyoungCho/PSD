@@ -347,9 +347,30 @@ class SpeculatorAsync(SpeculatorBase):
         # 읽도록 self에 스태시 (recv 헬퍼와 함수 스코프가 다름)
         self._tree_ints_step = (self._fused_response[_spec_end:].view(B, -1)
                                 if self._tree_wire_extra else None)
-        dist.recv(self._logits_q, src=self.draft_runner_rank, group=self.async_pg)
-        if self._tree_parent_q is not None:
-            dist.recv(self._tree_parent_q, src=self.draft_runner_rank,
+        # The fused block tells us whether the mutually exclusive next
+        # payload is ordinary chain q or dynamic-tree parent q.  Reading two
+        # tiny metadata scalars here replaces transferring up to 18 unused
+        # full-vocabulary rows on every non-tree step (and K unused rows on a
+        # tree hit).
+        _tree_valid = 0
+        _tree_phase = 0
+        if self._tree_ints_step is not None and B == 1:
+            _tree_valid = int(self._tree_ints_step[0, 0].item())
+            if _tree_valid > 0:
+                _tree_phase = int(phase_source[0].item())
+        if _tree_valid > 0:
+            from ssd.engine.helpers.p2_tree import tree_response_logit_rows
+            _, _pq_rows = tree_response_logit_rows(
+                _tree_valid, _tree_phase, self.K,
+                self.config.duet_p1_tree_max_nodes,
+                self.config.duet_p2_tree_max_nodes)
+            _pq_dst = self._tree_parent_q[:, :_pq_rows]
+            if not _pq_dst.is_contiguous():
+                raise RuntimeError("tree parent-q receive view must be contiguous")
+            dist.recv(_pq_dst, src=self.draft_runner_rank,
+                      group=self.async_pg)
+        else:
+            dist.recv(self._logits_q, src=self.draft_runner_rank,
                       group=self.async_pg)
         _mc("target_recv_response_wait", _mev_recv)
 

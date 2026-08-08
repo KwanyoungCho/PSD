@@ -309,11 +309,12 @@ P2와 다르다. root가 생성된 뒤에는 위 P2 동적 선택과 같은 코�
    view를 갖는다. 다음 request가 그 key를 hit하면 해당 root의 tree 하나만 공통
    wire로 보내고 target이 lossless 검증한다.
 
-기본 형상에서 context bucket은 10과 19 두 개다. U1=2이므로 P1 forward 폭은
-각각 20과 38, round 수는 K1=9다. 첫 번째는 K1/K2 chain과 P2 tree hit를,
-두 번째는 최대 18-node P1 tree hit의 19 context를 처리한다. 가능한 context 수를
-모두 별도 full-model graph로 만들지 않고 이 두 coarse canvas에 zero-score padding을
-사용한다.
+기본 형상에서 context bucket은 5, 10, 19 세 개다. U1=2이므로 P1 forward 폭은
+각각 10, 20, 38이고 round 수는 K1=9다. 5-context bucket은 K2 short/miss 경로,
+10-context bucket은 K1 chain/P2-tree 범위, 19-context bucket은 최대 18-node P1
+tree hit를 처리한다. 과거에는 5-context 요청도 10-context/W20 graph로 실행해
+절반 lane에서 실제 transformer를 낭비했다. 모든 가능한 node 수를 별도 graph로
+만들지는 않고, 위 세 개의 의미 있는 경계 사이만 zero-score padding한다.
 
 P1의 `F*W`는 최대 `9*38=342`라 하나의 64-bit 조상 bitmap에 들어가지 않는다.
 현재 구현은 부호 비트를 피한 63-cell word를 여러 개 사용한다. 이 예에서는 여섯
@@ -653,6 +654,43 @@ forward 대신 일반 hit에서 20 lane, 최대 P1-tree hit 뒤에는 38 lane을
 실행하고, target도 최대 9개가 아닌 18개 node를 검증하기 때문이다. P1 tree는
 기본값으로 승격하지 않고 폭/재귀 context 비용을 줄이는 설계가 선행되어야 한다.
 
+### 8.9 P1 draft/verify 전체 비용 재감사와 의미 보존 수정 (2026-08-08)
+
+위 3-seed gate의 `draft +24.02ms`, verify `+12.16ms`를 코드와 실제 topology로
+다시 귀속했다.
+
+- 짧은 5-context 요청이 W20 graph를 사용했다. P1은 이를 9 round 실행하므로
+  실제 필요한 90 cell 대신 180 cell을 계산했다. 실제 trace 202 step 중 97 step이
+  이 경우였다. 5-context/W10 bucket을 추가했다.
+- tree 기능이 켜지면 응답마다 일반 `K=13` q logits와 최대 `N1=18` parent-q
+  logits를 둘 다 전송했다. non-tree step은 parent-q를 사용하지 않고, tree hit는
+  일반 q를 사용하지 않는다. fused metadata를 먼저 받은 뒤 일반 응답은 K rows만,
+  P1/P2 tree hit는 각각 N1/N2 parent-q rows만 보내도록 프로토콜을 바꿨다.
+- FlashInfer wrapper마다 8MiB integer plan workspace가 새로 생겨 세 번째 context
+  bucket의 첫 smoke가 OOM이었다. 같은 page bucket의 9 round는 plan geometry가
+  완전히 같고 직렬 실행되므로 이 workspace를 공유했다. P1 float workspace도
+  실측 요구량 약 41MiB에 48MiB 여유를 사용한다.
+
+수정 뒤 1 prompt/dataset, output 32의 기능 smoke는 all-page 5/10/19 graph를 모두
+capture하고 44번 replay, fallback/error 없이 끝났다. P1 warmup reserved delta는
+중복 제거 전 3898MiB에서 2216MiB로 줄었고, 과거 10/19 두 버킷의 약 2852MiB보다도
+작다. 이 smoke의 TPS/AL은 표본이 너무 작아 성능 결론으로 사용하지 않는다.
+
+target verify 증가의 대부분은 구현상 padding이 아니었다. 실제 P1 tree hit 105건의
+응답 node 수는 평균 16.70이고, 80건이 상한 18을 채웠다. target은 recovery를
+포함해 대부분 19행을 실제 transformer로 검증한다. 현재 target graph가 18-node
+bucket 하나만 사용해 생기는 추가 padding은 평균 약 1.3 node/tree-hit에 불과하다.
+따라서 node bucket을 많이 추가하는 것은 rank마다 page별 graph workspace를 크게
+늘리는 데 비해 회수 폭이 작다.
+
+남은 핵심은 정책 비용이다. 현재 P1은 hit root의 response를 거의 항상 N1=18까지
+채우며, trace에는 root prior가 `9.5e-7`인 root도 16-node view를 가진 예가 있다.
+local confidence threshold는 `raw_q`만 보므로 낮은 root prior 뒤에 q≈1인 깊은
+경로를 막지 못한다. 다음 정책 실험은 단순 N1 축소가 아니라
+`root prior × cumulative path confidence`의 절대 marginal threshold 또는 target
+검증 row 비용을 뺀 utility를 사용해야 한다. 이는 AL을 바꾸는 연구 변경이므로 위
+의미 보존 최적화와 분리하고 paired quality/TPS gate 전에는 기본값으로 넣지 않는다.
+
 ---
 
 ## 9. Timeline 해석
@@ -939,6 +977,7 @@ Config는 다음을 시작 전에 거부한다.
 | `SSD_TREE_ARENA` | 1 | executor 사전-분류 fallback/참조 경로 허용 |
 | `SSD_TREE_EXEC_WARMUP` | `all` | 가능한 P1/P2 context/page graph를 요청 전 전부 capture |
 | `SSD_TREE_EXEC_WORKSPACE_MB` | 64(기본) | executor FlashInfer workspace 기준 크기 |
+| `SSD_P1_TREE_EXEC_WORKSPACE_MB` | 48(기본) | P1 전용 FA2 workspace; 현재 실측 요구량 약 41MiB |
 | `SSD_TREE_PROXY_GRAPH` | 1 | target tree proxy 계산 CUDA Graph |
 | `SSD_CHAIN_PROXY_GRAPH` | 1 | chain 비교군의 proxy 계산 CUDA Graph |
 | `SSD_DUET_EXIT_REPLICA` | 1 | rank0의 local exit 계산 경로 사용 |
@@ -947,8 +986,9 @@ Config는 다음을 시작 전에 거부한다.
 | `SSD_DIST_PORT` | run별 고유값 | 동시 실행끼리 process-group port 충돌 방지 |
 
 `SSD_TREE_EXEC_WARMUP=all`은 steady-state 측정에서 첫 hit compile/capture를 없애지만
-P2만 켠 과거 실모델에서는 약 7--9초/1014MiB였고, P1까지 켠 현재 형상에서는
-P1이 약 20--28초/2.8GiB를 더 예약했다. 짧은 end-to-end wall time을 보고할 때는
+P2만 켠 과거 실모델에서는 약 7--9초/1014MiB였다. 5/10/19 P1 context와 wrapper
+workspace 공유를 적용한 기능 smoke에서 P1 all-page capture는 약 32초/2216MiB를
+예약했다. 짧은 end-to-end wall time을 보고할 때는
 이 비용을 별도로 적는다. 특정 bucket만 진단할 때는 `2,3`처럼
 쉼표 목록을 줄 수 있으나 최종 성능 gate에는 `all`을 사용한다.
 
@@ -1024,9 +1064,10 @@ tok/step과 wall TPS를 함께 사용한다.
 ### 13.4 남은 시간 비용
 
 - tree graph의 동적 선택과 ordered sampling이 chain보다 약 2.5--3ms 더 든다.
-- target은 최대 8-node tree를 실제 transformer로 검증하므로 chain 4-node보다
-  model row 비용이 크다.
-- P1/P2 all-page warmup의 cold-start와 약 3.8GiB 추가 예약 비용이 있다.
+- target은 P2 최대 8-node, P1 최대 18-node tree를 실제 transformer로 검증한다.
+  특히 P1 tree hit는 chain의 9 proposal보다 model row 비용이 크게 남는다.
+- P1/P2 all-page warmup의 cold-start와 상주 메모리 비용이 있다. 최신 P1-only
+  5/10/19 smoke의 P1 executor reserved delta는 2216MiB다.
 - target mask 준비 0.41ms와 일부 output gather는 더 줄일 수 있지만 예상 폭은
   sub-ms다. 품질 정책을 바꾸지 않는 kernel-level 최적화만 허용한다.
 
@@ -1117,3 +1158,5 @@ target/draft p50 및 startup memory를 함께 보고한다.
     누락을 찾아 수정하고 P1/P2 모두 runtime replay만 수행함을 확인했다.
 15. commit `b8e8bfd`에서 public `on`을 `dynamic`에 연결하고 P2를 P1 도입 전
     전역 알고리즘으로 복원했으며, P1도 root prior만 다르게 같은 알고리즘을 쓴다.
+16. P1 짧은 경로의 W20→W10 exact bucket, mutually-exclusive q wire, 동일-plan
+    wrapper workspace 공유를 적용해 의미를 유지하면서 draft/통신 낭비를 줄였다.

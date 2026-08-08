@@ -364,10 +364,11 @@ SSD_TREE_EXEC_WARMUP=all
 ```
 
 이 warmup은 steady-state decode 시간에는 들어가지 않는다. P1을 함께 켜면
-context 폭 10/19와 모든 page bucket을 추가로 준비한다. 2026-08-07 실모델
-스모크에서는 P2 약 1.0GiB, P1 약 2.8GiB의 추가 예약과 P1 약 20--28초의 시작
-비용이 관측됐다. P1 page/context graph는 서로 동시에 실행되지 않으므로 transient
-capture pool을 공유하지만, FlashInfer plan workspace는 page별로 분리한다.
+context 폭 5/10/19와 모든 page bucket을 추가로 준비한다. 최신 실모델 기능
+smoke에서는 P2 약 1.0GiB, P1 약 2.2GiB의 추가 예약과 P1 약 32초의 시작 비용이
+관측됐다. P1 page/context graph는 서로 동시에 실행되지 않으므로 transient
+capture pool을 공유하고, 같은 page/shape의 round들은 동일한 FlashInfer plan
+workspace도 공유한다. page shape가 다른 graph의 plan 상태는 계속 분리한다.
 
 #### target tree verify 준비 최적화
 

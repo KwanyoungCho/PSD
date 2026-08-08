@@ -15,6 +15,8 @@ in the existing DUET runtime.
 """
 from __future__ import annotations
 
+import os
+
 import torch
 
 from ssd.engine.helpers.p2_tree import q_probs_from_logits
@@ -36,15 +38,18 @@ def p1_context_buckets(k1: int, k2: int,
                        p2_max_nodes: int) -> tuple[int, ...]:
     """Reachable glue-context buckets for P1.
 
-    Use only two coarse canvases in the champion shape: one covers both chain
-    widths and every P2 tree, and the optional larger one covers a P1 tree.
-    Capturing one executor for every possible valid-node count would multiply
-    full-model CUDA graphs and their FlashInfer workspace for no semantic
-    gain; inactive roots already have a safe zero-score representation.
+    Keep an exact short-chain bucket in addition to the long-chain/common and
+    largest-tree canvases.  In the K1=9/K2=4 champion shape, merging the short
+    five-context path into the ten-context bucket made P1 execute W=20 lanes
+    for nine rounds although only W=10 roots were live.  That padding is full
+    transformer work, not cheap metadata padding, and occurs on roughly half
+    of requests.  Three coarse canvases retain bounded capture memory while
+    avoiding this dominant hot-path waste.
     """
-    common = max(int(k1) + 1, int(k2) + 1, int(p2_max_nodes) + 1)
+    short = int(k2) + 1
+    common = max(int(k1) + 1, short, int(p2_max_nodes) + 1)
     largest = max(common, int(p1_max_nodes) + 1)
-    return tuple(sorted({common, largest}))
+    return tuple(sorted({short, common, largest}))
 
 
 def choose_p1_context_bucket(actual_contexts: int,
@@ -211,6 +216,18 @@ class P1TreeExecutor(P2TreeExecutor):
             depth=int(config.duet_phase1_k),
             max_nodes=int(config.duet_p1_tree_max_nodes),
             glue_width=int(context_bucket))
+        # Three context buckets remove substantial live-lane padding, but a
+        # generic 64 MiB FlashInfer workspace for every one of seven page
+        # shapes would exhaust the 24 GiB production draft GPU.  The real
+        # TinyLlama/FA2 P1 shape requests about 41 MiB; keep a 48 MiB P1-only
+        # margin (the generic/P2 executor retains its conservative 64 MiB).
+        # This is set before prepare_bucket() allocates any workspace.
+        p1_workspace_mb = int(os.environ.get(
+            "SSD_P1_TREE_EXEC_WORKSPACE_MB", "48"))
+        if p1_workspace_mb <= 0:
+            raise ValueError(
+                "SSD_P1_TREE_EXEC_WORKSPACE_MB must be positive")
+        self._workspace_bytes = p1_workspace_mb * 2**20
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
         self.forward_scale = scale

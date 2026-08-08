@@ -652,7 +652,8 @@ class P2TreeExecutor:
         self._float_ws_by_bucket = {}
 
     # ---------- 버킷 준비 ----------
-    def _mk_round_wrapper(self, n_pages_r, canvas_cols, float_workspace):
+    def _mk_round_wrapper(self, n_pages_r, canvas_cols, float_workspace,
+                          int_workspace=None, pin_int_workspace=None):
         d = self.dev
         W = self.W
         qo = torch.tensor([0, W], dtype=torch.int32, device=d)
@@ -668,6 +669,16 @@ class P2TreeExecutor:
             custom_mask_buf=mask_buf,
             mask_indptr_buf=torch.tensor([0, W * canvas_cols],
                                          dtype=torch.int32, device=d))
+        # FlashInfer allocates an 8 MiB device + pinned-host integer plan
+        # workspace inside every wrapper.  All F round wrappers in this page
+        # bucket have identical plan geometry (W/pages/heads/dtype) and run
+        # strictly serially, so they can share the same plan workspace just
+        # like the float workspace above.  Keeping F private copies cost
+        # 8 MiB * F * page_buckets per context executor and made an otherwise
+        # useful short-context P1 graph exceed the 24 GiB draft GPU.
+        if int_workspace is not None:
+            wr._int_workspace_buffer = int_workspace
+            wr._pin_memory_int_workspace_buffer = pin_int_workspace
         wr.plan(qo, kvp, kvi, lpl,
                 self.H, self.HKV, self.D, self.bs,
                 custom_mask=torch.zeros(W * canvas_cols,
@@ -686,10 +697,17 @@ class P2TreeExecutor:
                 self._workspace_bytes, dtype=torch.uint8, device=self.dev)
             self._float_ws_by_bucket[n_pages0] = float_workspace
         wrappers = []
+        int_workspace = None
+        pin_int_workspace = None
         for f in range(F):
             canvas_pages = n_pages0 + 1
-            wrappers.append(self._mk_round_wrapper(
-                canvas_pages, canvas_pages * self.bs, float_workspace))
+            wr = self._mk_round_wrapper(
+                canvas_pages, canvas_pages * self.bs, float_workspace,
+                int_workspace, pin_int_workspace)
+            if int_workspace is None:
+                int_workspace = wr._int_workspace_buffer
+                pin_int_workspace = wr._pin_memory_int_workspace_buffer
+            wrappers.append(wr)
         self.wrappers[n_pages0] = wrappers
         return wrappers
 

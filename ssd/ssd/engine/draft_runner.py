@@ -1169,14 +1169,28 @@ class DraftRunner(ModelRunner):
         from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_s, duet_close as _mc_s
         _mev_ds = _mr_s("draft_send_response")
         dist.send(fused_response, dst=0, group=self.async_pg)
-        dist.send(out_logits[:, :K, :].contiguous(), dst=0, group=self.async_pg)
-        if _tree_enabled:
-            _pq = getattr(self, "_tree_wire_parent_q", None)
-            if _pq is None:
-                _pq = torch.zeros(B, self.config.duet_tree_wire_nodes,
-                                  self.hf_config.vocab_size,
-                                  dtype=out_logits.dtype, device=self.device)
-            dist.send(_pq.contiguous(), dst=0, group=self.async_pg)
+        # The fused metadata is received before either logit tensor, so the
+        # target can take the identical branch.  Ordinary q and tree parent-q
+        # are mutually exclusive consumers; the old protocol sent both plus
+        # an all-zero max-width parent-q tensor on every non-tree request.
+        _pq = getattr(self, "_tree_wire_parent_q", None)
+        if _pq is None:
+            dist.send(out_logits[:, :K, :].contiguous(), dst=0,
+                      group=self.async_pg)
+        else:
+            if B != 1 or self._tree_hit_phase not in (1, 2):
+                raise RuntimeError(
+                    "tree response q payload requires B=1 and phase 1|2; "
+                    f"got B={B}, phase={self._tree_hit_phase}")
+            from ssd.engine.helpers.p2_tree import tree_response_logit_rows
+            _valid_tree = int(self._tree_served_ints[0]) \
+                if self._tree_served_ints is not None else 1
+            _, _pq_rows = tree_response_logit_rows(
+                _valid_tree, self._tree_hit_phase, K,
+                self.config.duet_p1_tree_max_nodes,
+                self.config.duet_p2_tree_max_nodes)
+            dist.send(_pq[:, :_pq_rows].contiguous(), dst=0,
+                      group=self.async_pg)
         _mc_s("draft_send_response", _mev_ds)
 
         partial_tree_decode_args = {
