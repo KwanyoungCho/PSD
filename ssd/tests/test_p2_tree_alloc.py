@@ -335,6 +335,40 @@ class TestRootBudgets(unittest.TestCase):
                            int(views["valid"][1]))
         self.assertGreaterEqual(int(views["valid"][1]), 1)
 
+    def test_dynamic_is_the_same_global_selector_as_legacy_eagle(self):
+        def run(policy):
+            calls = 0
+
+            def sample_fn(sel, fan):
+                nonlocal calls
+                rows = len(sel)
+                toks = (3000 + calls * 100
+                        + torch.arange(rows).unsqueeze(1) * 3
+                        + torch.arange(3).unsqueeze(0))
+                raw = torch.tensor([[0.80, 0.15, 0.04]]).repeat(rows, 1)
+                calls += 1
+                return toks, raw
+
+            pool, trace = PT.rollout_reference(
+                [10, 11], torch.tensor([0.95, 0.05]), None,
+                policy=policy, W=2, F_total=4, c_tensor=3, nv=8,
+                beta=0.5, depth_cap=4, sample_fn=sample_fn,
+                fanout_policy="backbone")
+            return pool, trace
+
+        old, old_trace = run("eagle")
+        new, new_trace = run("dynamic")
+        self.assertEqual(old.n, new.n)
+        for field in ("tok", "parent_idx", "depth", "root", "sib_order",
+                      "state", "cell"):
+            self.assertTrue(torch.equal(
+                getattr(old, field)[:old.n], getattr(new, field)[:new.n]),
+                field)
+        for (old_sel, old_fan), (new_sel, new_fan) in zip(
+                old_trace, new_trace):
+            self.assertEqual(old_sel, new_sel)
+            self.assertTrue(torch.equal(old_fan, new_fan))
+
     def test_hybrid_guarantees_depth_two_then_expands_globally(self):
         calls = 0
 

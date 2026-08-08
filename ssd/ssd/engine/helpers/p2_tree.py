@@ -273,16 +273,19 @@ def alloc_policy_root_budgets(piv: torch.Tensor, policy: str, total: int,
     model forward.  The historical confidence policy conflated those two
     quantities and paid for branching by deleting low-ranked roots.
 
-    ``coverage`` is the invariant-preserving DUET policy.  Every live root
-    keeps a complete first-child backbone and may retain siblings up to the
-    response capacity ``cap``.  With the production W=R=10, F=4, C=3,
-    cap=8 shape this stores eight nodes per root while still evaluating only
-    four rounds of ten parents.  Zero-P_iv padding roots stay at budget zero.
+    The production ``dynamic`` policy and its legacy ``eagle`` spelling give
+    every live root the same response-capacity bound, evaluate all roots in
+    round zero, and globally choose later parents by cumulative confidence.
+    ``coverage``/``backbone`` retain their historical fixed-depth behavior
+    only for controlled reproduction.  Zero-prior padding roots stay at
+    budget zero.
 
     The draw identities are deliberately not inputs.  Budget/topology is
     fixed before WOR sampling, preserving the lossless verifier contract.
     """
-    if policy in ("coverage", "backbone", "eagle", "hybrid", "adaptive"):
+    if policy in (
+            "coverage", "backbone", "dynamic", "eagle", "hybrid",
+            "adaptive"):
         return torch.where(
             piv > 0,
             torch.full_like(piv, int(cap), dtype=torch.int64),
@@ -1275,15 +1278,15 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
     반환: (pool, eval_log) — eval_log[f] = (선택 인덱스, fanout) 기록.
     """
     R = len(root_toks)
-    if policy in ("eagle", "hybrid"):
+    if policy in ("dynamic", "eagle", "hybrid"):
         # All roots are evaluated at depth zero.  Later levels compete
         # globally by cumulative root-proxy x path-draft confidence. Hybrid
         # keeps backbone handling only for its first two rounds.
-        if policy == "eagle":
+        if policy in ("dynamic", "eagle"):
             fanout_policy = "ctensor"
         if R > W:
             raise ValueError(
-                f"eagle tree rollout requires R<=W so every root is "
+                f"dynamic tree rollout requires R<=W so every root is "
                 f"evaluated in round zero; got R={R}, W={W}")
     if fanout_policy == "backbone" and R > W:
         raise ValueError(
@@ -1305,7 +1308,7 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
     tip_idx = list(range(R))                      # backbone tip (root부터)
     hybrid_floor = min(2, F_total)
     for f in range(F_total):
-        global_round = (policy == "eagle"
+        global_round = (policy in ("dynamic", "eagle")
                         or (policy == "hybrid" and f >= hybrid_floor))
         if global_round:
             sel = select_nodes_global(
@@ -1424,12 +1427,12 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     fanout 0 (자식 무시; RNG는 소비 — 고정 shape 유지).
     """
     R = len(root_toks)
-    if policy in ("eagle", "hybrid"):
-        if policy == "eagle":
+    if policy in ("dynamic", "eagle", "hybrid"):
+        if policy in ("dynamic", "eagle"):
             fanout_policy = "ctensor"
         if R > W:
             raise ValueError(
-                f"eagle tree rollout requires R<=W so every root is "
+                f"dynamic tree rollout requires R<=W so every root is "
                 f"evaluated in round zero; got R={R}, W={W}")
     if fanout_policy == "backbone" and R > W:
         raise ValueError(
@@ -1453,7 +1456,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     node_logpri = [float(x) for x in logpiv.tolist()]
     hybrid_floor = min(2, F_total)
     for f in range(F_total):
-        global_round = (policy == "eagle"
+        global_round = (policy in ("dynamic", "eagle")
                         or (policy == "hybrid" and f >= hybrid_floor))
         if global_round:
             sel = select_nodes_global(
@@ -2448,15 +2451,16 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
     (sel [F,W], sel_valid [F,W], fan [F,W]) device 텐서.
     """
     R = len(root_toks)
-    if policy in ("eagle", "hybrid"):
-        if policy == "eagle":
+    if policy in ("dynamic", "eagle", "hybrid"):
+        if policy in ("dynamic", "eagle"):
             fanout_policy = "ctensor"
         if R > W:
             raise ValueError(
-                f"eagle tree rollout requires R<=W so every root is "
+                f"dynamic tree rollout requires R<=W so every root is "
                 f"evaluated in round zero; got R={R}, W={W}")
     elif fanout_policy != "backbone":
-        raise NotImplementedError("arena는 backbone/eagle 전용 (T6 1a)")
+        raise NotImplementedError(
+            "arena supports only backbone/dynamic global policies (T6 1a)")
     if R > W:
         raise ValueError(f"tree rollout: R={R} > W={W} (이슈 #27)")
     dev = torch.device(device) if device is not None \
@@ -2484,7 +2488,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
             dev, non_blocking=True)
     ar._budgets = budgets
     ar._requested = (R * nv if policy in (
-        "coverage", "backbone", "eagle", "hybrid", "adaptive")
+        "coverage", "backbone", "dynamic", "eagle", "hybrid", "adaptive")
                      else F_total * W)
     remaining = budgets.clone()
     # CPU 경로와 동일 정밀도: f32 log 후 double 확장 (리뷰6 —
@@ -2505,7 +2509,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
     cell_logits = None
     hybrid_floor = min(2, F_total)
     for f in range(F_total):
-        global_round = (policy == "eagle"
+        global_round = (policy in ("dynamic", "eagle")
                         or (policy == "hybrid" and f >= hybrid_floor))
         _tips = None if global_round else tip_idx
         if global_round:

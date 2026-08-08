@@ -44,8 +44,8 @@ DUET_JIT_SUBSET = os.environ.get("SSD_DUET_JIT_SUBSET", "0") == "1"
 # public ``on`` normalizes to the internal global selector, while the other
 # names exist only for exact reproduction of older experiments.
 _P2_EXECUTOR_POLICIES = frozenset({
-    "level", "confidence", "coverage", "backbone", "eagle", "hybrid",
-    "adaptive",
+    "level", "confidence", "coverage", "backbone", "dynamic", "eagle",
+    "hybrid", "adaptive",
 })
 
 
@@ -2645,10 +2645,11 @@ class DraftRunner(ModelRunner):
         """Run the production P1 dynamic tree as one captured graph.
 
         P1 creates a fixed number of root candidates at every live glue
-        context and preserves each root's first-child path through K1.  The
-        forward/sample/select/mask loop is entirely inside
-        :class:`P1TreeExecutor`; host work here occurs once before replay and
-        never between the K1 draft forwards.
+        context.  Round zero evaluates all of them and later rounds globally
+        continue the highest reach-weighted paths, exactly as P2 does after
+        receiving its proxy roots.  The forward/sample/select/mask loop is
+        entirely inside :class:`P1TreeExecutor`; host work here occurs once
+        before replay and never between the K1 draft forwards.
 
         Returns ``None`` for the explicitly unsupported B>1/temp=0/near-end
         cases so the caller can retain the established chain path.

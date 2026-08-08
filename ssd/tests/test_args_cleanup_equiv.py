@@ -61,12 +61,12 @@ class TestOldNewEquivalence(unittest.TestCase):
         dynamic = _mk({})
         self.assertEqual(dynamic.duet_p1_tree_policy, "off")
         self.assertEqual(dynamic.duet_p2_tree_policy, "on")
-        self.assertEqual(dynamic.duet_tree_policy, "backbone")
+        self.assertEqual(dynamic.duet_tree_policy, "dynamic")
         self.assertEqual(dynamic.duet_p2_seed_count,
                          dynamic.duet_proxy_total_budget)
 
         smaller_r = _mk({}, duet_tree_root_count=6)
-        self.assertEqual(smaller_r.duet_tree_policy, "backbone")
+        self.assertEqual(smaller_r.duet_tree_policy, "dynamic")
         self.assertEqual(smaller_r.duet_p2_active_root_count, 6)
 
         chain = _mk({}, duet_p2_tree_policy="off")
@@ -91,7 +91,7 @@ class TestOldNewEquivalence(unittest.TestCase):
         copied = dataclasses.replace(original)
         self.assertEqual(copied.duet_p1_tree_policy, "on")
         self.assertEqual(copied.duet_p2_tree_policy, "on")
-        self.assertEqual(copied.duet_tree_policy, "backbone")
+        self.assertEqual(copied.duet_tree_policy, "dynamic")
         self.assertEqual(copied.duet_p1_tree_max_nodes, 18)
         self.assertEqual(copied.duet_p2_tree_max_nodes, 8)
 
@@ -110,13 +110,14 @@ class TestOldNewEquivalence(unittest.TestCase):
         self.assertEqual(c.duet_tree_wire_nodes, 18)
         self.assertEqual(c.duet_response_token_width, 18)
 
-    def test_p1_tree_node_envelope_keeps_a_complete_backbone(self):
-        with self.assertRaisesRegex(ValueError, "N1=8, K1=9"):
-            _mk({}, duet_p1_tree_policy="on",
-                duet_p1_tree_max_nodes=8)
-        with self.assertRaisesRegex(ValueError, "N1=28, K1=9, C=3"):
-            _mk({}, duet_p1_tree_policy="on",
-                duet_p1_tree_max_nodes=28)
+    def test_p1_tree_node_envelope_is_not_a_depth_constraint(self):
+        shallow = _mk({}, duet_p1_tree_policy="on",
+                      duet_p1_tree_max_nodes=8)
+        wide = _mk({}, duet_p1_tree_policy="on",
+                   duet_p1_tree_max_nodes=28)
+        self.assertEqual(shallow.duet_p1_tree_max_nodes, 8)
+        self.assertEqual(wide.duet_p1_tree_max_nodes, 28)
+        self.assertEqual(shallow.duet_p1_tree_forward_scale, 1.0)
 
     def test_env_free_equals_old_env_style(self):
         # Old style: champion scripts exported both envs.

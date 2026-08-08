@@ -4,9 +4,10 @@ P1 and P2 share the same captured rollout after their roots exist.  P2 roots
 arrive with an early-exit proxy score; P1 instead creates a fixed number of
 uniform candidates at every glue context.  Its initial score is the draft
 probability of reaching that context times the draft probability of the
-alternative root token.  Every root keeps one full-depth path because P1 has
-no target proxy score; captured lanes beyond that floor continue the highest
-reach-weighted cumulative-confidence children.
+alternative root token.  Round zero evaluates every root; later rounds use
+the same global cumulative-confidence expansion as P2.  The only phase
+difference is the source of the root prior: P2 receives a target proxy score,
+whereas P1 derives it from draft context reach and root-token probability.
 
 This module contains only fixed-shape/GPU-friendly preparation and shape
 selection.  Cache serving and target verification are phase-agnostic and live
@@ -213,7 +214,7 @@ class P1TreeExecutor(P2TreeExecutor):
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
         self.forward_scale = scale
-        # P1 has no target proxy score that can safely rank unrelated roots.
-        # Preserve one full-depth path per uniform root; lanes beyond R are
-        # still assigned dynamically by reach-weighted cumulative confidence.
-        self.policy = "backbone"
+        # P1 and P2 intentionally share one expansion algorithm.  P1's
+        # in_root_piv contains context-reach * root-token probability, which
+        # occupies the same ranking role as P2's target proxy prior.
+        self.policy = "dynamic"

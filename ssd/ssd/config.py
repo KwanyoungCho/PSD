@@ -80,26 +80,28 @@ class Config:
     duet_p1_tree_policy: str = "off"          # off | on
     duet_p2_tree_policy: str = "on"           # off | on
     # Deprecated compatibility input for old experiment scripts.  New code
-    # and documentation use only the phase-specific on/off controls above;
-    # the internal ``eagle`` name denotes the global confidence selector.
+    # and documentation use only the phase-specific on/off controls above.
+    # Public ``on`` normalizes to DUET's internal ``dynamic`` selector; the
+    # old ``eagle`` spelling remains only for exact experiment reproduction.
     duet_tree_policy: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
     # Per-phase maximum number of nodes sent for one cache hit.  This is a
-    # fixed buffer/cost bound.  Tokens remain data-dependent; the default
-    # R=W backbone policy has a deterministic parent layout, while R<W can
-    # assign surplus lanes dynamically.  ``duet_tree_nv`` is a legacy P2 alias.
+    # fixed buffer/cost bound, not a forced topology size.  Tokens, parents,
+    # and valid node counts remain data-dependent.  ``duet_tree_nv`` is a
+    # legacy P2 alias.
     duet_p1_tree_max_nodes: int = 18
     duet_p2_tree_max_nodes: int = 8
     duet_tree_nv: int | None = None
     # P1 creates this many uniform root candidates at every glue context.
     duet_p1_roots_per_position: int = 2
     # P1 roots and forward cells are different quantities.  A scale above
-    # one preserves every root backbone while leaving captured lanes to
-    # continue high-confidence sibling branches in later rounds.
-    duet_p1_tree_forward_scale: float = 1.25
+    # one is enough for the production dynamic policy: round zero evaluates
+    # every root, then the R*C sampled children compete for the next R lanes.
+    # Values above one remain an explicit compute/coverage experiment knob.
+    duet_p1_tree_forward_scale: float = 1.0
     duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
-    # 형상 진단 (docs/duet/internal/21 §4.5): 고정-C 배분은 깊이를 굶긴다 —
-    # backbone(맏이-사슬 fan1, 깊이 K2 보장) 우선 + 잔여만 형제.
+    # Legacy fixed-backbone reproduction knob.  The production dynamic
+    # selector decides fanout with its global allocation rule instead.
     duet_tree_fanout_policy: str = "backbone"   # backbone | ctensor
     # 이슈 #24 (리뷰 2B): R(예산 받는 root 수)을 W와 분리 — W/CG/예약
     # 불변, P_iv 상위 R root만 예산 (나머지는 뷰 없음 → #14 키 무효화
@@ -214,8 +216,8 @@ class Config:
     def duet_p2_active_root_count(self) -> int:
         """Number of roots that receive the production P2 node budget."""
         if getattr(self, "duet_tree_policy", "off") in (
-                "eagle", "hybrid", "adaptive"):
-            # EAGLE-style global expansion keeps the root/cache coverage and
+                "dynamic", "eagle", "hybrid", "adaptive"):
+            # Global dynamic expansion keeps root/cache coverage and
             # forward width as separate concepts.  By default every one of
             # the W chain roots is retained; an explicit smaller R remains a
             # supported experiment knob.  R>W is rejected in __post_init__
@@ -423,7 +425,7 @@ class Config:
         if _legacy_tree_policy is not None:
             if _legacy_tree_policy == "eagle":
                 self.duet_p2_tree_policy = "on"
-            elif _legacy_tree_policy == "backbone":
+            elif _legacy_tree_policy in ("dynamic", "backbone"):
                 # ``DraftRunner.create_draft_config`` reconstructs an already
                 # normalized Config via dataclasses.replace().  Treat the
                 # production internal name as an idempotent normalized value,
@@ -445,6 +447,8 @@ class Config:
             # Exact legacy reproduction remains available only when named
             # explicitly by an old experiment.
             self.duet_tree_policy = "eagle"
+        elif _legacy_tree_policy == "dynamic":
+            self.duet_tree_policy = "dynamic"
         elif _legacy_tree_policy == "backbone":
             self.duet_tree_policy = "backbone"
         elif _legacy_tree_policy in (
@@ -452,13 +456,13 @@ class Config:
                 "frontier"):
             self.duet_tree_policy = _legacy_tree_policy
         else:
-            # Production ``on`` preserves one complete path for every root.
-            # This is the only policy that retained conditional acceptance
-            # quality in the fixed-root paired gates; siblings sampled by
-            # each forward remain dynamic.  Global and two-depth hybrid
-            # selectors remain internal reproduction arms.
+            # Production ``on`` uses the same global cumulative-confidence
+            # selector that P2 used before P1 tree support was introduced.
+            # Round zero evaluates every root; later rounds select parents
+            # globally.  P1 shares this algorithm with a draft-derived root
+            # prior in place of the target proxy score.
             self.duet_tree_policy = (
-                "backbone" if self.duet_p2_tree_policy == "on" else "off")
+                "dynamic" if self.duet_p2_tree_policy == "on" else "off")
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
@@ -597,12 +601,13 @@ class Config:
                         f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
                 # Dynamic-tree knobs — -O 생존형 raise.
                 if self.duet_tree_policy not in (
-                        "off", "hybrid", "adaptive", "eagle", "coverage", "backbone",
-                        "confidence", "level", "frontier"):
+                        "off", "dynamic", "hybrid", "adaptive", "eagle",
+                        "coverage", "backbone", "confidence", "level",
+                        "frontier"):
                     raise ValueError(
                         f"duet_tree_policy must be "
-                        f"off|adaptive|eagle|coverage|backbone|confidence|"
-                        f"level|frontier; "
+                        f"off|dynamic|adaptive|eagle|coverage|backbone|"
+                        f"confidence|level|frontier; "
                         f"got {self.duet_tree_policy!r}")
                 if self.duet_tree_enabled:
                     # D2 pack 가드: 토큰이 비트 0-14를 넘으면 안 됨.
@@ -649,24 +654,6 @@ class Config:
                         raise ValueError(
                             "duet_tree_conf_threshold must be in [0,1]; "
                             f"got {self.duet_tree_conf_threshold}")
-                    if (self.duet_p1_tree_policy == "on"
-                            and self.duet_p1_tree_max_nodes
-                            < self.duet_phase1_k):
-                        raise ValueError(
-                            "P1 tree requires duet_p1_tree_max_nodes >= K1 "
-                            "to retain the complete first-child backbone; "
-                            f"got N1={self.duet_p1_tree_max_nodes}, "
-                            f"K1={self.duet_phase1_k}")
-                    if (self.duet_p1_tree_policy == "on"
-                            and self.duet_p1_tree_max_nodes
-                            > self.duet_phase1_k
-                            * self.duet_tree_c_tensor):
-                        raise ValueError(
-                            "P1 tree max nodes are not generatable by the "
-                            "fixed draft rounds and per-parent fanout; got "
-                            f"N1={self.duet_p1_tree_max_nodes}, "
-                            f"K1={self.duet_phase1_k}, "
-                            f"C={self.duet_tree_c_tensor}")
                     if (self.duet_p2_tree_policy == "on"
                             and self.duet_tree_policy == "coverage"
                             and self.duet_tree_root_count is not None):

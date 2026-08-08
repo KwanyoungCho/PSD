@@ -31,7 +31,7 @@ class _MiniCfg:
     duet_phase1_k = 9
     duet_phase2_k = 4
     duet_p1_roots_per_position = 2
-    duet_p1_tree_forward_scale = 1.25
+    duet_p1_tree_forward_scale = 1.0
     duet_p1_tree_max_nodes = 13
     duet_p2_tree_max_nodes = 8
     duet_tree_c_tensor = 3
@@ -115,7 +115,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         V, H, HKV, D = 128, 4, 2, 64
         cfg = _MiniCfg()
         cfg.duet_tree_policy = policy
-        if policy in ("coverage", "backbone", "eagle", "hybrid",
+        if policy in ("coverage", "backbone", "dynamic", "eagle", "hybrid",
                       "adaptive"):
             cfg.duet_tree_root_count = cfg.duet_proxy_total_budget
         max_blocks = 8
@@ -231,12 +231,13 @@ class TestExecutorModuleParity(unittest.TestCase):
             self.assertEqual(call.kwargs["sampler_x"], 0.7)
             self.assertEqual(call.kwargs["F"], 3)
 
-    def test_p1_multiword_executor_eager_equals_replay(self):
-        """P1 preserves roots and reallocates surplus lanes globally."""
+    def test_p1_dynamic_executor_eager_equals_replay(self):
+        """P1 evaluates every root, then reallocates lanes globally."""
         dev = "cuda:0"
         V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
         cfg = _MiniCfg()
-        cfg.duet_tree_policy = "backbone"
+        cfg.duet_tree_policy = "dynamic"
+        cfg.duet_tree_conf_threshold = 0.005
         max_blocks = 8
         cache = torch.zeros(max_blocks, 2, PAGE, HKV, D,
                             dtype=torch.float16, device=dev)
@@ -244,8 +245,8 @@ class TestExecutorModuleParity(unittest.TestCase):
         ex = P1TreeExecutor(
             model, model.logits_fn, cfg, dev, PAGE, max_blocks,
             V, H, HKV, D, context_bucket=10)
-        self.assertEqual((ex.F, ex.W, ex.R), (9, 25, 20))
-        self.assertEqual(ex.arena.anc_words, 4)
+        self.assertEqual((ex.F, ex.W, ex.R), (9, 20, 20))
+        self.assertEqual(ex.arena.anc_words, 3)
 
         ctx0 = 2 * PAGE + 21
         p0 = (ctx0 + PAGE - 1) // PAGE
@@ -270,26 +271,11 @@ class TestExecutorModuleParity(unittest.TestCase):
         for name, expected in ref.items():
             self.assertTrue(torch.equal(expected, getattr(ex, name)), name)
         vt_p1 = ex.out_valid.cpu()
-        self.assertEqual(vt_p1[:ex.R].tolist(), [ex.NV] * ex.R)
-        self.assertEqual(vt_p1[ex.R:].tolist(), [0] * (ex.W - ex.R))
-        par = ex.view_par.cpu()
-        sib = ex.view_sib.cpu()
-        for r in range(ex.R):
-            cur = -1
-            for depth in range(ex.F):
-                kids = [j for j in range(int(vt_p1[r]))
-                        if int(par[r, j]) == cur and int(sib[r, j]) == 0]
-                self.assertTrue(kids, (r, depth, vt_p1[r].item()))
-                cur = kids[0]
-        expanded_sibling = False
-        for r in range(ex.R):
-            n = int(vt_p1[r])
-            for j in range(n):
-                parent = int(par[r, j])
-                if parent >= 0 and int(sib[r, parent]) > 0:
-                    expanded_sibling = True
-                    break
-        self.assertTrue(expanded_sibling)
+        # Round zero covers every root, but later rounds are not obliged to
+        # keep one full-depth path per root.  Unequal root priors therefore
+        # produce unequal response depths/node counts.
+        self.assertTrue(bool((vt_p1 >= 1).all()))
+        self.assertGreater(len(set(vt_p1.tolist())), 1)
 
     def test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots(self):
         dev = "cuda:0"
@@ -322,9 +308,9 @@ class TestExecutorModuleParity(unittest.TestCase):
         gc.collect()
         torch.cuda.empty_cache()
 
-    def test_z_eagle_executor_capture_and_dynamic_root_depths(self):
+    def test_z_dynamic_executor_capture_and_dynamic_root_depths(self):
         dev = "cuda:0"
-        ex, cfg, PAGE, V = self._mk(dev, policy="eagle")
+        ex, cfg, PAGE, V = self._mk(dev, policy="dynamic")
         # This synthetic V=128 model is close to uniform (q≈1/128), whereas
         # the production 32k model's calibrated floor is 0.03.  Use the same
         # threshold code path at the fixture's probability scale; applying a

@@ -508,12 +508,11 @@ class P2TreeExecutor:
                   if phase == "p1" else
                   getattr(config, "duet_p2_tree_max_nodes",
                           getattr(config, "duet_tree_nv", 8))))
-        # P1 lacks the target-side proxy needed to rank unrelated roots, so
-        # it keeps a root backbone plus dynamically ranked surplus lanes.
-        # P2 follows the normalized public policy (currently the
-        # quality-preserving backbone policy); internal legacy names remain
-        # available for controlled reproduction tests.
-        self.policy = ("backbone" if phase == "p1" else
+        # Both phases use the same global dynamic expansion.  P1 supplies a
+        # draft-derived context-reach/root prior where P2 supplies the target
+        # proxy prior.  Legacy selectors remain available only for controlled
+        # reproduction tests.
+        self.policy = ("dynamic" if phase == "p1" else
                        getattr(config, "duet_tree_policy", "eagle"))
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
         if R > W:
@@ -807,7 +806,7 @@ class P2TreeExecutor:
             OUT_N=self.out_tok.numel(),
             OUT_ROWS=self.out_valid.numel(), BLOCK=256)
         policy = self.policy
-        if policy in ("coverage", "backbone", "eagle", "hybrid",
+        if policy in ("coverage", "backbone", "dynamic", "eagle", "hybrid",
                       "adaptive"):
             # Stored children are not forward cells.  A single parent
             # forward already samples C ordered WOR children, so retaining
@@ -838,7 +837,7 @@ class P2TreeExecutor:
         wrappers = self.wrappers[n_pages0]
         hybrid_floor = min(2, F)
         for f in range(F):
-            _global = (policy == "eagle"
+            _global = (policy in ("dynamic", "eagle")
                        or (policy == "hybrid" and f >= hybrid_floor))
             if _global:
                 sel, sel_valid = PT._arena_select_global(

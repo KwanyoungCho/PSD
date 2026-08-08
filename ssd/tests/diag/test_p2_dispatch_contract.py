@@ -11,8 +11,8 @@ from ssd.engine.helpers.p2_tree import sanitize_root_inputs
 
 
 class TestP2RootContract(unittest.TestCase):
-    def test_public_quality_preserving_policy_is_executor_supported(self):
-        self.assertIn("backbone", _P2_EXECUTOR_POLICIES)
+    def test_public_dynamic_policy_is_executor_supported(self):
+        self.assertIn("dynamic", _P2_EXECUTOR_POLICIES)
 
     def test_invalid_roots_become_safe_inactive_lanes(self):
         toks = torch.tensor([7, -1, 99, 8])
