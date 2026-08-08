@@ -898,12 +898,29 @@ class DraftRunner(ModelRunner):
                             # directly measure root-rank coverage loss.
                             import json as _json
                             _vn = int(_parsed["valid"])
+
+                            def _trace_root_scalar(name):
+                                value = _tviews.get(name)
+                                if value is None or _root >= value.numel():
+                                    return None
+                                return float(value.reshape(-1)[_root])
+
+                            _root_ctx = _tviews.get("root_context_ids")
+                            _root_ctx = (None if _root_ctx is None else
+                                         int(_root_ctx.reshape(-1)[_root]))
                             with open(_trace_prefix + ".serve.jsonl", "a") \
                                     as _f:
                                 _f.write(_json.dumps({
                                     "step": int(self._request_step_id),
                                     "phase": _phase,
                                     "root_rank": _root,
+                                    "root_context_id": _root_ctx,
+                                    "root_start_score": _trace_root_scalar(
+                                        "root_score"),
+                                    "root_context_reach": _trace_root_scalar(
+                                        "root_context_reach"),
+                                    "root_local_q": _trace_root_scalar(
+                                        "root_local_q"),
                                     "valid": _vn,
                                     "par": [int(x) for x in
                                             _parsed["parent_local"][:_vn]],
@@ -2670,6 +2687,10 @@ class DraftRunner(ModelRunner):
                 self._tree_views = None
                 return self._empty_p2_outputs(rows, depth)
             if isinstance(pool, dict):
+                if proxy_piv is not None:
+                    # Same grouped row order as proxy_forked/cache keys.
+                    # Kept only for diagnostic serve traces.
+                    pool["root_score"] = proxy_piv[0, :rows]
                 self._tree_views = pool
                 return exec_outputs
             self._tree_views = build_root_views(
@@ -2807,7 +2828,15 @@ class DraftRunner(ModelRunner):
             "parent_q_cells": ex.out_pq_cells[:real_roots],
             "u_valid": ex.out_u_valid[:real_roots],
             "cell_logits": ex.cell_logits,
+            # Exact cache-root metadata for diagnostic outcome joins.  These
+            # tensors never enter the production response wire.
+            "root_score": roots["scores"][:real_roots],
+            "root_context_ids": roots["context_ids"][:real_roots],
+            "root_context_reach": roots["context_reach"].index_select(
+                0, roots["context_ids"][:real_roots]),
         }
+        views["root_local_q"] = views["root_score"] / \
+            views["root_context_reach"].clamp_min(1e-30)
         self._p1_tree_views = views
         # Correctness-only tracing.  P1 previously reused the production
         # executor but had no equivalent of P2's topology/node audit, which
@@ -2820,6 +2849,13 @@ class DraftRunner(ModelRunner):
             context_reach=roots["context_reach"])
         self._audit_tree_executor_node_coverage(
             views, ex, real_roots, phase=1)
+        if _E0_TRACE:
+            _e0.record_draft_p1_roots(
+                self._request_step_id,
+                int(partial_tree_decode_args["seq_ids"][0]),
+                views["root_context_ids"], roots["tokens"][:real_roots],
+                views["root_score"], views["root_context_reach"],
+                views["root_local_q"], views["valid"])
         draft_args = {
             "seq_ids_expanded": partial_tree_decode_args["seq_ids"][:1]
                 .expand(real_roots),

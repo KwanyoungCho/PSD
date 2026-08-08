@@ -12,12 +12,48 @@ DUET 실행 설정을 짧은 실측으로 보정하는 도구를 모아 둔다.
 | `verify_tps.sh` | 가능 | 가능 | profiler를 끈 실제 TPS·hit·accepted length 최종 비교 |
 | `analyze_k_balance.py` | 가능 | 가능 | 이미 수집된 timeline 재분석 |
 | `analyze_thresholds.py` | 해당 없음 | 가능 | 이미 수집된 tree calibration trace 재분석 |
+| `analyze_tree_outcomes.py` | 해당 없음 | 가능 | 실제 target 보행에서 대체 가지가 몇 번·몇 token 도움됐는지 계산 |
 | `summarize_tps.py` | 가능 | 가능 | `verify_tps.sh` 결과 재요약 |
 
 Threshold는 tree에서만 의미가 있다. Chain은 한 root마다 한 경로만 연장하므로
 동적으로 보존하거나 제거할 형제가 없다. 반면 K1/K2는 두 방식 모두 target과
 draft의 도착시각을 맞추는 값이므로 공통으로 보정할 수 있다. 단, tree의 P2
 실행시간과 chain의 P2 실행시간이 다르므로 **각 모드에서 따로 실행해야 한다.**
+
+## 0. 실제 tree가 도움됐는지 사후 확인
+
+짧은 진단 실행에 다음 두 변수를 추가한다. 이 실행은 파일 기록과 GPU→CPU
+복사를 포함하므로 TPS 측정값으로 사용하지 않는다.
+
+```bash
+TRACE=$PWD/experiments/proxy_async_overlap/tree_sweep/my_tree_audit/topology
+E0=$PWD/experiments/proxy_async_overlap/tree_sweep/my_tree_audit/e0
+mkdir -p "$(dirname "$TRACE")" "$E0"
+
+SSD_TREE_TOPO_TRACE="$TRACE" \
+SSD_DUET_E0_TRACE=1 SSD_DUET_E0_DIR="$E0" \
+  python -O bench/bench.py <평소 tree 인자> --numseqs 2 --output_len 128
+
+python tools/duet_calibration/analyze_tree_outcomes.py \
+  --trace-prefix "$TRACE" --e0-dir "$E0" \
+  --json-out "$(dirname "$TRACE")/outcomes.json"
+```
+
+중요 출력은 다음과 같다.
+
+- `alternative_tree_rate`: target이 첫 번째 자식이 아닌 대체 자식을 실제로
+  수락한 tree-hit 비율
+- `branch_assisted_accepted_nodes`: 첫 대체 자식부터 그 아래까지, 첫 자식만
+  둔 구조에는 없었을 accepted token 수
+- `accepted_node_fraction`: 보낸 node 중 실제 accepted path에 놓인 비율
+- `p1_root_prediction.ranking_auc`: P1 실제 다음 cache key를 기준으로
+  `local_q`, `context_reach`, 둘의 곱인 `start_score`의 순위 예측력을 각각
+  비교한다. 0.5는 무작위 수준이고 값이 클수록 실제 hit root를 위에 둔다.
+
+`branch_assisted_accepted_nodes`는 구조적 기여량이다. 대체 가지가 없었다면
+그 지점에서 recovery token을 뽑고 다음 step으로 갔을 것이므로, 전체 생성의
+counterfactual TPS와 완전히 같은 값으로 해석하면 안 된다. 그래도 정책이 실제로
+대체 가지를 사용했는지 확인하는 가장 직접적인 지표다.
 
 ## 1. K1/K2 latency 균형 찾기
 

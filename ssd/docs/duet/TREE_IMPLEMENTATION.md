@@ -1031,6 +1031,12 @@ Config는 다음을 시작 전에 거부한다.
 - tree와 `SSD_DUET_PROXY_ON_DRAFT=1` 또는
   `SSD_DUET_EXIT_TOPM_GATHER=1`의 조합
 
+`K1`을 바꿀 때는 홀짝과 무관하게 두 값을 함께 바꿔야 한다. 예를 들어
+`K1=8,K2=4`라면 `--k`를 생략하거나 `--k 12`로 두고, P1 fanout list는
+정확히 9개여야 한다. 과거에는 합 검사 일부가 `assert`여서 `python -O`에서
+사라졌고, stale `--k 13`이 조용히 실행되는 버그가 있었다. `ced6146`부터
+실제 `ValueError`로 검사하므로 정식 실행에서도 잘못된 형상을 즉시 거부한다.
+
 #### runtime 환경 변수
 
 | 환경 변수 | 성능 실행값 | 의미 |

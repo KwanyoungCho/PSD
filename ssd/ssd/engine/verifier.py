@@ -645,6 +645,9 @@ class Verifier(VerifierBase):
             with open(_calib + ".jsonl", "a") as _f:
                 _f.write(_json.dumps({
                     "seq": self._tree_calib_seq,
+                    "phase": (int(speculate_result.phase_source[0])
+                              if speculate_result.phase_source is not None
+                              else 0),
                     "policy": cfg.duet_tree_policy,
                     "valid": _v,
                     "temperature_target": tt,

@@ -244,6 +244,29 @@ def record_draft_response(step_id, phase_source, valid_k, out_tokens):
         step_id=int(step_id))
 
 
+def record_draft_p1_roots(step_id, seq_id, context_ids, root_tokens,
+                          start_scores, context_reach, local_q, valid):
+    """Record P1 root candidates for a next-request outcome join.
+
+    The next request carries the actual ``(context_id, recovery_token)`` in
+    its cache key.  Joining this record with request ``step_id + 1`` therefore
+    measures whether context reach, local root probability, and their product
+    predicted a real P1 hit.  This is diagnostic-only and uses the existing
+    asynchronous pinned-copy writer.
+    """
+    get("draft")._record(
+        "p1_roots",
+        gpu_tensors=dict(
+            context_ids=context_ids,
+            root_tokens=root_tokens,
+            start_scores=start_scores,
+            context_reach=context_reach,
+            local_q=local_q,
+            valid=valid,
+        ),
+        step_id=int(step_id), seq_id=int(seq_id))
+
+
 def record_draft_selector(step_id, chosen_pos, chosen_tok,
                           proxy_forked, proxy_fan_out, proxy_piv=None):
     """Draft, once per tree build: the parsed wire (order = wire rank —
