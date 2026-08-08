@@ -19,7 +19,7 @@ import os
 
 import torch
 
-from ssd.engine.helpers.p2_tree import q_probs_from_logits
+from ssd.engine.helpers.p2_tree import selected_q_probs_from_logits
 from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
 from ssd.utils.async_helpers.async_spec_helpers import (
     compute_tree_forward_width)
@@ -129,8 +129,6 @@ def build_uniform_p1_roots(
     # renormalization.  Score the selected alternative under the original
     # draft distribution; otherwise a context whose returned token owns
     # almost all mass would make a tiny alternative look spuriously certain.
-    probs = q_probs_from_logits(
-        glue_logits.float(), temps, sampler_x, async_fan_out)
     # Approximate the probability that verification reaches each context.
     # context_glue_rows[c] contains context c plus all of its ancestors.  The
     # direct parent is therefore the largest visible earlier context index.
@@ -153,13 +151,26 @@ def build_uniform_p1_roots(
         reach_rows.bool() & prior, idx.unsqueeze(0),
         torch.zeros((), dtype=torch.int64, device=glue_logits.device)
     ).amax(dim=1)
-    edge = probs[parent, returned_tokens]
+    # Only U root candidates and one parent->returned-token edge per context
+    # are consumed.  ``source_rows`` lets all pair probabilities share one
+    # scaled-logit/logsumexp pass even for tree-shaped contexts whose parent
+    # row is not the immediately preceding row.
+    selected_ids = torch.cat(
+        (root_tok, returned_tokens.reshape(p, 1)), dim=1)
+    source_rows = idx.reshape(p, 1).expand(
+        p, roots_per_position + 1).clone()
+    source_rows[:, -1] = parent
+    selected_probs = selected_q_probs_from_logits(
+        glue_logits, temps, selected_ids, sampler_x, async_fan_out,
+        source_rows=source_rows)
+    root_probs = selected_probs[:, :roots_per_position]
+    edge = selected_probs[:, -1]
     edge = edge.clone()
     edge[0] = 1.0
     context_reach = torch.exp(
         reach_rows.to(torch.float32).matmul(edge.clamp_min(1e-30).log()))
     root_score = (
-        probs.gather(1, root_tok)
+        root_probs
         * context_reach.unsqueeze(1)).reshape(-1)
     root_tok = root_tok.reshape(-1)
     ctx = torch.arange(p, device=glue_logits.device, dtype=torch.int64) \

@@ -1030,6 +1030,68 @@ def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
     return probs
 
 
+def selected_q_probs_from_logits(logits: torch.Tensor,
+                                 temperatures: torch.Tensor,
+                                 token_ids: torch.Tensor,
+                                 sampler_x=None, F=None,
+                                 source_rows: torch.Tensor | None = None):
+    """Evaluate q only at selected token ids without materialising ``[P,V]``.
+
+    P1 root preparation needs probabilities for U alternative roots and one
+    returned edge per context, not the full vocabulary distribution.  A full
+    softmax output was immediately gathered and discarded every step.  This
+    computes the same temperature/sampler-x distribution from logsumexp and
+    returns only ``token_ids``.  The target verifier still uses
+    :func:`q_probs_from_logits`; this helper affects ranking preparation only,
+    never the lossless acceptance distribution.
+    """
+    if logits.ndim != 2 or token_ids.ndim != 2 \
+            or (source_rows is None
+                and logits.shape[0] != token_ids.shape[0]):
+        raise ValueError(
+            "selected q expects logits [P,V] and token_ids [P,M]; got "
+            f"{tuple(logits.shape)} and {tuple(token_ids.shape)}")
+    if source_rows is not None and source_rows.shape != token_ids.shape:
+        raise ValueError(
+            "source_rows must match token_ids; got "
+            f"{tuple(source_rows.shape)} vs {tuple(token_ids.shape)}")
+    scaled = logits.float()
+    scaled.div_(temperatures.to(
+        device=logits.device, dtype=torch.float32).reshape(-1, 1))
+    log_z = torch.logsumexp(scaled, dim=-1, keepdim=True)
+    if source_rows is None:
+        selected_logits = scaled.gather(1, token_ids)
+        selected_log_z = log_z
+    else:
+        source_rows = source_rows.to(
+            device=logits.device, dtype=torch.int64)
+        selected_logits = scaled[source_rows, token_ids]
+        selected_log_z = log_z.squeeze(1)[source_rows]
+    selected = torch.exp(selected_logits - selected_log_z)
+    if sampler_x is None:
+        return selected
+    if F is None or int(F) < 0 or int(F) + 1 > logits.shape[1]:
+        raise ValueError(
+            f"sampler_x selected q requires 0<=F+1<=V; F={F}, "
+            f"V={logits.shape[1]}")
+    # apply_sampler_x_rescaling scales its top-(F+1) set, then renormalizes.
+    # The ordering of softmax probabilities is identical to scaled logits.
+    top_values, top_ids = torch.topk(scaled, int(F) + 1, dim=-1)
+    top_mass = torch.exp(top_values - log_z).sum(dim=-1, keepdim=True)
+    normalizer = (1.0 + (float(sampler_x) - 1.0) * top_mass) \
+        .clamp_min(torch.finfo(torch.float32).tiny)
+    query_top_ids = (top_ids.unsqueeze(1) if source_rows is None
+                     else top_ids[source_rows])
+    in_scaled_set = (token_ids.unsqueeze(-1)
+                     == query_top_ids).any(dim=-1)
+    scale = torch.where(
+        in_scaled_set, torch.full_like(selected, float(sampler_x)),
+        torch.ones_like(selected))
+    query_normalizer = (normalizer if source_rows is None
+                        else normalizer.squeeze(1)[source_rows])
+    return selected * scale / query_normalizer
+
+
 def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
                     c_tensor: int, sampler_x=None, F=None,
                     assume_pos_temps: bool = False, generator=None,

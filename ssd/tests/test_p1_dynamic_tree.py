@@ -8,11 +8,34 @@ from ssd.engine.draft_runner import _should_run_p2_tree
 from ssd.engine.helpers.p1_tree import (
     build_uniform_p1_roots, choose_p1_context_bucket,
     p1_context_buckets)
+from ssd.engine.helpers.p2_tree import (
+    q_probs_from_logits, selected_q_probs_from_logits)
 from ssd.utils.async_helpers.async_spec_helpers import (
     compute_megaspec_lookahead, compute_tree_forward_width)
 
 
 class TestP1UniformRoots(unittest.TestCase):
+    def test_selected_q_matches_full_distribution(self):
+        g = torch.Generator().manual_seed(7)
+        logits = torch.randn(4, 31, generator=g)
+        temps = torch.tensor([0.4, 0.7, 1.0, 1.3])
+        ids = torch.randint(0, 31, (4, 5), generator=g)
+        for sampler_x in (None, 0.6, 1.4):
+            full = q_probs_from_logits(
+                logits, temps, sampler_x=sampler_x, F=3)
+            selected = selected_q_probs_from_logits(
+                logits, temps, ids, sampler_x=sampler_x, F=3)
+            self.assertTrue(torch.allclose(
+                selected, full.gather(1, ids), atol=2e-7, rtol=2e-6))
+            rows = torch.tensor([
+                [0, 1, 2, 3, 0], [3, 2, 1, 0, 3],
+                [1, 1, 2, 2, 3], [2, 0, 3, 1, 0]])
+            paired = selected_q_probs_from_logits(
+                logits, temps, ids, sampler_x=sampler_x, F=3,
+                source_rows=rows)
+            self.assertTrue(torch.allclose(
+                paired, full[rows, ids], atol=2e-7, rtol=2e-6))
+
     def test_uniform_topk_scores_padding_and_glue_rows(self):
         logits = torch.tensor([
             [0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
