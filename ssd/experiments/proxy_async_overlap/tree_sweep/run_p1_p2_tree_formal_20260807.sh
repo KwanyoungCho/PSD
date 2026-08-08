@@ -59,6 +59,12 @@ P1_ROOTS_PER_POSITION="${P1_ROOTS_PER_POSITION:-2}"
 P1_TREE_FORWARD_SCALE="${P1_TREE_FORWARD_SCALE:-1.0}"
 P1_TREE_MAX_NODES="${P1_TREE_MAX_NODES:-$((2 * K1))}"
 P2_TREE_MAX_NODES="${P2_TREE_MAX_NODES:-$((2 * K2))}"
+# Generation and verification budgets are intentionally separate.  The
+# executor may search a wider tree, then send only the highest-value
+# lossless-closed subtree to the target.  Equal values reproduce the legacy
+# path exactly.
+P1_TREE_VERIFY_NODES="${P1_TREE_VERIFY_NODES:-${P1_TREE_MAX_NODES}}"
+P2_TREE_VERIFY_NODES="${P2_TREE_VERIFY_NODES:-${P2_TREE_MAX_NODES}}"
 P2_WIDTH="${P2_WIDTH:-10}"
 P2_ROOT_COUNT="${P2_ROOT_COUNT:-10}"
 TREE_C="${TREE_C:-3}"
@@ -161,6 +167,8 @@ run_one () {
     --duet_p1_tree_forward_scale "${P1_TREE_FORWARD_SCALE}"
     --duet_p1_tree_max_nodes "${P1_TREE_MAX_NODES}"
     --duet_p2_tree_max_nodes "${P2_TREE_MAX_NODES}"
+    --duet_p1_tree_verify_nodes "${P1_TREE_VERIFY_NODES}"
+    --duet_p2_tree_verify_nodes "${P2_TREE_VERIFY_NODES}"
     --duet_tree_c_tensor "${TREE_C}"
     --duet_tree_fanout_policy backbone
     --duet_tree_proxy_threshold "${TREE_PROXY_THRESHOLD}"
@@ -187,6 +195,8 @@ run_one () {
     echo "p1_tree_forward_scale=${P1_TREE_FORWARD_SCALE}"
     echo "p1_tree_max_nodes=${P1_TREE_MAX_NODES}"
     echo "p2_tree_max_nodes=${P2_TREE_MAX_NODES}"
+    echo "p1_tree_verify_nodes=${P1_TREE_VERIFY_NODES}"
+    echo "p2_tree_verify_nodes=${P2_TREE_VERIFY_NODES}"
     echo "tree_c=${TREE_C}"
     echo "p1_start_threshold=${P1_START_THRESHOLD}"
     echo "p1_conf_threshold=${P1_CONF_THRESHOLD}"
@@ -208,8 +218,10 @@ run_one () {
   echo "[$(date -Is)] START server=${SERVER_LABEL} arm=${arm} seed=${seed} "\
 "P1=${p1_policy} P2=${p2_policy} K1=${K1} K2=${K2} "\
 "P1roots=${P1_ROOTS_PER_POSITION} P1scale=${P1_TREE_FORWARD_SCALE} "\
-"P1nodes=${P1_TREE_MAX_NODES} P2R/W=${P2_ROOT_COUNT}/${P2_WIDTH} "\
-"P2nodes=${P2_TREE_MAX_NODES}" | tee "${dir}/status.txt"
+"P1nodes=${P1_TREE_MAX_NODES}/${P1_TREE_VERIFY_NODES}(gen/verify) "\
+"P2R/W=${P2_ROOT_COUNT}/${P2_WIDTH} "\
+"P2nodes=${P2_TREE_MAX_NODES}/${P2_TREE_VERIFY_NODES}(gen/verify)" \
+    | tee "${dir}/status.txt"
 
   SSD_DIST_PORT="${port}" \
   SSD_PROFILE=0 SSD_PROFILE_DUET="${PROFILE_DUET}" \

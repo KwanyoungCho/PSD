@@ -4611,6 +4611,10 @@ class DraftRunner(ModelRunner):
             if _r is not None:
                 _CH.cache.pop("_tree_mask_override", None)
                 return _r
+        # Both the GPU arena and the CPU reference path end in the same view
+        # conversion stage.  Start its measurement before the branch so the
+        # diagnostic/reference path remains valid when SSD_TREE_ARENA=0.
+        _mev_cv2 = _mr_p2("p2_output_convert")
         try:
             if _use_arena:
                 if not hasattr(self, "_tree_arena_ws"):
@@ -4664,7 +4668,6 @@ class DraftRunner(ModelRunner):
                         for i in range(K2)]
                 # 1a 경계: 단일 sync로 기존 view/wire 경로에 접속
                 # (1b에서 view/wire GPU화로 제거 예정 — docs/duet/internal/22)
-                _mev_cv2 = _mr_p2("p2_output_convert")
                 pool = _ar.to_pool(len(seeds))
                 if _s1_art is not None:
                     try:
