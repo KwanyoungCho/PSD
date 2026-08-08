@@ -146,14 +146,20 @@ class TestExecutorModuleParity(unittest.TestCase):
         ex.in_glue[:, :gw] = 1
         ex.in_glue_w.fill_(gw)
         ex.in_temps.fill_(0.8)
-        ex.in_prefix_len.fill_(ctx0 - gw - W)
+        # ``ctx0`` is the context length after round zero, matching the
+        # production runner.  Forward cells themselves start one round-zero
+        # width earlier and then follow the executor's compact prefix sums.
+        first_base = ctx0 - ex.round_ends[0]
+        ex.in_prefix_len.fill_(first_base - gw)
         p0 = (ctx0 + PAGE - 1) // PAGE
         for f in range(F):
-            base = ctx0 + f * W
+            wf = ex.round_widths[f]
+            base = first_base + ex.round_offsets[f]
             pos = base + torch.arange(W)
+            pos[wf:] = first_base
             ex.in_slot[f].copy_((pos % ((p0 + 1) * PAGE))
                                 .to(torch.int32).to(ex.dev))
-            ex.in_ctx_len[f].fill_(base + W)
+            ex.in_ctx_len[f].fill_(first_base + ex.round_ends[f])
             wr = ex.wrappers[p0][f]
             wr._paged_kv_indices_buf[:p0 + 1].copy_(
                 torch.arange(p0 + 1, dtype=torch.int32, device=ex.dev))
@@ -238,7 +244,12 @@ class TestExecutorModuleParity(unittest.TestCase):
     def test_p1_dynamic_executor_eager_equals_replay(self):
         """P1 evaluates every root, then reallocates lanes globally."""
         dev = "cuda:0"
-        V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
+        # The production draft cache uses 256-token pages.  P1 has 128
+        # compact continuation cells after its first round, so a 64-token
+        # synthetic page would require two extra canvas pages and exercise a
+        # deliberately unsupported runner fallback instead of this executor
+        # parity path.
+        V, H, HKV, D, PAGE = 128, 4, 2, 64, 256
         cfg = _MiniCfg()
         cfg.duet_tree_policy = "dynamic"
         cfg.duet_p1_tree_conf_threshold = 0.005
