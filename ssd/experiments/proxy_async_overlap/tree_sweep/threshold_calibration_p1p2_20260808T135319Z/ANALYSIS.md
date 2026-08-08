@@ -112,4 +112,22 @@ ns=10 outlen=384, eslab18 상대비교 (절대치 아님):
 - start floor 0.01의 P1AL 우려는 실측에서 미발현 (3.847 vs 3.880 —
   예산 재분배가 deep 손실 상쇄).
 - 다음: 17 클린박스 full-scale(D vs A, 3-seed paired)로 절대치 확정 후
-  formal 기본값 갱신.
+  formal 기본값 갱신 (`run_threshold_confirm17.sh` 준비됨, 17 점유 대기).
+
+### 메커니즘 실측 (mech_prof/, D vs A 프로파일 쌍, seed 42 진단런)
+
+| 구간 | A | D | Δ |
+|---|---|---|---|
+| target graph_pre | 34.64 | 31.55 | **−3.08** |
+| draft proxy_wait | 3.99 | 1.39 | **−2.61** |
+| draft step | 65.41 | 62.45 | −2.96 |
+| target full step | 71.27 | 67.04 | −4.23 |
+| p1/p2_graph_replay | 28.90/12.24 | 28.98/12.27 | ±0.07 |
+
+예측 사슬(M row 절단 → verify 단축 → exit-proxy 조기 → proxy_wait 단축)
+그대로. draft 그래프 시간 불변 — M은 draft 연산에 무영향 확인.
+
+**후속 캠페인 함의**: proxy_wait 1.39ms로 랑데부(P1 종료 ≈ proxy 도착)
+재균형 — 이 지점부터 **K1 라운드 절단은 단독 무득**(P1이 일찍 끝나도
+proxy-bound). spec_wait 8.4ms가 가리키는 다음 병목은 **draft 꼬리
+(P2 4라운드 12.3ms + glue)** — K2/P2 축이 다음 탐색 대상.
