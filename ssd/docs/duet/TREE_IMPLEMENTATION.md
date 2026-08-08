@@ -818,6 +818,117 @@ reach가 local q의 순위를 망친 것이 아니라 실제 hit root를 더 위
 한 seed의 diagnostic smoke이므로 threshold 숫자의 최종 calibration 근거로 쓰지
 않고, 폭 분리 후 정식 trace에서 다시 집계한다.
 
+### 8.13 P1 가변 폭 정확성·phase 분리 수정 (2026-08-08)
+
+위 8.10과 8.11의 과거 P1 품질/TPS 결과는 현재 구현의 판정 근거로
+사용하지 않는다. 후속 전수 경로 비교에서 두 개의 독립한 실버그를
+발견했다.
+
+1. **가변 폭 mask 좌표 불일치**: `[20,16,16,...]` P1에서 self/KV
+   cell은 최대 폭 20 stride를 쓰면서 조상 범위는 현재 폭 16으로
+   계산했다. 뒤 round의 선택 부모 KV가 mask에서 사라질 수 있었다.
+   commit `9c437e3`에서 round 실제 폭 prefix sum을 slot·context length·cell
+   id·ancestor bit·packed mask의 단일 좌표계로 사용했다. 별도 mask
+   재구성 CUDA parity에서 eager==graph와 모든 바이트가 일치했다.
+2. **P1-only가 일부 step에서 P2 tree를 실행**: 일반 split 경로 한 곳이
+   `duet_p2_tree_policy` 대신 legacy 전체 tree selector를 봤다. P1=on,
+   P2=off이어도 non-tree-hit step에 28ms 정도의 `p2_rollout`이 실행됐고,
+   tree-hit 경로에서만 P2 chain으로 돌아갔다. commit `320de3e`에서 두
+   경로 모두 phase-local switch 하나로 통일했다. 짧은 동일 조건에서
+   P1-only TPS는 53.6→62.0, cache hit은 0.73→0.81로 회복했다.
+
+정확성 수정 후 성능 경로에서는 다음을 줄였다.
+
+- P1/P2 graph에 매 round 7개씩 들어가던 진단 mirror copy를 진단 환경
+  또는 고정-noise parity에서만 캡처한다 (`79777b3`).
+- P1 root 준비는 전체 `[P,V]` softmax 결과를 만들지 않고 실제 root와
+  context edge token의 q만 계산한다 (`b37492c`, `29d99c8`).
+- 매 step 새 root tensor를 할당한 뒤 graph 입력으로 복사하지 않고,
+  executor 고정 buffer에 직접 기록한다 (`e1ddefd`).
+
+최종 판정 순서는 P1 threshold 0/0을 사용하고, 먼저 N1=K1=9로 target
+검증량을 chain과 맞춘 뒤, 품질이 통과할 때만 N1=18의 추가 가지 비용을
+비교한다. 모든 성능 run은 `SSD_TREE_EXEC_WARMUP=all`, runtime capture 0,
+profiler off를 요구한다.
+
+### 8.14 수정 후 P1 node-budget 판정과 사후 기여 분석
+
+수정된 코드에서 네 dataset × 5 prompt, output 256, 3 seed를 사용해
+chain-equivalent `N1=9`와 실제 분기 예산을 다시 비교했다. P2는 모두
+`off`, P1 threshold는 0/0, profiler는 껐고 모든 page graph를 service 전에
+capture했다.
+
+| arm | TPS | tok/step | P1 hit | P1AL | target verify | draft step |
+|---|---:|---:|---:|---:|---:|---:|
+| chain | 71.00 | 3.83 | 0.547 | 3.750 | 48.86 ms | 47.99 ms |
+| P1 dynamic, N1=9 | 67.30 | 3.87 | 0.567 | 3.780 | 49.30 ms | 56.02 ms |
+| P1 dynamic, N1=15 | 56.12 | 3.73 | 0.549 | 3.567 | 56.45 ms | 63.29 ms |
+| P1 dynamic, N1=18 | 52.27 | 3.76 | 0.566 | 3.573 | 63.25 ms | 66.72 ms |
+
+`N1=9`에서는 K1=9의 남은-round 예약 규칙 때문에 root마다 한 자식만
+이어져 topology가 사실상 chain이다. 이 gate에서 P1AL/hit/tok-step이
+동등 범위로 돌아온 것은 mask/phase 수정 뒤 시작 경로가 붕괴하지 않는다는
+증거다. 그래도 uniform 2 roots/context가 chain의 위치별 16 roots보다 많은
+20 roots를 첫 round에 평가하고 tree 장부를 실행하므로 TPS는 5.2% 낮다.
+
+실제 분기 예산은 같은 GPU 배치에서 채택되지 않았다. 한 seed의 sparse arm은
+N1=12에서 TPS 58.70/P1AL 3.54, N1=15에서 57.52/3.78을 보였지만,
+N1=15의 3-seed 평균 P1AL 이득은 재현되지 않았다. N1이 커질수록 이전 tree의
+모든 terminal context에 다음 P1 root를 만들어야 하므로 round 0은 최대
+`2*(N1+1)`행이 되고, target도 recovery를 포함해 `N1+1`행을 실제 model로
+검증한다. 이 비용은 Python kernel fusion으로 없앨 수 없는 의미 비용이다.
+
+aggregate arm 사이의 RNG/cache 궤적 차이와 실제 branch 기여를 분리하기 위해
+N1=18, 8-prompt 진단 run을 별도로 수행했다. 289 executor step의 parent-q/
+evaluated-cell audit에서 오류와 중복 평가는 모두 0이었다. 실제 P1 tree hit
+159개 결과는 다음과 같다.
+
+- 생성 node 2,538개 중 accepted path node 549개(21.6%)
+- 32 tree(20.1%)에서 sibling order 1 또는 2를 실제 수락
+- 대체 sibling부터 이어진 accepted node 46개(전체 accepted의 8.4%)
+- 같은 보행에서 first-child-only였을 반사실적 평균 3.16 대비 tree 평균 3.45,
+  즉 구조적 branch 기여 `+0.29 accepted node/tree`
+- P1 시작점수의 실제 다음 root 순위 AUC 0.821
+  (`local_q` 0.747, context reach 0.676)
+
+따라서 P1 branch는 실제로 사용되고 AL에 기여하지만, 현재 70B target/1B draft
+배치에서는 낮은 node 이용률과 재귀 context 비용 때문에 그 이득보다 시간이
+더 크다. P1은 정확한 연구 arm으로 유지하되 production 기본값은 계속 `off`다.
+원 로그는 `p1_compute_matched_gate_20260808`, `p1_nodes{12,15,18}_gate_20260808`,
+`p1_nodes18_audit_20260808`에 있다.
+
+### 8.15 큰 K 안전성 및 마지막 host 준비 최적화
+
+기존 executor는 round-0 뒤 모든 compact cell이 256-token page 하나에
+들어간다고 가정했다. 현재 K1=9 형상은 우연히 continuation 128 cell이라
+통과하지만 K/F를 늘리거나 page를 줄이면 매 step chain fallback했다.
+commit `99c7b55`는 shape에서 필요한 추가 canvas page 수를 계산하고,
+live cell page는 실제 block table을 사용하며 완전히 mask된 정렬 tail만 유한
+page로 대체한다. 64-token page에서 P1 continuation이 두 추가 page에 걸치는
+CUDA eager/replay exact test가 통과했다.
+
+commit `9a1025b`는 P1 root 선택을 위해 매 step `[P,V]` logits 전체를 clone하고
+반환 token 한 칸에 `-inf`를 쓰던 작업을 제거했다. 각 행에서 필요한 U보다
+하나 많은 후보만 뽑아 제외 token을 버리므로 후보와 원래 분포 점수 규약은
+같고, 입력 logits도 수정하지 않는다.
+
+### 8.16 최종 P2-only 회귀 gate
+
+P1 수정이 기존 P2 dynamic을 바꾸지 않았는지 동일한 3 seed/20 prompt/256
+output 조건으로 P2-only를 다시 측정했다. 비교 chain은 8.14와 같은 run이다.
+
+| arm | TPS | tok/step | P2 hit | P2AL | target verify | draft step |
+|---|---:|---:|---:|---:|---:|---:|
+| chain | 71.00 | 3.83 | 0.264 | 1.750 | 48.86 ms | 47.99 ms |
+| P2 dynamic N2=8 | 66.59 | 3.91 | 0.249 | 1.860 | 51.58 ms | 57.63 ms |
+
+P2AL은 `+0.11`(`+6.3%`), tok/step은 `+2.0%`지만 hit은 `-1.5%p`, TPS는
+`-6.2%`다. 즉 P2 tree의 token-axis 이득과 full-P2 graph 실행은 유지됐지만,
+현재 한 서버의 70B target/1B draft 배치에서는 추가 target row와 dynamic GPU
+연산을 완전히 상쇄하지 못한다. production 성능 champion은 chain이며, P2
+기본 `on`은 tree 연구 기본값이지 TPS 우위 주장으로 해석하지 않는다. 원 로그는
+`p2_final_gate_20260808`에 있다.
+
 ---
 
 ## 9. Timeline 해석

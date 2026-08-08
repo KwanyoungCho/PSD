@@ -111,12 +111,14 @@ P1이 너무 짧으면 draft가 proxy를 기다리고, 너무 길면 proxy가 �
 P1이 끝나지 않아 P2 시작이 늦어진다. 따라서 K1은 acceptance만 보고 정하지
 않고 `P1 완료 시각 - proxy 도착 시각`이 0에 가까운 값으로 정한다.
 
-현재 P1 dynamic은 기능 구현과 CUDA Graph 실행은 완료됐지만 production
-champion은 아니다. commit `0dc9e9d`의 3-seed P1-only gate에서 P1AL은 평균
-`+1.3%`였지만 P1 hit와 tok/step이 각각 `-1.53%p`, `-0.8%`였고 TPS는
-68.4→43.2로 내려갔다. 일반 context의 20-vs-16 draft lane, tree-hit 뒤 최대
-38 lane, target의 최대 18-node 검증이 실제 모델 계산이기 때문이다. 따라서 새
-실험의 안전한 기준선은 P1 `off`이며, P1 `on`은 정책 연구 arm으로 취급한다.
+현재 P1 dynamic은 기능·정확성·CUDA Graph 실행까지 완료됐지만 production
+champion은 아니다. 가변 폭 attention mask와 P1-only/P2 dispatch 오류를 각각
+`9c437e3`, `320de3e`에서 수정한 뒤 3-seed 정식 비교를 다시 수행했다.
+chain-equivalent `N1=9`에서는 P1AL 3.750→3.780으로 quality가 동등했지만
+TPS는 71.00→67.30이었다. 실제 분기 예산 N1=15/18은 대체 sibling을 실제로
+사용했음에도 TPS가 56.12/52.27이고 3-seed aggregate P1AL도 개선되지 않았다.
+따라서 실험 기준선과 production 권장은 P1 `off`다. P1 `on`은 target 검증이
+더 싼 배치에서 branch/AL 연구 arm으로 사용한다.
 
 이 gate 뒤 P1 실행기는 round별 폭을 분리했다. 현재 K1=9 champion은 첫 round만
 root 20개(이전 tree hit 뒤 최대 38개)를 모두 평가하고, 이후 여덟 round는 기존
@@ -287,11 +289,13 @@ P1 도입 직후의 전역 선택 formal에서 큰 AL 하락이 관측됐지만,
 
 ### 6.5 expansion threshold
 
-기본 threshold는 다음과 같다.
+기본 threshold는 phase별로 다음과 같다.
 
 ```text
-root/start threshold = 0.01
-node confidence threshold = 0.03
+P1 root/start threshold = 0.0
+P1 node confidence threshold = 0.0
+P2 root/start threshold = 0.01
+P2 node confidence threshold = 0.03
 ```
 
 threshold는 root나 이미 sampled된 node를 삭제하지 않는다.
@@ -318,6 +322,21 @@ R과 D를 갱신한다. 모든 형제가 기각되면 최종 residual에서 reco
 target은 tree node를 scratch KV에 계산한 뒤 수락된 한 경로의 KV만 canonical
 위치에 commit한다. 다른 branch의 KV는 다음 autoregressive context에 들어가지
 않는다.
+
+### 6.7 현재 성능 판정
+
+수정 완료 코드의 3-seed, seed당 20 prompt, output 256 P2-only 비교는 다음과
+같다.
+
+| arm | TPS | tok/step | P2 hit | P2AL | target verify | draft step |
+|---|---:|---:|---:|---:|---:|---:|
+| chain | 71.00 | 3.83 | 0.264 | 1.75 | 48.86 ms | 47.99 ms |
+| P2 tree, N2=8 | 66.59 | 3.91 | 0.249 | 1.86 | 51.58 ms | 57.63 ms |
+
+P2 tree는 AL과 step당 token을 올리지만 이 GPU 배치의 TPS는 6.2% 낮다. 따라서
+논문의 token-axis/구조 실험은 P2 `on`, 현재 시스템 성능 기준선과 champion은
+P1/P2 모두 `off`를 사용한다. target 검증이 상대적으로 싸거나 draft/target
+GPU 비율이 다른 서버에서는 calibration 후 다시 TPS를 판정해야 한다.
 
 ---
 
