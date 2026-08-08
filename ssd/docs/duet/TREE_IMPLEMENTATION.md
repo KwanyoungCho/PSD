@@ -68,7 +68,7 @@
 | N2 | `duet_p2_tree_max_nodes` | 8 | P2 root 하나의 응답 node 상한 |
 | U1 | `duet_p1_roots_per_position` | 2 | P1 context마다 만드는 시작 root 수 |
 | W1/R1 | `duet_p1_tree_forward_scale` | 1.0 | P1 forward 폭/root 수 비율 |
-| τproxy | `duet_tree_proxy_threshold` | 0.01 | P2의 round 1 이후 확장 threshold |
+| τroot | `duet_tree_proxy_threshold` | 0.01 | P1/P2의 round 1 이후 시작점수 threshold |
 | τconf | `duet_tree_conf_threshold` | 0.03 | P1/P2의 round 1 이후 확장 threshold |
 
 W와 R을 혼동하면 안 된다. W는 모델 forward의 물리 폭이고 R은 의미 있는 root
@@ -263,12 +263,13 @@ queue는 아니다. 이 제약은 P1/P2에 동일하게 적용된다.
 
 ### 4.5 threshold의 현재 상태
 
-기본 threshold는 `proxy=0.01`, `confidence=0.03`이다. round 0에는 적용하지 않아
-모든 root/cache key를 유지한다. round 1 이후 P2는 root proxy가 proxy threshold
-미만이거나 현재 node의 `raw_q`가 confidence threshold 미만이면 그 node를 더
-확장하지 않는다. P1에는 같은-step target proxy가 없으므로 proxy threshold는
-적용하지 않고 confidence threshold만 공유한다. threshold 아래 node도 이미
-sampled된 leaf에서 삭제되지 않는다.
+기본 threshold는 `root=0.01`, `confidence=0.03`이다. round 0에는 적용하지 않아
+모든 root/cache key를 유지하고 각 root에서 최대 C개 자식을 비복원 sampling한다.
+round 1 이후에는 P2의 target proxy prior와 P1의
+`glue context reach × alternative-root q`를 같은 **시작점수** 역할로 취급한다.
+시작점수가 root threshold 미만이거나 현재 node의 `raw_q`가 confidence threshold
+미만이면 그 node를 더 확장하지 않는다. threshold 아래 node도 이미 sampled된
+leaf에서 삭제되지 않는다.
 
 ### 4.6 기본 P2 형상의 정확한 topology
 
@@ -303,7 +304,8 @@ P2와 다르다. root가 생성된 뒤에는 위 P2 동적 선택과 같은 코�
 4. **이후 K1-1 rounds**
    첫 forward에서 생성된 최대 `R*C`개 자식 중 누적 점수가 높은 W개를 선택하고,
    이후에도 같은 과정을 반복한다. 기본 `W=R`이어도 후보 수가 W보다 많으므로
-   topology는 동적으로 바뀐다. P1에는 proxy threshold를 적용하지 않는다.
+   topology는 동적으로 바뀐다. P1도 glue-derived 시작점수에 root threshold를
+   적용하되 round-0 root/leaf는 보존한다.
 5. **응답 view와 cache key**
    각 시작 root는 `(sequence, context id, root token)` key와 최대 N1개의 node
    view를 갖는다. 다음 request가 그 key를 hit하면 해당 root의 tree 하나만 공통
@@ -665,7 +667,8 @@ forward 대신 일반 hit에서 20 lane, 최대 P1-tree hit 뒤에는 38 lane을
 - tree 기능이 켜지면 응답마다 일반 `K=13` q logits와 최대 `N1=18` parent-q
   logits를 둘 다 전송했다. non-tree step은 parent-q를 사용하지 않고, tree hit는
   일반 q를 사용하지 않는다. fused metadata를 먼저 받은 뒤 일반 응답은 K rows만,
-  P1/P2 tree hit는 각각 N1/N2 parent-q rows만 보내도록 프로토콜을 바꿨다.
+  P1/P2 tree hit는 실제 valid node 수만큼 parent-q rows를 보내도록 프로토콜을
+  바꿨다. 수신 buffer만 N1/N2 상한으로 고정해 재할당을 피한다.
 - FlashInfer wrapper마다 8MiB integer plan workspace가 새로 생겨 세 번째 context
   bucket의 첫 smoke가 OOM이었다. 같은 page bucket의 9 round는 plan geometry가
   완전히 같고 직렬 실행되므로 이 workspace를 공유했다. P1 float workspace도
@@ -688,8 +691,9 @@ bucket 하나만 사용해 생기는 추가 padding은 평균 약 1.3 node/tree-
 local confidence threshold는 `raw_q`만 보므로 낮은 root prior 뒤에 q≈1인 깊은
 경로를 막지 못한다. 다음 정책 실험은 단순 N1 축소가 아니라
 `root prior × cumulative path confidence`의 절대 marginal threshold 또는 target
-검증 row 비용을 뺀 utility를 사용해야 한다. 이는 AL을 바꾸는 연구 변경이므로 위
-의미 보존 최적화와 분리하고 paired quality/TPS gate 전에는 기본값으로 넣지 않는다.
+검증 row 비용을 뺀 utility를 사용해야 한다. 현재 첫 단계로 P1 root prior를 P2
+proxy와 같은 root threshold에 연결했다. 값 자체의 calibration은 phase별 score
+분포가 다를 수 있으므로 paired quality/TPS gate에서 다시 확인해야 한다.
 
 ---
 
@@ -954,7 +958,7 @@ SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
 | `--duet_p2_tree_max_nodes` | 8 | P2 root별 최대 응답 node N2 |
 | `--duet_tree_root_count` | `None` | P2 R; 동적 P2는 기본 R=W |
 | `--duet_tree_c_tensor` | 3 | 부모별 ordered 비복원 자식 상한 C, 허용 1--8 |
-| `--duet_tree_proxy_threshold` | 0.01 | P2 round 1 이후 root 확장 threshold |
+| `--duet_tree_proxy_threshold` | 0.01 | P1/P2 round 1 이후 시작점수 확장 threshold |
 | `--duet_tree_conf_threshold` | 0.03 | P1/P2 round 1 이후 child 확장 threshold |
 | `--duet_tree_fanout_policy` | `backbone` | 과거 정책 재현용; production dynamic은 전역 fanout 사용 |
 | `--duet_tree_beta` | 0.5 | 과거 root-budget 재현용; 현재 동적 점수에는 사용 안 함 |

@@ -110,6 +110,9 @@ class Config:
     # Post-hoc calibrated expansion floors (docs/duet/internal/27).  Round
     # zero ignores them so every root/cache key is retained; later dynamic
     # rounds use them only to stop spending forwards below tail nodes.
+    # Shared root/start expansion floor.  P2 supplies an early-exit proxy
+    # prior; P1 supplies glue context-reach * alternative-root q.  Both keep
+    # round-zero roots/children and only suppress deeper expansion.
     duet_tree_proxy_threshold: float = 0.01
     duet_tree_conf_threshold: float = 0.03
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).

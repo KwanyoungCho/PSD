@@ -252,6 +252,10 @@ class TestExecutorModuleParity(unittest.TestCase):
         p0 = (ctx0 + PAGE - 1) // PAGE
         ex.prepare_bucket(p0)
         self._fill_inputs(ex, PAGE, ctx0)
+        # P1 uses its glue-derived start score exactly like P2 uses its proxy
+        # prior.  A root below the shared start floor must still receive the
+        # round-zero C children, but none of those leaves may be expanded.
+        ex.in_root_piv[-1].fill_(0.001)
         gN = torch.Generator().manual_seed(330)
         ex.parity_noise = [
             torch.empty(ex.W, V).exponential_(1, generator=gN).to(dev)
@@ -276,6 +280,8 @@ class TestExecutorModuleParity(unittest.TestCase):
         # produce unequal response depths/node counts.
         self.assertTrue(bool((vt_p1 >= 1).all()))
         self.assertGreater(len(set(vt_p1.tolist())), 1)
+        self.assertEqual(int(vt_p1[-1]), ex.C)
+        self.assertTrue(bool((vt_p1[:-1] > ex.C).any()))
 
     def test_round_wrappers_share_only_same_page_plan_workspace(self):
         """Identical serial round plans should not allocate F private 8MiB buffers."""

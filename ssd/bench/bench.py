@@ -153,9 +153,10 @@ def parse_arguments():
                              "confidence derives R and coverage keeps R=W.")
     parser.add_argument("--duet_tree_proxy_threshold", type=float,
                         default=0.01,
-                        help="Dynamic P2 tree: keep every root's first forward, "
-                             "but do not expand deeper below roots with a "
-                             "smaller calibrated proxy score.")
+                        help="Dynamic P1/P2 tree: keep every root's first "
+                             "forward, but do not expand deeper below roots "
+                             "with a smaller calibrated start score "
+                             "(P1=glue reach*root q, P2=proxy score).")
     parser.add_argument("--duet_tree_conf_threshold", type=float,
                         default=0.03,
                         help="Dynamic tree: keep the sampled child as a leaf, "

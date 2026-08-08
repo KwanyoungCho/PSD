@@ -861,9 +861,15 @@ class P2TreeExecutor:
                 sel, sel_valid = PT._arena_select_global(
                     ar, W, f, F, remaining,
                     future_rounds=F - f - 1, R=R,
-                    proxy_threshold=(
-                        0.0 if self.phase == "p1" else float(getattr(
-                            self.cfg, "duet_tree_proxy_threshold", 0.0))),
+                    # P1's glue-derived ``context reach * root q`` is the
+                    # phase-1 counterpart of P2's target proxy prior.  Round
+                    # zero still evaluates every root and stores its sampled
+                    # children; from round one onward the same calibrated
+                    # root floor decides whether that one-level tree is worth
+                    # extending.  Treating P1 as threshold-free made roots
+                    # with vanishing start probability grow almost to NV.
+                    proxy_threshold=float(getattr(
+                        self.cfg, "duet_tree_proxy_threshold", 0.0)),
                     conf_threshold=float(getattr(
                         self.cfg, "duet_tree_conf_threshold", 0.0)))
             else:

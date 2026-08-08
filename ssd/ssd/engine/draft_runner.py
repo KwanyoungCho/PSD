@@ -1189,6 +1189,9 @@ class DraftRunner(ModelRunner):
                 _valid_tree, self._tree_hit_phase, K,
                 self.config.duet_p1_tree_max_nodes,
                 self.config.duet_p2_tree_max_nodes)
+            # Metadata was sent first, so the target posts the same exact
+            # valid-row receive.  Do not send the unused phase-cap tail: P1
+            # root thresholding deliberately produces many shallow trees.
             dist.send(_pq[:, :_pq_rows].contiguous(), dst=0,
                       group=self.async_pg)
         _mc_s("draft_send_response", _mev_ds)

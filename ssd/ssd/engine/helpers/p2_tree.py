@@ -25,7 +25,9 @@ def tree_response_logit_rows(tree_valid: int, phase_source: int,
     only its parent-q sidecar.  Sending both unconditionally made tree-enabled
     DUET transfer ``K + max(N1,N2)`` full-vocabulary rows on every request,
     including misses.  The fused metadata is received first, so both peers
-    can deterministically choose the same following NCCL payload.
+    can deterministically choose the same following NCCL payload.  The
+    persistent parent-q receive buffer remains phase-cap sized, but only the
+    exact ``tree_valid`` prefix crosses the wire.
     """
     tree_valid = int(tree_valid)
     phase_source = int(phase_source)
@@ -43,7 +45,7 @@ def tree_response_logit_rows(tree_valid: int, phase_source: int,
     if tree_valid > cap:
         raise ValueError(
             f"tree valid={tree_valid} exceeds phase {phase_source} cap={cap}")
-    return 0, cap
+    return 0, tree_valid
 
 
 def pack_tree_verify_mask(mask: torch.Tensor) -> torch.Tensor:

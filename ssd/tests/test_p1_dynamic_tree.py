@@ -188,9 +188,9 @@ class TestAsyncResponseEnvelope(unittest.TestCase):
         self.assertEqual(
             tree_response_logit_rows(0, 0, 13, 18, 8), (13, 0))
         self.assertEqual(
-            tree_response_logit_rows(14, 1, 13, 18, 8), (0, 18))
+            tree_response_logit_rows(14, 1, 13, 18, 8), (0, 14))
         self.assertEqual(
-            tree_response_logit_rows(7, 2, 13, 18, 8), (0, 8))
+            tree_response_logit_rows(7, 2, 13, 18, 8), (0, 7))
         with self.assertRaises(ValueError):
             tree_response_logit_rows(9, 2, 13, 18, 8)
         with self.assertRaises(ValueError):

@@ -349,9 +349,10 @@ class SpeculatorAsync(SpeculatorBase):
                                 if self._tree_wire_extra else None)
         # The fused block tells us whether the mutually exclusive next
         # payload is ordinary chain q or dynamic-tree parent q.  Reading two
-        # tiny metadata scalars here replaces transferring up to 18 unused
-        # full-vocabulary rows on every non-tree step (and K unused rows on a
-        # tree hit).
+        # tiny metadata scalars here replaces transferring unused ordinary q
+        # rows on a tree hit.  Parent-q itself is also received at the exact
+        # valid-node length rather than the configured phase cap; the backing
+        # buffer stays cap-sized for fixed allocation.
         _tree_valid = 0
         _tree_phase = 0
         if self._tree_ints_step is not None and B == 1:

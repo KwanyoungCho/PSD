@@ -269,7 +269,7 @@ P1 도입 직후의 전역 선택 formal에서 큰 AL 하락이 관측됐지만,
 기본 threshold는 다음과 같다.
 
 ```text
-root proxy threshold = 0.01
+root/start threshold = 0.01
 node confidence threshold = 0.03
 ```
 
@@ -582,9 +582,11 @@ W는 P2 forward 폭이고 R은 실제 root 수다. 현재는 cache coverage를 �
 
 #### Proxy threshold와 confidence threshold
 
-production dynamic 정책은 round 0에서 모든 root를 평가하므로 threshold가 root나
-cache key를 삭제하지 않는다. round 1 이후 P2에는 proxy/confidence threshold가,
-P1에는 confidence threshold만 적용돼 낮은 점수 leaf 아래의 추가 forward를 막는다.
+production dynamic 정책은 round 0에서 모든 root를 평가하고 각 root에서 최대 C개
+자식을 sampling하므로 threshold가 root나 cache key를 삭제하지 않는다. round 1
+이후 P2는 early-exit proxy score를, P1은 `glue 도달확률 × 시작 token q`를 같은
+시작점수로 취급해 root/start threshold를 적용한다. 두 phase 모두 local confidence
+threshold도 함께 사용하며, 낮은 점수 leaf 아래의 추가 확장만 막는다.
 새 모델/temperature/exit layer에서는 threshold 0/0으로 trace를 수집하고 실제
 사후 hit와 accepted child를 라벨로 threshold를 다시 계산한다.
 
@@ -595,6 +597,10 @@ python tools/duet_calibration/analyze_thresholds.py --input /path/to/trace.jsonl
 
 threshold는 node를 삭제하는 값이 아니라 그 아래 추가 확장을 멈추는 값으로
 해석해야 한다.
+
+Tree 응답의 full-vocabulary parent-q payload도 N1/N2 상한 전체가 아니라 실제 valid
+node 수만 송신한다. fused metadata가 먼저 도착하므로 추가 handshake 없이 양쪽이
+같은 길이를 알 수 있고, 얕은 P1 tree의 통신량이 상한 크기에 묶이지 않는다.
 
 #### C와 phase별 최대 node 수
 
