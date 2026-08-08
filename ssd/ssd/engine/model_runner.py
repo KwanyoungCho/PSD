@@ -1482,8 +1482,17 @@ class ModelRunner:
         # Keep the packed mask on CPU.  The captured wrapper owns its fixed
         # GPU mask buffer, so materialising a fresh CUDA tensor here only
         # added an allocation and a second copy on every P2 hit.
+        # A captured FlashInfer plan is valid only for its page-count shape.
+        # Select that graph first, then build a full-last-page canvas mask;
+        # columns after the real kv_len remain zero.  Eager fallback keeps
+        # the exact-length mask and plans normally.
+        _cg = None
+        if os.environ.get("SSD_TREE_VERIFY_EAGER", "0") != "1":
+            _cg = getattr(self, "_tree_verify_cg", {}).get(
+                (nv_b, n_blocks))
+        _mask_kv_len = (n_blocks * bs if _cg is not None else kv_len)
         _packed_mask = pack_tree_verify_mask_direct(
-            anc, valid, r_b, pos0 + 1, kv_len)
+            anc, valid, r_b, pos0 + 1, _mask_kv_len)
         _tp = max(1, self.num_tp_gpus)     # KV 할당(:896)과 동일한 분모
         duet_close("tree_verify_mask_prepare", _ev_mask)
 
@@ -1497,9 +1506,6 @@ class ModelRunner:
                 torch.cuda.current_stream().wait_event(_prev_done)
 
         # === CG replay 경로 (T3.2 capture 존재 + eager 강제 아님) ===
-        _cg = None
-        if os.environ.get("SSD_TREE_VERIFY_EAGER", "0") != "1":
-            _cg = getattr(self, "_tree_verify_cg", {}).get(nv_b)
         if _cg is not None:
             bufs = _cg["bufs"]
             wcg = _cg["wrapper"]
@@ -1507,7 +1513,7 @@ class ModelRunner:
             bufs["input_ids"].copy_(input_ids)
             bufs["rope"].copy_(rope)
             bufs["slot_mapping"].copy_(slot_mapping)
-            bufs["context_lens"][0] = kv_len
+            bufs["context_lens"][0] = _mask_kv_len
             duet_close("tree_verify_input_copy", _ev_copy)
             # 이슈 #18: prepare_decode의 체인-verify context(cu_seqlens_q
             # 설정)가 남아 있으면 lm_head가 [1, rows, V] 3-D를 반환해
@@ -1521,6 +1527,13 @@ class ModelRunner:
                 block_tables=context.block_tables,
             )
             _ev_plan = duet_record("tree_verify_attention_buffers")
+            # Graph launch geometry was captured for this exact page count.
+            # Update only dynamic page ids/mask and restore the fixed canvas
+            # metadata because wrappers are shared by all page graphs of the
+            # same node bucket.
+            _ph["last"][0] = bs
+            _ph["mask"][1] = r_b * _mask_kv_len
+            _ph["klen"][0] = _mask_kv_len
             update_tree_verify_graph_buffers(
                 wcg, kv_indices, _packed_mask, _ph)
             duet_close("tree_verify_attention_buffers", _ev_plan)

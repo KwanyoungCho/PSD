@@ -1200,11 +1200,14 @@ def update_tree_verify_graph_buffers(wrapper, kv_indices, packed_mask,
 def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
     """P2-tree verify CG (T3.2 bucket capture — docs/duet/internal/20).
 
-    bucket = N_v+1 행 고정, B=1. duet_verify와 동일한 pre/exit/post
-    분할이되 attention은 FlashInfer tree wrapper (T3.1의 CG-buf
-    wrapper). plan은 replay 전에 public plan으로 매 step 갱신 (shape
-    고정: qo_indptr len 2, kv_indptr len 2 — 버퍼 핀 고정).
-    rope는 입력 버퍼 (depth 기반 — replay마다 복사).
+    bucket = (N_v, page_count), B=1.  FlashInfer's host ``plan()`` chooses
+    launch geometry from the KV page shape.  Rewriting its buffers after a
+    graph was captured does *not* rewrite that launch geometry, so a graph
+    captured with one page cannot safely serve a three-page request.  Capture
+    every reachable page count once.  Within a page bucket the last page is a
+    full-page canvas and the packed mask hides columns beyond the real
+    ``kv_len``; this keeps shape/launch fixed while token values and topology
+    remain dynamic.
     """
     config = model_runner.config
     hf_config = config.hf_config
@@ -1214,6 +1217,7 @@ def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
     _tp = max(1, model_runner.num_tp_gpus)
     dev = model_runner.device
     out = {}
+    max_pages = (config.max_model_len + bs_blk - 1) // bs_blk
     for nv_b in sorted(model_runner.tree_verify_wrappers):
         wrapper = model_runner.tree_verify_wrappers[nv_b]
         r = nv_b + 1
@@ -1226,56 +1230,66 @@ def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
             "exit_residual": torch.zeros(r, H, dtype=hf_config.torch_dtype),
             "outputs": torch.zeros(r, H, dtype=hf_config.torch_dtype),
         }
-        # 대표 plan (capture 전 필수) — kv 1블록, mask 전부 1
-        wrapper.plan(
-            torch.tensor([0, r], dtype=torch.int32, device=dev),
-            torch.tensor([0, 1], dtype=torch.int32, device=dev),
-            torch.zeros(1, dtype=torch.int32, device=dev),
-            torch.tensor([bs_blk], dtype=torch.int32, device=dev),
-            max(1, hf_config.num_attention_heads // _tp),
-            max(1, hf_config.num_key_value_heads // _tp),
-            hf_config.head_dim, bs_blk,
-            custom_mask=torch.ones(r * bs_blk, dtype=torch.bool,
-                                   device=dev),
-            q_data_type=hf_config.torch_dtype,
-            kv_data_type=hf_config.torch_dtype,
-        )
-        set_context(
-            is_prefill=False,
-            slot_mapping=bufs["slot_mapping"],
-            context_lens=bufs["context_lens"],
-            tree_verify_wrapper=wrapper,
-        )
-        # --- pre: layers [0, exit] ---
-        hs, res = model_runner.model(
-            bufs["input_ids"], bufs["rope"], end_layer=exit_layer + 1)
-        bufs["exit_hidden"].copy_(hs)
-        bufs["exit_residual"].copy_(res)
-        g_pre = torch.cuda.CUDAGraph()
-        with torch.cuda.graph(g_pre, graph_pool):
+        for n_pages in range(1, max_pages + 1):
+            canvas_cols = n_pages * bs_blk
+            bufs["context_lens"].fill_(canvas_cols)
+            # Capture with the exact page-count launch geometry.  Page ids
+            # are contents and are replaced before replay; all-zero ids are
+            # finite and valid for warmup/capture.
+            wrapper.plan(
+                torch.tensor([0, r], dtype=torch.int32, device=dev),
+                torch.tensor([0, n_pages], dtype=torch.int32, device=dev),
+                torch.zeros(n_pages, dtype=torch.int32, device=dev),
+                torch.tensor([bs_blk], dtype=torch.int32, device=dev),
+                max(1, hf_config.num_attention_heads // _tp),
+                max(1, hf_config.num_key_value_heads // _tp),
+                hf_config.head_dim, bs_blk,
+                custom_mask=torch.ones(
+                    r * canvas_cols, dtype=torch.bool, device=dev),
+                q_data_type=hf_config.torch_dtype,
+                kv_data_type=hf_config.torch_dtype,
+            )
+            set_context(
+                is_prefill=False,
+                slot_mapping=bufs["slot_mapping"],
+                context_lens=bufs["context_lens"],
+                tree_verify_wrapper=wrapper,
+            )
+            # --- pre: layers [0, exit] ---
             hs, res = model_runner.model(
                 bufs["input_ids"], bufs["rope"], end_layer=exit_layer + 1)
             bufs["exit_hidden"].copy_(hs)
             bufs["exit_residual"].copy_(res)
-        if graph_pool is None:
-            graph_pool = g_pre.pool()
-        # --- post: layers [exit+1, L) + norm ---
-        o = model_runner.model(
-            bufs["input_ids"], bufs["rope"], start_layer=exit_layer + 1,
-            init_hidden_states=bufs["exit_hidden"],
-            init_residual=bufs["exit_residual"])
-        bufs["outputs"].copy_(o if not isinstance(o, tuple) else o[0])
-        g_post = torch.cuda.CUDAGraph()
-        with torch.cuda.graph(g_post, graph_pool):
+            g_pre = torch.cuda.CUDAGraph()
+            with torch.cuda.graph(g_pre, graph_pool):
+                hs, res = model_runner.model(
+                    bufs["input_ids"], bufs["rope"],
+                    end_layer=exit_layer + 1)
+                bufs["exit_hidden"].copy_(hs)
+                bufs["exit_residual"].copy_(res)
+            if graph_pool is None:
+                graph_pool = g_pre.pool()
+            # --- post: layers [exit+1, L) + norm ---
             o = model_runner.model(
                 bufs["input_ids"], bufs["rope"],
                 start_layer=exit_layer + 1,
                 init_hidden_states=bufs["exit_hidden"],
                 init_residual=bufs["exit_residual"])
             bufs["outputs"].copy_(o if not isinstance(o, tuple) else o[0])
-        reset_context()
-        out[nv_b] = {"bufs": bufs, "pre": g_pre, "post": g_post,
-                     "wrapper": wrapper}
+            g_post = torch.cuda.CUDAGraph()
+            with torch.cuda.graph(g_post, graph_pool):
+                o = model_runner.model(
+                    bufs["input_ids"], bufs["rope"],
+                    start_layer=exit_layer + 1,
+                    init_hidden_states=bufs["exit_hidden"],
+                    init_residual=bufs["exit_residual"])
+                bufs["outputs"].copy_(
+                    o if not isinstance(o, tuple) else o[0])
+            reset_context()
+            out[(nv_b, n_pages)] = {
+                "bufs": bufs, "pre": g_pre, "post": g_post,
+                "wrapper": wrapper, "canvas_cols": canvas_cols,
+                "n_pages": n_pages}
     return out, graph_pool
 
 
