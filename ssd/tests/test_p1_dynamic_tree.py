@@ -115,6 +115,30 @@ class TestP1ShapeBuckets(unittest.TestCase):
         self.assertEqual(both.gpu_memory_utilization, 0.75)
         self.assertEqual(sync.gpu_memory_utilization, 0.75)
 
+    def test_phase_switches_select_dynamic_for_p1_only(self):
+        from ssd.config import _normalize_tree_switches
+
+        self.assertEqual(
+            _normalize_tree_switches("off", "off", None),
+            ("off", "off", "off"))
+        self.assertEqual(
+            _normalize_tree_switches("on", "off", None),
+            ("on", "off", "dynamic"))
+        self.assertEqual(
+            _normalize_tree_switches("off", "on", None),
+            ("off", "on", "dynamic"))
+        self.assertEqual(
+            _normalize_tree_switches("on", "on", None),
+            ("on", "on", "dynamic"))
+        # Draft-config reconstruction passes the normalized selector back
+        # through Config.  It must not silently enable P2.
+        self.assertEqual(
+            _normalize_tree_switches("on", "off", "dynamic"),
+            ("on", "off", "dynamic"))
+        self.assertEqual(
+            _normalize_tree_switches("off", "off", "eagle"),
+            ("off", "on", "eagle"))
+
     def test_buckets_cover_chain_and_tree_contexts(self):
         buckets = p1_context_buckets(9, 4, 13, 8)
         self.assertIn(5, buckets)   # K2 short-chain contexts

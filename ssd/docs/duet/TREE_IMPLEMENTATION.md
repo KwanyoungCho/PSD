@@ -180,6 +180,11 @@ forward의 부모로 고른다. 낮은 점수 root는 얕게 끝날 수 있고, 
 노출하지 않고 phase별 `off|on`만 사용한다. 과거 `backbone`과 `hybrid` 정책은
 비교·이력 재현용으로만 남는다.
 
+설정 정규화도 두 phase를 대칭으로 취급한다. P1만 `on`이고 P2가 `off`인 분해
+실험에서도 내부 selector는 `dynamic`이다. 2026-08-08 이전에는 이 경우 P2
+스위치만 보고 selector를 `off`로 만드는 결함이 있었으며, 이를 수정하고 회귀
+테스트로 고정했다. P1/P2가 모두 `off`일 때만 내부 selector도 `off`다.
+
 형제 순서는 proposal 분포의 일부다. 부모별 fanout은 token identity를 보기 전에
 결정하며, ordered without-replacement 순서를 target residual verifier까지 그대로
 보존한다.
@@ -409,6 +414,9 @@ block-table zero-fill, dtype 변환, canvas clone도 제거했다.
 chain logits/token 복사를 먼저 한 뒤 tree payload로 덮어쓰지 않으며, 미리 만든
 고정 staging buffer에 **실제 valid node 수만큼** parent-q를 모아 그 행만
 전송한다. 얕은 P1 tree를 phase 최대 N1행으로 pad해 보내지 않는다.
+Topology 검증에 필요한 한 번의 bounded readback에서 valid node 수도 함께 얻어
+별도의 scalar 동기화를 하지 않으며, parent-q는 임시 `index_select`/dtype 변환
+tensor 없이 bounded Triton gather가 staging buffer에 바로 쓴다.
 
 이 최적화는 B=1 tree wire의 계약이다. B>1 요청은 아직 tree payload를 담지
 못하므로, 직전 B=1에서 생성한 dynamic-tree cache row를 chain row로 잘못 읽지

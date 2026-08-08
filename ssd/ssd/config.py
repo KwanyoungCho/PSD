@@ -5,6 +5,45 @@ import torch
 from ssd.paths import DEFAULT_TARGET, DEFAULT_DRAFT
 
 
+def _normalize_tree_switches(p1_policy: str, p2_policy: str,
+                             legacy_policy: str | None) \
+        -> tuple[str, str, str]:
+    """Normalize public phase switches without changing them on re-entry.
+
+    ``Config`` is reconstructed with ``dataclasses.replace`` for the draft
+    runner, so its already-normalized internal selector appears here again as
+    ``legacy_policy``.  Internal ``dynamic``/``backbone`` values must not turn
+    P2 on during that second pass.  Only the old explicit ``eagle`` spelling
+    and ``off`` retain their historical P2-switch override.
+    """
+    if p1_policy not in ("off", "on"):
+        raise ValueError(
+            f"duet_p1_tree_policy must be off|on; got {p1_policy!r}")
+    if p2_policy not in ("off", "on"):
+        raise ValueError(
+            f"duet_p2_tree_policy must be off|on; got {p2_policy!r}")
+    reproduction = {
+        "dynamic", "backbone", "hybrid", "adaptive", "coverage",
+        "confidence", "level", "frontier",
+    }
+    if legacy_policy == "eagle":
+        return p1_policy, "on", "eagle"
+    if legacy_policy == "off":
+        p2_policy = "off"
+        selector = "dynamic" if p1_policy == "on" else "off"
+        return p1_policy, p2_policy, selector
+    if legacy_policy in reproduction:
+        return p1_policy, p2_policy, legacy_policy
+    if legacy_policy is not None:
+        raise ValueError(
+            "deprecated duet_tree_policy accepts only off|eagle or a "
+            "legacy reproduction policy; new runs must use "
+            "duet_p2_tree_policy=off|on")
+    selector = "dynamic" if (
+        p1_policy == "on" or p2_policy == "on") else "off"
+    return p1_policy, p2_policy, selector
+
+
 def _ensure_head_dim(hf_config: AutoConfig) -> None:
     """Inject ``head_dim`` on configs that omit it (e.g. Qwen2 / Qwama).
 
@@ -417,55 +456,10 @@ class Config:
         # Old scripts remain reproducible, but ``eagle`` is never a public
         # name in the new interface.
         _legacy_tree_policy = self.duet_tree_policy
-        if self.duet_p1_tree_policy not in ("off", "on"):
-            raise ValueError(
-                "duet_p1_tree_policy must be off|on; got "
-                f"{self.duet_p1_tree_policy!r}")
-        if self.duet_p2_tree_policy not in ("off", "on"):
-            raise ValueError(
-                "duet_p2_tree_policy must be off|on; got "
-                f"{self.duet_p2_tree_policy!r}")
-        if _legacy_tree_policy is not None:
-            if _legacy_tree_policy == "eagle":
-                self.duet_p2_tree_policy = "on"
-            elif _legacy_tree_policy in ("dynamic", "backbone"):
-                # ``DraftRunner.create_draft_config`` reconstructs an already
-                # normalized Config via dataclasses.replace().  Treat the
-                # production internal name as an idempotent normalized value,
-                # not as a user-facing legacy policy error.
-                self.duet_p2_tree_policy = "on"
-            elif _legacy_tree_policy == "off":
-                self.duet_p2_tree_policy = "off"
-            elif _legacy_tree_policy not in (
-                    "hybrid", "adaptive", "coverage", "confidence", "level",
-                    "frontier"):
-                raise ValueError(
-                    "deprecated duet_tree_policy accepts only off|eagle or "
-                    "a legacy reproduction policy; new runs must use "
-                    "duet_p2_tree_policy=off|on")
-        # Existing P2 code consumes this internal selector name.  Legacy
-        # reproduction modes retain their exact implementation only when an
-        # old script explicitly requested one.
-        if _legacy_tree_policy == "eagle":
-            # Exact legacy reproduction remains available only when named
-            # explicitly by an old experiment.
-            self.duet_tree_policy = "eagle"
-        elif _legacy_tree_policy == "dynamic":
-            self.duet_tree_policy = "dynamic"
-        elif _legacy_tree_policy == "backbone":
-            self.duet_tree_policy = "backbone"
-        elif _legacy_tree_policy in (
-                "hybrid", "adaptive", "coverage", "confidence", "level",
-                "frontier"):
-            self.duet_tree_policy = _legacy_tree_policy
-        else:
-            # Production ``on`` uses the same global cumulative-confidence
-            # selector that P2 used before P1 tree support was introduced.
-            # Round zero evaluates every root; later rounds select parents
-            # globally.  P1 shares this algorithm with a draft-derived root
-            # prior in place of the target proxy score.
-            self.duet_tree_policy = (
-                "dynamic" if self.duet_p2_tree_policy == "on" else "off")
+        (self.duet_p1_tree_policy, self.duet_p2_tree_policy,
+         self.duet_tree_policy) = _normalize_tree_switches(
+            self.duet_p1_tree_policy, self.duet_p2_tree_policy,
+            _legacy_tree_policy)
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
@@ -894,6 +888,7 @@ class Config:
                   f'P2_W={self.duet_proxy_total_budget}, '
                   f'P1_tree={self.duet_p1_tree_policy}, '
                   f'P2_tree={self.duet_p2_tree_policy}, '
+                  f'tree_selector={self.duet_tree_policy}, '
                   f'tree_R={self.duet_tree_root_count}, '
                   f'P1_tree_nodes={self.duet_p1_tree_max_nodes}, '
                   f'P2_tree_nodes={self.duet_p2_tree_max_nodes}, '

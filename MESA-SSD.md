@@ -73,6 +73,10 @@ P1은 target proxy 없이 draft 분포만 사용한다. 정책은 두 가지다.
 - `--duet_p1_tree_policy on`: 각 현재 context에서 같은 수의 시작 후보를 만들고,
   첫 forward에서 모두 평가한 뒤 누적 점수가 높은 자식을 전역적으로 확장한다.
 
+P1만 `on`으로 두는 분해 실험도 같은 동적 selector를 사용한다. 내부 정책은 P2
+스위치가 아니라 P1/P2 중 하나라도 `on`이면 동적으로 정규화되고, 둘 다 `off`일
+때만 chain이다.
+
 동적 P1의 시작 단계는 다음과 같다.
 
 1. 일반 chain 응답이면 `K1+1` 또는 `K2+1`개의 현재 context를 사용한다. 이전
@@ -361,6 +365,8 @@ Tree hit에서는 chain용 전체-vocabulary backbone logits를 만들거나 cac
 staging tensor도 매 hit마다 새로 할당하지 않고 시작할 때 한 번 만든다. 현재
 tree payload는 B=1 계약이므로, B>1 요청에서 이전 B=1 tree row가 우연히 key와
 일치하면 chain payload로 오독하지 않고 miss로 처리한다.
+Topology readback과 valid-node 수 readback도 한 번으로 합쳤고, parent 분포는
+임시 tensor 없이 고정 staging buffer로 직접 gather한다.
 
 #### page bucket 사전 준비
 

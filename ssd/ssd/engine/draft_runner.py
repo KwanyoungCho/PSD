@@ -848,43 +848,42 @@ class DraftRunner(ModelRunner):
                                  if _phase == 1 else
                                  self.config.duet_p2_tree_max_nodes)
                     _wire_nv = self.config.duet_tree_wire_nodes
-                    _n_valid = int(_tviews["valid"][_root])
+                    # Pack first, then use the already-required validation
+                    # readback as the sole source of the data-dependent row
+                    # count.  Reading ``valid[root]`` separately introduced
+                    # an additional GPU->CPU synchronization on every hit.
+                    _packed_ints = pack_tree_ints(
+                        _tviews, _root, _wire_nv)
+                    _packed_cpu = _packed_ints.detach().cpu()
+                    _parsed = parse_tree_ints(_packed_cpu, _wire_nv)
+                    validate_tree_ints(
+                        _parsed, _wire_nv, self.hf_config.vocab_size)
+                    _n_valid = int(_parsed["valid"])
                     if _n_valid > 0:
                         out_tokens[0, :_phase_nv] = \
                             _tviews["tok"][_root, :_phase_nv].to(self.device)
                         valid_k[0] = _n_valid
-                        _packed_ints = pack_tree_ints(
-                            _tviews, _root, _wire_nv)
-                        # One bounded readback replaces the old scalar
-                        # ``int(_packed_ints[0])`` sync.  Reject malformed
-                        # topology before it can enter the async wire and
-                        # strand target TP ranks in different code paths.
-                        _packed_cpu = _packed_ints.detach().cpu()
-                        _parsed = parse_tree_ints(_packed_cpu, _wire_nv)
-                        validate_tree_ints(
-                            _parsed, _wire_nv, self.hf_config.vocab_size)
-                        if int(_parsed["valid"]) != _n_valid:
-                            raise RuntimeError(
-                                f"tree serve invariant: pack valid="
-                                f"{int(_parsed['valid'])} != _n_valid="
-                                f"{_n_valid} root={_root}")
                         self._tree_wire_ints = _packed_ints.to(self.device)
                         # 1b: pq는 서빙 시 hit root만 gather (선제
                         # [R,nv,V] 물질화 제거 — docs/duet/internal/22)
                         _pqc = _tviews["parent_q_cells"][
-                            _root, :_n_valid].clamp(min=0).to(
-                                _tviews["cell_logits"].device)
-                        _pq_live = _tviews["cell_logits"].index_select(
-                            0, _pqc).to(device=self.device,
-                                       dtype=out_logits.dtype)
+                            _root, :_n_valid].to(
+                                device=_tviews["cell_logits"].device,
+                                dtype=torch.int64)
                         if self._tree_wire_parent_q_buf is None:
                             raise RuntimeError(
                                 "tree parent-q staging buffer was not "
                                 "preallocated")
                         self._tree_wire_parent_q = \
                             self._tree_wire_parent_q_buf
-                        self._tree_wire_parent_q[0, :_n_valid].copy_(
-                            _pq_live)
+                        # Direct bounded gather+cast into the persistent wire
+                        # buffer.  ``index_select(...).to(...)`` created two
+                        # full-vocabulary temporaries on every tree hit.
+                        from ssd.engine.helpers.p2_tree_executor import \
+                            _gather_backbone_logits
+                        _gather_backbone_logits(
+                            _tviews["cell_logits"], _pqc,
+                            self._tree_wire_parent_q[0, :_n_valid])
                         self._tree_hit_root = _root
                         self._tree_hit_views = _tviews
                         self._tree_hit_phase = _phase
