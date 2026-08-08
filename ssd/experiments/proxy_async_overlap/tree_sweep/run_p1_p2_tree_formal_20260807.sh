@@ -64,12 +64,12 @@ P2_ROOT_COUNT="${P2_ROOT_COUNT:-10}"
 TREE_C="${TREE_C:-3}"
 TREE_PROXY_THRESHOLD="${TREE_PROXY_THRESHOLD:-0.01}"
 TREE_CONF_THRESHOLD="${TREE_CONF_THRESHOLD:-0.03}"
+P1_START_THRESHOLD="${P1_START_THRESHOLD:-0.0}"
+P1_CONF_THRESHOLD="${P1_CONF_THRESHOLD:-0.0}"
 RUN_NS="${RUN_NS:-20}"
 RUN_OUTLEN="${RUN_OUTLEN:-384}"
-P1_FORWARD_WIDTH_CHAIN="$(${PY} -c \
-  "import math; print(math.ceil(10 * ${P1_ROOTS_PER_POSITION} * ${P1_TREE_FORWARD_SCALE}))")"
-P1_FORWARD_WIDTH_MAX="$(${PY} -c \
-  "import math; print(math.ceil((${P1_TREE_MAX_NODES} + 1) * ${P1_ROOTS_PER_POSITION} * ${P1_TREE_FORWARD_SCALE}))")"
+PROFILE_DUET="${PROFILE_DUET:-0}"
+PROFILE_DETAIL="${PROFILE_DETAIL:-0}"
 
 # Preserve the established schedule ratio while making its length match K1.
 # K1=9 reproduces 2,2,2,2,2,2,1,1,1,1.  Callers may override it exactly.
@@ -165,6 +165,8 @@ run_one () {
     --duet_tree_fanout_policy backbone
     --duet_tree_proxy_threshold "${TREE_PROXY_THRESHOLD}"
     --duet_tree_conf_threshold "${TREE_CONF_THRESHOLD}"
+    --duet_p1_tree_start_threshold "${P1_START_THRESHOLD}"
+    --duet_p1_tree_conf_threshold "${P1_CONF_THRESHOLD}"
   )
   if [[ "${p2_policy}" == "on" ]]; then
     extra+=(--duet_tree_root_count "${P2_ROOT_COUNT}")
@@ -186,15 +188,16 @@ run_one () {
     echo "p1_tree_max_nodes=${P1_TREE_MAX_NODES}"
     echo "p2_tree_max_nodes=${P2_TREE_MAX_NODES}"
     echo "tree_c=${TREE_C}"
+    echo "p1_start_threshold=${P1_START_THRESHOLD}"
+    echo "p1_conf_threshold=${P1_CONF_THRESHOLD}"
     echo "p2_width=${P2_WIDTH}"
     echo "p2_root_count=${P2_ROOT_COUNT}"
     echo "p2_executor=${p2_exec}"
     echo "p1_fanout_list=${P1_FANOUT_LIST}"
     echo "p1_chain_forward_cells=$((16 * K1))"
-    echo "p1_tree_forward_width_chain_context=${P1_FORWARD_WIDTH_CHAIN}"
-    echo "p1_tree_forward_width_max_tree_context=${P1_FORWARD_WIDTH_MAX}"
-    echo "p1_tree_forward_cells_chain_context=$((P1_FORWARD_WIDTH_CHAIN * K1))"
-    echo "p1_tree_forward_cells_max_tree_context=$((P1_FORWARD_WIDTH_MAX * K1))"
+    echo "p1_tree_round0_width=contexts*roots_per_position"
+    echo "p1_tree_continuation_width=chain_fanout_sum*forward_scale_capped_by_roots"
+    echo "p1_tree_forward_cells=round0_width+(K1-1)*continuation_width"
     echo "p2_forward_cells=$((P2_WIDTH * K2))"
     echo "numseqs_per_dataset=${RUN_NS}"
     echo "output_len=${RUN_OUTLEN}"
@@ -209,7 +212,8 @@ run_one () {
 "P2nodes=${P2_TREE_MAX_NODES}" | tee "${dir}/status.txt"
 
   SSD_DIST_PORT="${port}" \
-  SSD_PROFILE=0 SSD_PROFILE_DUET=0 SSD_PROFILE_DUET_DETAIL=0 \
+  SSD_PROFILE=0 SSD_PROFILE_DUET="${PROFILE_DUET}" \
+  SSD_PROFILE_DUET_DETAIL="${PROFILE_DETAIL}" SSD_PROFILE_DIR="${dir}" \
   SSD_TREE_EXEC="${p2_exec}" SSD_TREE_ARENA=1 \
   SSD_CHAIN_PROXY_GRAPH=1 SSD_TREE_PROXY_GRAPH="${tree_proxy_graph}" \
   SSD_TREE_EXEC_WARMUP="${warmup}" \
