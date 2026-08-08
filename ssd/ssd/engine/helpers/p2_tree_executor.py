@@ -83,7 +83,7 @@ def _insert_tree_children_kernel(
     out_valid_ptr,
     # optional backbone-tip state used by non-global policies
     tip_idx_ptr, tip_depth_ptr,
-    ROUND: tl.constexpr, W: tl.constexpr, R: tl.constexpr,
+    CELL_BASE: tl.constexpr, W: tl.constexpr, R: tl.constexpr,
     C: tl.constexpr, NV: tl.constexpr, ANC_WORDS: tl.constexpr,
     GLOBAL: tl.constexpr,
 ):
@@ -102,7 +102,7 @@ def _insert_tree_children_kernel(
     for lane in tl.static_range(0, W):
         sv = tl.load(sel_valid_ptr + lane)
         parent = tl.load(sel_ptr + lane)
-        tl.store(cell_ptr + parent, ROUND * W + lane, mask=sv)
+        tl.store(cell_ptr + parent, CELL_BASE + lane, mask=sv)
         tl.store(state_ptr + parent, 1, mask=sv)
 
     # Insert children in the exact historical lane-major, then sibling-major
@@ -203,14 +203,14 @@ def _insert_tree_children_kernel(
 @triton.jit
 def _mark_selected_parents_kernel(
     sel_ptr, sel_valid_ptr, cell_ptr, state_ptr,
-    ROUND: tl.constexpr, W: tl.constexpr, BLOCK: tl.constexpr,
+    CELL_BASE: tl.constexpr, W: tl.constexpr, BLOCK: tl.constexpr,
 ):
     """Scalable parent marking used by wide/multiword P1 shapes."""
     lane = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     live = lane < W
     sv = tl.load(sel_valid_ptr + lane, mask=live, other=0)
     parent = tl.load(sel_ptr + lane, mask=live, other=0)
-    tl.store(cell_ptr + parent, ROUND * W + lane, mask=live & sv)
+    tl.store(cell_ptr + parent, CELL_BASE + lane, mask=live & sv)
     tl.store(state_ptr + parent, 1, mask=live & sv)
 
 
@@ -478,7 +478,8 @@ class P2TreeExecutor:
                  num_heads, num_kv_heads, head_dim,
                  dtype=torch.float16, *, phase="p2", width=None,
                  root_count=None, depth=None, max_nodes=None,
-                 glue_width=None, materialize_backbone_logits=True):
+                 glue_width=None, materialize_backbone_logits=True,
+                 round_widths=None):
         self.model = model
         self.compute_logits = compute_logits_fn
         self.cfg = config
@@ -506,6 +507,22 @@ class P2TreeExecutor:
         self.R = int(root_count if root_count is not None
                      else config.duet_p2_seed_count)
         self.F = int(depth if depth is not None else config.duet_phase2_k)
+        if round_widths is None:
+            self.round_widths = (self.W,) * self.F
+        else:
+            self.round_widths = tuple(int(x) for x in round_widths)
+            if len(self.round_widths) != self.F:
+                raise ValueError(
+                    f"{phase} round_widths must have F={self.F} entries; "
+                    f"got {self.round_widths}")
+            if any(x < 1 or x > self.W for x in self.round_widths):
+                raise ValueError(
+                    f"{phase} round widths must be in [1,W={self.W}]; "
+                    f"got {self.round_widths}")
+            if self.round_widths[0] < self.R:
+                raise ValueError(
+                    f"{phase} round zero must evaluate all R={self.R} "
+                    f"roots; got width {self.round_widths[0]}")
         self.C = int(config.duet_tree_c_tensor)
         self.NV = int(
             max_nodes if max_nodes is not None
@@ -659,9 +676,10 @@ class P2TreeExecutor:
 
     # ---------- 버킷 준비 ----------
     def _mk_round_wrapper(self, n_pages_r, canvas_cols, float_workspace,
+                          query_width,
                           int_workspace=None, pin_int_workspace=None):
         d = self.dev
-        W = self.W
+        W = int(query_width)
         qo = torch.tensor([0, W], dtype=torch.int32, device=d)
         kvp = torch.tensor([0, n_pages_r], dtype=torch.int32, device=d)
         kvi = torch.zeros(n_pages_r, dtype=torch.int32, device=d)
@@ -703,16 +721,21 @@ class P2TreeExecutor:
                 self._workspace_bytes, dtype=torch.uint8, device=self.dev)
             self._float_ws_by_bucket[n_pages0] = float_workspace
         wrappers = []
-        int_workspace = None
-        pin_int_workspace = None
+        # FlashInfer plan state depends on query width.  Rounds with the same
+        # width execute serially and may share it; the wide P1 root round and
+        # narrower continuation rounds must not alias plan workspaces.
+        int_workspace_by_width = {}
         for f in range(F):
             canvas_pages = n_pages0 + 1
+            wf = self.round_widths[f]
+            pair = int_workspace_by_width.get(wf, (None, None))
             wr = self._mk_round_wrapper(
                 canvas_pages, canvas_pages * self.bs, float_workspace,
-                int_workspace, pin_int_workspace)
-            if int_workspace is None:
-                int_workspace = wr._int_workspace_buffer
-                pin_int_workspace = wr._pin_memory_int_workspace_buffer
+                wf, pair[0], pair[1])
+            if pair[0] is None:
+                int_workspace_by_width[wf] = (
+                    wr._int_workspace_buffer,
+                    wr._pin_memory_int_workspace_buffer)
             wrappers.append(wr)
         self.wrappers[n_pages0] = wrappers
         return wrappers
@@ -741,7 +764,10 @@ class P2TreeExecutor:
         self.in_prefix_len.zero_()
         self.in_block_tables.zero_()
         for f in range(self.F):
-            self.in_slot[f].copy_(f * self.W + self.lane_w)
+            wf = self.round_widths[f]
+            self.in_slot[f].zero_()
+            self.in_slot[f][:wf].copy_(
+                f * self.W + self.lane_w[:wf])
             self.in_ctx_len[f].fill_((f + 1) * self.W)
             self.wrappers[n_pages0][f]._paged_kv_indices_buf.zero_()
 
@@ -750,7 +776,7 @@ class P2TreeExecutor:
         """행별 [prefix 1s | glue | 조상셀 | self] canvas — 열 배치가
         prefix 길이(요청별 상이)에 의존하므로 전부 버퍼-구동 텐서
         연산 (python int 슬라이싱은 캡처에 박힘 — 금지)."""
-        W, F = self.W, self.F
+        W = self.round_widths[f]
         canvas = wr._canvas_cols
         ar = self.arena
         sel, sel_valid = self._sel[f]
@@ -792,7 +818,11 @@ class P2TreeExecutor:
         # 단계0 강화 mask 대조가 잡은 최초 불일치 — 비활성 lane
         # self=1은 valid-lane logits에는 무영향이나 mask bytes exact
         # 계약 위반)
-        self_col = plen + gW + f * W + self.lane_w.unsqueeze(1)  # [W,1]
+        # Cell ids retain the fixed physical stride ``self.W`` even when P1
+        # continuation rounds execute fewer rows.  This keeps ancestry and
+        # output parent-cell ids stable without computing inactive rows.
+        self_col = (plen + gW + f * self.W
+                    + self.lane_w[:W].unsqueeze(1))  # [W,1]
         is_self = col.unsqueeze(0) == self_col        # [W, canvas]
         m = torch.where(is_self,
                         sel_valid.to(torch.uint8).unsqueeze(1)
@@ -858,14 +888,20 @@ class P2TreeExecutor:
         tip_idx = self.arange_R.clone()
         tip_depth = torch.zeros(R, dtype=torch.int64, device=self.dev)
         self._sel = {}
+        # Only validity controls whether diagnostic tail lanes are consumed.
+        # Clear it once for variable-width P1; P2 keeps its historical
+        # zero-extra-kernel hot path because every round fills the full W.
+        if any(wf != W for wf in self.round_widths):
+            self.dbg_selv.zero_()
         wrappers = self.wrappers[n_pages0]
         hybrid_floor = min(2, F)
         for f in range(F):
+            wf = self.round_widths[f]
             _global = (policy in ("dynamic", "eagle")
                        or (policy == "hybrid" and f >= hybrid_floor))
             if _global:
                 sel, sel_valid = PT._arena_select_global(
-                    ar, W, f, F, remaining,
+                    ar, wf, f, F, remaining,
                     future_rounds=F - f - 1, R=R,
                     # P1's glue-derived ``context reach * root q`` is the
                     # phase-1 counterpart of P2's target proxy prior.  Round
@@ -880,7 +916,7 @@ class P2TreeExecutor:
                         self.cfg, "duet_tree_conf_threshold", 0.0)))
             else:
                 sel, sel_valid = PT._arena_select(
-                    ar, "level", W, f, F, tip_idx, remaining)
+                    ar, "level", wf, f, F, tip_idx, remaining)
             self._sel[f] = (sel, sel_valid)
             if _global:
                 fan = PT._arena_fanout_global(
@@ -909,62 +945,63 @@ class P2TreeExecutor:
                 sel_valid,
                 self.in_rope_base.gather(0, r_of)
                 + ar.depth.gather(0, sel.clamp(min=0)),
-                self.in_rope_base[0].expand(W))
-            self.dbg_sel[f].copy_(sel)
-            self.dbg_selv[f].copy_(sel_valid)
-            self.dbg_ids[f].copy_(ids)
-            self.dbg_rope[f].copy_(rope)
-            self.dbg_fan[f].copy_(fan)
+                self.in_rope_base[0].expand(wf))
+            self.dbg_sel[f, :wf].copy_(sel)
+            self.dbg_selv[f, :wf].copy_(sel_valid)
+            self.dbg_ids[f, :wf].copy_(ids)
+            self.dbg_rope[f, :wf].copy_(rope)
+            self.dbg_fan[f, :wf].copy_(fan)
             self._pack_row_mask(wrappers[f], f)
             # ── raw draft forward (capture-시 context 1회 bake)
             set_context(
                 is_prefill=False,
-                slot_mapping=self.in_slot[f],
+                slot_mapping=self.in_slot[f][:wf],
                 context_lens=self.in_ctx_len[f],
                 block_tables=self.in_block_tables,
-                active_mq_len=W,
+                active_mq_len=wf,
                 active_wrappers={1: wrappers[f]},
             )
             try:
                 hidden = self.model(ids, rope)
-                logits = self.compute_logits(hidden, False)[:W].float()
+                logits = self.compute_logits(hidden, False)[:wf].float()
             finally:
                 reset_context()
-            self.cell_logits[f * W:(f + 1) * W] = logits
+            cell_base = f * W
+            self.cell_logits[cell_base:cell_base + wf] = logits
             toks, raws = PT.tree_sample_wor(
-                logits, self.in_temps, C, assume_pos_temps=True,
+                logits, self.in_temps[:wf], C, assume_pos_temps=True,
                 sampler_x=getattr(self.cfg, "sampler_x", None),
                 F=getattr(self.cfg, "async_fan_out", None),
                 generator=self.gen,
-                noise=(self.parity_noise[f]
+                noise=(self.parity_noise[f][:wf]
                        if self.parity_noise is not None else None))
-            self.dbg_toks[f].copy_(toks)
-            self.dbg_raws[f].copy_(raws.float())
+            self.dbg_toks[f, :wf].copy_(toks)
+            self.dbg_raws[f, :wf].copy_(raws.float())
             # ── 삽입 + [R,NV] 직접 기록.  Probability arithmetic remains
             # in PyTorch to preserve the exact priority values used by the
             # selector; the integer bookkeeping itself is one tiny kernel.
-            par = sel.unsqueeze(1).expand(W, C).reshape(-1)
+            par = sel.unsqueeze(1).expand(wf, C).reshape(-1)
             rq = raws.double().reshape(-1)
             lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
-            if W > 10 or ar.anc_words > 1:
-                _mark_selected_parents_kernel[(triton.cdiv(W, 32),)](
+            if wf > 10 or ar.anc_words > 1:
+                _mark_selected_parents_kernel[(triton.cdiv(wf, 32),)](
                     sel, sel_valid, ar.cell, ar.state,
-                    ROUND=f, W=W, BLOCK=32)
-                _insert_tree_children_parallel_kernel[(W * C,)](
+                    CELL_BASE=cell_base, W=wf, BLOCK=32)
+                _insert_tree_children_parallel_kernel[(wf * C,)](
                     sel, sel_valid, fan, toks, rq, lp,
                     ar.tok, ar.parent_idx, ar.depth, ar.root, ar.sib,
                     ar.logpri, ar.raw_q, ar.state, ar.cell, ar.valid,
                     ar.anc_bits, ar.n, self._local_idx,
                     self.out_tok, self.out_par, self.out_sib,
                     self.out_rawq, self.out_pcell, self.out_valid,
-                    W=W, C=C, NV=NV, ANC_WORDS=ar.anc_words)
+                    W=wf, C=C, NV=NV, ANC_WORDS=ar.anc_words)
                 if not _global:
-                    _advance_backbone_tips_parallel_kernel[(W,)](
+                    _advance_backbone_tips_parallel_kernel[(wf,)](
                         sel, sel_valid, fan, ar.root, ar.n,
-                        tip_idx, tip_depth, W=W)
+                        tip_idx, tip_depth, W=wf)
                 _commit_tree_children_parallel_kernel[(R,)](
                     sel, sel_valid, fan, rq, ar.root,
-                    self.out_valid, ar.n, W=W, R=R, C=C)
+                    self.out_valid, ar.n, W=wf, R=R, C=C)
             else:
                 _insert_tree_children_kernel[(1,)](
                     sel, sel_valid, fan, toks, rq, lp,
@@ -973,7 +1010,7 @@ class P2TreeExecutor:
                     ar.anc_bits, ar.n, self._local_idx,
                     self.out_tok, self.out_par, self.out_sib, self.out_rawq,
                     self.out_pcell, self.out_valid, tip_idx, tip_depth,
-                    ROUND=f, W=W, R=R, C=C, NV=NV,
+                    CELL_BASE=cell_base, W=wf, R=R, C=C, NV=NV,
                     ANC_WORDS=ar.anc_words, GLOBAL=_global)
 
 

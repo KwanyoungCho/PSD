@@ -32,6 +32,8 @@ class _MiniCfg:
     duet_phase2_k = 4
     duet_p1_roots_per_position = 2
     duet_p1_tree_forward_scale = 1.0
+    duet_draft_fan_out = 2
+    duet_split_phase1_fan_out_list = [2, 2, 2, 2, 2, 2, 1, 1, 1, 1]
     duet_p1_tree_max_nodes = 13
     duet_p2_tree_max_nodes = 8
     duet_tree_c_tensor = 3
@@ -247,6 +249,7 @@ class TestExecutorModuleParity(unittest.TestCase):
             V, H, HKV, D, context_bucket=10,
             materialize_backbone_logits=False)
         self.assertEqual((ex.F, ex.W, ex.R), (9, 20, 20))
+        self.assertEqual(ex.round_widths, (20,) + (16,) * 8)
         self.assertEqual(ex.arena.anc_words, 3)
 
         ctx0 = 2 * PAGE + 21
@@ -280,6 +283,16 @@ class TestExecutorModuleParity(unittest.TestCase):
         torch.cuda.synchronize()
         for name, expected in ref.items():
             self.assertTrue(torch.equal(expected, getattr(ex, name)), name)
+        # Variable query widths must not renumber physical forward cells.
+        # Parent-q and ancestry masks use the fixed max-width stride even
+        # though later rounds only execute the chain-sized prefix.
+        for f, wf in enumerate(ex.round_widths):
+            sel, sel_valid = ex._sel[f]
+            if bool(sel_valid.any()):
+                got = ex.arena.cell.index_select(0, sel[sel_valid]).cpu()
+                expected = (f * ex.W
+                            + torch.arange(wf, device=dev)[sel_valid]).cpu()
+                self.assertTrue(torch.equal(got, expected), f"round {f}")
         vt_p1 = ex.out_valid.cpu()
         # Round zero covers every root, but later rounds are not obliged to
         # keep one full-depth path per root.  Unequal root priors therefore
@@ -308,6 +321,28 @@ class TestExecutorModuleParity(unittest.TestCase):
         self.assertNotEqual(
             ex.wrappers[2][0]._int_workspace_buffer.data_ptr(),
             ex.wrappers[3][0]._int_workspace_buffer.data_ptr())
+
+    def test_p1_round_wrappers_separate_different_width_plans(self):
+        dev = "cuda:0"
+        V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
+        cfg = _MiniCfg()
+        cfg.duet_tree_policy = "dynamic"
+        cache = torch.zeros(8, 2, PAGE, HKV, D,
+                            dtype=torch.float16, device=dev)
+        model = _MiniDraft(V, H, HKV, D, cache, dev)
+        ex = P1TreeExecutor(
+            model, model.logits_fn, cfg, dev, PAGE, 8,
+            V, H, HKV, D, context_bucket=10,
+            materialize_backbone_logits=False)
+        ex.prepare_bucket(2)
+        wrappers = ex.wrappers[2]
+        self.assertNotEqual(
+            wrappers[0]._int_workspace_buffer.data_ptr(),
+            wrappers[1]._int_workspace_buffer.data_ptr())
+        self.assertTrue(all(
+            w._int_workspace_buffer.data_ptr()
+            == wrappers[1]._int_workspace_buffer.data_ptr()
+            for w in wrappers[1:]))
 
     def test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots(self):
         dev = "cuda:0"

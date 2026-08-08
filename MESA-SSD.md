@@ -86,8 +86,9 @@ P1만 `on`으로 두는 분해 실험도 같은 동적 selector를 사용한다.
    제외 후 재정규화 확률이 아니라 원래 draft 분포 `q(x|context)`다.
 3. P1 root의 초기 점수는 `해당 context까지 도달할 확률 × q(root|context)`다.
    첫 P1 forward에서는 모든 실제 root를 평가한다. 이후 `K1-1`번은 앞 round에서
-   생성한 모든 자식 중 이 초기 점수와 경로 confidence의 누적 곱이 높은 W개를
-   다음 부모로 선택한다. P2와 같은 전역 동적 선택이며 proxy score만 없다.
+   생성한 모든 자식 중 이 초기 점수와 경로 confidence의 누적 곱이 높은 후보를
+   다음 부모로 선택한다. 이후 계산 폭은 같은 P1 chain 설정의 fanout 합과 같고,
+   P2와 같은 전역 동적 선택이며 proxy score만 없다.
 4. root 하나가 보낼 수 있는 node 수는 `duet_p1_tree_max_nodes`로 제한한다.
    이 값은 기본 18이며 항상 채우는 수가 아니라 root별 고정 응답 상한이다.
    순차 draft round `K1=9`와 응답 node 수는 독립적이고, 모든 root에 깊이 9를
@@ -97,9 +98,11 @@ P1만 `on`으로 두는 분해 실험도 같은 동적 selector를 사용한다.
 일반 10-context step의 실제 root는 20개이며, P1 forward 9번 전체와 그 사이의
 선택·sampling·mask 갱신은 하나의 CUDA Graph replay로 실행된다.
 
-기본 P1 forward 폭은 root 수와 같은 W=R=20이다. 첫 forward 뒤에는 최대
-`R×C=60`개 자식이 생기므로, 추가 폭 없이도 그중 상위 20개를 다음 부모로 골라
-동적 topology를 만들 수 있다. `root 20개`, `root당 최대 node 18개`,
+기본 K1=9 설정은 첫 forward에서 root 20개를 모두 계산하고, 이후 여덟 round는
+기존 chain fanout 합인 16개 부모만 계산한다. 첫 forward 뒤에는 최대
+`R×C=60`개 자식이 생기므로, 그중 상위 16개를 다음 부모로 골라 동적 topology를
+만든다. 이전 tree hit 뒤 root가 38개가 되어도 이후 round는 16개로 돌아온다.
+`root 20개`, `root당 최대 node 18개`,
 `target verify 최대 19행`은 각각 시작 후보 수, 응답 용량, recovery 포함 검증
 입력으로 서로 다른 수치다.
 
@@ -114,6 +117,13 @@ champion은 아니다. commit `0dc9e9d`의 3-seed P1-only gate에서 P1AL은 평
 68.4→43.2로 내려갔다. 일반 context의 20-vs-16 draft lane, tree-hit 뒤 최대
 38 lane, target의 최대 18-node 검증이 실제 모델 계산이기 때문이다. 따라서 새
 실험의 안전한 기준선은 P1 `off`이며, P1 `on`은 정책 연구 arm으로 취급한다.
+
+이 gate 뒤 P1 실행기는 round별 폭을 분리했다. 현재 K1=9 champion은 첫 round만
+root 20개(이전 tree hit 뒤 최대 38개)를 모두 평가하고, 이후 여덟 round는 기존
+chain fanout 합 16개만 계산한다. K1=8/K2=4 all-page 실모델 스모크에서는
+`[18,15×7]`/`[34,15×7]` graph가 P1/P2 각 304회 runtime capture 없이 재생됐고
+draft step은 69.54ms였다. 이 수치는 기능 sanity이며 P1을 champion으로 승격하는
+정식 chain 대비 결과는 아니다.
 
 ---
 
@@ -525,6 +535,13 @@ COMMON=(
   --duet_p2_budget 10
 )
 ```
+
+`--k`는 생략하면 `K1+K2`로 자동 설정된다. K1의 홀짝 제약은 없다. 예를 들어
+K1=8,K2=4면 `--k`를 생략하거나 12로 두고, P1 fanout 목록은 K1+1인 9개를
+적어야 한다. stale `--k 13`이나 10개 목록은 `python -O`에서도 즉시 오류로
+중단된다. 현재 `K2<=K1`은 long/short graph와 proxy 위치 범위의 명시적 지원
+계약이며, K2>K1 실험은 단순히 이 검사를 지우지 말고 레이아웃을 먼저 확장해야
+한다.
 
 전체 chain:
 

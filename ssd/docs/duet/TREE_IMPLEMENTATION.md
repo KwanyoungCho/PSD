@@ -67,7 +67,7 @@
 | N1 | `duet_p1_tree_max_nodes` | 18 | P1 root 하나의 응답 node 상한 |
 | N2 | `duet_p2_tree_max_nodes` | 8 | P2 root 하나의 응답 node 상한 |
 | U1 | `duet_p1_roots_per_position` | 2 | P1 context마다 만드는 시작 root 수 |
-| W1/R1 | `duet_p1_tree_forward_scale` | 1.0 | P1 forward 폭/root 수 비율 |
+| W1 | P1 fanout 합×`duet_p1_tree_forward_scale` | 1.0 | P1 round 1 이후 계산 폭; round 0 폭은 실제 root 수 |
 | τroot | `duet_tree_proxy_threshold` | 0.01 | P1/P2의 round 1 이후 시작점수 threshold |
 | τconf | `duet_tree_conf_threshold` | 0.03 | P1/P2의 round 1 이후 확장 threshold |
 
@@ -171,8 +171,9 @@ dedup 이전 통신 후보만 늘린다.
 
 round 0은 모든 실제 root를 한 번씩 평가한다. 따라서 각 root/cache key는 최소
 하나 이상의 검증 가능한 자식을 갖는다. round 1부터는 root별 의무 chain을 두지
-않고, 직전 round에서 생성된 모든 자식 중 누적 점수가 높은 `W`개를 다음 draft
-forward의 부모로 고른다. 낮은 점수 root는 얕게 끝날 수 있고, 높은 점수 root는
+않고, 직전 round에서 생성된 모든 자식 중 누적 점수가 높은 부모만 다음 draft
+forward에 넣는다. P2는 폭 W를 그대로 쓰고, P1은 같은 설정의 기존 chain fanout
+합을 계산 폭으로 쓴다. 낮은 점수 root는 얕게 끝날 수 있고, 높은 점수 root는
 여러 가지가 동시에 깊어질 수 있다. 이것이 현재 DUET의 기본 동적 topology다.
 
 내부 `eagle` 문자열은 P1 도입 전 P2 전역 선택 실험을 재현하기 위한 별칭이며,
@@ -220,10 +221,12 @@ dynamic 점수에는 쓰이지 않는다.
 ### 4.3 고정 실행 틀 안의 동적 내용
 
 CUDA Graph가 요구하는 것은 tensor shape, 주소와 연산 순서가 고정되는 것이다.
-선택되는 token과 부모 인덱스까지 고정할 필요는 없다. 따라서 실행 틀은 항상
-`F × W = 4 × 10`개의 부모 lane을 갖지만, 각 lane에 들어가는 부모, fanout,
-token, attention mask는 replay마다 달라진다. 무효 lane은 안전한 token, rope,
-page를 가리키고 mask가 0인 padding으로 남는다.
+선택되는 token과 부모 인덱스까지 고정할 필요는 없다. P2 실행 틀은 항상
+`F × W = 4 × 10`개의 부모 lane을 갖는다. P1은 round별 shape를 미리 캡처해
+`[모든 root 수, chain fanout 합, ..., chain fanout 합]`을 사용한다. 각 shape는
+고정이지만 lane에 들어가는 부모, fanout, token과 attention mask는 replay마다
+달라진다. 물리 KV canvas는 가장 넓은 round의 stride를 유지하고 계산하지 않는
+hole은 mask 0으로 둔다.
 
 ### 4.4 round별 절차
 
@@ -234,9 +237,11 @@ page를 가리키고 mask가 0인 padding으로 남는다.
 각 round `f = 0,...,F-1`은 다음 순서로 실행한다.
 
 1. **전역 부모 선택**
-   round 0에는 R개의 root를 모두 선택한다(`R<=W`가 필수). 이후 round에는 바로
-   앞 depth에서 생성됐고 아직 확장하지 않은 모든 node를 `logpri` 내림차순으로
-   정렬해 상위 W개를 선택한다. 동률은 arena 삽입 순서를 유지하는 stable sort다.
+   round 0에는 R개의 root를 모두 선택한다. 이후 round에는 바로 앞 depth에서
+   생성됐고 아직 확장하지 않은 모든 node를 `logpri` 내림차순으로 정렬해 해당
+   round 계산 폭만큼 선택한다. P2는 모든 round가 W이고, P1은 round 0만 R,
+   이후는 같은 chain 설정의 fanout 합이다. 동률은 arena 삽입 순서를 유지하는
+   stable sort다.
    선택되지 않은 낮은 점수 node는 검증 가능한 leaf로 남지만 추가 forward를
    받지는 않는다.
 2. **fanout 결정**
@@ -250,7 +255,7 @@ page를 가리키고 mask가 0인 padding으로 남는다.
    glue context, 부모의 조상 forward cell과 자기 자신만 볼 수 있도록 packed
    mask에 직접 기록한다.
 4. **draft forward와 분포 계산**
-   실제 draft transformer를 W 폭으로 한 번 실행한다. logits에 draft
+   실제 draft transformer를 해당 round 폭으로 한 번 실행한다. logits에 draft
    temperature와 `sampler_x`를 적용한 `q`를 만든다.
 5. **ordered without-replacement sampling**
    각 token의 `E_v ~ Exp(1)`을 만들고 `q_v / E_v` 상위 C개를 고른다. 이
@@ -307,23 +312,23 @@ P2와 다르다. root가 생성된 뒤에는 위 P2 동적 선택과 같은 코�
    모든 실제 root를 반드시 평가한다. 캡처 폭은 `context_bucket*U1`이고 실제
    context가 bucket보다 적으면 나머지 root는 score 0인 안전 padding이다.
 4. **이후 K1-1 rounds**
-   첫 forward에서 생성된 최대 `R*C`개 자식 중 누적 점수가 높은 W개를 선택하고,
-   이후에도 같은 과정을 반복한다. 기본 `W=R`이어도 후보 수가 W보다 많으므로
-   topology는 동적으로 바뀐다. P1도 glue-derived 시작점수에 root threshold를
-   적용하되 round-0 root/leaf는 보존한다.
+   첫 forward에서 생성된 최대 `R*C`개 자식 중 누적 점수가 높은 일부만 선택하고,
+   이후에도 같은 과정을 반복한다. 계산 폭은 별도 임의 파라미터가 아니라 같은
+   K1/fanout chain이 쓰는 fanout 합이다. P1도 glue-derived 시작점수에 root
+   threshold를 적용하되 round-0 root/leaf는 보존한다.
 5. **응답 view와 cache key**
    각 시작 root는 `(sequence, context id, root token)` key와 최대 N1개의 node
    view를 갖는다. 다음 request가 그 key를 hit하면 해당 root의 tree 하나만 공통
    wire로 보내고 target이 lossless 검증한다.
 
-기본 형상에서 context bucket은 5, 10, 19 세 개다. U1=2이므로 P1 forward 폭은
-각각 10, 20, 38이고 round 수는 K1=9다. 5-context bucket은 K2 short/miss 경로,
-10-context bucket은 K1 chain/P2-tree 범위, 19-context bucket은 최대 18-node P1
-tree hit를 처리한다. 과거에는 5-context 요청도 10-context/W20 graph로 실행해
-절반 lane에서 실제 transformer를 낭비했다. 모든 가능한 node 수를 별도 graph로
-만들지는 않고, 위 세 개의 의미 있는 경계 사이만 zero-score padding한다.
+기본 형상에서 context bucket은 5, 10, 19 세 개다. U1=2, K1 fanout 합 16이므로
+round별 계산 폭은 각각 `[10×9]`, `[20,16×8]`, `[38,16×8]`이다. 5-context
+bucket은 K2 short/miss 경로, 10-context bucket은 K1 chain/P2-tree 범위,
+19-context bucket은 최대 18-node P1 tree hit를 처리한다. 모든 가능한 node 수를
+별도 graph로 만들지는 않고, 위 세 개의 의미 있는 경계 사이만 zero-score
+padding한다.
 
-P1의 `F*W`는 최대 `9*38=342`라 하나의 64-bit 조상 bitmap에 들어가지 않는다.
+P1의 물리 cell stride 기준 `F*W`는 최대 `9*38=342`라 하나의 64-bit 조상 bitmap에 들어가지 않는다.
 현재 구현은 부호 비트를 피한 63-cell word를 여러 개 사용한다. 이 예에서는 여섯
 word가 필요하며, mask pack과 child insertion kernel이 필요한 word를 자동으로
 선택한다. 따라서 과거 `F*W<=63` 제한은 더 이상 존재하지 않는다.
@@ -747,11 +752,57 @@ context에서 chain P1은 16 lane이지만 균등 `2 roots/context` P1은 20 lan
 tree-hit context에도 같은 정책을 재귀 적용한다는 현재 의미를 보존하면 이 모델
 row 수는 kernel 융합으로 제거할 수 없다.
 
-따라서 다음 단계는 threshold 숫자 sweep이 아니라 목표 제약의 선택이다. chain과
-비슷한 latency가 우선이면 (a) chain과 같은 16개 물리 root budget 안에서 시작
-후보를 고르거나, (b) tree-hit 다음 P1은 재귀 tree 대신 chain으로 제한하거나,
-(c) target 검증 node cap을 줄여야 한다. 세 선택 모두 “모든 root/context를
-그대로 유지”하는 현재 정책과는 다른 알고리즘이므로 자동으로 적용하지 않는다.
+이 결과 뒤 round별 계산 폭을 분리했다. 시작 root/context를 삭제하지 않고 round
+0에서 전부 평가하되, round 1 이후만 같은 P1 chain의 fanout 합으로 제한하는 것이
+현재 구현이다. target 검증 node cap과 재귀 tree 여부는 바꾸지 않았다.
+
+### 8.11 P1 round별 계산 폭 수정과 K1=8 실모델 검증
+
+과거 실행기는 P1 context bucket의 root 수를 모든 round의 transformer 입력 폭으로
+재사용했다. K1=8, fanout `2,2,2,2,2,2,1,1,1`, U1=2 설정의 세 context bucket은
+각각 root 10/18/34개이며, 과거 계산량은 `8×10`, `8×18`, `8×34` rows였다.
+현재는 다음과 같이 캡처한다.
+
+```text
+short contexts: [10,10,10,10,10,10,10,10]
+long contexts:  [18,15,15,15,15,15,15,15]
+tree contexts:  [34,15,15,15,15,15,15,15]
+```
+
+15는 임의의 새 knob가 아니라 위 P1 fanout 목록의 합이다. 따라서 첫 round의 모든
+cache-key root coverage를 유지하고, 이후에는 기존 chain과 같은 폭의 모델 계산을
+누적점수 상위 부모에 재배분한다. KV/ancestry cell id는 최대 root 폭 stride를
+유지하고 실제 query, attention wrapper, sampling과 insertion kernel만 round 폭으로
+줄인다. 서로 다른 query 폭의 FlashInfer plan workspace는 공유하지 않고, 같은 폭의
+직렬 round끼리만 공유한다.
+
+K1=8/K2=4, P1/P2 모두 on, 모든 page 사전 capture, profiler/trace off인 8-prompt
+실모델 기능 스모크는 P1/P2 각 304 replay, runtime capture/fallback/error 0으로
+끝났다. draft step은 69.54ms, P1AL 2.90, P2AL 1.99였다. 이는 짧은 단일-seed
+기능/시간 sanity이며 chain 대비 최종 품질·TPS 결과가 아니다. page 3만 준비한 별도
+런은 서비스 중 P1 6/P2 2 capture가 발생해 draft 100.81ms였으므로 성능 자료에서
+폐기한다. 최종 gate는 반드시 all-page warmup과 충분한 prompt로 수행한다.
+
+### 8.12 생성한 가지의 사후 기여 진단
+
+`tools/duet_calibration/analyze_tree_outcomes.py`는 draft가 보낸 exact topology와
+target accepted path를 join한다. 첫째 자식만 사용한 경로와 둘째/셋째 형제로
+갈아탄 경로를 구분하고, 대체 형제가 없었다면 얻지 못했을 accepted node 수를
+phase별로 센다. E0 trace를 함께 주면 다음 request의 실제 cache key와 P1 root를
+join해 `context reach`, `local root q`, 두 값의 곱을 각각 AUC로 비교한다.
+
+K1=8 사후진단 스모크(폭 분리 직전 동일 global 정책)의 결과는 다음과 같다.
+
+| phase | hit tree | 대체 형제를 쓴 tree | 대체 분기 이후 accepted node |
+|---|---:|---:|---:|
+| P1 | 158 | 35 (22.2%) | 55 / accepted 491 (11.2%) |
+| P2 | 65 | 17 (26.2%) | 25 / accepted 112 (22.3%) |
+
+P1 root 6,332개와 다음 실제 key 158개를 비교한 ranking AUC는 local q 0.762,
+context reach 0.641, 곱한 시작점수 0.805였다. 따라서 현재 표본에서는 context
+reach가 local q의 순위를 망친 것이 아니라 실제 hit root를 더 위로 올렸다. 다만
+한 seed의 diagnostic smoke이므로 threshold 숫자의 최종 calibration 근거로 쓰지
+않고, 폭 분리 후 정식 trace에서 다시 집계한다.
 
 ---
 

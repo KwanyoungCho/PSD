@@ -208,7 +208,44 @@ class P1TreeExecutor(P2TreeExecutor):
         pfo = int(config.duet_p1_roots_per_position)
         root_count = int(context_bucket) * pfo
         scale = float(config.duet_p1_tree_forward_scale)
-        width = compute_tree_forward_width(root_count, scale)
+        # Every P1 cache-key root is evaluated once.  After that first round,
+        # only the globally best frontier nodes need model forwards.  The old
+        # executor replayed ``root_count`` rows for all K1 rounds, including
+        # up to 38 rows after a P1 tree hit, even when most lanes had already
+        # been rejected by the score thresholds.  Use the corresponding P1
+        # chain fanout sum as the continuation compute budget.  This keeps
+        # tree compute close to the established chain rather than silently
+        # shrinking it to the usually smaller P2 width.
+        fanout = getattr(config, "duet_split_phase1_fan_out_list", None)
+        if fanout is None:
+            default_fanout = int(getattr(
+                config, "duet_draft_fan_out",
+                config.duet_proxy_total_budget
+                // max(1, int(config.duet_phase1_k) + 1)))
+            fanout = [default_fanout] * (
+                int(config.duet_phase1_k) + 1)
+        else:
+            fanout = list(fanout)
+        if len(fanout) != int(config.duet_phase1_k) + 1:
+            raise ValueError(
+                "P1 executor fanout list must have K1+1 entries; got "
+                f"K1={config.duet_phase1_k}, fanout={fanout}")
+        short_contexts = int(config.duet_phase2_k) + 1
+        chain_width = sum(
+            fanout[:short_contexts]
+            if int(context_bucket) <= short_contexts else fanout)
+        if chain_width < 1:
+            raise ValueError(
+                f"P1 continuation width must be positive; fanout={fanout}")
+        # ``scale`` remains an explicit compute experiment multiplier, not a
+        # root-coverage knob.  It never forces more lanes than live roots.
+        continuation_width = min(
+            root_count,
+            compute_tree_forward_width(chain_width, scale))
+        round_widths = ((root_count,)
+                        + (continuation_width,)
+                        * max(0, int(config.duet_phase1_k) - 1))
+        width = max(round_widths)
         super().__init__(
             model, compute_logits_fn, config, device,
             block_size, max_blocks, vocab_size,
@@ -217,7 +254,8 @@ class P1TreeExecutor(P2TreeExecutor):
             depth=int(config.duet_phase1_k),
             max_nodes=int(config.duet_p1_tree_max_nodes),
             glue_width=int(context_bucket),
-            materialize_backbone_logits=materialize_backbone_logits)
+            materialize_backbone_logits=materialize_backbone_logits,
+            round_widths=round_widths)
         # Three context buckets remove substantial live-lane padding, but a
         # generic 64 MiB FlashInfer workspace for every one of seven page
         # shapes would exhaust the 24 GiB production draft GPU.  The real
@@ -233,6 +271,8 @@ class P1TreeExecutor(P2TreeExecutor):
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
         self.forward_scale = scale
+        self.continuation_width = continuation_width
+        self.chain_forward_width = chain_width
         # P1 and P2 intentionally share one expansion algorithm.  P1's
         # in_root_piv contains context-reach * root-token probability, which
         # occupies the same ranking role as P2's target proxy prior.

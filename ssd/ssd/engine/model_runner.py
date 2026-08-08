@@ -1351,10 +1351,10 @@ class ModelRunner:
         _vk = getattr(_ctx, "glue_valid_k", None)
         if _vk is None:
             _vk = K1  # K_max default
-        assert _vk in (K1, K2), (
-            f"split-K1K2 glue: unexpected valid_k={_vk}; "
-            f"expected K1={K1} or K2={K2}"
-        )
+        if _vk not in (K1, K2):
+            raise RuntimeError(
+                f"split-K1K2 glue: unexpected valid_k={_vk}; "
+                f"expected K1={K1} or K2={K2}")
         # K1==K2: verify_k2 not captured — collapse to verify_k1.
         bucket = "verify_k2" if (_vk == K2 and K2 < K1) else "verify_k1"
         return run_verify_cudagraph(
@@ -1372,10 +1372,10 @@ class ModelRunner:
         K1 = self.config.duet_phase1_k
         K2 = self.config.duet_phase2_k
         _step_lookahead = getattr(self, "_duet_step_lookahead", K1)
-        assert _step_lookahead in (K1, K2), (
-            f"split-K1K2 target verify: unexpected lookahead={_step_lookahead}; "
-            f"expected K1={K1} or K2={K2}"
-        )
+        if _step_lookahead not in (K1, K2):
+            raise RuntimeError(
+                "split-K1K2 target verify: unexpected lookahead="
+                f"{_step_lookahead}; expected K1={K1} or K2={K2}")
         bucket = "duet_verify_k2" if (_step_lookahead == K2 and K2 < K1) else "duet_verify_k1"
         return run_duet_verify_cudagraph(
             self, input_ids, positions, last_only,

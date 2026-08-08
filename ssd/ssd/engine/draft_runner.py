@@ -278,6 +278,7 @@ class DraftRunner(ModelRunner):
         free0, _ = torch.cuda.mem_get_info(self.device)
         t0 = _time.perf_counter()
         captured = {}
+        round_shapes = {}
         # All P1 executor variants are replayed serially and expose their
         # results through persistent buffers allocated before capture.  Share
         # only their transient graph allocations across context/page shapes.
@@ -312,11 +313,13 @@ class DraftRunner(ModelRunner):
             finally:
                 ex.gen.set_state(rng_state)
             captured[context_bucket] = pages
+            round_shapes[context_bucket] = ex.round_widths
         self._p1_exec_graph_pool = graph_pool
         torch.cuda.synchronize()
         free1, _ = torch.cuda.mem_get_info(self.device)
         print(
             f"[DUET tree] warmed P1 executors contexts={captured} "
+            f"round_widths={round_shapes} "
             f"in {(_time.perf_counter() - t0):.2f}s "
             f"(reserved delta={(free0 - free1) / 2**20:.1f} MiB)",
             flush=True)
@@ -4912,10 +4915,10 @@ class DraftRunner(ModelRunner):
         _step_valid_k = partial_tree_decode_args.get("valid_k_scalar")
         if _step_valid_k is None:
             _step_valid_k = K1  # K_max default for first-step / no-hit path
-        assert _step_valid_k in (K1, K2), (
-            f"split-K1K2 phase1 dispatch: unexpected valid_k={_step_valid_k}; "
-            f"expected K1={K1} or K2={K2}"
-        )
+        if _step_valid_k not in (K1, K2):
+            raise RuntimeError(
+                "split-K1K2 phase1 dispatch: unexpected valid_k="
+                f"{_step_valid_k}; expected K1={K1} or K2={K2}")
         _is_short_hit = (_step_valid_k == K2 and K2 != K1)
         _layout_k1 = (
             self.split_k1_short_layout if _is_short_hit
