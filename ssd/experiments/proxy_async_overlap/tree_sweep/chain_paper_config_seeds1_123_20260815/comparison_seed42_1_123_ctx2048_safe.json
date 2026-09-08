@@ -1,0 +1,242 @@
+[
+  {
+    "file": "/home/eslab/chokwans99/DUET_PAPER_RESULTS/experiments/performance/duet_chain/duet_chain_k18_k24_matched_treecfg_s42_o1024_ctx2048_safe.jsonl",
+    "questions": 456,
+    "turns": 536,
+    "tps": 67.274360821471,
+    "accept_len": 4.392849643897546,
+    "cache_hit_rate": 0.8143789269024465,
+    "p1_hit_rate": 0.6581967191466935,
+    "p2_hit_rate": 0.15618220775575295,
+    "p1_accept_len": 5.161869354941233,
+    "p2_accept_len": 2.999281135471831,
+    "groups": {
+      "mt_bench": {
+        "questions": 80,
+        "turns": 160,
+        "tps": 65.9232440473592,
+        "accept_len": 4.279219185816301,
+        "cache_hit_rate": 0.8721951032541254,
+        "p1_hit_rate": 0.6724320525189362,
+        "p2_hit_rate": 0.19976305073518913,
+        "p1_accept_len": 4.888393195313313,
+        "p2_accept_len": 2.947465411455659
+      },
+      "translation": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 72.88995555066587,
+        "accept_len": 4.753737340176684,
+        "cache_hit_rate": 0.8414960455853416,
+        "p1_hit_rate": 0.6962257282963634,
+        "p2_hit_rate": 0.1452703172889782,
+        "p1_accept_len": 5.434545647813045,
+        "p2_accept_len": 2.83690950427877
+      },
+      "summarization": {
+        "questions": 56,
+        "turns": 56,
+        "tps": 59.20412326945267,
+        "accept_len": 3.90765068907468,
+        "cache_hit_rate": 0.6454266046958768,
+        "p1_hit_rate": 0.5179818898344387,
+        "p2_hit_rate": 0.12744471486143807,
+        "p1_accept_len": 5.152340850503464,
+        "p2_accept_len": 3.018645263558451
+      },
+      "qa": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 70.19299981347828,
+        "accept_len": 4.574459876469549,
+        "cache_hit_rate": 0.8658279429124145,
+        "p1_hit_rate": 0.708956230309336,
+        "p2_hit_rate": 0.15687171260307853,
+        "p1_accept_len": 5.091768930960109,
+        "p2_accept_len": 3.227448977154822
+      },
+      "math_reasoning": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 63.42468441205883,
+        "accept_len": 4.12486111584027,
+        "cache_hit_rate": 0.8344231186980607,
+        "p1_hit_rate": 0.6563504163799845,
+        "p2_hit_rate": 0.1780727023180762,
+        "p1_accept_len": 4.894628054561471,
+        "p2_accept_len": 2.7781245731251327
+      },
+      "rag": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 69.59008657020567,
+        "accept_len": 4.571609969560932,
+        "cache_hit_rate": 0.7762190496068891,
+        "p1_hit_rate": 0.6551695487474261,
+        "p2_hit_rate": 0.121049500859463,
+        "p1_accept_len": 5.533799654597492,
+        "p2_accept_len": 3.2002913735655487
+      }
+    }
+  },
+  {
+    "file": "/home/eslab/chokwans99/PSD/ssd/experiments/proxy_async_overlap/tree_sweep/chain_paper_config_seeds1_123_20260815/duet_chain_papercfg_s1_o1024_ctx4096_ctx2048_safe.jsonl",
+    "questions": 456,
+    "turns": 536,
+    "tps": 67.66714576011141,
+    "accept_len": 4.398119250531134,
+    "cache_hit_rate": 0.8186818235143644,
+    "p1_hit_rate": 0.667532012482533,
+    "p2_hit_rate": 0.15114981103183125,
+    "p1_accept_len": 5.105997130013646,
+    "p2_accept_len": 3.003583100331488,
+    "groups": {
+      "mt_bench": {
+        "questions": 80,
+        "turns": 160,
+        "tps": 63.38597231422384,
+        "accept_len": 4.125850753404061,
+        "cache_hit_rate": 0.86567556181838,
+        "p1_hit_rate": 0.6729585289536496,
+        "p2_hit_rate": 0.19271703286473035,
+        "p1_accept_len": 4.660466420741235,
+        "p2_accept_len": 2.9598103777968494
+      },
+      "translation": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 70.78980343885038,
+        "accept_len": 4.603440523954071,
+        "cache_hit_rate": 0.810087234190154,
+        "p1_hit_rate": 0.6700260079642392,
+        "p2_hit_rate": 0.14006122622591483,
+        "p1_accept_len": 5.3410553036256765,
+        "p2_accept_len": 2.9165479553045395
+      },
+      "summarization": {
+        "questions": 56,
+        "turns": 56,
+        "tps": 63.47584632286232,
+        "accept_len": 4.136078769100991,
+        "cache_hit_rate": 0.7222912266845559,
+        "p1_hit_rate": 0.5878498132962455,
+        "p2_hit_rate": 0.13444141338831045,
+        "p1_accept_len": 5.18520241203748,
+        "p2_accept_len": 2.8743080463172332
+      },
+      "qa": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 69.58042700034494,
+        "accept_len": 4.5170568620236535,
+        "cache_hit_rate": 0.84543645386337,
+        "p1_hit_rate": 0.6933731527301357,
+        "p2_hit_rate": 0.15206330113323419,
+        "p1_accept_len": 5.020374466142122,
+        "p2_accept_len": 3.160569072102947
+      },
+      "math_reasoning": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 65.68339170152494,
+        "accept_len": 4.241871386007885,
+        "cache_hit_rate": 0.8687384319767316,
+        "p1_hit_rate": 0.6926115713074444,
+        "p2_hit_rate": 0.17612686066928723,
+        "p1_accept_len": 4.889671907371007,
+        "p2_accept_len": 2.896713857600572
+      },
+      "rag": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 71.83004395168732,
+        "accept_len": 4.685805064267098,
+        "cache_hit_rate": 0.7709448535040517,
+        "p1_hit_rate": 0.6644683408875977,
+        "p2_hit_rate": 0.10647651261645416,
+        "p1_accept_len": 5.606171736988188,
+        "p2_accept_len": 3.1669384173966497
+      }
+    }
+  },
+  {
+    "file": "/home/eslab/chokwans99/PSD/ssd/experiments/proxy_async_overlap/tree_sweep/chain_paper_config_seeds1_123_20260815/duet_chain_papercfg_s123_o1024_ctx4096_ctx2048_safe.jsonl",
+    "questions": 456,
+    "turns": 536,
+    "tps": 67.18740008350565,
+    "accept_len": 4.385807966036463,
+    "cache_hit_rate": 0.8239158435484937,
+    "p1_hit_rate": 0.661609655180071,
+    "p2_hit_rate": 0.16230618836842262,
+    "p1_accept_len": 5.098886651472293,
+    "p2_accept_len": 3.01559057936769,
+    "groups": {
+      "mt_bench": {
+        "questions": 80,
+        "turns": 160,
+        "tps": 64.43089188585692,
+        "accept_len": 4.1947158680611265,
+        "cache_hit_rate": 0.862949736055034,
+        "p1_hit_rate": 0.6656632971281891,
+        "p2_hit_rate": 0.19728643892684491,
+        "p1_accept_len": 4.766994039183475,
+        "p2_accept_len": 2.923415203374667
+      },
+      "translation": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 72.30767341924192,
+        "accept_len": 4.739759065604296,
+        "cache_hit_rate": 0.8323306288407208,
+        "p1_hit_rate": 0.6806013693578834,
+        "p2_hit_rate": 0.1517292594828374,
+        "p1_accept_len": 5.370843697342492,
+        "p2_accept_len": 2.987925318841792
+      },
+      "summarization": {
+        "questions": 56,
+        "turns": 56,
+        "tps": 56.48340121073375,
+        "accept_len": 3.6917869713073936,
+        "cache_hit_rate": 0.6456347668587127,
+        "p1_hit_rate": 0.5058708125425669,
+        "p2_hit_rate": 0.13976395431614572,
+        "p1_accept_len": 4.942706315064465,
+        "p2_accept_len": 2.884596336760691
+      },
+      "qa": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 72.31135108700798,
+        "accept_len": 4.70830200207339,
+        "cache_hit_rate": 0.8794451339827354,
+        "p1_hit_rate": 0.7246389217130396,
+        "p2_hit_rate": 0.15480621226969588,
+        "p1_accept_len": 5.217418057176099,
+        "p2_accept_len": 3.1364188460118276
+      },
+      "math_reasoning": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 63.57601859444185,
+        "accept_len": 4.113634244633,
+        "cache_hit_rate": 0.860118731192348,
+        "p1_hit_rate": 0.6640857303385045,
+        "p2_hit_rate": 0.1960330008538436,
+        "p1_accept_len": 4.742233596292746,
+        "p2_accept_len": 2.9771656497554364
+      },
+      "rag": {
+        "questions": 80,
+        "turns": 80,
+        "tps": 70.80386464191992,
+        "accept_len": 4.658443346120849,
+        "cache_hit_rate": 0.8095317413544763,
+        "p1_hit_rate": 0.6820761472089911,
+        "p2_hit_rate": 0.12745559414548513,
+        "p1_accept_len": 5.486917869518966,
+        "p2_accept_len": 3.1267096044553555
+      }
+    }
+  }
+]

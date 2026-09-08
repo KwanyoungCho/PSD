@@ -1,0 +1,43 @@
+{
+  "proxy_transport_ms": 0.10276949405670166,
+  "proxy_transport_samples": 360,
+  "runs": [
+    {
+      "path": "ssd/experiments/proxy_async_overlap/tree_sweep/p1_tree_full_backbone_k9_profile_20260811/p1_backbone_profile",
+      "k1": 9,
+      "k2": 4,
+      "proxy_transport_ms": 0.10276949405670166,
+      "k1_gap": {
+        "n": 363,
+        "p10_ms": 4.144922137260437,
+        "p50_ms": 5.125977516174316,
+        "p90_ms": 9.60605492591858,
+        "p50_abs_ms": 5.1464844942092896,
+        "p90_abs_ms": 9.655468928813935,
+        "draft_wait_mean_ms": 5.913047950458264,
+        "target_wait_mean_ms": 0.263493312948663
+      },
+      "k2_gap": {
+        "n": 355,
+        "p10_ms": 0.02799279689788818,
+        "p50_ms": 1.3396140336990356,
+        "p90_ms": 3.0931292533874517,
+        "p50_abs_ms": 1.395276963710785,
+        "p90_abs_ms": 3.141761386394501,
+        "draft_wait_mean_ms": 1.5703086387943215,
+        "target_wait_mean_ms": 0.32550837792141335
+      },
+      "p1_round_ms": 3.7430555555555554,
+      "p2_round_ms": 3.548339754343033,
+      "p2_timing_source": "p2_graph_replay",
+      "predicted_k1": 10,
+      "predicted_k2": 4,
+      "observed_proxy_wait_p50_ms": 5.136717975139618,
+      "quality": {}
+    }
+  ],
+  "recommendation": {
+    "k1": 9,
+    "k2": 4
+  }
+}

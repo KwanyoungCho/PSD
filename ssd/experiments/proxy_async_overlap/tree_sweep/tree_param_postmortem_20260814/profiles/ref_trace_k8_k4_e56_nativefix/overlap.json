@@ -1,0 +1,63 @@
+{
+  "proxy_transport_ms": 0.407028004527092,
+  "proxy_transport_samples": 2233,
+  "runs": [
+    {
+      "path": "/home/eslab/chokwans99/PSD/ssd/experiments/proxy_async_overlap/tree_sweep/tree_param_postmortem_20260814/profiles/ref_trace_k8_k4_e56_nativefix/profile",
+      "k1": 8,
+      "k2": 4,
+      "proxy_transport_ms": 0.407028004527092,
+      "k1_gap": {
+        "n": 3289,
+        "p01_ms": -9.946479477882384,
+        "p05_ms": -0.8515620008111,
+        "p10_ms": -0.5171874001622199,
+        "p50_ms": 0.6562509983778,
+        "p90_ms": 7.3203129991889,
+        "p95_ms": 7.757422403991222,
+        "p99_ms": 8.636562999188897,
+        "p50_abs_ms": 0.9140629991889,
+        "p90_abs_ms": 7.415625405311586,
+        "late_n": 899,
+        "late_rate": 0.27333536029188205,
+        "overrun_p90_ms": 0.5171874001622221,
+        "overrun_p95_ms": 0.8515620008111,
+        "overrun_p99_ms": 9.94647947788238,
+        "overrun_max_ms": 195.69368699193,
+        "draft_wait_mean_ms": 2.7220949253645594,
+        "target_wait_mean_ms": 0.3972340930637236
+      },
+      "k2_gap": {
+        "n": 3222,
+        "p01_ms": -9.922176259309055,
+        "p05_ms": -0.7035123545676469,
+        "p10_ms": 0.14765999466180801,
+        "p50_ms": 2.456253994256258,
+        "p90_ms": 4.585159994661808,
+        "p95_ms": 4.975784994661808,
+        "p99_ms": 5.581878750547766,
+        "p50_abs_ms": 2.5602579973638058,
+        "p90_abs_ms": 4.730618899315596,
+        "late_n": 271,
+        "late_rate": 0.08410924891371818,
+        "overrun_p90_ms": 0.0,
+        "overrun_p95_ms": 0.7035123545676455,
+        "overrun_p99_ms": 9.922176259309053,
+        "overrun_max_ms": 204.30415999889374,
+        "draft_wait_mean_ms": 2.7057587146934776,
+        "target_wait_mean_ms": 0.3571278149855203
+      },
+      "p1_round_ms": 3.7744141248986125,
+      "p2_round_ms": 3.5703125,
+      "p2_timing_source": "p2_graph_replay",
+      "predicted_k1": 8,
+      "predicted_k2": 5,
+      "observed_proxy_wait_p50_ms": 0.6054690033197403,
+      "quality": {}
+    }
+  ],
+  "recommendation": {
+    "k1": 8,
+    "k2": 4
+  }
+}

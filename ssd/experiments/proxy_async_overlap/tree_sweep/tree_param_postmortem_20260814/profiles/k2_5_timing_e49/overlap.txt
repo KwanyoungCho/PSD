@@ -1,0 +1,9 @@
+[proxy transport] 0.156 ms (blocked-wait samples=1082)
+K1 K2 | K1 gap p50 / |gap|p50 / n | K2 gap p50 / |gap|p50 / n | round ms | P1AL P2AL TPS
+ 8  5 |  +4.863   5.023 1089 |  +3.429   3.434 1025 | 3.768/3.573 | None None None
+      tails | P1 late=6/1089 (0.551%) p01=+2.097 overrun-p99=0.000 | P2 late=3/1025 (0.293%) p01=+0.659 overrun-p99=0.000
+
+[recommendation]
+K1 = 8
+K2 = 5
+local prediction from this run: K1= 9 K2= 6

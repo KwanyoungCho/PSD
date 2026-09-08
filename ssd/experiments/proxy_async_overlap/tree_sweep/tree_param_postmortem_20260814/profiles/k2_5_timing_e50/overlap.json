@@ -1,0 +1,63 @@
+{
+  "proxy_transport_ms": 0.2109920009970665,
+  "proxy_transport_samples": 1124,
+  "runs": [
+    {
+      "path": "/home/eslab/chokwans99/PSD/ssd/experiments/proxy_async_overlap/tree_sweep/tree_param_postmortem_20260814/profiles/k2_5_timing_e50/profile",
+      "k1": 8,
+      "k2": 5,
+      "proxy_transport_ms": 0.2109920009970665,
+      "k1_gap": {
+        "n": 1129,
+        "p01_ms": 1.7837696838378907,
+        "p05_ms": 2.421581801772118,
+        "p10_ms": 2.935986806452275,
+        "p50_ms": 6.020020008087158,
+        "p90_ms": 9.293554601073264,
+        "p95_ms": 9.805956801772117,
+        "p99_ms": 10.623613560199738,
+        "p50_abs_ms": 6.086426004767418,
+        "p90_abs_ms": 9.309082001447678,
+        "late_n": 4,
+        "late_rate": 0.00354295837023915,
+        "overrun_p90_ms": 0.0,
+        "overrun_p95_ms": 0.0,
+        "overrun_p99_ms": 0.0,
+        "overrun_max_ms": 473.4565429985523,
+        "draft_wait_mean_ms": 6.912203393889751,
+        "target_wait_mean_ms": 0.6479940832624719
+      },
+      "k2_gap": {
+        "n": 1062,
+        "p01_ms": -0.9531604987382889,
+        "p05_ms": 0.05167890042066578,
+        "p10_ms": 0.5746529996395111,
+        "p50_ms": 2.504340000450611,
+        "p90_ms": 4.521624495834112,
+        "p95_ms": 4.980902949720622,
+        "p99_ms": 5.592933640629058,
+        "p50_abs_ms": 2.519965000450611,
+        "p90_abs_ms": 4.5539490975439545,
+        "late_n": 48,
+        "late_rate": 0.04519774011299435,
+        "overrun_p90_ms": 0.0,
+        "overrun_p95_ms": 0.0,
+        "overrun_p99_ms": 0.953160498738292,
+        "overrun_max_ms": 202.09305699914694,
+        "draft_wait_mean_ms": 2.9551482594408895,
+        "target_wait_mean_ms": 0.2724638220182359
+      },
+      "p1_round_ms": 3.6228027502074838,
+      "p2_round_ms": 3.575,
+      "p2_timing_source": "p2_graph_replay",
+      "predicted_k1": 10,
+      "predicted_k2": 6,
+      "observed_proxy_wait_p50_ms": 6.03125,
+      "quality": {}
+    }
+  ],
+  "recommendation": {
+    "k1": 8,
+    "k2": 5
+  }
+}

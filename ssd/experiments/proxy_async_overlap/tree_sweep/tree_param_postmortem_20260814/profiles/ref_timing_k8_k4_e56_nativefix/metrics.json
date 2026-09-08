@@ -1,0 +1,83 @@
+[
+  {
+    "file": "/home/eslab/chokwans99/PSD/ssd/experiments/proxy_async_overlap/tree_sweep/tree_param_postmortem_20260814/profiles/ref_timing_k8_k4_e56_nativefix/raw.jsonl",
+    "questions": 60,
+    "turns": 70,
+    "zero_decode_questions": 1,
+    "tps": 53.240494559095616,
+    "accept_len": 3.650293226194434,
+    "cache_hit_rate": 0.6848693033465675,
+    "p1_hit_rate": 0.5057677577112026,
+    "p2_hit_rate": 0.17910154563536484,
+    "p1_accept_len": 4.39802674857822,
+    "p2_accept_len": 3.04886100328007,
+    "groups": {
+      "mt_bench": {
+        "questions": 10,
+        "turns": 20,
+        "tps": 54.75568369373367,
+        "accept_len": 3.784017870465239,
+        "cache_hit_rate": 0.7401129220866063,
+        "p1_hit_rate": 0.515128746707694,
+        "p2_hit_rate": 0.22498417537891222,
+        "p1_accept_len": 4.670246689584925,
+        "p2_accept_len": 2.845175438596491
+      },
+      "translation": {
+        "questions": 10,
+        "turns": 10,
+        "tps": 50.63018706613401,
+        "accept_len": 3.4355005460359367,
+        "cache_hit_rate": 0.7106801486474807,
+        "p1_hit_rate": 0.49347318138606705,
+        "p2_hit_rate": 0.21720696726141372,
+        "p1_accept_len": 4.075674603174603,
+        "p2_accept_len": 2.9579761904761908
+      },
+      "summarization": {
+        "questions": 10,
+        "turns": 10,
+        "tps": 61.65281330376186,
+        "accept_len": 4.283866442199776,
+        "cache_hit_rate": 0.6569584736251403,
+        "p1_hit_rate": 0.4816217732884399,
+        "p2_hit_rate": 0.17533670033670035,
+        "p1_accept_len": 5.001041666666667,
+        "p2_accept_len": 3.4819444444444443
+      },
+      "qa": {
+        "questions": 10,
+        "turns": 10,
+        "tps": 51.91365122493393,
+        "accept_len": 3.5201599587203303,
+        "cache_hit_rate": 0.6809921904571252,
+        "p1_hit_rate": 0.5307238179552758,
+        "p2_hit_rate": 0.1502683725018494,
+        "p1_accept_len": 4.225263347763348,
+        "p2_accept_len": 3.0683333333333334
+      },
+      "math_reasoning": {
+        "questions": 10,
+        "turns": 10,
+        "tps": 51.48148847722531,
+        "accept_len": 3.480757987110928,
+        "cache_hit_rate": 0.7606774989716166,
+        "p1_hit_rate": 0.5450816536404772,
+        "p2_hit_rate": 0.21559584533113946,
+        "p1_accept_len": 3.9811616161616166,
+        "p2_accept_len": 3.210454545454545
+      },
+      "rag": {
+        "questions": 10,
+        "turns": 10,
+        "tps": 49.85037546325155,
+        "accept_len": 3.460813874234927,
+        "cache_hit_rate": 0.5570035033192928,
+        "p1_hit_rate": 0.4661627748469853,
+        "p2_hit_rate": 0.09084072847230742,
+        "p1_accept_len": 4.594712752525252,
+        "p2_accept_len": 2.839795918367347
+      }
+    }
+  }
+]
