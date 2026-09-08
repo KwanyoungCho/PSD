@@ -57,3 +57,12 @@ experiments/hybrid_vs_split_70b/results_*/
 
 # Claude Code internal
 .claude/
+
+# DUET 진단 트레이스 — 대용량이며 env 스위치로 재생성 가능하다.
+# 실험 결론(RESULTS.md/REPORT.md와 요약 csv/json)은 계속 추적한다.
+# SSD_PROFILE_DUET=1
+experiments/**/duet_profile_*.json
+# SSD_TREE_TOPO_TRACE=1
+experiments/**/topology.*.jsonl
+# SSD_DUET_E0_TRACE=1
+experiments/**/calib.jsonl
