@@ -1262,7 +1262,7 @@ def capture_fi_tree_decode_cudagraph(model_runner, layout=None):
 # ============================================================
 
 def update_tree_verify_graph_buffers(wrapper, kv_indices, packed_mask,
-                                     plan_host):
+                                     plan_host, *, mask_numel=None):
     """Update only the tensors read by a captured tree-attention graph.
 
     ``BatchPrefillWithPagedKVCacheWrapper.plan()`` cannot itself be captured.
@@ -1285,9 +1285,15 @@ def update_tree_verify_graph_buffers(wrapper, kv_indices, packed_mask,
         raise ValueError(
             f"tree verify page count {n_blocks} exceeds wrapper capacity "
             f"{wrapper._paged_kv_indices_buf.numel()}")
-    if packed_mask.numel() > wrapper._custom_mask_buf.numel():
+    if mask_numel is None:
+        if packed_mask is None:
+            raise ValueError(
+                "tree verify requires packed_mask or explicit mask_numel")
+        mask_numel = packed_mask.numel()
+    mask_numel = int(mask_numel)
+    if mask_numel > wrapper._custom_mask_buf.numel():
         raise ValueError(
-            f"tree verify packed mask {packed_mask.numel()} exceeds "
+            f"tree verify packed mask {mask_numel} exceeds "
             f"wrapper capacity {wrapper._custom_mask_buf.numel()}")
 
     # All copies are enqueued on the current stream before graph replay.
@@ -1299,8 +1305,12 @@ def update_tree_verify_graph_buffers(wrapper, kv_indices, packed_mask,
         plan_host["last"], non_blocking=True)
     wrapper._paged_kv_indices_buf[:n_blocks].copy_(
         kv_indices[:n_blocks], non_blocking=True)
-    wrapper._custom_mask_buf[:packed_mask.numel()].copy_(
-        packed_mask, non_blocking=True)
+    # The GPU topology path writes directly into the wrapper-owned mask
+    # buffer.  Eager/diagnostic callers can still supply the historical CPU
+    # packed mask, preserving a simple correctness fallback.
+    if packed_mask is not None:
+        wrapper._custom_mask_buf[:mask_numel].copy_(
+            packed_mask, non_blocking=True)
     wrapper._mask_indptr_buf.copy_(plan_host["mask"], non_blocking=True)
     wrapper._kv_lens_buffer.copy_(plan_host["klen"], non_blocking=True)
 

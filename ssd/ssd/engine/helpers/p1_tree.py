@@ -4,10 +4,10 @@ P1 and P2 share the same captured rollout after their roots exist.  P2 roots
 arrive with an early-exit proxy score; P1 instead creates a fixed number of
 uniform candidates at every glue context.  Its initial score is the draft
 probability of reaching that context times the draft probability of the
-alternative root token.  Round zero evaluates every root; later rounds use
-the same global cumulative-confidence expansion as P2.  The only phase
-difference is the source of the root prior: P2 receives a target proxy score,
-whereas P1 derives it from draft context reach and root-token probability.
+alternative root token.  Round zero evaluates every root.  The allocation
+policy then either uses P2-like global cumulative-confidence expansion or a
+P1-specific full-root backbone.  The latter is important because P1 builds a
+forest of future cache keys, not one current-request proposal tree.
 
 This module contains only fixed-shape/GPU-friendly preparation and shape
 selection.  Cache serving and target verification are phase-agnostic and live
@@ -258,6 +258,8 @@ class P1TreeExecutor(P2TreeExecutor):
         pfo = int(config.duet_p1_roots_per_position)
         root_count = int(context_bucket) * pfo
         scale = float(config.duet_p1_tree_forward_scale)
+        allocation_policy = getattr(
+            config, "duet_p1_tree_allocation_policy", "dynamic")
         # Every P1 cache-key root is evaluated once.  After that first round,
         # only the globally best frontier nodes need model forwards.  The old
         # executor replayed ``root_count`` rows for all K1 rounds, including
@@ -289,9 +291,20 @@ class P1TreeExecutor(P2TreeExecutor):
                 f"P1 continuation width must be positive; fanout={fanout}")
         # ``scale`` remains an explicit compute experiment multiplier, not a
         # root-coverage knob.  It never forces more lanes than live roots.
-        continuation_width = min(
-            root_count,
-            compute_tree_forward_width(chain_width, scale))
+        # ``backbone`` is a semantic guarantee, not merely a selector hint.
+        # A tree hit can expose more contexts than the chain response, making
+        # R=context_count*pfo larger than the chain-sized continuation width.
+        # If we retained the smaller width, some roots would receive only the
+        # round-zero children and a later cache hit on those roots would have
+        # lower AL than the chain.  Full backbone therefore reserves one lane
+        # per root in every round.  Dynamic/hybrid remain compute-budgeted
+        # experiments and use the explicit chain-relative scale.
+        if allocation_policy == "backbone":
+            continuation_width = root_count
+        else:
+            continuation_width = min(
+                root_count,
+                compute_tree_forward_width(chain_width, scale))
         round_widths = ((root_count,)
                         + (continuation_width,)
                         * max(0, int(config.duet_phase1_k) - 1))
@@ -333,7 +346,7 @@ class P1TreeExecutor(P2TreeExecutor):
             root_count, dtype=torch.bool, device=device)
         self.in_context_reach = torch.zeros(
             int(context_bucket), dtype=torch.float32, device=device)
-        # P1 and P2 intentionally share one expansion algorithm.  P1's
-        # in_root_piv contains context-reach * root-token probability, which
-        # occupies the same ranking role as P2's target proxy prior.
-        self.policy = "dynamic"
+        # Pure dynamic allocation treats P1's context-reach * root-q like a
+        # P2 proxy prior.  Coverage-preserving alternatives account for P1
+        # being a future cache-key forest whose root score is imperfect.
+        self.policy = allocation_policy

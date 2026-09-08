@@ -7,7 +7,9 @@ import dataclasses
 from ssd.engine.model_runner import ModelRunner
 from ssd.config import Config
 from ssd.utils.context import set_context, reset_context
-from ssd.utils.async_helpers.async_spec_helpers import get_forked_recovery_tokens_from_logits, make_glue_decode_input_ids
+from ssd.utils.async_helpers.async_spec_helpers import (
+    compute_tree_canvas_page_plan, get_forked_recovery_tokens_from_logits,
+    make_glue_decode_input_ids)
 from ssd.utils.async_helpers.nccl_pack import recv_int64
 from ssd.engine.helpers.cudagraph_helpers import flush_draft_profile
 
@@ -109,6 +111,19 @@ class DraftRunner(ModelRunner):
             d_model_target=cfg.hf_config.hidden_size if cfg.use_eagle and cfg.hf_config else None,
             enforce_eager=cfg.enforce_eager,
         )
+        if getattr(cfg, "extend_draft_rope", False):
+            # dataclasses.replace() re-enters Config.__post_init__ with the
+            # draft as `model`, where its native max_position_embeddings
+            # would otherwise clamp the draft runner back to 2048.  Restore
+            # the already-validated main-engine context/RoPE contract before
+            # ModelRunner constructs its rotary cache and graph buffers.
+            draft_cfg.max_model_len = cfg.max_model_len
+            extended_rope_len = int(
+                cfg.draft_hf_config.max_position_embeddings)
+            draft_cfg.hf_config.max_position_embeddings = extended_rope_len
+            # ModelRunner selects draft_hf_config when is_draft=True.
+            draft_cfg.draft_hf_config.max_position_embeddings = \
+                extended_rope_len
         return draft_cfg
 
     def __init__(self, cfg: Config, rank: int = 0, init_q = None):
@@ -202,14 +217,13 @@ class DraftRunner(ModelRunner):
             return
 
         ex = self._ensure_p2_exec()
-        # A P2 rollout writes F*W cells and needs one further W-wide canvas.
-        # Restrict warmup to buckets that can occur without crossing the model
-        # length and that have a real + one-canvas page in the block table.
-        remaining = (int(self.config.max_model_len)
-                     - (ex.F + 1) * ex.W)
-        max_p0 = max(0, (remaining + self.block_size - 1)
-                     // self.block_size)
-        max_p0 = min(max_p0, int(self.config.max_blocks) - 1)
+        # A P2 rollout writes ``total_cells`` real cells.  The graph canvas
+        # may end in fully masked alignment pages beyond those cells; only
+        # the live footprint constrains the request block table.
+        max_ctx0 = int(self.config.max_model_len) - int(ex.total_cells)
+        max_p0 = max(
+            0, (max_ctx0 + self.block_size - 1) // self.block_size)
+        max_p0 = min(max_p0, int(self.config.max_blocks))
         if setting.lower() == "all":
             buckets = list(range(1, max_p0 + 1))
         else:
@@ -304,8 +318,16 @@ class DraftRunner(ModelRunner):
             # particular (context,width) combination cannot occur near the
             # model-length boundary.  It also guarantees no first-hit
             # capture appears in a later timeline.
-            max_p0 = (int(self.config.max_blocks)
-                      - int(ex.canvas_extra_pages))
+            # ``p0`` is the page count through round zero.  Later live cells
+            # must remain inside max_model_len, but the fixed graph canvas may
+            # add fully masked alignment pages beyond the physical block
+            # table.  Capture every *live-reachable* p0 bucket and alias that
+            # masked tail at replay time.
+            continuation = int(ex.total_cells) - int(ex.round_ends[0])
+            max_ctx0 = int(self.config.max_model_len) - continuation
+            max_p0 = max(
+                0, (max_ctx0 + self.block_size - 1) // self.block_size)
+            max_p0 = min(max_p0, int(self.config.max_blocks))
             if setting.lower() == "all":
                 pages = list(range(1, max_p0 + 1))
             else:
@@ -428,6 +450,12 @@ class DraftRunner(ModelRunner):
             2 * response_w + 1, device=d, dtype=torch.int64)
         self._tree_wire_parent_q_buf = None
         self._tree_compact_view = None
+        # P1 can finish before the target's early-exit proxy arrives.  When
+        # N1>M1, use that otherwise-idle interval to prepare the exact
+        # hit-time rerank result for every cache root.  The envelope and the
+        # selection stay on CUDA, avoiding a P1-graph synchronization.
+        self._p1_rerank_precompute_buf = None
+        self._p1_rerank_cache = None
         if getattr(self.config, "duet_tree_enabled", False):
             _tree_wire_n = int(self.config.duet_tree_wire_nodes)
             self._tree_wire_parent_q_buf = torch.empty(
@@ -460,6 +488,22 @@ class DraftRunner(ModelRunner):
                     "selected_old": torch.zeros(
                         _tree_wire_n, dtype=torch.int64, device=d),
                 }
+            if (getattr(self.config, "duet_p1_tree_policy", "off") == "on"
+                    and int(self.config.duet_p1_tree_verify_nodes)
+                    < int(self.config.duet_p1_tree_max_nodes)
+                    and os.environ.get(
+                        "SSD_P1_RERANK_PRECOMPUTE", "1") == "1"):
+                from ssd.engine.helpers.p1_tree import p1_context_buckets
+                _p1_buckets = p1_context_buckets(
+                    self.config.duet_phase1_k,
+                    self.config.duet_phase2_k,
+                    self.config.duet_p1_tree_verify_nodes,
+                    self.config.duet_p2_tree_verify_nodes)
+                _max_p1_roots = (
+                    max(_p1_buckets)
+                    * int(self.config.duet_p1_roots_per_position))
+                self._ensure_p1_rerank_precompute_buf(
+                    _max_p1_roots, _tree_wire_n)
 
         # full_layout: 기존 SSD용 (non-DUET + DUET 비활성)
         self.full_layout = create_tree_layout(
@@ -679,6 +723,94 @@ class DraftRunner(ModelRunner):
 
         return spec_activations
 
+    def _ensure_p1_rerank_precompute_buf(self, roots: int, wire_cap: int):
+        """Return a persistent CUDA envelope for batched P1 compact views."""
+        current = self._p1_rerank_precompute_buf
+        if (current is not None and int(current["capacity"]) >= int(roots)
+                and int(current["wire_cap"]) == int(wire_cap)):
+            return current
+
+        roots = int(roots)
+        wire_cap = int(wire_cap)
+        d = self.device
+        current = {
+            "capacity": roots,
+            "wire_cap": wire_cap,
+            "tok": torch.zeros(
+                roots, wire_cap, dtype=torch.int64, device=d),
+            "parent_local": torch.full(
+                (roots, wire_cap), -1, dtype=torch.int64, device=d),
+            "sib_order": torch.zeros(
+                roots, wire_cap, dtype=torch.int64, device=d),
+            "raw_q": torch.zeros(
+                roots, wire_cap, dtype=torch.float32, device=d),
+            "parent_q_ref": torch.full(
+                (roots, wire_cap), -1, dtype=torch.int64, device=d),
+            "parent_q_cells": torch.full(
+                (roots, wire_cap), -1, dtype=torch.int64, device=d),
+            "valid": torch.zeros(roots, dtype=torch.int64, device=d),
+            "u_valid": torch.zeros(roots, dtype=torch.int64, device=d),
+        }
+        from ssd.engine.helpers.p2_tree import tree_wire_ints_len
+        current["packed"] = torch.zeros(
+            roots, tree_wire_ints_len(wire_cap),
+            dtype=torch.int64, device=d)
+        self._p1_rerank_precompute_buf = current
+        return current
+
+    def _precompute_p1_rerank_views(self, views, roots: int):
+        """Move unchanged P1 reranking from a future hit into P1 slack.
+
+        This is deliberately a scheduling optimization, not a new selection
+        policy.  The batched CUDA helper implements the same cumulative path
+        score and prerequisite closure as ``rerank_tree_indices``; the chosen
+        row is still copied to CPU and validated before serving.
+        """
+        self._p1_rerank_cache = None
+        generated_cap = int(self.config.duet_p1_tree_max_nodes)
+        verify_cap = int(self.config.duet_p1_tree_verify_nodes)
+        if (os.environ.get("SSD_P1_RERANK_PRECOMPUTE", "1") != "1"
+                or verify_cap == generated_cap or int(roots) < 1):
+            return
+
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr_pre, duet_close as _mc_pre)
+        from ssd.engine.helpers.tree_rerank_gpu import \
+            precompute_reranked_tree_views_fused_gpu
+
+        wire_cap = int(self.config.duet_tree_wire_nodes)
+        label = "p1_rerank_precompute"
+        event = _mr_pre(label)
+
+        gpu = self._ensure_p1_rerank_precompute_buf(roots, wire_cap)
+        gpu_label = "p1_rerank_precompute_gpu"
+        gpu_event = _mr_pre(gpu_label)
+        precompute_reranked_tree_views_fused_gpu(
+            views["tok"][:roots], views["parent_local"][:roots],
+            views["sib_order"][:roots], views["raw_q"][:roots],
+            views["parent_q_ref"][:roots],
+            views["parent_q_cells"][:roots], views["valid"][:roots],
+            verify_cap=verify_cap, wire_cap=wire_cap, output_buffers=gpu)
+        _mc_pre(gpu_label, gpu_event)
+
+        compact_names = (
+            "tok", "parent_local", "sib_order", "raw_q",
+            "parent_q_ref", "parent_q_cells", "valid", "u_valid")
+        compact_views = {
+            name: gpu[name][:roots] for name in compact_names
+        }
+        # Full-vocabulary logits remain in the P1 executor's persistent
+        # matrix.  Reranking only changes the tiny row-id topology.
+        compact_views["cell_logits"] = views["cell_logits"]
+        self._p1_rerank_cache = {
+            "source_views": views,
+            "roots": int(roots),
+            "views": compact_views,
+            "packed_gpu": gpu["packed"][:roots],
+            "original_valid": views["valid"][:roots],
+        }
+        _mc_pre(label, event)
+
     def _rerank_tree_hit_view(self, views, root: int, phase: int):
         """Return the one-root view actually sent to target verification.
 
@@ -694,6 +826,8 @@ class DraftRunner(ModelRunner):
         from ssd.engine.helpers.p2_tree import (
             pack_tree_ints, parse_tree_ints, rerank_tree_indices,
             validate_tree_ints)
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr_rerank, duet_close as _mc_rerank)
 
         generated_cap = int(
             self.config.duet_p1_tree_max_nodes if phase == 1 else
@@ -706,11 +840,48 @@ class DraftRunner(ModelRunner):
         # The equal-limit case is the established production fast path.  Pack
         # and validate exactly once, as before reranking was introduced.
         if verify_cap == generated_cap:
+            _equal_label = f"tree_hit_pack_served_p{phase}"
+            _ev_equal = _mr_rerank(_equal_label)
             packed = pack_tree_ints(views, root, wire_cap)
             packed_cpu = packed.detach().cpu()
             parsed = parse_tree_ints(packed_cpu, wire_cap)
             validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
+            _mc_rerank(_equal_label, _ev_equal)
             return views, root, packed, packed_cpu, parsed, int(parsed["valid"])
+
+        # Fast path: P1 prepared this exact subtree after generation, while
+        # it was waiting for the target's proxy.  Identity-check the source
+        # view so an executor replay can never serve stale topology.
+        if (phase == 1
+                and os.environ.get("SSD_P1_RERANK_PRECOMPUTE", "1") == "1"):
+            # Runtime initialises this field in ``__init__``, but keep the
+            # hit-time helper robust for lightweight diagnostic/test runners
+            # and partially constructed objects as well.  Absence simply
+            # means the ordinary on-demand rerank path must be used.
+            cache = getattr(self, "_p1_rerank_cache", None)
+            if (cache is not None and cache["source_views"] is views
+                    and 0 <= int(root) < int(cache["roots"])):
+                root = int(root)
+                _served_label = "tree_hit_pack_served_p1"
+                _ev_served = _mr_rerank(_served_label)
+                packed = cache["packed_gpu"][root]
+                packed_cpu = packed.detach().cpu()
+                parsed = parse_tree_ints(packed_cpu, wire_cap)
+                validate_tree_ints(
+                    parsed, wire_cap, self.hf_config.vocab_size)
+                if int(parsed["valid"]) < 1:
+                    raise RuntimeError(
+                        "P1 rerank produced an empty served subtree")
+                # Generated width is diagnostic-only.  Avoid a second scalar
+                # D2H on production runs; exact traces retain it.
+                original_valid = int(parsed["valid"])
+                if os.environ.get("SSD_TREE_TOPO_TRACE", ""):
+                    original_valid = int(cache["original_valid"][root])
+                _mc_rerank(_served_label, _ev_served)
+                return (
+                    cache["views"], root,
+                    packed, packed_cpu, parsed, original_valid,
+                )
 
         if self._tree_compact_view is None:
             raise RuntimeError("tree compact buffers were not preallocated")
@@ -719,11 +890,17 @@ class DraftRunner(ModelRunner):
         # mandatory synchronization used to validate a tree before sending;
         # raw_q is copied after that stream completion and is only a few dozen
         # bytes for the supported caps.
+        _gen_label = f"tree_hit_pack_generated_p{phase}"
+        _ev_gen = _mr_rerank(_gen_label)
         full_packed = pack_tree_ints(views, root, generated_cap)
         full_cpu = full_packed.detach().cpu()
         full = parse_tree_ints(full_cpu, generated_cap)
         validate_tree_ints(
             full, generated_cap, self.hf_config.vocab_size)
+        _mc_rerank(_gen_label, _ev_gen)
+
+        _select_label = f"tree_hit_select_subtree_p{phase}"
+        _ev_select = _mr_rerank(_select_label)
         original_valid = int(full["valid"])
         raw_cpu = views["raw_q"][root, :original_valid] \
             .detach().float().cpu().tolist()
@@ -754,7 +931,10 @@ class DraftRunner(ModelRunner):
                 unique_refs.append(ref)
             compact_refs.append(ref_map[ref])
         u_valid = len(unique_refs)
+        _mc_rerank(_select_label, _ev_select)
 
+        _compact_label = f"tree_hit_compact_gpu_p{phase}"
+        _ev_compact = _mr_rerank(_compact_label)
         out = self._tree_compact_view
         out["tok"].zero_()
         out["parent_local"].fill_(-1)
@@ -767,10 +947,17 @@ class DraftRunner(ModelRunner):
         out["selected_old"][:n].copy_(torch.tensor(
             keep, dtype=torch.int64, device=self.device))
         selected = out["selected_old"][:n]
+        # P2 executor views may be CPU-backed while the compact staging view
+        # lives on the draft GPU.  Index on the source tensor's device, then
+        # let copy_ perform the bounded transfer into the staging buffer.
+        # Using the GPU staging index directly here crashes every N2>M2 P2
+        # hit (equal generation/verification caps never exercise this path).
+        selected_source = selected.to(views["tok"].device)
         out["tok"][0, :n].copy_(
-            views["tok"][root].index_select(0, selected))
+            views["tok"][root].index_select(0, selected_source))
         out["raw_q"][0, :n].copy_(
-            views["raw_q"][root].index_select(0, selected))
+            views["raw_q"][root].index_select(
+                0, selected.to(views["raw_q"].device)))
         out["parent_local"][0, :n].copy_(torch.tensor(
             compact_parent, dtype=torch.int64, device=self.device))
         out["sib_order"][0, :n].copy_(torch.tensor(
@@ -778,17 +965,22 @@ class DraftRunner(ModelRunner):
         out["parent_q_ref"][0, :n].copy_(torch.tensor(
             compact_refs, dtype=torch.int64, device=self.device))
         original_qref = torch.tensor(
-            unique_refs, dtype=torch.int64, device=self.device)
+            unique_refs, dtype=torch.int64,
+            device=views["parent_q_cells"].device)
         out["parent_q_cells"][0, :u_valid].copy_(
             views["parent_q_cells"][root].index_select(0, original_qref))
         # Full-vocabulary logits stay in the executor-owned persistent matrix;
         # only tiny row ids above are compacted.
         out["cell_logits"] = views["cell_logits"]
+        _mc_rerank(_compact_label, _ev_compact)
 
+        _served_label = f"tree_hit_pack_served_p{phase}"
+        _ev_served = _mr_rerank(_served_label)
         packed = pack_tree_ints(out, 0, wire_cap)
         packed_cpu = packed.detach().cpu()
         parsed = parse_tree_ints(packed_cpu, wire_cap)
         validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
+        _mc_rerank(_served_label, _ev_served)
         return out, 0, packed, packed_cpu, parsed, original_valid
 
     def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None):
@@ -867,7 +1059,7 @@ class DraftRunner(ModelRunner):
                 match, self.tree_cache_is_tree, B)
             cache_hits = match.any(dim=1)  # [B]
 
-            if self.config.duet_enabled and self._last_n_draft_keys > 0:
+            if self.config.duet_enabled and self.tree_cache_valid_k is not None:
                 _hit_idx = match.float().argmax(dim=1).to(torch.int64)
                 _is_phase1 = cache_hits & (_hit_idx < self._last_n_draft_keys)
                 phase_source = torch.where(_is_phase1, torch.full_like(phase_source, 1),
@@ -1001,9 +1193,14 @@ class DraftRunner(ModelRunner):
                                     int(idx[0])
                                     - self._last_n_draft_keys)
                     _source_views = _tviews
+                    from ssd.engine.helpers.cudagraph_helpers import (
+                        duet_record as _mr_thr, duet_close as _mc_thr)
+                    _rerank_label = f"tree_hit_rerank_p{_phase}"
+                    _ev_rerank = _mr_thr(_rerank_label)
                     (_tviews, _root, _packed_ints, _packed_cpu, _parsed,
                      _original_valid) = self._rerank_tree_hit_view(
                          _source_views, _source_root, _phase)
+                    _mc_thr(_rerank_label, _ev_rerank)
                     _phase_nv = (
                         self.config.duet_p1_tree_verify_nodes
                         if _phase == 1 else
@@ -1031,9 +1228,13 @@ class DraftRunner(ModelRunner):
                         # full-vocabulary temporaries on every tree hit.
                         from ssd.engine.helpers.p2_tree_executor import \
                             _gather_backbone_logits
+                        _gather_label = \
+                            f"tree_hit_parent_q_gather_p{_phase}"
+                        _ev_gather = _mr_thr(_gather_label)
                         _gather_backbone_logits(
                             _tviews["cell_logits"], _pqc,
                             self._tree_wire_parent_q[0, :_n_valid])
+                        _mc_thr(_gather_label, _ev_gather)
                         self._tree_hit_root = _root
                         self._tree_hit_views = _tviews
                         self._tree_hit_phase = _phase
@@ -1220,7 +1421,8 @@ class DraftRunner(ModelRunner):
         off += B
         if _E0_TRACE:  # E0: 직전 step의 실제 outcome (P0, docs/duet/internal/17 §2)
             self._e0_step_id = step_id
-            _e0.record_draft_request(step_id, cache_keys, temps_as_int64)
+            _e0.record_draft_request(
+                step_id, cache_keys, temps_as_int64, num_tokens)
         assert off == fused_total
         temperatures = temps_as_int64.to(torch.int32).view(torch.float32)
 
@@ -1232,6 +1434,11 @@ class DraftRunner(ModelRunner):
         # prefix == 수락 prefix). one-shot 소거.
         _served = getattr(self, "_tree_served_ints", None)
         if _served is not None:
+            # Profiling-only marker. This work is part of draft request
+            # service (and therefore target_spec_wait), not target verify.
+            from ssd.engine.helpers.cudagraph_helpers import (
+                duet_record as _mr_kvr, duet_close as _mc_kvr)
+            _ev_kvr = _mr_kvr("tree_kv_restore")
             self._tree_served_ints = None
             _staged = getattr(self, "_tree_staged_kv", None)
             self._tree_staged_kv = None
@@ -1273,6 +1480,7 @@ class DraftRunner(ModelRunner):
                     _dt = torch.tensor(_dst, dtype=torch.int64,
                                        device=kc.device)
                     _flat[:, :, _dt] = _staged[:, :, _sr]
+            _mc_kvr("tree_kv_restore", _ev_kvr)
 
         target_recovery_activations = torch.zeros(
             B, 3 * self.config.d_model_target, dtype=self.hf_config.torch_dtype, device=self.device
@@ -1343,6 +1551,9 @@ class DraftRunner(ModelRunner):
             _e0.record_draft_response(
                 getattr(self, "_e0_step_id", -1), phase_source, valid_k,
                 out_tokens[:, :K])
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr_s, duet_close as _mc_s)
+        _mev_pack = _mr_s("draft_response_pack")
         # Wire layout matches speculator_async._fused_response: cache/phase/
         # valid metadata followed by the independently sized token envelope.
         # Ordinary logits below remain K-wide.
@@ -1364,17 +1575,22 @@ class DraftRunner(ModelRunner):
                                   dtype=torch.int64, device=self.device)
             _fused_parts.append(_tb.reshape(-1))
         fused_response = torch.cat(_fused_parts)
-        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_s, duet_close as _mc_s
+        _mc_s("draft_response_pack", _mev_pack)
         _mev_ds = _mr_s("draft_send_response")
+        _mev_fused = _mr_s("draft_send_fused")
         dist.send(fused_response, dst=0, group=self.async_pg)
+        _mc_s("draft_send_fused", _mev_fused)
         # The fused metadata is received before either logit tensor, so the
         # target can take the identical branch.  Ordinary q and tree parent-q
         # are mutually exclusive consumers; the old protocol sent both plus
         # an all-zero max-width parent-q tensor on every non-tree request.
         _pq = getattr(self, "_tree_wire_parent_q", None)
         if _pq is None:
+            _q_label = "draft_send_chain_q"
+            _mev_q = _mr_s(_q_label)
             dist.send(out_logits[:, :K, :].contiguous(), dst=0,
                       group=self.async_pg)
+            _mc_s(_q_label, _mev_q)
         else:
             if B != 1 or self._tree_hit_phase not in (1, 2):
                 raise RuntimeError(
@@ -1390,8 +1606,11 @@ class DraftRunner(ModelRunner):
             # Metadata was sent first, so the target posts the same exact
             # valid-row receive.  Do not send the unused phase-cap tail: P1
             # root thresholding deliberately produces many shallow trees.
+            _q_label = f"draft_send_parent_q_p{self._tree_hit_phase}"
+            _mev_q = _mr_s(_q_label)
             dist.send(_pq[:, :_pq_rows].contiguous(), dst=0,
                       group=self.async_pg)
+            _mc_s(_q_label, _mev_q)
         _mc_s("draft_send_response", _mev_ds)
 
         partial_tree_decode_args = {
@@ -1930,7 +2149,8 @@ class DraftRunner(ModelRunner):
         if p1 is None:
             raise RuntimeError(
                 "P1 tree hit reached an unsupported dynamic-P1 shape; "
-                "the request should have been gated before tree serving")
+                "the request should have been gated before tree serving: "
+                f"{getattr(self, '_p1_tree_fallback_reason', 'unknown')}")
 
         event = _mr("proxy_wait")
         proxy_recv_work.wait()
@@ -2872,12 +3092,16 @@ class DraftRunner(ModelRunner):
         Returns ``None`` for the explicitly unsupported B>1/temp=0/near-end
         cases so the caller can retain the established chain path.
         """
+        self._p1_tree_fallback_reason = None
         if self.config.duet_p1_tree_policy != "on":
+            self._p1_tree_fallback_reason = "policy_off"
             return None
         B, contexts, _ = glue_logits.shape
         if B != 1 or not bool((partial_tree_decode_args["temperatures"] > 0)
                               .all()):
             self._p1exec_count("chain_fallback_batch_or_temperature")
+            self._p1_tree_fallback_reason = (
+                f"batch_or_temperature:B={B}")
             return None
 
         from ssd.engine.helpers.p1_tree import (
@@ -2922,10 +3146,17 @@ class DraftRunner(ModelRunner):
         if final_ctx > int(self.config.max_model_len):
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_model_length")
+            self._p1_tree_fallback_reason = (
+                f"model_length:num_tokens={num_tokens0},contexts={contexts},"
+                f"bucket={context_bucket},cells={ex.total_cells},"
+                f"final_ctx={final_ctx},limit={self.config.max_model_len}")
             return None
         if (final_ctx - 1) // self.block_size >= dbt.shape[1]:
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_block_table")
+            self._p1_tree_fallback_reason = (
+                f"block_table:final_ctx={final_ctx},block={self.block_size},"
+                f"table_pages={dbt.shape[1]}")
             return None
         positions = (first_base + ex.round_offsets_t.unsqueeze(1)
                      + ex.lane_w.unsqueeze(0))
@@ -2941,14 +3172,27 @@ class DraftRunner(ModelRunner):
         if bool(((step_slots < 0) & active_lanes).any()):
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_unallocated_slot")
+            self._p1_tree_fallback_reason = (
+                f"unallocated_slot:num_tokens={num_tokens0},contexts={contexts},"
+                f"bucket={context_bucket},final_ctx={final_ctx}")
             return None
 
-        p0 = (ctx0 + self.block_size - 1) // self.block_size
-        need_pages = p0 + int(ex.canvas_extra_pages)
-        if p0 < 1 or need_pages > dbt.shape[1]:
+        page_plan = compute_tree_canvas_page_plan(
+            ctx0, final_ctx, self.block_size, dbt.shape[1],
+            ex.canvas_extra_pages)
+        if page_plan is None:
             _mc("p1_slot_prepare", _ev_slot)
             self._p1exec_count("chain_fallback_page_bucket")
+            self._p1_tree_fallback_reason = (
+                f"page_bucket:ctx0={ctx0},final_ctx={final_ctx},"
+                f"table_pages={dbt.shape[1]},"
+                f"canvas_extra_pages={ex.canvas_extra_pages}")
             return None
+        p0, live_pages, need_pages = page_plan
+        if need_pages > ex.in_page_ids.numel():
+            raise RuntimeError(
+                "P1 tree page workspace is smaller than its fixed canvas: "
+                f"need={need_pages},capacity={ex.in_page_ids.numel()}")
         _mc("p1_slot_prepare", _ev_slot)
 
         event = _mr("p1_prepare")
@@ -2965,14 +3209,14 @@ class DraftRunner(ModelRunner):
             ex.in_slot[f].copy_(step_slots[f])
             ex.in_ctx_len[f].fill_(first_base + ex.round_ends[f])
         pages = ex.in_page_ids[:need_pages]
-        pages.copy_(dbt[0, :need_pages])
-        # Pages that hold live compact cells were already checked through
-        # step_slots above.  Only the masked alignment tail may still be -1;
-        # map that tail to a finite page because FA2 can propagate NaN/Inf
-        # from a masked OOB page (0*Inf is not finite).
-        pages[p0:need_pages].copy_(torch.where(
-            pages[p0:need_pages] >= 0,
-            pages[p0:need_pages], pages[:1]))
+        pages[:live_pages].copy_(dbt[0, :live_pages])
+        # The remaining canvas columns are fully masked.  Give FlashInfer a
+        # finite page id anyway because 0*Inf is not guaranteed finite inside
+        # every attention implementation.  No logical KV block is allocated
+        # or read for this alignment tail.
+        if live_pages < need_pages:
+            pages[live_pages:need_pages].copy_(
+                pages[:1].expand(need_pages - live_pages))
         if p0 not in ex.wrappers:
             ex.prepare_bucket(p0)
         for f in range(ex.F):
@@ -3010,6 +3254,7 @@ class DraftRunner(ModelRunner):
         views["root_local_q"] = views["root_score"] / \
             views["root_context_reach"].clamp_min(1e-30)
         self._p1_tree_views = views
+        self._precompute_p1_rerank_views(views, real_roots)
         # Correctness-only tracing.  P1 previously reused the production
         # executor but had no equivalent of P2's topology/node audit, which
         # made an AL regression impossible to localize beyond aggregate
@@ -3116,13 +3361,19 @@ class DraftRunner(ModelRunner):
                 self._stage1_init()
                 ex.parity_noise = self._s1_noise
             ctx0 = int(ctx_len)
-            p0 = (ctx0 + self.block_size - 1) // self.block_size
-            need_pages = p0 + 1
-            # 지원 조건: block table에 p0+1 page 존재, 길이 초과 없음
-            if ctx0 + F * W + W > cfg.max_model_len \
-                    or need_pages > dbt.shape[1]:
+            final_ctx = ctx0 + int(ex.total_cells)
+            page_plan = compute_tree_canvas_page_plan(
+                ctx0, final_ctx, self.block_size, dbt.shape[1],
+                ex.canvas_extra_pages)
+            if final_ctx > int(cfg.max_model_len) or page_plan is None:
                 self._p2exec_count("bucket_unsupported")
                 return None
+            p0, live_pages, need_pages = page_plan
+            if need_pages > ex.in_page_ids.numel():
+                raise RuntimeError(
+                    "P2 tree page workspace is smaller than its fixed "
+                    f"canvas: need={need_pages},"
+                    f"capacity={ex.in_page_ids.numel()}")
             gw = K_glue_used + 1
             if gw > ex.gw_max or R > ex.R:
                 self._p2exec_count("shape_unsupported")
@@ -3158,7 +3409,7 @@ class DraftRunner(ModelRunner):
                     if step_context_lens[f].dim() > 1
                     else step_context_lens[f][:1])
             _s1_check("input copies")
-            # canvas 여분 페이지(p0번째)가 미할당(-1)이면 유효 페이지로
+            # canvas 여분 페이지가 실제 block table 밖이면 유효 페이지로
             # 대체 — mask=0이라 내용 무영향(비연속 ID 전제 검증 완료).
             # 단계2: 이 -1 그대로 사용이 hit 하락 주범 클래스로 특정.
             # canvas 슬롯은 반드시 '유한값 보장' 유효 페이지여야 한다.
@@ -3168,10 +3419,10 @@ class DraftRunner(ModelRunner):
             # 읽기)은 메모리 내용에 따라 간헐적으로 트리 전체를
             # 오염 (tri-AB: e0 ΔP2AL −0.325·심저 1.04 vs e1 −0.065).
             _pages_fill = ex.in_page_ids[:need_pages]
-            _pages_fill.copy_(dbt[0, :need_pages])
-            _pages_fill[p0:p0 + 1].copy_(torch.where(
-                _pages_fill[p0:p0 + 1] >= 0,
-                _pages_fill[p0:p0 + 1], _pages_fill[:1]))
+            _pages_fill[:live_pages].copy_(dbt[0, :live_pages])
+            if live_pages < need_pages:
+                _pages_fill[live_pages:need_pages].copy_(
+                    _pages_fill[:1].expand(need_pages - live_pages))
             if p0 in ex.wrappers:
                 for f in range(F):
                     ex.wrappers[p0][f]._paged_kv_indices_buf[
@@ -5107,16 +5358,30 @@ class DraftRunner(ModelRunner):
         # both glue_logits and gd_for_fork before passing.
         _pc = _layout_k1.position_count
         self._p1_tree_views = None
+        self._p1_rerank_cache = None
         _draft_fan_idx_override = None
-        _ctx_rows = torch.tril(torch.ones(
-            _pc, _pc, dtype=torch.uint8, device=self.device))
-        _ctx_depth = torch.arange(
-            _pc, dtype=torch.int64, device=self.device)
-        _p1_dynamic = self._run_p1_tree_step(
-            partial_tree_decode_args,
-            glue_logits[:, :_pc, :].contiguous(),
-            gd_for_fork[:, :_pc].contiguous(),
-            _ctx_rows, _ctx_depth, cache_hits_list)
+        if self.config.duet_only_proxy:
+            # Logical K1=0 ablation.  Retain the positive internal K1 bucket
+            # for fixed CUDA-graph shapes, but do no Phase-1 model work and
+            # expose an empty candidate axis to Policy-B dedup.
+            draft_tree_args = None
+            draft_tokens = None
+            draft_logits = None
+            draft_acts = None
+            draft_forked_p1_padded = torch.empty(
+                (B, _pc, 0), dtype=torch.int64, device=self.device)
+            draft_forked_p1_mask = None
+            _p1_dynamic = None
+        else:
+            _ctx_rows = torch.tril(torch.ones(
+                _pc, _pc, dtype=torch.uint8, device=self.device))
+            _ctx_depth = torch.arange(
+                _pc, dtype=torch.int64, device=self.device)
+            _p1_dynamic = self._run_p1_tree_step(
+                partial_tree_decode_args,
+                glue_logits[:, :_pc, :].contiguous(),
+                gd_for_fork[:, :_pc].contiguous(),
+                _ctx_rows, _ctx_depth, cache_hits_list)
         if _p1_dynamic is not None:
             draft_tree_args = _p1_dynamic["args"]
             draft_tokens = _p1_dynamic["tokens"]
@@ -5125,7 +5390,7 @@ class DraftRunner(ModelRunner):
             draft_forked_p1_padded = _p1_dynamic["padded_roots"]
             draft_forked_p1_mask = _p1_dynamic["root_mask"]
             _draft_fan_idx_override = _p1_dynamic["context_ids"]
-        else:
+        elif not self.config.duet_only_proxy:
             _is_uniform = all(
                 f == _layout_k1.fan_out_list[0]
                 for f in _layout_k1.fan_out_list)
@@ -5270,7 +5535,7 @@ class DraftRunner(ModelRunner):
             proxy_tree_args, proxy_tokens, proxy_logits,
             cache_hits_list, draft_acts, proxy_acts,
             proxy_layout=_layout_k2,
-            draft_layout=_layout_k1,
+            draft_layout=(None if self.config.duet_only_proxy else _layout_k1),
             draft_fan_idx_override=_draft_fan_idx_override)
         if getattr(self, "_p2_skip_step", None) is not None:
             self.tree_cache_keys[self._last_n_draft_keys:] = -1
@@ -5306,7 +5571,10 @@ class DraftRunner(ModelRunner):
         _draft_layout = draft_layout
         # Cache row width: split-only K1/K2 mode pads to K_max=max(K1,K2)
         # so wire/cache layout is independent of K1+K2. Hybrid stays at K_long.
-        if SPLIT_K1K2_MODE and self.config.duet_phase1_k is not None:
+        # DUET has been split-only since the legacy/hybrid paths were
+        # removed; derive this local cache shape from Config rather than the
+        # import-time compatibility environment flag.
+        if self.config.duet_phase1_k is not None:
             K1_cfg = self.config.duet_phase1_k
             K2_cfg = self.config.duet_phase2_k
             K_long = K1_cfg if K1_cfg >= K2_cfg else K2_cfg  # = K_max in this mode
@@ -5315,20 +5583,27 @@ class DraftRunner(ModelRunner):
         # Phase 3: draft row valid_k = draft_tokens.shape[1] (K1 without
         # continuation, K_long with continuation). proxy row valid_k =
         # proxy_tokens.shape[1] (K_short = K2).
-        draft_row_vk = int(draft_tokens.shape[1])
+        draft_row_vk = (int(draft_tokens.shape[1])
+                        if draft_tokens is not None else K_long)
         proxy_row_vk = int(proxy_tokens.shape[1])
 
         # Build keys with layout-specific fan_idx.
         # T3.4-b3-4: 트리 step은 fan_idx = 종단 노드 id (0=root-종단,
         # 1+j=뷰 노드 j) — 호출자가 컨텍스트 매핑을 직접 넘긴다.
-        if draft_fan_idx_override is not None:
+        if draft_args is None:
+            draft_keys = torch.empty(
+                (0, 3), dtype=torch.int64, device=proxy_tokens.device)
+        elif draft_fan_idx_override is not None:
             draft_k = draft_fan_idx_override.to(torch.int64)
+            draft_keys = torch.stack([
+                draft_args["seq_ids_expanded"].to(torch.int64),
+                draft_k, draft_args["rec_flat"].to(torch.int64)], dim=1)
         else:
             draft_k = torch.cat([_draft_layout.fan_idx_hit if int(h) else _draft_layout.fan_idx_miss
                                   for h in cache_hits_list])
-        draft_keys = torch.stack([
-            draft_args["seq_ids_expanded"].to(torch.int64),
-            draft_k, draft_args["rec_flat"].to(torch.int64)], dim=1)
+            draft_keys = torch.stack([
+                draft_args["seq_ids_expanded"].to(torch.int64),
+                draft_k, draft_args["rec_flat"].to(torch.int64)], dim=1)
 
         if _proxy_layout.fan_idx_per_seq:
             # M3 (docs/duet/13 §4): split_k2 fan_idx already spans all seqs
@@ -5370,7 +5645,17 @@ class DraftRunner(ModelRunner):
                 acts = torch.cat([acts, act_pad], dim=1)
             return toks, logs, acts
 
-        draft_tokens, draft_logits, draft_acts = _pad_to_klong(draft_tokens, draft_logits, draft_acts, draft_row_vk)
+        if draft_tokens is None:
+            draft_tokens = torch.empty(
+                (0, K_long), dtype=proxy_tokens.dtype,
+                device=proxy_tokens.device)
+            draft_logits = torch.empty(
+                (0, K_long, proxy_logits.shape[2]), dtype=proxy_logits.dtype,
+                device=proxy_logits.device)
+            draft_acts = None
+        else:
+            draft_tokens, draft_logits, draft_acts = _pad_to_klong(
+                draft_tokens, draft_logits, draft_acts, draft_row_vk)
         proxy_tokens, proxy_logits, proxy_acts = _pad_to_klong(proxy_tokens, proxy_logits, proxy_acts, proxy_row_vk)
 
         # Keys and payloads share one row namespace.  A previous R/W bug let

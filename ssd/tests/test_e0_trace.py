@@ -49,7 +49,8 @@ class TestRecording(unittest.TestCase):
             mod.record_draft_request(
                 step_id=i,
                 cache_keys=torch.tensor([[7, i, 100 + i]]),
-                temps=torch.tensor([7000]))
+                temps=torch.tensor([7000]),
+                num_tokens=torch.tensor([2040 + i]))
         mod.close_all()
         files = [f for f in os.listdir(tmp) if f.startswith("e0_draft")]
         self.assertEqual(len(files), 1)
@@ -69,6 +70,7 @@ class TestRecording(unittest.TestCase):
         self.assertEqual(r["step_id"], 0)
         self.assertEqual(r["cache_keys"], [[7, 0, 100]])
         self.assertEqual(r["temps"], [7000])
+        self.assertEqual(r["num_tokens"], [2040])
 
     def test_subsample(self):
         recs = self._run({"SSD_DUET_E0_SUBSAMPLE": "2"}, 4)

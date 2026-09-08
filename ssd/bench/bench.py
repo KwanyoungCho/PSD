@@ -46,6 +46,11 @@ def parse_arguments():
     parser.add_argument("--block_sz", type=int, default=256, help="KV cache block size (see config.py: kvcache_block_size)")
     parser.add_argument("--b", type=int, default=1, help="Maximum number of sequences in batch")
     parser.add_argument("--max_model_len", type=int, default=8192, help="Maximum model length")
+    parser.add_argument(
+        "--extend_draft_rope", action="store_true",
+        help=("Extend the draft model's analytic RoPE cache to the effective "
+              "target context length instead of clamping to the draft's "
+              "advertised window"))
     parser.add_argument("--gpu_memory_utilization", type=float, default=None,
                         help="Fraction of free GPU memory to reserve for KV cache. "
                              "Useful for sync SD where target rank 0 also hosts the draft model.")
@@ -148,6 +153,12 @@ def parse_arguments():
                         help="P1 captured forward width / root count. The dynamic "
                              "default is 1; values above 1 explicitly spend "
                              "more compute on additional frontier lanes.")
+    parser.add_argument(
+        "--duet_p1_tree_allocation_policy", type=str, default="dynamic",
+        choices=["dynamic", "backbone", "hybrid"],
+        help="P1 forest allocation: global confidence, full per-root "
+             "backbone coverage, or a two-level backbone followed by global "
+             "selection.")
     parser.add_argument("--duet_tree_nv", type=int, default=None,
                         help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_fanout_policy", type=str,
@@ -307,6 +318,7 @@ def initialize_wandb(args, run_name):
             "fan_out_list_miss": args.flm,
             "llama": args.llama,
             "max_model_len": args.max_model_len,
+            "extend_draft_rope": args.extend_draft_rope,
             "input_len": args.input_len,
             "output_len": args.output_len,
             "numseqs": args.numseqs,
@@ -342,6 +354,7 @@ def create_llm_kwargs(args, draft_path):
         kvcache_block_size=args.block_sz,
         max_num_seqs=args.b,
         max_model_len=args.max_model_len,
+        extend_draft_rope=args.extend_draft_rope,
         sampler_x=args.x,
         jit_speculate=(args.backup == "jit"),
         max_steps=args.max_steps,
@@ -389,6 +402,8 @@ def create_llm_kwargs(args, draft_path):
                 args.duet_p1_roots_per_position
             llm_kwargs["duet_p1_tree_forward_scale"] = \
                 args.duet_p1_tree_forward_scale
+            llm_kwargs["duet_p1_tree_allocation_policy"] = \
+                args.duet_p1_tree_allocation_policy
             if args.duet_tree_nv is not None:
                 llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
             llm_kwargs["duet_tree_beta"] = args.duet_tree_beta

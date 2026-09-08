@@ -225,13 +225,14 @@ def record_target_final(logits_p, temperatures):
         K=int(lp.shape[1] - 1), B=int(lp.shape[0]))
 
 
-def record_draft_request(step_id, cache_keys, temps):
+def record_draft_request(step_id, cache_keys, temps, num_tokens=None):
     """Draft, once per spec request: the previous step's ACTUAL outcome —
     cache key (seq_id, accepted_len-1, recovery_token) + temperature."""
+    tensors = dict(cache_keys=cache_keys, temps=temps)
+    if num_tokens is not None:
+        tensors["num_tokens"] = num_tokens
     get("draft")._record(
-        "request",
-        gpu_tensors=dict(cache_keys=cache_keys, temps=temps),
-        step_id=int(step_id))
+        "request", gpu_tensors=tensors, step_id=int(step_id))
 
 
 def record_draft_response(step_id, phase_source, valid_k, out_tokens):

@@ -336,7 +336,10 @@ class SpeculatorAsync(SpeculatorBase):
         # where pipeline wait time accumulates on the target.
         _mev_recv = _mr("target_recv_response_wait", parent="target_spec_wait")
         # Recv into pre-allocated buffers
+        _mev_recv_fused = _mr(
+            "target_recv_fused", parent="target_recv_response_wait")
         dist.recv(self._fused_response, src=self.draft_runner_rank, group=self.async_pg)
+        _mc("target_recv_fused", _mev_recv_fused)
         cache_hits = self._fused_response[:B]
         phase_source = self._fused_response[B:2 * B]
         valid_k = self._fused_response[2 * B:3 * B]
@@ -355,10 +358,13 @@ class SpeculatorAsync(SpeculatorBase):
         # buffer stays cap-sized for fixed allocation.
         _tree_valid = 0
         _tree_phase = 0
+        _mev_meta = _mr(
+            "target_response_meta_read", parent="target_recv_response_wait")
         if self._tree_ints_step is not None and B == 1:
             _tree_valid = int(self._tree_ints_step[0, 0].item())
             if _tree_valid > 0:
                 _tree_phase = int(phase_source[0].item())
+        _mc("target_response_meta_read", _mev_meta)
         if _tree_valid > 0:
             from ssd.engine.helpers.p2_tree import tree_response_logit_rows
             _, _pq_rows = tree_response_logit_rows(
@@ -368,11 +374,19 @@ class SpeculatorAsync(SpeculatorBase):
             _pq_dst = self._tree_parent_q[:, :_pq_rows]
             if not _pq_dst.is_contiguous():
                 raise RuntimeError("tree parent-q receive view must be contiguous")
+            _recv_q_label = f"target_recv_parent_q_p{_tree_phase}"
+            _mev_recv_q = _mr(
+                _recv_q_label, parent="target_recv_response_wait")
             dist.recv(_pq_dst, src=self.draft_runner_rank,
                       group=self.async_pg)
+            _mc(_recv_q_label, _mev_recv_q)
         else:
+            _recv_q_label = "target_recv_chain_q"
+            _mev_recv_q = _mr(
+                _recv_q_label, parent="target_recv_response_wait")
             dist.recv(self._logits_q, src=self.draft_runner_rank,
                       group=self.async_pg)
+            _mc(_recv_q_label, _mev_recv_q)
         _mc("target_recv_response_wait", _mev_recv)
 
         # Point marker: target_response_received (zero-duration timestamp

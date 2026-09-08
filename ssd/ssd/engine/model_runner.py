@@ -249,6 +249,12 @@ class ModelRunner:
             // self.block_size
         self._tree_workspace = torch.zeros(
             128 * 1024 * 1024, dtype=torch.uint8, device=self.device)
+        # One persistent copy of the common P1/P2 tree wire for target TP
+        # followers.  Rank 0 consumes the response tensor directly; followers
+        # receive the same validated metadata through SHM and perform one H2D
+        # copy before the GPU topology kernels.
+        self._tree_wire_device = torch.empty(
+            3 + 4 * nv, dtype=torch.int64, device=self.device)
         self.tree_verify_wrappers = {}
         # Production backbone generation fills the configured per-root cap.
         # Capture only the active phase caps; intermediate valid counts pad
@@ -757,6 +763,7 @@ class ModelRunner:
                             capture_tree_verify_cudagraph(
                                 self, graph_pool=duet_pool_k1)
                         self.graph_pools["tree_verify"] = _tree_pool
+                        self._warmup_tree_topology_gpu()
                         print(f'[DUET tree] Captured tree_verify CG '
                               f'(buckets={sorted(self._tree_verify_cg)})',
                               flush=True)
@@ -1039,6 +1046,61 @@ class ModelRunner:
         print(f"[DUET tree] warmed proxy kernels "
               f"(buckets={sorted(self.tree_verify_wrappers)})", flush=True)
 
+    def _warmup_tree_topology_gpu(self):
+        """Compile the target-side GPU topology kernels before serving.
+
+        Triton specializes on the live-node count and padded verify-row
+        bucket.  Exercise every reachable live width once after the target
+        verify graphs exist, writing only into their persistent input/mask
+        buffers.  This prevents the first tree hit of a new width from paying
+        JIT compilation on the request critical path.
+        """
+        if (os.environ.get("SSD_TREE_TOPOLOGY_GPU", "1") == "0"
+                or self.is_draft
+                or self.device.type != "cuda"):
+            return
+        graphs = getattr(self, "_tree_verify_cg", None)
+        if not graphs:
+            return
+
+        from ssd.engine.helpers.tree_topology_gpu import (
+            build_tree_verify_inputs_gpu_)
+
+        buckets = sorted({int(key[0]) for key in graphs})
+        max_valid = max(buckets)
+        for valid in range(1, max_valid + 1):
+            nv_b = next(bucket for bucket in buckets if bucket >= valid)
+            cg = graphs[(nv_b, 1)]
+            rows = nv_b + 1
+            # A chain is a valid representative topology for every width;
+            # runtime parent values do not affect the compiled kernel shape.
+            parent = torch.arange(
+                valid, dtype=torch.int64, device=self.device) - 1
+            source_ids = torch.zeros(
+                valid + 1, dtype=torch.int64, device=self.device)
+            source_slots = torch.arange(
+                valid + 1, dtype=torch.int32, device=self.device)
+            prefix_len = 7
+            kv_len = prefix_len + valid
+            build_tree_verify_inputs_gpu_(
+                parent,
+                source_ids,
+                source_slots,
+                cg["bufs"]["input_ids"],
+                cg["bufs"]["rope"],
+                cg["bufs"]["slot_mapping"],
+                cg["bufs"]["context_lens"],
+                cg["wrapper"]._custom_mask_buf,
+                valid=valid,
+                rows=rows,
+                pos0=prefix_len - 1,
+                prefix_len=prefix_len,
+                kv_len=kv_len,
+            )
+        torch.cuda.synchronize(self.device)
+        print("[DUET tree] warmed GPU target topology "
+              f"(valid=1..{max_valid}, buckets={buckets})", flush=True)
+
     def _capture_tree_proxy_graphs(self):
         """Build rank-0 target proxy graphs before the engine is ready.
 
@@ -1093,7 +1155,7 @@ class ModelRunner:
             (int(cfg.duet_phase1_k)
              if cfg.duet_p1_tree_policy == "on" else 0))
         for nv in range(1, int(max_valid) + 1):
-            self._tree_proxy_graphs_prebuilt[nv] = TreeProxyCUDAGraph(
+            graph = TreeProxyCUDAGraph(
                 nv=nv,
                 vocab_size=cfg.hf_config.vocab_size,
                 wire_n=cfg.duet_proxy_wire_N,
@@ -1101,6 +1163,18 @@ class ModelRunner:
                 top_k=cfg.duet_proxy_top_k,
                 dtype=cfg.hf_config.torch_dtype,
                 device=self.device)
+            # Compile and initialize the GPU topology packer for this exact
+            # proxy bucket.  Live requests overwrite these representative
+            # chain values before replay.
+            if os.environ.get("SSD_TREE_TOPOLOGY_GPU", "1") != "0":
+                graph.prepare_topology_device(
+                    torch.arange(
+                        nv, dtype=torch.int64, device=self.device) - 1,
+                    torch.zeros(nv, dtype=torch.int64, device=self.device),
+                )
+            self._tree_proxy_graphs_prebuilt[nv] = graph
+        if os.environ.get("SSD_TREE_TOPOLOGY_GPU", "1") != "0":
+            torch.cuda.synchronize(self.device)
         print("[DUET tree] captured target proxy graphs "
               f"(buckets={sorted(self._tree_proxy_graphs_prebuilt)})",
               flush=True)
@@ -1491,6 +1565,8 @@ class ModelRunner:
         from ssd.engine.helpers.p2_tree import (
             pack_tree_verify_mask_direct, parse_tree_ints,
             validate_tree_ints)
+        from ssd.engine.helpers.tree_topology_gpu import (
+            build_tree_verify_inputs_gpu_)
         from ssd.engine.helpers.cudagraph_helpers import (
             duet_record, duet_close, _duet_exit_topm_gather,
             update_tree_verify_graph_buffers)
@@ -1512,50 +1588,30 @@ class ModelRunner:
         # the same check before entering model collectives.  A corrupt tree
         # therefore fails coherently instead of leaving only rank 0 in the
         # acceptance path while its peers wait forever.
-        validate_tree_ints(ti, nv, cfg.hf_config.vocab_size)
+        validate_tree_ints(
+            ti, nv, cfg.hf_config.vocab_size, sibling_capacity=3)
         valid = int(ti["valid"])
         n_rows = valid + 1
         assert input_ids.shape[0] == n_rows, (
             f"tree verify rows {input_ids.shape[0]} != valid+1 {n_rows}")
-        par = ti["parent_local"]
-
-        # depth/조상 복원 (parent_local < 자기 인덱스 — 뷰 invariant)
-        depths = [0] * valid
-        anc = [[] for _ in range(valid)]
-        for j in range(valid):
-            p = int(par[j])
-            if p >= 0:
-                depths[j] = depths[p] + 1
-                anc[j] = anc[p] + [p]
-
-        pos0 = int(positions[0])
         context = get_context()
         kv_len = int(context.context_lens[0])
-        assert kv_len == pos0 + 1 + valid, (
-            f"tree verify kv_len {kv_len} != pos0+1+valid {pos0 + 1 + valid}")
+        # prepare_decode appends exactly valid speculative scratch rows.  Derive
+        # the recovery position from that already materialised KV length and
+        # avoid a separate GPU scalar read of positions[0].
+        pos0 = kv_len - valid - 1
+        if pos0 < 0:
+            raise RuntimeError(
+                f"tree verify invalid KV geometry: kv_len={kv_len} "
+                f"valid={valid}")
         duet_close("tree_verify_meta_cpu", _ev_meta)
 
-        # bucket 선택 + 행 패딩 (고정 shape — 추후 CG capture 대비)
+        # Bucket selection is host-only.  Row padding, depth/RoPE derivation,
+        # and packed ancestor mask construction move to one fused GPU kernel.
         _ev_mask = duet_record("tree_verify_mask_prepare")
         _buckets = sorted(self.tree_verify_wrappers.keys())
         nv_b = next(b for b in _buckets if b + 1 >= n_rows)
         r_b = nv_b + 1
-        if r_b > n_rows:
-            pad = r_b - n_rows
-            input_ids = torch.cat([input_ids, torch.zeros(
-                pad, dtype=input_ids.dtype, device=input_ids.device)])
-            slot_mapping = torch.cat([context.slot_mapping, torch.full(
-                (pad,), -1, dtype=context.slot_mapping.dtype,
-                device=context.slot_mapping.device)])
-        else:
-            slot_mapping = context.slot_mapping
-
-        # rope 덮어쓰기: rec=pos0, 노드 j=pos0+1+depth_j, pad=pos0
-        rope = torch.full((r_b,), pos0, dtype=positions.dtype,
-                          device=positions.device)
-        if valid:
-            rope[1:n_rows] = pos0 + 1 + torch.tensor(
-                depths, dtype=positions.dtype, device=positions.device)
 
         bs = self.block_size
         n_blocks = (kv_len + bs - 1) // bs
@@ -1588,12 +1644,6 @@ class ModelRunner:
         qo_indptr = _ph["qo"]
         kv_indptr = _ph["kv"]
         kv_last_page_len = _ph["last"]
-        # Batch size is one, so FlashInfer's segmented little-endian packing
-        # is exactly a flat np.packbits.  Supplying it explicitly avoids a
-        # per-step GPU segment_packbits launch inside wrapper.plan().
-        # Keep the packed mask on CPU.  The captured wrapper owns its fixed
-        # GPU mask buffer, so materialising a fresh CUDA tensor here only
-        # added an allocation and a second copy on every P2 hit.
         # A captured FlashInfer plan is valid only for its page-count shape.
         # Select that graph first.  The final page length and packed mask stay
         # exact: treating the unwritten page tail as a masked canvas can leak
@@ -1602,8 +1652,79 @@ class ModelRunner:
         if os.environ.get("SSD_TREE_VERIFY_EAGER", "0") != "1":
             _cg = getattr(self, "_tree_verify_cg", {}).get(
                 (nv_b, n_blocks))
-        _packed_mask = pack_tree_verify_mask_direct(
-            anc, valid, r_b, pos0 + 1, kv_len)
+        _gpu_topology = (
+            os.environ.get("SSD_TREE_TOPOLOGY_GPU", "1") != "0"
+            and _cg is not None
+            and self.device.type == "cuda"
+        )
+        if _gpu_topology:
+            bufs = _cg["bufs"]
+            wcg = _cg["wrapper"]
+            _wire_gpu = getattr(self, "_duet_tree_wire_gpu_source", None)
+            if (not torch.is_tensor(_wire_gpu)
+                    or _wire_gpu.device != self.device
+                    or _wire_gpu.numel() < 3 + 4 * nv):
+                # TP followers receive a NumPy/list wire through SHM.  NumPy
+                # shares its host storage with as_tensor, so this is one H2D
+                # copy and no derived CPU topology allocation.
+                _wire_cpu = torch.as_tensor(
+                    self._duet_tree_meta, dtype=torch.int64)
+                if _wire_cpu.numel() != self._tree_wire_device.numel():
+                    raise RuntimeError(
+                        "tree wire length mismatch: "
+                        f"got={_wire_cpu.numel()} "
+                        f"expected={self._tree_wire_device.numel()}")
+                self._tree_wire_device.copy_(_wire_cpu, non_blocking=True)
+                _wire_gpu = self._tree_wire_device
+            _parent_gpu = _wire_gpu[3 + nv:3 + 2 * nv]
+            _mask_numel = build_tree_verify_inputs_gpu_(
+                _parent_gpu,
+                input_ids,
+                context.slot_mapping,
+                bufs["input_ids"],
+                bufs["rope"],
+                bufs["slot_mapping"],
+                bufs["context_lens"],
+                wcg._custom_mask_buf,
+                valid=valid,
+                rows=r_b,
+                pos0=pos0,
+                prefix_len=pos0 + 1,
+                kv_len=kv_len,
+            )
+            input_ids = bufs["input_ids"]
+            rope = bufs["rope"]
+            slot_mapping = bufs["slot_mapping"]
+            _packed_mask = None
+        else:
+            # Correctness/diagnostic fallback: retain the established CPU
+            # topology and NumPy packer for eager verify and A/B testing.
+            par = ti["parent_local"]
+            depths = [0] * valid
+            anc = [[] for _ in range(valid)]
+            for j in range(valid):
+                p = int(par[j])
+                if p >= 0:
+                    depths[j] = depths[p] + 1
+                    anc[j] = anc[p] + [p]
+            if r_b > n_rows:
+                pad = r_b - n_rows
+                input_ids = torch.cat([input_ids, torch.zeros(
+                    pad, dtype=input_ids.dtype, device=input_ids.device)])
+                slot_mapping = torch.cat([
+                    context.slot_mapping, torch.full(
+                        (pad,), -1, dtype=context.slot_mapping.dtype,
+                        device=context.slot_mapping.device)])
+            else:
+                slot_mapping = context.slot_mapping
+            rope = torch.full((r_b,), pos0, dtype=positions.dtype,
+                              device=positions.device)
+            if valid:
+                rope[1:n_rows] = pos0 + 1 + torch.tensor(
+                    depths, dtype=positions.dtype, device=positions.device)
+            _packed_mask = pack_tree_verify_mask_direct(
+                anc, valid, r_b, pos0 + 1, kv_len)
+            _mask_numel = _packed_mask.numel()
         _tp = max(1, self.num_tp_gpus)     # KV 할당(:896)과 동일한 분모
         duet_close("tree_verify_mask_prepare", _ev_mask)
 
@@ -1620,12 +1741,13 @@ class ModelRunner:
         if _cg is not None:
             bufs = _cg["bufs"]
             wcg = _cg["wrapper"]
-            _ev_copy = duet_record("tree_verify_input_copy")
-            bufs["input_ids"].copy_(input_ids)
-            bufs["rope"].copy_(rope)
-            bufs["slot_mapping"].copy_(slot_mapping)
-            bufs["context_lens"][0] = kv_len
-            duet_close("tree_verify_input_copy", _ev_copy)
+            if not _gpu_topology:
+                _ev_copy = duet_record("tree_verify_input_copy")
+                bufs["input_ids"].copy_(input_ids)
+                bufs["rope"].copy_(rope)
+                bufs["slot_mapping"].copy_(slot_mapping)
+                bufs["context_lens"][0] = kv_len
+                duet_close("tree_verify_input_copy", _ev_copy)
             # 이슈 #18: prepare_decode의 체인-verify context(cu_seqlens_q
             # 설정)가 남아 있으면 lm_head가 [1, rows, V] 3-D를 반환해
             # pad 절단이 무력화된다 (rows=1 관측). eager 분기와 동일하게
@@ -1642,7 +1764,8 @@ class ModelRunner:
             # the helper installs the request's real last-page length, page
             # ids and exact-length packed mask.
             update_tree_verify_graph_buffers(
-                wcg, kv_indices, _packed_mask, _ph)
+                wcg, kv_indices, _packed_mask, _ph,
+                mask_numel=_mask_numel)
             duet_close("tree_verify_attention_buffers", _ev_plan)
             duet_close("verify_setup", _ev_setup)
             _ev = duet_record("graph_pre")

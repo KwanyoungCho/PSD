@@ -74,11 +74,19 @@ class Scheduler:
                 _p1_root_cap = (
                     _p1_context_cap
                     * int(config.duet_p1_roots_per_position))
-                _p1_cont_width = min(
-                    _p1_root_cap,
-                    compute_tree_forward_width(
-                        self._sk_mq_p1,
-                        float(config.duet_p1_tree_forward_scale)))
+                if getattr(
+                        config, "duet_p1_tree_allocation_policy",
+                        "dynamic") == "backbone":
+                    # Full-root backbone is part of the public allocation
+                    # contract.  Mirror P1TreeExecutor exactly so every live
+                    # replay cell owns a scheduler-reserved KV slot.
+                    _p1_cont_width = _p1_root_cap
+                else:
+                    _p1_cont_width = min(
+                        _p1_root_cap,
+                        compute_tree_forward_width(
+                            self._sk_mq_p1,
+                            float(config.duet_p1_tree_forward_scale)))
                 self._sk_cells_p1 = (_p1_root_cap
                                      + max(0, self._sk_K1 - 1)
                                      * _p1_cont_width)
@@ -107,7 +115,36 @@ class Scheduler:
         return not self.waiting and not self.running
 
     def add(self, seq: Sequence):
+        if seq.num_tokens >= self.max_model_len:
+            raise ValueError(
+                "prompt leaves no room for generation: "
+                f"prompt_tokens={seq.num_tokens}, "
+                f"max_model_len={self.max_model_len}")
         self.waiting.append(seq) # is the issue when f(k+1)>block_sz?
+
+    def _model_length_block_reason(
+            self, seq: Sequence, target_lookahead_len: int,
+            draft_lookahead_len: int | None) -> str | None:
+        """Explain why another complete decode step cannot fit.
+
+        Speculative decoding must not execute a partial captured step: every
+        target/draft KV slot reserved by that step has to fit inside the native
+        context workspace.  Reaching this guard is therefore a normal context
+        termination condition, not a request error.
+        """
+        target_end = seq.num_tokens + target_lookahead_len
+        if target_end > self.max_model_len:
+            return (
+                f"target needs position {target_end - 1} "
+                f"(lookahead={target_lookahead_len})")
+        if self.speculate:
+            assert draft_lookahead_len is not None
+            draft_end = seq.num_tokens + draft_lookahead_len
+            if draft_end > self.max_model_len:
+                return (
+                    f"draft needs position {draft_end - 1} "
+                    f"(lookahead={draft_lookahead_len})")
+        return None
 
     def bms_can_append(self, seq: Sequence, target_lookahead_len: int, draft_lookahead_len: int | None = None) -> bool:
         target_can_append = self.block_manager.can_append(seq, target_lookahead_len)
@@ -124,7 +161,7 @@ class Scheduler:
         return self.block_manager.can_allocate(seq) and (not self.speculate or self.draft_block_manager.can_allocate(seq))
 
     # what if we added an option to prefill jit
-    def schedule(self) -> tuple[list[Sequence], bool]:
+    def schedule(self) -> tuple[list[Sequence], bool | None]:
         # prefill
         scheduled_seqs = []
         num_batched_tokens = 0 # within this round only 
@@ -186,6 +223,29 @@ class Scheduler:
         while self.running and num_seqs_decoded < self.max_num_seqs:
             seq = self.running.popleft()
             # print(f"[scheduler] processing seq {seq.seq_id} for decode, num_tokens={seq.num_tokens}", flush=True)
+
+            length_block_reason = self._model_length_block_reason(
+                seq, target_lookahead_len, draft_lookahead_len)
+            if length_block_reason is not None:
+                # A paper run uses the draft model's native context limit.
+                # Do not extend RoPE, preempt/re-prefill forever, or raise and
+                # lose the completed prefix.  Return the sequence as a normal
+                # context-limited completion before launching the unsafe step.
+                if __debug__:
+                    print(
+                        "[scheduler] context limit reached; finishing "
+                        f"seq_id={seq.seq_id}, num_tokens={seq.num_tokens}, "
+                        f"max_model_len={self.max_model_len}: "
+                        f"{length_block_reason}",
+                        flush=True,
+                    )
+                seq.status = SequenceStatus.FINISHED
+                self.block_manager.deallocate(seq)
+                if self.speculate:
+                    self.draft_block_manager.deallocate(seq)
+                # ``None`` tells LLMEngine.step that no model kernel should be
+                # launched; the returned sequence is already complete.
+                return [seq], None
             
             while not self.bms_can_append(seq, target_lookahead_len, draft_lookahead_len):
                 if self.running:  # eject a running sequence if one exists
@@ -234,7 +294,9 @@ class Scheduler:
                 seq.num_cached_tokens = seq.num_prompt_tokens # no draft needed
             else: 
                 seq.num_cached_tokens += 1
-            if (not seq.ignore_eos and token_id == self.eos) or seq.num_completion_tokens == seq.max_new_tokens:
+            if ((not seq.ignore_eos and token_id == self.eos)
+                    or seq.num_completion_tokens == seq.max_new_tokens
+                    or seq.num_tokens >= self.max_model_len):
                 seq.status = SequenceStatus.FINISHED
                 self.block_manager.deallocate(seq)
                 self.running.remove(seq)
@@ -309,7 +371,7 @@ class Scheduler:
                 if block.ref_count == 0:
                     self.block_manager._deallocate_block(block_id)
             seq.block_table = seq.block_table[:-excess_blocks]
-        
+
         # Deallocate excess draft blocks if we over-allocated during speculation
         if spec_crossed_draft:
             # print(f'spec crossed draft', flush=True)

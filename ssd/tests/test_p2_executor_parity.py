@@ -371,6 +371,157 @@ class TestExecutorModuleParity(unittest.TestCase):
         self.assertEqual(int(vt_p1[-1]), ex.C)
         self.assertTrue(bool((vt_p1[:-1] > ex.C).any()))
 
+    def test_p1_c1_is_an_exact_chain_forest(self):
+        """With matched roots/width and C=1, every P1 view is one chain.
+
+        This is the fair-root contract used by the end-to-end audit.  It
+        guards against a nominally chain-degenerate tree silently dropping a
+        root, skipping a round, or attaching a child to the wrong parent-q
+        cell before the target verifier ever sees the response.
+        """
+        dev = "cuda:0"
+        V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
+        cfg = _MiniCfg()
+        cfg.duet_tree_policy = "dynamic"
+        cfg.duet_phase1_k = 7
+        cfg.duet_phase2_k = 4
+        cfg.duet_p1_roots_per_position = 1
+        cfg.duet_draft_fan_out = 1
+        cfg.duet_split_phase1_fan_out_list = [1] * 8
+        cfg.duet_p1_tree_max_nodes = 14
+        cfg.duet_tree_c_tensor = 1
+        cfg.duet_p1_tree_start_threshold = 0.0
+        cfg.duet_p1_tree_conf_threshold = 0.0
+        cache = torch.zeros(8, 2, PAGE, HKV, D,
+                            dtype=torch.float16, device=dev)
+        model = _MiniDraft(V, H, HKV, D, cache, dev)
+        ex = P1TreeExecutor(
+            model, model.logits_fn, cfg, dev, PAGE, 8,
+            V, H, HKV, D, context_bucket=8,
+            materialize_backbone_logits=True)
+        ex.debug_buffers_enabled = True
+        self.assertEqual((ex.F, ex.W, ex.R), (7, 8, 8))
+        self.assertEqual(ex.round_widths, (8,) * 7)
+
+        ctx0 = 2 * PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        noise_gen = torch.Generator().manual_seed(910)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(
+                1, generator=noise_gen).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx = torch.full(
+            (ex.arena.capacity,), -1, dtype=torch.int64, device=dev)
+        ex.run_once(p0)
+        torch.cuda.synchronize()
+
+        expected_parent = torch.tensor(
+            [-1, 0, 1, 2, 3, 4, 5], dtype=torch.int64)
+        expected_sibling = torch.zeros(7, dtype=torch.int64)
+        expected_qref = torch.arange(7, dtype=torch.int64)
+        for root in range(ex.R):
+            self.assertEqual(int(ex.out_valid[root]), ex.F)
+            self.assertTrue(torch.equal(
+                ex.view_par[root, :ex.F].cpu(), expected_parent), root)
+            self.assertTrue(torch.equal(
+                ex.view_sib[root, :ex.F].cpu(), expected_sibling), root)
+            self.assertTrue(torch.equal(
+                ex.out_pq_ref[root, :ex.F].cpu(), expected_qref), root)
+            expected_cells = torch.arange(
+                root, ex.total_cells, ex.W, dtype=torch.int64)[:ex.F]
+            self.assertTrue(torch.equal(
+                ex.out_pq_cells[root, :ex.F].cpu(), expected_cells), root)
+            self.assertTrue(torch.equal(
+                ex.view_pcell[root, :ex.F].cpu(), expected_cells), root)
+            self.assertTrue(torch.equal(
+                ex.out_backbone_tok[root, :ex.F],
+                ex.view_tok[root, :ex.F]), root)
+            gathered = ex.cell_logits.index_select(
+                0, expected_cells.to(dev)).to(ex.out_backbone_logits.dtype)
+            self.assertTrue(torch.equal(
+                ex.out_backbone_logits[root, :ex.F], gathered), root)
+
+    def test_p1_backbone_preserves_every_root_depth_at_fixed_width(self):
+        """Coverage policy keeps depth K1 while retaining free siblings."""
+        dev = "cuda:0"
+        V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
+        cfg = _MiniCfg()
+        cfg.duet_phase1_k = 7
+        cfg.duet_phase2_k = 4
+        cfg.duet_p1_roots_per_position = 1
+        cfg.duet_draft_fan_out = 1
+        cfg.duet_split_phase1_fan_out_list = [1] * 8
+        cfg.duet_p1_tree_max_nodes = 14
+        cfg.duet_tree_c_tensor = 3
+        cfg.duet_p1_tree_allocation_policy = "backbone"
+        cache = torch.zeros(8, 2, PAGE, HKV, D,
+                            dtype=torch.float16, device=dev)
+        model = _MiniDraft(V, H, HKV, D, cache, dev)
+        ex = P1TreeExecutor(
+            model, model.logits_fn, cfg, dev, PAGE, 8,
+            V, H, HKV, D, context_bucket=8,
+            materialize_backbone_logits=False)
+        self.assertEqual(ex.policy, "backbone")
+        self.assertEqual(ex.round_widths, (8,) * 7)
+
+        ctx0 = 2 * PAGE + 21
+        p0 = (ctx0 + PAGE - 1) // PAGE
+        ex.prepare_bucket(p0)
+        self._fill_inputs(ex, PAGE, ctx0)
+        noise_gen = torch.Generator().manual_seed(911)
+        ex.parity_noise = [
+            torch.empty(ex.W, V).exponential_(
+                1, generator=noise_gen).to(dev)
+            for _ in range(ex.F)]
+        ex._local_idx = torch.full(
+            (ex.arena.capacity,), -1, dtype=torch.int64, device=dev)
+        ex.run_once(p0)
+        torch.cuda.synchronize()
+
+        for root in range(ex.R):
+            valid = int(ex.out_valid[root])
+            self.assertEqual(valid, 14, root)
+            parent = ex.view_par[root, :valid].cpu().tolist()
+            sibling = ex.view_sib[root, :valid].cpu().tolist()
+            cur = -1
+            backbone = []
+            for _ in range(ex.F):
+                children = [j for j in range(valid)
+                            if parent[j] == cur and sibling[j] == 0]
+                self.assertEqual(len(children), 1, (root, cur))
+                cur = children[0]
+                backbone.append(cur)
+            self.assertEqual(len(backbone), ex.F, root)
+            self.assertTrue(any(x > 0 for x in sibling), root)
+
+    def test_p1_backbone_expands_width_to_cover_overbooked_roots(self):
+        """Full backbone must not silently drop R-chain_width root tips."""
+        dev = "cuda:0"
+        V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
+        cfg = _MiniCfg()
+        cfg.duet_phase1_k = 8
+        cfg.duet_phase2_k = 4
+        cfg.duet_p1_roots_per_position = 3
+        cfg.duet_draft_fan_out = 3
+        cfg.duet_split_phase1_fan_out_list = [3] * 9
+        cfg.duet_p1_tree_max_nodes = 14
+        cfg.duet_tree_c_tensor = 3
+        cfg.duet_p1_tree_allocation_policy = "backbone"
+        cache = torch.zeros(12, 2, PAGE, HKV, D,
+                            dtype=torch.float16, device=dev)
+        model = _MiniDraft(V, H, HKV, D, cache, dev)
+        ex = P1TreeExecutor(
+            model, model.logits_fn, cfg, dev, PAGE, 12,
+            V, H, HKV, D, context_bucket=13,
+            materialize_backbone_logits=False)
+
+        self.assertEqual(ex.R, 39)
+        self.assertEqual(ex.chain_forward_width, 27)
+        self.assertEqual(ex.continuation_width, 39)
+        self.assertEqual(ex.round_widths, (39,) * 8)
+
     def test_round_wrappers_share_only_same_page_plan_workspace(self):
         """Identical serial round plans should not allocate F private 8MiB buffers."""
         dev = "cuda:0"

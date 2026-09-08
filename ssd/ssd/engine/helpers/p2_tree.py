@@ -104,6 +104,178 @@ def rerank_tree_indices(parent_local, sibling_order, raw_q,
     return sorted(selected)
 
 
+def precompute_reranked_tree_views_cpu(
+    token: torch.Tensor,
+    parent_local: torch.Tensor,
+    sibling_order: torch.Tensor,
+    raw_q: torch.Tensor,
+    parent_q_ref: torch.Tensor,
+    parent_q_cells: torch.Tensor,
+    valid: torch.Tensor,
+    u_valid: torch.Tensor,
+    *,
+    verify_cap: int,
+    wire_cap: int,
+    vocab_size: int | None = None,
+) -> dict[str, object]:
+    """Precompute the exact hit-time rerank result for every P1 root.
+
+    All inputs are CPU tensors with a common ``[roots, generated_cap]``
+    envelope (``valid``/``u_valid`` are ``[roots]``).  The selection policy is
+    deliberately delegated to :func:`rerank_tree_indices`, so moving this
+    work into P1's pre-proxy slack cannot change which subtree is served.
+
+    The returned compact tensors are CPU staging data.  Production copies
+    them into persistent CUDA buffers once after P1 generation; a later cache
+    hit then selects one already-compacted row without a device readback,
+    Python subtree walk, or per-hit GPU compaction.
+    """
+    fields = {
+        "tok": token,
+        "parent_local": parent_local,
+        "sib_order": sibling_order,
+        "raw_q": raw_q,
+        "parent_q_ref": parent_q_ref,
+        "parent_q_cells": parent_q_cells,
+    }
+    if any(value.device.type != "cpu" for value in fields.values()):
+        raise ValueError("P1 rerank precompute requires CPU input tensors")
+    if valid.device.type != "cpu" or u_valid.device.type != "cpu":
+        raise ValueError("P1 rerank valid counts must be CPU tensors")
+    if token.ndim != 2:
+        raise ValueError(f"P1 rerank token must be [R,N]; got {token.shape}")
+    roots, generated_cap = token.shape
+    for name, value in fields.items():
+        if value.shape != (roots, generated_cap):
+            raise ValueError(
+                f"P1 rerank {name} shape {tuple(value.shape)} != "
+                f"{(roots, generated_cap)}")
+    if valid.shape != (roots,) or u_valid.shape != (roots,):
+        raise ValueError(
+            f"P1 rerank count shapes valid={tuple(valid.shape)} "
+            f"u_valid={tuple(u_valid.shape)} roots={roots}")
+    verify_cap = int(verify_cap)
+    wire_cap = int(wire_cap)
+    if verify_cap < 1 or verify_cap > generated_cap:
+        raise ValueError(
+            f"P1 rerank verify_cap={verify_cap} outside "
+            f"[1,{generated_cap}]")
+    if wire_cap < verify_cap:
+        raise ValueError(
+            f"P1 rerank wire_cap={wire_cap} < verify_cap={verify_cap}")
+
+    compact = {
+        "tok": torch.zeros(roots, wire_cap, dtype=torch.int64),
+        "parent_local": torch.full(
+            (roots, wire_cap), -1, dtype=torch.int64),
+        "sib_order": torch.zeros(roots, wire_cap, dtype=torch.int64),
+        "raw_q": torch.zeros(roots, wire_cap, dtype=torch.float32),
+        "parent_q_ref": torch.full(
+            (roots, wire_cap), -1, dtype=torch.int64),
+        "parent_q_cells": torch.full(
+            (roots, wire_cap), -1, dtype=torch.int64),
+        "valid": torch.zeros(roots, dtype=torch.int64),
+        "u_valid": torch.zeros(roots, dtype=torch.int64),
+    }
+    packed = torch.zeros(
+        roots, tree_wire_ints_len(wire_cap), dtype=torch.int64)
+    original_valid = torch.zeros(roots, dtype=torch.int64)
+    parsed = []
+
+    for root in range(roots):
+        n_src = int(valid[root])
+        u_src = int(u_valid[root])
+        if n_src < 0 or n_src > generated_cap:
+            raise RuntimeError(
+                f"P1 rerank root {root} valid={n_src} outside "
+                f"[0,{generated_cap}]")
+        original_valid[root] = n_src
+        if n_src == 0:
+            parsed.append(parse_tree_ints(packed[root], wire_cap))
+            continue
+
+        source = {
+            "valid": n_src,
+            "u_valid": u_src,
+            "epoch": 1,
+            "tok": token[root],
+            "parent_local": parent_local[root],
+            "sib_order": sibling_order[root],
+            "parent_q_ref": parent_q_ref[root],
+        }
+        validate_tree_ints(source, generated_cap, vocab_size)
+        keep = rerank_tree_indices(
+            parent_local[root, :n_src],
+            sibling_order[root, :n_src],
+            raw_q[root, :n_src],
+            verify_cap,
+        )
+        n = len(keep)
+        if n < 1 or n > verify_cap:
+            raise RuntimeError(
+                f"P1 rerank root {root} produced invalid size {n}")
+
+        old_to_new = {old: new for new, old in enumerate(keep)}
+        compact_parent = []
+        compact_sibling = []
+        original_refs = []
+        for old in keep:
+            old_parent = int(parent_local[root, old])
+            compact_parent.append(
+                -1 if old_parent < 0 else old_to_new[old_parent])
+            compact_sibling.append(int(sibling_order[root, old]))
+            original_refs.append(int(parent_q_ref[root, old]))
+
+        unique_refs = []
+        ref_map = {}
+        compact_refs = []
+        for ref in original_refs:
+            if ref not in ref_map:
+                ref_map[ref] = len(unique_refs)
+                unique_refs.append(ref)
+            compact_refs.append(ref_map[ref])
+        u_out = len(unique_refs)
+
+        keep_t = torch.tensor(keep, dtype=torch.int64)
+        compact["tok"][root, :n] = token[root].index_select(0, keep_t)
+        compact["parent_local"][root, :n] = torch.tensor(
+            compact_parent, dtype=torch.int64)
+        compact["sib_order"][root, :n] = torch.tensor(
+            compact_sibling, dtype=torch.int64)
+        compact["raw_q"][root, :n] = raw_q[root].index_select(0, keep_t)
+        compact["parent_q_ref"][root, :n] = torch.tensor(
+            compact_refs, dtype=torch.int64)
+        if u_out:
+            ref_t = torch.tensor(unique_refs, dtype=torch.int64)
+            compact["parent_q_cells"][root, :u_out] = \
+                parent_q_cells[root].index_select(0, ref_t)
+        compact["valid"][root] = n
+        compact["u_valid"][root] = u_out
+
+        row = packed[root]
+        row[0] = n
+        row[1] = u_out
+        row[2] = 1
+        off = 3
+        row[off:off + wire_cap] = compact["tok"][root]
+        row[off + wire_cap:off + 2 * wire_cap] = \
+            compact["parent_local"][root]
+        row[off + 2 * wire_cap:off + 3 * wire_cap] = \
+            compact["sib_order"][root]
+        row[off + 3 * wire_cap:off + 4 * wire_cap] = \
+            compact["parent_q_ref"][root]
+        tree = parse_tree_ints(row, wire_cap)
+        validate_tree_ints(tree, wire_cap, vocab_size)
+        parsed.append(tree)
+
+    return {
+        "compact": compact,
+        "packed": packed,
+        "parsed": parsed,
+        "original_valid": original_valid,
+    }
+
+
 def filter_unservable_tree_matches(match: torch.Tensor,
                                    cache_is_tree: torch.Tensor | None,
                                    batch_size: int) -> torch.Tensor:
@@ -974,10 +1146,35 @@ class TreeProxyCUDAGraph:
 
     @torch.inference_mode()
     def prepare_topology(self, par, sib):
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record, duet_close)
+        _ev_pack = duet_record("tree_topology_cpu_pack")
         packed = pack_tree_proxy_topology(par, sib, self.nv)
+        duet_close("tree_topology_cpu_pack", _ev_pack)
         self.valid = len(par)
+        _ev_copy = duet_record("tree_topology_h2d_copies")
         for key, value in packed.items():
             self.topology[key].copy_(value.to(self.device))
+        duet_close("tree_topology_h2d_copies", _ev_copy)
+
+    @torch.inference_mode()
+    def prepare_topology_device(self, par: torch.Tensor,
+                                sib: torch.Tensor):
+        """Pack an already validated exact-width topology on the GPU.
+
+        The response wire is resident on target rank 0 before the proxy graph
+        runs.  Reusing those device slices avoids the old Python pack plus
+        five small H2D copies.  Validation remains at the CPU wire boundary so
+        malformed metadata still fails coherently before target collectives.
+        """
+        from ssd.engine.helpers.tree_topology_gpu import (
+            pack_tree_proxy_topology_gpu_)
+        if par.numel() != self.nv or sib.numel() != self.nv:
+            raise RuntimeError(
+                "tree proxy device topology must match the exact graph "
+                f"bucket: par={par.numel()} sib={sib.numel()} nv={self.nv}")
+        pack_tree_proxy_topology_gpu_(par, sib, self.topology)
+        self.valid = self.nv
 
     @torch.inference_mode()
     def replay(self, exit_logits, q_logits, tokens):
@@ -2011,7 +2208,8 @@ def parse_tree_ints(buf: torch.Tensor, nv: int):
     }
 
 
-def validate_tree_ints(tree_ints, nv: int, vocab_size: int | None = None):
+def validate_tree_ints(tree_ints, nv: int, vocab_size: int | None = None,
+                       sibling_capacity: int | None = None):
     """Validate the topology before any target collective or tree walk.
 
     A parent must precede its child in generation order.  Without this
@@ -2040,6 +2238,11 @@ def validate_tree_ints(tree_ints, nv: int, vocab_size: int | None = None):
         if sibling < 0:
             raise RuntimeError(
                 f"tree sibling order is negative at node {j}: {sibling}")
+        if (sibling_capacity is not None
+                and sibling >= int(sibling_capacity)):
+            raise RuntimeError(
+                f"tree sibling order exceeds capacity at node {j}: "
+                f"sibling={sibling}, capacity={int(sibling_capacity)}")
         if qref < 0 or qref >= u_valid:
             raise RuntimeError(
                 f"tree parent-q ref failed at node {j}: qref={qref}, "
@@ -2449,7 +2652,23 @@ def _arena_select(ar: TreeArena, policy, W, f, depth_cap, tip_idx,
         t_ok = (tip_idx >= 0) & (remaining > 0) & elig.gather(0, t)
         mand_slot.scatter_(0, t, t_ok)
     base = ar.logpri.float().double()      # CPU 비교 정밀도(f32) 고정
-    mandatory_key = 1000.0 - ar.root.double()
+    # When every live root fits in the continuation width, keep root order.
+    # This is the exact C=1/R=W chain-degenerate contract: root r stays in
+    # lane r, so the same fixed WOR noise row is consumed by the same root.
+    #
+    # P1 is different after a tree hit: the returned tree can expose more
+    # cache-key contexts than the chain-sized continuation width can carry
+    # (for example 45 roots but only 27 continuation lanes).  Root-order
+    # priority then deepened an arbitrary prefix and could leave a much more
+    # likely cache root at depth one.  In that overbooked fixed shape, rank
+    # mandatory tips by their cumulative draft probability.  Sigmoid is a
+    # monotone bounded transform of log-probability; the +2 group offset keeps
+    # every mandatory tip ahead of every optional sibling without losing the
+    # near-tie precision that a large additive log-score constant would lose.
+    if remaining.numel() > W:
+        mandatory_key = 2.0 + torch.sigmoid(base)
+    else:
+        mandatory_key = 1000.0 - ar.root.double()
     key = torch.where(
         elig,
         torch.where(mand_slot, mandatory_key, base),

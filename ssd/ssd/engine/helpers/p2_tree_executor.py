@@ -594,8 +594,12 @@ class P2TreeExecutor:
                            for _ in range(F)]
         self.in_block_tables = torch.zeros(1, max_blocks,
                                            dtype=torch.int32, device=d)
-        self.in_page_ids = torch.empty(max_blocks, dtype=torch.int32,
-                                       device=d)
+        # The fixed attention canvas can end in one or more entirely masked
+        # alignment pages beyond the model's real block table.  Keep room for
+        # those aliases here; only live pages consume request KV blocks.
+        self.in_page_ids = torch.empty(
+            max_blocks + self.canvas_extra_pages,
+            dtype=torch.int32, device=d)
         # prefix 경계는 버킷 내 요청마다 달라짐 — 캡처에 박히면 안
         # 되는 '내용' (버퍼 구동; python int 슬라이싱 금지)
         self.in_prefix_len = torch.zeros(1, dtype=torch.int64, device=d)

@@ -102,3 +102,31 @@ def test_chain_phase2_replays_supply_round_time(tmp_path):
     row = KB.analyze_run(raw, proxy_transport_ms=1.5)
     assert row["p2_timing_source"] == "phase2_replay"
     assert row["p2_round_ms"] == 3.0
+
+
+def test_repeated_generate_step_ids_are_partitioned_by_epoch(tmp_path):
+    """run_duet profiles reset step ids; occurrences must not overwrite."""
+    path = _profile(tmp_path, "multi_generate", 8, 4, 2.0, -1.0)
+    draft_file = path / "duet_profile_draft_test.json"
+    target_file = path / "duet_profile_target_rank0_test.json"
+    draft = json.loads(draft_file.read_text())
+    target = json.loads(target_file.read_text())
+
+    # Append a second generate() epoch with the same ids but a far-away wall
+    # clock.  Overwriting by raw step id would cross-pair these two epochs.
+    shift_ns = int(1_000_000 * 1e6)
+    for source, file in ((draft, draft_file), (target, target_file)):
+        second = []
+        for event in source:
+            copied = dict(event)
+            copied["wall_start_ns"] += shift_ns
+            copied["wall_end_ns"] += shift_ns
+            second.append(copied)
+        file.write_text(json.dumps(source + second))
+
+    raw = KB._load_raw(KB.RunSpec(8, 4, path), skip_steps=10)
+    row = KB.analyze_run(raw, proxy_transport_ms=1.5)
+    assert row["k1_gap"]["n"] == 120
+    assert row["k2_gap"]["n"] == 120
+    assert abs(row["k1_gap"]["p50_ms"] - 2.0) < 1e-6
+    assert abs(row["k2_gap"]["p50_ms"] + 1.0) < 1e-6

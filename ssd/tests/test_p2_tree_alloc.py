@@ -145,6 +145,12 @@ class TestTreeWireValidation(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "sibling order"):
             PT.validate_tree_ints(tree, 4)
 
+    def test_sibling_capacity_is_rejected_before_gpu_pack(self):
+        tree = self._tree()
+        tree["sib_order"][1] = 3
+        with self.assertRaisesRegex(RuntimeError, "exceeds capacity"):
+            PT.validate_tree_ints(tree, 4, sibling_capacity=3)
+
     def test_siblings_must_share_qref(self):
         tree = self._tree()
         tree["parent_q_ref"][1] = 1
@@ -170,6 +176,117 @@ class TestTreeWireValidation(unittest.TestCase):
         tree["parent_local"][2] = 2
         with self.assertRaisesRegex(RuntimeError, "strictly decreasing"):
             PT.tree_parent_path(tree, 3)
+
+
+class TestP1RerankPrecompute(unittest.TestCase):
+    def test_batch_precompute_matches_hit_time_policy_and_wire(self):
+        tok = torch.tensor([
+            [11, 12, 13, 14, 15, 16],
+            [21, 22, 23, 24, 25, 0],
+        ])
+        parent = torch.tensor([
+            [-1, -1, 0, 1, 2, 3],
+            [-1, -1, 0, 1, 2, -1],
+        ])
+        sibling = torch.tensor([
+            [0, 1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0],
+        ])
+        raw_q = torch.tensor([
+            [0.80, 0.20, 0.70, 0.90, 0.60, 0.95],
+            [0.35, 0.65, 0.90, 0.80, 0.70, 0.00],
+        ], dtype=torch.float32)
+        parent_q_ref = torch.tensor([
+            [0, 0, 1, 2, 3, 4],
+            [0, 0, 1, 2, 3, -1],
+        ])
+        parent_q_cells = torch.tensor([
+            [100, 101, 102, 103, 104, -1],
+            [200, 201, 202, 203, -1, -1],
+        ])
+        valid = torch.tensor([6, 5])
+        u_valid = torch.tensor([5, 4])
+
+        result = PT.precompute_reranked_tree_views_cpu(
+            tok, parent, sibling, raw_q, parent_q_ref, parent_q_cells,
+            valid, u_valid, verify_cap=4, wire_cap=6, vocab_size=32)
+
+        compact = result["compact"]
+        for root in range(2):
+            n_src = int(valid[root])
+            keep = PT.rerank_tree_indices(
+                parent[root, :n_src], sibling[root, :n_src],
+                raw_q[root, :n_src].tolist(), 4)
+            n = len(keep)
+            self.assertEqual(int(compact["valid"][root]), n)
+            self.assertEqual(
+                compact["tok"][root, :n].tolist(),
+                tok[root, keep].tolist())
+
+            old_to_new = {old: new for new, old in enumerate(keep)}
+            expected_parent = [
+                -1 if int(parent[root, old]) < 0
+                else old_to_new[int(parent[root, old])]
+                for old in keep
+            ]
+            self.assertEqual(
+                compact["parent_local"][root, :n].tolist(),
+                expected_parent)
+
+            original_refs = [int(parent_q_ref[root, old]) for old in keep]
+            unique_refs = list(dict.fromkeys(original_refs))
+            ref_map = {ref: i for i, ref in enumerate(unique_refs)}
+            self.assertEqual(
+                compact["parent_q_ref"][root, :n].tolist(),
+                [ref_map[ref] for ref in original_refs])
+            self.assertEqual(
+                compact["parent_q_cells"][root, :len(unique_refs)].tolist(),
+                parent_q_cells[root, unique_refs].tolist())
+
+            parsed = PT.parse_tree_ints(result["packed"][root], 6)
+            PT.validate_tree_ints(parsed, 6, vocab_size=32)
+            self.assertEqual(int(parsed["valid"]), n)
+            self.assertEqual(parsed["tok"][:n].tolist(),
+                             compact["tok"][root, :n].tolist())
+            self.assertEqual(int(result["original_valid"][root]), n_src)
+
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+            roots, wire_cap = 2, 6
+            gpu_buffers = {
+                "tok": torch.zeros(
+                    roots, wire_cap, dtype=torch.int64, device=device),
+                "parent_local": torch.full(
+                    (roots, wire_cap), -1, dtype=torch.int64, device=device),
+                "sib_order": torch.zeros(
+                    roots, wire_cap, dtype=torch.int64, device=device),
+                "raw_q": torch.zeros(
+                    roots, wire_cap, dtype=torch.float32, device=device),
+                "parent_q_ref": torch.full(
+                    (roots, wire_cap), -1, dtype=torch.int64, device=device),
+                "parent_q_cells": torch.full(
+                    (roots, wire_cap), -1, dtype=torch.int64, device=device),
+                "valid": torch.zeros(
+                    roots, dtype=torch.int64, device=device),
+                "u_valid": torch.zeros(
+                    roots, dtype=torch.int64, device=device),
+                "packed": torch.zeros(
+                    roots, PT.tree_wire_ints_len(wire_cap),
+                    dtype=torch.int64, device=device),
+            }
+            from ssd.engine.helpers.tree_rerank_gpu import \
+                precompute_reranked_tree_views_fused_gpu
+            precompute_reranked_tree_views_fused_gpu(
+                tok.to(device), parent.to(device), sibling.to(device),
+                raw_q.to(device), parent_q_ref.to(device),
+                parent_q_cells.to(device), valid.to(device),
+                verify_cap=4, wire_cap=wire_cap,
+                output_buffers=gpu_buffers)
+            for name, expected in result["compact"].items():
+                self.assertTrue(torch.equal(
+                    gpu_buffers[name].cpu(), expected), f"fused {name}")
+            self.assertTrue(torch.equal(
+                gpu_buffers["packed"].cpu(), result["packed"]))
 
 
 class TestTreeP1Allocation(unittest.TestCase):
@@ -1483,6 +1600,75 @@ class TestReview2Fixes(unittest.TestCase):
                         / (float(q_rows[j, toks[j]]) + 1e-10))
             self.assertAlmostEqual(float(alpha[j]), a_ref, places=5)
 
+    def test_chain_tree_walk_matches_standard_speculative_verify(self):
+        """A one-child tree must make the ordinary SD accept/reject choices.
+
+        Use the same coins and terminal sampler in both implementations.  In
+        particular, this checks the parent-q row shift and the residual
+        distribution on every possible first rejection, not only the proxy
+        terminal-mass formula above.
+        """
+        torch.manual_seed(511)
+        depth, vocab = 5, 19
+        temp = 0.7
+        p_logits = torch.randn(depth + 1, vocab)
+        q = torch.softmax(torch.randn(depth, vocab), dim=-1)
+        tokens = torch.randint(0, vocab, (depth,))
+        tree = {
+            "valid": depth,
+            "u_valid": depth,
+            "tok": tokens.tolist(),
+            "parent_local": [-1] + list(range(depth - 1)),
+            "sib_order": [0] * depth,
+            "parent_q_ref": list(range(depth)),
+        }
+
+        # Exercise all-accept and a forced first rejection at every depth.
+        scenarios = [[0.0] * depth]
+        for reject_at in range(depth):
+            scenarios.append([0.0] * reject_at + [1.0] + [0.0] * depth)
+
+        for coins in scenarios:
+            tree_coins = iter(coins)
+            tree_terminal = []
+
+            def tree_coin():
+                return next(tree_coins)
+
+            def tree_mult(probs):
+                tree_terminal.append(probs.clone())
+                return int(probs.argmax())
+
+            got_path, got_terminal = PT.tree_verify_walk_tensor(
+                tree, p_logits, q, temp, tree_coin, tree_mult)
+
+            expected_path = []
+            expected_terminal_probs = None
+            ordinary_coins = iter(coins)
+            for j in range(depth):
+                p = torch.softmax(p_logits[j].float() / temp, dim=-1)
+                tok = int(tokens[j])
+                accept = min(1.0, float(p[tok]) / float(q[j, tok]))
+                if next(ordinary_coins) < accept:
+                    expected_path.append(j)
+                    continue
+                residual = torch.clamp(p - q[j], min=0.0)
+                expected_terminal_probs = (
+                    residual / residual.sum()
+                    if float(residual.sum()) > 1e-12 else p)
+                break
+            if expected_terminal_probs is None:
+                expected_terminal_probs = torch.softmax(
+                    p_logits[depth].float() / temp, dim=-1)
+            expected_terminal = int(expected_terminal_probs.argmax())
+
+            self.assertEqual(got_path, expected_path, coins)
+            self.assertEqual(got_terminal, expected_terminal, coins)
+            self.assertEqual(len(tree_terminal), 1, coins)
+            self.assertTrue(torch.allclose(
+                tree_terminal[0], expected_terminal_probs, atol=1e-6),
+                coins)
+
     def test_ladder_terminal_mass_sums_to_one(self):
         torch.manual_seed(7)
         V = 16
@@ -1947,6 +2133,32 @@ class TestArenaCudaParity(unittest.TestCase):
 class TestArenaParityHardening(unittest.TestCase):
     """리뷰6 강화: near-tie 정렬, 실제 zero-q, 결정적 샘플러 주입으로
     temp 0.7 분기 상태의 전필드 CUDA 패리티."""
+
+    def test_overbooked_backbone_prioritizes_likely_root_tips(self):
+        """R>W must spend depth on likely roots, not root-id prefix.
+
+        P1 round zero is wide enough to evaluate every root, but a later
+        continuation round intentionally has only the chain-sized width.
+        The mandatory backbone selector must therefore keep the W most
+        probable tips.  R=W retains its separate lane-stability contract.
+        """
+        R, W = 6, 3
+        ar = PT.TreeArena(capacity=16, device="cpu", max_cells=16)
+        ar.n.fill_(R)
+        ar.valid[:R] = True
+        ar.depth[:R] = 1
+        ar.root[:R] = torch.arange(R)
+        probs = torch.tensor([0.02, 0.70, 0.04, 0.15, 0.08, 0.01])
+        ar.logpri[:R] = probs.log().double()
+        tips = torch.arange(R)
+        remaining = torch.ones(R, dtype=torch.int64)
+
+        selected, valid = PT._arena_select(
+            ar, "backbone", W, 1, 4, tips, remaining)
+
+        self.assertTrue(bool(valid.all()))
+        roots = ar.root.index_select(0, selected).tolist()
+        self.assertEqual(roots, [1, 3, 4])
 
     def test_near_tie_mandatory_ordering(self):
         # 반례 회귀: mand 두 tip의 priority가 f32 해상도(@1000)보다

@@ -1,5 +1,7 @@
 """CPU contracts for DUET Phase-1 dynamic tree preparation."""
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 
 import torch
 
@@ -12,7 +14,8 @@ from ssd.engine.helpers.p2_tree import (
     q_probs_from_logits, rerank_tree_indices,
     selected_q_probs_from_logits)
 from ssd.utils.async_helpers.async_spec_helpers import (
-    compute_megaspec_lookahead, compute_tree_forward_width)
+    compute_megaspec_lookahead, compute_tree_canvas_page_plan,
+    compute_tree_forward_width)
 
 
 class TestP1UniformRoots(unittest.TestCase):
@@ -232,6 +235,27 @@ class TestTreeHitRerank(unittest.TestCase):
 
 
 class TestP1ShapeBuckets(unittest.TestCase):
+    def test_masked_canvas_tail_may_extend_past_native_block_table(self):
+        # Regression from native-2048 prompt 316_t0.  All live positions end
+        # at 1895 (eight real pages), while the fixed P1 canvas needs a ninth
+        # fully masked alignment page.  That tail must alias a finite page,
+        # not force a fallback/crash.
+        self.assertEqual(
+            compute_tree_canvas_page_plan(1622, 1895, 256, 8, 2),
+            (7, 8, 9))
+
+    def test_live_tree_cell_beyond_native_context_is_rejected(self):
+        self.assertIsNone(
+            compute_tree_canvas_page_plan(1776, 2049, 256, 8, 2))
+
+    def test_p2_masked_tail_may_alias_past_native_block_table(self):
+        # K2=5, W=15 writes 75 real cells.  Starting at 1970 ends at 2045
+        # inside the eighth page, although its fixed one-page suffix canvas
+        # has a ninth, fully masked page.
+        self.assertEqual(
+            compute_tree_canvas_page_plan(1970, 2045, 256, 8, 1),
+            (8, 8, 9))
+
     def test_both_trees_reserve_draft_graph_headroom(self):
         import dataclasses
         from ssd.engine.draft_runner import DraftRunner
@@ -373,6 +397,28 @@ class TestP1ShapeBuckets(unittest.TestCase):
             self.assertEqual(ctxt["positions"].numel(), valid_k + 1)
             self.assertEqual(ctxt["slot_map"].numel(), valid_k + 1)
             self.assertEqual(ctxt["max_seqlen_q"], valid_k + 1)
+
+
+class TestNativeContextMetrics(unittest.TestCase):
+    def test_zero_decode_context_stop_is_reported_without_division(self):
+        from types import SimpleNamespace
+        from ssd.engine.llm_engine import LLMEngine, METRICS
+
+        saved = {name: (list(value) if isinstance(value, list) else value)
+                 for name, value in METRICS.items()}
+        try:
+            for name, value in METRICS.items():
+                METRICS[name] = [] if isinstance(value, list) else 0
+            METRICS["prefill_total_tokens"] = 2047
+            METRICS["prefill_total_time"] = 1.0
+            stub = SimpleNamespace(config=SimpleNamespace(speculate=True))
+            out = StringIO()
+            with redirect_stdout(out):
+                LLMEngine.log_metrics(stub)
+            self.assertIn("Final Decode Throughput: 0.00tok/s", out.getvalue())
+            self.assertIn("N/A (no decode steps)", out.getvalue())
+        finally:
+            METRICS.update(saved)
 
 
 class TestAsyncResponseEnvelope(unittest.TestCase):

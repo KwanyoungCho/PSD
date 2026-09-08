@@ -79,6 +79,11 @@ class Config:
     draft: str = DEFAULT_DRAFT
     speculate_k: int = 1
     draft_async: bool = False
+    # Permit RoPE cache extrapolation when the target context window is
+    # larger than the draft model's advertised window.  This is opt-in:
+    # positions outside the draft's training window can reduce proposal
+    # quality even though rotary positions themselves remain computable.
+    extend_draft_rope: bool = False
     
     # async spec only
     async_fan_out: int = 3
@@ -95,6 +100,11 @@ class Config:
 
     # DUET-SSD
     duet_enabled: bool = False
+    # Cache-policy ablation: expose logical K1=0 while retaining the K1=K2
+    # graph bucket required by the split engine.  The draft runner skips P1
+    # candidate generation, deduplication, and cache population entirely;
+    # every cache root is sourced from the early-exit proxy (P2).
+    duet_only_proxy: bool = False
     duet_exit_layer: int | None = None      # None=auto: 2*L//3
     duet_proxy_top_k: int = 3              # proxy correction token count
     duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
@@ -141,6 +151,13 @@ class Config:
     # every root, then the R*C sampled children compete for the next R lanes.
     # Values above one remain an explicit compute/coverage experiment knob.
     duet_p1_tree_forward_scale: float = 1.0
+    # P1 is a future cache-key forest rather than one current-request tree.
+    # ``dynamic`` is the EAGLE-like global frontier; ``backbone`` reserves
+    # one continuation lane per root and therefore guarantees one full-depth
+    # chain for every root before retaining ordered siblings; ``hybrid`` uses
+    # the chain-sized compute budget, preserves two levels where capacity
+    # permits, then switches to global selection.
+    duet_p1_tree_allocation_policy: str = "dynamic"
     duet_tree_beta: float = 0.5              # 예산 배분 지수 (E1 근거 0.5)
     # Legacy fixed-backbone reproduction knob.  The production dynamic
     # selector decides fanout with its global allocation rule instead.
@@ -349,6 +366,10 @@ class Config:
         # roots, so target compute/traffic and the top-six candidates stay
         # unchanged.
         total_budget = self.duet_p2_active_root_count
+        # The only-proxy ablation has no P1 candidates to deduplicate.  Keep
+        # two spare wire entries for the existing selector's safety margin.
+        if self.duet_only_proxy:
+            return total_budget + 2
         # List-aware Phase 1 dedup loss bound
         _p1_list = self.duet_split_phase1_fan_out_list
         if _split_mode and _p1_list is not None:
@@ -502,16 +523,41 @@ class Config:
         assert os.path.isdir(model)
 
         assert 1 <= self.num_gpus <= 8 # this codebase only works on one node 
+        requested_max_model_len = int(self.max_model_len)
+        if requested_max_model_len < 1:
+            raise ValueError(
+                f"max_model_len must be positive; got {self.max_model_len}")
+
         self.hf_config = AutoConfig.from_pretrained(model)
         _ensure_head_dim(self.hf_config)
+        target_max_position_embeddings = int(
+            self.hf_config.max_position_embeddings)
         self.max_model_len = min(
-            self.max_model_len, self.hf_config.max_position_embeddings)
+            requested_max_model_len, target_max_position_embeddings)
         if self.speculate:
             draft = self.draft
             self.draft_hf_config = AutoConfig.from_pretrained(draft)
             _ensure_head_dim(self.draft_hf_config)
-            self.max_model_len = min(
-                self.max_model_len, self.draft_hf_config.max_position_embeddings)
+            draft_max_position_embeddings = int(
+                self.draft_hf_config.max_position_embeddings)
+            if self.extend_draft_rope:
+                # RoPE is generated analytically from inv_freq.  Extending
+                # this cache avoids an artificial context clamp, while the
+                # target model and the user-requested limit remain hard caps.
+                if draft_max_position_embeddings < self.max_model_len:
+                    print(
+                        "[Config] Extending draft RoPE cache: "
+                        f"{draft_max_position_embeddings} -> "
+                        f"{self.max_model_len} positions "
+                        "(draft quality beyond its trained window is not "
+                        "guaranteed)",
+                        flush=True,
+                    )
+                    self.draft_hf_config.max_position_embeddings = \
+                        self.max_model_len
+            else:
+                self.max_model_len = min(
+                    self.max_model_len, draft_max_position_embeddings)
             if self.draft_async:
                 if self.fan_out_list is None: 
                     self.fan_out_list = [self.async_fan_out] * (self.speculate_k + 1)
@@ -549,6 +595,10 @@ class Config:
             assert not self.use_eagle, "DUET-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
             assert not self.enforce_eager, "DUET-SSD requires CudaGraph mode (enforce_eager must be False)"
             assert self.jit_speculate, "DUET-SSD requires jit_speculate=True (miss rows need valid logits_q)"
+            if self.duet_only_proxy and self.duet_tree_enabled:
+                raise ValueError(
+                    "duet_only_proxy is a chain-only ablation; set both "
+                    "duet_p1_tree_policy=off and duet_p2_tree_policy=off")
 
             # docs/duet/08 §4: SSD_PROXY_STREAM requires SSD_ASYNC_PROXY_SEND
             # (Policy B compute on proxy_stream is meaningless without
@@ -655,6 +705,12 @@ class Config:
                             f"duet_tree_fanout_policy must be "
                             f"backbone|ctensor; got "
                             f"{self.duet_tree_fanout_policy!r}")
+                    if self.duet_p1_tree_allocation_policy not in (
+                            "dynamic", "backbone", "hybrid"):
+                        raise ValueError(
+                            "duet_p1_tree_allocation_policy must be "
+                            "dynamic|backbone|hybrid; got "
+                            f"{self.duet_p1_tree_allocation_policy!r}")
                     if not (1 <= self.duet_tree_c_tensor <= 8):
                         raise ValueError(
                             f"duet_tree_c_tensor must be in [1,8]; "
@@ -843,7 +899,14 @@ class Config:
 
             # List-aware Phase 1 fan-out stats — used in ALL cases when user
             # provides list, otherwise fall back to uniform [dfo]*(K1+1).
-            if _split_mode and _p1_list is not None:
+            if self.duet_only_proxy:
+                # Logical K1=0: P1 contributes no roots and therefore causes
+                # no proxy-candidate dedup loss.  Internal K1 remains positive
+                # solely to preserve the captured graph/buffer shape contract.
+                p1_sum_full = 0
+                p1_sum_short = 0
+                p1_max = 0
+            elif _split_mode and _p1_list is not None:
                 _p1_eff = list(_p1_list)
                 _K2p1 = self.duet_phase2_k + 1
                 p1_sum_full = sum(_p1_eff)
@@ -926,11 +989,13 @@ class Config:
                     "(2026-07); see git history."
                 )
             print(f'[Config] DUET-SSD enabled: exit_layer={self.duet_exit_layer}, '
+                  f'only_proxy={self.duet_only_proxy}, '
                   f'proxy_top_k={self.duet_proxy_top_k}, '
                   f'draft_fan_out={self.duet_draft_fan_out}, proxy_fan_out={self.duet_proxy_fan_out}, '
                   f'K1={self.duet_phase1_k}, K2={self.duet_phase2_k}, '
                   f'P2_W={self.duet_proxy_total_budget}, '
                   f'P1_tree={self.duet_p1_tree_policy}, '
+                  f'P1_alloc={self.duet_p1_tree_allocation_policy}, '
                   f'P2_tree={self.duet_p2_tree_policy}, '
                   f'tree_selector={self.duet_tree_policy}, '
                   f'tree_R={self.duet_tree_root_count}, '

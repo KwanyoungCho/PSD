@@ -32,6 +32,11 @@ METRICS = {
     "accepted_suffix_lens_on_miss": [],  # Only for cache misses in async mode
     "accepted_lens_phase1_hit": [],  # accepted speculative tokens, excludes recovery token
     "accepted_lens_phase2_hit": [],  # accepted speculative tokens, excludes recovery token
+    # Optional analysis payload consumed by run_duet --emit-phase-trace.
+    # One compact record per verified sequence/step.  Keeping the event order
+    # lets offline analysis map each source decision to the realized output
+    # prefix without adding file I/O to the engine hot path.
+    "phase_events": [],
     "prefill_total_time": 0,
     "decode_total_time": 0,
     "prefill_total_tokens": 0,
@@ -293,11 +298,19 @@ class LLMEngine:
     def step(self, step: InferenceStep):
         t = perf_counter()
         seqs, is_prefill = self.scheduler.schedule()
-        ttl_tokens = step.prefill(seqs) if is_prefill else step.decode(seqs)
+        if is_prefill is None:
+            # Scheduler-side context termination: the completed prefix is
+            # returned without launching a model kernel beyond the native
+            # context window.
+            ttl_tokens = 0
+        else:
+            ttl_tokens = step.prefill(seqs) if is_prefill else step.decode(seqs)
 
         time_taken = perf_counter() - t
 
-        if is_prefill:
+        if is_prefill is None:
+            pass
+        elif is_prefill:
             METRICS["prefill_total_time"] += time_taken
             METRICS["prefill_total_tokens"] += ttl_tokens
         else:
@@ -313,10 +326,14 @@ class LLMEngine:
         return self.scheduler.is_finished()
 
     def log_metrics(self):
-        avg_prefill_throughput = METRICS["prefill_total_tokens"] / \
-            METRICS["prefill_total_time"]
-        avg_decode_throughput = METRICS["decode_total_tokens"] / \
-            METRICS["decode_total_time"]
+        prefill_time = float(METRICS["prefill_total_time"])
+        decode_time = float(METRICS["decode_total_time"])
+        avg_prefill_throughput = (
+            METRICS["prefill_total_tokens"] / prefill_time
+            if prefill_time > 0.0 else 0.0)
+        avg_decode_throughput = (
+            METRICS["decode_total_tokens"] / decode_time
+            if decode_time > 0.0 else 0.0)
         print(
             f"Final Prefill Throughput: {avg_prefill_throughput:.2f}tok/s", flush=True)
         print(
@@ -331,6 +348,16 @@ class LLMEngine:
         if self.config.speculate:
             ttl_accepted_with_recovery = sum(METRICS['accepted_suffix_lens_with_recovery'])
             ttl_num_spec_steps = len(METRICS['accepted_suffix_lens_with_recovery'])
+            # A native-context request can finish in the scheduler before its
+            # first decode launch.  That is a valid context-limit result, not
+            # an engine failure.  Keep the standard throughput lines above
+            # machine-readable and avoid dividing every speculative metric by
+            # an empty step list.
+            if ttl_num_spec_steps == 0:
+                print(
+                    "[metrics] Speculative decode: N/A (no decode steps)",
+                    flush=True)
+                return
             avg_tokens_per_step = ttl_accepted_with_recovery / ttl_num_spec_steps
             print(
                 f"[metrics] Avg Tokens per step (incl recovery): {avg_tokens_per_step:.2f}", flush=True)

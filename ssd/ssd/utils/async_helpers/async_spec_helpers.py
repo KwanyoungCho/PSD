@@ -18,6 +18,47 @@ def compute_tree_forward_width(root_count: int, scale: float) -> int:
         raise ValueError(f"scale must be at least one; got {scale}")
     return max(int(root_count), math.ceil(int(root_count) * float(scale)))
 
+
+def compute_tree_canvas_page_plan(
+    ctx0: int,
+    final_ctx: int,
+    block_size: int,
+    block_table_pages: int,
+    canvas_extra_pages: int,
+) -> tuple[int, int, int] | None:
+    """Plan real and masked-tail pages for a fixed tree canvas.
+
+    ``ctx0`` and ``final_ctx`` are exclusive sequence lengths: ``ctx0`` is
+    the end of round zero and ``final_ctx`` is the end of the final live tree
+    cell.  FlashInfer's fixed canvas can extend beyond ``final_ctx`` for shape
+    alignment.  Those tail columns are fully masked and may alias a finite KV
+    page; only ``live_pages`` must exist in the request block table.
+
+    Returns ``(p0, live_pages, canvas_pages)`` or ``None`` when a live token,
+    rather than merely masked padding, would exceed the allocated table.
+    """
+    values = (ctx0, final_ctx, block_size, block_table_pages,
+              canvas_extra_pages)
+    if any(int(v) < 0 for v in values):
+        raise ValueError(f"tree page-plan values must be non-negative: {values}")
+    if int(block_size) == 0:
+        raise ValueError("block_size must be positive")
+    if int(final_ctx) < int(ctx0):
+        raise ValueError(
+            f"final_ctx must be >= ctx0; got {final_ctx} < {ctx0}")
+
+    p0 = (int(ctx0) + int(block_size) - 1) // int(block_size)
+    live_pages = (
+        int(final_ctx) + int(block_size) - 1) // int(block_size)
+    canvas_pages = p0 + int(canvas_extra_pages)
+    if p0 < 1 or live_pages > int(block_table_pages):
+        return None
+    if canvas_pages < live_pages:
+        raise ValueError(
+            "fixed tree canvas is smaller than its live footprint: "
+            f"canvas_pages={canvas_pages}, live_pages={live_pages}")
+    return p0, live_pages, canvas_pages
+
 @torch.inference_mode()
 def compute_megaspec_lookahead(
     MQ_LEN: int,

@@ -240,6 +240,7 @@ class Verifier(VerifierBase):
         # T3.4-b5: 트리 step 감지 플래그 — 비-DUET 경로에서도 정의돼야
         # 아래 verify 분기가 안전하다.
         _tree_meta_arg = None
+        _tree_wire_gpu_source = None
         # DUET: set proxy function on target model runner (rank 0 only)
         if config.duet_enabled:
             async_pg = self.target_model_runner.async_pg
@@ -285,6 +286,11 @@ class Verifier(VerifierBase):
                     is not None):
                 _ti_row = speculate_result.tree_ints[0]
                 if int(_ti_row[0]) > 0:
+                    from ssd.engine.helpers.cudagraph_helpers import (
+                        duet_record as _mr_tree_prep,
+                        duet_close as _mc_tree_prep)
+                    _ev_wire = _mr_tree_prep(
+                        "tree_wire_parse_validate")
                     _tree_meta_arg = _ti_row.tolist()
                     # Validate on rank 0 before indexing parent_q_ref or
                     # sending the metadata through SHM to target TP ranks.
@@ -292,11 +298,11 @@ class Verifier(VerifierBase):
                     from ssd.engine.helpers.p2_tree import (
                         parse_tree_ints, validate_tree_ints)
                     _nv_t = int(config.duet_tree_wire_nodes)
-                    _ti_checked = parse_tree_ints(
-                        torch.tensor(_tree_meta_arg, dtype=torch.int64),
-                        _nv_t)
+                    _ti_checked = parse_tree_ints(_tree_meta_arg, _nv_t)
                     validate_tree_ints(
-                        _ti_checked, _nv_t, config.hf_config.vocab_size)
+                        _ti_checked, _nv_t, config.hf_config.vocab_size,
+                        sibling_capacity=3)
+                    _tree_wire_gpu_source = _ti_row
                     _phase_t = int(speculate_result.phase_source[0]) \
                         if speculate_result.phase_source is not None else 0
                     _phase_cap = (int(config.duet_p1_tree_verify_nodes)
@@ -313,25 +319,41 @@ class Verifier(VerifierBase):
                             f"{_step_lookahead} "
                             f"(valid_k={speculate_result.valid_k.tolist()}, "
                             f"ints={_tree_meta_arg})")
+                    _mc_tree_prep(
+                        "tree_wire_parse_validate", _ev_wire)
 
                     # Prepare only tiny fixed-shape topology buffers here,
                     # while graph_pre has not started.  The exit callback
                     # then needs no Python topology construction or H2D copy.
                     self._active_tree_proxy_graph = None
                     if self._tree_proxy_graphs:
+                        _ev_topo = _mr_tree_prep(
+                            "tree_proxy_topology_prepare")
                         _valid_t = int(_tree_meta_arg[0])
                         _pg = self._tree_proxy_graphs[_valid_t]
-                        _par_t = _tree_meta_arg[
-                            3 + _nv_t:3 + 2 * _nv_t][:_valid_t]
-                        _sib_t = _tree_meta_arg[
-                            3 + 2 * _nv_t:3 + 3 * _nv_t][:_valid_t]
-                        _pg.prepare_topology(_par_t, _sib_t)
+                        if (os.environ.get(
+                                "SSD_TREE_TOPOLOGY_GPU", "1") != "0"
+                                and _ti_row.device.type == "cuda"):
+                            _par_t = _ti_row[
+                                3 + _nv_t:3 + 2 * _nv_t][:_valid_t]
+                            _sib_t = _ti_row[
+                                3 + 2 * _nv_t:3 + 3 * _nv_t][:_valid_t]
+                            _pg.prepare_topology_device(_par_t, _sib_t)
+                        else:
+                            _par_t = _tree_meta_arg[
+                                3 + _nv_t:3 + 2 * _nv_t][:_valid_t]
+                            _sib_t = _tree_meta_arg[
+                                3 + 2 * _nv_t:3 + 3 * _nv_t][:_valid_t]
+                            _pg.prepare_topology(_par_t, _sib_t)
                         self._active_tree_proxy_graph = _pg
+                        _mc_tree_prep(
+                            "tree_proxy_topology_prepare", _ev_topo)
 
             # Slice draft_tokens / logits_q to step_lookahead since target ran
             # only K_short+1 positions on a short-hit step.
             draft_tokens = speculate_result.speculations[:, 1:_step_lookahead + 1]  # [B, vk]
             if _tree_meta_arg is not None:
+                _ev_pq = _mr_tree_prep("tree_parent_q_select")
                 # 트리 step: 노드 j의 제안분포 q = 부모 셀 logits —
                 # parent_q_ref로 gather (backbone 캐시 행 logits_q는
                 # 트리 노드의 q가 아니다). α̂ = min(1, p^E/q_parent).
@@ -341,6 +363,7 @@ class Verifier(VerifierBase):
                 logits_q = speculate_result.parent_q_logits[
                     0, _pq_ref.to(speculate_result.parent_q_logits.device)
                 ].unsqueeze(0)                                          # [1, vk, V]
+                _mc_tree_prep("tree_parent_q_select", _ev_pq)
             else:
                 logits_q = speculate_result.logits_q[:, :_step_lookahead, :]        # [B, vk, V]
             cache_hits = speculate_result.cache_hits                                  # [B] or None
@@ -389,6 +412,11 @@ class Verifier(VerifierBase):
             if config.duet_enabled and config.duet_phase1_k is not None else None
         # T3.4-b4: 트리 응답이면 tree_ints를 SHM으로 전 rank에 전달 —
         # target이 eager 트리 verify 분기를 탄다. (위 duet 블록에서 계산)
+        # Rank 0 already owns the exact tree wire on its target GPU.  Let its
+        # model runner consume that tensor directly; TP followers retain the
+        # existing SHM metadata and perform one bounded H2D copy.
+        self.target_model_runner._duet_tree_wire_gpu_source = \
+            _tree_wire_gpu_source
         result = self.target_model_runner.call(
             "run", seqs, False, False, True, None, _step_lh_arg,
             _tree_meta_arg)
@@ -421,6 +449,9 @@ class Verifier(VerifierBase):
         logits_p = logits_p_flat.view(
             batch_size, _step_lookahead + 1, -1)  # [b, vk+1, v]
 
+        from ssd.engine.helpers.cudagraph_helpers import (
+            duet_record as _mr, duet_close as _mc)
+        _mev_accept_prep = _mr("verify_accept_prep")
         # Build per-seq temps for target verify and draft q respectively.
         temps_target = [seq.temperature for seq in seqs]
         temps_draft = [
@@ -433,16 +464,18 @@ class Verifier(VerifierBase):
         # ===== E0: 최종층 분포 기록 (P0 확장 — 기본 OFF, 전용 런 전용) =====
         if _E0_TRACE:
             _e0.record_target_final(logits_p, temperatures_target)
+        _mc("verify_accept_prep", _mev_accept_prep)
 
-        from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr, duet_close as _mc
         _mev_vs = _mr("verify_sample_accept")
         if _tree_meta_arg is not None:
             # T3.4-b5: 트리 보행 (잔차 사다리 — tree_verify_walk_tensor,
             # 참조 보행과 동일-코인 동등성으로 고정된 프로덕션 경로).
+            _mev_walk = _mr("tree_accept_walk")
             new_suffixes, recovery_tokens, _term_node, _walk_path = \
                 self._tree_verify_walk(
                     speculate_result, logits_p,
                     temperatures_target, temperatures_draft)
+            _mc("tree_accept_walk", _mev_walk)
             # b6-1: 종단 노드 id (0=root-종단, 1+j=노드 j) — 다음 요청
             # 키 k_idx로 나간다 (speculator). 절단 시에도 경로-prefix가
             # 수락-prefix와 일치하므로 id는 그대로 유효 (키는 miss 가능
@@ -464,10 +497,13 @@ class Verifier(VerifierBase):
                 _src.append(_bt[sp // _bs] * _bs + sp % _bs)
                 _dst.append(_bt[dp // _bs] * _bs + dp % _bs)
             if _src:
+                _mev_commit = _mr("tree_kv_commit")
                 self.target_model_runner.call("commit_tree_kv", _src, _dst)
+                _mc("tree_kv_commit", _mev_commit)
         else:
             for _s in seqs:
                 _s.tree_terminal_node = None
+            _mev_chain_accept = _mr("chain_accept")
             new_suffixes, recovery_tokens = verify(
                 logits_p=logits_p,
                 logits_q=speculate_result.logits_q,
@@ -480,6 +516,7 @@ class Verifier(VerifierBase):
                 jit_speculate=self.jit_speculate,
                 valid_k=speculate_result.valid_k,
             )
+            _mc("chain_accept", _mev_chain_accept)
         _mc("verify_sample_accept", _mev_vs)
 
         self.metrics["target_verify_times"].append(perf_counter() - _tv0)
@@ -514,12 +551,26 @@ class Verifier(VerifierBase):
                 _ps_cpu = speculate_result.phase_source.cpu()
                 self.metrics["phase1_hits"].append((_ps_cpu == 1).float().mean().item())
                 self.metrics["phase2_hits"].append((_ps_cpu == 2).float().mean().item())
+            else:
+                _ps_cpu = None
+            _vk_cpu = (speculate_result.valid_k.cpu()
+                       if speculate_result.valid_k is not None else None)
             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
+                _src = int(_ps_cpu[i].item()) if _ps_cpu is not None else 0
+                self.metrics["phase_events"].append({
+                    "step_id": (int(speculate_result.step_id)
+                                if speculate_result.step_id is not None else None),
+                    "source": _src,
+                    "cache_hit": int(_ch_cpu[i].item()),
+                    "accepted_len": int(suffix_len),
+                    "accepted_spec_len": int(max(0, suffix_len - 1)),
+                    "valid_k": (int(_vk_cpu[i].item())
+                                if _vk_cpu is not None else None),
+                })
                 if _ch_cpu[i] == 1:
                     self.metrics["accepted_suffix_lens_on_hit"].append(suffix_len)
                     if speculate_result.phase_source is not None:
                         _accepted_len = max(0, suffix_len - 1)
-                        _src = int(_ps_cpu[i].item())
                         if _src == 1:
                             self.metrics["accepted_lens_phase1_hit"].append(_accepted_len)
                         elif _src == 2:

@@ -1,9 +1,12 @@
+import os
+
 import torch
 from torch import nn
 
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
 
-torch.manual_seed(0) 
+_SEED = int(os.environ.get("SSD_SEED", "0"))
+torch.manual_seed(_SEED)
 
 class Sampler(nn.Module): 
     def __init__(self, sampler_x: float | None = None, async_fan_out: int = 3):
