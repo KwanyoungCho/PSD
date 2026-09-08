@@ -18,11 +18,21 @@ This is a research monorepo with two distinct pieces:
   are independent of the SSD engine. Outputs land in `results/`, `report/`,
   `report_llama70B/`, `layer_skip/`.
 
-Three+ separate conda envs are involved:
+> **Running on a new server?** Read
+> `ssd/docs/duet/00-server-setup.md` first. The paper-facing runner and the
+> metrics scripts live *outside* this repository and are not version
+> controlled; that document lists what must be copied over, the GPU memory
+> requirements, and the canonical run commands.
+
+Three+ separate envs are involved. Paths below are per-machine — always
+resolve them from environment variables, never from the literals in older
+scripts:
 - `PSD` — top-level analysis scripts (HF Transformers-based).
-- `ssd` — SSD engine (built from `ssd/pyproject.toml` via `uv sync`;
-  `bench/*.sh` call it at `/home/chokwans99/anaconda3/envs/ssd/bin/python`).
+- `ssd` — SSD engine (built from `ssd/pyproject.toml` via `uv sync`).
   torchao 0.12.0 must be added manually on top of pyproject pins.
+  On the current RTX PRO 6000 box this is a uv venv (`.venv-ssd`,
+  Python 3.11.15); older `bench/*.sh` still reference a conda path from a
+  previous machine.
 - `sglang`, `vllm016` — baselines only, required by `bench/run_sglang_bench.py`
   and `bench/run_vllm_bench.py` (FlashInfer versions conflict with SSD, so
   they must live in separate envs).
@@ -54,12 +64,18 @@ removed.
 
 ### SSD engine (work under `ssd/`)
 
-Always `source ssd/env.sh` first — it sets `SSD_HF_CACHE`,
-`SSD_TARGET_MODEL` (default `layerskip-llama3-8B`), `SSD_DRAFT_MODEL`
-(default `Llama-3.2-1B-Instruct`), `SSD_CUDA_ARCH=8.6` (RTX 3090 box),
-and `SSD_DATASET_DIR`. Paths are resolved in `ssd/ssd/paths.py`, which is
-imported at the top of `llm_engine.py` before FlashInfer so
-`TORCH_CUDA_ARCH_LIST` is set early.
+`ssd/env.sh` sets `SSD_HF_CACHE`, `SSD_TARGET_MODEL`, `SSD_DRAFT_MODEL`,
+`SSD_CUDA_ARCH` and `SSD_DATASET_DIR`, but its values target an older
+RTX 3090 box (`SSD_CUDA_ARCH=8.6`, `/data2/...` model paths). On the current
+RTX PRO 6000 box (sm_120) the experiment scripts export these inline instead
+— see `ssd/docs/duet/00-server-setup.md` §4–5 for the current set, including
+`SSD_ATTN_BACKEND=auto`, which is required because `sgl-kernel` attention
+does not support sm_120.
+
+Paths are resolved in `ssd/ssd/paths.py`, which is imported at the top of
+`llm_engine.py` before FlashInfer so `TORCH_CUDA_ARCH_LIST` is set early.
+`paths.py` hard-fails at import when `SSD_HF_CACHE` / `SSD_DATASET_DIR` are
+unset.
 
 Benchmarks run from inside `bench/` and use `python -O` (debug assertions
 off is load-bearing for perf):

@@ -1,6 +1,6 @@
 # DUET P1/P2 동적 트리: 설계, 구현, 검증 기준 문서
 
-- 최종 갱신: 2026-08-08
+- 최종 갱신: 2026-08-11
 - 대상 브랜치: `feat/duet-p2tree-g0`
 - 공개 정책: `duet_p1_tree_policy=off|on`, `duet_p2_tree_policy=off|on`
 
@@ -59,6 +59,22 @@
 판정 자료로 사용할 수 없다. 현재 production `on`은 P2의 P1 도입 전 전역 동적
 알고리즘을 복원하고 P1도 같은 확장을 사용한다. 정확성 gate 뒤 동일 workload의
 다중 seed 실험으로 AL, hit와 추가 target 검증비를 다시 확정해야 한다.
+
+#### 2026-08-11 P1 allocation audit 추가 결론
+
+P1은 target proxy가 오기 전에 미래 cache key 여러 개의 forest를 만든다. 현재
+request 하나의 tree를 최적화하는 P2/EAGLE2식 global frontier를 P1에 그대로
+쓰면, 나중에 실제 hit될 root가 얕게 끝날 수 있다. 추가된
+`duet_p1_tree_allocation_policy=backbone`은 모든 P1 root에 매 round continuation
+lane을 예약하는 full-root 보장이다. scheduler와 executor가 동일한 compact
+cell 수를 사용한다.
+
+기존 실험 재현을 위해 allocation 기본값은 `dynamic`으로 남겨 두었다.
+새 P1 tree 확대 실험은 allocation을 반드시 `backbone`으로 명시한다. 작은
+paired gate의 현재 권장값은 `K1=8, K2=4, C=2, N1=14, M1=12,
+U1=3`이다. 상세 수치와 한계는
+[`internal/30-p1-tree-audit-plan.md`](internal/30-p1-tree-audit-plan.md)와
+[`../../experiments/proxy_async_overlap/tree_sweep/p1_tree_full_backbone_gate_seed42_20260811/RESULTS.md`](../../experiments/proxy_async_overlap/tree_sweep/p1_tree_full_backbone_gate_seed42_20260811/RESULTS.md)에 기록한다.
 
 ### 1.3 현재 기본 설정
 

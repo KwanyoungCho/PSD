@@ -469,27 +469,39 @@ fallback을 허용한다. 정상 기본 shape의 최종 결과에서는 executor
 
 ### 8.1 서버 준비
 
+새 서버에서 처음 돌린다면 먼저
+[`ssd/docs/duet/00-server-setup.md`](ssd/docs/duet/00-server-setup.md)를 읽는다.
+논문용 실행 드라이버(`runners/run_duet.py`)와 지표 스크립트는 **이 저장소 밖에**
+있어 별도로 옮겨야 하고, GPU 요구량과 캘리브레이션 절차도 그 문서에 있다.
+
 ```bash
 git fetch origin
 git switch feat/duet-p2tree-g0
 git pull --ff-only
 
 cd ssd
+uv sync          # torchao 0.12.0은 pyproject 핀 위에 수동 설치
 ```
 
-다음 경로가 실험 서버에 존재해야 한다.
+경로는 하드코딩하지 않고 환경 변수로 주입한다. 아래는 AWQ 경로를 쓰는 구
+서버(sm_86, TP4) 예시이며, **값은 서버마다 다르므로 그대로 쓰지 않는다.**
 
-```text
-target model: /data2/chokwans99/awq_calibrated/layerskip_llama2_70b
-target AWQ:   /data2/chokwans99/awq_artifacts/layerskip_llama2_70b/autoawq_tp4
-draft model:  /data2/chokwans99/awq_calibrated/tinyllama_1b
-draft AWQ:    /data2/chokwans99/awq_artifacts/tinyllama_1b/draft_tp1
-dataset:      /data2/chokwans99/datasets
-Python:       /home/chokwans99/anaconda3/envs/ssd/bin/python
+```bash
+export HF_HOME=/path/to/models
+export SSD_HF_CACHE=${HF_HOME}/hub        # 미설정 시 import 단계에서 즉시 실패
+export SSD_DATASET_DIR=/path/to/data
+
+export MODEL_PATH=/path/to/awq_calibrated/layerskip_llama2_70b
+export TARGET_AWQ=/path/to/awq_artifacts/layerskip_llama2_70b/autoawq_tp4
+export DRAFT_PATH=/path/to/awq_calibrated/tinyllama_1b
+export DRAFT_AWQ=/path/to/awq_artifacts/tinyllama_1b/draft_tp1
+export PY=/path/to/.venv-ssd/bin/python
 ```
 
-경로가 다르면 `MODEL_PATH`, `TARGET_AWQ`, `DRAFT_PATH`, `DRAFT_AWQ`, `PY`,
-`SSD_DATASET_DIR` 환경 변수로 덮어쓴다.
+현재 주 실험 서버(RTX PRO 6000, sm_120)는 AWQ 없이 **bf16 target TP2 + bf16
+draft 1GPU**로 돌리며, HF repo id(`facebook/layerskip-llama2-70B`,
+`TinyLlama/TinyLlama-1.1B-Chat-v1.0`)를 직접 넘긴다. 이 구성의 정본 명령은
+`00-server-setup.md` §6에 있다.
 
 ### 8.2 먼저 짧은 smoke
 
