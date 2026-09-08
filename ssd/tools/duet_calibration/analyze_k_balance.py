@@ -76,20 +76,47 @@ def _find_profile(path: Path, role: str) -> Path:
     return matches[0]
 
 
-def _events_by_step(events: list[dict], label: str,
-                    skip_steps: int) -> dict[int, dict]:
-    out = {}
+def _events_with_keys(events: list[dict], label: str,
+                      skip_steps: int) -> list[dict]:
+    """Attach a request-epoch key to one label's chronological events.
+
+    ``bench.py`` normally emits one monotonically increasing step sequence,
+    while ``run_duet.py`` calls ``generate()`` repeatedly and resets step_id
+    to one for every warmup/request.  A plain ``dict[step_id]`` silently
+    paired the last draft occurrence with a different target request.  The
+    profiler preserves event order and both processes observe identical
+    resets, so ``(epoch, step_id)`` is the stable cross-process key.
+    """
+    out = []
+    epoch = 0
+    previous = None
     for event in events:
         sid = event.get("step_id")
-        if sid is None or int(sid) <= skip_steps or event.get("label") != label:
+        if sid is None or event.get("label") != label:
             continue
         sid = int(sid)
+        if previous is not None and sid < previous:
+            epoch += 1
+        previous = sid
+        if sid <= skip_steps:
+            continue
+        tagged = dict(event)
+        tagged["_profile_key"] = (epoch, sid)
+        out.append(tagged)
+    return out
+
+
+def _events_by_step(events: list[dict], label: str,
+                    skip_steps: int) -> dict[tuple[int, int], dict]:
+    out = {}
+    for event in _events_with_keys(events, label, skip_steps):
+        key = event["_profile_key"]
         # The selected labels should occur once.  If a detailed profiler emits
         # a nested duplicate, retain the widest enclosing event.
-        prev = out.get(sid)
+        prev = out.get(key)
         if prev is None or (_wall_end(event) - _wall_start(event)) > (
                 _wall_end(prev) - _wall_start(prev)):
-            out[sid] = event
+            out[key] = event
     return out
 
 
@@ -110,14 +137,12 @@ def _load_raw(spec: RunSpec, skip_steps: int) -> dict:
         "target_path": target_path,
         "proxy_wait": _events_by_step(draft, "proxy_wait", skip_steps),
         "phase1_build": _events_by_step(draft, "phase1_build", skip_steps),
-        "phase1_replay_all": [x for x in draft
-                              if x.get("label") == "phase1_replay"
-                              and x.get("step_id") is not None
-                              and int(x["step_id"]) > skip_steps],
-        "phase2_replay_all": [x for x in draft
-                              if x.get("label") == "phase2_replay"
-                              and x.get("step_id") is not None
-                              and int(x["step_id"]) > skip_steps],
+        "phase1_replay_all": _events_with_keys(
+            draft, "phase1_replay", skip_steps),
+        "phase2_replay_all": _events_with_keys(
+            draft, "phase2_replay", skip_steps),
+        "p1_graph": _events_by_step(
+            draft, "p1_graph_replay", skip_steps),
         "p2_graph": _events_by_step(draft, "p2_graph_replay", skip_steps),
         "merge": _events_by_step(draft, "merge_cache", skip_steps),
         "proxy_send": proxy_send,
@@ -175,8 +200,8 @@ def analyze_run(raw: dict, proxy_transport_ms: float) -> dict:
         wait_durations.append(max(0.0, _wall_end(wait) - _wall_start(wait)))
 
     k2_gaps = []
-    for sid, merge in raw["merge"].items():
-        send = raw["next_send"].get(sid + 1)
+    for (epoch, sid), merge in raw["merge"].items():
+        send = raw["next_send"].get((epoch, sid + 1))
         if send is None:
             continue
         k2_gaps.append(_wall_start(send) - _wall_end(merge))
@@ -184,15 +209,20 @@ def analyze_run(raw: dict, proxy_transport_ms: float) -> dict:
     # Median effective time added by one more P1/P2 round.  This is used only
     # to predict a small local candidate set; final selection uses measured
     # gaps, not the linear model.
-    replay_by_step: dict[int, list[dict]] = {}
-    for event in raw["phase1_replay_all"]:
-        replay_by_step.setdefault(int(event["step_id"]), []).append(event)
-    p1_round = []
-    for events in replay_by_step.values():
-        if events:
-            span = max(_wall_end(x) for x in events) - min(
-                _wall_start(x) for x in events)
-            p1_round.append(span / spec.k1)
+    if raw["p1_graph"]:
+        p1_round = [(_wall_end(x) - _wall_start(x)) / spec.k1
+                    for x in raw["p1_graph"].values()]
+    else:
+        replay_by_step: dict[tuple[int, int], list[dict]] = {}
+        for event in raw["phase1_replay_all"]:
+            replay_by_step.setdefault(
+                event["_profile_key"], []).append(event)
+        p1_round = []
+        for events in replay_by_step.values():
+            if events:
+                span = max(_wall_end(x) for x in events) - min(
+                    _wall_start(x) for x in events)
+                p1_round.append(span / spec.k1)
     # The optimized tree path records the complete P2 executor as one graph.
     # Chain records K2 individual phase2_replay events.  Supporting both here
     # is what makes the same rendezvous calibration valid for either policy.
@@ -201,9 +231,10 @@ def analyze_run(raw: dict, proxy_transport_ms: float) -> dict:
                     for x in raw["p2_graph"].values()]
         p2_timing_source = "p2_graph_replay"
     else:
-        phase2_by_step: dict[int, list[dict]] = {}
+        phase2_by_step: dict[tuple[int, int], list[dict]] = {}
         for event in raw["phase2_replay_all"]:
-            phase2_by_step.setdefault(int(event["step_id"]), []).append(event)
+            phase2_by_step.setdefault(
+                event["_profile_key"], []).append(event)
         p2_round = []
         for events in phase2_by_step.values():
             if events:
@@ -213,13 +244,29 @@ def analyze_run(raw: dict, proxy_transport_ms: float) -> dict:
         p2_timing_source = "phase2_replay"
 
     def summary(values: list[float]) -> dict:
+        overruns = [max(-x, 0.0) for x in values]
+        late = [x for x in values if x < 0.0]
         return {
             "n": len(values),
+            "p01_ms": percentile(values, 0.01),
+            "p05_ms": percentile(values, 0.05),
             "p10_ms": percentile(values, 0.10),
             "p50_ms": percentile(values, 0.50),
             "p90_ms": percentile(values, 0.90),
+            "p95_ms": percentile(values, 0.95),
+            "p99_ms": percentile(values, 0.99),
             "p50_abs_ms": percentile([abs(x) for x in values], 0.50),
             "p90_abs_ms": percentile([abs(x) for x in values], 0.90),
+            # Negative signed gap means the producer missed its overlap
+            # deadline: P1 ended after proxy arrival, or P2 cache became
+            # ready after the target issued the next request.  Tail frequency
+            # is the deployment gate; a positive mean can hide rare stalls.
+            "late_n": len(late),
+            "late_rate": len(late) / len(values) if values else math.nan,
+            "overrun_p90_ms": percentile(overruns, 0.90),
+            "overrun_p95_ms": percentile(overruns, 0.95),
+            "overrun_p99_ms": percentile(overruns, 0.99),
+            "overrun_max_ms": max(overruns) if overruns else math.nan,
             "draft_wait_mean_ms": st.mean(max(x, 0.0) for x in values)
             if values else math.nan,
             "target_wait_mean_ms": st.mean(max(-x, 0.0) for x in values)
@@ -313,6 +360,12 @@ def main(argv: list[str] | None = None) -> int:
               f"{b['p50_ms']:+7.3f} {b['p50_abs_ms']:7.3f} {b['n']:4d} | "
               f"{row['p1_round_ms']:.3f}/{row['p2_round_ms']:.3f} | "
               f"{q.get('p1_al')} {q.get('p2_al')} {q.get('tps')}")
+        print(
+            "      tails | "
+            f"P1 late={a['late_n']}/{a['n']} ({a['late_rate']:.3%}) "
+            f"p01={a['p01_ms']:+.3f} overrun-p99={a['overrun_p99_ms']:.3f} | "
+            f"P2 late={b['late_n']}/{b['n']} ({b['late_rate']:.3%}) "
+            f"p01={b['p01_ms']:+.3f} overrun-p99={b['overrun_p99_ms']:.3f}")
     print("\n[recommendation]")
     print("K1 =", selected_k1 if selected_k1 is not None else "NONE")
     print("K2 =", k2_rec["k2"] if k2_rec else "NONE")

@@ -24,9 +24,10 @@ from plot_duet_aligned_timeline import (  # noqa: E402
     _strip_anchor,
     compute_causality_shift_ns,
     is_aligned_schema,
-    list_steps_by_status,
+    list_step_occurrences_by_status,
     plot_aligned_step,
     select_step,
+    tag_request_epochs,
 )
 
 
@@ -42,6 +43,10 @@ def main() -> None:
         help="comma-separated duration quantiles (default: 0.25,0.50,0.75)",
     )
     ap.add_argument("--causality-window", type=int, default=5)
+    ap.add_argument(
+        "--skip-request-epochs", type=int, default=0,
+        help="exclude initial warmup generate() calls",
+    )
     args = ap.parse_args()
 
     quantiles = [float(x) for x in args.quantiles.split(",")]
@@ -52,51 +57,72 @@ def main() -> None:
     draft = _load_json(args.profile_dir, "draft")
     if not is_aligned_schema(target):
         raise SystemExit(f"unaligned target profile: {args.profile_dir}")
-    target = _strip_anchor(target)
-    draft = _strip_anchor(draft)
+    target = tag_request_epochs(_strip_anchor(target))
+    draft = tag_request_epochs(_strip_anchor(draft))
+    if args.skip_request_epochs:
+        target = [
+            row for row in target
+            if row["_request_epoch"] >= args.skip_request_epochs
+        ]
+        draft = [
+            row for row in draft
+            if row["_request_epoch"] >= args.skip_request_epochs
+        ]
 
     captured = {
-        int(r["step_id"])
+        (int(r["_request_epoch"]), int(r["step_id"]))
         for r in draft
         if r.get("step_id") is not None
         and r.get("label") == "draft_send_response"
     }
-    table = list_steps_by_status(target)
-    manifest = ["status\tquantile\tstep_id\tfull_step_ms\timage"]
+    table = list_step_occurrences_by_status(target)
+    manifest = [
+        "status\tquantile\trequest_epoch\tstep_id\tfull_step_ms\timage"
+    ]
     rendered: dict[tuple[str, str], Path] = {}
 
     for status in ("hit_k1", "hit_k2", "miss"):
         items = [item for item in table.get(status, []) if item[0] in captured]
         if not items:
-            manifest.append(f"{status}\tNA\tNA\tNA\tNA")
+            manifest.append(f"{status}\tNA\tNA\tNA\tNA\tNA")
             continue
-        used: set[int] = set()
+        used: set[tuple[int, int]] = set()
         for q in quantiles:
-            sid, duration = items[_quantile_index(len(items), q)]
-            if sid in used:
+            (epoch, sid), duration = items[_quantile_index(len(items), q)]
+            if (epoch, sid) in used:
                 continue
-            used.add(sid)
-            tgt, drf = select_step(target, draft, sid, status_filter=status)
+            used.add((epoch, sid))
+            tgt, drf = select_step(
+                target, draft, sid, status_filter=status,
+                request_epoch=epoch,
+            )
             if not tgt:
                 continue
+            target_epoch = [
+                row for row in target if row["_request_epoch"] == epoch
+            ]
+            draft_epoch = [
+                row for row in draft if row["_request_epoch"] == epoch
+            ]
             shift_ns, n_pairs = compute_causality_shift_ns(
-                target, draft, sid, window=args.causality_window,
+                target_epoch, draft_epoch, sid,
+                window=args.causality_window,
             )
             qname = f"p{round(q * 100):02d}"
             out = args.profile_dir / (
-                f"timeline_cache_{status}_{qname}_step{sid}.png"
+                f"timeline_cache_{status}_{qname}_req{epoch}_step{sid}.png"
             )
             plot_aligned_step(
                 tgt, drf, sid, out,
                 title_suffix=(
                     f"cache {status.replace('_', ' ')} — {qname} "
-                    f"full-step duration ({duration:.2f} ms)"
+                    f"full-step duration ({duration:.2f} ms); request {epoch}"
                 ),
                 draft_shift_ns=shift_ns,
                 shift_n_pairs=n_pairs,
             )
             manifest.append(
-                f"{status}\t{qname}\t{sid}\t{duration:.6f}\t{out.name}"
+                f"{status}\t{qname}\t{epoch}\t{sid}\t{duration:.6f}\t{out.name}"
             )
             rendered[(status, qname)] = out
 

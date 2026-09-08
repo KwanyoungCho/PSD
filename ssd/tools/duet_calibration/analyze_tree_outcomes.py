@@ -196,6 +196,76 @@ def _safe_rerank_indices(par: list[int], sib: list[int],
     return sorted(chosen)
 
 
+def _served_to_generated_indices(root: dict, serve: dict) -> list[int]:
+    """Map compact served-node ids back to the generated-tree ids.
+
+    P1 may generate ``N1`` nodes and then closure-preserving rerank them to
+    ``M1`` nodes.  The wire topology is compacted after this selection, so a
+    direct comparison with ``root['par'][:M1]`` is wrong whenever reranking
+    removed a node.  P2 currently has ``N2 == M2``, but using the same helper
+    keeps the analysis correct for future independent P2 search/verify caps.
+    """
+    valid = int(serve["valid"])
+    par = [int(x) for x in root["par"]]
+    sib = [int(x) for x in root["sib"]]
+    raw_q = [float(x) for x in root["raw_q"]]
+    keep = _safe_rerank_indices(par, sib, raw_q, valid)
+    old_to_new = {old: new for new, old in enumerate(keep)}
+    compact_par = [
+        -1 if par[old] < 0 else old_to_new[par[old]] for old in keep
+    ]
+    compact_sib = [sib[old] for old in keep]
+    served_par = [int(x) for x in serve["par"][:valid]]
+    served_sib = [int(x) for x in serve["sib"][:valid]]
+    if compact_par != served_par or compact_sib != served_sib:
+        raise ValueError(
+            "generated/reranked served topology differs at "
+            f"step={serve.get('step')}, phase={serve.get('phase')}, "
+            f"root={serve.get('root_rank')}")
+    return keep
+
+
+def _match_served_draft(drafts: list[dict], serve: dict,
+                         after_trace_seq: int) -> tuple[dict, dict, list[int]]:
+    """Find the generated forest that produced one served cache row.
+
+    The engine's topology ``trace_seq`` is process-global, while the public
+    request ``step`` restarts for every prompt.  Consequently ``step - 1``
+    only works for the first prompt.  The served record carries the exact
+    phase, root rank, start score, context id, and compact topology; together
+    these identify its monotonically earlier generated forest without relying
+    on a reset-prone step number.
+    """
+    phase = int(serve.get("phase") or 2)
+    root_rank = int(serve["root_rank"])
+    score = serve.get("root_start_score")
+    context_id = serve.get("root_context_id")
+    for draft in drafts:
+        seq = int(draft["trace_seq"])
+        if seq <= after_trace_seq or int(draft.get("phase") or 2) != phase:
+            continue
+        roots = draft["roots"]
+        if root_rank >= len(roots):
+            continue
+        root = roots[root_rank]
+        if score is not None and abs(float(root["piv"]) - float(score)) > max(
+                1e-9, 1e-7 * abs(float(score))):
+            continue
+        context_ids = draft.get("root_context_ids")
+        if context_id is not None and context_ids is not None \
+                and int(context_ids[root_rank]) != int(context_id):
+            continue
+        try:
+            mapping = _served_to_generated_indices(root, serve)
+        except ValueError:
+            continue
+        return draft, root, mapping
+    raise ValueError(
+        "cannot match served topology to a later generated forest: "
+        f"step={serve.get('step')}, phase={phase}, root={root_rank}, "
+        f"after_trace_seq={after_trace_seq}")
+
+
 def summarize_rerank_caps(prefixes: list[Path], caps: list[int]) -> dict:
     """Estimate useful final-verify caps from already collected hit traces.
 
@@ -206,36 +276,31 @@ def summarize_rerank_caps(prefixes: list[Path], caps: list[int]) -> dict:
     """
     rows = []
     for prefix in prefixes:
-        drafts = {}
-        for rec in _jsonl(Path(str(prefix) + ".draft.jsonl")):
-            phase = int(rec.get("phase") or 2)
-            drafts[(int(rec["trace_seq"]), phase)] = rec
+        drafts = list(_jsonl(Path(str(prefix) + ".draft.jsonl")))
         serves = list(_jsonl(Path(str(prefix) + ".serve.jsonl")))
         walks = list(_jsonl(Path(str(prefix) + ".walk.jsonl")))
         if len(serves) != len(walks):
             raise ValueError(f"{prefix}: incomplete serve/walk trace")
+        last_trace_seq = -1
         for serve, walk in zip(serves, walks):
             phase = int(serve.get("phase") or walk.get("phase") or 2)
             step = int(serve["step"])
             root_rank = int(serve["root_rank"])
-            draft = drafts.get((step - 1, phase))
-            if draft is None or root_rank >= len(draft["roots"]):
-                raise ValueError(
-                    f"{prefix}: cannot join served step={step}, "
-                    f"phase={phase}, root={root_rank} to draft trace")
-            root = draft["roots"][root_rank]
-            valid = int(serve["valid"])
-            par = [int(x) for x in root["par"][:valid]]
-            sib = [int(x) for x in root["sib"][:valid]]
-            if par != [int(x) for x in serve["par"][:valid]] \
-                    or sib != [int(x) for x in serve["sib"][:valid]]:
-                raise ValueError(
-                    f"{prefix}: joined draft/serve topology differs at "
-                    f"step={step}, phase={phase}, root={root_rank}")
+            draft, root, served_to_generated = _match_served_draft(
+                drafts, serve, last_trace_seq)
+            last_trace_seq = int(draft["trace_seq"])
+            par = [int(x) for x in root["par"]]
+            sib = [int(x) for x in root["sib"]]
+            served_path = [int(x) for x in walk.get("path", [])]
+            path = [served_to_generated[x] for x in served_path]
             rows.append({
-                "phase": phase, "valid": valid, "par": par, "sib": sib,
-                "raw_q": [float(x) for x in root["raw_q"][:valid]],
-                "path": [int(x) for x in walk.get("path", [])],
+                "phase": phase,
+                "generated_valid": len(par),
+                "served_valid": int(serve["valid"]),
+                "par": par,
+                "sib": sib,
+                "raw_q": [float(x) for x in root["raw_q"]],
+                "path": path,
             })
 
     result = {}
@@ -256,7 +321,7 @@ def summarize_rerank_caps(prefixes: list[Path], caps: list[int]) -> dict:
                     prefix_len += 1
                 retained += prefix_len
                 full += int(prefix_len == len(row["path"]))
-            original_sent = sum(r["valid"] for r in phase_rows)
+            original_sent = sum(r["served_valid"] for r in phase_rows)
             one_phase[str(cap)] = {
                 "trees": len(phase_rows),
                 "mean_verify_nodes": sent / len(phase_rows),

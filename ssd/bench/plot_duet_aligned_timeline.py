@@ -174,6 +174,58 @@ def _anchor_row(rows: list[dict]) -> dict | None:
     return None
 
 
+def tag_request_epochs(rows: list[dict]) -> list[dict]:
+    """Return copies of profile rows tagged with their ``generate()`` epoch.
+
+    ``run_duet.py`` invokes ``generate()`` once per warmup/request, and the
+    engine restarts ``step_id`` at one for every invocation.  A bare
+    ``step_id`` therefore is not unique in a multi-request profile.  Profiler
+    rows are emitted in execution order, so a non-increasing step transition
+    at the once-per-step request anchor marks the next request epoch.  The
+    stable key is ``(_request_epoch, step_id)``.
+
+    Keeping this tag derived (rather than changing the trace schema) also
+    makes old aligned profiles safe to plot.
+    """
+    labels = {str(row.get("label", "")) for row in rows}
+    if "target_send_request" in labels:
+        step_anchor = "target_send_request"
+    elif "draft_recv_request" in labels:
+        step_anchor = "draft_recv_request"
+    elif "target_spec_wait" in labels:
+        step_anchor = "target_spec_wait"
+    elif "draft_send_response" in labels:
+        step_anchor = "draft_send_response"
+    else:
+        step_anchor = None
+
+    tagged_rows: list[dict] = []
+    epoch = 0
+    previous_step: int | None = None
+    for row in rows:
+        tagged = dict(row)
+        sid = row.get("step_id")
+        if sid is not None:
+            sid = int(sid)
+            is_anchor = step_anchor is None or row.get("label") == step_anchor
+            if is_anchor:
+                # Equal also means a reset when two one-step generate() calls
+                # are adjacent.  Within one request the selected anchor occurs
+                # exactly once per step, so equality is not a duplicate span.
+                if previous_step is not None and sid <= previous_step:
+                    epoch += 1
+                previous_step = sid
+        tagged["_request_epoch"] = epoch
+        tagged_rows.append(tagged)
+    return tagged_rows
+
+
+def _ensure_request_epochs(rows: list[dict]) -> list[dict]:
+    if not rows or all("_request_epoch" in row for row in rows):
+        return rows
+    return tag_request_epochs(rows)
+
+
 # ---------------------------------------------------------------------------
 # Step selection
 # ---------------------------------------------------------------------------
@@ -184,6 +236,7 @@ def select_step(
     draft_rows: list[dict],
     step_id: int,
     status_filter: str | None = None,
+    request_epoch: int | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Return target rows for ``step_id`` and draft rows relevant to it.
 
@@ -199,8 +252,23 @@ def select_step(
     as the step's canonical status — every span produced inside the same
     step inherits the same context (see Phase-B RESULTS step 50 example).
     """
-    tgt = [r for r in target_rows if r.get("step_id") == step_id]
-    drf = [r for r in draft_rows if r.get("step_id") == step_id]
+    if request_epoch is not None:
+        target_rows = _ensure_request_epochs(target_rows)
+        draft_rows = _ensure_request_epochs(draft_rows)
+        target_scope = [
+            r for r in target_rows
+            if int(r.get("_request_epoch", -1)) == request_epoch
+        ]
+        draft_scope = [
+            r for r in draft_rows
+            if int(r.get("_request_epoch", -1)) == request_epoch
+        ]
+    else:
+        target_scope = target_rows
+        draft_scope = draft_rows
+
+    tgt = [r for r in target_scope if r.get("step_id") == step_id]
+    drf = [r for r in draft_scope if r.get("step_id") == step_id]
     if status_filter is not None:
         # Determine the step's canonical status from the target spec_wait row.
         step_status = None
@@ -219,7 +287,7 @@ def select_step(
 
     win = _target_wait_window_ns(tgt)
     if win is not None:
-        drf_overlap = _rows_overlapping_window(draft_rows, win)
+        drf_overlap = _rows_overlapping_window(draft_scope, win)
         if drf_overlap:
             # Keep deterministic order and avoid duplicates when same-step rows
             # also overlap the window.
@@ -347,6 +415,60 @@ def list_steps_by_status(
     return out
 
 
+def list_step_occurrences_by_status(
+    target_rows: list[dict],
+) -> dict[str, list[tuple[tuple[int, int], float]]]:
+    """Return status tables keyed by ``(request_epoch, step_id)``.
+
+    Unlike :func:`list_steps_by_status`, this remains correct when several
+    benchmark prompts are captured in one profile and every prompt restarts
+    ``step_id`` at one.
+    """
+    tagged = _ensure_request_epochs(target_rows)
+    status_by_key: dict[tuple[int, int], str | None] = {}
+    rows_by_key: dict[tuple[int, int], list[dict]] = {}
+    for row in tagged:
+        sid = row.get("step_id")
+        if sid is None:
+            continue
+        key = (int(row["_request_epoch"]), int(sid))
+        rows_by_key.setdefault(key, []).append(row)
+        if str(row.get("label", "")).startswith("target_spec_wait"):
+            status_by_key[key] = row.get("status")
+
+    out: dict[str, list[tuple[tuple[int, int], float]]] = {}
+    for key, status in status_by_key.items():
+        if status is None:
+            continue
+        duration = step_full_duration_ms(rows_by_key[key])
+        if duration is not None:
+            out.setdefault(status, []).append((key, duration))
+    for status in out:
+        out[status].sort(key=lambda item: item[1])
+    return out
+
+
+def pick_representative_occurrence(
+    target_rows: list[dict], status: str, draft_rows: list[dict] | None = None
+) -> tuple[int, int] | None:
+    """Pick the median-duration ``(request_epoch, step_id)`` for a status."""
+    table = list_step_occurrences_by_status(target_rows)
+    items = table.get(status)
+    if not items:
+        return None
+    if draft_rows is not None:
+        captured = {
+            (int(row["_request_epoch"]), int(row["step_id"]))
+            for row in _ensure_request_epochs(draft_rows)
+            if row.get("step_id") is not None
+            and row.get("label") == "draft_send_response"
+        }
+        common = [item for item in items if item[0] in captured]
+        if common:
+            items = common
+    return items[len(items) // 2][0]
+
+
 def pick_representative_step(
     target_rows: list[dict], status: str, draft_rows: list[dict] | None = None
 ) -> int | None:
@@ -358,21 +480,9 @@ def pick_representative_step(
     empty draft row and hides precisely the P2 interval it is meant to show.
     Fall back to the target-only median for legacy/incomplete draft traces.
     """
-    table = list_steps_by_status(target_rows)
-    items = table.get(status)
-    if not items:
-        return None
-    if draft_rows is not None:
-        captured = {
-            int(r["step_id"])
-            for r in draft_rows
-            if r.get("step_id") is not None
-            and r.get("label") == "draft_send_response"
-        }
-        common = [item for item in items if item[0] in captured]
-        if common:
-            items = common
-    return items[len(items) // 2][0]
+    occurrence = pick_representative_occurrence(
+        target_rows, status, draft_rows)
+    return occurrence[1] if occurrence is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -785,23 +895,40 @@ def plot_aligned_for_status(
             Corrects CUDA-event clock drift between target and draft GPUs
             on long runs.  See ``compute_causality_shift_ns``.
     """
-    step_id = pick_representative_step(target_rows, status, draft_rows)
-    if step_id is None:
+    target_rows = _ensure_request_epochs(target_rows)
+    draft_rows = _ensure_request_epochs(draft_rows)
+    occurrence = pick_representative_occurrence(
+        target_rows, status, draft_rows)
+    if occurrence is None:
         return None
-    tgt, drf = select_step(target_rows, draft_rows, step_id, status_filter=status)
+    request_epoch, step_id = occurrence
+    tgt, drf = select_step(
+        target_rows, draft_rows, step_id, status_filter=status,
+        request_epoch=request_epoch,
+    )
     if not tgt:
         return None
     shift_ns = 0
     n_pairs = 0
     if causality_shift:
+        target_epoch = [
+            row for row in target_rows
+            if int(row["_request_epoch"]) == request_epoch
+        ]
+        draft_epoch = [
+            row for row in draft_rows
+            if int(row["_request_epoch"]) == request_epoch
+        ]
         shift_ns, n_pairs = compute_causality_shift_ns(
-            target_rows, draft_rows, step_id, window=causality_window,
+            target_epoch, draft_epoch, step_id, window=causality_window,
         )
     fname = _STATUS_SUFFIX.get(status, f"timeline_cache_{status}.png")
     out_path = outdir / fname
     return plot_aligned_step(
         tgt, drf, step_id, out_path,
-        title_suffix=f"cache {status.replace('_', ' ')}",
+        title_suffix=(
+            f"cache {status.replace('_', ' ')}; request {request_epoch}"
+        ),
         draft_shift_ns=shift_ns,
         shift_n_pairs=n_pairs,
     )
@@ -859,7 +986,6 @@ def _percentile(vals: list[float], q: float) -> float:
 def print_status_summary(target_rows: list[dict]) -> None:
     """Per-status counts + target_spec_wait mean/median/p99 (cuda_ms)."""
     by_status_wait: dict[str, list[float]] = {}
-    step_status: dict[int, str] = {}
     for r in target_rows:
         lbl = str(r.get("label", ""))
         if not lbl.startswith("target_spec_wait"):
@@ -869,19 +995,11 @@ def print_status_summary(target_rows: list[dict]) -> None:
             continue
         ms = float(r.get("cuda_ms", r.get("ms", 0.0)))
         by_status_wait.setdefault(s, []).append(ms)
-        sid = r.get("step_id")
-        if sid is not None:
-            step_status[sid] = s
-
-    counts: dict[str, int] = {}
-    for s in step_status.values():
-        counts[s] = counts.get(s, 0) + 1
-
     print("by_status summary (target rank0):")
     print(f"  {'status':<10} {'n_steps':>8} {'wait_mean':>10} {'wait_median':>12} {'wait_p99':>10}")
     for s in sorted(by_status_wait):
         vals = by_status_wait[s]
-        n = counts.get(s, len(vals))
+        n = len(vals)
         print(
             f"  {s:<10} {n:>8d} "
             f"{statistics.fmean(vals):>10.3f} "
@@ -909,6 +1027,21 @@ def main() -> None:
         choices=("hit_k1", "hit_k2", "miss"),
         default=None,
         help="when --step-id is set, override the title's status string",
+    )
+    ap.add_argument(
+        "--request-epoch",
+        type=int,
+        default=None,
+        help=(
+            "zero-based generate()/prompt occurrence for --step-id. Required "
+            "when that step_id occurs in more than one request"
+        ),
+    )
+    ap.add_argument(
+        "--skip-request-epochs",
+        type=int,
+        default=0,
+        help="exclude the first N warmup/request epochs from representative selection",
     )
     ap.add_argument(
         "--out",
@@ -948,11 +1081,41 @@ def main() -> None:
 
     target_rows = _strip_anchor(target_rows)
     draft_rows = _strip_anchor(draft_rows)
+    target_rows = tag_request_epochs(target_rows)
+    draft_rows = tag_request_epochs(draft_rows)
+
+    if args.skip_request_epochs:
+        target_rows = [
+            row for row in target_rows
+            if int(row["_request_epoch"]) >= args.skip_request_epochs
+        ]
+        draft_rows = [
+            row for row in draft_rows
+            if int(row["_request_epoch"]) >= args.skip_request_epochs
+        ]
 
     print_status_summary(target_rows)
 
     if args.step_id is not None:
-        tgt, drf = select_step(target_rows, draft_rows, args.step_id)
+        matching_epochs = sorted({
+            int(row["_request_epoch"])
+            for row in target_rows
+            if row.get("step_id") == args.step_id
+        })
+        request_epoch = args.request_epoch
+        if request_epoch is None:
+            if len(matching_epochs) > 1:
+                print(
+                    f"ERROR: step_id={args.step_id} occurs in request epochs "
+                    f"{matching_epochs}; pass --request-epoch",
+                    file=sys.stderr,
+                )
+                sys.exit(3)
+            request_epoch = matching_epochs[0] if matching_epochs else None
+        tgt, drf = select_step(
+            target_rows, draft_rows, args.step_id,
+            request_epoch=request_epoch,
+        )
         if not tgt:
             print(
                 f"ERROR: no rows for step_id={args.step_id} in target JSON",
@@ -972,8 +1135,16 @@ def main() -> None:
         shift_ns = 0
         n_pairs = 0
         if args.causality_shift:
+            target_epoch = [
+                row for row in target_rows
+                if int(row["_request_epoch"]) == request_epoch
+            ]
+            draft_epoch = [
+                row for row in draft_rows
+                if int(row["_request_epoch"]) == request_epoch
+            ]
             shift_ns, n_pairs = compute_causality_shift_ns(
-                target_rows, draft_rows, args.step_id,
+                target_epoch, draft_epoch, args.step_id,
                 window=args.causality_window,
             )
             print(f"[causality-shift] draft shift = {shift_ns/1e6:+.3f} ms "
@@ -983,7 +1154,10 @@ def main() -> None:
             drf,
             args.step_id,
             out_path,
-            title_suffix=f"cache {step_status}" if step_status else "",
+            title_suffix=(
+                f"cache {step_status}; request {request_epoch}"
+                if step_status else f"request {request_epoch}"
+            ),
             draft_shift_ns=shift_ns,
             shift_n_pairs=n_pairs,
         )

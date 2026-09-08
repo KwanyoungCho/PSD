@@ -26,7 +26,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from analyze_tree_outcomes import _jsonl
+from analyze_tree_outcomes import _jsonl, _match_served_draft
 
 
 def _quantile(sorted_vals, q):
@@ -46,37 +46,27 @@ def load_joined_steps(prefixes: list[Path]) -> list[dict]:
     """
     steps = []
     for prefix in prefixes:
-        drafts = {}
-        for rec in _jsonl(Path(str(prefix) + ".draft.jsonl")):
-            phase = int(rec.get("phase") or 2)
-            drafts[(int(rec["trace_seq"]), phase)] = rec
+        drafts = list(_jsonl(Path(str(prefix) + ".draft.jsonl")))
         serves = list(_jsonl(Path(str(prefix) + ".serve.jsonl")))
         walks = list(_jsonl(Path(str(prefix) + ".walk.jsonl")))
         if len(serves) != len(walks):
             raise ValueError(f"{prefix}: incomplete serve/walk trace")
+        last_trace_seq = -1
         for serve, walk in zip(serves, walks):
             phase = int(serve.get("phase") or walk.get("phase") or 2)
             step = int(serve["step"])
             root_rank = int(serve["root_rank"])
-            draft = drafts.get((step - 1, phase))
-            if draft is None or root_rank >= len(draft["roots"]):
-                raise ValueError(
-                    f"{prefix}: cannot join served step={step}, "
-                    f"phase={phase}, root={root_rank} to draft trace")
-            root = draft["roots"][root_rank]
-            valid = int(serve["valid"])
-            if [int(x) for x in root["par"][:valid]] != \
-                    [int(x) for x in serve["par"][:valid]] or \
-                    [int(x) for x in root["sib"][:valid]] != \
-                    [int(x) for x in serve["sib"][:valid]]:
-                raise ValueError(
-                    f"{prefix}: joined draft/serve topology differs at "
-                    f"step={step}, phase={phase}, root={root_rank}")
+            draft, root, served_to_generated = _match_served_draft(
+                drafts, serve, last_trace_seq)
+            last_trace_seq = int(draft["trace_seq"])
+            served_path = [int(x) for x in walk.get("path", [])]
             steps.append({
                 "phase": phase,
                 "draft": draft,
                 "root_rank": root_rank,
-                "path": [int(x) for x in walk.get("path", [])],
+                # The verifier records compact post-rerank ids.  Width ranks
+                # are defined on the generated forest, so restore the ids.
+                "path": [served_to_generated[x] for x in served_path],
             })
     if not steps:
         raise ValueError("no joined serve/draft steps found")
