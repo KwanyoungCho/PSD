@@ -1,0 +1,211 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 7
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.34it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.33it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.24it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.23it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.24it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.24it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.18it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.17it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.92it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.92it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET probe] 80 layers, rows=9, buffers=23.6MB
+[DUET] captured target chain proxy graphs (K=[4, 8], source=residual)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=1.0 b=1
+============================================================
+Generating:   0%|          | 0/32 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+[DUET probe] tap check @layer=56 max|probe-engine|=0.000e+00 OK
+Generating:   3%|▎         | 1/32 [00:04<02:20,  4.52s/it]Generating:   6%|▋         | 2/32 [00:07<01:54,  3.81s/it]Generating:   9%|▉         | 3/32 [00:11<01:49,  3.78s/it]Generating:  12%|█▎        | 4/32 [00:15<01:51,  3.99s/it]Generating:  16%|█▌        | 5/32 [00:19<01:40,  3.71s/it]Generating:  19%|█▉        | 6/32 [00:23<01:38,  3.79s/it]Generating:  22%|██▏       | 7/32 [00:26<01:29,  3.57s/it]Generating:  25%|██▌       | 8/32 [00:29<01:24,  3.53s/it]Generating:  28%|██▊       | 9/32 [00:34<01:28,  3.85s/it]Generating:  31%|███▏      | 10/32 [00:37<01:21,  3.72s/it]Generating:  34%|███▍      | 11/32 [00:41<01:17,  3.69s/it]Generating:  38%|███▊      | 12/32 [00:44<01:10,  3.54s/it]Generating:  41%|████      | 13/32 [00:47<01:07,  3.56s/it]Generating:  44%|████▍     | 14/32 [00:51<01:04,  3.57s/it]Generating:  47%|████▋     | 15/32 [00:55<01:00,  3.54s/it]Generating:  50%|█████     | 16/32 [00:59<00:58,  3.68s/it]Generating:  53%|█████▎    | 17/32 [01:02<00:52,  3.52s/it]Generating:  56%|█████▋    | 18/32 [01:05<00:46,  3.32s/it]Generating:  59%|█████▉    | 19/32 [01:09<00:45,  3.50s/it]Generating:  62%|██████▎   | 20/32 [01:12<00:42,  3.56s/it]Generating:  66%|██████▌   | 21/32 [01:15<00:36,  3.36s/it]Generating:  69%|██████▉   | 22/32 [01:20<00:38,  3.83s/it]Generating:  72%|███████▏  | 23/32 [01:23<00:33,  3.71s/it]Generating:  75%|███████▌  | 24/32 [01:27<00:29,  3.72s/it]Generating:  78%|███████▊  | 25/32 [01:31<00:26,  3.74s/it]Generating:  81%|████████▏ | 26/32 [01:35<00:22,  3.69s/it]Generating:  84%|████████▍ | 27/32 [01:38<00:18,  3.65s/it]Generating:  88%|████████▊ | 28/32 [01:43<00:15,  4.00s/it]Generating:  91%|█████████ | 29/32 [01:46<00:11,  3.86s/it]Generating:  94%|█████████▍| 30/32 [01:50<00:07,  3.71s/it]Generating:  97%|█████████▋| 31/32 [01:53<00:03,  3.48s/it]Generating: 100%|██████████| 32/32 [01:57<00:00,  3.61s/it]Generating: 100%|██████████| 32/32 [01:57<00:00,  3.66s/it]
+Final Prefill Throughput: 502.10tok/s
+Final Decode Throughput: 70.77tok/s
+[metrics] Prefill tokens/time: 456 / 0.908182s
+[metrics] Decode tokens/time: 8218 / 116.125695s
+[metrics] Avg Tokens per step (incl recovery): 2.74
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.22 (denom=8)
+[metrics] Avg target time per full step (ms): 39.00
+[metrics] Avg target verify time (ms): 27.64
+[metrics] Avg Cache Hits: 0.56
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.562
+[metrics] Avg Phase 2 Accepted Len: 1.79
+[metrics] Avg Phase 2 Acceptance Ratio: 0.448
+[metrics] Avg Tokens per step on Cache Hit: 2.79
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.321
+  1: 0.183
+  2: 0.139
+  3: 0.100
+  4: 0.257
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.67
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 8192tok, Time: 117.15s, Total Throughput: 69.93tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Give three tips for staying healthy.'
+Generation: '\n2. Health is a matter of choice: when it comes to your health you have control of your diet and lifestyle choices.\n3. American adults waste 5 days a year on the sofa watching TV (2012 research): to help avoid wasting time, spend time with children and family, get out in the fresh air and enjoy swimming, the park and vacations.\n4. Choose one word to describe your sitting down time on the sofa (5 days per year): Wasted, couch potato, lazy, bored...?\nWhere do Americans spend the majority of their day spent sitting?\nAnswer: In front of a screen (tv, ipads, lap tops, mobile phones).\nGive three facts that might be shocking to students e.g. Global diabetes will increase to 592 million people by 2035 along with 439 million by 2030 this might impact future generations of children.\nNote that 44% of bowel cancer are caused by poor diet and lack of exercise.\n5. Exercise needs long-term commitment: to stay motivated make your exercise'
+----------------------------------------
+
+Prompt 2: 'What are the three primary colors?'
+Generation: '\nWhat device does Newton offer?</s><s> Exercise Physiology Home\nA Multiple Sclerosis Community\nMultiple Sclerosis community is enriched by the work, advocacy, and friendship of other people who share this diagnosis. MS can take the punch out of your limits. It can derail your career, impair your mobility, threaten your career plans, and cause disruptions in your personal relationships.\nThis page is devoted to exercise and MS. The powerful research rationale that supports exercise (cardiovascular, neuromuscular, functional motor, emotional, social) goes far beyond what modern medical science can offer to deal with the effects of MS. Exercise is one of the very few things within your control to design and live an active life with MS. But you must exercise deliberately with a plan and purpose.\nFor example, it is no secret that exercise in MS can help you be independent longer. In my humble opinion, independence is like a little bit of oxygen for the human spirit. It provides a psychological push against the dark walls or self-doubt that MS can so easily grow.\nJust like breathing, you need it every second'
+----------------------------------------
+
+Prompt 3: 'Describe the structure of an atom.'
+Generation: '\nHow are the electronic, neutron, proton, and nucleon structuring in the nucleus?\nDoctors can often detect and locate electrons and neutrons by different types of scans, such as a PET scan or an X-ray. Can they locate the nucleons? Explain.\n2.7: Atomic Number and Mass Number is shared under a not declared license and was authored, remixed, and/or curated by LibreTexts.\n2.6: Defining Matter</s><s> Somalia: Al-Shabab Islamist militants have built a safe haven in the country, AP reports\nHarakat al-Shabaab al-Mujahideen (more commonly known as Al-Shabaab, and also known as Mujahideen Youth Movement or MYM) is a Balad-based terrorist organization questing to overthrow Somalia’s transitional government and impose its brand of Wahabist Islam on Somalia’s entire population.\nAl-Shabab’s code of conduct is influenced by the teachings of Salafism, a literalist, radical and puritanical interpretation of Islam with ideas and ideals'
+----------------------------------------
+
+Prompt 4: 'How can we reduce air pollution?'
+Generation: '\nHow “unteachable” am I?\nStoried Mind is “back from the bottom” and starting to feel stable again (see How I Survived my Bipolar Depression).\nHaving experienced such an abyss, can I really believe that I have sole ownership of anything of any importance, whether about my bipolar condition or any other aspect of life? I’m “proofed” against that solipsistic error, darn it, for once and for all. I should simply be glad that I’m alive and maybe even useful.\nWhen I opened the door and proved I could listen for a change, I found the world full of ideas and lessons. Big surprise, eh?\nMeandering rivers contain more species of life than any other ecosystem, save coral reefs – Wallace Stegner\nAdmit that the “light” at the end of the tunnel is the headlight of an oncoming train. – Woody Allen\nI will love the light for is shows me the way, yet I will endure the darkness, for it shows me the stars. –Og Mandino\nBe like a postage stamp — stick to a thinguntil you get'
+----------------------------------------
+
+Prompt 5: 'Describe a time when you had to make a difficult decision.'
+Generation: ' How did you handle the situation?\nThis is a behavioural question. The interviewer is trying to determine how you approach critical thinking, independent decision making. Being able to make sound decisions with minimal guidance is critical to your role as a supervisor, especially when you may be working in a distributed (multiple site) organization without access to peers or managers.\nThese types of questions can help tease out the type of supervisor you are and what your management style might be. It’s great if all your decisions revolve around consensus decisions, but not so great if you don’t take other people’s opinions into account when making decisions.\nTell me about a time when you disagreed with a team member. How did you resolve the situation?\nIn my 25 years of hiring, I can tell you that this is one of the questions I have most heavily relied upon as a litmus test for a great potential employee.\nThere are several red flags with this question. 1) If you decide to shoot the messenger, it just reveals that you aren’t a great team player and aren’t able to separate your emotions from the task at hand and'
+----------------------------------------
+
+Prompt 6: 'Identify the odd one out.\n\nTwitter, Instagram, Telegram'
+Generation: ', Viber.\nollyLee\n\nI guess WhatsApp but i\'ve just realized it has telegram in the group. I\'m assuming the odd one is\n`Telegram`.\nSorry.\n\nComment: Please let me know if you meant Viber as the odd one out.\n\nComment: Thank you for your quick response. Viber is afar from what "swoosh" is trying to do. Telegram is alright, although they are all complete different and do _very_ little resistance to Google. Twitter is a publicity scoreboard and Ever fancied a group for WhatsApp? Mixin.one\n\nAnswer: Chat rooms like TwitchPlaysPokemon on Skype and the famous \\strong{Stalking Horse} who helped defeat NSA track-track through encryption code music all seem to have one very familiar thing in common: \\strong{No group for} WhatsApp. "What\'s Wrong with telling a platypus or topic and not a joke? group code? The government had to seal this up and they even went out of their way to monitor the Telegrams, if they weren\'t doing'
+----------------------------------------
+
+Prompt 7: 'Explain why the following fraction is equivalent to 1/4\n\n4/16'
+Generation: '=1/4\n\nI understand that the absolute value of the fraction and the value numerically make sense, but then where did the 16 come from in the denominator?\n\nAnswer: We have: $$\\frac{16}{4}=4$$ Since: $$16=4\\times 4\\xrightarrow{exch. \\frac{16}{4}=\\frac{4\\times 4}{4} \\rightarrow \\frac{1\\times4}{4}}{\\sqrt{4\\times 4}}=\\frac{16}{4}$$\n\nAnd similarly: $$\\frac{4}{16}=\\frac{1}{4}$$\n\nComment: Thank you. How do I approach such a question without first realising there is a "4" up at the top with "x"?\n\nComment: In this case with a search: $$16\\xrightarrow{\\text{Comparisons}} 1\\times6\\xrightarrow{\\frac{16}{4}=\\frac{1\\times6}{4}} 4\\xrightarrow{\\frac{4}{16}=\\frac{16}{16}} 4\\xrightarrow{\\text{Compensations}}\\frac{16'
+----------------------------------------
+
+Prompt 8: 'Write a short story in third person narration about a protagonist who has to make an important career decision.'
+Generation: '\nWrite a short story in either first person narration, or second person narration about a protagonist who has to make an important career decision.\nWrite a short story in omniscient narration about a protagonist who has to make an important career decision.\nWrite a short story in either first person narration, or second person narration about a protagonist who has to make an important career decision. This is the story you first started in Week 11</s><s> Strategies for TDs and Senators to win referendum\nNow that an exact date for the abortion referendum has been chosen, it’s time for the campaign to overturn the 8th Amendment to intensify. Those of us […]\nPaul Murphy explains struggle for Irish abortion rights\nby Paul Murphy, MEP\nIreland is going to the polls on May 26th to repeal the 8th Amendment to the Irish Constitution.\nIrish abortion referendum date announced\nIt has been announced that the Irish abortion referendum will take place on the 26th May as part of a referendum on the Irish constitution’s 8th amendment.\n'
+----------------------------------------
+
+Prompt 9: 'Render a 3D model of a house'
+Generation: ' with view to the green Tropical Garden. 3D view of the example exterior design house, 3D lounge and section of interior design house. Adobe illustrator, vector format.\nBegin by checking the dimensions of the building lot that you are going to develop or buy. Note the main dimensions of the croissance des cicatrices bouche design house including the garage, if any, and any waterways, roadworks or canals that pass through. Determine the minimum standards to be taken into consideration, construction standards, privacy and security. Plan how much space you have and, accordingly, plan the size of the house. Architect new york house; determine the dimensions of the rooms; read the space requirements, plans and prices. Now that we know the basics of a house but what meaning has home?.\ncaptivating tropical house design in philippines on trend #7 - Untitled 171622 by winsome images of tropical house design in Photo . istikharb.ho.id.</s><s> UK Attorney General says "economic" cases will get toured out, but not now.\nLast year, when Ars first reported on'
+----------------------------------------
+
+Prompt 10: 'Evaluate this sentence for spelling and grammar mistakes\n\nHe finnished his meal and left the resturant'
+Generation: " in spite of he did not finish himself\n\nComment: 'correct' and 'grammatical' do not necessarily go together.\n\nComment: I doubt that he is 'most correct'.  The correctness is relative to a 'standard' grammar.  My spell-checker picked up on the 'resturant' and 'finished', but it's happy with the rest.  In any case, both 'standard' English and 'My dad's English' tried to pick up on this sort of stuff a few hundred years ago\n\nComment: Maybe you can suggest other grammar considerations? The line just seems confusing to me\n\nComment: @ProZak: this is really can of worms. But, off-hand, it does not have the right tense for the 'would' of the 'in spite' and it sounds over-formal as it would be clearer if it had been phrased differently.  ('He left the resteraunt even though he didn't finish his meal' or 'In spite of not finishing his meal he left the resteraunt' or 'he finished his meal then left the restraunt').   But none of these 'altern"
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 35.19

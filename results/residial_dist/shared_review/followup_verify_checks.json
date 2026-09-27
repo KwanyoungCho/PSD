@@ -1,0 +1,157 @@
+{
+  "scope": "CPU production sampler + chain verify (600000 proposals), and B=1 cache lookup with JIT model execution stubbed",
+  "monte_carlo": [
+    {
+      "n": 200000,
+      "proposal_hist": [
+        0.69975,
+        0.19979,
+        0.10046
+      ],
+      "first_output_hist": [
+        0.50047,
+        0.300095,
+        0.199435
+      ],
+      "reject_count": 39856,
+      "hit_miss_identical": true,
+      "committed_root_not_reverified": true,
+      "proposal_max_abs_error": 0.00045999850988387436,
+      "output_max_abs_error": 0.0005650029802322376,
+      "correction_hist": [
+        0.0,
+        0.5033370132476916,
+        0.4966629867523083
+      ],
+      "correction_expected": [
+        0.0,
+        0.5,
+        0.4999999701976776
+      ],
+      "correction_max_abs_error": 0.0033370132476916448,
+      "bonus_max_abs_error": 0.0013716722186217223
+    },
+    {
+      "n": 200000,
+      "proposal_hist": [
+        0.28011,
+        0.28964,
+        0.43025
+      ],
+      "first_output_hist": [
+        0.29963,
+        0.29965,
+        0.40072
+      ],
+      "reject_count": 5906,
+      "hit_miss_identical": true,
+      "committed_root_not_reverified": true,
+      "proposal_max_abs_error": 0.0003599916553497229,
+      "output_max_abs_error": 0.0007199940395355431,
+      "correction_hist": [
+        0.66102268879106,
+        0.33897731120894004,
+        0.0
+      ],
+      "correction_expected": [
+        0.6666663289070129,
+        0.33333367109298706,
+        0.0
+      ],
+      "correction_max_abs_error": 0.005643640115952975,
+      "bonus_max_abs_error": 0.0017259777641279728
+    },
+    {
+      "n": 200000,
+      "proposal_hist": [
+        0.44878,
+        0.26208,
+        0.169945,
+        0.119195
+      ],
+      "first_output_hist": [
+        0.49886,
+        0.25213,
+        0.14963,
+        0.09938
+      ],
+      "reject_count": 10016,
+      "hit_miss_identical": true,
+      "committed_root_not_reverified": true,
+      "proposal_max_abs_error": 0.0020800095367431437,
+      "output_max_abs_error": 0.0021300000000000208,
+      "correction_hist": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "correction_expected": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "correction_max_abs_error": 0.0,
+      "bonus_max_abs_error": 0.0013064377252072212
+    }
+  ],
+  "cache_response": [
+    {
+      "case": "hit",
+      "passed": true,
+      "cache_hit": true
+    },
+    {
+      "case": "wrong_token",
+      "passed": true,
+      "cache_hit": false
+    },
+    {
+      "case": "wrong_position",
+      "passed": true,
+      "cache_hit": false
+    },
+    {
+      "case": "wrong_sequence",
+      "passed": true,
+      "cache_hit": false
+    },
+    {
+      "case": "empty",
+      "passed": true,
+      "cache_hit": false
+    }
+  ],
+  "wrong_denominator_control": {
+    "output": [
+      0.76,
+      0.2,
+      0.04000000000000001
+    ],
+    "target": [
+      0.5,
+      0.3,
+      0.2
+    ],
+    "tv": 0.26
+  },
+  "original_campaign_tracked_code_unchanged": {
+    "ssd/ssd/engine/helpers/distribution_probe.py": true,
+    "ssd/ssd/engine/helpers/entropy_probe.py": true,
+    "ssd/ssd/engine/verifier.py": true,
+    "ssd/ssd/engine/model_runner.py": true,
+    "ssd/ssd/engine/helpers/cudagraph_helpers.py": true,
+    "ssd/ssd/models/llama3.py": true,
+    "ssd/ssd/engine/llm_engine.py": true,
+    "ssd/experiments/proxy_source_ablation/probe_replay_20260910/run.py": true
+  },
+  "production_code_sha256": {
+    "ssd/ssd/utils/verify.py": "53019574ef1fca3b95f51512f2228a44d6421c91f603be74d693bcb3c65c7f15",
+    "ssd/ssd/layers/sampler.py": "b4b18802875b07bca3688c34ae20328497284bec704239661ea31280938d4116",
+    "ssd/ssd/utils/async_helpers/async_spec_helpers.py": "0d70779098c5051fcba5d3add5ff0b7896139f1b7789babe701a8df6eaa40f24",
+    "ssd/ssd/engine/helpers/p2_tree.py": "5e5d33ef918e2a074e7a8537ea1b6078a68366047f738adda34ed036e598ddc0",
+    "ssd/ssd/engine/draft_runner.py": "f739b84c3053a9f55402ac00b0eb6a2cf538db526125c907941cab1f55cd2518"
+  },
+  "limitation": "Not an end-to-end GPU/TP/KV correctness proof; ordinary floating-point sampling tolerances apply. Original experiment target is AWQ, not the unquantized checkpoint."
+}

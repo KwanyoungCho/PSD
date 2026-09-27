@@ -449,6 +449,13 @@ class Verifier(VerifierBase):
         logits_p = logits_p_flat.view(
             batch_size, _step_lookahead + 1, -1)  # [b, vk+1, v]
 
+        # All-layer early-exit probe (SSD_DUET_PROBE_LAYERS). Measurement
+        # only: reads the probe buffers the just-finished forward filled and
+        # scores counterfactual proxy layers/sources against this step's true
+        # correction distribution. Never feeds anything back into the step.
+        if getattr(self.target_model_runner, "_probe_layers", ()):
+            self._run_exit_probe(logits_p, speculate_result, _step_lookahead, seqs[0])
+
         from ssd.engine.helpers.cudagraph_helpers import (
             duet_record as _mr, duet_close as _mc)
         _mev_accept_prep = _mr("verify_accept_prep")
@@ -882,6 +889,69 @@ class Verifier(VerifierBase):
         if _detail_profile:
             _mc_tree("tree_proxy_send", _ev_send)
 
+    @torch.inference_mode()
+    def _run_exit_probe(self, logits_p, speculate_result, vk, seq=None):
+        """Score every probe layer x candidate source against this step.
+
+        B=1 only (the DUET chain contract). Cost is deliberately unbounded --
+        this path exists to measure quality, never to be fast.
+        """
+        mr = self.target_model_runner
+        if mr.config.max_num_seqs != 1:
+            return
+        probe = getattr(self, "_exit_probe", None)
+        probe_kind = os.environ.get("SSD_DUET_PROBE_KIND", "coverage")
+        context_probe = probe_kind in ("entropy", "distribution")
+        if probe is None:
+            args = dict(layers=mr._probe_layers,
+                        out_path=os.environ.get("SSD_DUET_PROBE_OUT", "exit_probe.json"),
+                        exit_layer=int(mr.config.duet_exit_layer))
+            if context_probe:
+                if self.sampler_x is not None or mr.config.duet_p1_tree_policy != "off" or mr.config.duet_p2_tree_policy != "off":
+                    raise ValueError("context probe requires chain mode and no sampler_x")
+                if probe_kind == "entropy":
+                    from ssd.engine.helpers.entropy_probe import EntropyProbe
+                    probe = EntropyProbe(**args)
+                else:
+                    from ssd.engine.helpers.distribution_probe import DistributionProbe
+                    probe = DistributionProbe(stride=int(os.environ.get("SSD_DUET_PROBE_STRIDE", "8")), **args)
+            else:
+                from ssd.engine.helpers.exit_probe import ExitProbe
+                probe = ExitProbe(top_m=int(os.environ.get("SSD_DUET_PROBE_TOPM", "64")), **args)
+            self._exit_probe = probe
+
+        mdl = mr.model.model
+        rows = vk + 1
+        n_layer = len(mr._probe_layers)
+        # (hidden + residual) -> final norm -> shared lm_head, batched over
+        # every probe layer in ONE lm_head call.
+        hs = mdl._probe_h[:, :rows]                    # [L, rows, H]
+        rs = mdl._probe_r[:, :rows]
+        normed = mdl.norm((hs + rs).reshape(n_layer * rows, -1), None)
+        # compute_logits is a TP collective (every rank must join the gather).
+        # The probe runs on rank 0 only, so it MUST use the full-vocab rank-0
+        # lm_head replica instead -- calling compute_logits here deadlocks the
+        # other ranks (600s NCCL GATHER timeout).
+        e_logits = torch.nn.functional.linear(normed, mr._duet_lm_head_replica)
+        temperature = float(seq.temperature) if context_probe else 1.0
+        draft_temperature = (float(seq.draft_temperature) if context_probe
+                             and seq.draft_temperature is not None else temperature)
+        if temperature <= 0 or draft_temperature <= 0:
+            raise ValueError("entropy probe requires positive temperatures")
+        p_E = torch.softmax(
+            e_logits.float().view(n_layer, rows, -1) / temperature, dim=-1)
+        p_T = torch.softmax(logits_p[0].float() / temperature, dim=-1)
+        p_D = torch.softmax(
+            speculate_result.logits_q[0, :vk].float() / draft_temperature, dim=-1)
+        y = speculate_result.speculations[0, 1:vk + 1]            # [vk]
+        if context_probe:
+            probe.observe(p_E, p_D, p_T, y, seq_id=seq.seq_id,
+                          prefix_len=seq.num_tokens, temperature=temperature)
+        else:
+            probe.observe(p_E, p_D, p_T, y)
+        if not context_probe and probe.n_steps % 50 == 0:
+            probe.dump()
+
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,
                                  valid_k=None):
@@ -1016,8 +1086,17 @@ class Verifier(VerifierBase):
         p_D_y = p_D.gather(2, gather_idx).squeeze(-1)  # [B, K]
         accept_probs = (p_E_y / (p_D_y + 1e-10)).clamp(max=1.0)  # [B, K]
 
-        # Residual proxy: [p_E - p_D]_+
-        residual = (p_E - p_D).clamp(min=0)  # [B, K, V]
+        # Candidate source (config.duet_proxy_source, resolved once at config
+        # time — never a per-step tensor branch, which would alter the
+        # captured graph).  "residual" is the champion path; the other two
+        # are the P2 source ablation arms.  p_E must not be mutated here: the
+        # cache-miss block below re-reads it.
+        if config.duet_proxy_source == "residual":
+            residual = (p_E - p_D).clamp(min=0)  # [B, K, V]
+        elif config.duet_proxy_source == "proxy":
+            residual = p_E.clone()               # target-only baseline
+        else:  # "draft"
+            residual = p_D.clone()               # draft-only baseline
         residual.scatter_(2, gather_idx, 0.0)  # exclude draft token y_i
         topk_probs, topk_ids = residual.topk(top_k, dim=-1)  # [B, K, top_k]
         topk_sum = topk_probs.sum(dim=-1, keepdim=True).clamp(min=1e-10)

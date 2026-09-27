@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "records": [
+    {
+      "temperature": 1.0,
+      "proposals": 100000,
+      "rejections": 19999,
+      "proposal_error": 0.00037001192092900315,
+      "output_error": 0.0007999880790710567,
+      "correction_error": 0.0031750991532931705,
+      "hit_miss_identical": true,
+      "committed_root_not_reverified": true
+    },
+    {
+      "temperature": 0.7,
+      "proposals": 100000,
+      "rejections": 24281,
+      "proposal_error": 0.0004772798633575423,
+      "output_error": 0.0008178003740310635,
+      "correction_error": 0.001545722279564954,
+      "hit_miss_identical": true,
+      "committed_root_not_reverified": true
+    },
+    {
+      "temperature": 0.5,
+      "proposals": 100000,
+      "rejections": 25154,
+      "proposal_error": 0.0013974625968933285,
+      "output_error": 0.0034247305679321327,
+      "correction_error": 0.0033416330264616767,
+      "hit_miss_identical": true,
+      "committed_root_not_reverified": true
+    }
+  ],
+  "production_code_sha256": {
+    "ssd/ssd/utils/verify.py": "53019574ef1fca3b95f51512f2228a44d6421c91f603be74d693bcb3c65c7f15",
+    "ssd/ssd/layers/sampler.py": "b4b18802875b07bca3688c34ae20328497284bec704239661ea31280938d4116"
+  },
+  "scope": "300,000 CPU proposals using production sampler and verifier; same raw logits and actual T in q sampling/verification. Not a GPU/TP/KV distributional proof."
+}

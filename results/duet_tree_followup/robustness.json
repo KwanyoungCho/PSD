@@ -1,0 +1,2801 @@
+{
+  "scope": "Exploratory local C=3 allocation; no online AL claim",
+  "summary": {
+    "all": {
+      "cases": 602,
+      "questions": 369,
+      "means": {
+        "delta": 0.011405597118126762,
+        "positive": 0.029232624328453843,
+        "negative": -0.01782702721032708,
+        "integration_delta_lower": 0.011275786831338364,
+        "integration_delta_upper": 0.01194504278920711,
+        "calibration_numeric_decision_stable": 0.9978368198707183
+      },
+      "leave_one_prompt_out_mean_deltas": [
+        0.01228067532598702,
+        0.010707007533241296,
+        0.009005077017441888,
+        0.012114730738403391,
+        0.011048984636763718,
+        0.009510678983629877,
+        0.011639591564083498,
+        0.01228067532598702
+      ],
+      "all_group_ci": {
+        "mean": 0.011405597118126762,
+        "ci95": [
+          -0.0020208192107499094,
+          0.024562419581656787
+        ],
+        "questions": 369
+      },
+      "worst_losses": [
+        {
+          "question_id": 403,
+          "group": "math_reasoning",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 13600,
+          "uid": "403_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9973490872720591,
+          "frozen_breadth": 0.9973490872720591,
+          "q_gain": 0.0006164472571094687,
+          "frozen_gain": 0.0006164472571094687,
+          "true_reach_gain": 0.9993233335513063,
+          "frozen_true_gain": 0.0006164472571094687,
+          "oracle": 0.9997743082715889,
+          "observed": 0.9973490872720591,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              0,
+              3,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              1,
+              2,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.9967326400149495,
+          "g3_error_se": 3.3310261219074463e-14,
+          "calibration_loo_min": -0.9967326400149495,
+          "calibration_loo_max": -0.9967326400149495,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.9967326400149495,
+          "integration_delta_lower": -0.9967327298587139,
+          "integration_delta_upper": -0.9967324067910635,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.9967326400149495,
+          "loo_1": -0.9967326400149495,
+          "loo_2": -0.9967326400149495,
+          "loo_3": -0.9967326400149495,
+          "loo_4": -0.9967326400149495,
+          "loo_5": -0.9967326400149495,
+          "loo_6": -0.9967326400149495,
+          "loo_7": -0.9967326400149495
+        },
+        {
+          "question_id": 196,
+          "group": "translation",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 6848,
+          "uid": "196_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9936143192089902,
+          "frozen_breadth": 0.9936143192089902,
+          "q_gain": 0.9936166059800251,
+          "frozen_gain": 0.0013497174505807208,
+          "true_reach_gain": 0.9986464925852396,
+          "frozen_true_gain": 0.9936143192089902,
+          "oracle": 0.9999735046034445,
+          "observed": 0.9936143192089902,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              0,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              0,
+              0,
+              3
+            ],
+            "frozen_true_gain": [
+              1,
+              1,
+              1
+            ],
+            "oracle": [
+              1,
+              0,
+              2
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.9922646017584095,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.9922646017584095,
+          "calibration_loo_max": -0.9922646017584095,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.9922646017584095,
+          "integration_delta_lower": -0.9922646017584096,
+          "integration_delta_upper": -0.9922646017584096,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.9922646017584095,
+          "loo_1": -0.9922646017584095,
+          "loo_2": -0.9922646017584095,
+          "loo_3": -0.9922646017584095,
+          "loo_4": -0.9922646017584095,
+          "loo_5": -0.9922646017584095,
+          "loo_6": -0.9922646017584095,
+          "loo_7": -0.9922646017584095
+        },
+        {
+          "question_id": 367,
+          "group": "qa",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 12320,
+          "uid": "367_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9990406320590941,
+          "frozen_breadth": 0.9990406320590941,
+          "q_gain": 0.9990850272504574,
+          "frozen_gain": 0.22039035530180587,
+          "true_reach_gain": 0.9997407396785332,
+          "frozen_true_gain": 0.9990406320590941,
+          "oracle": 0.9997407396785332,
+          "observed": 0.9990406320590941,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              0,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              1,
+              0,
+              2
+            ],
+            "frozen_true_gain": [
+              1,
+              1,
+              1
+            ],
+            "oracle": [
+              1,
+              0,
+              2
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.7786502767572883,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.7786502767572883,
+          "calibration_loo_max": 0.0,
+          "calibration_loo_decision_change": 1.0,
+          "positive": 0,
+          "negative": -0.7786502767572883,
+          "integration_delta_lower": -0.7786502767572882,
+          "integration_delta_upper": -0.7786502767572882,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.7786502767572883,
+          "loo_1": -0.7786502767572883,
+          "loo_2": -0.7786502767572883,
+          "loo_3": -0.7786502767572883,
+          "loo_4": -0.7786502767572883,
+          "loo_5": -0.7786502767572883,
+          "loo_6": 0.0,
+          "loo_7": -0.7786502767572883
+        },
+        {
+          "question_id": 235,
+          "group": "translation",
+          "phase": 1,
+          "policy": "q_path",
+          "serial": 8096,
+          "uid": "235_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            1,
+            0,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.6946605324546942,
+          "frozen_breadth": 0.6946605324546942,
+          "q_gain": 5.937016828022586e-12,
+          "frozen_gain": 4.3921417122711495e-05,
+          "true_reach_gain": 0.8498764522372539,
+          "frozen_true_gain": 0.6946605324487571,
+          "oracle": 0.8967902092809524,
+          "observed": 0.6946605324546942,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              1,
+              0
+            ],
+            "frozen_gain": [
+              1,
+              2,
+              0
+            ],
+            "true_reach_gain": [
+              0,
+              1,
+              2
+            ],
+            "frozen_true_gain": [
+              2,
+              0,
+              1
+            ],
+            "oracle": [
+              0,
+              0,
+              3
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.6946166110375714,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.6946166110375714,
+          "calibration_loo_max": -0.6946166110375714,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.6946166110375714,
+          "integration_delta_lower": -0.6946166110375714,
+          "integration_delta_upper": -0.6946166110375714,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.6946166110375714,
+          "loo_1": -0.6946166110375714,
+          "loo_2": -0.6946166110375714,
+          "loo_3": -0.6946166110375714,
+          "loo_4": -0.6946166110375714,
+          "loo_5": -0.6946166110375714,
+          "loo_6": -0.6946166110375714,
+          "loo_7": -0.6946166110375714
+        },
+        {
+          "question_id": 404,
+          "group": "math_reasoning",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 13664,
+          "uid": "404_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            1,
+            0,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9885831476915001,
+          "frozen_breadth": 0.9885831476915001,
+          "q_gain": 0.9885831476915001,
+          "frozen_gain": 0.2996064681490099,
+          "true_reach_gain": 0.992505641283357,
+          "frozen_true_gain": 0.9885831476915001,
+          "oracle": 0.992505641283357,
+          "observed": 0.9885831476915001,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              1,
+              1,
+              1
+            ],
+            "frozen_gain": [
+              1,
+              2,
+              0
+            ],
+            "true_reach_gain": [
+              1,
+              0,
+              2
+            ],
+            "frozen_true_gain": [
+              1,
+              1,
+              1
+            ],
+            "oracle": [
+              1,
+              0,
+              2
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.6889766795424903,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.6889766795424903,
+          "calibration_loo_max": -0.6889766795424903,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.6889766795424903,
+          "integration_delta_lower": -0.6889766795424902,
+          "integration_delta_upper": -0.6889766795424902,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.6889766795424903,
+          "loo_1": -0.6889766795424903,
+          "loo_2": -0.6889766795424903,
+          "loo_3": -0.6889766795424903,
+          "loo_4": -0.6889766795424903,
+          "loo_5": -0.6889766795424903,
+          "loo_6": -0.6889766795424903,
+          "loo_7": -0.6889766795424903
+        }
+      ],
+      "largest_gains": [
+        {
+          "question_id": 170,
+          "group": "translation",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 6080,
+          "uid": "170_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.1027615734432879,
+          "frozen_breadth": 0.1027615734432879,
+          "q_gain": 0.986252271060202,
+          "frozen_gain": 0.986252271060202,
+          "true_reach_gain": 0.986252271060202,
+          "frozen_true_gain": 0.986252271060202,
+          "oracle": 0.986252271060202,
+          "observed": 0.1027615734432879,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.8834906976169141,
+          "g3_error_se": 5.299159248316063e-10,
+          "calibration_loo_min": 0.8834906976169141,
+          "calibration_loo_max": 0.8834906976169141,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.8834906976169141,
+          "negative": 0,
+          "integration_delta_lower": 0.8832256924888364,
+          "integration_delta_upper": 0.883593414463653,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.8834906976169141,
+          "loo_1": 0.8834906976169141,
+          "loo_2": 0.8834906976169141,
+          "loo_3": 0.8834906976169141,
+          "loo_4": 0.8834906976169141,
+          "loo_5": 0.8834906976169141,
+          "loo_6": 0.8834906976169141,
+          "loo_7": 0.8834906976169141
+        },
+        {
+          "question_id": 137,
+          "group": "mt_bench",
+          "phase": 1,
+          "policy": "q_path",
+          "serial": 4096,
+          "uid": "137_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.21530104320494192,
+          "frozen_breadth": 0.21530104320494192,
+          "q_gain": 0.9975978156706918,
+          "frozen_gain": 0.9975978156706918,
+          "true_reach_gain": 0.9975978156706918,
+          "frozen_true_gain": 0.9975978156706918,
+          "oracle": 0.9975978156706918,
+          "observed": 0.21530104320494192,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.7822967724657499,
+          "g3_error_se": 7.395771064182803e-14,
+          "calibration_loo_min": 0.7822967724657499,
+          "calibration_loo_max": 0.7822967724657499,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.7822967724657499,
+          "negative": 0,
+          "integration_delta_lower": 0.7822956607684208,
+          "integration_delta_upper": 0.7822968381907504,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.7822967724657499,
+          "loo_1": 0.7822967724657499,
+          "loo_2": 0.7822967724657499,
+          "loo_3": 0.7822967724657499,
+          "loo_4": 0.7822967724657499,
+          "loo_5": 0.7822967724657499,
+          "loo_6": 0.7822967724657499,
+          "loo_7": 0.7822967724657499
+        },
+        {
+          "question_id": 111,
+          "group": "mt_bench",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 2336,
+          "uid": "111_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.28447613613963435,
+          "frozen_breadth": 0.28447613613963435,
+          "q_gain": 0.9060730339091252,
+          "frozen_gain": 0.9060730339091252,
+          "true_reach_gain": 0.9060730339091252,
+          "frozen_true_gain": 0.9060730339091252,
+          "oracle": 0.9060730339091252,
+          "observed": 0.28447613613963435,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.6215968977694908,
+          "g3_error_se": 1.0777537194523932e-10,
+          "calibration_loo_min": 0.6215968977694908,
+          "calibration_loo_max": 0.6215968977694908,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.6215968977694908,
+          "negative": 0,
+          "integration_delta_lower": 0.6214821960993826,
+          "integration_delta_upper": 0.6217681758540063,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.6215968977694908,
+          "loo_1": 0.6215968977694908,
+          "loo_2": 0.6215968977694908,
+          "loo_3": 0.6215968977694908,
+          "loo_4": 0.6215968977694908,
+          "loo_5": 0.6215968977694908,
+          "loo_6": 0.6215968977694908,
+          "loo_7": 0.6215968977694908
+        },
+        {
+          "question_id": 121,
+          "group": "mt_bench",
+          "phase": 1,
+          "policy": "q_path",
+          "serial": 2944,
+          "uid": "121_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.3078786360474651,
+          "frozen_breadth": 0.3078786360474651,
+          "q_gain": 0.9254812515387525,
+          "frozen_gain": 0.9254812515387525,
+          "true_reach_gain": 0.9928902779037193,
+          "frozen_true_gain": 0.9254812515387525,
+          "oracle": 0.9928902779037193,
+          "observed": 0.3078786360474651,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              1,
+              0
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              2,
+              1,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.6176026154912874,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": 0.0,
+          "calibration_loo_max": 0.6176026154912874,
+          "calibration_loo_decision_change": 1.0,
+          "positive": 0.6176026154912874,
+          "negative": 0,
+          "integration_delta_lower": 0.6176026154912874,
+          "integration_delta_upper": 0.6176026154912874,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.6176026154912874,
+          "loo_1": 0.6176026154912874,
+          "loo_2": 0.6176026154912874,
+          "loo_3": 0.6176026154912874,
+          "loo_4": 0.6176026154912874,
+          "loo_5": 0.6176026154912874,
+          "loo_6": 0.0,
+          "loo_7": 0.6176026154912874
+        },
+        {
+          "question_id": 466,
+          "group": "math_reasoning",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 16032,
+          "uid": "466_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.3559570677452482,
+          "frozen_breadth": 0.3559570677452482,
+          "q_gain": 0.8427769146506642,
+          "frozen_gain": 0.8427769146506642,
+          "true_reach_gain": 0.8427769146506642,
+          "frozen_true_gain": 0.8427769146506642,
+          "oracle": 0.8427769146506642,
+          "observed": 0.3559570677452482,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.48681984690541596,
+          "g3_error_se": 2.2136101692125893e-09,
+          "calibration_loo_min": 0.48681984690541596,
+          "calibration_loo_max": 0.48681984690541596,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.48681984690541596,
+          "negative": 0,
+          "integration_delta_lower": 0.4863615428375524,
+          "integration_delta_upper": 0.4877557381668149,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.48681984690541596,
+          "loo_1": 0.48681984690541596,
+          "loo_2": 0.48681984690541596,
+          "loo_3": 0.48681984690541596,
+          "loo_4": 0.48681984690541596,
+          "loo_5": 0.48681984690541596,
+          "loo_6": 0.48681984690541596,
+          "loo_7": 0.48681984690541596
+        }
+      ]
+    },
+    "1": {
+      "cases": 462,
+      "questions": 318,
+      "means": {
+        "delta": 0.012531509297729615,
+        "positive": 0.032889932212367794,
+        "negative": -0.020358422914638175,
+        "integration_delta_lower": 0.01239842157856264,
+        "integration_delta_upper": 0.013075056272087182,
+        "calibration_numeric_decision_stable": 1.0
+      },
+      "leave_one_prompt_out_mean_deltas": [
+        0.014143594639722803,
+        0.012532395535779001,
+        0.012532395535779001,
+        0.014481742751822221,
+        0.012531509297729615,
+        0.012532395535779001,
+        0.014377288771891691,
+        0.014143594639722803
+      ],
+      "all_group_ci": {
+        "mean": 0.012531509297729615,
+        "ci95": [
+          -0.003397727653346099,
+          0.028203513870681964
+        ],
+        "questions": 318
+      },
+      "worst_losses": [
+        {
+          "question_id": 403,
+          "group": "math_reasoning",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 13600,
+          "uid": "403_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9973490872720591,
+          "frozen_breadth": 0.9973490872720591,
+          "q_gain": 0.0006164472571094687,
+          "frozen_gain": 0.0006164472571094687,
+          "true_reach_gain": 0.9993233335513063,
+          "frozen_true_gain": 0.0006164472571094687,
+          "oracle": 0.9997743082715889,
+          "observed": 0.9973490872720591,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              0,
+              3,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              1,
+              2,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.9967326400149495,
+          "g3_error_se": 3.3310261219074463e-14,
+          "calibration_loo_min": -0.9967326400149495,
+          "calibration_loo_max": -0.9967326400149495,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.9967326400149495,
+          "integration_delta_lower": -0.9967327298587139,
+          "integration_delta_upper": -0.9967324067910635,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.9967326400149495,
+          "loo_1": -0.9967326400149495,
+          "loo_2": -0.9967326400149495,
+          "loo_3": -0.9967326400149495,
+          "loo_4": -0.9967326400149495,
+          "loo_5": -0.9967326400149495,
+          "loo_6": -0.9967326400149495,
+          "loo_7": -0.9967326400149495
+        },
+        {
+          "question_id": 196,
+          "group": "translation",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 6848,
+          "uid": "196_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9936143192089902,
+          "frozen_breadth": 0.9936143192089902,
+          "q_gain": 0.9936166059800251,
+          "frozen_gain": 0.0013497174505807208,
+          "true_reach_gain": 0.9986464925852396,
+          "frozen_true_gain": 0.9936143192089902,
+          "oracle": 0.9999735046034445,
+          "observed": 0.9936143192089902,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              0,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              0,
+              0,
+              3
+            ],
+            "frozen_true_gain": [
+              1,
+              1,
+              1
+            ],
+            "oracle": [
+              1,
+              0,
+              2
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.9922646017584095,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.9922646017584095,
+          "calibration_loo_max": -0.9922646017584095,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.9922646017584095,
+          "integration_delta_lower": -0.9922646017584096,
+          "integration_delta_upper": -0.9922646017584096,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.9922646017584095,
+          "loo_1": -0.9922646017584095,
+          "loo_2": -0.9922646017584095,
+          "loo_3": -0.9922646017584095,
+          "loo_4": -0.9922646017584095,
+          "loo_5": -0.9922646017584095,
+          "loo_6": -0.9922646017584095,
+          "loo_7": -0.9922646017584095
+        },
+        {
+          "question_id": 367,
+          "group": "qa",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 12320,
+          "uid": "367_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9990406320590941,
+          "frozen_breadth": 0.9990406320590941,
+          "q_gain": 0.9990850272504574,
+          "frozen_gain": 0.22039035530180587,
+          "true_reach_gain": 0.9997407396785332,
+          "frozen_true_gain": 0.9990406320590941,
+          "oracle": 0.9997407396785332,
+          "observed": 0.9990406320590941,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              0,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              1,
+              0,
+              2
+            ],
+            "frozen_true_gain": [
+              1,
+              1,
+              1
+            ],
+            "oracle": [
+              1,
+              0,
+              2
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.7786502767572883,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.7786502767572883,
+          "calibration_loo_max": 0.0,
+          "calibration_loo_decision_change": 1.0,
+          "positive": 0,
+          "negative": -0.7786502767572883,
+          "integration_delta_lower": -0.7786502767572882,
+          "integration_delta_upper": -0.7786502767572882,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.7786502767572883,
+          "loo_1": -0.7786502767572883,
+          "loo_2": -0.7786502767572883,
+          "loo_3": -0.7786502767572883,
+          "loo_4": -0.7786502767572883,
+          "loo_5": -0.7786502767572883,
+          "loo_6": 0.0,
+          "loo_7": -0.7786502767572883
+        },
+        {
+          "question_id": 235,
+          "group": "translation",
+          "phase": 1,
+          "policy": "q_path",
+          "serial": 8096,
+          "uid": "235_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            1,
+            0,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.6946605324546942,
+          "frozen_breadth": 0.6946605324546942,
+          "q_gain": 5.937016828022586e-12,
+          "frozen_gain": 4.3921417122711495e-05,
+          "true_reach_gain": 0.8498764522372539,
+          "frozen_true_gain": 0.6946605324487571,
+          "oracle": 0.8967902092809524,
+          "observed": 0.6946605324546942,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              1,
+              0
+            ],
+            "frozen_gain": [
+              1,
+              2,
+              0
+            ],
+            "true_reach_gain": [
+              0,
+              1,
+              2
+            ],
+            "frozen_true_gain": [
+              2,
+              0,
+              1
+            ],
+            "oracle": [
+              0,
+              0,
+              3
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.6946166110375714,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.6946166110375714,
+          "calibration_loo_max": -0.6946166110375714,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.6946166110375714,
+          "integration_delta_lower": -0.6946166110375714,
+          "integration_delta_upper": -0.6946166110375714,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.6946166110375714,
+          "loo_1": -0.6946166110375714,
+          "loo_2": -0.6946166110375714,
+          "loo_3": -0.6946166110375714,
+          "loo_4": -0.6946166110375714,
+          "loo_5": -0.6946166110375714,
+          "loo_6": -0.6946166110375714,
+          "loo_7": -0.6946166110375714
+        },
+        {
+          "question_id": 354,
+          "group": "qa",
+          "phase": 1,
+          "policy": "q_path",
+          "serial": 11968,
+          "uid": "354_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            2,
+            1
+          ],
+          "budget": 3,
+          "q_breadth": 0.99750505507139,
+          "frozen_breadth": 0.99750505507139,
+          "q_gain": 0.99750505507139,
+          "frozen_gain": 0.4272490849426881,
+          "true_reach_gain": 0.9657754789952508,
+          "frozen_true_gain": 0.99750505507139,
+          "oracle": 0.99750505507139,
+          "observed": 0.99750505507139,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              1,
+              1,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              0,
+              1
+            ],
+            "true_reach_gain": [
+              1,
+              2,
+              0
+            ],
+            "frozen_true_gain": [
+              1,
+              1,
+              1
+            ],
+            "oracle": [
+              1,
+              1,
+              1
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.5702559701287019,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.5702559701287019,
+          "calibration_loo_max": -0.5702559701287019,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.5702559701287019,
+          "integration_delta_lower": -0.5702559701287019,
+          "integration_delta_upper": -0.5702559701287019,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.5702559701287019,
+          "loo_1": -0.5702559701287019,
+          "loo_2": -0.5702559701287019,
+          "loo_3": -0.5702559701287019,
+          "loo_4": -0.5702559701287019,
+          "loo_5": -0.5702559701287019,
+          "loo_6": -0.5702559701287019,
+          "loo_7": -0.5702559701287019
+        }
+      ],
+      "largest_gains": [
+        {
+          "question_id": 170,
+          "group": "translation",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 6080,
+          "uid": "170_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.1027615734432879,
+          "frozen_breadth": 0.1027615734432879,
+          "q_gain": 0.986252271060202,
+          "frozen_gain": 0.986252271060202,
+          "true_reach_gain": 0.986252271060202,
+          "frozen_true_gain": 0.986252271060202,
+          "oracle": 0.986252271060202,
+          "observed": 0.1027615734432879,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.8834906976169141,
+          "g3_error_se": 5.299159248316063e-10,
+          "calibration_loo_min": 0.8834906976169141,
+          "calibration_loo_max": 0.8834906976169141,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.8834906976169141,
+          "negative": 0,
+          "integration_delta_lower": 0.8832256924888364,
+          "integration_delta_upper": 0.883593414463653,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.8834906976169141,
+          "loo_1": 0.8834906976169141,
+          "loo_2": 0.8834906976169141,
+          "loo_3": 0.8834906976169141,
+          "loo_4": 0.8834906976169141,
+          "loo_5": 0.8834906976169141,
+          "loo_6": 0.8834906976169141,
+          "loo_7": 0.8834906976169141
+        },
+        {
+          "question_id": 137,
+          "group": "mt_bench",
+          "phase": 1,
+          "policy": "q_path",
+          "serial": 4096,
+          "uid": "137_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.21530104320494192,
+          "frozen_breadth": 0.21530104320494192,
+          "q_gain": 0.9975978156706918,
+          "frozen_gain": 0.9975978156706918,
+          "true_reach_gain": 0.9975978156706918,
+          "frozen_true_gain": 0.9975978156706918,
+          "oracle": 0.9975978156706918,
+          "observed": 0.21530104320494192,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.7822967724657499,
+          "g3_error_se": 7.395771064182803e-14,
+          "calibration_loo_min": 0.7822967724657499,
+          "calibration_loo_max": 0.7822967724657499,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.7822967724657499,
+          "negative": 0,
+          "integration_delta_lower": 0.7822956607684208,
+          "integration_delta_upper": 0.7822968381907504,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.7822967724657499,
+          "loo_1": 0.7822967724657499,
+          "loo_2": 0.7822967724657499,
+          "loo_3": 0.7822967724657499,
+          "loo_4": 0.7822967724657499,
+          "loo_5": 0.7822967724657499,
+          "loo_6": 0.7822967724657499,
+          "loo_7": 0.7822967724657499
+        },
+        {
+          "question_id": 111,
+          "group": "mt_bench",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 2336,
+          "uid": "111_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.28447613613963435,
+          "frozen_breadth": 0.28447613613963435,
+          "q_gain": 0.9060730339091252,
+          "frozen_gain": 0.9060730339091252,
+          "true_reach_gain": 0.9060730339091252,
+          "frozen_true_gain": 0.9060730339091252,
+          "oracle": 0.9060730339091252,
+          "observed": 0.28447613613963435,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.6215968977694908,
+          "g3_error_se": 1.0777537194523932e-10,
+          "calibration_loo_min": 0.6215968977694908,
+          "calibration_loo_max": 0.6215968977694908,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.6215968977694908,
+          "negative": 0,
+          "integration_delta_lower": 0.6214821960993826,
+          "integration_delta_upper": 0.6217681758540063,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.6215968977694908,
+          "loo_1": 0.6215968977694908,
+          "loo_2": 0.6215968977694908,
+          "loo_3": 0.6215968977694908,
+          "loo_4": 0.6215968977694908,
+          "loo_5": 0.6215968977694908,
+          "loo_6": 0.6215968977694908,
+          "loo_7": 0.6215968977694908
+        },
+        {
+          "question_id": 121,
+          "group": "mt_bench",
+          "phase": 1,
+          "policy": "q_path",
+          "serial": 2944,
+          "uid": "121_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.3078786360474651,
+          "frozen_breadth": 0.3078786360474651,
+          "q_gain": 0.9254812515387525,
+          "frozen_gain": 0.9254812515387525,
+          "true_reach_gain": 0.9928902779037193,
+          "frozen_true_gain": 0.9254812515387525,
+          "oracle": 0.9928902779037193,
+          "observed": 0.3078786360474651,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              1,
+              0
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              2,
+              1,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.6176026154912874,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": 0.0,
+          "calibration_loo_max": 0.6176026154912874,
+          "calibration_loo_decision_change": 1.0,
+          "positive": 0.6176026154912874,
+          "negative": 0,
+          "integration_delta_lower": 0.6176026154912874,
+          "integration_delta_upper": 0.6176026154912874,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.6176026154912874,
+          "loo_1": 0.6176026154912874,
+          "loo_2": 0.6176026154912874,
+          "loo_3": 0.6176026154912874,
+          "loo_4": 0.6176026154912874,
+          "loo_5": 0.6176026154912874,
+          "loo_6": 0.0,
+          "loo_7": 0.6176026154912874
+        },
+        {
+          "question_id": 466,
+          "group": "math_reasoning",
+          "phase": 1,
+          "policy": "phase_sibling_q_bin",
+          "serial": 16032,
+          "uid": "466_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.3559570677452482,
+          "frozen_breadth": 0.3559570677452482,
+          "q_gain": 0.8427769146506642,
+          "frozen_gain": 0.8427769146506642,
+          "true_reach_gain": 0.8427769146506642,
+          "frozen_true_gain": 0.8427769146506642,
+          "oracle": 0.8427769146506642,
+          "observed": 0.3559570677452482,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.48681984690541596,
+          "g3_error_se": 2.2136101692125893e-09,
+          "calibration_loo_min": 0.48681984690541596,
+          "calibration_loo_max": 0.48681984690541596,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.48681984690541596,
+          "negative": 0,
+          "integration_delta_lower": 0.4863615428375524,
+          "integration_delta_upper": 0.4877557381668149,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.48681984690541596,
+          "loo_1": 0.48681984690541596,
+          "loo_2": 0.48681984690541596,
+          "loo_3": 0.48681984690541596,
+          "loo_4": 0.48681984690541596,
+          "loo_5": 0.48681984690541596,
+          "loo_6": 0.48681984690541596,
+          "loo_7": 0.48681984690541596
+        }
+      ]
+    },
+    "2": {
+      "cases": 140,
+      "questions": 114,
+      "means": {
+        "delta": 0.010696040638442457,
+        "positive": 0.01539852844313383,
+        "negative": -0.004702487804691367,
+        "integration_delta_lower": 0.010650231267493768,
+        "integration_delta_upper": 0.01095102601267424,
+        "calibration_numeric_decision_stable": 0.9800569800569802
+      },
+      "leave_one_prompt_out_mean_deltas": [
+        0.010696040638442457,
+        0.006930432715676636,
+        0.00434868805834862,
+        0.008390611213744755,
+        0.008390611213744755,
+        0.00548574529523849,
+        0.005485610560092793,
+        0.010696040638442457
+      ],
+      "all_group_ci": {
+        "mean": 0.010696040638442457,
+        "ci95": [
+          -0.0003879996382390477,
+          0.02285683348121132
+        ],
+        "questions": 114
+      },
+      "worst_losses": [
+        {
+          "question_id": 404,
+          "group": "math_reasoning",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 13664,
+          "uid": "404_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            1,
+            0,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.9885831476915001,
+          "frozen_breadth": 0.9885831476915001,
+          "q_gain": 0.9885831476915001,
+          "frozen_gain": 0.2996064681490099,
+          "true_reach_gain": 0.992505641283357,
+          "frozen_true_gain": 0.9885831476915001,
+          "oracle": 0.992505641283357,
+          "observed": 0.9885831476915001,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              1,
+              1,
+              1
+            ],
+            "frozen_gain": [
+              1,
+              2,
+              0
+            ],
+            "true_reach_gain": [
+              1,
+              0,
+              2
+            ],
+            "frozen_true_gain": [
+              1,
+              1,
+              1
+            ],
+            "oracle": [
+              1,
+              0,
+              2
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.6889766795424903,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.6889766795424903,
+          "calibration_loo_max": -0.6889766795424903,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.6889766795424903,
+          "integration_delta_lower": -0.6889766795424902,
+          "integration_delta_upper": -0.6889766795424902,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.6889766795424903,
+          "loo_1": -0.6889766795424903,
+          "loo_2": -0.6889766795424903,
+          "loo_3": -0.6889766795424903,
+          "loo_4": -0.6889766795424903,
+          "loo_5": -0.6889766795424903,
+          "loo_6": -0.6889766795424903,
+          "loo_7": -0.6889766795424903
+        },
+        {
+          "question_id": 113,
+          "group": "mt_bench",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 2368,
+          "uid": "113_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1
+          ],
+          "budget": 3,
+          "q_breadth": 0.9577395519227533,
+          "frozen_breadth": 0.9577395519227533,
+          "q_gain": 0.31746261871603304,
+          "frozen_gain": 0.31746261871603304,
+          "true_reach_gain": 0.9579889382127574,
+          "frozen_true_gain": 0.9577395519227533,
+          "oracle": 0.9579889382127574,
+          "observed": 0.9577395519227533,
+          "fans": {
+            "q_breadth": [
+              2,
+              1
+            ],
+            "frozen_breadth": [
+              2,
+              1
+            ],
+            "q_gain": [
+              3,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0
+            ],
+            "true_reach_gain": [
+              1,
+              2
+            ],
+            "frozen_true_gain": [
+              2,
+              1
+            ],
+            "oracle": [
+              1,
+              2
+            ],
+            "observed": [
+              2,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.6402769332067202,
+          "g3_error_se": 3.068642256128007e-11,
+          "calibration_loo_min": -0.6402769332067202,
+          "calibration_loo_max": -0.6402769332067202,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.6402769332067202,
+          "integration_delta_lower": -0.6402835956221373,
+          "integration_delta_upper": -0.6401654735058155,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.6402769332067202,
+          "loo_1": -0.6402769332067202,
+          "loo_2": -0.6402769332067202,
+          "loo_3": -0.6402769332067202,
+          "loo_4": -0.6402769332067202,
+          "loo_5": -0.6402769332067202,
+          "loo_6": -0.6402769332067202,
+          "loo_7": -0.6402769332067202
+        },
+        {
+          "question_id": 400,
+          "group": "qa",
+          "phase": 2,
+          "policy": "phase_sibling_q_bin",
+          "serial": 13472,
+          "uid": "400_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1
+          ],
+          "budget": 3,
+          "q_breadth": 0.5710790624769408,
+          "frozen_breadth": 0.5710790624769408,
+          "q_gain": 0.5010611491136647,
+          "frozen_gain": 0.5010611491136647,
+          "true_reach_gain": 0.5710790624769408,
+          "frozen_true_gain": 0.5771569728249406,
+          "oracle": 0.5771569728249406,
+          "observed": 0.5710790624769408,
+          "fans": {
+            "q_breadth": [
+              2,
+              1
+            ],
+            "frozen_breadth": [
+              2,
+              1
+            ],
+            "q_gain": [
+              3,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0
+            ],
+            "true_reach_gain": [
+              2,
+              1
+            ],
+            "frozen_true_gain": [
+              1,
+              2
+            ],
+            "oracle": [
+              1,
+              2
+            ],
+            "observed": [
+              2,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.07001791336327612,
+          "g3_error_se": 1.9830504558951552e-16,
+          "calibration_loo_min": -0.07001791336327612,
+          "calibration_loo_max": -0.07001791336327612,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.07001791336327612,
+          "integration_delta_lower": -0.0700179243767851,
+          "integration_delta_upper": -0.07001790507392841,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.07001791336327612,
+          "loo_1": -0.07001791336327612,
+          "loo_2": -0.07001791336327612,
+          "loo_3": -0.07001791336327612,
+          "loo_4": -0.07001791336327612,
+          "loo_5": -0.07001791336327612,
+          "loo_6": -0.07001791336327612,
+          "loo_7": -0.07001791336327612
+        },
+        {
+          "question_id": 365,
+          "group": "qa",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 12288,
+          "uid": "365_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            1,
+            0,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.6266513009578323,
+          "frozen_breadth": 0.6266513009578323,
+          "q_gain": 0.4784021404849981,
+          "frozen_gain": 0.578362868946934,
+          "true_reach_gain": 0.7266120294197682,
+          "frozen_true_gain": 0.578362868946934,
+          "oracle": 0.7266120294197682,
+          "observed": 0.6266513009578323,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              2,
+              1,
+              0
+            ],
+            "frozen_gain": [
+              1,
+              2,
+              0
+            ],
+            "true_reach_gain": [
+              0,
+              2,
+              1
+            ],
+            "frozen_true_gain": [
+              1,
+              2,
+              0
+            ],
+            "oracle": [
+              0,
+              2,
+              1
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.048288432010898275,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": -0.048288432010898275,
+          "calibration_loo_max": -0.048288432010898275,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.048288432010898275,
+          "integration_delta_lower": -0.048288432010898386,
+          "integration_delta_upper": -0.048288432010898386,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.048288432010898275,
+          "loo_1": -0.048288432010898275,
+          "loo_2": -0.048288432010898275,
+          "loo_3": -0.048288432010898275,
+          "loo_4": -0.048288432010898275,
+          "loo_5": -0.048288432010898275,
+          "loo_6": -0.048288432010898275,
+          "loo_7": -0.048288432010898275
+        },
+        {
+          "question_id": 502,
+          "group": "rag",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 17216,
+          "uid": "502_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1
+          ],
+          "budget": 3,
+          "q_breadth": 0.8791504085897245,
+          "frozen_breadth": 0.8791504085897245,
+          "q_gain": 0.8586190937223974,
+          "frozen_gain": 0.8586190937223974,
+          "true_reach_gain": 0.8586190937223974,
+          "frozen_true_gain": 0.882852865768156,
+          "oracle": 0.882852865768156,
+          "observed": 0.8791504085897245,
+          "fans": {
+            "q_breadth": [
+              2,
+              1
+            ],
+            "frozen_breadth": [
+              2,
+              1
+            ],
+            "q_gain": [
+              3,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0
+            ],
+            "frozen_true_gain": [
+              1,
+              2
+            ],
+            "oracle": [
+              1,
+              2
+            ],
+            "observed": [
+              2,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 0.0,
+          "loss": 1.0,
+          "delta": -0.020531314867327066,
+          "g3_error_se": 7.654071669674194e-15,
+          "calibration_loo_min": -0.020531314867327066,
+          "calibration_loo_max": -0.020531314867327066,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0,
+          "negative": -0.020531314867327066,
+          "integration_delta_lower": -0.02053135603456773,
+          "integration_delta_upper": -0.020531282196908467,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": -0.020531314867327066,
+          "loo_1": -0.020531314867327066,
+          "loo_2": -0.020531314867327066,
+          "loo_3": -0.020531314867327066,
+          "loo_4": -0.020531314867327066,
+          "loo_5": -0.020531314867327066,
+          "loo_6": -0.020531314867327066,
+          "loo_7": -0.020531314867327066
+        }
+      ],
+      "largest_gains": [
+        {
+          "question_id": 476,
+          "group": "math_reasoning",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 16288,
+          "uid": "476_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            2,
+            1
+          ],
+          "budget": 3,
+          "q_breadth": 0.5315383723727465,
+          "frozen_breadth": 0.5315383723727465,
+          "q_gain": 0.9998304679921752,
+          "frozen_gain": 0.9754882002509047,
+          "true_reach_gain": 0.9998304679921752,
+          "frozen_true_gain": 0.9754882002509047,
+          "oracle": 0.9998304679921752,
+          "observed": 0.5315383723727465,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_gain": [
+              2,
+              0,
+              1
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              2,
+              0,
+              1
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.4439498278781582,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": 0.4439498278781582,
+          "calibration_loo_max": 0.4439498278781582,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.4439498278781582,
+          "negative": 0,
+          "integration_delta_lower": 0.4439498278781582,
+          "integration_delta_upper": 0.4439498278781582,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.4439498278781582,
+          "loo_1": 0.4439498278781582,
+          "loo_2": 0.4439498278781582,
+          "loo_3": 0.4439498278781582,
+          "loo_4": 0.4439498278781582,
+          "loo_5": 0.4439498278781582,
+          "loo_6": 0.4439498278781582,
+          "loo_7": 0.4439498278781582
+        },
+        {
+          "question_id": 394,
+          "group": "qa",
+          "phase": 2,
+          "policy": "phase_sibling_q_bin",
+          "serial": 13248,
+          "uid": "394_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.5282826632965334,
+          "frozen_breadth": 0.5282826632965334,
+          "q_gain": 0.5282826632965334,
+          "frozen_gain": 0.9706764017291682,
+          "true_reach_gain": 0.9977944097627509,
+          "frozen_true_gain": 0.9706764017291682,
+          "oracle": 0.9977944097627509,
+          "observed": 0.5282826632965334,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              1,
+              1,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              2,
+              0,
+              1
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.44239373843263485,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": 0.44239373843263485,
+          "calibration_loo_max": 0.44239373843263485,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.44239373843263485,
+          "negative": 0,
+          "integration_delta_lower": 0.44239373843263485,
+          "integration_delta_upper": 0.44239373843263485,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.44239373843263485,
+          "loo_1": 0.44239373843263485,
+          "loo_2": 0.44239373843263485,
+          "loo_3": 0.44239373843263485,
+          "loo_4": 0.44239373843263485,
+          "loo_5": 0.44239373843263485,
+          "loo_6": 0.44239373843263485,
+          "loo_7": 0.44239373843263485
+        },
+        {
+          "question_id": 129,
+          "group": "mt_bench",
+          "phase": 2,
+          "policy": "phase_sibling_q_bin",
+          "serial": 3616,
+          "uid": "129_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            2,
+            1
+          ],
+          "budget": 3,
+          "q_breadth": 0.45674224089744203,
+          "frozen_breadth": 0.45674224089744203,
+          "q_gain": 0.45674224089744203,
+          "frozen_gain": 0.6591328715009894,
+          "true_reach_gain": 0.8115741480414925,
+          "frozen_true_gain": 0.8115741480414925,
+          "oracle": 0.8115741480414925,
+          "observed": 0.45674224089744203,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              1,
+              1,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              1,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.2023906306035474,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": 0.0,
+          "calibration_loo_max": 0.2023906306035474,
+          "calibration_loo_decision_change": 1.0,
+          "positive": 0.2023906306035474,
+          "negative": 0,
+          "integration_delta_lower": 0.2023906306035474,
+          "integration_delta_upper": 0.2023906306035474,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.2023906306035474,
+          "loo_1": 0.0,
+          "loo_2": 0.2023906306035474,
+          "loo_3": 0.2023906306035474,
+          "loo_4": 0.2023906306035474,
+          "loo_5": 0.2023906306035474,
+          "loo_6": 0.2023906306035474,
+          "loo_7": 0.2023906306035474
+        },
+        {
+          "question_id": 323,
+          "group": "qa",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 10944,
+          "uid": "323_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1
+          ],
+          "budget": 3,
+          "q_breadth": 0.6298760749374421,
+          "frozen_breadth": 0.6298760749374421,
+          "q_gain": 0.8264918563759241,
+          "frozen_gain": 0.8264918563759241,
+          "true_reach_gain": 0.8264918563759241,
+          "frozen_true_gain": 0.8264918563759241,
+          "oracle": 0.8264918563759241,
+          "observed": 0.6298760749374421,
+          "fans": {
+            "q_breadth": [
+              2,
+              1
+            ],
+            "frozen_breadth": [
+              2,
+              1
+            ],
+            "q_gain": [
+              3,
+              0
+            ],
+            "frozen_gain": [
+              3,
+              0
+            ],
+            "true_reach_gain": [
+              3,
+              0
+            ],
+            "frozen_true_gain": [
+              3,
+              0
+            ],
+            "oracle": [
+              3,
+              0
+            ],
+            "observed": [
+              2,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.19661578143848202,
+          "g3_error_se": 6.278625472933205e-08,
+          "calibration_loo_min": 0.19661578143848202,
+          "calibration_loo_max": 0.19661578143848202,
+          "calibration_loo_decision_change": 0.0,
+          "positive": 0.19661578143848202,
+          "negative": 0,
+          "integration_delta_lower": 0.19387369739794225,
+          "integration_delta_upper": 0.2018439070068868,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.19661578143848202,
+          "loo_1": 0.19661578143848202,
+          "loo_2": 0.19661578143848202,
+          "loo_3": 0.19661578143848202,
+          "loo_4": 0.19661578143848202,
+          "loo_5": 0.19661578143848202,
+          "loo_6": 0.19661578143848202,
+          "loo_7": 0.19661578143848202
+        },
+        {
+          "question_id": 413,
+          "group": "math_reasoning",
+          "phase": 2,
+          "policy": "q_path",
+          "serial": 14016,
+          "uid": "413_t0",
+          "kind": "observed_round",
+          "depth": 1,
+          "parents": [
+            0,
+            1,
+            2
+          ],
+          "budget": 3,
+          "q_breadth": 0.7001852439440811,
+          "frozen_breadth": 0.7001852439440811,
+          "q_gain": 0.7001852439440811,
+          "frozen_gain": 0.8543632582384383,
+          "true_reach_gain": 0.8709023614700063,
+          "frozen_true_gain": 0.8543632582384383,
+          "oracle": 0.8709023614700063,
+          "observed": 0.7001852439440811,
+          "fans": {
+            "q_breadth": [
+              1,
+              1,
+              1
+            ],
+            "frozen_breadth": [
+              1,
+              1,
+              1
+            ],
+            "q_gain": [
+              1,
+              1,
+              1
+            ],
+            "frozen_gain": [
+              2,
+              0,
+              1
+            ],
+            "true_reach_gain": [
+              3,
+              0,
+              0
+            ],
+            "frozen_true_gain": [
+              2,
+              1,
+              0
+            ],
+            "oracle": [
+              3,
+              0,
+              0
+            ],
+            "observed": [
+              1,
+              1,
+              1
+            ]
+          },
+          "changed": 1.0,
+          "win": 1.0,
+          "loss": 0.0,
+          "delta": 0.15417801429435718,
+          "g3_error_se": 0.0,
+          "calibration_loo_min": 0.0,
+          "calibration_loo_max": 0.15417801429435718,
+          "calibration_loo_decision_change": 1.0,
+          "positive": 0.15417801429435718,
+          "negative": 0,
+          "integration_delta_lower": 0.15417801429435718,
+          "integration_delta_upper": 0.15417801429435718,
+          "calibration_numeric_decision_stable": 1.0,
+          "loo_0": 0.15417801429435718,
+          "loo_1": 0.0,
+          "loo_2": 0.15417801429435718,
+          "loo_3": 0.15417801429435718,
+          "loo_4": 0.15417801429435718,
+          "loo_5": 0.15417801429435718,
+          "loo_6": 0.15417801429435718,
+          "loo_7": 0.15417801429435718
+        }
+      ]
+    }
+  },
+  "within_collection_policy": {
+    "phase_sibling_q_bin": {
+      "q_gain": {
+        "mean": 0.020734020032208367,
+        "ci95": [
+          0.007702878572013931,
+          0.03365912412628728
+        ],
+        "questions": 283
+      },
+      "frozen_gain": {
+        "mean": 0.014223021191500096,
+        "ci95": [
+          -0.0026838073178638267,
+          0.03022484687276449
+        ],
+        "questions": 283
+      },
+      "oracle": {
+        "mean": 0.058172241065887365,
+        "ci95": [
+          0.04622368799228064,
+          0.07083708448346052
+        ],
+        "questions": 283
+      }
+    },
+    "q_path": {
+      "q_gain": {
+        "mean": -0.00432540438522333,
+        "ci95": [
+          -0.02160108878437687,
+          0.010587787608608836
+        ],
+        "questions": 236
+      },
+      "frozen_gain": {
+        "mean": 0.002630696663871057,
+        "ci95": [
+          -0.012987498331489187,
+          0.01672999923925737
+        ],
+        "questions": 236
+      },
+      "oracle": {
+        "mean": 0.05767215928306013,
+        "ci95": [
+          0.045252547689081664,
+          0.0699145569011014
+        ],
+        "questions": 236
+      }
+    }
+  },
+  "within_task": {
+    "math_reasoning": {
+      "mean": -0.006039923312735117,
+      "ci95": [
+        -0.04912332205893767,
+        0.02767333598666355
+      ],
+      "questions": 65
+    },
+    "mt_bench": {
+      "mean": 0.0143763606541588,
+      "ci95": [
+        -0.016341204496555937,
+        0.044502133662360055
+      ],
+      "questions": 74
+    },
+    "qa": {
+      "mean": 0.019322336614798197,
+      "ci95": [
+        -0.026874226733556918,
+        0.05868736323918963
+      ],
+      "questions": 60
+    },
+    "rag": {
+      "mean": 0.02839328136760125,
+      "ci95": [
+        0.014064162462693482,
+        0.04589655289406577
+      ],
+      "questions": 55
+    },
+    "summarization": {
+      "mean": 0.0015305076932949722,
+      "ci95": [
+        -0.02051187742207686,
+        0.018197387591327125
+      ],
+      "questions": 59
+    },
+    "translation": {
+      "mean": 0.010851019691642472,
+      "ci95": [
+        -0.025942079689061776,
+        0.05360524334772413
+      ],
+      "questions": 56
+    }
+  },
+  "direct_q_gain_vs_frozen_gain": {
+    "mean": 0.0017184504473728435,
+    "ci95": [
+      -0.007815769392250243,
+      0.011074690863640132
+    ],
+    "questions": 369
+  },
+  "q_gain_vs_q_breadth": {
+    "mean": 0.01633076697786129,
+    "ci95": [
+      0.004980773523917537,
+      0.02742823707254001
+    ],
+    "questions": 369
+  }
+}

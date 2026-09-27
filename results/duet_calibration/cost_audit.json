@@ -1,0 +1,73 @@
+{
+  "stages": {
+    "extensions": {
+      "config_runs": 13,
+      "prompts": 104,
+      "output_tokens": 13312,
+      "generate_s": 237.75291514396667,
+      "launch_through_completion_s": 787.9284296035767
+    },
+    "probe_validation": {
+      "config_runs": 1,
+      "prompts": 16,
+      "output_tokens": 2048,
+      "generate_s": 26.717074871063232,
+      "launch_through_completion_s": 64.05006146430969
+    },
+    "validation": {
+      "config_runs": 19,
+      "prompts": 304,
+      "output_tokens": 38912,
+      "generate_s": 620.339038848877,
+      "launch_through_completion_s": 1312.3934211730957
+    },
+    "probe_calibration": {
+      "config_runs": 1,
+      "prompts": 8,
+      "output_tokens": 1024,
+      "generate_s": 11.876968145370483,
+      "launch_through_completion_s": 47.1634304523468
+    },
+    "confirmation": {
+      "config_runs": 8,
+      "prompts": 128,
+      "output_tokens": 32768,
+      "generate_s": 398.9221019744873,
+      "launch_through_completion_s": 694.24755859375
+    },
+    "calibration": {
+      "config_runs": 5,
+      "prompts": 40,
+      "output_tokens": 5120,
+      "generate_s": 86.91720414161682,
+      "launch_through_completion_s": 275.53532361984253
+    },
+    "selection": {
+      "config_runs": 6,
+      "prompts": 96,
+      "output_tokens": 12288,
+      "generate_s": 146.12123656272888,
+      "launch_through_completion_s": 356.96922183036804
+    },
+    "tree_repeat": {
+      "config_runs": 1,
+      "prompts": 8,
+      "output_tokens": 1024,
+      "generate_s": 18.350411653518677,
+      "launch_through_completion_s": 60.437838554382324
+    }
+  },
+  "successful_run_elapsed_s": 3598.7252852916718,
+  "discarded_completed_runs": [
+    {
+      "path": "failed_attempts/probe_per_request_overwrite/probe_validation/chain_e56_k4_2_w15_s5913/complete.json",
+      "elapsed_s": 60.89600133895874
+    },
+    {
+      "path": "failed_attempts/probe_per_request_overwrite/probe_calibration/chain_e56_k4_2_w15_s4913/complete.json",
+      "elapsed_s": 46.61759805679321
+    }
+  ],
+  "discarded_completed_run_elapsed_s": 107.51359939575195,
+  "note": "Counts warmup/load in launch time; excludes failed setup attempts, idle time, CPU analysis. Probe time includes instrumentation and is not inference throughput."
+}

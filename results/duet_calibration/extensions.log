@@ -1,0 +1,88 @@
+{
+  "complete": true,
+  "n": 19,
+  "expected": 19,
+  "selection": {
+    "top1": {
+      "tag": "chain_e40_k4_2_w15",
+      "tps": 81.38103504655959,
+      "regret_pct": 4.651288420336042
+    },
+    "top3": {
+      "tag": "chain_e40_k4_2_w15",
+      "tps": 81.38103504655959,
+      "regret_pct": 4.651288420336042
+    },
+    "gap_only": {
+      "tag": "chain_e72_k4_2_w15",
+      "tps": 80.90600831618377,
+      "regret_pct": 5.207845444725345
+    },
+    "best_measured_anchor": {
+      "tag": "chain_e56_k6_4_w15",
+      "tps": 62.03356733381929,
+      "regret_pct": 27.319421329723546
+    }
+  },
+  "oracle": "chain_e56_k4_2_w15",
+  "rank_spearman": 0.712280701754386,
+  "tps_mape_pct": 15.982647173563851,
+  "cycle_mape_pct": 1.5761493560031135,
+  "reward_mape_pct": 17.90153513751833,
+  "calibration_total_s": 275.53532361984253,
+  "validation_total_s": 1312.3934211730957
+}
+[run] extensions chain_e56_k10_4_w8 profile True
+[done] extensions chain_e56_k10_4_w8 53.9 s
+[run] extensions chain_e56_k10_4_w24 profile True
+[done] extensions chain_e56_k10_4_w24 57.3 s
+[run] extensions p2tree_e56_k10_4_w15_n12v8_n8v4 profile True
+[done] extensions p2tree_e56_k10_4_w15_n12v8_n8v4 77.9 s
+[run] extensions p2tree_e56_k10_4_w15_n12v8_n8v8 profile True
+{
+  "complete": true,
+  "n": 19,
+  "expected": 19,
+  "selection": {
+    "top1": {
+      "tag": "chain_e40_k4_2_w15",
+      "tps": 81.38103504655959,
+      "regret_pct": 4.651288420336042
+    },
+    "top3": {
+      "tag": "chain_e40_k4_2_w15",
+      "tps": 81.38103504655959,
+      "regret_pct": 4.651288420336042
+    },
+    "gap_only": {
+      "tag": "chain_e72_k4_2_w15",
+      "tps": 80.90600831618377,
+      "regret_pct": 5.207845444725345
+    },
+    "best_measured_anchor": {
+      "tag": "chain_e56_k6_4_w15",
+      "tps": 62.03356733381929,
+      "regret_pct": 27.319421329723546
+    }
+  },
+  "oracle": "chain_e56_k4_2_w15",
+  "rank_spearman": 0.712280701754386,
+  "tps_mape_pct": 15.982647173563851,
+  "cycle_mape_pct": 1.5761493560031135,
+  "reward_mape_pct": 17.90153513751833,
+  "calibration_total_s": 275.53532361984253,
+  "validation_total_s": 1312.3934211730957
+}
+[run] extensions p2tree_e56_k10_4_w15_n12v8_n8v8 profile True
+[done] extensions p2tree_e56_k10_4_w15_n12v8_n8v8 73.6 s
+[run] extensions fulltree_e56_k10_4_w15_n12v8_n8v8 profile True
+[done] extensions fulltree_e56_k10_4_w15_n12v8_n8v8 83.1 s
+[run] extensions chain_e56_k10_4_w15_proxy__topm__original profile True
+[done] extensions chain_e56_k10_4_w15_proxy__topm__original 53.0 s
+[run] extensions chain_e56_k10_4_w15_proxy__full__expected_mix0.25 profile True
+[done] extensions chain_e56_k10_4_w15_proxy__full__expected_mix0.25 55.5 s
+[run] extensions chain_e40_k2_2_w15 profile True
+[done] extensions chain_e40_k2_2_w15 49.6 s
+[run] extensions chain_e56_k2_2_w15 profile True
+[done] extensions chain_e56_k2_2_w15 50.4 s
+Extensions completed; failures retained separately.

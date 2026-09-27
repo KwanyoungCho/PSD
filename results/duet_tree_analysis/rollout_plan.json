@@ -1,0 +1,158 @@
+{
+  "mapping": [
+    {
+      "dataset": "alpaca",
+      "source_row": 29,
+      "input_tokens": 16,
+      "token_sha256": "2ad87343647e0e0af186b389b732197b530a53eded4e4226cacdea82142a407e",
+      "split": "validation"
+    },
+    {
+      "dataset": "c4",
+      "source_row": 25,
+      "input_tokens": 448,
+      "token_sha256": "71b11a9f9dae413c7dcc8ede40f8c3e9ce84644046321d344774b6755e75d81b",
+      "split": "validation"
+    },
+    {
+      "dataset": "gsm",
+      "source_row": 25,
+      "input_tokens": 92,
+      "token_sha256": "cf9ebf551be6c07d5fc07061896a8d17dd3ed6c257acad4ed01dcf193cb31640",
+      "split": "validation"
+    },
+    {
+      "dataset": "humaneval",
+      "source_row": 25,
+      "input_tokens": 58,
+      "token_sha256": "59da50eaffe7d2de6e03977223bd9ea63dd6aaea8e7425b79007e8982822c29b",
+      "split": "validation"
+    },
+    {
+      "dataset": "alpaca",
+      "source_row": 32,
+      "input_tokens": 20,
+      "token_sha256": "a270719df6b3fbb26dd5c94ad5dfc2d5b1ff3f2194b0f2c5e7b64b9950ff4224",
+      "split": "validation"
+    },
+    {
+      "dataset": "c4",
+      "source_row": 26,
+      "input_tokens": 735,
+      "token_sha256": "1969c478efa32e918529ea01a001cbcad9b4f63aae4c2c9c3f44116836a6de9d",
+      "split": "validation"
+    },
+    {
+      "dataset": "gsm",
+      "source_row": 26,
+      "input_tokens": 97,
+      "token_sha256": "b7daf435de20cf6f94fc5a75d0924144ce486934ac6296fc7f183c0dd9050d8d",
+      "split": "validation"
+    },
+    {
+      "dataset": "humaneval",
+      "source_row": 26,
+      "input_tokens": 136,
+      "token_sha256": "a781bdc1a1cac319fee2a9f5108bad44a19e407ecb2e720b9efd4bac6245be05",
+      "split": "validation"
+    },
+    {
+      "dataset": "alpaca",
+      "source_row": 36,
+      "input_tokens": 26,
+      "token_sha256": "4afd35c2cfce42dd8f804c553e9a9dba37eb60427a4e4dcd305b2578b7aabe8d",
+      "split": "validation"
+    },
+    {
+      "dataset": "c4",
+      "source_row": 27,
+      "input_tokens": 437,
+      "token_sha256": "b5bf82de059f134edb5503eecf6fcf39e4769df0e0c6a2b4a7a159bec49d190f",
+      "split": "validation"
+    },
+    {
+      "dataset": "gsm",
+      "source_row": 27,
+      "input_tokens": 62,
+      "token_sha256": "3e9adf62d1dbcda174fe9b6a7d92603a055f4e03596889de76b0d5e333bbd63a",
+      "split": "validation"
+    },
+    {
+      "dataset": "humaneval",
+      "source_row": 27,
+      "input_tokens": 93,
+      "token_sha256": "09fb334860ead9b653c1cf5835552a29461c9553f9f032dd3c4ad42533d8d891",
+      "split": "validation"
+    },
+    {
+      "dataset": "alpaca",
+      "source_row": 37,
+      "input_tokens": 37,
+      "token_sha256": "ad2f623c36432820f76341924fbb9282275aa825db70c9dd3882532310347d49",
+      "split": "validation"
+    },
+    {
+      "dataset": "c4",
+      "source_row": 28,
+      "input_tokens": 285,
+      "token_sha256": "6a4f3aaed52ba656a17822395b548c4495dfc9a78f434781a1e0ba09b8dae8ed",
+      "split": "validation"
+    },
+    {
+      "dataset": "gsm",
+      "source_row": 28,
+      "input_tokens": 89,
+      "token_sha256": "1b5798855c50bd414feeb8f72d19ac69a7ad0d1ea5c35c460733bd5d00a42679",
+      "split": "validation"
+    },
+    {
+      "dataset": "humaneval",
+      "source_row": 28,
+      "input_tokens": 60,
+      "token_sha256": "424e7a87b59b39ffdcb47aa25ba43cb73c88bb0f538e1e011d5864e10d512a86",
+      "split": "validation"
+    }
+  ],
+  "stride": 4,
+  "seed": 921,
+  "temperature": 0.7,
+  "output_len": 128,
+  "config": {
+    "exit": 56,
+    "k1": 4,
+    "k2": 2,
+    "c": 3,
+    "roots": 15,
+    "p1_nodes": 8,
+    "p2_nodes": 6,
+    "verify_equals_generated": true
+  },
+  "dataset_scope": "Disjoint within this analysis; reused finite prompt bank, NOT globally unseen research data.",
+  "analysis_prespecified": {
+    "q_bins": [
+      0,
+      0.01,
+      0.03,
+      0.1,
+      0.3,
+      0.6,
+      0.9,
+      1.00001
+    ],
+    "estimators": [
+      "raw_q",
+      "phase_sibling_mean",
+      "phase_sibling_q_bin"
+    ],
+    "shrinkage_attempt_mass": 5,
+    "validation_reselection": false
+  },
+  "purpose": "Actual safe expansion-score ablation; diagnostic synchronization; not TPS.",
+  "policies": [
+    "q_path",
+    "phase_sibling_q_bin"
+  ],
+  "primary_estimand": "Per-prompt accepted descendant tokens per served tree hit.",
+  "fixed_before_validation_analysis": true,
+  "calibration": "calibration_frozen.json"
+}

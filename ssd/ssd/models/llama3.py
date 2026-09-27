@@ -266,12 +266,29 @@ class LlamaModel(nn.Module):
         # Collect activations if use_eagle
         collected_acts = [] if self.use_eagle else None
 
+        # All-layer early-exit probe (measurement only, off unless ModelRunner
+        # attached the buffers BEFORE CUDA-graph capture, so the copies are
+        # baked into the captured graphs).  Slot s holds the residual stream
+        # AFTER layers[l] -- the same convention as duet_exit_layer, whose
+        # graph_pre runs with end_layer=exit_layer+1.
+        _pslot = getattr(self, "_probe_slot", None)
+
         for layer_idx in range(start_layer, actual_end):
             layer = self.layers[layer_idx]
             if collected_acts is not None and layer_idx in self.eagle_layers:
                 current_act = hidden_states if residual is None else hidden_states + residual
                 collected_acts.append(current_act)
             hidden_states, residual = layer(positions, hidden_states, residual)
+            if _pslot is not None and layer_idx in _pslot:
+                _s = _pslot[layer_idx]
+                _n = hidden_states.shape[0]
+                # Buffers are sized for the DUET verify geometry; prefill runs
+                # the same loop with far more rows and is skipped. Inside a
+                # captured graph the shape is static, so this resolves at
+                # capture time and the copy is baked in.
+                if _n <= self._probe_h.shape[1]:
+                    self._probe_h[_s, :_n].copy_(hidden_states)
+                    self._probe_r[_s, :_n].copy_(residual)
 
         if end_layer is None:
             # Full forward: apply final norm

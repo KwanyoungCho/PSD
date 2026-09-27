@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD/results/duet_tree_followup/check_executor.py", line 82, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/chokwans99/PSD/results/duet_tree_followup/check_executor.py", line 30, in main
+    score_install()
+  File "/home/chokwans99/PSD/results/duet_tree_analysis/score_hook.py", line 29, in install
+    import ssd.engine.helpers.p2_tree_executor as module
+  File "/home/chokwans99/PSD/ssd/ssd/__init__.py", line 1, in <module>
+    from ssd.llm import LLM
+  File "/home/chokwans99/PSD/ssd/ssd/llm.py", line 1, in <module>
+    from ssd.engine.llm_engine import LLMEngine
+  File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 2, in <module>
+    import ssd.paths  # noqa: F401 — sets TORCH_CUDA_ARCH_LIST before flashinfer import
+    ^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/paths.py", line 19, in <module>
+    HF_CACHE_DIR = _required_env(
+                   ^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/paths.py", line 13, in _required_env
+    raise RuntimeError(f"Missing required env var {var_name}. {note}")
+RuntimeError: Missing required env var SSD_HF_CACHE. Set it to your HuggingFace cache hub directory (for example: /path/to/huggingface/hub).

@@ -1,0 +1,468 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench] --k omitted -> derived k = K1+K2 = 14
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 913
+[Config] duet_proxy_top_k raised 3 → 20 (K_max=10 K_min=4 p1_sum_full=33 p1_sum_short=15 p1_max=3 per_pos=20 total=10 wire_N=50)
+[Config] DUET-SSD enabled: exit_layer=72, only_proxy=False, proxy_top_k=20, draft_fan_out=3, proxy_fan_out=2, K1=10, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=72, only_proxy=False, proxy_top_k=20, draft_fan_out=3, proxy_fan_out=2, K1=10, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=14
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 15.03it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.51it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.57it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.61it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.23it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.23it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2972, 256, 4, 64])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET] captured target chain proxy graphs (K=[4, 10], source=residual)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=75
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=75
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=75
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=75
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=11) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=75
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=75
+[DUET split-K1K2] layouts: split_k1_long MQ=33 (K=K1=10, pos=11), split_k1_short MQ=15 (K=K1=10, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=33
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=72, only_proxy=False, proxy_top_k=20, draft_fan_out=3, proxy_fan_out=2, K1=10, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.7 b=1
+============================================================
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:03<00:00,  3.78s/it]Generating: 100%|██████████| 1/1 [00:03<00:00,  3.78s/it]
+Final Prefill Throughput: 38.05tok/s
+Final Decode Throughput: 40.23tok/s
+[metrics] Prefill tokens/time: 20 / 0.525674s
+[metrics] Decode tokens/time: 129 / 3.206685s
+[metrics] Avg Tokens per step (incl recovery): 2.53
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.15 (denom=10)
+[metrics] Avg target time per full step (ms): 71.78
+[metrics] Avg target verify time (ms): 26.57
+[metrics] Avg Cache Hits: 0.96
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.569
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.392
+[metrics] Avg Phase 1 Accepted Len: 1.55
+[metrics] Avg Phase 1 Acceptance Ratio: 0.155
+[metrics] Avg Phase 2 Accepted Len: 1.55
+[metrics] Avg Phase 2 Acceptance Ratio: 0.388
+[metrics] Avg Tokens per step on Cache Hit: 2.55
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.327
+  1: 0.306
+  2: 0.122
+  3: 0.143
+  4: 0.041
+  5: 0.000
+  6: 0.041
+  7: 0.000
+  8: 0.020
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.00
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:03<00:00,  3.60s/it]Generating: 100%|██████████| 1/1 [00:03<00:00,  3.60s/it]
+Final Prefill Throughput: 131.07tok/s
+Final Decode Throughput: 37.21tok/s
+[metrics] Prefill tokens/time: 20 / 0.152587s
+[metrics] Decode tokens/time: 128 / 3.439542s
+[metrics] Avg Tokens per step (incl recovery): 2.21
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.12 (denom=10)
+[metrics] Avg target time per full step (ms): 60.89
+[metrics] Avg target verify time (ms): 25.16
+[metrics] Avg Cache Hits: 0.84
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.414
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.431
+[metrics] Avg Phase 1 Accepted Len: 1.12
+[metrics] Avg Phase 1 Acceptance Ratio: 0.113
+[metrics] Avg Phase 2 Accepted Len: 1.20
+[metrics] Avg Phase 2 Acceptance Ratio: 0.300
+[metrics] Avg Tokens per step on Cache Hit: 2.16
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.429
+  1: 0.327
+  2: 0.082
+  3: 0.020
+  4: 0.122
+  5: 0.000
+  6: 0.020
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.44
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:02<00:00,  2.47s/it]Generating: 100%|██████████| 1/1 [00:02<00:00,  2.47s/it]
+Final Prefill Throughput: 675.82tok/s
+Final Decode Throughput: 55.47tok/s
+[metrics] Prefill tokens/time: 106 / 0.156846s
+[metrics] Decode tokens/time: 128 / 2.307587s
+[metrics] Avg Tokens per step (incl recovery): 3.37
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.24 (denom=10)
+[metrics] Avg target time per full step (ms): 63.20
+[metrics] Avg target verify time (ms): 25.37
+[metrics] Avg Cache Hits: 0.84
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.447
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.395
+[metrics] Avg Phase 1 Accepted Len: 2.35
+[metrics] Avg Phase 1 Acceptance Ratio: 0.235
+[metrics] Avg Phase 2 Accepted Len: 2.80
+[metrics] Avg Phase 2 Acceptance Ratio: 0.700
+[metrics] Avg Tokens per step on Cache Hit: 3.56
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.250
+  1: 0.188
+  2: 0.062
+  3: 0.125
+  4: 0.281
+  5: 0.000
+  6: 0.031
+  7: 0.000
+  8: 0.031
+  9: 0.000
+  10: 0.031
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.33
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:02<00:00,  2.83s/it]Generating: 100%|██████████| 1/1 [00:02<00:00,  2.83s/it]
+Final Prefill Throughput: 231.59tok/s
+Final Decode Throughput: 49.12tok/s
+[metrics] Prefill tokens/time: 36 / 0.155446s
+[metrics] Decode tokens/time: 131 / 2.667051s
+[metrics] Avg Tokens per step (incl recovery): 2.91
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.19 (denom=10)
+[metrics] Avg target time per full step (ms): 61.36
+[metrics] Avg target verify time (ms): 25.68
+[metrics] Avg Cache Hits: 0.89
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.556
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.333
+[metrics] Avg Phase 1 Accepted Len: 2.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.200
+[metrics] Avg Phase 2 Accepted Len: 1.67
+[metrics] Avg Phase 2 Acceptance Ratio: 0.417
+[metrics] Avg Tokens per step on Cache Hit: 2.88
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.475
+  1: 0.125
+  2: 0.075
+  3: 0.025
+  4: 0.225
+  5: 0.025
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.050
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 3.20
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:01<00:00,  1.14s/it]Generating: 100%|██████████| 1/1 [00:01<00:00,  1.14s/it]
+Final Prefill Throughput: 1405.85tok/s
+Final Decode Throughput: 136.07tok/s
+[metrics] Prefill tokens/time: 224 / 0.159334s
+[metrics] Decode tokens/time: 132 / 0.970070s
+[metrics] Avg Tokens per step (incl recovery): 8.25
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.72 (denom=10)
+[metrics] Avg target time per full step (ms): 66.44
+[metrics] Avg target verify time (ms): 27.42
+[metrics] Avg Cache Hits: 0.94
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.875
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.062
+[metrics] Avg Phase 1 Accepted Len: 8.29
+[metrics] Avg Phase 1 Acceptance Ratio: 0.829
+[metrics] Avg Phase 2 Accepted Len: 0.00
+[metrics] Avg Phase 2 Acceptance Ratio: 0.000
+[metrics] Avg Tokens per step on Cache Hit: 8.73
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.133
+  1: 0.000
+  2: 0.067
+  3: 0.000
+  4: 0.000
+  5: 0.067
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.067
+  10: 0.667
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.00
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:02<00:00,  2.80s/it]Generating: 100%|██████████| 1/1 [00:02<00:00,  2.80s/it]
+Final Prefill Throughput: 162.05tok/s
+Final Decode Throughput: 48.40tok/s
+[metrics] Prefill tokens/time: 23 / 0.141932s
+[metrics] Decode tokens/time: 128 / 2.644662s
+[metrics] Avg Tokens per step (incl recovery): 2.84
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.18 (denom=10)
+[metrics] Avg target time per full step (ms): 60.58
+[metrics] Avg target verify time (ms): 25.80
+[metrics] Avg Cache Hits: 0.93
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.556
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.378
+[metrics] Avg Phase 1 Accepted Len: 1.96
+[metrics] Avg Phase 1 Acceptance Ratio: 0.196
+[metrics] Avg Phase 2 Accepted Len: 1.94
+[metrics] Avg Phase 2 Acceptance Ratio: 0.485
+[metrics] Avg Tokens per step on Cache Hit: 2.95
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.429
+  1: 0.143
+  2: 0.095
+  3: 0.048
+  4: 0.190
+  5: 0.048
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.048
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.33
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:02<00:00,  2.18s/it]Generating: 100%|██████████| 1/1 [00:02<00:00,  2.18s/it]
+Final Prefill Throughput: 1862.42tok/s
+Final Decode Throughput: 66.17tok/s
+[metrics] Prefill tokens/time: 442 / 0.237325s
+[metrics] Decode tokens/time: 128 / 1.934514s
+[metrics] Avg Tokens per step (incl recovery): 4.13
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.31 (denom=10)
+[metrics] Avg target time per full step (ms): 67.87
+[metrics] Avg target verify time (ms): 25.51
+[metrics] Avg Cache Hits: 0.81
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.516
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.290
+[metrics] Avg Phase 1 Accepted Len: 3.81
+[metrics] Avg Phase 1 Acceptance Ratio: 0.381
+[metrics] Avg Phase 2 Accepted Len: 2.89
+[metrics] Avg Phase 2 Acceptance Ratio: 0.722
+[metrics] Avg Tokens per step on Cache Hit: 4.48
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.160
+  1: 0.160
+  2: 0.120
+  3: 0.120
+  4: 0.240
+  5: 0.000
+  6: 0.000
+  7: 0.040
+  8: 0.040
+  9: 0.040
+  10: 0.080
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.67
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:03<00:00,  3.33s/it]Generating: 100%|██████████| 1/1 [00:03<00:00,  3.33s/it]
+Final Prefill Throughput: 357.69tok/s
+Final Decode Throughput: 40.70tok/s
+[metrics] Prefill tokens/time: 62 / 0.173335s
+[metrics] Decode tokens/time: 128 / 3.144632s
+[metrics] Avg Tokens per step (incl recovery): 2.46
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.15 (denom=10)
+[metrics] Avg target time per full step (ms): 62.61
+[metrics] Avg target verify time (ms): 25.92
+[metrics] Avg Cache Hits: 0.87
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.538
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.327
+[metrics] Avg Phase 1 Accepted Len: 1.79
+[metrics] Avg Phase 1 Acceptance Ratio: 0.179
+[metrics] Avg Phase 2 Accepted Len: 0.76
+[metrics] Avg Phase 2 Acceptance Ratio: 0.191
+[metrics] Avg Tokens per step on Cache Hit: 2.40
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.556
+  1: 0.133
+  2: 0.067
+  3: 0.089
+  4: 0.067
+  5: 0.000
+  6: 0.044
+  7: 0.022
+  8: 0.022
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.86
+Generating:   0%|          | 0/1 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 10])
+Generating: 100%|██████████| 1/1 [00:01<00:00,  1.26s/it]Generating: 100%|██████████| 1/1 [00:01<00:00,  1.26s/it]
+Final Prefill Throughput: 757.13tok/s
+Final Decode Throughput: 117.01tok/s
+[metrics] Prefill tokens/time: 122 / 0.161136s
+[metrics] Decode tokens/time: 128 / 1.093897s
+[metrics] Avg Tokens per step (incl recovery): 7.11
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.61 (denom=10)
+[metrics] Avg target time per full step (ms): 66.06
+[metrics] Avg target verify time (ms): 27.37
+[metrics] Avg Cache Hits: 0.89
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.833
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.056
+[metrics] Avg Phase 1 Accepted Len: 6.87
+[metrics] Avg Phase 1 Acceptance Ratio: 0.687
+[metrics] Avg Phase 2 Accepted Len: 4.00
+[metrics] Avg Phase 2 Acceptance Ratio: 1.000
+[metrics] Avg Tokens per step on Cache Hit: 7.69
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 0.125
+  2: 0.188
+  3: 0.000
+  4: 0.062
+  5: 0.000
+  6: 0.062
+  7: 0.000
+  8: 0.000
+  9: 0.062
+  10: 0.500
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.50
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=14) + Async + JIT, Total: 1024tok, Time: 19.62s, Total Throughput: 52.19tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: "Create a Twitter post to promote your new product.\n\nAlisha's All Natural Jam"
+Generation: ' uses fruit grown on the Alisha family farm.\n\nThe jam is sold in markets throughout the state.\n\nEnter a URL for your post.\n\nhttps://twitter.com/AlisahasJam/status/179062852953718784\n\nComplete the following sentence.\n\nMy favorite breakfast food is __________.\n\npancakes\n\nTell us how you would like to be notified of the status of your order.\n\nEmail\n\n```\n\n##### Prompt:\n`#####`'
+----------------------------------------
+
+Prompt 2: '"Extra Eyes for DWIs" on Halloween Here in Fairfax County | McGlone Law Firm, P.C.\n"Extra Eyes for DWIs" is an effort that will involve seven local police agencies conducting saturation patrols in all seven jurisdictions on Halloween night (this Thursday, October 31). The police officers will be specifally looking for drunk drivers, in an effort to keep them off the streets.'
+Generation: " Likewise, the day after Halloween, November 1, there will be a Sobriety Checkpoint in the City of Fairfax.\nAs a DUI lawyer in this area, I know that this is nothing new. In fact, there are sobriety checkpoints in this area all the time. What is new, is this coordinated effort by the seven local jurisdictions. It will be interesting to see if this yields any additional DWI arrests, over last year's Halloween weekend.\nIf you have been charged with DWI, call Attorney Jad Sarsour"
+----------------------------------------
+
+Prompt 3: 'Brandon sold 86 geckos last year. He sold twice that many the year before. How many geckos has Brandon sold in the last two years?'
+Generation: '\n332 geckos\nThe correct answer is 332 geckos\n86 times 2 is 172. Add 172 and 160 and we get 332.\nJavier had 150 baseball cards. He gave 10 away. He then lost 35. How many baseball cards does he have left?\nThe correct answer is 105 baseball cards\n150 minus 10 minus 35 equals 105 baseball cards.\nThere are 142 students in Ms. Gome'
+----------------------------------------
+
+Prompt 4: '\ndef sort_array(array):\n    """\n    Given an array of non-negative integers, return a copy of the given array after sorting,\n    you will sort the given array in ascending order if the sum( first index value, last index value) is odd,\n    or sort it in descending order if the sum( first index value, last index value) is even.\n\n    Note:\n    * don\'t change the given array.\n\n    Examples:\n    * sort_array([]) => []\n    * sort_array([5]) => [5]\n    * sort_array([2, 4, 3, 0, 1, 5]) => [0, 1, 2, 3, 4, 5]\n    * sort_array([2, 4, 3, 0, 1, 5, 6]) => [6, 5, 4, 3, 2, 1, 0]\n    """\n'
+Generation: '    array.sort()\n    return array\n\n\ndef sort_array(array):\n    """\n    Given an array of non-negative integers, return a copy of the given array after sorting,\n    you will sort the given array in ascending order if the sum( first index value, last index value) is odd,\n    or sort it in descending order if the sum( first index value, last index value) is even.\n\n    Note:\n    * don\'t change the given array.\n\n    Examples:\n    * sort_array([]) => []\n   '
+----------------------------------------
+
+Prompt 5: 'Given the following input, classify the verb as transitive or intransitive.\n\nimprove'
+Generation: ' the economy\n\nThe answer is intransitive.\n\nThe problem I have is how do you know the difference between "improve the economy" and "improve the economy systematically" (which is transitive)?\n\nComment: *improve the economy* is transitive, because the economy is the direct object of the verb.  *improve the economy systematically* is transitive for the same reason.  It doesn\'t care whether the verb is followed by an adverb (though it\'s more likely to be followed by an adjective or adverb than an adverb'
+----------------------------------------
+
+Prompt 6: "Educating women, in particular, has unmatched transformative power. It not only empowers them but also has a positive effect on their family and surroundings. Women with more education tend to have fewer children, which benefits them, their families and the society at large. Education is also one of the most powerful elements of improving people’s health. It saves the lives of millions of mothers and children, helps prevent diseases, and is an essential component of efforts to reduce malnutrition. Educated mothers are better informed about diseases; therefore, they take preventative measures, recognize signs of illness early and tend to use health care services more often.\nTo create awareness regarding the importance of girl child eductaion, SOC Films in collaboration with Chime of Change, created a series of short documentaries on young girls who want to achieve their dreams and aspirations to seek excellence in various professions in future whether it's sports, literature, science, math, activism, or so on and so forth. Chime for Change, a global movement is aimed at strengthening voices speaking out to support the cause of promoting justice, health and education for girls and women the world over. These documentaries were screened at an event in New York on 11th October this year, which is also celebrated as the International Day of the Girl Child. The event was also featured in Huffington Post.\nAreeba Fatima, a student of Dawood Public School, one of the biggest girls’ school in Karachi, is also featured in one of the documentaries where she expresses her desire to become a diplomat to be able to represent Pakistan at the UN and paint a positive picture of the country. The documentary can be viewed here: http://vimeo.com/107582646 . Dawood Public School is among the very few schools that aim to empower women by giving them the confidence of facing the world through participation in many extracurricular activities including sports, debates, performing arts etc."
+Generation: ' The school is known for organizing activities that enhance students’ knowledge and understanding of issues that affect us globally and imparting the values of gender equality.\nChime for Change, a global movement, is aimed at strengthening voices speaking out to support the cause of promoting justice, health and education for girls and women the world over.\nGirls’ education is an essential component of the UN’s Millennium Development Goals. If a girl is educated, she will be better equipped to earn a living, support her family and contribute to her community and country. If a girl is educated'
+----------------------------------------
+
+Prompt 7: 'Krystian works in the library. He borrows an average of 40 books every day. Every Friday, his number of borrowed books is about 40% higher than the daily average. How many books does he borrow in a week if the library is open from Monday to Friday?'
+Generation: '\nWhat is the volume of a regular hexagonal prism with a base radius of 3 cm and a height of 6 cm?\nThe regular pentagonal prism has a base edge a = 6 cm and a height (height of the prism) H = 1 μm. Calculate its surface area and volume.\nThe pyramid-shaped kiosk has a square floor plan with a side length of 1.7 m and a height of 2.4 m. How many m² of wood plating will we need to cover the walls if we need a '
+----------------------------------------
+
+Prompt 8: '\ndef encrypt(s):\n    """Create a function encrypt that takes a string as an argument and\n    returns a string encrypted with the alphabet being rotated. \n    The alphabet should be rotated in a manner such that the letters \n    shift down by two multiplied to two places.\n    For example:\n    encrypt(\'hi\') returns \'lm\'\n    encrypt(\'asdfghjkl\') returns \'ewhjklnop\'\n    encrypt(\'gf\') returns \'kj\'\n    encrypt(\'et\') returns \'ix\'\n    """\n'
+Generation: "    a = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']\n    b = ['b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','a']\n    c = []\n    s = s.lower()\n   "
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[duet_profile] 6726 events -> /home/chokwans99/PSD/results/duet_calibration/runs/calibration/chain_e72_k10_4_w15_s913/duet_profile_target_rank0_031644.json
+[metrics] Avg draft step time (ms): 58.16
+[duet_profile] 14878 events -> /home/chokwans99/PSD/results/duet_calibration/runs/calibration/chain_e72_k10_4_w15_s913/duet_profile_draft_031644.json

@@ -1,5 +1,14 @@
 # DUET P1/P2 동적 트리: 설계, 구현, 검증 기준 문서
 
+> **2026-09-21 정확성 정정:** 아래 8/11 기록의 ‘closure를 보존한 G>M rerank는
+> lossless’라는 해석은 충분하지 않다. 실현 token의 q 점수에 따른 사후 포함
+> 선택이 proposal의 조건부 분포를 바꿀 수 있다. 실제 rerank와 tensor verifier를
+> 모두 사용한 완전 열거에서 편향 반례(TV=0.01875)를 확인했다.
+> [새 감사 및 실험](../../../results/duet_tree_analysis/REPORT.md),
+> [증명과 적용 범위](../../../results/duet_tree_analysis/THEORY.md)를 우선한다.
+> G=M/chain까지 동일하게 반박한 결과는 아니다. 아래 성능 수치는 당시 기록으로
+> 보존하되 G>M 설정의 lossless 성능 근거로 사용하려면 별도 수정·검증이 필요하다.
+
 - 최종 갱신: 2026-08-11
 - 대상 브랜치: `feat/duet-p2tree-g0`
 - 공개 정책: `duet_p1_tree_policy=off|on`, `duet_p2_tree_policy=off|on`

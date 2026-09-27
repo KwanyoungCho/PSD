@@ -1,0 +1,214 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 42
+Loading 32 prompts from humaneval...
+Loading 32 prompts from alpaca...
+Loading 32 prompts from gsm...
+Loading 32 prompts from ultrafeedback...
+Total prompts loaded: 128
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 15.55it/s]
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 18.00it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 16.84it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 16.78it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.33it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.33it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 508, 256, 2, 128])
+[DUET] captured target chain proxy graphs (K=[4, 8], source=draft)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=1.0 b=1
+============================================================
+Generating:   0%|          | 0/128 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+Generating:   1%|          | 1/128 [00:07<16:31,  7.81s/it]Generating:   2%|▏         | 2/128 [00:10<10:04,  4.80s/it]Generating:   2%|▏         | 3/128 [00:13<08:39,  4.16s/it]Generating:   3%|▎         | 4/128 [00:16<07:05,  3.43s/it]Generating:   4%|▍         | 5/128 [00:19<06:40,  3.26s/it]Generating:   5%|▍         | 6/128 [00:22<06:21,  3.12s/it]Generating:   5%|▌         | 7/128 [00:24<05:59,  2.97s/it]Generating:   6%|▋         | 8/128 [00:26<05:21,  2.68s/it]Generating:   7%|▋         | 9/128 [00:30<05:41,  2.87s/it]Generating:   8%|▊         | 10/128 [00:32<05:24,  2.75s/it]Generating:   9%|▊         | 11/128 [00:35<05:30,  2.82s/it]Generating:   9%|▉         | 12/128 [00:38<05:16,  2.73s/it]Generating:  10%|█         | 13/128 [00:41<05:33,  2.90s/it]Generating:  11%|█         | 14/128 [00:44<05:31,  2.91s/it]Generating:  12%|█▏        | 15/128 [00:46<05:05,  2.70s/it]Generating:  12%|█▎        | 16/128 [00:49<05:00,  2.68s/it]Generating:  13%|█▎        | 17/128 [00:52<05:05,  2.75s/it]Generating:  14%|█▍        | 18/128 [00:54<04:54,  2.68s/it]Generating:  15%|█▍        | 19/128 [00:57<05:13,  2.87s/it]Generating:  16%|█▌        | 20/128 [01:00<04:56,  2.75s/it]Generating:  16%|█▋        | 21/128 [01:02<04:37,  2.59s/it]Generating:  17%|█▋        | 22/128 [01:05<04:41,  2.66s/it]Generating:  18%|█▊        | 23/128 [01:07<04:35,  2.63s/it]Generating:  19%|█▉        | 24/128 [01:10<04:32,  2.62s/it]Generating:  20%|█▉        | 25/128 [01:12<04:21,  2.54s/it]Generating:  20%|██        | 26/128 [01:15<04:25,  2.60s/it]Generating:  21%|██        | 27/128 [01:18<04:45,  2.83s/it]Generating:  22%|██▏       | 28/128 [01:21<04:39,  2.80s/it]Generating:  23%|██▎       | 29/128 [01:24<04:45,  2.89s/it]Generating:  23%|██▎       | 30/128 [01:27<04:39,  2.85s/it]Generating:  24%|██▍       | 31/128 [01:29<04:16,  2.64s/it]Generating:  25%|██▌       | 32/128 [01:32<04:15,  2.67s/it]Generating:  26%|██▌       | 33/128 [01:36<04:41,  2.96s/it]Generating:  27%|██▋       | 34/128 [01:39<04:50,  3.09s/it]Generating:  27%|██▋       | 35/128 [01:42<04:59,  3.23s/it]Generating:  28%|██▊       | 36/128 [01:46<05:04,  3.31s/it]Generating:  29%|██▉       | 37/128 [01:50<05:10,  3.41s/it]Generating:  30%|██▉       | 38/128 [01:53<04:55,  3.28s/it]Generating:  30%|███       | 39/128 [01:55<04:38,  3.13s/it]Generating:  31%|███▏      | 40/128 [01:59<04:39,  3.18s/it]Generating:  32%|███▏      | 41/128 [02:03<04:57,  3.42s/it]Generating:  33%|███▎      | 42/128 [02:07<05:16,  3.68s/it]Generating:  34%|███▎      | 43/128 [02:10<05:03,  3.57s/it]Generating:  34%|███▍      | 44/128 [02:14<04:53,  3.50s/it]Generating:  35%|███▌      | 45/128 [02:17<04:48,  3.47s/it]Generating:  36%|███▌      | 46/128 [02:20<04:36,  3.37s/it]Generating:  37%|███▋      | 47/128 [02:24<04:44,  3.51s/it]Generating:  38%|███▊      | 48/128 [02:27<04:34,  3.43s/it]Generating:  38%|███▊      | 49/128 [02:31<04:27,  3.39s/it]Generating:  39%|███▉      | 50/128 [02:35<04:43,  3.63s/it]Generating:  40%|███▉      | 51/128 [02:39<04:45,  3.70s/it]Generating:  41%|████      | 52/128 [02:42<04:43,  3.73s/it]Generating:  41%|████▏     | 53/128 [02:48<05:12,  4.16s/it]Generating:  42%|████▏     | 54/128 [02:51<04:54,  3.98s/it]Generating:  43%|████▎     | 55/128 [02:55<04:40,  3.84s/it]Generating:  44%|████▍     | 56/128 [02:58<04:34,  3.82s/it]Generating:  45%|████▍     | 57/128 [03:02<04:18,  3.65s/it]Generating:  45%|████▌     | 58/128 [03:05<04:13,  3.61s/it]Generating:  46%|████▌     | 59/128 [03:09<04:12,  3.66s/it]Generating:  47%|████▋     | 60/128 [03:12<04:02,  3.57s/it]Generating:  48%|████▊     | 61/128 [03:16<03:57,  3.54s/it]Generating:  48%|████▊     | 62/128 [03:19<03:51,  3.51s/it]Generating:  49%|████▉     | 63/128 [03:22<03:40,  3.40s/it]Generating:  50%|█████     | 64/128 [03:26<03:49,  3.58s/it]Generating:  51%|█████     | 65/128 [03:30<03:39,  3.48s/it]Generating:  52%|█████▏    | 66/128 [03:34<03:52,  3.75s/it]Generating:  52%|█████▏    | 67/128 [03:37<03:43,  3.67s/it]Generating:  53%|█████▎    | 68/128 [03:41<03:46,  3.77s/it]Generating:  54%|█████▍    | 69/128 [03:45<03:41,  3.76s/it]Generating:  55%|█████▍    | 70/128 [03:49<03:34,  3.69s/it]Generating:  55%|█████▌    | 71/128 [03:53<03:37,  3.81s/it]Generating:  56%|█████▋    | 72/128 [03:56<03:29,  3.75s/it]Generating:  57%|█████▋    | 73/128 [04:00<03:16,  3.57s/it]Generating:  58%|█████▊    | 74/128 [04:04<03:19,  3.69s/it]Generating:  59%|█████▊    | 75/128 [04:08<03:20,  3.78s/it]Generating:  59%|█████▉    | 76/128 [04:11<03:12,  3.69s/it]Generating:  60%|██████    | 77/128 [04:14<02:59,  3.53s/it]Generating:  61%|██████    | 78/128 [04:18<02:56,  3.54s/it]Generating:  62%|██████▏   | 79/128 [04:21<02:48,  3.44s/it]Generating:  62%|██████▎   | 80/128 [04:25<02:49,  3.53s/it]Generating:  63%|██████▎   | 81/128 [04:28<02:45,  3.51s/it]Generating:  64%|██████▍   | 82/128 [04:32<02:44,  3.58s/it]Generating:  65%|██████▍   | 83/128 [04:36<02:43,  3.64s/it]Generating:  66%|██████▌   | 84/128 [04:39<02:42,  3.68s/it]Generating:  66%|██████▋   | 85/128 [04:43<02:36,  3.64s/it]Generating:  67%|██████▋   | 86/128 [04:47<02:33,  3.66s/it]Generating:  68%|██████▊   | 87/128 [04:50<02:25,  3.54s/it]Generating:  69%|██████▉   | 88/128 [04:54<02:29,  3.75s/it]Generating:  70%|██████▉   | 89/128 [04:57<02:12,  3.41s/it]Generating:  70%|███████   | 90/128 [05:00<02:03,  3.26s/it]Generating:  71%|███████   | 91/128 [05:03<02:00,  3.25s/it]Generating:  72%|███████▏  | 92/128 [05:07<02:00,  3.35s/it]Generating:  73%|███████▎  | 93/128 [05:10<01:57,  3.36s/it]Generating:  73%|███████▎  | 94/128 [05:13<01:55,  3.40s/it]Generating:  74%|███████▍  | 95/128 [05:17<01:54,  3.47s/it]Generating:  75%|███████▌  | 96/128 [05:21<01:52,  3.52s/it]Generating:  76%|███████▌  | 97/128 [05:26<02:01,  3.92s/it]Generating:  77%|███████▋  | 98/128 [05:28<01:47,  3.59s/it]Generating:  77%|███████▋  | 99/128 [05:32<01:46,  3.67s/it]Generating:  78%|███████▊  | 100/128 [05:36<01:42,  3.65s/it]Generating:  79%|███████▉  | 101/128 [05:40<01:39,  3.68s/it]Generating:  80%|███████▉  | 102/128 [05:43<01:36,  3.73s/it]Generating:  80%|████████  | 103/128 [05:46<01:27,  3.50s/it]Generating:  81%|████████▏ | 104/128 [05:50<01:22,  3.43s/it]Generating:  82%|████████▏ | 105/128 [05:53<01:16,  3.32s/it]Generating:  83%|████████▎ | 106/128 [05:56<01:13,  3.32s/it]Generating:  84%|████████▎ | 107/128 [05:59<01:09,  3.31s/it]Generating:  84%|████████▍ | 108/128 [06:03<01:06,  3.35s/it]Generating:  85%|████████▌ | 109/128 [06:06<01:04,  3.37s/it]Generating:  86%|████████▌ | 110/128 [06:09<00:59,  3.30s/it]Generating:  87%|████████▋ | 111/128 [06:13<00:55,  3.29s/it]Generating:  88%|████████▊ | 112/128 [06:16<00:54,  3.39s/it]Generating:  88%|████████▊ | 113/128 [06:19<00:49,  3.30s/it]Generating:  89%|████████▉ | 114/128 [06:23<00:47,  3.38s/it]Generating:  90%|████████▉ | 115/128 [06:27<00:45,  3.51s/it]Generating:  91%|█████████ | 116/128 [06:29<00:38,  3.19s/it]Generating:  91%|█████████▏| 117/128 [06:32<00:35,  3.20s/it]Generating:  92%|█████████▏| 118/128 [06:36<00:31,  3.18s/it]Generating:  93%|█████████▎| 119/128 [06:40<00:31,  3.46s/it]Generating:  94%|█████████▍| 120/128 [06:43<00:28,  3.53s/it]Generating:  95%|█████████▍| 121/128 [06:47<00:24,  3.48s/it]Generating:  95%|█████████▌| 122/128 [06:50<00:21,  3.55s/it]Generating:  96%|█████████▌| 123/128 [06:54<00:18,  3.70s/it]Generating:  97%|█████████▋| 124/128 [06:59<00:15,  3.84s/it]Generating:  98%|█████████▊| 125/128 [07:02<00:11,  3.74s/it]Generating:  98%|█████████▊| 126/128 [07:06<00:07,  3.65s/it]Generating:  99%|█████████▉| 127/128 [07:09<00:03,  3.61s/it]Generating: 100%|██████████| 128/128 [07:13<00:00,  3.58s/it]Generating: 100%|██████████| 128/128 [07:13<00:00,  3.38s/it]
+Final Prefill Throughput: 1901.41tok/s
+Final Decode Throughput: 76.98tok/s
+[metrics] Prefill tokens/time: 9445 / 4.967357s
+[metrics] Decode tokens/time: 32938 / 427.864902s
+[metrics] Avg Tokens per step (incl recovery): 2.87
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.23 (denom=8)
+[metrics] Avg target time per full step (ms): 37.70
+[metrics] Avg target verify time (ms): 24.88
+[metrics] Avg Cache Hits: 0.56
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.556
+[metrics] Avg Phase 2 Accepted Len: 2.06
+[metrics] Avg Phase 2 Acceptance Ratio: 0.515
+[metrics] Avg Tokens per step on Cache Hit: 3.06
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.270
+  1: 0.174
+  2: 0.123
+  3: 0.090
+  4: 0.343
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.63
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 32768tok, Time: 433.17s, Total Throughput: 75.65tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'from typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    """ Check if in given list of numbers, are any two numbers closer to each other than\n    given threshold.\n    >>> has_close_elements([1.0, 2.0, 3.0], 0.5)\n    False\n    >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)\n    True\n    """\n'
+Generation: '    for current_item_index in range(len(numbers)):\n        for neighbour_index in range(current_item_index + 1, len(numbers)):\n            curr_item = numbers[current_item_index]\n            next_item = numbers[neighbour_index]\n\n            if next_item - curr_item <= threshold:\n                return True\n\n    return False\n\n\nif __name__ == "__main__":\n    import doctest\n    doctest.testmod()\n</s><s> import { describe, it } from \'mocha\'\nimport { expect } from \'chai\'\n\nimport { hashSync } from \'js-md5\'\n\nimport { test as integrationsManagerFactory } from \'./__mocks__/IntegrationsManager_factory\'\nimport {\n    __activate,\n    testAsEvent,\n    testAsElement\n} from \'./__mocks__/IntegrationsManager_stubs\'\nimport {\n    plugin,\n    inject,\n    STORAGE_KEY,\n    apply as applyPlugin\n} from \'../../es\'\nimport {\n    ObserverContext,\n'
+----------------------------------------
+
+Prompt 2: 'from typing import List\n\n\ndef separate_paren_groups(paren_string: str) -> List[str]:\n    """ Input to this function is a string containing multiple groups of nested parentheses. Your goal is to\n    separate those group into separate strings and return the list of those.\n    Separate groups are balanced (each open brace is properly closed) and not nested within each other\n    Ignore any spaces in the input string.\n    >>> separate_paren_groups(\'( ) (( )) (( )( ))\')\n    [\'()\', \'(())\', \'(()())\']\n    """\n'
+Generation: '    index_list = []\n    for index, character in enumerate(paren_string):\n        if character == \'(\':\n            index_list.append(index)\n        if character == \')\':\n            while len(index_list) == 0:\n                index_list.append(index)\n                break\n            index_list.pop()\n\n    return string_group(index_list, paren_string)\n\n\ndef string_group(index_list: List[int], s_input: str) -> List[str]:\n    separate_strings = []\n    while len(index_list) > 0:\n        begin = index_list.pop(0)\n        end = index_list.pop()\n        separate_strings.append(s_input[begin: end + 1].strip())\n\n    return separate_strings\n\n\n\n\n\n\n\n\nif __name__ == \'__main__\':\n    separate_paren_groups(\'\')\n</s><s> ---\ntitle: "R видеоаудио rapports de formation CSS - CSS 4"\nprintTypography: yes\nbasePage'
+----------------------------------------
+
+Prompt 3: '\n\ndef truncate_number(number: float) -> float:\n    """ Given a positive floating point number, it can be decomposed into\n    and integer part (largest integer smaller than given number) and decimals\n    (leftover part always smaller than 1).\n\n    Return the decimal part of the number.\n    >>> truncate_number(3.5)\n    0.5\n    """\n'
+Generation: '    return number - int(number)\n\n\ndef float_to_percent(fraction: float, **kwargs):\n    """ Internal percentage representation: It is rounded to 2 decimals.\n\n    Internally, the value was rounded.  Because of potential rounding, it\n    does not satisfy: P == F * 100.0 at all times. Instead let the caller\n    convert the percent to frac and assert those values equal each other.\n    >>> assert float_to_percent(0.2, fmt=.1) == 20.0: round(2 decimals)\n    >>> assert float_to_percent(0.555, fmt=.01) == 55.55\n\n    Args:\n        fraction (int, float): the floating point value to convert to\n        resolution (optional, int): how many decimal places to show in the internal format\n        fmt (int): allowable decimal places (when converting back to float format) for functions\n            "round", "ceil",\n    Returns:\n        formatted_fraction:\n    """\n    # params: integer, decimal places, two int'
+----------------------------------------
+
+Prompt 4: 'from typing import List\n\n\ndef below_zero(operations: List[int]) -> bool:\n    """ You\'re given a list of deposit and withdrawal operations on a bank account that starts with\n    zero balance. Your task is to detect if at any point the balance of account fallls below zero, and\n    at that point function should return True. Otherwise it should return False.\n    >>> below_zero([1, 2, 3])\n    False\n    >>> below_zero([1, 2, -4, 5])\n    True\n    """\n'
+Generation: '    start = 0\n    for i in range(1, len(operations)):\n        current = start - operations[i]\n        if current < 0:\n            return True\n        start = current\n    return False\n\n\ndef largest_difference(elements: List[int]) -> int:\n    """ You are given a list of integers where every element is between 1 and n inclusive,\n    find the largest difference between two consecutive elements in the list.\n    >>> largest_difference([13, 15, 17, 14, 24, 18, 20, 15, 19, 19, 9])\n    9\n    """\n    length = len(elements)\n    best = abs(list((length + 1) // 2))\n    best_index = -1\n    for i in range(1, length + 1):\n        diff = abs(elements[i] - elements[i - 1])\n        if best != diff and diff > best:\n            best = diff\n            best_index = i\n    return best\n\n\ndef'
+----------------------------------------
+
+Prompt 5: 'from typing import List\n\n\ndef mean_absolute_deviation(numbers: List[float]) -> float:\n    """ For a given list of input numbers, calculate Mean Absolute Deviation\n    around the mean of this dataset.\n    Mean Absolute Deviation is the average absolute difference between each\n    element and a centerpoint (mean in this case):\n    MAD = average | x - x_mean |\n    >>> mean_absolute_deviation([1.0, 2.0, 3.0, 4.0])\n    1.0\n    """\n'
+Generation: '    try:\n        numbers_length = int(len(numbers))\n    except ValueError as err:\n        raise err\n    try:\n        numbers_sum = float(numbers_length) * math.fsum(numbers)\n    except ZeroDivisionError as err:\n        raise err\n        # NOTE: Negative sqrt error will also be raised by fsum (maybe due to\n        #     more than one number being zero) check the exceptions for this\n    return math.fsum(map(lambda x: abs(x - numbers_sum / numbers_length), numbers)) / float(numbers_length)\n\n\ndef median_deviation(x: List[float]) -> float:\n    """ For a given list of input numbers, calculate the median deviation\n    around the median.\n    Middle: the median has equal counts of values above or below it.\n    Median Deviation is the average absolute difference between each\n    element and a median value:\n    M_D = average | x - x_median |\n    >>> median_deviation([1.0, 2.0, 3.0, 4.0]) #'
+----------------------------------------
+
+Prompt 6: 'from typing import List\n\n\ndef intersperse(numbers: List[int], delimeter: int) -> List[int]:\n    """ Insert a number \'delimeter\' between every two consecutive elements of input list `numbers\'\n    >>> intersperse([], 4)\n    []\n    >>> intersperse([1, 2, 3], 4)\n    [1, 4, 2, 4, 3]\n    """\n'
+Generation: '    left `[1, 2, 3]`\n    middle `[1, 4, 2, 4, 3]`\n    right `[1, 4, 2, 4, 3]` \n\n    if not numbers or numbers[0] == delimeter:\n        return numbers\n\n    output: List[int] = []\n\n    output.append(numbers[0])\n\n    # move one position forward, since last element is appended\n    n = len(numbers) - 1 \n    # left\n    numbers, prev = numbers[1:], numbers[0]\n    prev = prev or delimeter\n    inserted = 0\n    # middle \n    for i, x in enumerate(numbers):\n        if i != (n or 0):\n            output.append(x)\n        else:\n            output.append(delimeter)\n            inserted += 1\n    \n    # right\n    if delimeter == numbers[-1]:\n        numbers[-1] = numbers[-1] and 0\n    \n    output.append(delimeter)\n    return [*output, *numbers]\n</s>'
+----------------------------------------
+
+Prompt 7: 'from typing import List\n\n\ndef parse_nested_parens(paren_string: str) -> List[int]:\n    """ Input to this function is a string represented multiple groups for nested parentheses separated by spaces.\n    For each of the group, output the deepest level of nesting of parentheses.\n    E.g. (()()) has maximum two levels of nesting while ((())) has three.\n\n    >>> parse_nested_parens(\'(()()) ((())) () ((())()())\')\n    [2, 3, 1, 3]\n    """\n'
+Generation: '    nested_parens = []\n    for bracket_group in paren_string.split():\n        levels = 0\n        for c in bracket_group:\n            # If start \'(\', increase level or set a level if so far it\'s empty.\n            if c == \'(\':\n                levels += 1\n            # If end \')\', decrease level if a nested pair is closed.\n            elif c == \')\':\n                levels -= 1\n        nested_parens.append(max(levels, 0))\n    return nested_parens\n\n\nif __name__ == \'__main__\':\n    import doctest\n    doctest.testmod(verbose=True)\n</s><s> #ifndef CAIRO_AVAILABLE\n#error "Cairo is required."\n#endif\n\n#include "patches.hpp"\n#include "cairo.h"\n#include "Dispatch.hpp"\n\nusing namespace eyk;\n\nvoid setBackground(Dispatch &d, const std::string &color)\n{\n    d.pushValue(color);\n    d.call("setBackground'
+----------------------------------------
+
+Prompt 8: 'from typing import List\n\n\ndef filter_by_substring(strings: List[str], substring: str) -> List[str]:\n    """ Filter an input list of strings only for ones that contain given substring\n    >>> filter_by_substring([], \'a\')\n    []\n    >>> filter_by_substring([\'abc\', \'bacd\', \'cde\', \'array\'], \'a\')\n    [\'abc\', \'bacd\', \'array\']\n    """\n'
+Generation: '    filtered = []\n    for s in strings:\n        if substring in s:\n            filtered.append(s)\n    return filtered\n\n\ndef remove_all_separator_symbols(dataframe: pd.DataFrame, column: str) -> pd.DataFrame:\n    """ Remove all separator symbols in one dataframe\n    >>> remove_all_separator_symbols(df, column1)\n    """\n    df2 = dataframe.copy()\n    df2[column] = df2[column].apply(lambda x: x.replace(";", ""))\n    df2[column] = df2[column].apply(lambda x: x.replace(",", ""))\n    df2[column] = df2[column].apply(lambda x: x.replace(".", ""))\n    return df2\n\n\ndef filter_by_substring_exact(strings: List[str], substring: str) -> List[str]:\n    """ Filter an input list of strings only for ones that contain given substring\n    >>> filter_by_substring_exact([], \'a\')\n    []\n    >>> filter_by_substring_exact([\''
+----------------------------------------
+
+Prompt 9: 'from typing import List, Tuple\n\n\ndef sum_product(numbers: List[int]) -> Tuple[int, int]:\n    """ For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.\n    Empty sum should be equal to 0 and empty product should be equal to 1.\n    >>> sum_product([])\n    (0, 1)\n    >>> sum_product([1, 2, 3, 4])\n    (10, 24)\n    """\n'
+Generation: "    sum = 0\n    product = 1\n    for num in numbers:\n        sum += num\n        product *= num\n    return sum, product\n</s><s> <?php\ninclude '../../../../../static/api/config.php';\nrequire '../../../../../static/api/vendor/autoload.php';\n\n$app = factory('app');\n\n$conf['type'] = Html::PHP_FE;\n$conf['type'] = '':'; \n\n$erreurs = $app['j replied']->produits->modifProduct($app['j query']->all());\n\ncbDeterminerErreurs($erreurs);\n\n\n\n\n?></s><s> package com.deren.cashände\n\nimport android.app.ProgressDialog\nimport android.content.Intent\nimport android.os.Bundle\nimport android.util.Log\nimport android.widget.Toast\nimport androidx.appcompat.app.AppCompatActivity\nimport kotlinx.android.synthetic.main.activity_login.*\nimport org.json.JSONObject\n\n\nclass LoginActivity : AppCompatActivity() {\n"
+----------------------------------------
+
+Prompt 10: 'from typing import List, Tuple\n\n\ndef rolling_max(numbers: List[int]) -> List[int]:\n    """ From a given list of integers, generate a list of rolling maximum element found until given moment\n    in the sequence.\n    >>> rolling_max([1, 2, 3, 2, 3, 4, 2])\n    [1, 2, 3, 3, 3, 4, 4]\n    """\n'
+Generation: '    assert len(numbers) > 0\n    # By initializing as the min number in range, because we need max number, the best result would be the\n    # best number in the first number!!\n    return [max(numbers[0:i]) for i in range(0, len(numbers))]\n\n\ndef rolling_min(numbers: List[int]) -> List[int]:\n    """ From a given list of integers, generate a list of rolling minimum element found until given moment\n    in the sequence.\n    >>> rolling_min([1, 2, 3, 2, 3, 4, 2])\n    [1, 1, 2, 2, 3, 3, 2]\n    """\n    assert len(numbers) > 0\n    # Same as above\n    return [min(numbers[0:i]) for i in range(0, len(numbers))]\n\n\ndef get_cube(number: int, offset: int = 0) -> List[int]:\n    """ Generates the cube of a number following and centered at an offset\n    This is more like a rotating cube'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 34.04
+EXIT:0

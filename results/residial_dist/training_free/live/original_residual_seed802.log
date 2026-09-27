@@ -1,0 +1,194 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[TF experiment] policy=legacy, candidate T=1.0; sampler T=0.7 unchanged
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 802
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.17it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.16it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.75it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.11it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.38it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.38it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET] captured target chain proxy graphs (K=[4, 8], source=residual)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.7 b=1
+============================================================
+Generating:   0%|          | 0/16 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+Generating:   6%|▋         | 1/16 [00:06<01:35,  6.36s/it]Generating:  12%|█▎        | 2/16 [00:08<00:58,  4.17s/it]Generating:  19%|█▉        | 3/16 [00:12<00:50,  3.92s/it]Generating:  25%|██▌       | 4/16 [00:15<00:42,  3.55s/it]Generating:  31%|███▏      | 5/16 [00:17<00:32,  3.00s/it]Generating:  38%|███▊      | 6/16 [00:20<00:30,  3.05s/it]Generating:  44%|████▍     | 7/16 [00:23<00:27,  3.08s/it]Generating:  50%|█████     | 8/16 [00:26<00:23,  2.92s/it]Generating:  56%|█████▋    | 9/16 [00:29<00:21,  3.04s/it]Generating:  62%|██████▎   | 10/16 [00:32<00:18,  3.06s/it]Generating:  69%|██████▉   | 11/16 [00:35<00:14,  2.98s/it]Generating:  75%|███████▌  | 12/16 [00:38<00:11,  2.78s/it]Generating:  81%|████████▏ | 13/16 [00:41<00:08,  2.86s/it]Generating:  88%|████████▊ | 14/16 [00:43<00:05,  2.61s/it]Generating:  94%|█████████▍| 15/16 [00:46<00:02,  2.70s/it]Generating: 100%|██████████| 16/16 [00:48<00:00,  2.63s/it]Generating: 100%|██████████| 16/16 [00:48<00:00,  3.03s/it]
+Final Prefill Throughput: 1502.35tok/s
+Final Decode Throughput: 88.60tok/s
+[metrics] Prefill tokens/time: 2701 / 1.797844s
+[metrics] Decode tokens/time: 4128 / 46.590872s
+[metrics] Avg Tokens per step (incl recovery): 3.19
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.27 (denom=8)
+[metrics] Avg target time per full step (ms): 37.35
+[metrics] Avg target verify time (ms): 25.90
+[metrics] Avg Cache Hits: 0.77
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.772
+[metrics] Avg Phase 2 Accepted Len: 2.28
+[metrics] Avg Phase 2 Acceptance Ratio: 0.571
+[metrics] Avg Tokens per step on Cache Hit: 3.28
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.240
+  1: 0.157
+  2: 0.108
+  3: 0.071
+  4: 0.424
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.87
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 4096tok, Time: 48.49s, Total Throughput: 84.48tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Transform the following sentence into the passive voice\n\nI bought a book'
+Generation: '.\n\nIs this correct?\n\n\\begin{blockquote}\n\nA book was bought (by me).\n\\end{blockquote}\n\nComment: Neither of your two sentences is a complete sentence, so they don\'t really have voices.\n\nComment: @deadrat: I\'m not even going to get into the whole \'can a "sentence" be "incomplete"?\' thing. But for sure, OP\'s *A book was bought by me* is grammatically valid, meaningful, and has the same tense, aspect, and subject-object relationships as *I bought a book*.\n\nComment: @FumbleFingers "Can a sentence be incomplete?" Not according to [CGEL](http://www.cambridge.org/gb/elt/teacher-training-development/grammar-and-vocabulary/comprehensive-grammar-english-language-second-edition) (p. 1110), which says that the subject is obligatory. And I don\'t think the OP\'s sentence is meaningful. If it were, then it\'s the same as "I bought a book,"'
+----------------------------------------
+
+Prompt 2: 'Expand your clientele, meet and network with potential business partners and make new business contacts.\nLearn from seasoned industry experts sharing their knowledge and experience on scaling up productivity, driving profitability and positioning SMEs for sustainability and global Competitiveness.\nReach new markets, improve your corporate identity, showcase and promote your products and services to visitors and buyers.\nExplore potential business deals and commercial partnerships with key trade, commerce and investment representatives from around the Country, the USA and the International Community.\nRaise brand awareness and generate new business opportunities across multiple market sectors.\nBooth prices starts from N50,000 for 2 days. Start Booking Now! Booth prices starts from N50,000 for 2 days. Start Booking Now!\nWe were privilege to meet with Ebeano Supermarket, Shoppers Delite and Just Rite; we took up from there and today we are on the shelf of these malls. The exhibition showed us the way to do business right and to do it effectively and efficiently. The exhibition also made room for us to meet various investors, who have tremendously been of help to the growth of Hyst Global Business Ltd.\nI exhibited at the African Food and Products Exhibition 2018. The Event was a wonderful one and an eye-opener for not just me but for other exhibitors and attendees. From the conference sessions, I acquired knowledge on exportation of goods. The AFPE 2018 was the door opener to my exquisite Zobo Business. I thought to myself that since the Exhibition was for African Food and Products, Zobo is an African drink so I decided to make and sell for the Exhibition. Just like magic, amidst my other products, the zobo made super sales. Now I have a branded Zobo drink.\nThe AFPE 2018 was great, it was an opportunity to have a firsthand understanding of the challenges facing SMEs, helping us know what products they needed and how they can take advantage of our service offerings. The AFPE 2019 gave us a chance to partner with many of them.\nIt was an amazing experience, my business was a month old and I didn’t know anyone. It was the first time I got to be in public and I appreciate the opportunity to be exposed. Coming to the exhibition boosted my sales and created awareness for me when people didn’t know me. I have got contacts from the exhibition and they have formed part of my customer base.\nLagos is a commercial hub and it was important for us to share with the market. There has always been a great need to take our products and services to our end users, offering them values and benefits and we achieved that at the African Food & Products Exhibition 2018.'
+Generation: '\nThe African Food and Products Exhibition 2018 was quite a wonderful experience. It was a platform to interact with the general public and other exhibitors, building and networking. The exhibition was a great opportunity for my brand to grow and I would say that the exhibition has been a stepping stone to the growth of my brand.\nThe African Food and Products Exhibition 2018 was an eye-opener for me as a business man. I was able to learn more about all the opportunities and the challenges facing the SMEs and how we can help them overcome the challenges.\nOur participation at the African Food and Products Exhibition 2018 was a success. We were able to showcase our products and services and network with other exhibitors. It was an excellent platform to network, showcase and meet potential clients.\nThe African Food and Products Exhibition 2018 provided us with an avenue to put our products in the public eye. The exhibition increased our exposure and awareness. The exhibition also gave us a platform to network with other exhibitors and we took a tour round the exhibition.\nWhen we exhibited at the African'
+----------------------------------------
+
+Prompt 3: 'James earns $20 an hour while working at his main job.  He earns 20% less while working his second job.  He works 30 hours at his main job and half that much at his second job.  How much does he earn per week?'
+Generation: "\n\nI am currently working through the math section of the GMAT.  I know that I'm doing something wrong, but I can't figure out what.  I know that the answer is $225, but I can't figure out how to get there.  I tried to just multiply everything out, but that got me nowhere.  I get the answer $640, which is incorrect.\n\nHere is the work that I did:\n\n$20(30) + (0.8)(20)(15) = $640$\n\nCan anyone tell me what I am doing wrong?\n\nComment: If he is earning $20 per hour at his main job, he is earning $16 per hour at his second job, and he works 15 hours at his second job.  His weekly pay is $20\\times30 + 16\\times15 = 225$.\n\nComment: Ah, I see.  I was taking the 20% reduction of $20 as a percentage of the $20 an hour, which is $4 an hour.  Essentially,"
+----------------------------------------
+
+Prompt 4: '\nFIX = """\nAdd more test cases.\n"""\n\ndef vowels_count(s):\n    """Write a function vowels_count which takes a string representing\n    a word as input and returns the number of vowels in the string.\n    Vowels in this case are \'a\', \'e\', \'i\', \'o\', \'u\'. Here, \'y\' is also a\n    vowel, but only when it is at the end of the given word.\n\n    Example:\n    >>> vowels_count("abcde")\n    2\n    >>> vowels_count("ACEDY")\n    3\n    """\n'
+Generation: '    # YOUR CODE HERE\n\n    return 0\n\ndef main():\n    """Write a function main that takes an input string via\n    command line arguments and runs vowels_count on it.\n\n    Hint: You can use sys.argv[1] to get the input string.\n\n    Example:\n    $ python vowels_count.py "abcde"\n    2\n    """\n    # YOUR CODE HERE\n\n    pass\n\nif __name__ == \'__main__\':\n    main()\n</s><s> package com.example.demo.dao;\n\nimport com.example.demo.entity.Permission;\nimport com.example.demo.entity.Role;\nimport com.example.demo.entity.UserRole;\nimport org.apache.ibatis.annotations.Result;\nimport org.apache.ibatis.annotations.Results;\nimport org.apache.ibatis.annotations.ResultType;\nimport org.apache.ibatis.annotations.SelectProvider;\nimport org.apache.ibatis.jpa.provider.JpaMethodProvider;\nimport org.springframework'
+----------------------------------------
+
+Prompt 5: 'Create a dialog between two people who are discussing a scientific phenomenon\n\nHydropower'
+Generation: ' is the process of producing electricity through water. It has become one of the most important sources of electricity in the world.\n\nHydropower is the most important source of electricity in the world. It has become one of the most important sources of electricity in the world.\n\nHydropower is the most important source of electricity in the world. It has become one of the most important sources of electricity in the world.\n\nHydropower is the most important source of electricity in the world. It has become one of the most important sources of electricity in the world.\n\nHydropower is the most important source of electricity in the world. It has become one of the most important sources of electricity in the world.\n\nHydropower is the most important source of electricity in the world. It has become one of the most important sources of electricity in the world.\n\nHydropower is the most important source of electricity in the world. It has become one of the most important sources of electricity in the world.\n\nHydropower is the most important source of electricity in the world. It has become one of the most important'
+----------------------------------------
+
+Prompt 6: 'Originally, from Chicago, now living in Hong Kong, Jeanne studied improvisation in Chicago. She holds a B.S. in Anthropology from Loyola University of Chicago and an M.S. in Historic Preservation from the School of the Art Institute.\nShe has performed, presented and conducted workshops in the US, Europe and Asia. Ms. Lambin’s workshops have been described as “amazing,” “powerful,” and “great fun.” Her work has been featured in the Hong Kong’s Top Notch Storytelling Festival, Liar’s League Hong Kong, Literary Death Match, the Art’s House World Voices Presents, the Moth Chicago, Story Lab and This Much is True. Ms. Lambin is a proud to be a founding member of Improv for Humanity and co-creator of The Quest: Improv for Transformation.'
+Generation: '\njeanne@improvforhumanity.com\nJoyce Ketterer\nJoyce Ketterer is a graduate of DePaul University’s Theatre School. She has trained in improv with Second City and Improv Olympic in Chicago, and is a graduate of the Second City Conservatory. She currently performs with the improv group Improv Bingo and has performed with the improv groups Green Room and Sweet Tea. She is a former founding member of the improv group The Pastiche and the sketch comedy group Flux. Joyce has performed in the Chicago Sketch Comedy Festival, Chicago Improv Festival, and Detroit Improv Festival. She has also performed in the Las Vegas Improv Festival, the Miami Improv Festival, and the San Francisco Improv Festival. Joyce has also performed with the sketch group 4th Floor for the Chicago Sketch Comedy Festival, the Toronto Sketch Comedy Festival, the New York Underground Comedy Festival, and the Montreal Comedy Festival. She has also acted in a number of films, including the independent film Noise Matters, which was the winner of the Chicago Film Festival. She currently coaches for the Chicago Women’s Funny Festival. Joyce'
+----------------------------------------
+
+Prompt 7: 'Lee mows one lawn and charges $33. Last week he mowed 16 lawns and three customers each gave him a $10 tip. How many dollars did Lee earn mowing lawns last week?'
+Generation: '\nWhat is the best estimate for 83 + 27?\nThe sum of 83 + 27 = 110.\nA jar contains 12 marbles. There are five times as many green marbles as red marbles. How many green marbles are in the jar?\nThere are 5 times as many green marbles as red marbles.\nSo, number of green marbles = (5 times) number of red marbles\nnumber of green marbles = 5 * 2 = 10\nThere are 10 green marbles in the jar.\nA taxi costs $3 to start plus 60 cents for each mile traveled.\nWrite an equation to find the distance traveled if the total cost of the ride was $18.\nThe equation to find the distance traveled if the total cost of the ride was $18 is 18 = (3 + 0.6x)\n15.0 < 2x < 20.0\nWe are to find the distance traveled.\nThe equation to find the distance traveled is\n18 = (3 + 0.'
+----------------------------------------
+
+Prompt 8: '\ndef circular_shift(x, shift):\n    """Circular shift the digits of the integer x, shift the digits right by shift\n    and return the result as a string.\n    If shift > number of digits, return digits reversed.\n    >>> circular_shift(12, 1)\n    "21"\n    >>> circular_shift(12, 2)\n    "12"\n    """\n'
+Generation: "    digits = list(str(x))\n    shift = shift % len(digits)\n    if shift == 0:\n        return str(x)\n    else:\n        result = []\n        for i in range(len(digits) - 1, -1, -1):\n            result.append(digits[i])\n        for i in range(shift):\n            result.append(digits[i])\n        return ''.join(result)\n\n\ndef reduce_str_by_1(string):\n    return circular_shift(int(string), 1)\n\n\ndef reduce(string):\n    # return circular_shift(int(string), 1)\n    if int(string) < 10:\n        return string\n    else:\n        return reduce_str_by_1(str(reduce(str(circular_shift(int(string), -1)))))\n\n\nprint(reduce(input()))</s><s> <?php\nnamespace app\\admin\\model;\nuse think\\Model;\nuse think\\Db;\nclass User extends Model\n{\n    // 查询用"
+----------------------------------------
+
+Prompt 9: 'Identify the most suitable adverb for the following sentence\n\nShe works'
+Generation: ' \\strong{\\em{hardly}}.\n\n1) hardly\n\n2) hard\n\n3) hardly\n\n4) hardly\n\nI think the correct answer is 3, but I am not sure.\n\nAnswer: The correct answer is 1, hardly.\n\n\\strong{Hardly} is an adverb meaning "with great difficulty" or "barely" (source: Cambridge Dictionary).</s><s> Tags: apache-spark, spark-streaming\n\nQuestion: Spark Streaming "Unsupported class for type tag" exception for a case class\n\nI am getting the following error when I run the following code.\n\n\\begin{code}\njava.lang.RuntimeException: Unsupported class for type tag: org.apache.spark.streaming.dstream.DStream$$anon$1\n    at org.apache.spark.util.Utils$.classForName(Utils.scala:209)\n    at org.apache.spark.util.Utils$.classForName$(Utils.scala:207)\n    at org.apache.spark.streaming.dstream.DStream.classForName(DStream.scala:13'
+----------------------------------------
+
+Prompt 10: 'I grew up with stove top mac and cheese. Luckily my mother often made her own from scratch, but I also had the commercial boxed mac and cheese as well. Personally I’ve always prefered stove top to baked. I know, it is controversial. There is something to that velvety sauce and soft texture. It is simple and concise.\nHowever, as I grew up, the idea of making it from scratch seemed more and more improbable. So I leaned toward the box. Now I am not saying that something is bad if it is in a box but powdered things often don’t feel super healthy in the food realm. Especially if all you are adding to them is butter and hot sauce and maybe tuna from a can. Wait. What?\nYes. I would like to take a moment to address something that we call “Shame Food.” What is Shame Food? Shame Food is food that you only feel comfortable eating in private. Far from any witnesses. My big Shame Food experience was when I was doing social work. I would work all day in a pretty intense environment and then commute home and my wife worked another 5-6 hours. So I would get home, eat something, and then take a nap. That thing became my Shame Food. It was inspired by a natural food company’s spicy mac and cheese. (It has since been discontinued.) I would make mac and cheese and add a lot of cheap hot sauce (this was before we had a sauce business) and a can of tuna. I would not even plate it. I would eat the whole thing out of the pot and then take a nap. I mean the nap wasn’t a choice. That box of noodles is meant to feed a family of four. Plus the amount of hot sauce I added meant I wasn’t really enjoying the meal as much as surviving it. I had to recoup.\nThis recipe isn’t that dish. It is tied to that spicy boxed macaroni and cheese, that my wife introduced me to, and we would eat it together at a time that we didn’t eat much. Also the roots are a stove top mac and cheese. The kind where the only powder involved it mustard powder and the spice comes from a complex sauce with a bright balsamic flavor and a nutty essence that pairs well with the gruyere and trust me if you finish it with toasted sesame, you will not regret it. Please enjoy and feel free to share with us your Shame Food.\nPour the pasta into a strainer and place the empty pot back on the stove.\nTurn heat to medium and add the butter.\nOnce the butter has melted, stir in the flour and use a whisk continue for a minute.\nSlowly add the milk and cream while whisking to combine.\nAdd the mustard powder and stir.\nReduce heat to medium-low and add the mascarpone. Continue to whisk.\nBegin adding the cheese a handful at a time while whisking to combine.\nAdd the Hatch Sesame Balsamic Sauce.\nReturn the pasta to the sauce pan and stir to coat.\nIf the sauce seems a little loose then continue to stir the pasta occasionally on low heat.\nServe in bowls topped with toasted sesame seeds and Mexican oregano.'
+Generation: '\nIn the spirit of the holidays and eating too much, I present to you Sweet Potato Pie. I don’t know if you have noticed but eating too much is a major theme for the holidays and anytime I take a break from being in the kitchen. Because of this my body has decided to go on strike. I feel like I have to smuggle food and drink through my own border control. I have to convince my own stomach that I am worthy of the nutrition.\nAs a result I have been eating a lot of Easy Mac. I have been avoiding spice. I have been avoiding anything that might upset the balance of power inside my body. I have been avoiding anything that might actually be called a meal.\nThat said thanks to some encouragement from my wife I have been trying to bring the spice and the food back into my life. And for the first time in a while I have been able to eat a meal, feel normal, and not have to immediately take a nap.\nWhat is in this Sweet Potato Pie?\nThis pie is an attempt to bring balance back into our food. It is a pie that'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 32.73

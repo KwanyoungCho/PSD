@@ -1199,7 +1199,8 @@ class TreeProxyCUDAGraph:
 
 def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
                                  top_k: int, wire_n: int,
-                                 pack_scores: bool):
+                                 pack_scores: bool,
+                                 source: str = "residual"):
     """Capture-safe B=1 Policy-B proxy calculation for a chain.
 
     This is the fixed-shape equivalent of
@@ -1217,7 +1218,18 @@ def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
     p_d_y = p_d.gather(1, gather).squeeze(1)
     accept = (p_e_y / (p_d_y + 1e-10)).clamp(max=1.0)
 
-    residual = (p_e - p_d).clamp(min=0)
+    # Candidate source (config.duet_proxy_source).  Evaluated at graph
+    # CAPTURE time, so the captured graph holds exactly one arm's kernels
+    # and replay cost is unchanged.  "residual" is the champion path.
+    if source == "residual":
+        residual = (p_e - p_d).clamp(min=0)
+    elif source == "proxy":
+        residual = p_e.clone()               # target-only baseline
+    elif source == "draft":
+        residual = p_d.clone()               # draft-only baseline
+    else:
+        raise ValueError(
+            f"chain proxy source must be residual|proxy|draft; got {source!r}")
     residual.scatter_(1, gather, 0.0)
     top_prob, top_id = residual.topk(int(top_k), dim=-1)
     top_prob = top_prob / top_prob.sum(-1, keepdim=True).clamp(min=1e-10)
@@ -1248,7 +1260,8 @@ class ChainProxyCUDAGraph:
 
     @torch.inference_mode()
     def __init__(self, k: int, vocab_size: int, top_k: int, wire_n: int,
-                 pack_scores: bool, dtype, device):
+                 pack_scores: bool, dtype, device, source: str = "residual"):
+        self.source = str(source)
         self.k = int(k)
         self.V = int(vocab_size)
         self.top_k = int(top_k)
@@ -1275,7 +1288,7 @@ class ChainProxyCUDAGraph:
             for _ in range(2):
                 chain_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
-                    self.top_k, self.wire_n, self.pack_scores)
+                    self.top_k, self.wire_n, self.pack_scores, self.source)
         warm.synchronize()
         torch.cuda.synchronize(self.device)
         self.graph = torch.cuda.CUDAGraph()
@@ -1283,7 +1296,7 @@ class ChainProxyCUDAGraph:
             self.out_pos, self.out_tok, self.out_piv = \
                 chain_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
-                    self.top_k, self.wire_n, self.pack_scores)
+                    self.top_k, self.wire_n, self.pack_scores, self.source)
 
     @torch.inference_mode()
     def replay(self, exit_logits, q_logits, tokens):

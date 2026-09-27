@@ -1,0 +1,84 @@
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD/results/residial_dist/training_free/runtime_snapshot_checks.py", line 47, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/results/residial_dist/training_free/runtime_snapshot_checks.py", line 43, in main
+    if any(r['contexts_above_3e_5'] for r in out):raise RuntimeError(json.dumps(out,indent=2))
+                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: [
+  {
+    "temperature": 0.5,
+    "policy": "policy::floor0.75__full__expected_mix0.25",
+    "contexts": 32,
+    "coverage_max_abs_difference": 0.00023036450147628784,
+    "coverage_mean_signed_difference": 7.197028025984764e-06,
+    "contexts_above_3e_5": 1
+  },
+  {
+    "temperature": 0.5,
+    "policy": "policy::proxy__full__uniform0.05",
+    "contexts": 32,
+    "coverage_max_abs_difference": 0.00011324882507324219,
+    "coverage_mean_signed_difference": 3.5390257835388184e-06,
+    "contexts_above_3e_5": 1
+  },
+  {
+    "temperature": 0.5,
+    "policy": "policy::proxy__topm__original",
+    "contexts": 32,
+    "coverage_max_abs_difference": 2.002716064453125e-05,
+    "coverage_mean_signed_difference": 6.258487701416016e-07,
+    "contexts_above_3e_5": 0
+  },
+  {
+    "temperature": 0.7,
+    "policy": "policy::complement_power1__full__expected_mix0.25",
+    "contexts": 32,
+    "coverage_max_abs_difference": 5.960464477539063e-08,
+    "coverage_mean_signed_difference": 1.862645149230957e-09,
+    "contexts_above_3e_5": 0
+  },
+  {
+    "temperature": 0.7,
+    "policy": "policy::proxy__full__expected_mix0.25",
+    "contexts": 32,
+    "coverage_max_abs_difference": 0.0,
+    "coverage_mean_signed_difference": 0.0,
+    "contexts_above_3e_5": 0
+  },
+  {
+    "temperature": 0.7,
+    "policy": "policy::proxy__topm__original",
+    "contexts": 32,
+    "coverage_max_abs_difference": 0.009217321872711182,
+    "coverage_mean_signed_difference": 0.0002880413085222244,
+    "contexts_above_3e_5": 1
+  },
+  {
+    "temperature": 1.0,
+    "policy": "policy::complement_power0.5__full__expected_mix0.25",
+    "contexts": 32,
+    "coverage_max_abs_difference": 5.960464477539063e-08,
+    "coverage_mean_signed_difference": 1.862645149230957e-09,
+    "contexts_above_3e_5": 0
+  },
+  {
+    "temperature": 1.0,
+    "policy": "policy::proxy__full__expected_mix0.25",
+    "contexts": 32,
+    "coverage_max_abs_difference": 0.006997525691986084,
+    "coverage_mean_signed_difference": -0.00023225322365760803,
+    "contexts_above_3e_5": 2
+  },
+  {
+    "temperature": 1.0,
+    "policy": "policy::proxy__topm__original",
+    "contexts": 32,
+    "coverage_max_abs_difference": 0.006997525691986084,
+    "coverage_mean_signed_difference": -0.00021867267787456512,
+    "contexts_above_3e_5": 1
+  }
+]

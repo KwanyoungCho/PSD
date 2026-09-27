@@ -1,0 +1,392 @@
+{
+  "passed": true,
+  "records": [
+    {
+      "temperature": 0.5,
+      "policy": "policy::floor0.75__full__expected_mix0.25",
+      "contexts": 935,
+      "predicted_objective_max_error": 1.1920928955078125e-07,
+      "coverage_max_abs_difference": 0.05352321267127991,
+      "coverage_mean_signed_difference": -7.129299774533138e-05,
+      "contexts_above_3e_5": 11
+    },
+    {
+      "temperature": 0.5,
+      "policy": "policy::proxy__full__expected_mix0.25",
+      "contexts": 935,
+      "predicted_objective_max_error": 1.1920928955078125e-07,
+      "coverage_max_abs_difference": 0.8988455533981323,
+      "coverage_mean_signed_difference": 0.0009317939402535558,
+      "contexts_above_3e_5": 44
+    },
+    {
+      "temperature": 0.5,
+      "policy": "policy::proxy__full__uniform0.05",
+      "contexts": 935,
+      "predicted_objective_max_error": 5.960464477539063e-08,
+      "coverage_max_abs_difference": 0.3169754147529602,
+      "coverage_mean_signed_difference": 0.00044015172170475125,
+      "contexts_above_3e_5": 29
+    },
+    {
+      "temperature": 0.5,
+      "policy": "policy::proxy__topm__original",
+      "contexts": 935,
+      "predicted_objective_max_error": 5.960464477539063e-08,
+      "coverage_max_abs_difference": 0.8988455533981323,
+      "coverage_mean_signed_difference": 0.0010451397392898798,
+      "contexts_above_3e_5": 40
+    },
+    {
+      "temperature": 0.7,
+      "policy": "policy::complement_power1__full__expected_mix0.25",
+      "contexts": 1033,
+      "predicted_objective_max_error": 1.1920928955078125e-07,
+      "coverage_max_abs_difference": 0.009907543659210205,
+      "coverage_mean_signed_difference": 3.457739694567863e-06,
+      "contexts_above_3e_5": 2
+    },
+    {
+      "temperature": 0.7,
+      "policy": "policy::proxy__full__expected_mix0.25",
+      "contexts": 1033,
+      "predicted_objective_max_error": 1.1920928955078125e-07,
+      "coverage_max_abs_difference": 0.9806775450706482,
+      "coverage_mean_signed_difference": -0.0008643792825751007,
+      "contexts_above_3e_5": 43
+    },
+    {
+      "temperature": 0.7,
+      "policy": "policy::proxy__topm__original",
+      "contexts": 1033,
+      "predicted_objective_max_error": 1.1920928955078125e-07,
+      "coverage_max_abs_difference": 0.115332692861557,
+      "coverage_mean_signed_difference": -0.000207922697882168,
+      "contexts_above_3e_5": 58
+    },
+    {
+      "temperature": 1.0,
+      "policy": "policy::complement_power0.5__full__expected_mix0.25",
+      "contexts": 1144,
+      "predicted_objective_max_error": 5.960464477539063e-08,
+      "coverage_max_abs_difference": 0.00476720929145813,
+      "coverage_mean_signed_difference": -3.894325345754623e-06,
+      "contexts_above_3e_5": 2
+    },
+    {
+      "temperature": 1.0,
+      "policy": "policy::proxy__full__expected_mix0.25",
+      "contexts": 1144,
+      "predicted_objective_max_error": 5.960464477539063e-08,
+      "coverage_max_abs_difference": 0.9819322824478149,
+      "coverage_mean_signed_difference": 0.0010345838963985443,
+      "contexts_above_3e_5": 54
+    },
+    {
+      "temperature": 1.0,
+      "policy": "policy::proxy__topm__original",
+      "contexts": 1144,
+      "predicted_objective_max_error": 1.1920928955078125e-07,
+      "coverage_max_abs_difference": 0.9819322228431702,
+      "coverage_mean_signed_difference": 0.0007871587295085192,
+      "contexts_above_3e_5": 73
+    }
+  ],
+  "summaries": {
+    "0.5": {
+      "original_proxy": {
+        "policy": "policy::proxy__topm__original",
+        "coverage": {
+          "mean": 0.8900521813581387,
+          "ci95": [
+            0.8714381744153799,
+            0.907625561983635
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": -0.02329685166478157,
+          "ci95": [
+            -0.033346880413591865,
+            -0.01386889551455776
+          ]
+        }
+      },
+      "proxy_allocation": {
+        "policy": "policy::proxy__full__uniform0.05",
+        "coverage": {
+          "mean": 0.8993155881762505,
+          "ci95": [
+            0.883029598152886,
+            0.914659443233783
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.009263406818111736,
+          "ci95": [
+            0.0006477057468146087,
+            0.01843225113116205
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": -0.014033444846669832,
+          "ci95": [
+            -0.020162562637900314,
+            -0.008491212424511708
+          ]
+        }
+      },
+      "overall": {
+        "policy": "policy::floor0.75__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.9132071317483982,
+          "ci95": [
+            0.8999108511644105,
+            0.9259081488475205
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.023154950390259426,
+          "ci95": [
+            0.013677766732871532,
+            0.0332420714199543
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": -0.00014190127452214563,
+          "ci95": [
+            -0.0011201151025791963,
+            0.0006767053777972857
+          ]
+        }
+      },
+      "identical_allocation_proxy": {
+        "policy": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.9133490330229203,
+          "ci95": [
+            0.9002339442105343,
+            0.9259903779563805
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.02329685166478157,
+          "ci95": [
+            0.01386889551455776,
+            0.033346880413591865
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    },
+    "0.7": {
+      "original_proxy": {
+        "policy": "policy::proxy__topm__original",
+        "coverage": {
+          "mean": 0.8202011057486137,
+          "ci95": [
+            0.8025511728754888,
+            0.8370368601133427
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": -0.023426754710574944,
+          "ci95": [
+            -0.031341527790452045,
+            -0.01608959309135874
+          ]
+        }
+      },
+      "proxy_allocation": {
+        "policy": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.8436278604591886,
+          "ci95": [
+            0.8260700061451643,
+            0.8597279688964288
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.023426754710574944,
+          "ci95": [
+            0.016089593091358743,
+            0.031341527790452045
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "overall": {
+        "policy": "policy::complement_power1__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.8443085951730609,
+          "ci95": [
+            0.8267798450930666,
+            0.8605181796088194
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.02410748942444722,
+          "ci95": [
+            0.016490465387081106,
+            0.03225316890360167
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": 0.0006807347138722737,
+          "ci95": [
+            -0.0011011455052842695,
+            0.002736846404150129
+          ]
+        }
+      },
+      "identical_allocation_proxy": {
+        "policy": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.8436278604591886,
+          "ci95": [
+            0.8260700061451643,
+            0.8597279688964288
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.023426754710574944,
+          "ci95": [
+            0.016089593091358743,
+            0.031341527790452045
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    },
+    "1.0": {
+      "original_proxy": {
+        "policy": "policy::proxy__topm__original",
+        "coverage": {
+          "mean": 0.651260617809991,
+          "ci95": [
+            0.6318203111800055,
+            0.6705595693939055
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": -0.016745021877189476,
+          "ci95": [
+            -0.02273585652001202,
+            -0.011245820849823455
+          ]
+        }
+      },
+      "proxy_allocation": {
+        "policy": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6680056396871805,
+          "ci95": [
+            0.6488650469497468,
+            0.6866787955708181
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.016745021877189476,
+          "ci95": [
+            0.011245820849823455,
+            0.022735856520012022
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "overall": {
+        "policy": "policy::complement_power0.5__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6681134486570954,
+          "ci95": [
+            0.6491611074268198,
+            0.6865530358084168
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.016852830847104393,
+          "ci95": [
+            0.011063525670518477,
+            0.023111715369547408
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": 0.00010780896991491323,
+          "ci95": [
+            -0.0021679839352145795,
+            0.0016241101780906323
+          ]
+        }
+      },
+      "identical_allocation_proxy": {
+        "policy": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6680056396871805,
+          "ci95": [
+            0.6488650469497468,
+            0.6866787955708181
+          ]
+        },
+        "vs_original_proxy": {
+          "mean": 0.016745021877189476,
+          "ci95": [
+            0.011245820849823455,
+            0.022735856520012022
+          ]
+        },
+        "vs_identical_allocation_proxy": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    }
+  },
+  "scope": "All 3,112 confirmation steps, reconstructed float32 logits. Every runtime 17-slot wire prefix has the optimal predicted 15-root score within 2e-6. Ties can change true coverage; paired results reported rather than claiming token-ID equality. Not bitwise reconstruction of original model logits."
+}

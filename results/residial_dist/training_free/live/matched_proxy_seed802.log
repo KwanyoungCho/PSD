@@ -1,0 +1,194 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[TF experiment] policy=policy::proxy__topm__original, candidate T=0.7; sampler T=0.7 unchanged
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 802
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 15.34it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 13.73it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.78it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.83it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.35it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.35it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET] captured target chain proxy graphs (K=[4, 8], source=proxy)
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.7 b=1
+============================================================
+Generating:   0%|          | 0/16 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+Generating:   6%|▋         | 1/16 [00:05<01:27,  5.86s/it]Generating:  12%|█▎        | 2/16 [00:08<00:59,  4.26s/it]Generating:  19%|█▉        | 3/16 [00:12<00:52,  4.04s/it]Generating:  25%|██▌       | 4/16 [00:15<00:41,  3.47s/it]Generating:  31%|███▏      | 5/16 [00:18<00:36,  3.36s/it]Generating:  38%|███▊      | 6/16 [00:21<00:32,  3.30s/it]Generating:  44%|████▍     | 7/16 [00:24<00:29,  3.24s/it]Generating:  50%|█████     | 8/16 [00:27<00:24,  3.04s/it]Generating:  56%|█████▋    | 9/16 [00:31<00:22,  3.26s/it]Generating:  62%|██████▎   | 10/16 [00:34<00:19,  3.20s/it]Generating:  69%|██████▉   | 11/16 [00:36<00:15,  3.04s/it]Generating:  75%|███████▌  | 12/16 [00:39<00:11,  2.85s/it]Generating:  81%|████████▏ | 13/16 [00:42<00:08,  2.92s/it]Generating:  88%|████████▊ | 14/16 [00:45<00:06,  3.04s/it]Generating:  94%|█████████▍| 15/16 [00:48<00:02,  2.99s/it]Generating: 100%|██████████| 16/16 [00:51<00:00,  2.90s/it]Generating: 100%|██████████| 16/16 [00:51<00:00,  3.21s/it]
+Final Prefill Throughput: 1403.59tok/s
+Final Decode Throughput: 83.81tok/s
+[metrics] Prefill tokens/time: 2701 / 1.924355s
+[metrics] Decode tokens/time: 4126 / 49.230270s
+[metrics] Avg Tokens per step (incl recovery): 3.04
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.26 (denom=8)
+[metrics] Avg target time per full step (ms): 37.70
+[metrics] Avg target verify time (ms): 25.43
+[metrics] Avg Cache Hits: 0.81
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.809
+[metrics] Avg Phase 2 Accepted Len: 2.12
+[metrics] Avg Phase 2 Acceptance Ratio: 0.530
+[metrics] Avg Tokens per step on Cache Hit: 3.12
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.272
+  1: 0.167
+  2: 0.109
+  3: 0.075
+  4: 0.377
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.72
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 4096tok, Time: 51.30s, Total Throughput: 79.84tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Transform the following sentence into the passive voice\n\nI bought a book'
+Generation: ".\n\nIs this correct?\n\n\\begin{blockquote}\n\nA book was bought (by me).\n\\end{blockquote}\n\nComment: You're using the past perfect passive, so the correct by-phrase is *by me*.\n\nComment: You can't put by me if you are using a passive voice.\n\nComment: @Makeda, you can, but the passive voice is a bit redundant because the passive voice already implies that the subject is the object of the sentence.\n\nAnswer: It is grammatically correct, but it is not typical usage. Normally, we would not use the passive voice in this situation, because the subject is specified. That is, it is clear from the context what the subject is, so the passive voice is not necessary.\n\n\\begin{blockquote}\n\nI bought a book.\n\\end{blockquote}\n\nIn other words, the passive voice is not necessary because the identity of the person who bought the book is known.\n\nIn a situation where the identity of the person who bought the book is unknown, we would use the passive voice.\n\n\\begin{blockquote}\n\n"
+----------------------------------------
+
+Prompt 2: 'Expand your clientele, meet and network with potential business partners and make new business contacts.\nLearn from seasoned industry experts sharing their knowledge and experience on scaling up productivity, driving profitability and positioning SMEs for sustainability and global Competitiveness.\nReach new markets, improve your corporate identity, showcase and promote your products and services to visitors and buyers.\nExplore potential business deals and commercial partnerships with key trade, commerce and investment representatives from around the Country, the USA and the International Community.\nRaise brand awareness and generate new business opportunities across multiple market sectors.\nBooth prices starts from N50,000 for 2 days. Start Booking Now! Booth prices starts from N50,000 for 2 days. Start Booking Now!\nWe were privilege to meet with Ebeano Supermarket, Shoppers Delite and Just Rite; we took up from there and today we are on the shelf of these malls. The exhibition showed us the way to do business right and to do it effectively and efficiently. The exhibition also made room for us to meet various investors, who have tremendously been of help to the growth of Hyst Global Business Ltd.\nI exhibited at the African Food and Products Exhibition 2018. The Event was a wonderful one and an eye-opener for not just me but for other exhibitors and attendees. From the conference sessions, I acquired knowledge on exportation of goods. The AFPE 2018 was the door opener to my exquisite Zobo Business. I thought to myself that since the Exhibition was for African Food and Products, Zobo is an African drink so I decided to make and sell for the Exhibition. Just like magic, amidst my other products, the zobo made super sales. Now I have a branded Zobo drink.\nThe AFPE 2018 was great, it was an opportunity to have a firsthand understanding of the challenges facing SMEs, helping us know what products they needed and how they can take advantage of our service offerings. The AFPE 2019 gave us a chance to partner with many of them.\nIt was an amazing experience, my business was a month old and I didn’t know anyone. It was the first time I got to be in public and I appreciate the opportunity to be exposed. Coming to the exhibition boosted my sales and created awareness for me when people didn’t know me. I have got contacts from the exhibition and they have formed part of my customer base.\nLagos is a commercial hub and it was important for us to share with the market. There has always been a great need to take our products and services to our end users, offering them values and benefits and we achieved that at the African Food & Products Exhibition 2018.'
+Generation: '\nThe exhibition was an avenue for us to meet with long term customers. Our customers were there and we were able to meet and interact with them.\nThe African Food and Products Exhibition 2018 was a very good platform to create awareness on our products and services.\nThe Exhibition was more than I expected. I thought I was going to gain a different perspective and learn new things. It turned out to be a game changer for me. It was a platform to showcase my brand and also get to know the market better. It was an opportunity to learn about competition and how to be more competitive.</s><s> A.I.M. Controls | Multi-Matic Sdn. Bhd.\nA. I. M. Controls Sdn Bhd is a wholly owned subsidiary company of Multi-Matic Sdn Bhd. A.I.M. Controls Sdn Bhd is the dealer and distributor for DELTA in Malaysia.</s><s> The Monterey County Board of Supervisors voted unanimously on Tuesday to put a 1-cent sales tax increase to fund transportation projects on the ballot in November.'
+----------------------------------------
+
+Prompt 3: 'James earns $20 an hour while working at his main job.  He earns 20% less while working his second job.  He works 30 hours at his main job and half that much at his second job.  How much does he earn per week?'
+Generation: "\n\nComment: I'm not sure this question is on-topic for the site. You may want to check out [How to Ask](https://math.meta.stackexchange.com/questions/9959/how-to-ask-a-good-question?rq=1).\n\nComment: I'm voting to close this question as off-topic because it is just a word problem with no attempt.\n\nAnswer: His wages at his main job are $20 \\times 30 = 600$\n\nHis wages at his second job are $0.8 \\times 20 \\times 15 = 240$\n\nTotal wages are $600 + 240 = 840$</s><s> Tags: c#, windows, delphi, com, activex\n\nQuestion: Is there a way to get the filename from an activex component?\n\nI have compiled a DLL from a C# project. This DLL is registered as an ActiveX component. I have a Delphi application that creates an instance of this ActiveX component. I can't seem to find a way to get the filename of this"
+----------------------------------------
+
+Prompt 4: '\nFIX = """\nAdd more test cases.\n"""\n\ndef vowels_count(s):\n    """Write a function vowels_count which takes a string representing\n    a word as input and returns the number of vowels in the string.\n    Vowels in this case are \'a\', \'e\', \'i\', \'o\', \'u\'. Here, \'y\' is also a\n    vowel, but only when it is at the end of the given word.\n\n    Example:\n    >>> vowels_count("abcde")\n    2\n    >>> vowels_count("ACEDY")\n    3\n    """\n'
+Generation: '    # Write an implementation of the function described above.\n    # You will be graded on correctness.\n    # Please see the test cases below for more examples.\n    # vowels_count("abcde")\n    # vowels_count("ACEDY")\n    # vowels_count("abcdey")\n    # vowels_count("abcdeuvy")\n    # vowels_count("a")\n    # vowels_count("A")\n    # vowels_count("aA")\n    # vowels_count("aAy")\n    # vowels_count("AaY")\n    pass\n\ndef test_vowels_count():\n    """DO NOT EDIT THIS FUNCTION\n    Tests for vowels_count.\n    """\n    # test_vowels_count("abcde")\n    # test_vowels_count("ACEDY")\n    # test_vowels_count("abcdey")\n    # test_vowels_count("abcdeuvy")\n    # test_vowels_count'
+----------------------------------------
+
+Prompt 5: 'Create a dialog between two people who are discussing a scientific phenomenon\n\nHydropower'
+Generation: ' is a common source of energy in the United States. It is a relatively clean source of energy, though there are some ecological concerns about its use. In this activity, you will create a dialog between two people who are discussing the benefits of hydropower as well as the concerns about its use.\n\n### Directions\n\nWrite a dialog between two people about hydropower.\n\nThe dialog should be a conversation between two friends discussing the benefits and concerns of hydropower.\n\nThe dialog should be at least 150 words long.\n\nThe dialog should use at least four of the vocabulary words.\n\nThe dialog should include at least one sentence that correctly uses the word "ecological."\n\n### Vocabulary\n\n**ecological**: of or relating to the branch of science that deals with the relations of organisms to one another and to their physical surroundings\n\n**electrical**: of or relating to electricity\n\n**electricity**: a form of energy that produces a current that can make a bulb glow and can be used to power many devices in the home\n\n**electromagnetic**:'
+----------------------------------------
+
+Prompt 6: 'Originally, from Chicago, now living in Hong Kong, Jeanne studied improvisation in Chicago. She holds a B.S. in Anthropology from Loyola University of Chicago and an M.S. in Historic Preservation from the School of the Art Institute.\nShe has performed, presented and conducted workshops in the US, Europe and Asia. Ms. Lambin’s workshops have been described as “amazing,” “powerful,” and “great fun.” Her work has been featured in the Hong Kong’s Top Notch Storytelling Festival, Liar’s League Hong Kong, Literary Death Match, the Art’s House World Voices Presents, the Moth Chicago, Story Lab and This Much is True. Ms. Lambin is a proud to be a founding member of Improv for Humanity and co-creator of The Quest: Improv for Transformation.'
+Generation: "\n“Jeanne Lambin is an improviser, writer and performer with 25 years of experience. She has studied at Second City, iO, the Annoyance, the Players Workshop and the Conservatory at the Training Center. She has performed, presented and conducted workshops in the US, Europe and Asia. Ms. Lambin’s workshops have been described as “amazing,” “powerful,” and “great fun.” Her work has been featured in the Hong Kong’s Top Notch Storytelling Festival, Literary Death Match, the Art’s House World Voices Presents, the Moth Chicago, Story Lab, This Much is True, and at the Chicago History Museum. Ms. Lambin is a proud to be a founding member of Improv for Humanity and co-creator of The Quest: Improv for Transformation.”\nTags: art, Chicago, Don't miss, France, Jeanne Lambin, Le Comptoir General, Paris, Paris Events Calendar, storytelling, things to do in Paris, What's Happening in Paris</s><s> Apple and Newegg's environmental practices\nIn a recent"
+----------------------------------------
+
+Prompt 7: 'Lee mows one lawn and charges $33. Last week he mowed 16 lawns and three customers each gave him a $10 tip. How many dollars did Lee earn mowing lawns last week?'
+Generation: '\nThe ratio of the number of boxes of cereal to the number of boxes of crackers is 5 to 2. If there are 15 boxes of crackers in the pantry, how many boxes of cereal are there?\nWrite a fraction or mixed number to represent the shaded region.\nJenny’s favorite snack is an apple. An apple has approximately the same number of calories as 3 cups of carrots. The table shows how many cups of carrots Jenny ate each week for three months. How many calories did Jenny eat from carrots in those three months?\nMike’s house uses approximately 5 gallons of gas for heating the house each day. If he has a 100-gallon gas tank, how many days will it take to run out of gas?\nThe graph shows the number of people who participated in a fundraiser for three consecutive years. Find the mean of the data set.\nThe graph shows the number of magazine subscriptions sold for the first 5 months of the year. Find the median of the data set.\nThe following data set gives the number of students who play an'
+----------------------------------------
+
+Prompt 8: '\ndef circular_shift(x, shift):\n    """Circular shift the digits of the integer x, shift the digits right by shift\n    and return the result as a string.\n    If shift > number of digits, return digits reversed.\n    >>> circular_shift(12, 1)\n    "21"\n    >>> circular_shift(12, 2)\n    "12"\n    """\n'
+Generation: "    return str(int(str(x)[::-1])[::-1])[shift:]\n</s><s> import os\nimport gzip\nimport pickle\nimport json\n\nfrom data_tools.data_tools import *\n\n\n### MAIN ###\ndef main():\n    if not os.path.isdir('data_tools/raw_data'):\n        os.makedirs('data_tools/raw_data')\n\n    # # Get all of the json files in the folder\n    # all_files = os.listdir('data_tools/raw_data')\n    #\n    # # Iterate over the json files\n    # for file in all_files:\n    #     # load JSON\n    #     with open(f'data_tools/raw_data/{file}', 'r') as f:\n    #         json_data = json.load(f)\n    #\n    #     # Iterate over all the different elements\n    #     for element in json_data:\n    #         # Get the content of the element\n    #         element_content = element['content']\n    #         # Save"
+----------------------------------------
+
+Prompt 9: 'Identify the most suitable adverb for the following sentence\n\nShe works'
+Generation: " \\strong{_________.}\n\nA. Hard\n\nB. Hardly\n\nC. Harder\n\nD. Hardly\n\nI'm wondering if there is any rule with regards to this kind of question. I was able to find this one\n\n\\begin{blockquote}\n\nThis adverb can be used both as an intensive and as a negative. As\n  an intensive, it means \\strong{very}.\n\nAs a negative, it means \\strong{not at all} or \\strong{not hardly at all}. (Hardly\n  as a negative is a common word.)\n\\end{blockquote}\n\n[Source](https://www.chompchomp.com/terms/hardly.htm)\n\nAnswer: \\begin{blockquote}\n\nHardly\n\\end{blockquote}\n\nis the only one that fits.\n\n\\begin{blockquote}\n\nShe works hardly.\n\n\\begin{blockquote}\n\nShe works not at all.\n\n  </blockquote>\n\\end{blockquote}\n\n\\begin{blockquote}\n\nShe works hardly.\n\n\\begin{blockquote}\n\nShe works a"
+----------------------------------------
+
+Prompt 10: 'I grew up with stove top mac and cheese. Luckily my mother often made her own from scratch, but I also had the commercial boxed mac and cheese as well. Personally I’ve always prefered stove top to baked. I know, it is controversial. There is something to that velvety sauce and soft texture. It is simple and concise.\nHowever, as I grew up, the idea of making it from scratch seemed more and more improbable. So I leaned toward the box. Now I am not saying that something is bad if it is in a box but powdered things often don’t feel super healthy in the food realm. Especially if all you are adding to them is butter and hot sauce and maybe tuna from a can. Wait. What?\nYes. I would like to take a moment to address something that we call “Shame Food.” What is Shame Food? Shame Food is food that you only feel comfortable eating in private. Far from any witnesses. My big Shame Food experience was when I was doing social work. I would work all day in a pretty intense environment and then commute home and my wife worked another 5-6 hours. So I would get home, eat something, and then take a nap. That thing became my Shame Food. It was inspired by a natural food company’s spicy mac and cheese. (It has since been discontinued.) I would make mac and cheese and add a lot of cheap hot sauce (this was before we had a sauce business) and a can of tuna. I would not even plate it. I would eat the whole thing out of the pot and then take a nap. I mean the nap wasn’t a choice. That box of noodles is meant to feed a family of four. Plus the amount of hot sauce I added meant I wasn’t really enjoying the meal as much as surviving it. I had to recoup.\nThis recipe isn’t that dish. It is tied to that spicy boxed macaroni and cheese, that my wife introduced me to, and we would eat it together at a time that we didn’t eat much. Also the roots are a stove top mac and cheese. The kind where the only powder involved it mustard powder and the spice comes from a complex sauce with a bright balsamic flavor and a nutty essence that pairs well with the gruyere and trust me if you finish it with toasted sesame, you will not regret it. Please enjoy and feel free to share with us your Shame Food.\nPour the pasta into a strainer and place the empty pot back on the stove.\nTurn heat to medium and add the butter.\nOnce the butter has melted, stir in the flour and use a whisk continue for a minute.\nSlowly add the milk and cream while whisking to combine.\nAdd the mustard powder and stir.\nReduce heat to medium-low and add the mascarpone. Continue to whisk.\nBegin adding the cheese a handful at a time while whisking to combine.\nAdd the Hatch Sesame Balsamic Sauce.\nReturn the pasta to the sauce pan and stir to coat.\nIf the sauce seems a little loose then continue to stir the pasta occasionally on low heat.\nServe in bowls topped with toasted sesame seeds and Mexican oregano.'
+Generation: '\nFor this recipe we used our Curry Sesame Balsamic. If you want to try it, you can find it here.</s><s> I’ve always been a big fan of male grooming. I’m a pretty easy going girl, but I have to say that when it comes to grooming, I have my limits. And those limits are pretty high.\nI know that a lot of girls out there don’t mind their men without any grooming at all. But I find it a little repulsive.\nI don’t know, it’s just not my thing.\nI’ve been dating my guy for a few months now and I noticed that he definitely has a little more facial hair than I am used to. I just can’t stand it.\nI asked him to try and trim it down a little bit, but he just kept going out without doing anything about it.\nI knew he was going to be out of town for a few days, so I decided to sneak out his Mach3 razor and try to get some of the hair off his face.\nI knew I was going to have to be careful because I had no idea how to use a'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 33.11

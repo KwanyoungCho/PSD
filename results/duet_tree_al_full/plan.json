@@ -1,0 +1,137 @@
+{
+  "schema": "duet_full_al_v1",
+  "date": "2026-09-21",
+  "objective": "Maximize accepted tree descendants conditional on cache hit at fixed root policy and fixed generation/verification budgets. TPS is descriptive only.",
+  "source": {
+    "local": "/home/chokwans99/dev/llm/specinfer.cpp/examples/spec-bench-data/question.jsonl",
+    "official_url": "https://raw.githubusercontent.com/hemingkx/Spec-Bench/main/data/spec_bench/question.jsonl",
+    "local_sha256": "4b6d33e79484f9841c487ee87d1cf6aa8c6066f61d5d482ff09e5a007fafdf04",
+    "downloaded_sha256": "4b6d33e79484f9841c487ee87d1cf6aa8c6066f61d5d482ff09e5a007fafdf04",
+    "question_content_equal": true
+  },
+  "questions": 480,
+  "turns": 560,
+  "groups": [
+    "mt_bench",
+    "translation",
+    "summarization",
+    "qa",
+    "math_reasoning",
+    "rag"
+  ],
+  "group_counts": {
+    "mt_bench": 80,
+    "translation": 80,
+    "summarization": 80,
+    "qa": 80,
+    "math_reasoning": 80,
+    "rag": 80
+  },
+  "questions_sha256": "aec560cbe7bee67ca764c211c822cad8ff26e1a84834b86b86f35870c0048af4",
+  "policies": [
+    "q_path",
+    "phase_sibling_q_bin"
+  ],
+  "seeds": [
+    1,
+    42,
+    123
+  ],
+  "jobs": [
+    {
+      "seed": 1,
+      "policy": "q_path"
+    },
+    {
+      "seed": 1,
+      "policy": "phase_sibling_q_bin"
+    },
+    {
+      "seed": 42,
+      "policy": "phase_sibling_q_bin"
+    },
+    {
+      "seed": 42,
+      "policy": "q_path"
+    },
+    {
+      "seed": 123,
+      "policy": "q_path"
+    },
+    {
+      "seed": 123,
+      "policy": "phase_sibling_q_bin"
+    }
+  ],
+  "max_new_tokens": 128,
+  "ignore_eos": false,
+  "max_model_len": 2048,
+  "extend_draft_rope": false,
+  "prompt_input_token_range": [
+    6,
+    1733
+  ],
+  "context_upper_bound": 2005,
+  "truncate_inputs": false,
+  "multiturn": "Raw prompt tokens on turn 0; prior input plus actual generated tokens plus newline and next question on subsequent turns. Both turns clustered by original question ID.",
+  "calibration_path": "/home/chokwans99/PSD/results/duet_tree_analysis/calibration_frozen.json",
+  "calibration_sha256": "afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39",
+  "calibration_exact_overlap_question_ids": [],
+  "calibration_refit": false,
+  "config": {
+    "exit_layer": 56,
+    "k1": 4,
+    "k2": 2,
+    "p1_fanout": 3,
+    "p2_budget": 15,
+    "root_count": 15,
+    "roots_per_position": 3,
+    "c_tensor": 3,
+    "p1_generation_nodes": 8,
+    "p1_verify_nodes": 8,
+    "p2_generation_nodes": 6,
+    "p2_verify_nodes": 6,
+    "allocation": "dynamic",
+    "root_source": "unchanged existing legacy proxy residual",
+    "temperature": 0.7,
+    "batch": 1
+  },
+  "metrics": {
+    "primary": "Equal-six-task mean of per-task hit-conditional descendant AL, pooled over prespecified seeds; exclude final verification step of each request to avoid EOS/cap censoring.",
+    "phase_metrics": [
+      "P1 conditional AL",
+      "P2 conditional AL",
+      "equal-phase AL as mix-control diagnostic"
+    ],
+    "additional": [
+      "all-step AL sensitivity",
+      "hit rate",
+      "accepted-length histogram and tail probabilities",
+      "question-level macro AL on jointly observed questions",
+      "generation/verification node counts",
+      "TPS descriptive only"
+    ],
+    "inference": "Paired stratified bootstrap of original questions within each task, keeping both turns and all seeds together; 5000 resamples. Also report seed-specific and task-specific differences.",
+    "no_hit": "Zero-hit questions remain in full coverage counts and ratio statistics; undefined per-question conditional AL is missing, never zero-imputed.",
+    "thresholds": "No policy retuning or early efficacy stopping on this corpus."
+  },
+  "runtime": {
+    "gpus": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "draft_kv_memory_fraction": 0.5,
+    "workspace_mb": 128,
+    "warmup_pages": "all",
+    "profiling": false,
+    "full_distribution_observer": false
+  },
+  "limits": [
+    "Fixed depth 4/2 and node budgets 8/6; not global AL-optimal architecture search.",
+    "Root policy is fixed, but realized contexts/cache-hit mix may differ across trajectories.",
+    "Previously used research benchmark, not globally unseen data; frozen scalar calibration uses separate prompts."
+  ]
+}

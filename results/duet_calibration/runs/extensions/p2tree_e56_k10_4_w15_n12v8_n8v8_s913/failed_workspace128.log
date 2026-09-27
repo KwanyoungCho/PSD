@@ -1,0 +1,199 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench] --k omitted -> derived k = K1+K2 = 14
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 913
+[Config] duet_proxy_top_k raised 3 → 25 (K_max=10 K_min=4 p1_sum_full=33 p1_sum_short=15 p1_max=3 per_pos=20 total=25 wire_N=50)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=25, draft_fan_out=3, proxy_fan_out=2, K1=10, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=12/8(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=25, draft_fan_out=3, proxy_fan_out=2, K1=10, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=12/8(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=14
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=14
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 16.41it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 15.84it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.92it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.73it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.21it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.21it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2962, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 468, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 468, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 468, 256, 2, 128])
+[DUET tree] warmed proxy kernels (buckets=[8])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 431, 256, 2, 128])
+[DUET] captured target chain proxy graphs (K=[4, 10], source=residual)
+[DUET tree] captured target proxy graphs (buckets=[1, 2, 3, 4, 5, 6, 7, 8])
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=11) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=75
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=75
+[DUET split-K1K2] layouts: split_k1_long MQ=33 (K=K1=10, pos=11), split_k1_short MQ=15 (K=K1=10, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 764, in setup_and_warmup_model_and_cudagraphs
+    capture_tree_verify_cudagraph(
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/helpers/cudagraph_helpers.py", line 1361, in capture_tree_verify_cudagraph
+    wrapper.plan(
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/prefill.py", line 1905, in plan
+    self._plan_info = self._cached_module.plan(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "python/tvm_ffi/cython/function.pxi", line 929, in tvm_ffi.core.Function.__call__
+RuntimeError: Error in function 'aligned_alloc' at /home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/data/include/flashinfer/allocator.h:49: Buffer overflow when allocating memory for batch_prefill_tmp_s with size 1048576 and alignment 16, but only 0 bytes available in AlignedAllocator. Increase the workspace buffer size.
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=10) + duet_verify_k2 CG (K2=4)
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 764, in setup_and_warmup_model_and_cudagraphs
+    capture_tree_verify_cudagraph(
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/helpers/cudagraph_helpers.py", line 1361, in capture_tree_verify_cudagraph
+    wrapper.plan(
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/prefill.py", line 1905, in plan
+    self._plan_info = self._cached_module.plan(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "python/tvm_ffi/cython/function.pxi", line 929, in tvm_ffi.core.Function.__call__
+RuntimeError: Error in function 'aligned_alloc' at /home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/data/include/flashinfer/allocator.h:49: Buffer overflow when allocating memory for batch_prefill_tmp_s with size 1048576 and alignment 16, but only 0 bytes available in AlignedAllocator. Increase the workspace buffer size.
+Process SpawnProcess-3:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 764, in setup_and_warmup_model_and_cudagraphs
+    capture_tree_verify_cudagraph(
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/helpers/cudagraph_helpers.py", line 1361, in capture_tree_verify_cudagraph
+    wrapper.plan(
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/prefill.py", line 1905, in plan
+    self._plan_info = self._cached_module.plan(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "python/tvm_ffi/cython/function.pxi", line 929, in tvm_ffi.core.Function.__call__
+RuntimeError: Error in function 'aligned_alloc' at /home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/data/include/flashinfer/allocator.h:49: Buffer overflow when allocating memory for batch_prefill_tmp_s with size 1048576 and alignment 16, but only 0 bytes available in AlignedAllocator. Increase the workspace buffer size.
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/chokwans99/PSD/results/duet_calibration/run_bench.py", line 58, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/chokwans99/PSD/results/duet_calibration/run_bench.py", line 54, in main
+[rank0]:     bench.main()
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 625, in main
+[rank0]:     llm = LLM(model_path, **llm_kwargs)
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 128, in __init__
+[rank0]:     self.model_runner = ModelRunner(
+[rank0]:                         ^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+[rank0]:     model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 764, in setup_and_warmup_model_and_cudagraphs
+[rank0]:     capture_tree_verify_cudagraph(
+[rank0]:   File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/helpers/cudagraph_helpers.py", line 1361, in capture_tree_verify_cudagraph
+[rank0]:     wrapper.plan(
+[rank0]:   File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/prefill.py", line 1905, in plan
+[rank0]:     self._plan_info = self._cached_module.plan(
+[rank0]:                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "python/tvm_ffi/cython/function.pxi", line 929, in tvm_ffi.core.Function.__call__
+[rank0]: RuntimeError: Error in function 'aligned_alloc' at /home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/flashinfer/data/include/flashinfer/allocator.h:49: Buffer overflow when allocating memory for batch_prefill_tmp_s with size 1048576 and alignment 16, but only 0 bytes available in AlignedAllocator. Increase the workspace buffer size.
+[DUET tree] warmed P2 executor buckets=[1, 2, 3, 4, 5, 6, 7, 8] in 3.21s (reserved delta=1400.0 MiB)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=33
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_tree_glue MQ_LEN=9
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue starting...
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue warmup...
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (4 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

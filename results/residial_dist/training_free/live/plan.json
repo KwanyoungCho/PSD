@@ -1,0 +1,130 @@
+{
+  "temperature": 0.7,
+  "seeds": [
+    801,
+    802
+  ],
+  "policies": {
+    "legacy": "legacy",
+    "matched_proxy": "policy::proxy__topm__original",
+    "optimized_proxy": "policy::proxy__full__expected_mix0.25",
+    "selected": "policy::complement_power1__full__expected_mix0.25"
+  },
+  "orders": [
+    [
+      "legacy",
+      "matched_proxy",
+      "optimized_proxy",
+      "selected"
+    ],
+    [
+      "selected",
+      "optimized_proxy",
+      "matched_proxy",
+      "legacy"
+    ]
+  ],
+  "num_prompts": 16,
+  "mapping": [
+    {
+      "seq_id": 1,
+      "dataset": "alpaca",
+      "source_row": 65,
+      "text_sha256": "78d2f73347efb313f61818c69c872d15c9986d6a9fde04a3c1759ca41a001f1d"
+    },
+    {
+      "seq_id": 2,
+      "dataset": "c4",
+      "source_row": 65,
+      "text_sha256": "d71d3b9b50040fe4e3f9ba9035e71940ec48a00f43c88b0a5dfba5e476bceabf"
+    },
+    {
+      "seq_id": 3,
+      "dataset": "gsm",
+      "source_row": 65,
+      "text_sha256": "01a0545c22dc10a57b33d14b5d726669a9252fda8d8a5b78a21fb40e8db6996a"
+    },
+    {
+      "seq_id": 4,
+      "dataset": "humaneval",
+      "source_row": 65,
+      "text_sha256": "b1ff059f78c9b9ca75c725fd3dccd542129ecc61344bb4a44596e13f4623fcf1"
+    },
+    {
+      "seq_id": 5,
+      "dataset": "alpaca",
+      "source_row": 66,
+      "text_sha256": "ac09888baf261d07d9145072e17c27b684b1b8c90225796ab58ea611bbe713dd"
+    },
+    {
+      "seq_id": 6,
+      "dataset": "c4",
+      "source_row": 66,
+      "text_sha256": "717a4e1e9c17fa483def41411a51ba7b0279f91e634b46b6bd57c0c948369b8f"
+    },
+    {
+      "seq_id": 7,
+      "dataset": "gsm",
+      "source_row": 66,
+      "text_sha256": "d48747fe96f2dfe0dee4a7284e0be8f24d495f550f7a9c0819c0e74ea420aee8"
+    },
+    {
+      "seq_id": 8,
+      "dataset": "humaneval",
+      "source_row": 66,
+      "text_sha256": "97a5310f6ed33f3e071de2e6f91dba833f0bcab9ca83887792dd9c72d4f063ef"
+    },
+    {
+      "seq_id": 9,
+      "dataset": "alpaca",
+      "source_row": 67,
+      "text_sha256": "478c8db21173a44cdbe8db793a9d6c549983e555634078d0a9e153d27d3d4de0"
+    },
+    {
+      "seq_id": 10,
+      "dataset": "c4",
+      "source_row": 67,
+      "text_sha256": "f22fc1bc166b507a1a79795e5530457f5544eaa9fc1939dd9ae9823ab2115a63"
+    },
+    {
+      "seq_id": 11,
+      "dataset": "gsm",
+      "source_row": 67,
+      "text_sha256": "e0efbdc0b56d61fd49894c0379397faaa0d8e08e0c4d139d2375831bbe033e68"
+    },
+    {
+      "seq_id": 12,
+      "dataset": "humaneval",
+      "source_row": 67,
+      "text_sha256": "bf2b14bfeab2fea94ee1374415e4a82bc0eb01b305de8d5af081f6e346368ce5"
+    },
+    {
+      "seq_id": 13,
+      "dataset": "alpaca",
+      "source_row": 68,
+      "text_sha256": "6dcb4e5b25b126eb846f8b420856671b2aa3e4670105c76dd8f296484d4684e5"
+    },
+    {
+      "seq_id": 14,
+      "dataset": "c4",
+      "source_row": 68,
+      "text_sha256": "e1a94826ee32d5169d9b567be4a7542fa73fcfa3372435d1877424215b07224d"
+    },
+    {
+      "seq_id": 15,
+      "dataset": "gsm",
+      "source_row": 68,
+      "text_sha256": "9a2e593195f9e272623b51abf9b34bdf8d6939d63b05ed5e080ad8c01432aab3"
+    },
+    {
+      "seq_id": 16,
+      "dataset": "humaneval",
+      "source_row": 68,
+      "text_sha256": "108119f29464ef285271bb51933f37a4f16e29137dadb0552938ccd197019837"
+    }
+  ],
+  "output_len": 256,
+  "dataset_sha256": "7871a583afb9162e5108180a51737d88cf86d1cfd60b3c505ab7663f40cc641d",
+  "frozen_sha256": "e543fefafa6249bb71a041120cdae4c0ecb35282f07f9094c55ca758d7b32de9",
+  "note": "Small prespecified throughput screen; two seeds, reverse arm order. No distribution probes. All arms use identical prompts and output limits. Not a full Mirror-SD comparison."
+}

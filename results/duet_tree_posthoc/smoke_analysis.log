@@ -1,0 +1,245 @@
+analyzed 0 / 293
+{
+  "coverage": [
+    {
+      "policy": "q_path",
+      "turns": 8,
+      "questions": 7,
+      "trees": 293,
+      "nonfinal_trees": 286,
+      "nodes": 1951,
+      "questions_with_hits": 7,
+      "raw_snapshots": 10
+    }
+  ],
+  "primary": {
+    "trees": 286,
+    "means": {
+      "n": 6.598874141746741,
+      "true_al": 1.6085460225710493,
+      "observed_al": 1.6269266766284265,
+      "coin_variance": 0.26492933747919845,
+      "oracle_observed_mse": 0.29806413125369735,
+      "observed_minus_exact": 0.018380654057377255,
+      "q_path_reach_mse": 0.08519976586605633,
+      "q_path_pred_al": 1.550792696366211,
+      "q_path_al_bias": -0.05775332620483798,
+      "q_path_al_mse": 0.5210564384498808,
+      "q_path_observed_mse": 0.7710859359237044,
+      "frozen_reach_mse": 0.08154660664213015,
+      "frozen_pred_al": 1.8256792510617839,
+      "frozen_al_bias": 0.21713322849073494,
+      "frozen_al_mse": 0.6114872895357261,
+      "frozen_observed_mse": 0.8613196930890465,
+      "same8_depth_reach_mse": 0.07976273389221637,
+      "same8_depth_pred_al": 1.8052991387078092,
+      "same8_depth_al_bias": 0.19675311613676016,
+      "same8_depth_al_mse": 0.5791521106167535,
+      "same8_depth_observed_mse": 0.8245426547828728,
+      "same8_rich_reach_mse": 0.08106699074929674,
+      "same8_rich_pred_al": 1.7967005937529874,
+      "same8_rich_al_bias": 0.1881545711819382,
+      "same8_rich_al_mse": 0.5724360448912941,
+      "same8_rich_observed_mse": 0.8085233063300139,
+      "refit_q_reach_mse": 0.11845965364881855,
+      "refit_q_pred_al": 2.139887325619527,
+      "refit_q_al_bias": 0.5313413030484774,
+      "refit_q_al_mse": 1.141674494735326,
+      "refit_q_observed_mse": 1.4098335881587885,
+      "depth_q_reach_mse": 0.11662972491644576,
+      "depth_q_pred_al": 2.1341048363148656,
+      "depth_q_al_bias": 0.5255588137438163,
+      "depth_q_al_mse": 1.1144623361601593,
+      "depth_q_observed_mse": 1.3849326911102384,
+      "cond_depth_q_reach_mse": 0.11657413548267485,
+      "cond_depth_q_pred_al": 2.1399571595008333,
+      "cond_depth_q_al_bias": 0.5314111369297844,
+      "cond_depth_q_al_mse": 1.1026613260310592,
+      "cond_depth_q_observed_mse": 1.3713192837262813,
+      "draft_rich_reach_mse": 0.11590538220244552,
+      "draft_rich_pred_al": 2.1319856125741565,
+      "draft_rich_al_bias": 0.5234395900031076,
+      "draft_rich_al_mse": 1.1066332830040773,
+      "draft_rich_observed_mse": 1.3768927093487662,
+      "direct_beta_reach_mse": 0.09895305559161323,
+      "direct_beta_pred_al": 2.0155899056935804,
+      "direct_beta_al_bias": 0.407043883122531,
+      "direct_beta_al_mse": 0.9488437491041314,
+      "direct_beta_observed_mse": 1.2223480056061529,
+      "rich_from_q_path_reach_mse": 0.11590538220244552,
+      "rich_from_q_path_pred_al": 2.1319856125741565,
+      "rich_from_q_path_al_bias": 0.5234395900031076,
+      "rich_from_q_path_al_mse": 1.1066332830040773,
+      "rich_from_q_path_observed_mse": 1.3768927093487662,
+      "frozen_alpha_mse": 0.143216966409446,
+      "same8_depth_alpha_mse": 0.14234643262101332,
+      "same8_rich_alpha_mse": 0.14345123298990298,
+      "refit_q_alpha_mse": 0.25515073532850246,
+      "depth_q_alpha_mse": 0.2548639465219143,
+      "cond_depth_q_alpha_mse": 0.25365013263200675,
+      "draft_rich_alpha_mse": 0.2544302442862943,
+      "oracle_parent_frozen_local_mse": 0.06562836688819262,
+      "frozen_parent_oracle_local_mse": 0.016089816605522,
+      "early_leaf_terminal": 0.3014033669093262,
+      "depth_cap_terminal": 0.27382933183314545,
+      "internal_rejection_terminal": 0.4247673012575284,
+      "early_leaf_extra_upper": 0.7256498236897045,
+      "internal_rejection_gap": 1.0292315691959333,
+      "early_leaf_below_q_threshold_mass": 0.01883150191384068,
+      "unused_node_budget": 0.7645532737099466,
+      "underfilled_tree": 0.16704484273705625,
+      "zero_reach_node_fraction": 0.5197561100503055,
+      "low_reach_node_fraction": 0.6056789158893577
+    },
+    "reach_vs_q": {
+      "frozen": {
+        "mean": -0.003653159223926186,
+        "ci95": [
+          -0.006166665937652143,
+          -0.0011396525102002533
+        ],
+        "questions": 7
+      },
+      "same8_depth": {
+        "mean": -0.005437031973839962,
+        "ci95": [
+          -0.00791931731158223,
+          -0.002954746636097721
+        ],
+        "questions": 7
+      },
+      "same8_rich": {
+        "mean": -0.004132775116759593,
+        "ci95": [
+          -0.006606099863802758,
+          -0.0016594503697164632
+        ],
+        "questions": 7
+      },
+      "refit_q": {
+        "mean": 0.03325988778276222,
+        "ci95": [
+          0.03176208628055262,
+          0.0347576892849718
+        ],
+        "questions": 7
+      },
+      "depth_q": {
+        "mean": 0.03142995905038942,
+        "ci95": [
+          0.029726219838259477,
+          0.03313369826251936
+        ],
+        "questions": 7
+      },
+      "cond_depth_q": {
+        "mean": 0.03137436961661852,
+        "ci95": [
+          0.02968606589601476,
+          0.03306267333722225
+        ],
+        "questions": 7
+      },
+      "draft_rich": {
+        "mean": 0.030705616336389185,
+        "ci95": [
+          0.029006460181120484,
+          0.03240477249165781
+        ],
+        "questions": 7
+      },
+      "direct_beta": {
+        "mean": 0.013753289725556894,
+        "ci95": [
+          0.011316435540524375,
+          0.01619014391058939
+        ],
+        "questions": 7
+      }
+    },
+    "reach_vs_frozen": {
+      "refit_q": {
+        "mean": 0.036913047006688404,
+        "ci95": [
+          0.035897341795172046,
+          0.037928752218204756
+        ],
+        "questions": 7
+      },
+      "depth_q": {
+        "mean": 0.03508311827431561,
+        "ci95": [
+          0.03427335077271961,
+          0.03589288577591162
+        ],
+        "questions": 7
+      },
+      "cond_depth_q": {
+        "mean": 0.035027528840544706,
+        "ci95": [
+          0.034202325847422506,
+          0.0358527318336669
+        ],
+        "questions": 7
+      },
+      "draft_rich": {
+        "mean": 0.03435877556031537,
+        "ci95": [
+          0.033544425001858065,
+          0.03517312611877263
+        ],
+        "questions": 7
+      },
+      "direct_beta": {
+        "mean": 0.01740644894948308,
+        "ci95": [
+          0.017329796420789648,
+          0.01748310147817652
+        ],
+        "questions": 7
+      }
+    },
+    "reach_vs_refit": {
+      "depth_q": {
+        "mean": -0.0018299287323727959,
+        "ci95": [
+          -0.0020358664422931373,
+          -0.0016239910224524433
+        ],
+        "questions": 7
+      },
+      "cond_depth_q": {
+        "mean": -0.0018855181661436987,
+        "ci95": [
+          -0.0020760203845378547,
+          -0.0016950159477495444
+        ],
+        "questions": 7
+      },
+      "draft_rich": {
+        "mean": -0.0025542714463730326,
+        "ci95": [
+          -0.002755626099432128,
+          -0.002352916793313984
+        ],
+        "questions": 7
+      },
+      "direct_beta": {
+        "mean": -0.019506598057205324,
+        "ci95": [
+          -0.02044565074002824,
+          -0.018567545374382405
+        ],
+        "questions": 7
+      }
+    },
+    "observed_minus_exact": {
+      "mean": 0.018380654057377255,
+      "ci95": [
+        -0.0020093675092183725,
+        0.03877067562397288
+      ],
+      "questions": 7
+    }
+  }
+}

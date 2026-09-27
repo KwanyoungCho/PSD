@@ -1,0 +1,68 @@
+Starting LlamaForCausalLM init, draft=True, speculate=False, spec_k=1
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=False, spec_k=1
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.64it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.64it/s]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD/results/duet_tree_followup/shadow_q.py", line 135, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/chokwans99/PSD/results/duet_tree_followup/shadow_q.py", line 110, in main
+    q=probabilities(model,prefix,t['par'],t['tok'],t['depth'],t['temperature'])
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/results/duet_tree_followup/shadow_q.py", line 79, in probabilities
+    hidden=model(ids[0],pos[0]);logits=model.compute_logits(hidden[length-1:],False).float()
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/models/llama3.py", line 363, in forward
+    out = self.model(input_ids, positions,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/models/llama3.py", line 281, in forward
+    hidden_states, residual = layer(positions, hidden_states, residual)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/models/llama3.py", line 196, in forward
+    hidden_states = self.self_attn(positions, hidden_states)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/models/llama3.py", line 97, in forward
+    o = self.attn(q, k, v)
+        ^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/results/duet_tree_followup/shadow_q.py", line 39, in attention
+    enable_gqa=True,dropout_p=0.,scale=self.scaling)
+                                       ^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1962, in __getattr__
+    raise AttributeError(
+AttributeError: 'Attention' object has no attribute 'scaling'

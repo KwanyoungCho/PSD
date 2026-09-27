@@ -1,0 +1,3123 @@
+{
+  "temperatures": {
+    "0.5": {
+      "selected": {
+        "bounded_subtraction": {
+          "policy": "policy::floor0.75__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.9235464025020287,
+            "ci95": [
+              0.9095554751362106,
+              0.9369213608614091
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.03508406245785485,
+            "ci95": [
+              0.022193752977968884,
+              0.04827708245840753
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0024997299184975497,
+            "ci95": [
+              -0.004095044232841601,
+              0.008987410502173337
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.9404847166362054,
+            "c4": 0.8901254412015407,
+            "gsm": 0.9327400019960783,
+            "humaneval": 0.9308354501742904
+          }
+        },
+        "local_gate": {
+          "policy": "policy::qpeak0.9__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.9124939027745956,
+            "ci95": [
+              0.8973708203642123,
+              0.9270631881982595
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.02403156273042191,
+            "ci95": [
+              0.012486062686629124,
+              0.03612215600933088
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.008552769808935394,
+            "ci95": [
+              -0.016620517833705023,
+              -0.0007207233790358051
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.9301039234768158,
+            "c4": 0.882459835051801,
+            "gsm": 0.9233242991014639,
+            "humaneval": 0.9140875534683022
+          }
+        },
+        "proxy_allocation": {
+          "policy": "policy::proxy__full__uniform0.05",
+          "coverage": {
+            "mean": 0.9210466725835311,
+            "ci95": [
+              0.9067147478891907,
+              0.9343614731184141
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.0325843325393573,
+            "ci95": [
+              0.021702313189168203,
+              0.044000290803626135
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.9434471746333832,
+            "c4": 0.8830812309997971,
+            "gsm": 0.9335282617341945,
+            "humaneval": 0.9241300229667497
+          }
+        },
+        "rank_only": {
+          "policy": "policy::keep12__full__uniform0.05",
+          "coverage": {
+            "mean": 0.9210476179276845,
+            "ci95": [
+              0.9067157405005518,
+              0.9343614731184141
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.032585277883510684,
+            "ci95": [
+              0.021702313189168203,
+              0.04400218149193289
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 9.453441533763957e-07,
+            "ci95": [
+              0.0,
+              2.836032460129187e-06
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.9434471746333832,
+            "c4": 0.8830812309997971,
+            "gsm": 0.9335282617341945,
+            "humaneval": 0.9241338043433633
+          }
+        },
+        "residual_allocation": {
+          "policy": "policy::residual__full__expected_mix0.75",
+          "coverage": {
+            "mean": 0.863166822853362,
+            "ci95": [
+              0.8409577981716521,
+              0.8847417349131284
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.025295517190811908,
+            "ci95": [
+              -0.041215309046912535,
+              -0.009498971167419856
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.057879849730169214,
+            "ci95": [
+              -0.07516307001556315,
+              -0.04193397723188103
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8673550680561931,
+            "c4": 0.8207445904963362,
+            "gsm": 0.888907878064991,
+            "humaneval": 0.8756597547959275
+          }
+        },
+        "source_temperature": {
+          "policy": "policy::source_tau1.1__full__expected_mix0.5",
+          "coverage": {
+            "mean": 0.8654279879270783,
+            "ci95": [
+              0.8435244329671246,
+              0.8863528063263927
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.023034352117095452,
+            "ci95": [
+              -0.03741339794910504,
+              -0.008425934801093264
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.05561868465645276,
+            "ci95": [
+              -0.07128727524480964,
+              -0.04062465883954826
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8747100322351586,
+            "c4": 0.8232356167499785,
+            "gsm": 0.8849819447209276,
+            "humaneval": 0.8787843580022487
+          }
+        },
+        "overall": {
+          "policy": "policy::floor0.75__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.9235464025020287,
+            "ci95": [
+              0.9095554751362106,
+              0.9369213608614091
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.03508406245785485,
+            "ci95": [
+              0.022193752977968884,
+              0.04827708245840753
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0024997299184975497,
+            "ci95": [
+              -0.004095044232841601,
+              0.008987410502173337
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.9404847166362054,
+            "c4": 0.8901254412015407,
+            "gsm": 0.9327400019960783,
+            "humaneval": 0.9308354501742904
+          }
+        },
+        "source_only": {
+          "policy": "policy::floor0.75__topm__original",
+          "coverage": {
+            "mean": 0.8905896652750129,
+            "ci95": [
+              0.8706918068426363,
+              0.909742605373819
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.002127325230839047,
+            "ci95": [
+              -0.0006165283515985287,
+              0.005928212638699234
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.030457007308518257,
+            "ci95": [
+              -0.04163678532856222,
+              -0.019752387563182434
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.9110681855973355,
+            "c4": 0.8439974968408024,
+            "gsm": 0.9036755942047889,
+            "humaneval": 0.9036173844571248
+          }
+        },
+        "original_proxy": {
+          "policy": "policy::proxy__topm__original",
+          "coverage": {
+            "mean": 0.8884623400441738,
+            "ci95": [
+              0.8687991507046471,
+              0.9080908067347938
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.0325843325393573,
+            "ci95": [
+              -0.044000290803626135,
+              -0.021702313189168203
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.9118171901344115,
+            "c4": 0.8399278357716005,
+            "gsm": 0.9039878879183914,
+            "humaneval": 0.898116446352292
+          }
+        },
+        "original_residual": {
+          "policy": "policy::residual__topm__original",
+          "coverage": {
+            "mean": 0.8518595621855556,
+            "ci95": [
+              0.8288155982301648,
+              0.8743889374378059
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.03660277785861815,
+            "ci95": [
+              -0.04869788647006117,
+              -0.025012536100606195
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.06918711039797545,
+            "ci95": [
+              -0.08498126479727212,
+              -0.05462237551087276
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8664702899362628,
+            "c4": 0.7970621299217755,
+            "gsm": 0.874027465763377,
+            "humaneval": 0.8698783631208074
+          }
+        }
+      },
+      "development_or_confirmation": "development",
+      "unique_prompts": 64,
+      "sampled_steps": 624,
+      "pooled_rejection_event_diagnostics": {
+        "local::proxy": 0.7676562717501704,
+        "local::residual": 0.6928885445106957,
+        "local::lambda0.1": 0.7453369577698833,
+        "local::lambda0.25": 0.7432592819649924,
+        "local::lambda0.5": 0.7274463114837624,
+        "local::lambda0.75": 0.7093374127565647,
+        "local::floor0.25": 0.7597739528731993,
+        "local::floor0.5": 0.760574946051491,
+        "local::floor0.75": 0.759845638503767,
+        "local::floor0.9": 0.7660100276075754,
+        "local::twosided0.1": 0.741356078988138,
+        "local::capped_negative0.1": 0.7501586856723208,
+        "local::twosided0.25": 0.7433196851459641,
+        "local::capped_negative0.25": 0.7542170767957004,
+        "local::twosided0.5": 0.7411746861327174,
+        "local::capped_negative0.5": 0.7545392275936654,
+        "local::twosided1": 0.7219021798852093,
+        "local::capped_negative1": 0.759466685440305,
+        "local::complement_power0.5": 0.7631660306055863,
+        "local::complement_power1": 0.763292072433324,
+        "local::complement_power2": 0.7621166771402565,
+        "local::complement_power4": 0.753890205852337,
+        "local::uncertainty0.01": 0.7518805646781941,
+        "local::uncertainty0.03": 0.7575891059450571,
+        "local::uncertainty0.1": 0.759956339930922,
+        "local::anchor_y": 0.7118170289234514,
+        "local::anchor_peak": 0.6929004764698541,
+        "local::complement": 0.7017458901764705,
+        "local::argmax_diff": 0.7415304796345222,
+        "local::argmax_same": 0.719014336626344,
+        "local::z_gate0.2": 0.727100332376545,
+        "local::z_gate0.4": 0.738745512768188,
+        "local::z_gate0.6": 0.752393495327906,
+        "local::qpeak0.5": 0.7066004323114847,
+        "local::epeak0.5": 0.6995852059746503,
+        "local::qpeak0.7": 0.7324846608120043,
+        "local::epeak0.7": 0.7134729423188703,
+        "local::qpeak0.9": 0.7523059012809055,
+        "local::epeak0.9": 0.731616971377763,
+        "local::source_tau0.8": 0.677545725779061,
+        "local::source_tau0.9": 0.686807611186228,
+        "local::source_tau1.1": 0.6936470812310241,
+        "local::keep1": 0.736736787039865,
+        "local::keep2": 0.7528914869449135,
+        "local::keep3": 0.7676562717501704,
+        "local::keep5": 0.7676562717501704,
+        "local::keep8": 0.7676562717501704,
+        "local::keep12": 0.7676562717501704,
+        "local::interval0": 0.6957149831976134,
+        "local::interval0.05": 0.7013737484315383,
+        "local::interval0.1": 0.702346624003075,
+        "local::interval0.25": 0.7137478605150875,
+        "local::interval0.5": 0.7219536365777648,
+        "local::interval0.75": 0.7322218919169883,
+        "local::interval1": 0.7676562717501704,
+        "row::h": 0.7792418985208747,
+        "row::z": 0.6780325956267884,
+        "row::delta": 0.3684528181683517,
+        "row::entropy_difference": -0.07535489501473189,
+        "row::top1_correct": 0.5991659555540467,
+        "exchange::gamma": 0.004902872957484961,
+        "exchange::error_in": -0.0019979173364955776,
+        "exchange::error_out": -0.04201284246124015,
+        "exchange::true_gain_raw": -0.035112051992830295,
+        "exchange::deleted_out": 0.03725228304573168,
+        "exchange::positive_error_in": 0.004522784817825158,
+        "exchange::negative_error_out": 0.042952859941967986,
+        "oracle::global": 0.9878656268119812,
+        "oracle::pool_proxy": 0.9602795839309692,
+        "oracle::pool_residual": 0.879974365234375,
+        "control::legacy_temperature_proxy": 0.8593107461929321,
+        "control::legacy_temperature_residual": 0.8193212747573853,
+        "oracle::switch": 0.8860354423522949
+      },
+      "original_residual_local_win_event_fraction": 0.18900078858102504,
+      "original_residual_local_loss_event_fraction": 0.22875462552575138,
+      "top_exploratory_means": [
+        {
+          "policy": "policy::floor0.75__full__expected_mix0.25",
+          "coverage": 0.9235464025020287,
+          "gain": 0.03508406245785489
+        },
+        {
+          "policy": "policy::complement_power2__full__expected_mix0.25",
+          "coverage": 0.9217048918416264,
+          "gain": 0.03324255179745261
+        },
+        {
+          "policy": "policy::floor0.9__full__expected_mix0.25",
+          "coverage": 0.9216549932989061,
+          "gain": 0.03319265325473231
+        },
+        {
+          "policy": "policy::floor0.5__full__expected_mix0.25",
+          "coverage": 0.921625356513429,
+          "gain": 0.033163016469255235
+        },
+        {
+          "policy": "policy::complement_power1__full__expected_mix0.5",
+          "coverage": 0.9215822008555979,
+          "gain": 0.03311986081142415
+        },
+        {
+          "policy": "policy::complement_power0.5__full__expected_mix0.25",
+          "coverage": 0.9215282210273199,
+          "gain": 0.03306588098314611
+        },
+        {
+          "policy": "policy::floor0.5__topm__expected_mix0.25",
+          "coverage": 0.9215189916303721,
+          "gain": 0.033056651586198305
+        },
+        {
+          "policy": "policy::keep12__full__uniform0.05",
+          "coverage": 0.9210476179276846,
+          "gain": 0.032585277883510844
+        },
+        {
+          "policy": "policy::interval1__full__uniform0.05",
+          "coverage": 0.9210466725835312,
+          "gain": 0.03258433253935744
+        },
+        {
+          "policy": "policy::proxy__full__uniform0.05",
+          "coverage": 0.9210466725835312,
+          "gain": 0.03258433253935744
+        },
+        {
+          "policy": "policy::proxy__full__expected_mix0.25",
+          "coverage": 0.9210252937194844,
+          "gain": 0.03256295367531059
+        },
+        {
+          "policy": "policy::interval1__full__expected_mix0.25",
+          "coverage": 0.9210252937194844,
+          "gain": 0.03256295367531059
+        },
+        {
+          "policy": "policy::keep8__full__uniform0.05",
+          "coverage": 0.9209838673437954,
+          "gain": 0.032521527299621655
+        },
+        {
+          "policy": "policy::complement_power1__full__expected_mix0.25",
+          "coverage": 0.9208726940861243,
+          "gain": 0.03241035404195047
+        },
+        {
+          "policy": "policy::floor0.5__full__uniform0.05",
+          "coverage": 0.9208711923815562,
+          "gain": 0.03240885233738244
+        }
+      ]
+    },
+    "0.7": {
+      "selected": {
+        "bounded_subtraction": {
+          "policy": "policy::complement_power1__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.8669098677735059,
+            "ci95": [
+              0.8494074798605479,
+              0.8827950605745883
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.029200487979889563,
+            "ci95": [
+              0.020351113219058123,
+              0.03885579414030515
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.001588208082895795,
+            "ci95": [
+              -0.0008294357598931692,
+              0.004610445729657345
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8442024589766814,
+            "c4": 0.8285073039208641,
+            "gsm": 0.8890607105281348,
+            "humaneval": 0.905868997668343
+          }
+        },
+        "local_gate": {
+          "policy": "policy::qpeak0.9__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.8629006092018511,
+            "ci95": [
+              0.8448732062747231,
+              0.8787091188199133
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.025191229408234764,
+            "ci95": [
+              0.016015162100628318,
+              0.03525969770139617
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.0024210504887590013,
+            "ci95": [
+              -0.003607664153966718,
+              -0.0013576052252350578
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8357571695796236,
+            "c4": 0.8257878250600594,
+            "gsm": 0.8844501548959839,
+            "humaneval": 0.9056072872717373
+          }
+        },
+        "proxy_allocation": {
+          "policy": "policy::proxy__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.8653216596906101,
+            "ci95": [
+              0.847315112710103,
+              0.8812837594455828
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.027612279896993767,
+            "ci95": [
+              0.018560531993643898,
+              0.03757998698924675
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8409629545620101,
+            "c4": 0.8263896567070792,
+            "gsm": 0.8869276457356774,
+            "humaneval": 0.9070063817576738
+          }
+        },
+        "rank_only": {
+          "policy": "policy::interval1__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.8653216596906101,
+            "ci95": [
+              0.847315112710103,
+              0.8812837594455828
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.027612279896993767,
+            "ci95": [
+              0.018560531993643898,
+              0.03757998698924675
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8409629545620101,
+            "c4": 0.8263896567070792,
+            "gsm": 0.8869276457356774,
+            "humaneval": 0.9070063817576738
+          }
+        },
+        "residual_allocation": {
+          "policy": "policy::residual__full__uniform0.05",
+          "coverage": {
+            "mean": 0.8215887876618513,
+            "ci95": [
+              0.8001849523747874,
+              0.8415174127522219
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.016120592131764956,
+            "ci95": [
+              -0.02847923209679379,
+              -0.003813174990327049
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.043732872028758724,
+            "ci95": [
+              -0.05948387078789042,
+              -0.029292824561612935
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.7914131854362628,
+            "c4": 0.7690458402526249,
+            "gsm": 0.853619905132046,
+            "humaneval": 0.8722762198264717
+          }
+        },
+        "source_temperature": {
+          "policy": "policy::source_tau1.1__full__uniform0.05",
+          "coverage": {
+            "mean": 0.8249580277272783,
+            "ci95": [
+              0.8034699366393885,
+              0.8437563252780954
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.01275135206633791,
+            "ci95": [
+              -0.023492177284330732,
+              -0.002496564558667932
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.040363631963331675,
+            "ci95": [
+              -0.05524221213962436,
+              -0.027433727441960775
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.795368863244975,
+            "c4": 0.7688899493645971,
+            "gsm": 0.8594380982978197,
+            "humaneval": 0.8761352000017217
+          }
+        },
+        "overall": {
+          "policy": "policy::complement_power1__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.8669098677735059,
+            "ci95": [
+              0.8494074798605479,
+              0.8827950605745883
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.029200487979889563,
+            "ci95": [
+              0.020351113219058123,
+              0.03885579414030515
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.001588208082895795,
+            "ci95": [
+              -0.0008294357598931692,
+              0.004610445729657345
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8442024589766814,
+            "c4": 0.8285073039208641,
+            "gsm": 0.8890607105281348,
+            "humaneval": 0.905868997668343
+          }
+        },
+        "source_only": {
+          "policy": "policy::complement_power1__topm__original",
+          "coverage": {
+            "mean": 0.8386195196966495,
+            "ci95": [
+              0.820138617893691,
+              0.855800407549185
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.000910139903033097,
+            "ci95": [
+              -0.0004060202186743905,
+              0.0027046300011033257
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.02670213999396067,
+            "ci95": [
+              -0.036999660365111785,
+              -0.017078925833887596
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8149515972237007,
+            "c4": 0.7855571678053477,
+            "gsm": 0.8694388987906577,
+            "humaneval": 0.8845304149668916
+          }
+        },
+        "original_proxy": {
+          "policy": "policy::proxy__topm__original",
+          "coverage": {
+            "mean": 0.8377093797936164,
+            "ci95": [
+              0.8189233782528689,
+              0.8550152882614942
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.027612279896993767,
+            "ci95": [
+              -0.03757998698924674,
+              -0.018560531993643894
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.8147458226201634,
+            "c4": 0.7852552989308996,
+            "gsm": 0.8659930636110227,
+            "humaneval": 0.8848433340123796
+          }
+        },
+        "original_residual": {
+          "policy": "policy::residual__topm__original",
+          "coverage": {
+            "mean": 0.8073451576971685,
+            "ci95": [
+              0.7854373739677275,
+              0.8272946647181646
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.03036422209644782,
+            "ci95": [
+              -0.040801576490525696,
+              -0.020522239825565367
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.05797650199344159,
+            "ci95": [
+              -0.07500155280435498,
+              -0.04326007764865427
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.775685057767016,
+            "c4": 0.7493286129278625,
+            "gsm": 0.8420136552620289,
+            "humaneval": 0.8623533048317666
+          }
+        }
+      },
+      "development_or_confirmation": "development",
+      "unique_prompts": 64,
+      "sampled_steps": 668,
+      "pooled_rejection_event_diagnostics": {
+        "local::proxy": 0.723778131634953,
+        "local::residual": 0.671187935308077,
+        "local::lambda0.1": 0.7228081118990467,
+        "local::lambda0.25": 0.7199122915664924,
+        "local::lambda0.5": 0.7097040554284937,
+        "local::lambda0.75": 0.6968039528430712,
+        "local::floor0.25": 0.7206216832239599,
+        "local::floor0.5": 0.7255788339538463,
+        "local::floor0.75": 0.7242517554586094,
+        "local::floor0.9": 0.7235317188773831,
+        "local::twosided0.1": 0.6999976977605055,
+        "local::capped_negative0.1": 0.7006349296778857,
+        "local::twosided0.25": 0.6963136010936608,
+        "local::capped_negative0.25": 0.7036702697428359,
+        "local::twosided0.5": 0.6909395729084896,
+        "local::capped_negative0.5": 0.7082995142128595,
+        "local::twosided1": 0.6750711951384128,
+        "local::capped_negative1": 0.7105454193271633,
+        "local::complement_power0.5": 0.7259053775865972,
+        "local::complement_power1": 0.726666557358827,
+        "local::complement_power2": 0.7270053560495265,
+        "local::complement_power4": 0.7096989794396298,
+        "local::uncertainty0.01": 0.6998343941922807,
+        "local::uncertainty0.03": 0.7086858849650155,
+        "local::uncertainty0.1": 0.7245344869640051,
+        "local::anchor_y": 0.6908921436250128,
+        "local::anchor_peak": 0.677432628730825,
+        "local::complement": 0.6907950592235379,
+        "local::argmax_diff": 0.7099722811623581,
+        "local::argmax_same": 0.6849937857806718,
+        "local::z_gate0.2": 0.6931300677919269,
+        "local::z_gate0.4": 0.7105919760665771,
+        "local::z_gate0.6": 0.7197742652638446,
+        "local::qpeak0.5": 0.6889016854991851,
+        "local::epeak0.5": 0.6805489987190054,
+        "local::qpeak0.7": 0.7052094655165458,
+        "local::epeak0.7": 0.6969322933234215,
+        "local::qpeak0.9": 0.7182544132601606,
+        "local::epeak0.9": 0.7106402608841139,
+        "local::source_tau0.8": 0.6620194408511945,
+        "local::source_tau0.9": 0.6672860507413112,
+        "local::source_tau1.1": 0.677994611599805,
+        "local::keep1": 0.7006321908149536,
+        "local::keep2": 0.7188346906556473,
+        "local::keep3": 0.723778131634953,
+        "local::keep5": 0.723778131634953,
+        "local::keep8": 0.723778131634953,
+        "local::keep12": 0.723778131634953,
+        "local::interval0": 0.671493612722526,
+        "local::interval0.05": 0.6770078097134509,
+        "local::interval0.1": 0.6832450508233892,
+        "local::interval0.25": 0.694085582481775,
+        "local::interval0.5": 0.6978869844315289,
+        "local::interval0.75": 0.7007584931467573,
+        "local::interval1": 0.723778131634953,
+        "row::h": 0.7434573233551777,
+        "row::z": 0.5723317162269324,
+        "row::delta": 0.33030784831665205,
+        "row::entropy_difference": -0.10816213631199624,
+        "row::top1_correct": 0.6392933452937073,
+        "exchange::gamma": 0.010087285752098782,
+        "exchange::error_in": 0.0002904545202577002,
+        "exchange::error_out": -0.02920423139594233,
+        "exchange::true_gain_raw": -0.019407400109387508,
+        "exchange::deleted_out": 0.026438477124951388,
+        "exchange::positive_error_in": 0.006739676739530995,
+        "exchange::negative_error_out": 0.029981628911595608,
+        "oracle::global": 0.9592206478118896,
+        "oracle::pool_proxy": 0.9282471537590027,
+        "oracle::pool_residual": 0.8495152592658997,
+        "control::legacy_temperature_proxy": 0.8260887265205383,
+        "control::legacy_temperature_residual": 0.792647123336792,
+        "oracle::switch": 0.8373971581459045
+      },
+      "original_residual_local_win_event_fraction": 0.2847942409334106,
+      "original_residual_local_loss_event_fraction": 0.22344419989361813,
+      "top_exploratory_means": [
+        {
+          "policy": "policy::complement_power1__full__expected_mix0.25",
+          "coverage": 0.8669098677735059,
+          "gain": 0.029200487979889722
+        },
+        {
+          "policy": "policy::complement_power0.5__full__expected_mix0.25",
+          "coverage": 0.8660905126157239,
+          "gain": 0.028381132822107746
+        },
+        {
+          "policy": "policy::complement_power2__full__expected_mix0.25",
+          "coverage": 0.8660171790446101,
+          "gain": 0.028307799250993915
+        },
+        {
+          "policy": "policy::complement_power1__full__uniform0.05",
+          "coverage": 0.8658151216543104,
+          "gain": 0.028105741860694256
+        },
+        {
+          "policy": "policy::complement_power0.5__topm__expected_mix0.25",
+          "coverage": 0.8654950176206714,
+          "gain": 0.027785637827055232
+        },
+        {
+          "policy": "policy::complement_power1__topm__expected_mix0.25",
+          "coverage": 0.8654175737942869,
+          "gain": 0.027708194000670705
+        },
+        {
+          "policy": "policy::interval1__full__expected_mix0.25",
+          "coverage": 0.86532165969061,
+          "gain": 0.027612279896993885
+        },
+        {
+          "policy": "policy::proxy__full__expected_mix0.25",
+          "coverage": 0.86532165969061,
+          "gain": 0.027612279896993885
+        },
+        {
+          "policy": "policy::proxy__topm__expected_mix0.25",
+          "coverage": 0.8649925009329144,
+          "gain": 0.027283121139298205
+        },
+        {
+          "policy": "policy::interval1__topm__expected_mix0.25",
+          "coverage": 0.8649925009329144,
+          "gain": 0.027283121139298205
+        },
+        {
+          "policy": "policy::keep12__full__expected_mix0.25",
+          "coverage": 0.8648706171841474,
+          "gain": 0.027161237390531223
+        },
+        {
+          "policy": "policy::complement_power0.5__full__uniform0.05",
+          "coverage": 0.864644979239961,
+          "gain": 0.026935599446344827
+        },
+        {
+          "policy": "policy::keep12__topm__expected_mix0.25",
+          "coverage": 0.864527408550209,
+          "gain": 0.026818028756592893
+        },
+        {
+          "policy": "policy::complement_power1__full__expected_mix0.5",
+          "coverage": 0.8643393529987123,
+          "gain": 0.02662997320509619
+        },
+        {
+          "policy": "policy::complement_power2__topm__expected_mix0.25",
+          "coverage": 0.8642304668863026,
+          "gain": 0.026521087092686413
+        }
+      ]
+    },
+    "1.0": {
+      "selected": {
+        "bounded_subtraction": {
+          "policy": "policy::complement_power0.5__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.6714770648352343,
+            "ci95": [
+              0.6620209991747205,
+              0.6810855660564262
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.023315860070334586,
+            "ci95": [
+              0.01937363435394677,
+              0.027303295073052573
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0009934497543752081,
+            "ci95": [
+              0.00025485459675111906,
+              0.0017928278883809802
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6354656698734336,
+            "c4": 0.6225430766939632,
+            "gsm": 0.6670504527950015,
+            "humaneval": 0.7608490599785389
+          }
+        },
+        "local_gate": {
+          "policy": "policy::qpeak0.9__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.6687282482351797,
+            "ci95": [
+              0.6593579755624778,
+              0.6783308969521342
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.020567043470279912,
+            "ci95": [
+              0.016555794547247853,
+              0.02462997709661922
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.001755366845679464,
+            "ci95": [
+              -0.002832865567161006,
+              -0.0008545470332248625
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6323193548061613,
+            "c4": 0.6205573099241353,
+            "gsm": 0.6659028075480772,
+            "humaneval": 0.7561335206623452
+          }
+        },
+        "proxy_allocation": {
+          "policy": "policy::proxy__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.6704836150808592,
+            "ci95": [
+              0.6610492343067838,
+              0.6799914328341911
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.022322410315959378,
+            "ci95": [
+              0.018355697422877383,
+              0.026333553095802577
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6343264706335384,
+            "c4": 0.621254854307286,
+            "gsm": 0.6656698675482383,
+            "humaneval": 0.760683267834374
+          }
+        },
+        "rank_only": {
+          "policy": "policy::interval1__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.6704836150808592,
+            "ci95": [
+              0.6610492343067838,
+              0.6799914328341911
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.022322410315959378,
+            "ci95": [
+              0.018355697422877383,
+              0.026333553095802577
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6343264706335384,
+            "c4": 0.621254854307286,
+            "gsm": 0.6656698675482383,
+            "humaneval": 0.760683267834374
+          }
+        },
+        "residual_allocation": {
+          "policy": "policy::residual__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.6243855110228189,
+            "ci95": [
+              0.6138881652561525,
+              0.6346294889311577
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.023775693742080856,
+            "ci95": [
+              -0.029741096046170593,
+              -0.018118791807608645
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.04609810405804023,
+            "ci95": [
+              -0.05168702577792532,
+              -0.04067008715486789
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6018117091174657,
+            "c4": 0.5643820150998246,
+            "gsm": 0.6350181250373146,
+            "humaneval": 0.6963301948366707
+          }
+        },
+        "source_temperature": {
+          "policy": "policy::source_tau0.9__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.626994441165167,
+            "ci95": [
+              0.6166012933480296,
+              0.6369914425948098
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.021166763599732817,
+            "ci95": [
+              -0.02705793256995002,
+              -0.015469187509873824
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.043489173915692195,
+            "ci95": [
+              -0.048922750750506484,
+              -0.03819957221091859
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6063984767590729,
+            "c4": 0.5683077934474349,
+            "gsm": 0.6324777339268013,
+            "humaneval": 0.7007937605273589
+          }
+        },
+        "overall": {
+          "policy": "policy::complement_power0.5__full__expected_mix0.25",
+          "coverage": {
+            "mean": 0.6714770648352343,
+            "ci95": [
+              0.6620209991747205,
+              0.6810855660564262
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.023315860070334586,
+            "ci95": [
+              0.01937363435394677,
+              0.027303295073052573
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": 0.0009934497543752081,
+            "ci95": [
+              0.00025485459675111906,
+              0.0017928278883809802
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6354656698734336,
+            "c4": 0.6225430766939632,
+            "gsm": 0.6670504527950015,
+            "humaneval": 0.7608490599785389
+          }
+        },
+        "source_only": {
+          "policy": "policy::interval1__topm__original",
+          "coverage": {
+            "mean": 0.6481612047648998,
+            "ci95": [
+              0.6382649183964114,
+              0.6581538886766322
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.022322410315959378,
+            "ci95": [
+              -0.026333553095802577,
+              -0.018355697422877383
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6132150995774619,
+            "c4": 0.5956831977039425,
+            "gsm": 0.6519634598646031,
+            "humaneval": 0.7317830619135918
+          }
+        },
+        "original_proxy": {
+          "policy": "policy::proxy__topm__original",
+          "coverage": {
+            "mean": 0.6481612047648998,
+            "ci95": [
+              0.6382649183964114,
+              0.6581538886766322
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.022322410315959378,
+            "ci95": [
+              -0.026333553095802577,
+              -0.018355697422877383
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.6132150995774619,
+            "c4": 0.5956831977039425,
+            "gsm": 0.6519634598646031,
+            "humaneval": 0.7317830619135918
+          }
+        },
+        "original_residual": {
+          "policy": "policy::residual__topm__original",
+          "coverage": {
+            "mean": 0.6067692768206596,
+            "ci95": [
+              0.5959087785762344,
+              0.6174751366878803
+            ]
+          },
+          "vs_original_proxy": {
+            "mean": -0.04139192794424015,
+            "ci95": [
+              -0.046698134043278654,
+              -0.036446312597361946
+            ]
+          },
+          "vs_optimized_proxy": {
+            "mean": -0.06371433826019952,
+            "ci95": [
+              -0.07002475777405356,
+              -0.05762840540892831
+            ]
+          },
+          "dataset_means": {
+            "alpaca": 0.5828520880888876,
+            "c4": 0.5447270038133167,
+            "gsm": 0.621465422478799,
+            "humaneval": 0.6780325929016353
+          }
+        }
+      },
+      "development_or_confirmation": "development",
+      "unique_prompts": 256,
+      "sampled_steps": 4504,
+      "pooled_rejection_event_diagnostics": {
+        "local::proxy": 0.5480960075432258,
+        "local::residual": 0.4980552399530011,
+        "local::lambda0.1": 0.5453275375761294,
+        "local::lambda0.25": 0.5410948753290181,
+        "local::lambda0.5": 0.5311899624209456,
+        "local::lambda0.75": 0.5180237429754636,
+        "local::floor0.25": 0.538612227161521,
+        "local::floor0.5": 0.5452373180704739,
+        "local::floor0.75": 0.5466139749664867,
+        "local::floor0.9": 0.5474369772085064,
+        "local::twosided0.1": 0.5158440279220244,
+        "local::capped_negative0.1": 0.5145564374368954,
+        "local::twosided0.25": 0.5174607368887787,
+        "local::capped_negative0.25": 0.5241132773821332,
+        "local::twosided0.5": 0.5083908424680897,
+        "local::capped_negative0.5": 0.5288060452317574,
+        "local::twosided1": 0.48950502993671635,
+        "local::capped_negative1": 0.5282480117654621,
+        "local::complement_power0.5": 0.5482656792588446,
+        "local::complement_power1": 0.5474939997236378,
+        "local::complement_power2": 0.5445961277598991,
+        "local::complement_power4": 0.5247294423358236,
+        "local::uncertainty0.01": 0.5126988711934951,
+        "local::uncertainty0.03": 0.5219095276920658,
+        "local::uncertainty0.1": 0.5369618341386806,
+        "local::anchor_y": 0.5271955701135248,
+        "local::anchor_peak": 0.5042442019184161,
+        "local::complement": 0.5051258540807452,
+        "local::argmax_diff": 0.5317791196701365,
+        "local::argmax_same": 0.5143721278260905,
+        "local::z_gate0.2": 0.512704191160069,
+        "local::z_gate0.4": 0.5269268059225248,
+        "local::z_gate0.6": 0.5380450094695416,
+        "local::qpeak0.5": 0.5181616678445559,
+        "local::epeak0.5": 0.5200182648217294,
+        "local::qpeak0.7": 0.5328426173960729,
+        "local::epeak0.7": 0.5285812377537383,
+        "local::qpeak0.9": 0.5436123910076551,
+        "local::epeak0.9": 0.5395793010206303,
+        "local::source_tau0.8": 0.49799961206758164,
+        "local::source_tau0.9": 0.5026916404662468,
+        "local::source_tau1.1": 0.486012105803241,
+        "local::keep1": 0.5231147671268981,
+        "local::keep2": 0.5417118307212582,
+        "local::keep3": 0.5480960075432258,
+        "local::keep5": 0.5480960075432258,
+        "local::keep8": 0.5480960075432258,
+        "local::keep12": 0.5480960075432258,
+        "local::interval0": 0.4980500297938474,
+        "local::interval0.05": 0.50262524277464,
+        "local::interval0.1": 0.5071132526467187,
+        "local::interval0.25": 0.5151431625992906,
+        "local::interval0.5": 0.5240000203688912,
+        "local::interval0.75": 0.5282783785103597,
+        "local::interval1": 0.5480960075432258,
+        "row::h": 0.6561181644415126,
+        "row::z": 0.4699637983822265,
+        "row::delta": 0.3346209133871864,
+        "row::entropy_difference": 0.22015545765033953,
+        "row::top1_correct": 0.661763661840907,
+        "exchange::gamma": 0.014009444591270404,
+        "exchange::error_in": 0.004159195551742612,
+        "exchange::error_out": -0.02862100855044675,
+        "exchange::true_gain_raw": -0.0187707595318617,
+        "exchange::deleted_out": 0.024354165045903355,
+        "exchange::positive_error_in": 0.009466233171538229,
+        "exchange::negative_error_out": 0.030146725603064736,
+        "oracle::global": 0.8171120882034302,
+        "oracle::pool_proxy": 0.7730423212051392,
+        "oracle::pool_residual": 0.6882227063179016,
+        "control::legacy_temperature_proxy": 0.6395589113235474,
+        "control::legacy_temperature_residual": 0.5986133813858032,
+        "oracle::switch": 0.6515827178955078
+      },
+      "original_residual_local_win_event_fraction": 0.3646171239278391,
+      "original_residual_local_loss_event_fraction": 0.25110903320060907,
+      "top_exploratory_means": [
+        {
+          "policy": "policy::complement_power0.5__full__expected_mix0.25",
+          "coverage": 0.6714770648352343,
+          "gain": 0.02331586007033437
+        },
+        {
+          "policy": "policy::complement_power1__full__expected_mix0.25",
+          "coverage": 0.6706466763071435,
+          "gain": 0.022485471542243562
+        },
+        {
+          "policy": "policy::interval1__full__expected_mix0.25",
+          "coverage": 0.6704836150808591,
+          "gain": 0.022322410315959162
+        },
+        {
+          "policy": "policy::proxy__full__expected_mix0.25",
+          "coverage": 0.6704836150808591,
+          "gain": 0.022322410315959162
+        },
+        {
+          "policy": "policy::floor0.9__full__expected_mix0.25",
+          "coverage": 0.6704403739610781,
+          "gain": 0.022279169196178228
+        },
+        {
+          "policy": "policy::keep12__full__expected_mix0.25",
+          "coverage": 0.6702021743487849,
+          "gain": 0.022040969583885017
+        },
+        {
+          "policy": "policy::floor0.75__full__expected_mix0.25",
+          "coverage": 0.6701891074442322,
+          "gain": 0.0220279026793323
+        },
+        {
+          "policy": "policy::complement_power2__full__expected_mix0.25",
+          "coverage": 0.6696249518749733,
+          "gain": 0.021463747110073372
+        },
+        {
+          "policy": "policy::complement_power0.5__full__expected_mix0.5",
+          "coverage": 0.6695603864494558,
+          "gain": 0.0213991816845559
+        },
+        {
+          "policy": "policy::complement_power1__full__uniform0.2",
+          "coverage": 0.6689495664156793,
+          "gain": 0.020788361650779352
+        },
+        {
+          "policy": "policy::complement_power0.5__full__uniform0.2",
+          "coverage": 0.6688470352116352,
+          "gain": 0.02068583044673533
+        },
+        {
+          "policy": "policy::complement_power1__full__expected_mix0.5",
+          "coverage": 0.6688434079686647,
+          "gain": 0.020682203203764793
+        },
+        {
+          "policy": "policy::qpeak0.9__full__expected_mix0.25",
+          "coverage": 0.6687282482351795,
+          "gain": 0.0205670434702796
+        },
+        {
+          "policy": "policy::floor0.5__full__expected_mix0.25",
+          "coverage": 0.6684756923160997,
+          "gain": 0.0203144875511998
+        },
+        {
+          "policy": "policy::lambda0.1__full__expected_mix0.25",
+          "coverage": 0.6681217923488862,
+          "gain": 0.019960587583986333
+        }
+      ]
+    }
+  },
+  "records": [
+    {
+      "record": {
+        "dataset": "alpaca",
+        "seed": 123,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 172.16591620445251,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--alpaca",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "123",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 3025,
+        "n_samples": 392,
+        "n_rows": 1960,
+        "manifest": "alpaca_seed123.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/alpaca_seed123.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "alpaca",
+        "seed": 42,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 152.56073021888733,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--alpaca",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "42",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2937,
+        "n_samples": 382,
+        "n_rows": 1910,
+        "manifest": "alpaca_seed42.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/alpaca_seed42.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "alpaca",
+        "seed": 7,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 197.16835498809814,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--alpaca",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "7",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 3084,
+        "n_samples": 398,
+        "n_rows": 1990,
+        "manifest": "alpaca_seed7.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_direct_20260912/out/alpaca_seed7.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "c4",
+        "seed": 123,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 181.55376195907593,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--c4",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "123",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 3038,
+        "n_samples": 396,
+        "n_rows": 1980,
+        "manifest": "c4_seed123.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/c4_seed123.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "c4",
+        "seed": 42,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 173.39157056808472,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--c4",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "42",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2972,
+        "n_samples": 388,
+        "n_rows": 1940,
+        "manifest": "c4_seed42.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/c4_seed42.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "c4",
+        "seed": 7,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 192.16208910942078,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--c4",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "7",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2994,
+        "n_samples": 390,
+        "n_rows": 1950,
+        "manifest": "c4_seed7.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_direct_20260912/out/c4_seed7.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "gsm",
+        "seed": 123,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 168.44079446792603,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "123",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2973,
+        "n_samples": 385,
+        "n_rows": 1925,
+        "manifest": "gsm_seed123.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/gsm_seed123.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "gsm",
+        "seed": 42,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 160.88977909088135,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "42",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 3089,
+        "n_samples": 403,
+        "n_rows": 2015,
+        "manifest": "gsm_seed42.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/gsm_seed42.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "gsm",
+        "seed": 7,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 165.35926365852356,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "7",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2995,
+        "n_samples": 388,
+        "n_rows": 1940,
+        "manifest": "gsm_seed7.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_direct_20260912/out/gsm_seed7.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "humaneval",
+        "seed": 123,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 143.92318034172058,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--humaneval",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "123",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2413,
+        "n_samples": 315,
+        "n_rows": 1575,
+        "manifest": "humaneval_seed123.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/humaneval_seed123.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "humaneval",
+        "seed": 42,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 147.97002410888672,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--humaneval",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "42",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2543,
+        "n_samples": 334,
+        "n_rows": 1670,
+        "manifest": "humaneval_seed42.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_replay_20260910/out/humaneval_seed42.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "humaneval",
+        "seed": 7,
+        "numseqs": 32,
+        "output_len": 256,
+        "elapsed_s": 138.4714436531067,
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--humaneval",
+          "--numseqs",
+          "32",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "1.0",
+          "--seed",
+          "7",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "n_steps": 2543,
+        "n_samples": 333,
+        "n_rows": 1665,
+        "manifest": "humaneval_seed7.json",
+        "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_direct_20260912/out/humaneval_seed7.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "mixed",
+        "stage": "development",
+        "temperature": 0.5,
+        "seed": 101,
+        "numseqs": 64,
+        "output_len": 256,
+        "n_steps": 4789,
+        "n_samples": 624,
+        "n_rows": 3120,
+        "elapsed_s": 216.1352105140686,
+        "manifest": "mixed_t0.5_seed101.json",
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--alpaca",
+          "--numseqs",
+          "64",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "0.5",
+          "--seed",
+          "101",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "mapping": [
+          {
+            "seq_id": 1,
+            "dataset": "alpaca",
+            "source_row": 2,
+            "text_sha256": "5fcc25093b2b787a044efe9fad8979ca6a80a61a7530bad106248cb119fbc25f"
+          },
+          {
+            "seq_id": 2,
+            "dataset": "c4",
+            "source_row": 3,
+            "text_sha256": "400d5dc2ca92f77b2a9ba09d6206f918a32b6b0b0cf1bb680fee1a3480905452"
+          },
+          {
+            "seq_id": 3,
+            "dataset": "gsm",
+            "source_row": 5,
+            "text_sha256": "d38bacc8724a241927dec39e1459b3c17295f79d244c7ec4a518303968c9dc01"
+          },
+          {
+            "seq_id": 4,
+            "dataset": "humaneval",
+            "source_row": 3,
+            "text_sha256": "d8858a9be713f1ea4a6623e8fbcd8cba6853ef234964aa521f965af44a5e8a59"
+          },
+          {
+            "seq_id": 5,
+            "dataset": "alpaca",
+            "source_row": 6,
+            "text_sha256": "90cc269269a9e01e19f12898de214165f0f921643d9d41254e541b9696e8fbdc"
+          },
+          {
+            "seq_id": 6,
+            "dataset": "c4",
+            "source_row": 4,
+            "text_sha256": "f6803e68e694bddcb20fa8ca5b347a653e644f58982837c00ffc6b06d8196a4a"
+          },
+          {
+            "seq_id": 7,
+            "dataset": "gsm",
+            "source_row": 7,
+            "text_sha256": "cf2595dad6a3ad5bbef4cb35fdf9d90cf2ea8ea8cfa675e9c0af771abd2dea12"
+          },
+          {
+            "seq_id": 8,
+            "dataset": "humaneval",
+            "source_row": 4,
+            "text_sha256": "bacc423d487c21fd03878e4a3bea6d19ab3d987bbd0fc71f2fb6cbef0391eb9e"
+          },
+          {
+            "seq_id": 9,
+            "dataset": "alpaca",
+            "source_row": 8,
+            "text_sha256": "ebae0fa7e0a19f8a6badff44bd8409a297dd11afb61e0be865b46490b4416195"
+          },
+          {
+            "seq_id": 10,
+            "dataset": "c4",
+            "source_row": 5,
+            "text_sha256": "f380fe0e3b3f579ee4e1550201efd7ab3f3994b4f097a18061c93bdc2e05f8ce"
+          },
+          {
+            "seq_id": 11,
+            "dataset": "gsm",
+            "source_row": 9,
+            "text_sha256": "a13430e732d2c1e663238de0e34daf75abd640df18ff2ab97d0d55479204c2d1"
+          },
+          {
+            "seq_id": 12,
+            "dataset": "humaneval",
+            "source_row": 7,
+            "text_sha256": "1438438acb0e90c5fd05ad464f0e88441d12413b12f0e5f41e495ce43dd3cb2c"
+          },
+          {
+            "seq_id": 13,
+            "dataset": "alpaca",
+            "source_row": 13,
+            "text_sha256": "852abddc0bb34d327930d70414776e2475575025222f7713bdfc477a5e2bc82f"
+          },
+          {
+            "seq_id": 14,
+            "dataset": "c4",
+            "source_row": 22,
+            "text_sha256": "243dfbec89ab78e008b03f19edd76c0f6fb7b830f99978139f96a7cadcd9ca09"
+          },
+          {
+            "seq_id": 15,
+            "dataset": "gsm",
+            "source_row": 10,
+            "text_sha256": "699ab79580f3d4e07173fdf9ff3b39ab4d4aa99e3efdf92ea650753c03c27a4d"
+          },
+          {
+            "seq_id": 16,
+            "dataset": "humaneval",
+            "source_row": 11,
+            "text_sha256": "6172b6d6f9e32f9fdb5e63abc301476f457973978cd5980a1d1c92efef871a2e"
+          },
+          {
+            "seq_id": 17,
+            "dataset": "alpaca",
+            "source_row": 14,
+            "text_sha256": "c21a91380cea9bf3136039352b774eb9c6b5bdc490090b1b52914921d309351a"
+          },
+          {
+            "seq_id": 18,
+            "dataset": "c4",
+            "source_row": 29,
+            "text_sha256": "2ff4e1e528289a7d05fcfc2458b2b37425703c811312064ad23f86ea18b869a7"
+          },
+          {
+            "seq_id": 19,
+            "dataset": "gsm",
+            "source_row": 11,
+            "text_sha256": "09296cd5e0fc1cb5a7c241379aa53704fca1c2d3cf3e106fdf539f2f88d050c1"
+          },
+          {
+            "seq_id": 20,
+            "dataset": "humaneval",
+            "source_row": 15,
+            "text_sha256": "5ca45cb6776d5bfde4d7ad5b768b5bf197831ccfc1dd4dbc5d03ccb2136dbfc8"
+          },
+          {
+            "seq_id": 21,
+            "dataset": "alpaca",
+            "source_row": 28,
+            "text_sha256": "dc25d4342e78feca9d9ba8ca7134bca558edfa21ca53fd37ecfbc320849f153d"
+          },
+          {
+            "seq_id": 22,
+            "dataset": "c4",
+            "source_row": 32,
+            "text_sha256": "7d0865c0d41a7cf9d847a534e59d1e01637979c448ad9e53ff949b84379a400c"
+          },
+          {
+            "seq_id": 23,
+            "dataset": "gsm",
+            "source_row": 14,
+            "text_sha256": "da32de9a8fdf17faf139ce3943810fcbe34c0a96e5790b2553a1dde0d4ede5c3"
+          },
+          {
+            "seq_id": 24,
+            "dataset": "humaneval",
+            "source_row": 18,
+            "text_sha256": "b50507ca53cffd197daf7af8981fa204da15c049fd6f160ebddf69608a574f7e"
+          },
+          {
+            "seq_id": 25,
+            "dataset": "alpaca",
+            "source_row": 31,
+            "text_sha256": "6b83ea2f2de975b6f0c6637a04da183492ebc863a29ca6e292bc1d5e97826b5a"
+          },
+          {
+            "seq_id": 26,
+            "dataset": "c4",
+            "source_row": 35,
+            "text_sha256": "ceb5cdd03cbfec77f9780dc4985ce9ace989fdc69d3d1ff1b25ff8a4b1117e8e"
+          },
+          {
+            "seq_id": 27,
+            "dataset": "gsm",
+            "source_row": 15,
+            "text_sha256": "9646c1dc9939f268f57613f37f2264d20720261283ad70383e5f14400edd9749"
+          },
+          {
+            "seq_id": 28,
+            "dataset": "humaneval",
+            "source_row": 21,
+            "text_sha256": "a52ebbbd960f4e331979dfeb77c1c1660498074b142f9c6c1f78a679a1f1cc3d"
+          },
+          {
+            "seq_id": 29,
+            "dataset": "alpaca",
+            "source_row": 37,
+            "text_sha256": "42b17096fc6e4cfbfe311b729d7d91370d48206ab6eceafd1eb70c6478f672f1"
+          },
+          {
+            "seq_id": 30,
+            "dataset": "c4",
+            "source_row": 36,
+            "text_sha256": "c3b580416396023e5e694a871d7a8f3aa695386d5208e4bbd4e045012b70316b"
+          },
+          {
+            "seq_id": 31,
+            "dataset": "gsm",
+            "source_row": 16,
+            "text_sha256": "9a9628f61eb62c54b986eccd2adad13cb9bc4748d23d34aae74e563ba95d8183"
+          },
+          {
+            "seq_id": 32,
+            "dataset": "humaneval",
+            "source_row": 29,
+            "text_sha256": "6baba341f678ca62d400bdd7d38315a29f9d411a9a3c96a9ba041d5530df9f1c"
+          },
+          {
+            "seq_id": 33,
+            "dataset": "alpaca",
+            "source_row": 39,
+            "text_sha256": "a0b1c0d5cfea7bd1c55f8e3fe85bb1e507985e1169d66bd931e0b16953759e81"
+          },
+          {
+            "seq_id": 34,
+            "dataset": "c4",
+            "source_row": 37,
+            "text_sha256": "27647d75af7a15e08e7f712a944e591b987dc33d225df7112793910f5558e180"
+          },
+          {
+            "seq_id": 35,
+            "dataset": "gsm",
+            "source_row": 21,
+            "text_sha256": "e04a6ba1b453a05d7c06fdbe4bca8fe555b80ae46a5a1cbf2000a512cee86887"
+          },
+          {
+            "seq_id": 36,
+            "dataset": "humaneval",
+            "source_row": 34,
+            "text_sha256": "c1a6947b70fa2346c33a3cb0167da542e4652eb1cd605f6addf5167671dd64e7"
+          },
+          {
+            "seq_id": 37,
+            "dataset": "alpaca",
+            "source_row": 40,
+            "text_sha256": "b615e9baf04a6eac495b5e790877b8b43f48ee31b882601fe9530721acfd0684"
+          },
+          {
+            "seq_id": 38,
+            "dataset": "c4",
+            "source_row": 38,
+            "text_sha256": "acc69478f20be949cf103ee0c4e15dd0c2c1fa1b7f9e1c26207d659cb9d74949"
+          },
+          {
+            "seq_id": 39,
+            "dataset": "gsm",
+            "source_row": 22,
+            "text_sha256": "9c7d7104e70d1658738b2173be75fe5ebaa86035b540c0a47667d9b3cc8d11d2"
+          },
+          {
+            "seq_id": 40,
+            "dataset": "humaneval",
+            "source_row": 45,
+            "text_sha256": "0f8b5b3db05e85b0630632f477c3f578704e63bccfb02eb99c13fea36fb68d21"
+          },
+          {
+            "seq_id": 41,
+            "dataset": "alpaca",
+            "source_row": 44,
+            "text_sha256": "c606ba3ca315a7b84289e43ebbe9a70ebbb5d896b9f6905692ad759f65c67297"
+          },
+          {
+            "seq_id": 42,
+            "dataset": "c4",
+            "source_row": 43,
+            "text_sha256": "fec1eea8cb9f342dfa262f0671859adbb5101049f096ff0e5889460743280d16"
+          },
+          {
+            "seq_id": 43,
+            "dataset": "gsm",
+            "source_row": 29,
+            "text_sha256": "5d54ceb241898c491233b220d4a66fff25a3afb2cb1fbaeafd727194408874e5"
+          },
+          {
+            "seq_id": 44,
+            "dataset": "humaneval",
+            "source_row": 52,
+            "text_sha256": "78947a4e9d709bb48218dacc270403b7a2bdccb25591743e0d8e32957f011c5e"
+          },
+          {
+            "seq_id": 45,
+            "dataset": "alpaca",
+            "source_row": 45,
+            "text_sha256": "6dc7c9b3aa69a7a671c7a70a1e40ce0e19101fd8c70903789087b9fff2e021d0"
+          },
+          {
+            "seq_id": 46,
+            "dataset": "c4",
+            "source_row": 45,
+            "text_sha256": "25f774e915b634ffb8d31fe128a6804eaae88d49bad30a120e76c107b11724e5"
+          },
+          {
+            "seq_id": 47,
+            "dataset": "gsm",
+            "source_row": 31,
+            "text_sha256": "54641b315d08f6ef56f7445c5c5abc5cee8bbdea39a60249c63455e04a9d934f"
+          },
+          {
+            "seq_id": 48,
+            "dataset": "humaneval",
+            "source_row": 53,
+            "text_sha256": "0284a70fef9eb23698de8f27dcf6813e6eaa13496917dc3a9810f51c68c3f6d5"
+          },
+          {
+            "seq_id": 49,
+            "dataset": "alpaca",
+            "source_row": 52,
+            "text_sha256": "1684b63802c6afe5e34395d2d40ea2407e68ba6e247f0de22ad3ac4cf090608e"
+          },
+          {
+            "seq_id": 50,
+            "dataset": "c4",
+            "source_row": 52,
+            "text_sha256": "f03eec3aa8910c74dada2e2fd527e9b80a027024691e2606cdfcf459e6dbd6ce"
+          },
+          {
+            "seq_id": 51,
+            "dataset": "gsm",
+            "source_row": 37,
+            "text_sha256": "7f5709a21d11e1ac64737bb88e76a2d9180a2959e36fb725993b9c18ca1954ce"
+          },
+          {
+            "seq_id": 52,
+            "dataset": "humaneval",
+            "source_row": 60,
+            "text_sha256": "0990064a717dc05c247b0773af11dfb6b0f9b316a4391525dbe661b74891cb4b"
+          },
+          {
+            "seq_id": 53,
+            "dataset": "alpaca",
+            "source_row": 57,
+            "text_sha256": "3d6d7ca1e98d14812ea9a0f11aa84f9c7f5b15a0e8b35b4e09ebfe43539d60f3"
+          },
+          {
+            "seq_id": 54,
+            "dataset": "c4",
+            "source_row": 61,
+            "text_sha256": "9060ec7f975f083a9e0e85c2aa149baf57f02429d5ffbf853a9df2aeeb752b01"
+          },
+          {
+            "seq_id": 55,
+            "dataset": "gsm",
+            "source_row": 47,
+            "text_sha256": "c696b849f4225dc395985e39b8360eaa04f92555a8c1b383bf321c44bab2f9e6"
+          },
+          {
+            "seq_id": 56,
+            "dataset": "humaneval",
+            "source_row": 62,
+            "text_sha256": "ba74b0582f45e35e06bc713e90172371e3057e0b68a49901c7048c6312819bd2"
+          },
+          {
+            "seq_id": 57,
+            "dataset": "alpaca",
+            "source_row": 63,
+            "text_sha256": "db0c910af43502efe2229119bb70c61bb568750bb48647cddac9a8fe46be40cb"
+          },
+          {
+            "seq_id": 58,
+            "dataset": "c4",
+            "source_row": 63,
+            "text_sha256": "2511f4682707ded33f77e5f7185dfd9c5bca6cb469b350dac01b8345ef7c3a2c"
+          },
+          {
+            "seq_id": 59,
+            "dataset": "gsm",
+            "source_row": 48,
+            "text_sha256": "da19d532632e5c0c9836f52869d0411180c6118f95b8e9b2f88bee8f34e53279"
+          },
+          {
+            "seq_id": 60,
+            "dataset": "humaneval",
+            "source_row": 63,
+            "text_sha256": "519c3bae0105dfcbfaf7ce02cfe1fc15152497cf8b1310d47aa119c8e64d5c11"
+          },
+          {
+            "seq_id": 61,
+            "dataset": "alpaca",
+            "source_row": 64,
+            "text_sha256": "b3b9519fee0b997180324f4a6c67e36f7115e0d1964b56fb77a4033c29bd5bb3"
+          },
+          {
+            "seq_id": 62,
+            "dataset": "c4",
+            "source_row": 64,
+            "text_sha256": "b79b91de64c2823b8a728fec147777224cad3cc4b4a4adf7bd9e1ee81131ff3f"
+          },
+          {
+            "seq_id": 63,
+            "dataset": "gsm",
+            "source_row": 59,
+            "text_sha256": "e250bc2e7b4631f5654335e1723195a7ea22bf2948d958ba2a96238853ee8de1"
+          },
+          {
+            "seq_id": 64,
+            "dataset": "humaneval",
+            "source_row": 64,
+            "text_sha256": "47e80a5ea1066026722ee07b95fb9a21b0e09dc392a4fa4d3526a02c7ee15971"
+          }
+        ],
+        "dataset_sha256": "552558c4a4ee0e3fd4df119dcf7c74901d8f176d0933c970e8b628b708c6d2f5",
+        "max_probability_sum_error": 3.425545056501278e-07,
+        "snapshot_sha256": {
+          "mixed_t0.5_seed101/chunk_0000.npz": "22a9bbee2f156ef3a5d18afaf8a0255776936192732b6ab79f5523d1de66177d",
+          "mixed_t0.5_seed101/chunk_0001.npz": "0892215b24d0d3afb9863b3b0875f3ca682b49a9da22fd5603a4e618be8f8ac8",
+          "mixed_t0.5_seed101/chunk_0002.npz": "ff1cced12086346674516f87b4fc0caccf982e362c21f426832a893a96133708",
+          "mixed_t0.5_seed101/chunk_0003.npz": "0fb806223a1b7c7a715567d76eeabf6a110371209f9150d32b18cc70f28a970b",
+          "mixed_t0.5_seed101/chunk_0004.npz": "bd5fe423c62f99193ff4738863491d9eac55dd519b4c781043632a19746fda31",
+          "mixed_t0.5_seed101/chunk_0005.npz": "2e382d827ff37c805c558a678a90a2be8b3af88190b5b63b4baa55875c80088e",
+          "mixed_t0.5_seed101/chunk_0006.npz": "5f5bc75187730c84537a661c95582e726504778959da92b95c8e7a26493f59c1",
+          "mixed_t0.5_seed101/chunk_0007.npz": "f8a5e4bc4a177faa3b9d0dfa8c65817a2490ce8c10a8821042a3bc94d335d653",
+          "mixed_t0.5_seed101/chunk_0008.npz": "ef5a1cfce377ed27fa573b40f9156bc29404de2543536e2453a9506870988e7c",
+          "mixed_t0.5_seed101/chunk_0009.npz": "33744b676be3f8aabca8618be9a80d54c3a49555faa581a2441aedc105953d82",
+          "mixed_t0.5_seed101/chunk_0010.npz": "3a252e3259ad623344d7133452778ec33444c64b7ceabfebf122e50e99b38905",
+          "mixed_t0.5_seed101/chunk_0011.npz": "d204060940a93fed97da24cd480b7dc082fb743d3eb90147d20ad35d66fac6e7",
+          "mixed_t0.5_seed101/chunk_0012.npz": "89f490a4b247d93424d9da69458d860ac205a687ad01ddc8f01b271632b7ddfb",
+          "mixed_t0.5_seed101/chunk_0013.npz": "551f6c792e4c1158c1a33d7c03657989fcd247bca742a68fa9a3b7f0c1f4ea15",
+          "mixed_t0.5_seed101/chunk_0014.npz": "9960c3d1cd1921774272a5d5001c7bb06896e934875426cdd92a42e9adcd7df1",
+          "mixed_t0.5_seed101/chunk_0015.npz": "00467bb64a5a48a225440cc49568d9932727918642b945b0b1d9a305eedf00ae",
+          "mixed_t0.5_seed101/chunk_0016.npz": "f5a2ffbdffbdefe5c933de4c0197e451f26274a0f9d7c8afad68dd343f2e5166",
+          "mixed_t0.5_seed101/chunk_0017.npz": "740f65139e15c85e97bf05ee701af2eef607f634974a6d76636a788871a26f9e",
+          "mixed_t0.5_seed101/chunk_0018.npz": "06a1296d011ba78de409ccc7d7c7bbeb41228eac2cb231cf7892ff16b58313d7",
+          "mixed_t0.5_seed101/chunk_0019.npz": "3df18c21b2fe7fa2bfb085f4796b1c1f8e9073bf3341a82c848d4054b4c10a5e"
+        },
+        "validation": "exit, log, exact tap, finite normalized float32, all prompt/step IDs and stride"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_training_free_20260912/out/development/mixed_t0.5_seed101.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    },
+    {
+      "record": {
+        "dataset": "mixed",
+        "stage": "development",
+        "temperature": 0.7,
+        "seed": 101,
+        "numseqs": 64,
+        "output_len": 256,
+        "n_steps": 5108,
+        "n_samples": 668,
+        "n_rows": 3340,
+        "elapsed_s": 231.95032382011414,
+        "manifest": "mixed_t0.7_seed101.json",
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD/ssd/bench/bench.py",
+          "--llama",
+          "--size",
+          "70",
+          "--gpus",
+          "5",
+          "--model_path",
+          "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+          "--draft_path",
+          "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+          "--quant_awq",
+          "--quant_awq_artifact",
+          "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+          "--alpaca",
+          "--numseqs",
+          "64",
+          "--output_len",
+          "256",
+          "--b",
+          "1",
+          "--temp",
+          "0.7",
+          "--seed",
+          "101",
+          "--async",
+          "--spec",
+          "--duet",
+          "--duet_exit_layer",
+          "56",
+          "--duet_phase1_k",
+          "8",
+          "--duet_phase2_k",
+          "4",
+          "--duet_draft_fan_out",
+          "3",
+          "--duet_p2_budget",
+          "15",
+          "--duet_p1_tree_policy",
+          "off",
+          "--duet_p2_tree_policy",
+          "off",
+          "--duet_only_proxy"
+        ],
+        "mapping": [
+          {
+            "seq_id": 1,
+            "dataset": "alpaca",
+            "source_row": 2,
+            "text_sha256": "5fcc25093b2b787a044efe9fad8979ca6a80a61a7530bad106248cb119fbc25f"
+          },
+          {
+            "seq_id": 2,
+            "dataset": "c4",
+            "source_row": 3,
+            "text_sha256": "400d5dc2ca92f77b2a9ba09d6206f918a32b6b0b0cf1bb680fee1a3480905452"
+          },
+          {
+            "seq_id": 3,
+            "dataset": "gsm",
+            "source_row": 5,
+            "text_sha256": "d38bacc8724a241927dec39e1459b3c17295f79d244c7ec4a518303968c9dc01"
+          },
+          {
+            "seq_id": 4,
+            "dataset": "humaneval",
+            "source_row": 3,
+            "text_sha256": "d8858a9be713f1ea4a6623e8fbcd8cba6853ef234964aa521f965af44a5e8a59"
+          },
+          {
+            "seq_id": 5,
+            "dataset": "alpaca",
+            "source_row": 6,
+            "text_sha256": "90cc269269a9e01e19f12898de214165f0f921643d9d41254e541b9696e8fbdc"
+          },
+          {
+            "seq_id": 6,
+            "dataset": "c4",
+            "source_row": 4,
+            "text_sha256": "f6803e68e694bddcb20fa8ca5b347a653e644f58982837c00ffc6b06d8196a4a"
+          },
+          {
+            "seq_id": 7,
+            "dataset": "gsm",
+            "source_row": 7,
+            "text_sha256": "cf2595dad6a3ad5bbef4cb35fdf9d90cf2ea8ea8cfa675e9c0af771abd2dea12"
+          },
+          {
+            "seq_id": 8,
+            "dataset": "humaneval",
+            "source_row": 4,
+            "text_sha256": "bacc423d487c21fd03878e4a3bea6d19ab3d987bbd0fc71f2fb6cbef0391eb9e"
+          },
+          {
+            "seq_id": 9,
+            "dataset": "alpaca",
+            "source_row": 8,
+            "text_sha256": "ebae0fa7e0a19f8a6badff44bd8409a297dd11afb61e0be865b46490b4416195"
+          },
+          {
+            "seq_id": 10,
+            "dataset": "c4",
+            "source_row": 5,
+            "text_sha256": "f380fe0e3b3f579ee4e1550201efd7ab3f3994b4f097a18061c93bdc2e05f8ce"
+          },
+          {
+            "seq_id": 11,
+            "dataset": "gsm",
+            "source_row": 9,
+            "text_sha256": "a13430e732d2c1e663238de0e34daf75abd640df18ff2ab97d0d55479204c2d1"
+          },
+          {
+            "seq_id": 12,
+            "dataset": "humaneval",
+            "source_row": 7,
+            "text_sha256": "1438438acb0e90c5fd05ad464f0e88441d12413b12f0e5f41e495ce43dd3cb2c"
+          },
+          {
+            "seq_id": 13,
+            "dataset": "alpaca",
+            "source_row": 13,
+            "text_sha256": "852abddc0bb34d327930d70414776e2475575025222f7713bdfc477a5e2bc82f"
+          },
+          {
+            "seq_id": 14,
+            "dataset": "c4",
+            "source_row": 22,
+            "text_sha256": "243dfbec89ab78e008b03f19edd76c0f6fb7b830f99978139f96a7cadcd9ca09"
+          },
+          {
+            "seq_id": 15,
+            "dataset": "gsm",
+            "source_row": 10,
+            "text_sha256": "699ab79580f3d4e07173fdf9ff3b39ab4d4aa99e3efdf92ea650753c03c27a4d"
+          },
+          {
+            "seq_id": 16,
+            "dataset": "humaneval",
+            "source_row": 11,
+            "text_sha256": "6172b6d6f9e32f9fdb5e63abc301476f457973978cd5980a1d1c92efef871a2e"
+          },
+          {
+            "seq_id": 17,
+            "dataset": "alpaca",
+            "source_row": 14,
+            "text_sha256": "c21a91380cea9bf3136039352b774eb9c6b5bdc490090b1b52914921d309351a"
+          },
+          {
+            "seq_id": 18,
+            "dataset": "c4",
+            "source_row": 29,
+            "text_sha256": "2ff4e1e528289a7d05fcfc2458b2b37425703c811312064ad23f86ea18b869a7"
+          },
+          {
+            "seq_id": 19,
+            "dataset": "gsm",
+            "source_row": 11,
+            "text_sha256": "09296cd5e0fc1cb5a7c241379aa53704fca1c2d3cf3e106fdf539f2f88d050c1"
+          },
+          {
+            "seq_id": 20,
+            "dataset": "humaneval",
+            "source_row": 15,
+            "text_sha256": "5ca45cb6776d5bfde4d7ad5b768b5bf197831ccfc1dd4dbc5d03ccb2136dbfc8"
+          },
+          {
+            "seq_id": 21,
+            "dataset": "alpaca",
+            "source_row": 28,
+            "text_sha256": "dc25d4342e78feca9d9ba8ca7134bca558edfa21ca53fd37ecfbc320849f153d"
+          },
+          {
+            "seq_id": 22,
+            "dataset": "c4",
+            "source_row": 32,
+            "text_sha256": "7d0865c0d41a7cf9d847a534e59d1e01637979c448ad9e53ff949b84379a400c"
+          },
+          {
+            "seq_id": 23,
+            "dataset": "gsm",
+            "source_row": 14,
+            "text_sha256": "da32de9a8fdf17faf139ce3943810fcbe34c0a96e5790b2553a1dde0d4ede5c3"
+          },
+          {
+            "seq_id": 24,
+            "dataset": "humaneval",
+            "source_row": 18,
+            "text_sha256": "b50507ca53cffd197daf7af8981fa204da15c049fd6f160ebddf69608a574f7e"
+          },
+          {
+            "seq_id": 25,
+            "dataset": "alpaca",
+            "source_row": 31,
+            "text_sha256": "6b83ea2f2de975b6f0c6637a04da183492ebc863a29ca6e292bc1d5e97826b5a"
+          },
+          {
+            "seq_id": 26,
+            "dataset": "c4",
+            "source_row": 35,
+            "text_sha256": "ceb5cdd03cbfec77f9780dc4985ce9ace989fdc69d3d1ff1b25ff8a4b1117e8e"
+          },
+          {
+            "seq_id": 27,
+            "dataset": "gsm",
+            "source_row": 15,
+            "text_sha256": "9646c1dc9939f268f57613f37f2264d20720261283ad70383e5f14400edd9749"
+          },
+          {
+            "seq_id": 28,
+            "dataset": "humaneval",
+            "source_row": 21,
+            "text_sha256": "a52ebbbd960f4e331979dfeb77c1c1660498074b142f9c6c1f78a679a1f1cc3d"
+          },
+          {
+            "seq_id": 29,
+            "dataset": "alpaca",
+            "source_row": 37,
+            "text_sha256": "42b17096fc6e4cfbfe311b729d7d91370d48206ab6eceafd1eb70c6478f672f1"
+          },
+          {
+            "seq_id": 30,
+            "dataset": "c4",
+            "source_row": 36,
+            "text_sha256": "c3b580416396023e5e694a871d7a8f3aa695386d5208e4bbd4e045012b70316b"
+          },
+          {
+            "seq_id": 31,
+            "dataset": "gsm",
+            "source_row": 16,
+            "text_sha256": "9a9628f61eb62c54b986eccd2adad13cb9bc4748d23d34aae74e563ba95d8183"
+          },
+          {
+            "seq_id": 32,
+            "dataset": "humaneval",
+            "source_row": 29,
+            "text_sha256": "6baba341f678ca62d400bdd7d38315a29f9d411a9a3c96a9ba041d5530df9f1c"
+          },
+          {
+            "seq_id": 33,
+            "dataset": "alpaca",
+            "source_row": 39,
+            "text_sha256": "a0b1c0d5cfea7bd1c55f8e3fe85bb1e507985e1169d66bd931e0b16953759e81"
+          },
+          {
+            "seq_id": 34,
+            "dataset": "c4",
+            "source_row": 37,
+            "text_sha256": "27647d75af7a15e08e7f712a944e591b987dc33d225df7112793910f5558e180"
+          },
+          {
+            "seq_id": 35,
+            "dataset": "gsm",
+            "source_row": 21,
+            "text_sha256": "e04a6ba1b453a05d7c06fdbe4bca8fe555b80ae46a5a1cbf2000a512cee86887"
+          },
+          {
+            "seq_id": 36,
+            "dataset": "humaneval",
+            "source_row": 34,
+            "text_sha256": "c1a6947b70fa2346c33a3cb0167da542e4652eb1cd605f6addf5167671dd64e7"
+          },
+          {
+            "seq_id": 37,
+            "dataset": "alpaca",
+            "source_row": 40,
+            "text_sha256": "b615e9baf04a6eac495b5e790877b8b43f48ee31b882601fe9530721acfd0684"
+          },
+          {
+            "seq_id": 38,
+            "dataset": "c4",
+            "source_row": 38,
+            "text_sha256": "acc69478f20be949cf103ee0c4e15dd0c2c1fa1b7f9e1c26207d659cb9d74949"
+          },
+          {
+            "seq_id": 39,
+            "dataset": "gsm",
+            "source_row": 22,
+            "text_sha256": "9c7d7104e70d1658738b2173be75fe5ebaa86035b540c0a47667d9b3cc8d11d2"
+          },
+          {
+            "seq_id": 40,
+            "dataset": "humaneval",
+            "source_row": 45,
+            "text_sha256": "0f8b5b3db05e85b0630632f477c3f578704e63bccfb02eb99c13fea36fb68d21"
+          },
+          {
+            "seq_id": 41,
+            "dataset": "alpaca",
+            "source_row": 44,
+            "text_sha256": "c606ba3ca315a7b84289e43ebbe9a70ebbb5d896b9f6905692ad759f65c67297"
+          },
+          {
+            "seq_id": 42,
+            "dataset": "c4",
+            "source_row": 43,
+            "text_sha256": "fec1eea8cb9f342dfa262f0671859adbb5101049f096ff0e5889460743280d16"
+          },
+          {
+            "seq_id": 43,
+            "dataset": "gsm",
+            "source_row": 29,
+            "text_sha256": "5d54ceb241898c491233b220d4a66fff25a3afb2cb1fbaeafd727194408874e5"
+          },
+          {
+            "seq_id": 44,
+            "dataset": "humaneval",
+            "source_row": 52,
+            "text_sha256": "78947a4e9d709bb48218dacc270403b7a2bdccb25591743e0d8e32957f011c5e"
+          },
+          {
+            "seq_id": 45,
+            "dataset": "alpaca",
+            "source_row": 45,
+            "text_sha256": "6dc7c9b3aa69a7a671c7a70a1e40ce0e19101fd8c70903789087b9fff2e021d0"
+          },
+          {
+            "seq_id": 46,
+            "dataset": "c4",
+            "source_row": 45,
+            "text_sha256": "25f774e915b634ffb8d31fe128a6804eaae88d49bad30a120e76c107b11724e5"
+          },
+          {
+            "seq_id": 47,
+            "dataset": "gsm",
+            "source_row": 31,
+            "text_sha256": "54641b315d08f6ef56f7445c5c5abc5cee8bbdea39a60249c63455e04a9d934f"
+          },
+          {
+            "seq_id": 48,
+            "dataset": "humaneval",
+            "source_row": 53,
+            "text_sha256": "0284a70fef9eb23698de8f27dcf6813e6eaa13496917dc3a9810f51c68c3f6d5"
+          },
+          {
+            "seq_id": 49,
+            "dataset": "alpaca",
+            "source_row": 52,
+            "text_sha256": "1684b63802c6afe5e34395d2d40ea2407e68ba6e247f0de22ad3ac4cf090608e"
+          },
+          {
+            "seq_id": 50,
+            "dataset": "c4",
+            "source_row": 52,
+            "text_sha256": "f03eec3aa8910c74dada2e2fd527e9b80a027024691e2606cdfcf459e6dbd6ce"
+          },
+          {
+            "seq_id": 51,
+            "dataset": "gsm",
+            "source_row": 37,
+            "text_sha256": "7f5709a21d11e1ac64737bb88e76a2d9180a2959e36fb725993b9c18ca1954ce"
+          },
+          {
+            "seq_id": 52,
+            "dataset": "humaneval",
+            "source_row": 60,
+            "text_sha256": "0990064a717dc05c247b0773af11dfb6b0f9b316a4391525dbe661b74891cb4b"
+          },
+          {
+            "seq_id": 53,
+            "dataset": "alpaca",
+            "source_row": 57,
+            "text_sha256": "3d6d7ca1e98d14812ea9a0f11aa84f9c7f5b15a0e8b35b4e09ebfe43539d60f3"
+          },
+          {
+            "seq_id": 54,
+            "dataset": "c4",
+            "source_row": 61,
+            "text_sha256": "9060ec7f975f083a9e0e85c2aa149baf57f02429d5ffbf853a9df2aeeb752b01"
+          },
+          {
+            "seq_id": 55,
+            "dataset": "gsm",
+            "source_row": 47,
+            "text_sha256": "c696b849f4225dc395985e39b8360eaa04f92555a8c1b383bf321c44bab2f9e6"
+          },
+          {
+            "seq_id": 56,
+            "dataset": "humaneval",
+            "source_row": 62,
+            "text_sha256": "ba74b0582f45e35e06bc713e90172371e3057e0b68a49901c7048c6312819bd2"
+          },
+          {
+            "seq_id": 57,
+            "dataset": "alpaca",
+            "source_row": 63,
+            "text_sha256": "db0c910af43502efe2229119bb70c61bb568750bb48647cddac9a8fe46be40cb"
+          },
+          {
+            "seq_id": 58,
+            "dataset": "c4",
+            "source_row": 63,
+            "text_sha256": "2511f4682707ded33f77e5f7185dfd9c5bca6cb469b350dac01b8345ef7c3a2c"
+          },
+          {
+            "seq_id": 59,
+            "dataset": "gsm",
+            "source_row": 48,
+            "text_sha256": "da19d532632e5c0c9836f52869d0411180c6118f95b8e9b2f88bee8f34e53279"
+          },
+          {
+            "seq_id": 60,
+            "dataset": "humaneval",
+            "source_row": 63,
+            "text_sha256": "519c3bae0105dfcbfaf7ce02cfe1fc15152497cf8b1310d47aa119c8e64d5c11"
+          },
+          {
+            "seq_id": 61,
+            "dataset": "alpaca",
+            "source_row": 64,
+            "text_sha256": "b3b9519fee0b997180324f4a6c67e36f7115e0d1964b56fb77a4033c29bd5bb3"
+          },
+          {
+            "seq_id": 62,
+            "dataset": "c4",
+            "source_row": 64,
+            "text_sha256": "b79b91de64c2823b8a728fec147777224cad3cc4b4a4adf7bd9e1ee81131ff3f"
+          },
+          {
+            "seq_id": 63,
+            "dataset": "gsm",
+            "source_row": 59,
+            "text_sha256": "e250bc2e7b4631f5654335e1723195a7ea22bf2948d958ba2a96238853ee8de1"
+          },
+          {
+            "seq_id": 64,
+            "dataset": "humaneval",
+            "source_row": 64,
+            "text_sha256": "47e80a5ea1066026722ee07b95fb9a21b0e09dc392a4fa4d3526a02c7ee15971"
+          }
+        ],
+        "dataset_sha256": "552558c4a4ee0e3fd4df119dcf7c74901d8f176d0933c970e8b628b708c6d2f5",
+        "max_probability_sum_error": 4.0360759023805315e-07,
+        "snapshot_sha256": {
+          "mixed_t0.7_seed101/chunk_0000.npz": "af5ecba491bf94248756837bf3f795bf4b2ff76bd10100cefa3494e5f200c9d2",
+          "mixed_t0.7_seed101/chunk_0001.npz": "4e082ec82b7c48cf42570d2dc8ccb8aca083ccc9e146a8952a6c9475ccdaeb58",
+          "mixed_t0.7_seed101/chunk_0002.npz": "9c3521a289401d01f9df6a39105adf92435c58323f6d27fa9db664170f82eee9",
+          "mixed_t0.7_seed101/chunk_0003.npz": "b6807c81908d67fdacee0d4005870ffa5d069ccf6714535ab4f42fae03302cb1",
+          "mixed_t0.7_seed101/chunk_0004.npz": "55c0e41b220f0b68ff3f0d2f038291c19097ca49b9537ff1f48d9493a4af11dd",
+          "mixed_t0.7_seed101/chunk_0005.npz": "3079be2885baecf6037f6b84a2b7b096470f2c2cde9f9ace0db37b281d5f3a2d",
+          "mixed_t0.7_seed101/chunk_0006.npz": "757cc25f699b3285914dcbf04dc702d5f51f1157a8c6c888de344df00371b081",
+          "mixed_t0.7_seed101/chunk_0007.npz": "9ae4f7d69060b80c9320d66cf502759fe595d535674f57dca01c9a571baae957",
+          "mixed_t0.7_seed101/chunk_0008.npz": "8502163b4a19c884cdb398675c042bd6b6a43e3f08fe46e54e02b59e6c653372",
+          "mixed_t0.7_seed101/chunk_0009.npz": "9fe2e0a8385508d87ea6f6b34df395e776622277fb857bb65890fce9b81dc535",
+          "mixed_t0.7_seed101/chunk_0010.npz": "b655c26e88f46df325d7a07122c837b7d16adfa841919e4c8ae152c92d9ae295",
+          "mixed_t0.7_seed101/chunk_0011.npz": "f47c774c087afdbdac29c3775f518217a29e53122d6a5c0bfd2e060302c501e0",
+          "mixed_t0.7_seed101/chunk_0012.npz": "a0c1372ef6347b10505df06e476e4c5dc11b77251259441f8f74dc6b87583d37",
+          "mixed_t0.7_seed101/chunk_0013.npz": "3add378c49597a40f10c7c6665cc30751a843446bfad283d683a7740acbce5c4",
+          "mixed_t0.7_seed101/chunk_0014.npz": "2f9b9936136eb732ca8842fa2c6fa783d43a66113e8dadecc7fa8939311c1a1c",
+          "mixed_t0.7_seed101/chunk_0015.npz": "a554aac1a5ac763617011a75084e68e4cbe879fb11128d8e003b448cb60eb070",
+          "mixed_t0.7_seed101/chunk_0016.npz": "0db2bf7e580f47e514582f15b540f9a0278015cb9029390001356136e568b1b1",
+          "mixed_t0.7_seed101/chunk_0017.npz": "e228b65445433f6910e149b85d9f312862ab797c893a98bf673d1a28aa15d727",
+          "mixed_t0.7_seed101/chunk_0018.npz": "359769361d1495b0e6dc371cb5b13cfde8fe40ae23cd4a61e4813bd1d4877c4e",
+          "mixed_t0.7_seed101/chunk_0019.npz": "724a2d93d05e25d747b64af8adf0bc559338bfa3179d6bdccd82767e515ec51a",
+          "mixed_t0.7_seed101/chunk_0020.npz": "2fec249e180e3e1638c6a295b19405e4f7845f6d41a259350235e0aacfbe9136"
+        },
+        "validation": "exit, log, exact tap, finite normalized float32, all prompt/step IDs and stride"
+      },
+      "analysis_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+      "manifest": "ssd/experiments/proxy_source_ablation/probe_training_free_20260912/out/development/mixed_t0.7_seed101.json",
+      "policies": 2640,
+      "topm": 17,
+      "budget": 15
+    }
+  ],
+  "frozen_sha256": "e543fefafa6249bb71a041120cdae4c0ecb35282f07f9094c55ca758d7b32de9",
+  "weighting": "equal datasets, prompts, then seeds per prompt; 4000 paired prompt bootstrap; diagnostic rows separately h-weighted"
+}

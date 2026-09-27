@@ -1,0 +1,119 @@
+{
+  "registered_utc": "2026-09-12T18:50:39.489457+00:00",
+  "note": "Secondary boundary expansion after inspecting all primary validation results, before any selection runs. Rank the expanded integer domain with the original frozen model, then measure one additional candidate per exit on independent selection prompts. Keep original exit-diverse candidates. Not a new independent result on the original grid.",
+  "predictions": [
+    {
+      "config": {
+        "tag": "chain_e40_k4_1_w15",
+        "exit": 40,
+        "k1": 4,
+        "k2": 1,
+        "budget": 15,
+        "mode": "chain",
+        "n1": 12,
+        "v1": 8,
+        "n2": 8,
+        "v2": 8,
+        "candidate": "legacy",
+        "fanout": 3
+      },
+      "status": "extrapolation",
+      "pi": [
+        0.07549576710173025,
+        0.8775334190004486,
+        0.04697081389782114
+      ],
+      "al": [
+        1.0,
+        3.227022204944619,
+        0.40532272208718684
+      ],
+      "tokens_per_step": 3.9263539339448634,
+      "cycle_ms": 25.563050607229663,
+      "tps": 128.11203609369645,
+      "absolute_gap_ms": 7.061381350466739
+    },
+    {
+      "config": {
+        "tag": "chain_e56_k4_1_w15",
+        "exit": 56,
+        "k1": 4,
+        "k2": 1,
+        "budget": 15,
+        "mode": "chain",
+        "n1": 12,
+        "v1": 8,
+        "n2": 8,
+        "v2": 8,
+        "candidate": "legacy",
+        "fanout": 3
+      },
+      "status": "extrapolation",
+      "pi": [
+        0.0336533561964182,
+        0.8026663733375109,
+        0.16368027046607103
+      ],
+      "al": [
+        1.0,
+        2.0981351345681865,
+        0.0
+      ],
+      "tokens_per_step": 2.7177558754322746,
+      "cycle_ms": 25.378752031425016,
+      "tps": 94.04539824422481,
+      "absolute_gap_ms": 3.6238390649238195
+    },
+    {
+      "config": {
+        "tag": "chain_e72_k4_1_w15",
+        "exit": 72,
+        "k1": 4,
+        "k2": 1,
+        "budget": 15,
+        "mode": "chain",
+        "n1": 12,
+        "v1": 8,
+        "n2": 8,
+        "v2": 8,
+        "candidate": "legacy",
+        "fanout": 3
+      },
+      "status": "extrapolation",
+      "pi": [
+        0.0,
+        0.7621250921794308,
+        0.23787490782056928
+      ],
+      "al": [
+        1.0,
+        1.5776535835988308,
+        0.0
+      ],
+      "tokens_per_step": 2.2023693828274684,
+      "cycle_ms": 25.513142390155316,
+      "tps": 77.64312044019921,
+      "absolute_gap_ms": 1.3823430381726074
+    }
+  ],
+  "domain": {
+    "exit": [
+      40,
+      56,
+      72
+    ],
+    "k1": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "k2": "1..min(K1,4)"
+  }
+}

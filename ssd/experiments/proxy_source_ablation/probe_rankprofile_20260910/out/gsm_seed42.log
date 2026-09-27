@@ -1,0 +1,211 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 42
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.43it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.64it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 13.46it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.30it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.61it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.61it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET probe] 80 layers, rows=9, buffers=23.6MB
+[DUET] captured target chain proxy graphs (K=[4, 8], source=residual)
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=1.0 b=1
+============================================================
+Generating:   0%|          | 0/32 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+[DUET probe] tap check @layer=56 max|probe-engine|=0.000e+00 OK
+Generating:   3%|▎         | 1/32 [00:06<03:21,  6.49s/it]Generating:   6%|▋         | 2/32 [00:10<02:37,  5.24s/it]Generating:   9%|▉         | 3/32 [00:16<02:32,  5.26s/it]Generating:  12%|█▎        | 4/32 [00:20<02:18,  4.94s/it]Generating:  16%|█▌        | 5/32 [00:25<02:12,  4.90s/it]Generating:  19%|█▉        | 6/32 [00:30<02:12,  5.09s/it]Generating:  22%|██▏       | 7/32 [00:35<02:03,  4.93s/it]Generating:  25%|██▌       | 8/32 [00:40<01:59,  4.96s/it]Generating:  28%|██▊       | 9/32 [00:45<01:55,  5.04s/it]Generating:  31%|███▏      | 10/32 [00:50<01:48,  4.93s/it]Generating:  34%|███▍      | 11/32 [00:54<01:39,  4.74s/it]Generating:  38%|███▊      | 12/32 [00:59<01:35,  4.79s/it]Generating:  41%|████      | 13/32 [01:04<01:30,  4.74s/it]Generating:  44%|████▍     | 14/32 [01:09<01:28,  4.91s/it]Generating:  47%|████▋     | 15/32 [01:14<01:21,  4.82s/it]Generating:  50%|█████     | 16/32 [01:19<01:18,  4.92s/it]Generating:  53%|█████▎    | 17/32 [01:24<01:14,  4.94s/it]Generating:  56%|█████▋    | 18/32 [01:29<01:09,  4.94s/it]Generating:  59%|█████▉    | 19/32 [01:33<01:01,  4.77s/it]Generating:  62%|██████▎   | 20/32 [01:38<00:58,  4.86s/it]Generating:  66%|██████▌   | 21/32 [01:43<00:54,  4.92s/it]Generating:  69%|██████▉   | 22/32 [01:48<00:49,  4.92s/it]Generating:  72%|███████▏  | 23/32 [01:54<00:45,  5.09s/it]Generating:  75%|███████▌  | 24/32 [01:58<00:39,  4.90s/it]Generating:  78%|███████▊  | 25/32 [02:02<00:32,  4.69s/it]Generating:  81%|████████▏ | 26/32 [02:08<00:29,  4.85s/it]Generating:  84%|████████▍ | 27/32 [02:12<00:24,  4.87s/it]Generating:  88%|████████▊ | 28/32 [02:18<00:19,  4.95s/it]Generating:  91%|█████████ | 29/32 [02:24<00:16,  5.39s/it]Generating:  94%|█████████▍| 30/32 [02:29<00:10,  5.40s/it]Generating:  97%|█████████▋| 31/32 [02:35<00:05,  5.52s/it]Generating: 100%|██████████| 32/32 [02:40<00:00,  5.28s/it]Generating: 100%|██████████| 32/32 [02:40<00:00,  5.01s/it]
+Final Prefill Throughput: 1455.29tok/s
+Final Decode Throughput: 51.83tok/s
+[metrics] Prefill tokens/time: 2274 / 1.562578s
+[metrics] Decode tokens/time: 8230 / 158.788438s
+[metrics] Avg Tokens per step (incl recovery): 2.78
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.22 (denom=8)
+[metrics] Avg target time per full step (ms): 54.07
+[metrics] Avg target verify time (ms): 47.58
+[metrics] Avg Cache Hits: 0.63
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.627
+[metrics] Avg Phase 2 Accepted Len: 1.81
+[metrics] Avg Phase 2 Acceptance Ratio: 0.452
+[metrics] Avg Tokens per step on Cache Hit: 2.81
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.304
+  1: 0.200
+  2: 0.135
+  3: 0.107
+  4: 0.254
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.72
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 8192tok, Time: 160.45s, Total Throughput: 51.06tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?'
+Generation: '\n2. During a recent sale, a clothing store reduced the price of some pants by 20%. What was the original dollar price of each pair of these pants if they were reduced to $52 each?\n1. The distance from school to home is 5 km. The distance from the store to home is 4 km, and the distance from school to the store is 6 km. How far\n3. If 50 is divided into three consecutive integers, then which of the following is the smallest number?\n4. The distance in feet from a grocery store to an ice cream shop is less than a mile. If you walk at an average rate of 105 feet per minute, how long\nIf the rectangle is wholly inside the larger circle, which statement(s) MUST be true?\nWord for the day: Statistically Significant\nApril is here and we started learning something new in math today. Check out what I learned today:\nFind three consecutive numbers (negative, zero or positiveintgers.)\nThe sum of 3 consecutive numbers must equal 30. Try not to use algebra in your answer.</s><s> Sooil’s DB'
+----------------------------------------
+
+Prompt 2: 'Weng earns $12 an hour for babysitting. Yesterday, she just did 50 minutes of babysitting. How much did she earn?'
+Generation: '\nHow often do Ben and Weng do tutoring?\nAnswer: for Ben, 4 times each week; for Weng, 16 times each week\nHow much did Ben earn for his tutoring last week?\nAnswer: $153.60\nHow should this project be before you make a conclusion?\nAnswer: You need a programming language and some coding training to deliver the project.\nSocial Development goals! 🙂\n1. The toolbar has a checklist of questions, a QR Code scanner for adding items, the ability to email orders to other leaders, and the ability to print a copy of the shopping list. To keep everything on one list, a QR Code is scanned to add an item to the shopping list. After adding all the items a leader needs for the next two months, the leader checks the shopping list. The leader makes a copy and sends it to those who are responsible for buying a specific item.\n2. Yes, every single person in the organization can see the shopping list. But just for design purposes, only people with ownership privileges can change anything on the shopping list.\nNow let’s look at a'
+----------------------------------------
+
+Prompt 3: 'Betty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?'
+Generation: ' Next exercise\nUniversity of California at Santa Barbara 6 IV.\nManagement’s Ethics and Social Responsibility\nNICColleges Division - EnglishJENNIFER Burns, or wounds...\nAn N 12% solution contains 12 g solute in 100 mL solutio...\nIf the length of an eraser is 4 cm, what percent error...</s><s> Travel chaos as four reported shot at Munich\'s main station\nPolice attend the scene of a shooting in Munich\'s main station\nPolice apprehended a man reported to be armed with a knife and a gun near one of the main train stations in Munich, only to say minutes later that an ongoing incident there was not an "act of terror," German news media reported.\nSome media reported that as few as one person and as many as four were injured in the shooting, which authorities said they were alerted to at about 1:45 pm CET.\nState police said on Twitter that people should avoid the area and near a nearby street and the station was closed. Several hundred people were being held at a safe distance from the station.\nThe'
+----------------------------------------
+
+Prompt 4: 'Julie is reading a 120-page book. Yesterday, she was able to read 12 pages and today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages should she read?'
+Generation: ' Show the steps to find the solution.\nRoy is reading a 400-page book. Yesterday he read 40 pages. Today, he wants to cover twice as many pages as he did yesterday. If he plans to read half of the remaining pages tomorrow to finish the novel, how many pages should he read today? Show the steps to find the solution.</s><s> ADOPT DASH! Wherever you are walking Dash, you can see people stop in their tracks at the sight of that huge body moving like a train down the sidewalk. Charlottesville Housing and Redevelopment Authority Culpeper Street Meadows is a community development project dedicated to affordable, low-income housing. This location of Culpeper Street Meadows is titled its East neighborhood. The homes are newer and all units have three bedroom and two bathrooms. Other features include in unit washer and. 95 Culpeper St, Fort Smith AR 72901 is a Land, with 0 bedrooms which is for sale, it has 10,200 sqft, 10,200 sized lot, and'
+----------------------------------------
+
+Prompt 5: 'James writes a 3-page letter to 2 different friends twice a week.  How many pages does he write a year?'
+Generation: "\nThis is probably a hobby that James has and we should take it into consideration in this calculation.  Since he writes 3-page letters on average 2 times a week, how many times does he write in a year? How many of those letters are 3 pages in length.  That would be the numerator of his hobby.  But let's assume that he also writes other 1-2 page letters as well.  He writes short 1-2 page letters to at least 26 people twice a year (once every 6 months, for instance, as Christmas cards and/or birthday cards).  Let's assume then that James only writes 2 times a week, April through October, but otherwise writes at least 26 short 1-2 page letters twice yearly at other times during the year.  During the year he writes short 1-2 page letters 52 times, and 26 3-page letters twice a week x 36 weeks for a year equal 156 3-page letters.  That would be 208 pages x 3 = 624 pages.  His total, if he writes a three"
+----------------------------------------
+
+Prompt 6: 'Mark has a garden with flowers. He planted plants of three different colors in it. Ten of them are yellow, and there are 80% more of those in purple. There are only 25% as many green flowers as there are yellow and purple flowers. How many flowers does Mark have in his garden?'
+Generation: "\nI have nine siblings. Six of them are younger then me. What is the minimum number of siblings I could have?\nLargest Present\nOn New Year's Eve, Edmond wants to buy the largest present he can buy for 3000 euros. He found a box of dimensions 1 m, 1.5 m, 2 m. How much will he have to pay for wrapping paper at the rate of 10 euros per square meter?\nDifżeli\nSeven knights fell for a ambush Peasants. The first five were killed and the rest escaped. 'Some fled crawling In the dirt!' Ambidisidwa and jelmo divided by imposing an animal that was past pasmibtila tower.\nIn a certain art museum, there was a painting displayed which attracted people, who were persuaded to donate a coin for touching the painting. The donation was f apr £ 1.250 =£ 385 equivalent to £ 1,250. How many coins were collected?\nThe fairway and the woods are 2km away from each other. Due to the heavy"
+----------------------------------------
+
+Prompt 7: 'Albert is wondering how much pizza he can eat in one day. He buys 2 large pizzas and 2 small pizzas. A large pizza has 16 slices and a small pizza has 8 slices. If he eats it all, how many pieces does he eat that day?'
+Generation: ' 17.\nHere is my solution, which is WAY too long and offers way too much discussion to the students to develop the rigor required of the CCSS. Below the pics, I’ll show you how I used it to come up with a lesson for the next day.\nAnd for those with the Devil’s Advocate syndrome (I know who you are!), I have posted at the bottom: the VND program, which is what I used to create the Math Matrix, which is where I got theNext Number game.\nHow about offering these sorts of games in addition to the higher-level games for differentiation? It’s a great way to offer varied questions for students of all ages. Hey! I did that 14 years ago!\nThis may not seem rigorous to some, but if we can break this down into creating a cycle of optional games and peer tutoring with permanent markers on the tank top in the next room, then finally facing the question in a test form, WHEW! That game is WAY tougher than the three questions above.\nThat alone, in the rigorous CD burning process, will give the student rigor for all'
+----------------------------------------
+
+Prompt 8: 'Ken created a care package to send to his brother, who was away at boarding school.  Ken placed a box on a scale, and then he poured into the box enough jelly beans to bring the weight to 2 pounds.  Then, he added enough brownies to cause the weight to triple.  Next, he added another 2 pounds of jelly beans.  And finally, he added enough gummy worms to double the weight once again.  What was the final weight of the box of goodies, in pounds?'
+Generation: "\nWell, to start things off, we know the scale reads 2 pounds as Ken pours in the jelly beans, and we know the final weight is brightly divided by 4 (sorry, I should have said that 'brightly' instead of 'triply' :-)  So we know one quarter of the weight is 2 pounds of jelly beans, and the other three quarters adds up to 4 pounds of those 'other' goodies.  So now we can write out the following system of equations:\n2:  jellybeans\nx:  brownies\ny:  jellybeans #2\nz:  gummy worms\n2 + 3x + 2y + 2z = 8\nSolving this system of equations, we get 6 for the brownies, 4 for the second batch of jelly beans, and 18 for the gummy worms.  This gives us a final weight of 30 pounds.\nOf course, Ken was clearly a math teacher, or would become one, since this was his favorite question.  This set up of weighted foods is actually how I pack coffee beans for"
+----------------------------------------
+
+Prompt 9: 'Alexis is applying for a new job and bought a new set of business clothes to wear to the interview. She went to a department store with a budget of $200 and spent $30 on a button-up shirt, $46 on suit pants, $38 on a suit coat, $11 on socks, and $18 on a belt. She also purchased a pair of shoes, but lost the receipt for them. She has $16 left from her budget. How much did Alexis pay for the shoes?'
+Generation: '\nMorgan mixed five cups of apples and seven cups of oranges to make a fruit salad in one bowl. If six cups of fruit is added while the salad is being tossed, then how many cups of fruit are there in all? Use a number line to solve.\nMake a picture riddle about the his problem if x represents the unknown number of cups of fruit added to the fruit salad.\nMarci went running on the treadmill for an hour. At the gym, she spent $16 on a pair of sneakers. The total cost of the sneakers is $2 more than the number of miles she ran. How many miles did Marci run?</s><s> Machining of rare earth magnets\nBy RLW\nMachining rare earth magnets is non-trivial at best. No tools are magnetic-field-proof, and there is a magnetic force about 30% of the actual weight of the magnet.Maybe only 50 pounds for a large NEO magnet, but for smaller or specialty magnets the forces can be in the 200 pound range.\n1) Stabilized coolant helps a lot'
+----------------------------------------
+
+Prompt 10: 'Tina makes $18.00 an hour.  If she works more than 8 hours per shift, she is eligible for overtime, which is paid by your hourly wage + 1/2 your hourly wage.  If she works 10 hours every day for 5 days, how much money does she make?'
+Generation: '  She makes $180.00/day + $90.00 (5 hours overtime), or $1700.00/week + 1/2 her hourly wage\ncapture:  Your job assign your inventory number for each item along with the price in the retail column and the price in the preferable column.  The physical quantity of items on-hand is provided in retial and preferable columns at the end of every business day.  The total dollar value of the items in the preferable column is automatically recorded for you in the totalpreferable column.\n\ncomplete:  Write ten complete sentences using the ten words from the list below.  As you complete each sentence, write the part of speech of each word on a line next to the sentence and label each sentence as fundamental or non-fundamental.  Verb Conjunction Noun Adverb Determiner Miscellaneous Word Wh-Word Preposition Pronoun Phrase Direct Object Indirect Object Wh-Object Subject\n\n</textarea></pre>\n        <p></p>\n        <button class="btn btn-default">Test it!</button>\n</form>'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 34.30

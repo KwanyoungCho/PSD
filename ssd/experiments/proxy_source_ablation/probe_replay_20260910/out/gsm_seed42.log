@@ -1,0 +1,211 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 42
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s][model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 16.49it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.02it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 16.55it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 16.25it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.12it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.12it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET probe] 2 layers, rows=9, buffers=0.6MB
+[DUET] captured target chain proxy graphs (K=[4, 8], source=residual)
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=1.0 b=1
+============================================================
+Generating:   0%|          | 0/32 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+[DUET probe] tap check @layer=56 max|probe-engine|=0.000e+00 OK
+Generating:   3%|▎         | 1/32 [00:05<02:56,  5.68s/it]Generating:   6%|▋         | 2/32 [00:09<02:11,  4.37s/it]Generating:   9%|▉         | 3/32 [00:12<01:52,  3.87s/it]Generating:  12%|█▎        | 4/32 [00:15<01:42,  3.65s/it]Generating:  16%|█▌        | 5/32 [00:19<01:40,  3.73s/it]Generating:  19%|█▉        | 6/32 [00:23<01:40,  3.87s/it]Generating:  22%|██▏       | 7/32 [00:27<01:34,  3.77s/it]Generating:  25%|██▌       | 8/32 [00:31<01:33,  3.88s/it]Generating:  28%|██▊       | 9/32 [00:35<01:30,  3.95s/it]Generating:  31%|███▏      | 10/32 [00:39<01:26,  3.93s/it]Generating:  34%|███▍      | 11/32 [00:43<01:22,  3.94s/it]Generating:  38%|███▊      | 12/32 [00:46<01:16,  3.83s/it]Generating:  41%|████      | 13/32 [00:50<01:13,  3.88s/it]Generating:  44%|████▍     | 14/32 [00:54<01:07,  3.78s/it]Generating:  47%|████▋     | 15/32 [00:57<01:02,  3.67s/it]Generating:  50%|█████     | 16/32 [01:01<00:59,  3.70s/it]Generating:  53%|█████▎    | 17/32 [01:04<00:53,  3.58s/it]Generating:  56%|█████▋    | 18/32 [01:08<00:50,  3.64s/it]Generating:  59%|█████▉    | 19/32 [01:12<00:47,  3.62s/it]Generating:  62%|██████▎   | 20/32 [01:16<00:43,  3.65s/it]Generating:  66%|██████▌   | 21/32 [01:20<00:41,  3.78s/it]Generating:  69%|██████▉   | 22/32 [01:24<00:39,  3.98s/it]Generating:  72%|███████▏  | 23/32 [01:28<00:35,  3.98s/it]Generating:  75%|███████▌  | 24/32 [01:32<00:31,  3.93s/it]Generating:  78%|███████▊  | 25/32 [01:36<00:27,  3.87s/it]Generating:  81%|████████▏ | 26/32 [01:40<00:23,  3.92s/it]Generating:  84%|████████▍ | 27/32 [01:43<00:19,  3.82s/it]Generating:  88%|████████▊ | 28/32 [01:47<00:14,  3.68s/it]Generating:  91%|█████████ | 29/32 [01:50<00:10,  3.60s/it]Generating:  94%|█████████▍| 30/32 [01:54<00:07,  3.60s/it]Generating:  97%|█████████▋| 31/32 [01:57<00:03,  3.61s/it]Generating: 100%|██████████| 32/32 [02:00<00:00,  3.50s/it]Generating: 100%|██████████| 32/32 [02:00<00:00,  3.78s/it]
+Final Prefill Throughput: 1318.74tok/s
+Final Decode Throughput: 69.06tok/s
+[metrics] Prefill tokens/time: 2274 / 1.724374s
+[metrics] Decode tokens/time: 8227 / 119.136049s
+[metrics] Avg Tokens per step (incl recovery): 2.66
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.21 (denom=8)
+[metrics] Avg target time per full step (ms): 39.12
+[metrics] Avg target verify time (ms): 26.82
+[metrics] Avg Cache Hits: 0.61
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.606
+[metrics] Avg Phase 2 Accepted Len: 1.73
+[metrics] Avg Phase 2 Acceptance Ratio: 0.432
+[metrics] Avg Tokens per step on Cache Hit: 2.73
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.334
+  1: 0.196
+  2: 0.127
+  3: 0.094
+  4: 0.249
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.56
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 8192tok, Time: 121.00s, Total Throughput: 67.70tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?'
+Generation: '\n2. During a recent sale, a clothing store reduced the price of some pants by 20%. What was the original dollar price of each pair of these pants if they were reduced to $52 each?\n1. The distance from school to home is 5 km. The carriage, traveling at the maximum speed, will drive 2 km/hour for 3 hours. Find the time at which the students will catch the carriage. The speed of the horse is equal.\n– 240 gallons\n– 0.02 miles per gallon\n– 10 miles per gallon\n– 5 miles per gallon\n– $35 per gallon\n– 90 gallons\nWalks to the store in 5 hours\nCannot answer with the information given\nIs nappier</s><s> Registered Manager named in the Queens Birthday Honours 2019\nDawn Pritchard Manager of Daloni Gardens\nDALONI GARDENS MANAGER JEFF YAPP, PRIVATE HOME MANAGER’S HONOURS\nThe Manager of Award-winning Daloni gard'
+----------------------------------------
+
+Prompt 2: 'Weng earns $12 an hour for babysitting. Yesterday, she just did 50 minutes of babysitting. How much did she earn?'
+Generation: '\nBabysitting sister\nDoes baby need a bath?\nDoes Baby need a bath right now?Yes, Baby needs a bath right nowNo, Baby doesn\'t need a bath right now three five minute breaks during your baby... Average Bathing Time\nHow often should my baby have a bath?\nPianoforte has half-hourly duration, so he said everything when adding: humor is short laugh... Faulty Consequence\nPiano fuerte has one-hour duration, so he said everything when adding: humor is short laugh... Utilize deputy\nUse the substitute to participate in the party on behalf of herself, she will pass everything ...\nGun and bat war\nThere are 100 people live on the island, 100 guns and 99 bats... Who will win the war and how?\nHalf an hour before the train,the blind people are going to the train station. Blind people took a carriage and asked the carriage man to take them to the train station in 5 minutes... What is the degree of blindness?\nThe consultation on suicide\n"Do you want to commit suicide?" "Of course not!""Why did you'
+----------------------------------------
+
+Prompt 3: 'Betty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?'
+Generation: " Next, Betty wants a car, but she decides to buy a cheaper one at $25,000 which she gets from a smart contract. She deposits only a small part of that payment in a bank and is expected to provide only a 10% interest from the principal. But, her grandparents also decide to extend their support and provide her with another quarter of that amount. What's the valor of the banks interest at the end of the year? Later in life, Betty becomes more responsible and decides to deposit all of her salary at a bank where she'll receive 0.25% interest per month. In order to buy a house for $450,000, she decided to take money from the bank. According to the mortgage agreement, the bank will pay Betty a bonus which is 3% of the cost of the house. Once a month, Betty pays back 0.5% of her debt to the bank, and the valuj amounts of to 2.8%. Finally, she prohibited using Betty's money in any project for which she has 30 years of tenure. I doubt you got mad at another question because you"
+----------------------------------------
+
+Prompt 4: 'Julie is reading a 120-page book. Yesterday, she was able to read 12 pages and today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages should she read?'
+Generation: " Show all your work.\nGiven. She has a book of pages =120 pages\nshe has read from yesterday =12 pages\nshe has read from till today =12pages (yesterday)+24 pages(today)=36 pages (total read)\nS1=pages read today=36pages\nS2= pages already reads=36\nS3= pages left to read=18\nThe 5th grade class is collecting box tops for their local schools. So far, all the students have collected a total of 17 box tops. After a few weeks, the students find that no student has collected more than 4.5 box tops. Which expression can be used to find how many box tops the students have, if b represents the number of box tops each student collected, and b = 0 < b <4.5. What is the valid range of values for the variable?\nDid anyone of you get this right?\nThe problem is you have to take the steps like they're given:\nS1=pages read today = 15\nS2=S1+S3 (not 18)\nThere are "
+----------------------------------------
+
+Prompt 5: 'James writes a 3-page letter to 2 different friends twice a week.  How many pages does he write a year?'
+Generation: '\n\nJames writes a 3-page letter to 2 different friends twice a week.  How many pages does he write a year?**\n\n**I came up with `288 pages a year` or `1,472 pages a year`** Why is this answer wrong? Where am I going wrong?!!\n\nA.)288 pages a year\nB.)1,472 pages a year\nC.)1832 pages a year\nD.)284 pages a year\nE.)404 pages a year\n\nAnswer: In this year you hit 104 weekends in total. Since this means 208 letters written twice in total, you have 624 letters in all written a year. 3pages for Letter. 1872 pages. Thus option B\n\nAnswer: The best way to solve this is with rates:\n\nLetters per minute per day = 624</s><s> Tags: java, lucene\n\nQuestion: Lucene StoredFields vs FieldCache: Stored fields with Sorting / FieldCaching for non-keyword tokens, but with OrderByQuery\n\nI tried the following'
+----------------------------------------
+
+Prompt 6: 'Mark has a garden with flowers. He planted plants of three different colors in it. Ten of them are yellow, and there are 80% more of those in purple. There are only 25% as many green flowers as there are yellow and purple flowers. How many flowers does Mark have in his garden?'
+Generation: "\nThe company has 3 managers and 23 workers. Average gross salary operates to 3384k. CZK per month. How much in total earn 23 workers in a half-year?\nKate Sparkling\nKate Sparkling had 14400 Czech crowns. She bought a laptop that's cost 12800 CZK. Then she threw 100 CZK for the sale assistant. How much money does she have left?</s><s> Curator Invites Artists to Draw Attention to Censorship With Nude Performance\nNational Endowment for the Arts Acting Chairman Mary Anne Carter said artists should “never be afraid to duplicate someone else’s signature”.... (more...)\nAs arts organizations continuously race to keep up with technology, what they need most from technology platforms is useful, well-designed tools.... (more...)\nWhat 2019 can teach arts groups about code of conducts\nOn Feb. 15, the editorial board of the New York Times published an op-ed about changing the culture of sexual harassment in artistic institutions.... (more...)\n"
+----------------------------------------
+
+Prompt 7: 'Albert is wondering how much pizza he can eat in one day. He buys 2 large pizzas and 2 small pizzas. A large pizza has 16 slices and a small pizza has 8 slices. If he eats it all, how many pieces does he eat that day?'
+Generation: " 40 80 32 64This is the correct answer because there are16 slices in 2 large pizzas and 16 slices in 2 small pizzas, so times are 2*2=4 and 2*1=2. Of these, half are large pizzas and half are small pizzas. As a result, 4+2=6\nSolve this problem to figure out his age. His brother Howie is twice as old. Their father's tank top shows he is twice as old as his sister. Add Wink's age to his siblings to find their father's age. Then their grandpa's age is 63 more than their father's. How old is his grandfather?6337570\nFirst you have to find the ages of his family members and then add up their ages. As a result, you will get their grandfather's age Below are the steps: Their father's age= Wink+Howie+Wink's sister's age Then, Grandpa's age= Father's age + 63 This is the correct answer because Wink"
+----------------------------------------
+
+Prompt 8: 'Ken created a care package to send to his brother, who was away at boarding school.  Ken placed a box on a scale, and then he poured into the box enough jelly beans to bring the weight to 2 pounds.  Then, he added enough brownies to cause the weight to triple.  Next, he added another 2 pounds of jelly beans.  And finally, he added enough gummy worms to double the weight once again.  What was the final weight of the box of goodies, in pounds?'
+Generation: '\n(b) Ken put jelly beans in pounds "J", brownies in pounds "B", and gummy worms in pounds "G", for a total of\nJ+3B+J+2G\nAnd we have the quantitity weights and\nJ = 1\n3B = 2\nJ = 1\n2G = 2\nOBJECTION: Pound, a unit of mass, is not a unit of weight, is it?  Not in all applications.  In particular, it is a unit of weight for a man riding an elevator.\nAnswer: 7 pounds\nMisconception:  "Twisting a balloon is compressing the rubber, and exerting a pressure force.  Fluids are not normally compressed, because a column of fluid exerts a pressure force at every height."  In the X\'s and O\'s game, consider a situation where there is a region of fluid usage, say, OOOOOOOOOOOOOOOOO.  If the NEXT symbol at the O saw a comparison word FLOOD, the point count might be on the'
+----------------------------------------
+
+Prompt 9: 'Alexis is applying for a new job and bought a new set of business clothes to wear to the interview. She went to a department store with a budget of $200 and spent $30 on a button-up shirt, $46 on suit pants, $38 on a suit coat, $11 on socks, and $18 on a belt. She also purchased a pair of shoes, but lost the receipt for them. She has $16 left from her budget. How much did Alexis pay for the shoes?'
+Generation: '\ni $("16.gif").wrap(\'\'); });\nThis is the "Clothes Shop - LCM" page of "<em>JEA\'S Common Core Math</em>".\nRockefeller Center 2.jpg .Image is from stock.xchnge (http://freepik.com). This image has been cropped from the original image.\nShort answer problem\nSolving a linear equation practically\nFinding slope as a rate of change\nCost common core problem\nEvaluating expressions with decimals\nTransforming linear inequalities\nEquations with negative coefficients</s><s> Dog Pfff\ncaptainunicorn TM1\nLog in to learn more about captainunicorn, share content, and exchange messages and invites.\nI found this joke (making fun of a Linux distro called puppy) 6 years ago. I still get tears from laughing when I read it! And by the way, Google has just acquired FitBit. So I made an updated version. Hah hah hah sorry, I can’t stop laughing! :D And here is the original one, for posterity and “in format”.\nDog P'
+----------------------------------------
+
+Prompt 10: 'Tina makes $18.00 an hour.  If she works more than 8 hours per shift, she is eligible for overtime, which is paid by your hourly wage + 1/2 your hourly wage.  If she works 10 hours every day for 5 days, how much money does she make?'
+Generation: '  Are there broader ways to frame the narrative beyond allocating characters and descriptors?\n\nAnswer: \\begin{code}\nTaxes :: $15\nYearly salary: $28250\nYearly salary + Taxed: $22612.5\n\nPer pay period she recieved: $793.14 without tax and $661.56 with tax\nSalary per month: $2354 (28250/12)\nSalary per month + tax: $1884 (22612.5/12)\nPays: (every other week): $1,521.7\nDaily before tax: $40.00\nOvertime: $1.5 * base salary per hour\n\n=\nYearly salary: $29700\nYearly salary + Taxed: $ $23760\n\nPer pay period she recieved: $ 751.18 without tax\nPays per pay: $1,502.36 with tax\nSalary per month:'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 34.70

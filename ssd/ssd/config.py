@@ -107,6 +107,12 @@ class Config:
     duet_only_proxy: bool = False
     duet_exit_layer: int | None = None      # None=auto: 2*L//3
     duet_proxy_top_k: int = 3              # proxy correction token count
+    # P2 candidate-source ablation.  "residual" = [p_E - p_D]_+ (champion;
+    # MESA-SSD §4.2), "proxy" scores from the early-exit distribution
+    # alone (target-only baseline), "draft" from the draft distribution
+    # alone.  Orthogonal to duet_only_proxy, which controls whether P1
+    # populates the cache at all rather than how P2 ranks its candidates.
+    duet_proxy_source: str = "residual"     # residual | proxy | draft
     duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
     duet_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (only option;
                                             # Policy "a" was removed 2026-07 — see git history).
@@ -682,6 +688,22 @@ class Config:
                 if self.duet_p2_budget is not None and self.duet_p2_budget < 1:
                     raise ValueError(
                         f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
+                if self.duet_proxy_source not in (
+                        "residual", "proxy", "draft"):
+                    raise ValueError(
+                        f"duet_proxy_source must be "
+                        f"residual|proxy|draft; got "
+                        f"{self.duet_proxy_source!r}")
+                if (self.duet_proxy_source != "residual"
+                        and self.duet_tree_enabled):
+                    # The tree proxy path builds a sibling residual ladder
+                    # (MESA-SSD §4.3), not the chain [p_E - p_D]_+ form, so
+                    # the source switch would be silently ignored there.
+                    raise ValueError(
+                        f"duet_proxy_source={self.duet_proxy_source!r} is "
+                        f"implemented for the chain proxy only; run with "
+                        f"duet_p1_tree_policy=off and "
+                        f"duet_p2_tree_policy=off")
                 # Dynamic-tree knobs — -O 생존형 raise.
                 if self.duet_tree_policy not in (
                         "off", "dynamic", "hybrid", "adaptive", "eagle",

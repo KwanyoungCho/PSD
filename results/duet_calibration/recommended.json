@@ -1,0 +1,112 @@
+{
+  "config": {
+    "tag": "chain_e56_k4_2_w15",
+    "exit": 56,
+    "k1": 4,
+    "k2": 2,
+    "budget": 15,
+    "mode": "chain",
+    "n1": 12,
+    "v1": 8,
+    "n2": 8,
+    "v2": 8,
+    "candidate": "legacy"
+  },
+  "cli_args": [
+    "--duet",
+    "--duet_exit_layer",
+    "56",
+    "--duet_k1",
+    "4",
+    "--duet_k2",
+    "2",
+    "--duet_p1_fanout",
+    "3",
+    "--duet_p2_budget",
+    "15",
+    "--duet_p1_tree_policy",
+    "off",
+    "--duet_p2_tree_policy",
+    "off"
+  ],
+  "scope": "Measured 80-layer LayerSkip70B AWQ TP4 + TinyLlama BF16 TP1, RTX4090, B1 T0.7, chain full P1+P2; re-calibrate for another model/hardware/shape.",
+  "primary_frozen_model": {
+    "top1": "chain_e40_k4_2_w15",
+    "top3": [
+      "chain_e40_k4_2_w15",
+      "chain_e40_k6_2_w15",
+      "chain_e40_k4_4_w15"
+    ],
+    "gap_only": "chain_e72_k4_2_w15",
+    "best_measured_anchor": "chain_e56_k6_4_w15"
+  },
+  "confirmation": {
+    "tag": "chain_e56_k4_2_w15",
+    "config": {
+      "tag": "chain_e56_k4_2_w15",
+      "exit": 56,
+      "k1": 4,
+      "k2": 2,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    "tps": 92.1536899126647,
+    "per_seed_tps": [
+      93.77162069913706,
+      90.59064354464377
+    ],
+    "tokens": 8192,
+    "wall_s": 88.89497542381287,
+    "phase_probability": [
+      0.11836007130124777,
+      0.663458110516934,
+      0.21818181818181817
+    ],
+    "accepted_length": [
+      1.141566265060241,
+      2.3471252015045674,
+      1.1062091503267975
+    ],
+    "gain_vs_default_pct": 42.1879784858975,
+    "gain_vs_default_ci95_pct": [
+      36.600358101773864,
+      47.51654793024231
+    ],
+    "dataset_tps": {
+      "alpaca": 84.39838727700443,
+      "c4": 85.64446627547485,
+      "gsm": 94.63127663521668,
+      "humaneval": 107.3690179502366
+    }
+  },
+  "method": "5 measured anchors + 6 actual shortlisted candidates, including a secondary lower-bound expansion. No grid-wide quality fitting.",
+  "runtime_contract": {
+    "target": "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+    "awq_artifact": "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+    "draft": "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+    "target_tp": 4,
+    "draft_tp": 1,
+    "batch": 1,
+    "temperature": 0.7,
+    "max_model_len": 2048,
+    "input_tokens": [
+      16,
+      768
+    ],
+    "measured_output_tokens": [
+      128,
+      256
+    ],
+    "jit_short": true,
+    "exit_replica": true,
+    "async_proxy_send": true,
+    "chain_proxy_graph": true,
+    "candidate_source": "legacy residual, raw-logit candidate temperature 1.0",
+    "public_cost_prediction_scope": "ChainAdapter guards domain. The frozen experimental Calibrator is a recorded v1 estimator, not an unchecked production configuration API."
+  }
+}

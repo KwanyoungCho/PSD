@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "fresh_unique_prompts": 128,
+  "overlap_with_development": 0,
+  "raw_float32_probability_max_sum_error": 6.740697338081247e-07,
+  "frozen_policies_sha256": "e27d4bd8abf5316cf4af1dc97052afb53949ac9b8186f4a571d0ec1e0460fe0d",
+  "policy_freeze_precedes_all_confirmation_metrics": true,
+  "production_lossless_audit_code_unchanged": true,
+  "development_policy_parity": "8/8 runs: GPU top-k coverage matches original replay within 3e-5",
+  "numerical_theorems": {
+    "passed": true,
+    "seed": 20260912,
+    "precision": "float64",
+    "counts": {
+      "contexts": 60000,
+      "bound": 60000,
+      "direct_TV_certificate": 47969,
+      "raw_score_certificate": 22158,
+      "topk_margin_certificate": 38996,
+      "regret_certificate": 21735
+    },
+    "same_proxy_draft_opposite_target_gains": [
+      -1.0,
+      1.0
+    ],
+    "large_Z_no_gain": true,
+    "scope": "unmasked, fixed cost top-k; excludes zero normalization cases"
+  }
+}

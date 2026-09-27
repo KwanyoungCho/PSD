@@ -1,0 +1,71 @@
+{
+  "original": {
+    "metrics": {
+      "tps": 47.04496078967085,
+      "steps": 276,
+      "pi": [
+        0.17753623188405798,
+        0.5978260869565217,
+        0.2246376811594203
+      ],
+      "al": [
+        1.8571428571428572,
+        3.4242424242424243,
+        1.8709677419354838
+      ],
+      "u": 3.7971014492753623,
+      "wall_s": 21.766412019729614,
+      "elapsed_s": 73.56267142295837
+    },
+    "p2_verify": {
+      "n": 60,
+      "mean_ms": 63.67355142720044,
+      "median_ms": 27.9534375295043
+    },
+    "over100ms": [
+      {
+        "prompt": 1,
+        "step": 14,
+        "source": 2,
+        "valid_k": 3,
+        "milliseconds": 692.6396917551756
+      },
+      {
+        "prompt": 4,
+        "step": 39,
+        "source": 2,
+        "valid_k": 7,
+        "milliseconds": 1497.0913268625736
+      }
+    ]
+  },
+  "repeat": {
+    "metrics": {
+      "tps": 55.80256287077074,
+      "steps": 260,
+      "pi": [
+        0.16538461538461538,
+        0.6576923076923077,
+        0.17692307692307693
+      ],
+      "al": [
+        1.558139534883721,
+        3.6666666666666665,
+        1.891304347826087
+      ],
+      "u": 4.003846153846154,
+      "wall_s": 18.350411653518677,
+      "elapsed_s": 60.437838554382324
+    },
+    "p2_verify": {
+      "n": 42,
+      "mean_ms": 28.552497027530556,
+      "median_ms": 28.005975764244795
+    },
+    "over100ms": []
+  },
+  "posthoc_median_interpolation_ms": 25.81562753766775,
+  "measured_nv6_median_ms": 25.61638131737709,
+  "posthoc_median_error_pct": 0.7778078325040411,
+  "scope": "Post-hoc diagnostic after the original mean interpolation failed; same prompts/seed, new process, existing kernel caches. Preserve original failure. Exact cause of stalls was not isolated. Median error is descriptive, not a separately held-out model validation."
+}

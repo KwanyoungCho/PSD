@@ -1,0 +1,30 @@
+{
+  "schema": "duet_full_distribution_v1",
+  "layers": [
+    24,
+    40,
+    48,
+    56,
+    64,
+    72,
+    79
+  ],
+  "exit_layer": 56,
+  "temperature": 0.7,
+  "stride": 8,
+  "n_steps": 59,
+  "n_samples": 8,
+  "n_rows": 34,
+  "seq_steps": {
+    "12": 59
+  },
+  "chunks": [
+    {
+      "file": "prompt_010/chunk_0000.npz",
+      "rows": 34
+    }
+  ],
+  "max_prob_sum_error": 2.980232238769531e-07,
+  "sampling": "per-sequence local verification step 0, stride, 2*stride, ...",
+  "dtype": "float32; bonus draft row zero and y=-1"
+}

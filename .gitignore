@@ -1,0 +1,17 @@
+# Local caches and handoff packages. Research source, reports and small run
+# records are deliberately versioned; bulky raw data is listed in the handoff.
+__pycache__/
+*.py[cod]
+/handoff_artifacts/
+/results/*/queue.lock
+/results/residial_dist/**/*.npz
+/results/duet_calibration/**/*.npz
+/results/duet_tree_analysis/**/*.npz
+/results/duet_tree_posthoc/**/*.npz
+/results/duet_tree_followup/**/*.npz
+/ssd/experiments/proxy_source_ablation/**/*.npz
+/results/duet_calibration/**/duet_profile_*.json
+/results/duet_tree_posthoc/tree_metrics.jsonl
+/results/duet_tree_posthoc/subset_metrics.jsonl
+/results/duet_tree_posthoc/prospective_metrics.jsonl
+/results/duet_tree_posthoc/runs/*/trees.jsonl

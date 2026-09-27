@@ -1,0 +1,65 @@
+{
+  "created_utc": "2026-09-12T13:43:02.060637+00:00",
+  "selection": {
+    "0.5": {
+      "bounded_subtraction": "policy::floor0.75__full__expected_mix0.25",
+      "local_gate": "policy::qpeak0.9__full__expected_mix0.25",
+      "proxy_allocation": "policy::proxy__full__uniform0.05",
+      "rank_only": "policy::keep12__full__uniform0.05",
+      "residual_allocation": "policy::residual__full__expected_mix0.75",
+      "source_temperature": "policy::source_tau1.1__full__expected_mix0.5",
+      "overall": "policy::floor0.75__full__expected_mix0.25",
+      "source_only": "policy::floor0.75__topm__original",
+      "original_proxy": "policy::proxy__topm__original",
+      "original_residual": "policy::residual__topm__original"
+    },
+    "0.7": {
+      "bounded_subtraction": "policy::complement_power1__full__expected_mix0.25",
+      "local_gate": "policy::qpeak0.9__full__expected_mix0.25",
+      "proxy_allocation": "policy::proxy__full__expected_mix0.25",
+      "rank_only": "policy::interval1__full__expected_mix0.25",
+      "residual_allocation": "policy::residual__full__uniform0.05",
+      "source_temperature": "policy::source_tau1.1__full__uniform0.05",
+      "overall": "policy::complement_power1__full__expected_mix0.25",
+      "source_only": "policy::complement_power1__topm__original",
+      "original_proxy": "policy::proxy__topm__original",
+      "original_residual": "policy::residual__topm__original"
+    },
+    "1.0": {
+      "bounded_subtraction": "policy::complement_power0.5__full__expected_mix0.25",
+      "local_gate": "policy::qpeak0.9__full__expected_mix0.25",
+      "proxy_allocation": "policy::proxy__full__expected_mix0.25",
+      "rank_only": "policy::interval1__full__expected_mix0.25",
+      "residual_allocation": "policy::residual__full__expected_mix0.25",
+      "source_temperature": "policy::source_tau0.9__full__expected_mix0.25",
+      "overall": "policy::complement_power0.5__full__expected_mix0.25",
+      "source_only": "policy::interval1__topm__original",
+      "original_proxy": "policy::proxy__topm__original",
+      "original_residual": "policy::residual__topm__original"
+    }
+  },
+  "primary": [
+    "overall",
+    "proxy_allocation",
+    "source_only"
+  ],
+  "policy_count": 2640,
+  "replay_sha256": "2482c0b44b8e3c10846d032c767cdc296c1de6a10483fc133a89f74ea2a9c9f0",
+  "development_hashes": {
+    "alpaca_seed7.npz": "80ed85439c9a7324bcf4532745b3afb9218b227ae037fc61a68404c3bc68aa29",
+    "humaneval_seed123.npz": "89958d1aaf36e92c07f0590a114ac2e0b7f5f659b1c9c4ebc26ba9cdd4144973",
+    "alpaca_seed123.npz": "0addebbf462281d24d37b0c39c1d3ed3b33a4e21ee17b37cc34622e1b5f5be0c",
+    "gsm_seed42.npz": "bf38b2b49667928f4661f924c3f381586bb148b028d21961d005d01bf2b29047",
+    "alpaca_seed42.npz": "c8effabc8a106c1cade3708261f72de96289f45bfb2c8e17372bef017ceb4546",
+    "gsm_seed7.npz": "7ed7f0a9522052ab1718e9ee6c050052a334fbd8a3a0f36dd164b9a995e7bb7f",
+    "mixed_t0.5_seed101.npz": "fc151bb713b03870d2d3236037b09e0dfdc2a283abdac36b4d978e2350da350d",
+    "c4_seed7.npz": "18903312f4c9d7c4202911145c08034bb5e22d2cbfe16dce14494e2bc079a2f5",
+    "mixed_t0.7_seed101.npz": "2f71cacb03da494a540b75d91f6a60671c71d53af781f672ccf2fa843bbd58ac",
+    "c4_seed42.npz": "c90ddd0dc746ec52b7655d81e895ad826c973d1965822c295c3f3e4eb823d111",
+    "c4_seed123.npz": "aae8785669094447a054c709f7bd134f31df1ce057a7d4d828779a2bc3956481",
+    "humaneval_seed42.npz": "ce16a8932e85145fcc1594228eab99bf1faa3209bb2d1527ceb6a6f5daab0d4f",
+    "humaneval_seed7.npz": "fd214282499299153722a0e124514825b7777908d6210e35c24137ef63dfb6d5",
+    "gsm_seed123.npz": "49a906445f24c895203664d0312d2862e1c507f6b273f53b71ccb1f87caf5a72"
+  },
+  "note": "No model fitting. Scalar/rule choices selected solely on development. Confirmation labels unseen at freeze."
+}

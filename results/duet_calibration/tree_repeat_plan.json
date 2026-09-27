@@ -1,0 +1,20 @@
+{
+  "registered_utc": "2026-09-12T19:22:44.527125+00:00",
+  "config": {
+    "tag": "p2tree_e56_k10_4_w15_n12v8_n8v8",
+    "exit": 56,
+    "k1": 10,
+    "k2": 4,
+    "budget": 15,
+    "mode": "p2tree",
+    "n1": 12,
+    "v1": 8,
+    "n2": 8,
+    "v2": 8,
+    "candidate": "legacy",
+    "fanout": 3
+  },
+  "stage": "tree_repeat",
+  "seed": 913,
+  "note": "Post-hoc repeat after discovering two >100ms target verify events in the Nv8 anchor. Preserve the original 67.894% interpolation failure. Same calibration prompts/seed and profiler, new process with existing compilation caches. This repeat does not identify the exact transient cause or independently validate a retrospectively chosen median model."
+}

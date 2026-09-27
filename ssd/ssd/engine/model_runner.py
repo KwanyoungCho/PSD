@@ -707,6 +707,7 @@ class ModelRunner:
         if self.verbose:
             print(f'-----ALLOCATING {model_type}KV CACHE----', flush=True)
         self.allocate_kv_cache()
+        self._setup_exit_probe()
         self._capture_tree_proxy_graphs()
         if init_q is not None:
             # super().__init__() runs warmup and calculates num_kvcache_blocks, pass that up
@@ -1141,9 +1142,12 @@ class ModelRunner:
                     wire_n=cfg.duet_proxy_wire_N,
                     pack_scores=pack_scores,
                     dtype=cfg.hf_config.torch_dtype,
-                    device=self.device)
+                    device=self.device,
+                    source=getattr(cfg, "duet_proxy_source", "residual"))
             print("[DUET] captured target chain proxy graphs "
-                  f"(K={widths})", flush=True)
+                  f"(K={widths}, source="
+                  f"{getattr(cfg, 'duet_proxy_source', 'residual')})",
+                  flush=True)
 
         if (os.environ.get("SSD_TREE_PROXY_GRAPH", "1") == "0"
                 or not getattr(cfg, "duet_tree_enabled", False)
@@ -1177,6 +1181,51 @@ class ModelRunner:
             torch.cuda.synchronize(self.device)
         print("[DUET tree] captured target proxy graphs "
               f"(buckets={sorted(self._tree_proxy_graphs_prebuilt)})",
+              flush=True)
+
+    def _setup_exit_probe(self):
+        """Attach all-layer early-exit probe buffers (measurement only).
+
+        ``SSD_DUET_PROBE_LAYERS`` = "all" or a comma list of layer indices,
+        using the same convention as ``duet_exit_layer``: slot for layer l
+        holds the residual stream AFTER ``layers[l]``, which is exactly what
+        graph_pre produces for l == exit_layer.  Must run BEFORE CUDA-graph
+        capture so the per-layer copies are captured with the graphs.
+        """
+        self._probe_layers = ()
+        spec = os.environ.get("SSD_DUET_PROBE_LAYERS", "").strip()
+        if (not spec or self.is_draft or self.rank != 0
+                or not getattr(self.config, "duet_enabled", False)):
+            return
+        n_layers = self.hf_config.num_hidden_layers
+        if spec.lower() == "all":
+            layers = list(range(n_layers))
+        else:
+            layers = sorted({int(x) for x in spec.split(",") if x.strip()})
+            bad = [l for l in layers if not 0 <= l < n_layers]
+            if bad:
+                raise ValueError(
+                    f"SSD_DUET_PROBE_LAYERS out of range 0..{n_layers-1}: {bad}")
+        if getattr(self, "_duet_lm_head_replica", None) is None:
+            raise RuntimeError(
+                "SSD_DUET_PROBE_LAYERS requires SSD_DUET_EXIT_REPLICA=1: the "
+                "probe computes full-vocab logits on rank 0 alone, which is "
+                "only possible with the rank-0 lm_head replica (compute_logits "
+                "is a TP collective and would hang the other ranks).")
+        K_max = max(int(self.config.duet_phase1_k),
+                    int(self.config.duet_phase2_k))
+        rows = self.config.max_num_seqs * (K_max + 1)
+        H = self.hf_config.hidden_size
+        dt = self.hf_config.torch_dtype
+        mdl = self.model.model
+        mdl._probe_h = torch.zeros(len(layers), rows, H, dtype=dt,
+                                   device=self.device)
+        mdl._probe_r = torch.zeros(len(layers), rows, H, dtype=dt,
+                                   device=self.device)
+        mdl._probe_slot = {l: i for i, l in enumerate(layers)}
+        self._probe_layers = tuple(layers)
+        print(f"[DUET probe] {len(layers)} layers, rows={rows}, "
+              f"buffers={2*len(layers)*rows*H*dt.itemsize/1e6:.1f}MB",
               flush=True)
 
     def allocate_kv_cache(self):

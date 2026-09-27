@@ -215,6 +215,14 @@ class LLMEngine:
         watch_stop = getattr(self, "_draft_watch_stop", None)
         if watch_stop is not None:
             watch_stop.set()
+        # Flush the final partial measurement chunk before CUDA teardown.
+        # Probe runs are diagnostic; a flush failure must be visible in logs.
+        _probe = getattr(getattr(self, "verifier", None), "_exit_probe", None)
+        if _probe is not None:
+            try:
+                _probe.dump()
+            except Exception as e:
+                print(f"[llm_engine] PROBE_FLUSH_FAILED: {e}", flush=True)
         try:
             from ssd.engine.helpers.cudagraph_helpers import duet_dump
             duet_dump("target_rank0")

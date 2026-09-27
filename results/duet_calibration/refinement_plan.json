@@ -1,0 +1,155 @@
+{
+  "registered_utc": "2026-09-12T18:24:09.407062+00:00",
+  "primary_validation_seen": 3,
+  "method": "One model-best configuration per exit, measured on 16 new selection prompts, no profiler. Select observed throughput winner.",
+  "shortlist": [
+    {
+      "tag": "chain_e40_k4_2_w15",
+      "exit": 40,
+      "k1": 4,
+      "k2": 2,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "chain_e56_k4_2_w15",
+      "exit": 56,
+      "k1": 4,
+      "k2": 2,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "chain_e72_k4_2_w15",
+      "exit": 72,
+      "k1": 4,
+      "k2": 2,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    }
+  ],
+  "dataset": {
+    "file": "/home/chokwans99/PSD/results/duet_calibration/datasets/selection/alpaca/alpaca_data_10000.jsonl",
+    "mapping": [
+      {
+        "dataset": "alpaca",
+        "source_row": 6,
+        "input_tokens": 17,
+        "token_sha256": "f171c3c5278e1a1d72def159a699d992b0a4a6dee49225a68be7973577fb0f8c"
+      },
+      {
+        "dataset": "c4",
+        "source_row": 1,
+        "input_tokens": 188,
+        "token_sha256": "5dd11b376113372e761422b4d1b495a56843a1b65ff32c478a897067a037ad3a"
+      },
+      {
+        "dataset": "gsm",
+        "source_row": 1,
+        "input_tokens": 42,
+        "token_sha256": "44dd36f3b744a3b463f6b1d84f66ce662df682254d86a984c174edfbdb3e87b2"
+      },
+      {
+        "dataset": "humaneval",
+        "source_row": 1,
+        "input_tokens": 133,
+        "token_sha256": "6078509f1012e1d9c3ff2063227a24b651e006e42e7564d2fbf0ab5b989b03d7"
+      },
+      {
+        "dataset": "alpaca",
+        "source_row": 7,
+        "input_tokens": 19,
+        "token_sha256": "71883b5a9cff5832a0c8d8e943abf0a1c9ae148f38c4595e4f3b8dbaf21737e3"
+      },
+      {
+        "dataset": "c4",
+        "source_row": 2,
+        "input_tokens": 428,
+        "token_sha256": "1c5c53e9ceff447055aa09ce98fad790fe82152755e9af2263e3fb81227ccd79"
+      },
+      {
+        "dataset": "gsm",
+        "source_row": 2,
+        "input_tokens": 38,
+        "token_sha256": "b21197688e5e366f535b0483358809afd1163c2556cb54c05e0e37aaf3798155"
+      },
+      {
+        "dataset": "humaneval",
+        "source_row": 2,
+        "input_tokens": 136,
+        "token_sha256": "ba0cfd18b04a126782f1f7f64e436fd06d72c3ebcc90b426ae592c5eeb3631e3"
+      },
+      {
+        "dataset": "alpaca",
+        "source_row": 8,
+        "input_tokens": 22,
+        "token_sha256": "bf419cb650796a4b6fc1e606e8d376ea867765cb3500828eb0d8c22232a903a4"
+      },
+      {
+        "dataset": "c4",
+        "source_row": 3,
+        "input_tokens": 55,
+        "token_sha256": "2f099d8f9aad2f36f8b2a6d1497eafe56e76b76506172c76dd7572a160633d4b"
+      },
+      {
+        "dataset": "gsm",
+        "source_row": 3,
+        "input_tokens": 66,
+        "token_sha256": "5a70bcd15099d14dbf2b500aa5402a48d067eb4bbfa1d742af83f4ad462a762a"
+      },
+      {
+        "dataset": "humaneval",
+        "source_row": 3,
+        "input_tokens": 94,
+        "token_sha256": "da55c98399416acff0887fb84cb325f7aedf840fc800f88fdc375c7ce084f112"
+      },
+      {
+        "dataset": "alpaca",
+        "source_row": 10,
+        "input_tokens": 26,
+        "token_sha256": "1240db940d2f1c622a5704cd70fab1e17595775c71d59183bdbed3d208a61d04"
+      },
+      {
+        "dataset": "c4",
+        "source_row": 4,
+        "input_tokens": 266,
+        "token_sha256": "ea6bc1c64666790b2fdbb83ecf27fa61a3edca9520c702afee1831d601534215"
+      },
+      {
+        "dataset": "gsm",
+        "source_row": 4,
+        "input_tokens": 57,
+        "token_sha256": "0de0154de76722fbec0de4a0faf8b0ac806f860a01b327da232d0c37581f9dd6"
+      },
+      {
+        "dataset": "humaneval",
+        "source_row": 4,
+        "input_tokens": 128,
+        "token_sha256": "ebf3bc99d9f655fe1240525581e86de6d1cefc53a3974945618f77e5a8b7b62c"
+      }
+    ],
+    "sha256": "4478e6bee11213d4cb04bf81e3f4fb813107994fdb4c0d4766043b56026ba779"
+  },
+  "selection_seed": 2413,
+  "confirmation_seeds": [
+    2913,
+    3913
+  ],
+  "confirmation_output_len": 256,
+  "note": "Secondary adaptation, not retroactively pre-registered primary. Final confirmation remains independent."
+}

@@ -1,0 +1,127 @@
+{
+  "passed": true,
+  "plan": {
+    "temperature": 0.7,
+    "seeds": [
+      903,
+      904
+    ],
+    "policies": {
+      "matched_proxy": "policy::proxy__topm__original",
+      "optimized_proxy": "policy::proxy__full__expected_mix0.25"
+    },
+    "orders": [
+      [
+        "matched_proxy",
+        "optimized_proxy"
+      ],
+      [
+        "optimized_proxy",
+        "matched_proxy"
+      ]
+    ],
+    "num_prompts": 16,
+    "reason": "Main allocation contrast, fresh sampling seeds, analysis GPU idle. Earlier runtime screen overlapped GPU2 analysis and is treated as exploratory.",
+    "data": "Same 16 prompt texts as the pilot; new seeds, not a new unseen-prompt claim."
+  },
+  "rows": [
+    {
+      "arm": "matched_proxy",
+      "seed": 903,
+      "output_tokens": 4096,
+      "generate_s": 51.08899641036987,
+      "output_tps": 80.17381995721897,
+      "decode_tps": 83.899228566306,
+      "decode_tokens": 4117,
+      "decode_s": 49.070773001760244,
+      "cache_hit": 0.8063583815028902,
+      "steps": 1384,
+      "tokens_per_step": 2.9747109826589595,
+      "tokens_on_hit": 3.0268817204301075,
+      "tokens_on_miss": 2.7574626865671643,
+      "generate_start_unix": 1789222273.7734141,
+      "generate_end_unix": 1789222324.8624105
+    },
+    {
+      "arm": "matched_proxy",
+      "seed": 904,
+      "output_tokens": 4096,
+      "generate_s": 45.95364999771118,
+      "output_tps": 89.13328974312182,
+      "decode_tps": 93.48394143173248,
+      "decode_tokens": 4118,
+      "decode_s": 44.05034636892378,
+      "cache_hit": 0.8316041500399042,
+      "steps": 1253,
+      "tokens_per_step": 3.286512370311253,
+      "tokens_on_hit": 3.326295585412668,
+      "tokens_on_miss": 3.090047393364929,
+      "generate_start_unix": 1789222520.440869,
+      "generate_end_unix": 1789222566.394519
+    },
+    {
+      "arm": "optimized_proxy",
+      "seed": 903,
+      "output_tokens": 4096,
+      "generate_s": 48.786662340164185,
+      "output_tps": 83.95737284589605,
+      "decode_tps": 87.82999306558297,
+      "decode_tokens": 4122,
+      "decode_s": 46.931576061062515,
+      "cache_hit": 0.828101644245142,
+      "steps": 1338,
+      "tokens_per_step": 3.0807174887892375,
+      "tokens_on_hit": 3.148014440433213,
+      "tokens_on_miss": 2.756521739130435,
+      "generate_start_unix": 1789222356.8623512,
+      "generate_end_unix": 1789222405.6490135
+    },
+    {
+      "arm": "optimized_proxy",
+      "seed": 904,
+      "output_tokens": 4096,
+      "generate_s": 49.84852576255798,
+      "output_tps": 82.16892951880575,
+      "decode_tps": 85.88969863391,
+      "decode_tokens": 4119,
+      "decode_s": 47.95685705635697,
+      "cache_hit": 0.8197802197802198,
+      "steps": 1365,
+      "tokens_per_step": 3.0175824175824175,
+      "tokens_on_hit": 3.098302055406613,
+      "tokens_on_miss": 2.6504065040650406,
+      "generate_start_unix": 1789222438.1832788,
+      "generate_end_unix": 1789222488.0318046
+    }
+  ],
+  "arms": {
+    "matched_proxy": {
+      "pooled_output_tps": 84.41649422410873,
+      "pooled_decode_tps": 88.43321531842008,
+      "pooled_cache_hit": 0.8183541903678423
+    },
+    "optimized_proxy": {
+      "pooled_output_tps": 83.05352438187234,
+      "pooled_decode_tps": 86.8493632917533,
+      "pooled_cache_hit": 0.8238993710691824
+    }
+  },
+  "paired": [
+    {
+      "seed": 903,
+      "output_tps_gain_percent": 4.719187498732125,
+      "decode_tps_gain_percent": 4.6851020759630435,
+      "cache_hit_gain_pp": 2.17432627422518
+    },
+    {
+      "seed": 904,
+      "output_tps_gain_percent": -7.813422173002971,
+      "decode_tps_gain_percent": -8.123580030446453,
+      "cache_hit_gain_pp": -1.1823930259684423
+    }
+  ],
+  "pooled_output_tps_gain_percent": -1.6145776423953206,
+  "last_gpu2_analysis_completed_unix": 1789221920.6582062,
+  "primary_timing_metric": "4096 actually emitted tokens / generate wall time; includes prefill, excludes model loading.",
+  "limitation": "Two seeds, same 16 prompts, reverse arm order; no concurrent GPU2 analysis. Limited runtime screen, not a large-sample speedup claim or full Mirror-SD benchmark."
+}

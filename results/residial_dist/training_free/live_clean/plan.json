@@ -1,0 +1,24 @@
+{
+  "temperature": 0.7,
+  "seeds": [
+    903,
+    904
+  ],
+  "policies": {
+    "matched_proxy": "policy::proxy__topm__original",
+    "optimized_proxy": "policy::proxy__full__expected_mix0.25"
+  },
+  "orders": [
+    [
+      "matched_proxy",
+      "optimized_proxy"
+    ],
+    [
+      "optimized_proxy",
+      "matched_proxy"
+    ]
+  ],
+  "num_prompts": 16,
+  "reason": "Main allocation contrast, fresh sampling seeds, analysis GPU idle. Earlier runtime screen overlapped GPU2 analysis and is treated as exploratory.",
+  "data": "Same 16 prompt texts as the pilot; new seeds, not a new unseen-prompt claim."
+}

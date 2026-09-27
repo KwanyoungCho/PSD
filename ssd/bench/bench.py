@@ -90,6 +90,17 @@ def parse_arguments():
                         help="Early-exit layer index (default: 2*L//3)")
     parser.add_argument("--duet_proxy_top_k", type=int, default=3,
                         help="Number of proxy correction tokens per position")
+    parser.add_argument("--duet_proxy_source",
+                        choices=("residual", "proxy", "draft"),
+                        default="residual",
+                        help="P2 candidate source: residual = [p_E - p_D]_+ "
+                             "(champion), proxy = early-exit distribution "
+                             "only, draft = draft distribution only.")
+    parser.add_argument("--duet_only_proxy", action="store_true",
+                        help="Chain-only ablation: logical K1=0. The draft "
+                             "skips P1 candidate generation entirely, so "
+                             "every cache root comes from the P2 proxy "
+                             "score. Isolates --duet_proxy_source.")
     parser.add_argument("--duet_draft_fan_out", type=int, default=None,
                         help="Draft-sourced branches per position (default: fan_out//2)")
     parser.add_argument("--duet_policy", choices=("a", "b"), default="b",
@@ -369,6 +380,8 @@ def create_llm_kwargs(args, draft_path):
         if args.duet_exit_layer is not None:
             llm_kwargs["duet_exit_layer"] = args.duet_exit_layer
         llm_kwargs["duet_proxy_top_k"] = args.duet_proxy_top_k
+        llm_kwargs["duet_proxy_source"] = args.duet_proxy_source
+        llm_kwargs["duet_only_proxy"] = args.duet_only_proxy
         if args.duet_draft_fan_out is not None:
             llm_kwargs["duet_draft_fan_out"] = args.duet_draft_fan_out
         llm_kwargs["duet_policy"] = args.duet_policy

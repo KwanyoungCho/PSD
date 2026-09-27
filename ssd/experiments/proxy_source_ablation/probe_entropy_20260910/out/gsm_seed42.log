@@ -1,0 +1,211 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 42
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 10.14it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 11.17it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  9.65it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  9.61it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 10.30it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.59it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.59it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET probe] 80 layers, rows=9, buffers=23.6MB
+[DUET] captured target chain proxy graphs (K=[4, 8], source=residual)
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=1.0 b=1
+============================================================
+Generating:   0%|          | 0/32 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+[DUET probe] tap check @layer=56 max|probe-engine|=0.000e+00 OK
+Generating:   3%|▎         | 1/32 [00:06<03:09,  6.11s/it]Generating:   6%|▋         | 2/32 [00:09<02:20,  4.67s/it]Generating:   9%|▉         | 3/32 [00:14<02:11,  4.54s/it]Generating:  12%|█▎        | 4/32 [00:17<01:58,  4.23s/it]Generating:  16%|█▌        | 5/32 [00:22<01:56,  4.32s/it]Generating:  19%|█▉        | 6/32 [00:26<01:48,  4.18s/it]Generating:  22%|██▏       | 7/32 [00:30<01:47,  4.30s/it]Generating:  25%|██▌       | 8/32 [00:34<01:39,  4.14s/it]Generating:  28%|██▊       | 9/32 [00:39<01:38,  4.29s/it]Generating:  31%|███▏      | 10/32 [00:43<01:32,  4.22s/it]Generating:  34%|███▍      | 11/32 [00:47<01:29,  4.24s/it]Generating:  38%|███▊      | 12/32 [00:50<01:19,  3.96s/it]Generating:  41%|████      | 13/32 [00:54<01:15,  3.97s/it]Generating:  44%|████▍     | 14/32 [00:58<01:07,  3.75s/it]Generating:  47%|████▋     | 15/32 [01:01<01:03,  3.75s/it]Generating:  50%|█████     | 16/32 [01:06<01:04,  4.00s/it]Generating:  53%|█████▎    | 17/32 [01:10<00:58,  3.92s/it]Generating:  56%|█████▋    | 18/32 [01:13<00:53,  3.85s/it]Generating:  59%|█████▉    | 19/32 [01:17<00:49,  3.80s/it]Generating:  62%|██████▎   | 20/32 [01:21<00:46,  3.85s/it]Generating:  66%|██████▌   | 21/32 [01:26<00:44,  4.09s/it]Generating:  69%|██████▉   | 22/32 [01:30<00:41,  4.16s/it]Generating:  72%|███████▏  | 23/32 [01:34<00:36,  4.08s/it]Generating:  75%|███████▌  | 24/32 [01:38<00:32,  4.06s/it]Generating:  78%|███████▊  | 25/32 [01:42<00:28,  4.01s/it]Generating:  81%|████████▏ | 26/32 [01:46<00:24,  4.08s/it]Generating:  84%|████████▍ | 27/32 [01:50<00:19,  3.94s/it]Generating:  88%|████████▊ | 28/32 [01:53<00:15,  3.89s/it]Generating:  91%|█████████ | 29/32 [01:56<00:10,  3.61s/it]Generating:  94%|█████████▍| 30/32 [02:01<00:07,  3.80s/it]Generating:  97%|█████████▋| 31/32 [02:05<00:03,  3.87s/it]Generating: 100%|██████████| 32/32 [02:09<00:00,  4.03s/it]Generating: 100%|██████████| 32/32 [02:09<00:00,  4.05s/it]
+Final Prefill Throughput: 1217.85tok/s
+Final Decode Throughput: 64.54tok/s
+[metrics] Prefill tokens/time: 2274 / 1.867220s
+[metrics] Decode tokens/time: 8234 / 127.581085s
+[metrics] Avg Tokens per step (incl recovery): 2.69
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.21 (denom=8)
+[metrics] Avg target time per full step (ms): 42.27
+[metrics] Avg target verify time (ms): 29.97
+[metrics] Avg Cache Hits: 0.61
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.608
+[metrics] Avg Phase 2 Accepted Len: 1.76
+[metrics] Avg Phase 2 Acceptance Ratio: 0.440
+[metrics] Avg Tokens per step on Cache Hit: 2.76
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.317
+  1: 0.200
+  2: 0.140
+  3: 0.093
+  4: 0.250
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.58
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 8192tok, Time: 129.61s, Total Throughput: 63.21tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May?'
+Generation: '\n2. During a recent sale, a clothing store sold 40% fewer clothes than last month. An official analyzed the data and said, “During this holiday sale, just over 3,100 clothes were sold in the store.” Martin, a member of the community, asked, “Is the amount of clothes sold even or odd?”\nStart at the nearest ten to the number of clothes sold.\n– Add 4. (3,108) The number of clothes sold is odd.\n3. A local bike shop sponsored a biking competition. The number of miles recorded by 16 competitors is shown below.\n(model of a car with a bicycle on top of it)\nThe “best first medal” was awarded to the racer who rode the greatest number of miles. The “best second medal” was awarded to the racer who rode the 2nd greatest number of miles. And the “best third medal” was awarded to the racer who rode the 3rdgreatest number of miles. Which racers received the medal awards?\nBetty Davis won the “best first medal” because she had the 1stgreat'
+----------------------------------------
+
+Prompt 2: 'Weng earns $12 an hour for babysitting. Yesterday, she just did 50 minutes of babysitting. How much did she earn?'
+Generation: "\nExample of zap question:\nGaga Nunu, the goblin baby sitter, is paid $12 per baby per hour.\nHow much did Gaga Nunu make in one hour should she baby sit 3 human babies? $12×3=?=? $12×36=?=? 36×$12=$12×36=?=? 3=$12*3=?=? $12($3)=?=? 3$12=$123=$123=?=? $12(3)=?=$12(3)=? $3×12=$3×12=?=? 3×$12=$3×$12=?=? Maybe some of these are difficult and maybe some of these are easy for you. Does it really matter what they look like on a test? Good luck! It's not a simple as people seem to think, possible future teachers.\nAmanda Wells Answered: my spell won this gives me gratitude, helps me through the day, makes me at ease, i am the best me, strong and nice"
+----------------------------------------
+
+Prompt 3: 'Betty is saving money for a new wallet which costs $100. Betty has only half of the money she needs. Her parents decided to give her $15 for that purpose, and her grandparents twice as much as her parents. How much more money does Betty need to buy the wallet?'
+Generation: " Next...\nDo you play Guitar Hero online?\n.:Sally:. posted a topic in General Video Gaming\nI just got an xbox and I'm online and I love Guitar Hero. Are there any builders/designers that play GH?\ncustom tracks for LBP for ps3\njyrific posted a topic in Other Game Discussion\nhey do you know if there is a fake guitar available online for character(guitar hero type) and if you have any ideas about user made songs posted online? Does anyone know the functionality of the guitar dock? I dont have my ps3 yet as i have to wait for my local toy store to open at papa's big top cuz we don't have prop repair =[ But im so antsy to buy rockband.\nVOSTC64 as a cartridge, and now emulated on the internet\nlucasmascote on deviantart has posted several VOC SIDs to the LBP community, which can willingly be downloaded from his website. I decided to treat them as ps3 game saves and import them into LBP, since the VOSTC64 is emulated in L"
+----------------------------------------
+
+Prompt 4: 'Julie is reading a 120-page book. Yesterday, she was able to read 12 pages and today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages should she read?'
+Generation: " Show the solution. 12 + 12 = 24 2/2 (24/2) = 12 q= 20.1215120\nPosted by kennedyldn on Wednesday, September 20, 2006 at 03:36 PM | Permalink</s><s> HMI designs\nAuthor Topic: HMI designs (Read 5546 times)\nelbool7\nMy name is elBool (meant as OPC/Goutte) and I'm new here,\nI just would like to ask, what's a designing method you use for HMI designs? What are the things, you use to think over the HMI design by yourself and customer?\nDo you use any graphical library or article, which explains the file formats and how the images are packed and supplied to CS HMI panel?\nDo you use a vector graphics editor and draw your own graphics, perhaps, having your own library, or ... ??\nRe: HMI designs\nI also create my own graphics. But it will be a very tedious work, if you must draw all of them !"
+----------------------------------------
+
+Prompt 5: 'James writes a 3-page letter to 2 different friends twice a week.  How many pages does he write a year?'
+Generation: "\n\nAnswer: Look at 12 x's 2 - 24 here, what does that equal, multiply that times 52, the number of weeks in a year (12x12=144), which equals 1,248, 11 month + 1 + 144 + 11 month + 1, i.e. he writes one letter twice a week so that's 104 for 1 month, 144 for two months, 1,248 for a year and you either add 104 or 208 if on the leap year, and it's 1,248 (base, i.e. the equation)  + 208 which is 1,456 for this year, a special year :).\n\nfor the 2nd example refer to the paper and we will get back to the solution shortly.</s><s> Tags: parsing,kotlin, coroutine, java.util.scanner\n\nQuestion: How to use kotlin globalScope.launch to continuously read every thread printed message?\n\nI have a parser to read the thread"
+----------------------------------------
+
+Prompt 6: 'Mark has a garden with flowers. He planted plants of three different colors in it. Ten of them are yellow, and there are 80% more of those in purple. There are only 25% as many green flowers as there are yellow and purple flowers. How many flowers does Mark have in his garden?'
+Generation: "\n11 ambassadors and 12 doctors share an apartment with 8 footballers, 11 dancers, and 14 singers. Three small apartments were rented for 9 senators, 10 student science teams, and 15 dentists. How many people share an apartment?\nThere are two smaller squares and one larger at the following ratio, 1:3. Smaller a = 384 cm² and b = 576 cm². Calculate the area of the larger square.\nMusic class has a selection of three instruments for every four pupils. The school has 10 pupils more than in the music class. What is the smallest possible number of pupils in music class?\nA pine cone landed on the pavement in front of Janka. 🌱 It wasn't quite round but rather resembled an irregular polyhedron made of equilateral triangles. How many different triangle sides had the pine cone if Janka counted exactly at 9 vertices? 🎄\nPartisan band\n9 partisan brothers lived in a partisan camp. Two days ago three of them fell"
+----------------------------------------
+
+Prompt 7: 'Albert is wondering how much pizza he can eat in one day. He buys 2 large pizzas and 2 small pizzas. A large pizza has 16 slices and a small pizza has 8 slices. If he eats it all, how many pieces does he eat that day?'
+Generation: ' 40 32 24 20\nA complete circle has _______ degrees. 360 361 362 346\nWhen 3 meets 10, the sum of their ages is 44. When 35 leaves them, the sum of their ages is 37. Who are these mysterious people? Three dwarfs Dwarfs and their pet dog Three-legged country pup with sagacious attitude Three headed dragon on a very congested high way\nDuring an experiment a bottle containing water at 22 degree C was placed into a cup containing water at 100 degree C. After a little time had elapsed, the temperature of the water in the bottle was found to be 40 degree C. The air temperature was assumed to be 22 degree C. Use this data to compute something interesting about the properties of water.\nWhen supreme bliss --euphoria?-- beckons, only a madman would turn his back on its embrace Many of us occasionally ponder our individual years to date and calculate how much is left in the entire realm of possibility. When we arrive'
+----------------------------------------
+
+Prompt 8: 'Ken created a care package to send to his brother, who was away at boarding school.  Ken placed a box on a scale, and then he poured into the box enough jelly beans to bring the weight to 2 pounds.  Then, he added enough brownies to cause the weight to triple.  Next, he added another 2 pounds of jelly beans.  And finally, he added enough gummy worms to double the weight once again.  What was the final weight of the box of goodies, in pounds?'
+Generation: '\n1MR-TAML4RCS.png (356.56 kB, 1000x960 - viewed 39 times.)\nThis is a really poor exam question! - I can\'t even tell what (if any) assumption ones are allowed to make when evaluating answers.\nI think the only valid way to do this exam is to rewrite the base case so that it yields start at 0,0 and although that will get around a lot of the nastiness, it still forces the answers to have some structure that they normally wouldn\'t.\nHere is what the overloading gives (if you try to generate the sequences):\nIf they count the OEIS I came up with as valid then the tests will have to be extremely well written to check answers under any conditions.\nFinite saw his way through Fermat\'s Last Theorem, squelched deep-sea mutant aliens, rerouted an asteroid carrying doom to humanity, and wrote the next Broadway sensation.  As he left his time machine, he adjusted his coat and thought, "So much for infinite impossibility." *kapow*, *zap*, *art'
+----------------------------------------
+
+Prompt 9: 'Alexis is applying for a new job and bought a new set of business clothes to wear to the interview. She went to a department store with a budget of $200 and spent $30 on a button-up shirt, $46 on suit pants, $38 on a suit coat, $11 on socks, and $18 on a belt. She also purchased a pair of shoes, but lost the receipt for them. She has $16 left from her budget. How much did Alexis pay for the shoes?'
+Generation: '\nAlexis is applying for ...\nPE/VC Actors in the Dairy Supply Chain of India | Principles of Biochemistry | Risk Management | Clinical Decision Support System |\n1) Calculate the pairwise gene similarity measure as described in the paper between the second section of the MAR segment (from base 1611 to 2037) to\n1) Imagine an in vitro antibody production experiment in which the amount of soluble antigen was changed as in the control of the Western Blotte\n1) Assume we are performing 64-bit single-precision dot product calculations with data in 4-way associative cache blocks of 64-bit words. Using the\nA) Define the HSV and HSL color spaces and how they are different than the RGB color space. B) Explain how the HSV model is an implementation of hue. Du\nA mathematics game show gives the contestant the chance to win various amounts of money. The contestant must choose between consecutive integers (i.\nYou are asked to solve a system of 10000 linear equations in 10000 unknowns.'
+----------------------------------------
+
+Prompt 10: 'Tina makes $18.00 an hour.  If she works more than 8 hours per shift, she is eligible for overtime, which is paid by your hourly wage + 1/2 your hourly wage.  If she works 10 hours every day for 5 days, how much money does she make?'
+Generation: '  The total days worked is fundamental: 5.  Amount per hour: You pay boosts for overtime, but never to undercut the full hour.  If she works 8 hours, you pay $18.  If she works 10 hours, you pay $18 for 8 hours and you also pay 1/2 of that for the next two hours.  $18 can be expressed as a decimal as 18/1, which reduces to 18.  Now you do the math.  How many decimals over 2 are there?  $18.50 an hour.  How much do you pay overtime?  $9.25.  If she worked 10 hours a day for 5 days, how much would she make?  Fifty times her fair limit is 400, over the first 8 hours and then another 160 is an additional 560.</s><s> Our practice has spent the last 20 years building sustainable, entertaining, and usable mobile apps. Elle acknowledges that her job as a developer is to create apps that are painless and easy for users. She shares'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 38.14

@@ -1,0 +1,1031 @@
+{
+  "0.5": {
+    "ablation": {
+      "original_proxy": {
+        "key": "policy::proxy__topm__original",
+        "coverage": {
+          "mean": 0.8893086995379209,
+          "ci95": [
+            0.8706679409888238,
+            0.9069439877704237
+          ]
+        },
+        "vs_base": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.023386490786897782,
+          "ci95": [
+            -0.03344963546963743,
+            -0.013937574852234638
+          ]
+        }
+      },
+      "original_residual": {
+        "key": "policy::residual__topm__original",
+        "coverage": {
+          "mean": 0.8509982782557137,
+          "ci95": [
+            0.8304042271638424,
+            0.8706029947619132
+          ]
+        },
+        "vs_base": {
+          "mean": -0.0383104212822071,
+          "ci95": [
+            -0.046388721421365214,
+            -0.030837088744202986
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.06169691206910488,
+          "ci95": [
+            -0.07463311941088091,
+            -0.04982182966683182
+          ]
+        }
+      },
+      "full_only": {
+        "key": "policy::proxy__full__original",
+        "coverage": {
+          "mean": 0.889344969460033,
+          "ci95": [
+            0.8706703857740412,
+            0.9069591732744589
+          ]
+        },
+        "vs_base": {
+          "mean": 3.626992211227739e-05,
+          "ci95": [
+            -4.0299789541028044e-06,
+            9.96938849104431e-05
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.023350220864785505,
+          "ci95": [
+            -0.03342618683208361,
+            -0.01390426315984287
+          ]
+        }
+      },
+      "hazard_only": {
+        "key": "policy::proxy__topm__expected_mix0.25",
+        "coverage": {
+          "mean": 0.9126486504917342,
+          "ci95": [
+            0.8993679558393146,
+            0.9254108483236587
+          ]
+        },
+        "vs_base": {
+          "mean": 0.023339950953813263,
+          "ci95": [
+            0.013897732297286853,
+            0.033422976356893175
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -4.653983308451973e-05,
+          "ci95": [
+            -0.0001475682333259638,
+            3.451037312604383e-05
+          ]
+        }
+      },
+      "allocation_only": {
+        "key": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.9126951903248187,
+          "ci95": [
+            0.8994640329063791,
+            0.9254566213140739
+          ]
+        },
+        "vs_base": {
+          "mean": 0.023386490786897782,
+          "ci95": [
+            0.01393757485223464,
+            0.03344963546963744
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "source_only": {
+        "key": "policy::floor0.75__topm__original",
+        "coverage": {
+          "mean": 0.8882636403279233,
+          "ci95": [
+            0.8695229876810017,
+            0.9060004644740728
+          ]
+        },
+        "vs_base": {
+          "mean": -0.0010450592099976337,
+          "ci95": [
+            -0.0036060471510702295,
+            0.0010774585670907714
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.024431549996895417,
+          "ci95": [
+            -0.03452984189322982,
+            -0.015229929687163541
+          ]
+        }
+      },
+      "source_plus_full": {
+        "key": "policy::floor0.75__full__original",
+        "coverage": {
+          "mean": 0.8883078109782059,
+          "ci95": [
+            0.8695713252423447,
+            0.9060681799220924
+          ]
+        },
+        "vs_base": {
+          "mean": -0.0010008885597149555,
+          "ci95": [
+            -0.0035509480087297924,
+            0.0011209288486257712
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.024387379346612736,
+          "ci95": [
+            -0.034476417624472115,
+            -0.015181320832940074
+          ]
+        }
+      },
+      "source_plus_hazard": {
+        "key": "policy::floor0.75__topm__expected_mix0.25",
+        "coverage": {
+          "mean": 0.9121417404800239,
+          "ci95": [
+            0.8988496534547059,
+            0.9250982972485443
+          ]
+        },
+        "vs_base": {
+          "mean": 0.022833040942103016,
+          "ci95": [
+            0.012967558211933726,
+            0.033361976989800736
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.0005534498447947653,
+          "ci95": [
+            -0.00342380918371686,
+            0.001612064292173403
+          ]
+        }
+      },
+      "selected": {
+        "key": "policy::floor0.75__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.913267716575518,
+          "ci95": [
+            0.8999766108647396,
+            0.9259458054906676
+          ]
+        },
+        "vs_base": {
+          "mean": 0.02395901703759718,
+          "ci95": [
+            0.014568839217064169,
+            0.03402238176111896
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": 0.000572526250699399,
+          "ci95": [
+            -0.00044659999535679134,
+            0.001980685784580337
+          ]
+        }
+      },
+      "optimized_proxy": {
+        "key": "policy::proxy__full__uniform0.05",
+        "coverage": {
+          "mean": 0.8988874914310733,
+          "ci95": [
+            0.8826024835819607,
+            0.9141867739966907
+          ]
+        },
+        "vs_base": {
+          "mean": 0.009578791893152382,
+          "ci95": [
+            0.0009059905229735237,
+            0.01865283026265469
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.0138076988937454,
+          "ci95": [
+            -0.01994720829519126,
+            -0.008228162046217171
+          ]
+        }
+      },
+      "optimized_residual": {
+        "key": "policy::residual__full__expected_mix0.75",
+        "coverage": {
+          "mean": 0.8625671750304963,
+          "ci95": [
+            0.8450533683088086,
+            0.8796169313832344
+          ]
+        },
+        "vs_base": {
+          "mean": -0.02674152450742459,
+          "ci95": [
+            -0.035779468228003784,
+            -0.01783376071482981
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.05012801529432238,
+          "ci95": [
+            -0.06001555183687798,
+            -0.040812334869893434
+          ]
+        }
+      },
+      "legacy_unscaled_proxy": {
+        "key": "control::legacy_temperature_proxy",
+        "coverage": {
+          "mean": 0.8862419314682483,
+          "ci95": [
+            0.8686073228716851,
+            0.9032570194763442
+          ]
+        },
+        "vs_base": {
+          "mean": -0.0030667680696725113,
+          "ci95": [
+            -0.011723481401879121,
+            0.005824913655892604
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.026453258856570294,
+          "ci95": [
+            -0.03715190418179954,
+            -0.01619360181553864
+          ]
+        }
+      },
+      "legacy_unscaled_residual": {
+        "key": "control::legacy_temperature_residual",
+        "coverage": {
+          "mean": 0.8399653397500516,
+          "ci95": [
+            0.8177463201805949,
+            0.8615853317159539
+          ]
+        },
+        "vs_base": {
+          "mean": -0.049343359787869384,
+          "ci95": [
+            -0.062172248100176734,
+            -0.037308485564046964
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.07272985057476716,
+          "ci95": [
+            -0.08865224846465061,
+            -0.057719144436464954
+          ]
+        }
+      }
+    },
+    "primary_selected_vs_original": {
+      "mean": 0.02395901703759718,
+      "ci_bonferroni_six": [
+        0.011826649289049722,
+        0.037667352103833214
+      ]
+    },
+    "primary_selected_vs_optimized_proxy": {
+      "mean": 0.0143802251444448,
+      "ci_bonferroni_six": [
+        0.006835745952988432,
+        0.0226740777351831
+      ]
+    },
+    "signed_exchange_top3_rejection_weighted": {
+      "gain_proxy_raw_over_Z": 0.011833010241868946,
+      "incoming_error_over_Z": -0.005761342711221124,
+      "outgoing_error_over_Z": -0.09029494615582925,
+      "total_error_over_Z": 0.08453360344460814,
+      "true_gain_over_Z": -0.07270059304810862,
+      "deleted_out_over_Z": 0.08380741551107307,
+      "win_event_fraction": 0.2360588771395575,
+      "loss_event_fraction": 0.22070583147979456,
+      "mean_gain_on_winning_events": 0.0609476237691777,
+      "mean_gain_on_losing_events": -0.3945877774419835
+    },
+    "method": "20,000 paired prompt bootstrap; six primary contrasts use 99.1667% Bonferroni intervals; pointwise 95% ablation intervals are secondary."
+  },
+  "0.7": {
+    "ablation": {
+      "original_proxy": {
+        "key": "policy::proxy__topm__original",
+        "coverage": {
+          "mean": 0.8204242470815123,
+          "ci95": [
+            0.8028770816260977,
+            0.837243007714793
+          ]
+        },
+        "vs_base": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.02396819465419089,
+          "ci95": [
+            -0.03148419052590822,
+            -0.01680187993227687
+          ]
+        }
+      },
+      "original_residual": {
+        "key": "policy::residual__topm__original",
+        "coverage": {
+          "mean": 0.7827512686664451,
+          "ci95": [
+            0.7593047305619006,
+            0.8044922721836493
+          ]
+        },
+        "vs_base": {
+          "mean": -0.037672978415067226,
+          "ci95": [
+            -0.047319131280538294,
+            -0.028995114368902716
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.061641173069258114,
+          "ci95": [
+            -0.07474389018830205,
+            -0.050000066696824316
+          ]
+        }
+      },
+      "full_only": {
+        "key": "policy::proxy__full__original",
+        "coverage": {
+          "mean": 0.8210375147054336,
+          "ci95": [
+            0.8035383337854237,
+            0.837855572104607
+          ]
+        },
+        "vs_base": {
+          "mean": 0.0006132676239212718,
+          "ci95": [
+            -0.00013556117657342412,
+            0.001462878086301304
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.023354927030269614,
+          "ci95": [
+            -0.03088021056058427,
+            -0.01631311668784797
+          ]
+        }
+      },
+      "hazard_only": {
+        "key": "policy::proxy__topm__expected_mix0.25",
+        "coverage": {
+          "mean": 0.8438724708723536,
+          "ci95": [
+            0.8271737062523137,
+            0.8594013165563152
+          ]
+        },
+        "vs_base": {
+          "mean": 0.023448223790841185,
+          "ci95": [
+            0.01617857970587495,
+            0.030944432068813373
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.0005199708633496988,
+          "ci95": [
+            -0.001083188246986458,
+            -2.9601760580453843e-05
+          ]
+        }
+      },
+      "allocation_only": {
+        "key": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.8443924417357034,
+          "ci95": [
+            0.8276242642731667,
+            0.8600522192303729
+          ]
+        },
+        "vs_base": {
+          "mean": 0.02396819465419089,
+          "ci95": [
+            0.01680187993227687,
+            0.03148419052590823
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "source_only": {
+        "key": "policy::complement_power1__topm__original",
+        "coverage": {
+          "mean": 0.8204101909774209,
+          "ci95": [
+            0.8029642502533532,
+            0.8371341319543613
+          ]
+        },
+        "vs_base": {
+          "mean": -1.405610409160986e-05,
+          "ci95": [
+            -0.0009349916073079387,
+            0.001030944872036452
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.023982250758282496,
+          "ci95": [
+            -0.03152523743957789,
+            -0.016906280066065368
+          ]
+        }
+      },
+      "source_plus_full": {
+        "key": "policy::complement_power1__full__original",
+        "coverage": {
+          "mean": 0.8207846661313456,
+          "ci95": [
+            0.8033889909430226,
+            0.83768324136851
+          ]
+        },
+        "vs_base": {
+          "mean": 0.0003604190498332655,
+          "ci95": [
+            -0.0007472353657029067,
+            0.0015924173372055242
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.02360777560435762,
+          "ci95": [
+            -0.031226149232092718,
+            -0.0164001885017095
+          ]
+        }
+      },
+      "source_plus_hazard": {
+        "key": "policy::complement_power1__topm__expected_mix0.25",
+        "coverage": {
+          "mean": 0.844228354716673,
+          "ci95": [
+            0.8269755730384776,
+            0.8602468504419661
+          ]
+        },
+        "vs_base": {
+          "mean": 0.023804107635160634,
+          "ci95": [
+            0.016145212125281083,
+            0.03193064186126611
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.00016408701903024815,
+          "ci95": [
+            -0.0028329866113696823,
+            0.002416592967356658
+          ]
+        }
+      },
+      "selected": {
+        "key": "policy::complement_power1__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.8443047116286679,
+          "ci95": [
+            0.8267850175452921,
+            0.8605070908163047
+          ]
+        },
+        "vs_base": {
+          "mean": 0.02388046454715555,
+          "ci95": [
+            0.016172211827462646,
+            0.03207255716818963
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -8.773010703533375e-05,
+          "ci95": [
+            -0.002686553925722643,
+            0.0023956685354132186
+          ]
+        }
+      },
+      "optimized_proxy": {
+        "key": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.8443924417357034,
+          "ci95": [
+            0.8276242642731667,
+            0.8600522192303729
+          ]
+        },
+        "vs_base": {
+          "mean": 0.02396819465419089,
+          "ci95": [
+            0.01680187993227687,
+            0.03148419052590823
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "optimized_residual": {
+        "key": "policy::residual__full__uniform0.05",
+        "coverage": {
+          "mean": 0.7952748062816436,
+          "ci95": [
+            0.7725799390765282,
+            0.8161332431512847
+          ]
+        },
+        "vs_base": {
+          "mean": -0.025149440799868777,
+          "ci95": [
+            -0.035519019016486755,
+            -0.01597883396687693
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.049117635454059665,
+          "ci95": [
+            -0.06209826278520546,
+            -0.03787830627277264
+          ]
+        }
+      },
+      "legacy_unscaled_proxy": {
+        "key": "control::legacy_temperature_proxy",
+        "coverage": {
+          "mean": 0.814926960505545,
+          "ci95": [
+            0.7958208837003137,
+            0.83241312832882
+          ]
+        },
+        "vs_base": {
+          "mean": -0.005497286575967252,
+          "ci95": [
+            -0.011453881287007984,
+            4.7348016127155e-05
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.029465481230158137,
+          "ci95": [
+            -0.03906955084420068,
+            -0.020352893616622066
+          ]
+        }
+      },
+      "legacy_unscaled_residual": {
+        "key": "control::legacy_temperature_residual",
+        "coverage": {
+          "mean": 0.7721337514619032,
+          "ci95": [
+            0.7467784480269377,
+            0.7946772772197922
+          ]
+        },
+        "vs_base": {
+          "mean": -0.04829049561960914,
+          "ci95": [
+            -0.05976399089048333,
+            -0.03788085589465319
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.07225869027380002,
+          "ci95": [
+            -0.08722636605122626,
+            -0.05879810762021374
+          ]
+        }
+      }
+    },
+    "primary_selected_vs_original": {
+      "mean": 0.02388046454715555,
+      "ci_bonferroni_six": [
+        0.013445475821498819,
+        0.03477522359098496
+      ]
+    },
+    "primary_selected_vs_optimized_proxy": {
+      "mean": -8.773010703533375e-05,
+      "ci_bonferroni_six": [
+        -0.0036689931806166156,
+        0.00328739914551287
+      ]
+    },
+    "signed_exchange_top3_rejection_weighted": {
+      "gain_proxy_raw_over_Z": 0.022233524982081296,
+      "incoming_error_over_Z": 0.003323723915978532,
+      "outgoing_error_over_Z": -0.08467476464228081,
+      "total_error_over_Z": 0.08799848855825934,
+      "true_gain_over_Z": -0.06576496365913462,
+      "deleted_out_over_Z": 0.07841165676154815,
+      "win_event_fraction": 0.28756841208155987,
+      "loss_event_fraction": 0.23153519005906625,
+      "mean_gain_on_winning_events": 0.05607705734931051,
+      "mean_gain_on_losing_events": -0.3536868644944569
+    },
+    "method": "20,000 paired prompt bootstrap; six primary contrasts use 99.1667% Bonferroni intervals; pointwise 95% ablation intervals are secondary."
+  },
+  "1.0": {
+    "ablation": {
+      "original_proxy": {
+        "key": "policy::proxy__topm__original",
+        "coverage": {
+          "mean": 0.6503938159762153,
+          "ci95": [
+            0.6312629913260834,
+            0.6694738067879927
+          ]
+        },
+        "vs_base": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.016470672178028386,
+          "ci95": [
+            -0.0224288696366527,
+            -0.011033687142242135
+          ]
+        }
+      },
+      "original_residual": {
+        "key": "policy::residual__topm__original",
+        "coverage": {
+          "mean": 0.617616916635068,
+          "ci95": [
+            0.6004268647154549,
+            0.6348246158406778
+          ]
+        },
+        "vs_base": {
+          "mean": -0.03277689934114725,
+          "ci95": [
+            -0.04282932493316344,
+            -0.023522950330622225
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.04924757151917564,
+          "ci95": [
+            -0.060031070893349574,
+            -0.03900392681542354
+          ]
+        }
+      },
+      "full_only": {
+        "key": "policy::proxy__full__original",
+        "coverage": {
+          "mean": 0.6545179585364337,
+          "ci95": [
+            0.6353663303609821,
+            0.6735343327121817
+          ]
+        },
+        "vs_base": {
+          "mean": 0.0041241425602185095,
+          "ci95": [
+            0.0017481808790166915,
+            0.007062715553624839
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.012346529617809878,
+          "ci95": [
+            -0.018506292671017083,
+            -0.006746996197285682
+          ]
+        }
+      },
+      "hazard_only": {
+        "key": "policy::proxy__topm__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6665101291539202,
+          "ci95": [
+            0.647498126631935,
+            0.6853573517919769
+          ]
+        },
+        "vs_base": {
+          "mean": 0.016116313177705007,
+          "ci95": [
+            0.010992115534647318,
+            0.021813238449981485
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.00035435900032337934,
+          "ci95": [
+            -0.0024910778861675716,
+            0.0021389191269653696
+          ]
+        }
+      },
+      "allocation_only": {
+        "key": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6668644881542436,
+          "ci95": [
+            0.6479858741167203,
+            0.685168604571306
+          ]
+        },
+        "vs_base": {
+          "mean": 0.016470672178028386,
+          "ci95": [
+            0.011033687142242135,
+            0.0224288696366527
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "source_only": {
+        "key": "policy::complement_power0.5__topm__original",
+        "coverage": {
+          "mean": 0.6512800067535756,
+          "ci95": [
+            0.632148929698528,
+            0.670208682544364
+          ]
+        },
+        "vs_base": {
+          "mean": 0.0008861907773603245,
+          "ci95": [
+            -0.00020831372275781308,
+            0.0020636281487014414
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.015584481400668062,
+          "ci95": [
+            -0.021581676031738148,
+            -0.0099612998159776
+          ]
+        }
+      },
+      "source_plus_full": {
+        "key": "policy::complement_power0.5__full__original",
+        "coverage": {
+          "mean": 0.6548912504334486,
+          "ci95": [
+            0.636112195387984,
+            0.6735285867967282
+          ]
+        },
+        "vs_base": {
+          "mean": 0.004497434457233451,
+          "ci95": [
+            0.0023961224986999395,
+            0.0068582733447301045
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.011973237720794937,
+          "ci95": [
+            -0.018025885787612033,
+            -0.006369843593910294
+          ]
+        }
+      },
+      "source_plus_hazard": {
+        "key": "policy::complement_power0.5__topm__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6665604380761438,
+          "ci95": [
+            0.6479570217472266,
+            0.6852078684950718
+          ]
+        },
+        "vs_base": {
+          "mean": 0.01616662209992856,
+          "ci95": [
+            0.011025770830752145,
+            0.021820815270889204
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.0003040500780998283,
+          "ci95": [
+            -0.0031230782762618286,
+            0.0027250291702458134
+          ]
+        }
+      },
+      "selected": {
+        "key": "policy::complement_power0.5__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6681173368048446,
+          "ci95": [
+            0.6491687853429219,
+            0.6865570278058674
+          ]
+        },
+        "vs_base": {
+          "mean": 0.017723520828629484,
+          "ci95": [
+            0.01218862865819113,
+            0.023647263437149194
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": 0.0012528486506010975,
+          "ci95": [
+            0.00046449173534283256,
+            0.002091814662181514
+          ]
+        }
+      },
+      "optimized_proxy": {
+        "key": "policy::proxy__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6668644881542436,
+          "ci95": [
+            0.6479858741167203,
+            0.685168604571306
+          ]
+        },
+        "vs_base": {
+          "mean": 0.016470672178028386,
+          "ci95": [
+            0.011033687142242135,
+            0.0224288696366527
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "optimized_residual": {
+        "key": "policy::residual__full__expected_mix0.25",
+        "coverage": {
+          "mean": 0.6286799850919718,
+          "ci95": [
+            0.6119772372267576,
+            0.6454112639207569
+          ]
+        },
+        "vs_base": {
+          "mean": -0.021713830884243435,
+          "ci95": [
+            -0.03200465192412133,
+            -0.011879396649623293
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.03818450306227182,
+          "ci95": [
+            -0.04806087534258356,
+            -0.02862855328574472
+          ]
+        }
+      },
+      "legacy_unscaled_proxy": {
+        "key": "control::legacy_temperature_proxy",
+        "coverage": {
+          "mean": 0.6503938160215815,
+          "ci95": [
+            0.6312629897845908,
+            0.6694738110837838
+          ]
+        },
+        "vs_base": {
+          "mean": 4.536628538109872e-11,
+          "ci95": [
+            -6.875223276514113e-09,
+            6.950637629040205e-09
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.016470672132662102,
+          "ci95": [
+            -0.02242887313470249,
+            -0.011033685784490387
+          ]
+        }
+      },
+      "legacy_unscaled_residual": {
+        "key": "control::legacy_temperature_residual",
+        "coverage": {
+          "mean": 0.6176169135918219,
+          "ci95": [
+            0.6004268621327357,
+            0.6348246121779084
+          ]
+        },
+        "vs_base": {
+          "mean": -0.032776902384393215,
+          "ci95": [
+            -0.04282932768564046,
+            -0.023522950428802557
+          ]
+        },
+        "vs_identical_proxy_allocation": {
+          "mean": -0.049247574562421605,
+          "ci95": [
+            -0.06003107469106199,
+            -0.03900393549894951
+          ]
+        }
+      }
+    },
+    "primary_selected_vs_original": {
+      "mean": 0.017723520828629484,
+      "ci_bonferroni_six": [
+        0.010241220079834365,
+        0.025693580539806797
+      ]
+    },
+    "primary_selected_vs_optimized_proxy": {
+      "mean": 0.0012528486506010975,
+      "ci_bonferroni_six": [
+        0.0001860120967945908,
+        0.002445715640567507
+      ]
+    },
+    "signed_exchange_top3_rejection_weighted": {
+      "gain_proxy_raw_over_Z": 0.03834122314294844,
+      "incoming_error_over_Z": 0.009403636836912765,
+      "outgoing_error_over_Z": -0.06421998750765126,
+      "total_error_over_Z": 0.07362362434456403,
+      "true_gain_over_Z": -0.035282401218758724,
+      "deleted_out_over_Z": 0.05386577619519136,
+      "win_event_fraction": 0.35609191142807217,
+      "loss_event_fraction": 0.2456349059205568,
+      "mean_gain_on_winning_events": 0.07388932126497191,
+      "mean_gain_on_losing_events": -0.2507534183035967
+    },
+    "method": "20,000 paired prompt bootstrap; six primary contrasts use 99.1667% Bonferroni intervals; pointwise 95% ablation intervals are secondary."
+  }
+}

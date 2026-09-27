@@ -1,0 +1,110 @@
+{
+  "passed": true,
+  "complete": false,
+  "total_turns": 2240,
+  "jobs": [
+    {
+      "seed": 1,
+      "policy": "q_path",
+      "questions": 480,
+      "turns": 560,
+      "records_sha256": "7c4dcc5508afe35830234c5995828e528ab57f460943053b1bfc992f4a06f376",
+      "stop_counts": {
+        "cap": 491,
+        "eos": 69
+      },
+      "input_max": 1733,
+      "output_min": 1,
+      "output_median": 128.0,
+      "output_max": 128,
+      "immediate_eos": 16,
+      "clipped_final_events": 319,
+      "verification_events": 23469,
+      "cache_hit_events": 19381,
+      "wall_s": 1008.9469048976898,
+      "resolved_config": "[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=22, draft_fan_out=3, proxy_fan_out=3, K1=4, K2=2, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03",
+      "p1_context_shapes": "[DUET tree] warmed P1 executors contexts={3: [1, 2, 3, 4, 5, 6, 7, 8], 7: [1, 2, 3, 4, 5, 6, 7, 8], 9: [1, 2, 3, 4, 5, 6, 7, 8]} round_widths={3: (9, 9, 9, 9), 7: (21, 15, 15, 15), 9: (27, 15, 15, 15)}"
+    },
+    {
+      "seed": 1,
+      "policy": "phase_sibling_q_bin",
+      "questions": 480,
+      "turns": 560,
+      "records_sha256": "3a8240e5c7415c4c2b29351143c32125f8e4a9ee3aa4d934b5dda567ef9546ae",
+      "stop_counts": {
+        "cap": 477,
+        "eos": 83
+      },
+      "input_max": 1733,
+      "output_min": 1,
+      "output_median": 128.0,
+      "output_max": 128,
+      "immediate_eos": 20,
+      "clipped_final_events": 331,
+      "verification_events": 22727,
+      "cache_hit_events": 18544,
+      "wall_s": 990.9028630256653,
+      "resolved_config": "[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=22, draft_fan_out=3, proxy_fan_out=3, K1=4, K2=2, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03",
+      "p1_context_shapes": "[DUET tree] warmed P1 executors contexts={3: [1, 2, 3, 4, 5, 6, 7, 8], 7: [1, 2, 3, 4, 5, 6, 7, 8], 9: [1, 2, 3, 4, 5, 6, 7, 8]} round_widths={3: (9, 9, 9, 9), 7: (21, 15, 15, 15), 9: (27, 15, 15, 15)}"
+    },
+    {
+      "seed": 42,
+      "policy": "phase_sibling_q_bin",
+      "questions": 480,
+      "turns": 560,
+      "records_sha256": "99709a1ec0f66ea4f62f7fcd1d5e2a0b4dac4d7caf29276fadf323ff9f5cee6a",
+      "stop_counts": {
+        "cap": 490,
+        "eos": 70
+      },
+      "input_max": 1733,
+      "output_min": 1,
+      "output_median": 128.0,
+      "output_max": 128,
+      "immediate_eos": 12,
+      "clipped_final_events": 358,
+      "verification_events": 22623,
+      "cache_hit_events": 18590,
+      "wall_s": 988.9445762634277,
+      "resolved_config": "[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=22, draft_fan_out=3, proxy_fan_out=3, K1=4, K2=2, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03",
+      "p1_context_shapes": "[DUET tree] warmed P1 executors contexts={3: [1, 2, 3, 4, 5, 6, 7, 8], 7: [1, 2, 3, 4, 5, 6, 7, 8], 9: [1, 2, 3, 4, 5, 6, 7, 8]} round_widths={3: (9, 9, 9, 9), 7: (21, 15, 15, 15), 9: (27, 15, 15, 15)}"
+    },
+    {
+      "seed": 42,
+      "policy": "q_path",
+      "questions": 480,
+      "turns": 560,
+      "records_sha256": "5b9b7cfa419d2a286ba4eb13adb1711018ce9de0a154568027e47ada204c6e01",
+      "stop_counts": {
+        "cap": 480,
+        "eos": 80
+      },
+      "input_max": 1733,
+      "output_min": 1,
+      "output_median": 128.0,
+      "output_max": 128,
+      "immediate_eos": 13,
+      "clipped_final_events": 334,
+      "verification_events": 23015,
+      "cache_hit_events": 19111,
+      "wall_s": 994.6131148338318,
+      "resolved_config": "[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=22, draft_fan_out=3, proxy_fan_out=3, K1=4, K2=2, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03",
+      "p1_context_shapes": "[DUET tree] warmed P1 executors contexts={3: [1, 2, 3, 4, 5, 6, 7, 8], 7: [1, 2, 3, 4, 5, 6, 7, 8], 9: [1, 2, 3, 4, 5, 6, 7, 8]} round_widths={3: (9, 9, 9, 9), 7: (21, 15, 15, 15), 9: (27, 15, 15, 15)}"
+    }
+  ],
+  "checks": [
+    "exact full corpus/order",
+    "no input truncation",
+    "actual multi-turn history",
+    "same command/environment except policy, seed and process coordinates",
+    "frozen calibration and correctly installed policy hook",
+    "natural EOS/cap",
+    "output and suffix accounting",
+    "AL units, phase and node budgets",
+    "raw data checksums"
+  ],
+  "limits": [
+    "This is an execution/measurement audit, not an end-to-end distribution-preservation proof.",
+    "Forward counts and generated nodes for every unhit root were not instrumented."
+  ]
+}

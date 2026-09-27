@@ -1,0 +1,63 @@
+{
+  "recorded_utc": "2026-09-10T11:07:02.811804+00:00",
+  "host": "eslab19",
+  "python": "3.12.7",
+  "torch": "2.8.0+cu128",
+  "numpy": "2.3.3",
+  "git_head": "a82f7d24fb36827a9a81a3567f344dccb71f193e",
+  "code_sha256": {
+    "ssd/ssd/engine/helpers/entropy_probe.py": "f7f0ea6b67c5101df57e24964d2d71216fbbad6b4815e5397776e5395728060b",
+    "ssd/ssd/engine/verifier.py": "27200eaeb20c38ee92f246861daea58a011b7d77234ac4f1b147e4646c61ecaa",
+    "ssd/ssd/engine/model_runner.py": "1e4942fa6bfdb9e39ed96e3cf82432f0eb8c14d595982cdceb83eed8baa74ae5",
+    "ssd/ssd/engine/helpers/cudagraph_helpers.py": "775713f0ba5aa1fbe3dbd70a6887712e7f897203edee7ec262a4dc0565a8a37a",
+    "ssd/ssd/models/llama3.py": "c95e9458ffe2e0644679443913f8e97baa5c4a01dcd7896a59cf3d129b51e303",
+    "ssd/ssd/engine/llm_engine.py": "3e18bf4b1b49427ff0dda11fe7fb39e48044a97d2ebc6232d41ef45f7db798d1",
+    "ssd/experiments/proxy_source_ablation/probe_entropy_20260910/run.py": "30b908fa2336d49bce3e569f24c24d81890b9a3a530ecd8e15fea8f8bfeac249"
+  },
+  "cuda_visible_devices": "2,3,4,5,6",
+  "datasets": {
+    "alpaca": {
+      "path": "/home/chokwans99/ssd_datasets/processed_datasets/alpaca/alpaca_data_10000.jsonl",
+      "resolved": "/data/ssd_datasets/processed_datasets/alpaca/alpaca_data_100.jsonl",
+      "sha256": "16bd6c6543b536daf88501ff1b4b9ba19f570a43b9bc2a860071e85b9ee3e8fb",
+      "rows": 100
+    },
+    "c4": {
+      "path": "/home/chokwans99/ssd_datasets/processed_datasets/c4/c4_data_10000.jsonl",
+      "resolved": "/home/chokwans99/ssd_datasets/processed_datasets/c4/c4_data_10000.jsonl",
+      "sha256": "fca555a0773d40f6f34c08661d8ad79454c74d43107dd12a32b6f8c760b6daae",
+      "rows": 95
+    },
+    "gsm": {
+      "path": "/home/chokwans99/ssd_datasets/processed_datasets/gsm8k/gsm8k_data_10000.jsonl",
+      "resolved": "/data/ssd_datasets/processed_datasets/gsm8k/gsm8k_data_100.jsonl",
+      "sha256": "225ccd7121b68deb153c2928900351264c386504801a2fa9603d931ce9c44f83",
+      "rows": 100
+    },
+    "humaneval": {
+      "path": "/home/chokwans99/ssd_datasets/processed_datasets/humaneval/humaneval_data_10000.jsonl",
+      "resolved": "/data/ssd_datasets/processed_datasets/humaneval/humaneval_data_100.jsonl",
+      "sha256": "86198e7d6d143079393bdae63aae5321d5ffe7135b01178fa2f6af47ef9db577",
+      "rows": 100
+    }
+  },
+  "only_proxy": true,
+  "temperature": 1.0,
+  "numseqs": 32,
+  "output_len": 256,
+  "seeds": [
+    42,
+    123,
+    7
+  ],
+  "finished_utc": "2026-09-10T11:35:29.845370+00:00",
+  "analysis_sha256": "c9530e7337855e5705378845bd1a21d89afa654df43f9d352e4b1ee91e0116e4",
+  "totals": {
+    "runs": 12,
+    "sequences": 384,
+    "steps": 34702,
+    "rows": 173510,
+    "reject_positions": 138808
+  },
+  "report": "results/residial_dist/entropy/REPORT.md"
+}

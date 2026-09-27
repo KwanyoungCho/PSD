@@ -1,0 +1,278 @@
+{
+  "rows": [
+    {
+      "tag": "chain_e56_k4_2_w15",
+      "config": {
+        "tag": "chain_e56_k4_2_w15",
+        "exit": 56,
+        "k1": 4,
+        "k2": 2,
+        "budget": 15,
+        "mode": "chain",
+        "n1": 12,
+        "v1": 8,
+        "n2": 8,
+        "v2": 8,
+        "candidate": "legacy"
+      },
+      "tps": 92.1536899126647,
+      "per_seed_tps": [
+        93.77162069913706,
+        90.59064354464377
+      ],
+      "tokens": 8192,
+      "wall_s": 88.89497542381287,
+      "phase_probability": [
+        0.11836007130124777,
+        0.663458110516934,
+        0.21818181818181817
+      ],
+      "accepted_length": [
+        1.141566265060241,
+        2.3471252015045674,
+        1.1062091503267975
+      ],
+      "gain_vs_default_pct": 42.1879784858975,
+      "gain_vs_default_ci95_pct": [
+        36.600358101773864,
+        47.51654793024231
+      ],
+      "dataset_tps": {
+        "alpaca": 84.39838727700443,
+        "c4": 85.64446627547485,
+        "gsm": 94.63127663521668,
+        "humaneval": 107.3690179502366
+      }
+    },
+    {
+      "tag": "chain_e40_k4_2_w15",
+      "config": {
+        "tag": "chain_e40_k4_2_w15",
+        "exit": 40,
+        "k1": 4,
+        "k2": 2,
+        "budget": 15,
+        "mode": "chain",
+        "n1": 12,
+        "v1": 8,
+        "n2": 8,
+        "v2": 8,
+        "candidate": "legacy"
+      },
+      "tps": 90.24373694701143,
+      "per_seed_tps": [
+        86.6706260881459,
+        94.12412826244697
+      ],
+      "tokens": 8192,
+      "wall_s": 90.77638268470764,
+      "phase_probability": [
+        0.20967741935483872,
+        0.635343618513324,
+        0.15497896213183732
+      ],
+      "accepted_length": [
+        1.068561872909699,
+        2.3454746136865343,
+        1.1244343891402715
+      ],
+      "gain_vs_default_pct": 39.241028109339005,
+      "gain_vs_default_ci95_pct": [
+        31.256286841139683,
+        45.81065424438242
+      ],
+      "dataset_tps": {
+        "alpaca": 89.9350339755473,
+        "c4": 80.96837511427562,
+        "gsm": 83.39195821633048,
+        "humaneval": 112.82602624918145
+      }
+    },
+    {
+      "tag": "chain_e72_k4_2_w15",
+      "config": {
+        "tag": "chain_e72_k4_2_w15",
+        "exit": 72,
+        "k1": 4,
+        "k2": 2,
+        "budget": 15,
+        "mode": "chain",
+        "n1": 12,
+        "v1": 8,
+        "n2": 8,
+        "v2": 8,
+        "candidate": "legacy"
+      },
+      "tps": 88.22568814358944,
+      "per_seed_tps": [
+        89.29096454159674,
+        87.1855304046222
+      ],
+      "tokens": 8192,
+      "wall_s": 92.85277533531189,
+      "phase_probability": [
+        0.0902281239359891,
+        0.6373850868232891,
+        0.27238678924072185
+      ],
+      "accepted_length": [
+        1.0981132075471698,
+        2.1875,
+        1.13625
+      ],
+      "gain_vs_default_pct": 36.12729191368154,
+      "gain_vs_default_ci95_pct": [
+        32.34888984945014,
+        40.08607084797711
+      ],
+      "dataset_tps": {
+        "alpaca": 80.04762144742409,
+        "c4": 83.28760003217505,
+        "gsm": 89.15533439421031,
+        "humaneval": 103.92053036119482
+      }
+    },
+    {
+      "tag": "chain_e56_k8_4_w15",
+      "config": {
+        "tag": "chain_e56_k8_4_w15",
+        "exit": 56,
+        "k1": 8,
+        "k2": 4,
+        "budget": 15,
+        "mode": "chain",
+        "n1": 12,
+        "v1": 8,
+        "n2": 8,
+        "v2": 8,
+        "candidate": "legacy"
+      },
+      "tps": 64.81116821124557,
+      "per_seed_tps": [
+        63.75316368299279,
+        65.90488119281102
+      ],
+      "tokens": 8192,
+      "wall_s": 126.39796853065491,
+      "phase_probability": [
+        0.19239274657231314,
+        0.5908889871738169,
+        0.21671826625386997
+      ],
+      "accepted_length": [
+        1.6597701149425288,
+        3.3233532934131738,
+        1.7061224489795919
+      ],
+      "gain_vs_default_pct": 0.0,
+      "gain_vs_default_ci95_pct": [
+        0.0,
+        0.0
+      ],
+      "dataset_tps": {
+        "alpaca": 54.28905983184066,
+        "c4": 55.94477766828988,
+        "gsm": 67.19255337511235,
+        "humaneval": 94.87243279344176
+      }
+    }
+  ],
+  "secondary_selected": "chain_e56_k4_2_w15",
+  "best_observed": "chain_e56_k4_2_w15",
+  "selected_pairwise_comparisons": [
+    {
+      "reference": "chain_e40_k4_2_w15",
+      "selected_gain_pct": 2.116438248534336,
+      "selected_gain_ci95_pct": [
+        -4.905278829315576,
+        9.467712942569719
+      ]
+    },
+    {
+      "reference": "chain_e72_k4_2_w15",
+      "selected_gain_pct": 4.452220041267729,
+      "selected_gain_ci95_pct": [
+        0.6680563797173902,
+        8.238136490015261
+      ]
+    },
+    {
+      "reference": "chain_e56_k8_4_w15",
+      "selected_gain_pct": 42.1879784858975,
+      "selected_gain_ci95_pct": [
+        36.600358101773864,
+        47.51654793024231
+      ]
+    }
+  ],
+  "selected_regret_pct": 0.0,
+  "selected_vs_best_ci95_pct": [
+    0.0,
+    0.0
+  ],
+  "calibration_plus_selection_cost_s": 632.5045454502106,
+  "selection_cost_s": 356.96922183036804,
+  "amortization_tokens_vs_default": 138161.69876272668,
+  "validation_oracle": "chain_e56_k4_2_w15",
+  "selected_vs_validation_oracle_pct": 0.0,
+  "same_configuration_as_validation_oracle": true,
+  "selected_vs_validation_oracle_ci95_pct": [
+    0.0,
+    0.0
+  ],
+  "validation_exhaustive_cost_s": 1312.3934211730957,
+  "recommended_recipe_config_count": 11,
+  "validation_grid_config_count": 19,
+  "inference_count": 128,
+  "uncertainty": "4000 dataset-stratified paired prompt bootstrap; both seeds retained together. Best observed arm is not a global optimum."
+}
+[
+  {
+    "stage": "calibration",
+    "samples": 47,
+    "actual_mean": 2.9148936170212765,
+    "expected_mean": 2.9015823954613276,
+    "empirical_actual_variance": 2.1629696695337253,
+    "empirical_expected_variance": 1.6211142502699885,
+    "conditional_variance_mean": 0.5800637565466265,
+    "observed_residual_mse": 0.4784734711254078,
+    "prompt_mean_actual_minus_expected": 0.048318503066606365,
+    "paired_prompt_residual_ci95": [
+      -0.0700670232483743,
+      0.16670402938158704
+    ]
+  },
+  {
+    "stage": "validation",
+    "samples": 104,
+    "actual_mean": 2.6826923076923075,
+    "expected_mean": 2.6236844567530686,
+    "empirical_actual_variance": 2.2550850591715976,
+    "empirical_expected_variance": 1.932382640590487,
+    "conditional_variance_mean": 0.35021769458618446,
+    "observed_residual_mse": 0.41335348517877535,
+    "prompt_mean_actual_minus_expected": 0.06541590369679942,
+    "paired_prompt_residual_ci95": [
+      -0.049561104334071335,
+      0.1877426939316023
+    ]
+  }
+]
+{
+  "status": "passed",
+  "complete_runs": 54,
+  "distinct_prompts": 56,
+  "checks": [
+    "immutable model/plan/adapter benchmark source",
+    "dataset disjointness",
+    "actual output counts",
+    "phase reward accounting identity",
+    "metric alignment",
+    "config domain rejection",
+    "generated/verified tree node separation",
+    "miss reward counterexample",
+    "marginal goodput identity",
+    "variable-length replay warmup exclusion and exact-target residual oracle"
+  ]
+}
+All requested feasibility artifacts generated.

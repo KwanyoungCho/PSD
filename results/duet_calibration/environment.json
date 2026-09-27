@@ -1,0 +1,35 @@
+{
+  "python": "3.12.7",
+  "platform": "Linux-5.15.0-105-generic-x86_64-with-glibc2.35",
+  "packages": {
+    "torch": "2.8.0",
+    "transformers": "4.57.1",
+    "flashinfer-python": "0.5.2",
+    "numpy": "2.3.3",
+    "matplotlib": "3.11.1"
+  },
+  "git_commit": "a82f7d24fb36827a9a81a3567f344dccb71f193e",
+  "preexisting_modified_production": {
+    "ssd/bench/bench.py": "1a1e710638b803412da5a0bcc54ffbdd07bd391ffb95f8aab255a810e0dd4a84",
+    "ssd/env.sh": "654f5e5f6a7c63ee16c4915bdd24d286465b67e15fa68f1963ac3673f3bc2111",
+    "ssd/ssd/config.py": "33c59ad57ee1804e02c2e64758a65ed4284360133d5c6fd9fe852901fb92d7cb",
+    "ssd/ssd/engine/helpers/cudagraph_helpers.py": "775713f0ba5aa1fbe3dbd70a6887712e7f897203edee7ec262a4dc0565a8a37a",
+    "ssd/ssd/engine/helpers/p2_tree.py": "5e5d33ef918e2a074e7a8537ea1b6078a68366047f738adda34ed036e598ddc0",
+    "ssd/ssd/engine/llm_engine.py": "3e18bf4b1b49427ff0dda11fe7fb39e48044a97d2ebc6232d41ef45f7db798d1",
+    "ssd/ssd/engine/model_runner.py": "1e4942fa6bfdb9e39ed96e3cf82432f0eb8c14d595982cdceb83eed8baa74ae5",
+    "ssd/ssd/engine/verifier.py": "60894f8a53c648c1ef9d62e316ff3e90b86eef750f81febd947313cd7df02416",
+    "ssd/ssd/models/llama3.py": "c95e9458ffe2e0644679443913f8e97baa5c4a01dcd7896a59cf3d129b51e303"
+  },
+  "production_diff_sha256": "b9add6d7440cd5030e385d4d9d23efa4054ba61cd245cd4b64bc4c7c1c9af2f6",
+  "gpus": [
+    "0, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02",
+    "1, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02",
+    "2, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02",
+    "3, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02",
+    "4, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02",
+    "5, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02",
+    "6, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02",
+    "7, NVIDIA GeForce RTX 4090, 24564 MiB, 580.173.02"
+  ],
+  "note": "Recorded during this campaign. Production modifications were already present at task start; this task edits results only. GPUs 3-7 used; GPUs 0-1 belong to other jobs."
+}

@@ -1,0 +1,109 @@
+{
+  "record": {
+    "dataset": "alpaca",
+    "seed": 42,
+    "numseqs": 2,
+    "output_len": 48,
+    "elapsed_s": 39.1586058139801,
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD/ssd/bench/bench.py",
+      "--llama",
+      "--size",
+      "70",
+      "--gpus",
+      "5",
+      "--model_path",
+      "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+      "--draft_path",
+      "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+      "--quant_awq",
+      "--quant_awq_artifact",
+      "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+      "--alpaca",
+      "--numseqs",
+      "2",
+      "--output_len",
+      "48",
+      "--b",
+      "1",
+      "--temp",
+      "1.0",
+      "--seed",
+      "42",
+      "--async",
+      "--spec",
+      "--duet",
+      "--duet_exit_layer",
+      "56",
+      "--duet_phase1_k",
+      "8",
+      "--duet_phase2_k",
+      "4",
+      "--duet_draft_fan_out",
+      "3",
+      "--duet_p2_budget",
+      "15",
+      "--duet_p1_tree_policy",
+      "off",
+      "--duet_p2_tree_policy",
+      "off",
+      "--duet_only_proxy",
+      "--example"
+    ],
+    "n_steps": 43,
+    "n_samples": 6,
+    "n_rows": 30,
+    "manifest": "alpaca_seed42.json",
+    "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+  },
+  "probe": {
+    "schema": "duet_full_distribution_v1",
+    "layers": [
+      56,
+      79
+    ],
+    "exit_layer": 56,
+    "temperature": 1.0,
+    "stride": 8,
+    "n_steps": 43,
+    "n_samples": 6,
+    "n_rows": 30,
+    "seq_steps": {
+      "1": 21,
+      "2": 22
+    },
+    "chunks": [
+      {
+        "file": "alpaca_seed42/chunk_0000.npz",
+        "rows": 30
+      }
+    ],
+    "max_prob_sum_error": 2.384185791015625e-07,
+    "sampling": "per-sequence local verification step 0, stride, 2*stride, ...",
+    "dtype": "float32; bonus draft row zero and y=-1"
+  },
+  "policies": {
+    "taus": [
+      0.65,
+      0.8,
+      0.9,
+      1.0,
+      1.1,
+      1.25,
+      1.5
+    ],
+    "lambdas": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "main_topm": 17,
+    "budget": 15
+  },
+  "train": "seq_id 1..16 in every dataset; same prompt split across seeds",
+  "test": "seq_id 17..32 in every dataset; never used to select hyperparameters"
+}

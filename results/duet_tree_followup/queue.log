@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD/results/duet_tree_followup/launch.py", line 122, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/chokwans99/PSD/results/duet_tree_followup/launch.py", line 109, in main
+    execute('smoke_'+policy,dict(seed=1,policy=policy),gpus,smoke=True,trace=True)
+  File "/home/chokwans99/PSD/results/duet_tree_followup/launch.py", line 89, in execute
+    if code:raise RuntimeError('Experiment failed; preserved log: '+str(dest/'run.log'))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Experiment failed; preserved log: /home/chokwans99/PSD/results/duet_tree_followup/runs/smoke_q_path/run.log

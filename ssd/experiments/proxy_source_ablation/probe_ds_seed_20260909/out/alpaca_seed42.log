@@ -1,0 +1,211 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 42
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+`torch_dtype` is deprecated! Use `dtype` instead!
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.90it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.89it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.60it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.17it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.24it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.59it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.16it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.23it/s]
+Loading model files: 100%|██████████| 1/1 [00:01<00:00,  1.59s/it]Loading model files: 100%|██████████| 1/1 [00:01<00:00,  1.59s/it]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET probe] 80 layers, rows=9, buffers=23.6MB
+[DUET] captured target chain proxy graphs (K=[4, 8], source=residual)
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=1.0 b=1
+============================================================
+Generating:   0%|          | 0/32 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+[DUET probe] tap check @layer=56 max|probe-engine|=0.000e+00 OK
+Generating:   3%|▎         | 1/32 [00:05<02:40,  5.18s/it]Generating:   6%|▋         | 2/32 [00:09<02:15,  4.53s/it]Generating:   9%|▉         | 3/32 [00:13<02:07,  4.40s/it]Generating:  12%|█▎        | 4/32 [00:16<01:50,  3.95s/it]Generating:  16%|█▌        | 5/32 [00:20<01:46,  3.93s/it]Generating:  19%|█▉        | 6/32 [00:24<01:42,  3.95s/it]Generating:  22%|██▏       | 7/32 [00:29<01:46,  4.26s/it]Generating:  25%|██▌       | 8/32 [00:33<01:42,  4.27s/it]Generating:  28%|██▊       | 9/32 [00:39<01:47,  4.67s/it]Generating:  31%|███▏      | 10/32 [00:44<01:43,  4.69s/it]Generating:  34%|███▍      | 11/32 [00:48<01:37,  4.63s/it]Generating:  38%|███▊      | 12/32 [00:52<01:28,  4.40s/it]Generating:  41%|████      | 13/32 [00:57<01:25,  4.51s/it]Generating:  44%|████▍     | 14/32 [01:01<01:20,  4.45s/it]Generating:  47%|████▋     | 15/32 [01:06<01:16,  4.52s/it]Generating:  50%|█████     | 16/32 [01:09<01:08,  4.25s/it]Generating:  53%|█████▎    | 17/32 [01:13<01:02,  4.19s/it]Generating:  56%|█████▋    | 18/32 [01:17<00:57,  4.11s/it]Generating:  59%|█████▉    | 19/32 [01:21<00:52,  4.07s/it]Generating:  62%|██████▎   | 20/32 [01:27<00:52,  4.40s/it]Generating:  66%|██████▌   | 21/32 [01:31<00:47,  4.34s/it]Generating:  69%|██████▉   | 22/32 [01:34<00:41,  4.11s/it]Generating:  72%|███████▏  | 23/32 [01:39<00:39,  4.34s/it]Generating:  75%|███████▌  | 24/32 [01:44<00:35,  4.48s/it]Generating:  78%|███████▊  | 25/32 [01:48<00:29,  4.27s/it]Generating:  81%|████████▏ | 26/32 [01:52<00:26,  4.40s/it]Generating:  84%|████████▍ | 27/32 [01:56<00:21,  4.26s/it]Generating:  88%|████████▊ | 28/32 [02:00<00:16,  4.21s/it]Generating:  91%|█████████ | 29/32 [02:04<00:12,  4.09s/it]Generating:  94%|█████████▍| 30/32 [02:09<00:08,  4.18s/it]Generating:  97%|█████████▋| 31/32 [02:13<00:04,  4.14s/it]Generating: 100%|██████████| 32/32 [02:17<00:00,  4.27s/it]Generating: 100%|██████████| 32/32 [02:17<00:00,  4.31s/it]
+Final Prefill Throughput: 392.85tok/s
+Final Decode Throughput: 60.44tok/s
+[metrics] Prefill tokens/time: 456 / 1.160744s
+[metrics] Decode tokens/time: 8251 / 136.515110s
+[metrics] Avg Tokens per step (incl recovery): 2.75
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.22 (denom=8)
+[metrics] Avg target time per full step (ms): 45.84
+[metrics] Avg target verify time (ms): 38.31
+[metrics] Avg Cache Hits: 0.58
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.584
+[metrics] Avg Phase 2 Accepted Len: 1.80
+[metrics] Avg Phase 2 Acceptance Ratio: 0.450
+[metrics] Avg Tokens per step on Cache Hit: 2.80
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.330
+  1: 0.189
+  2: 0.110
+  3: 0.094
+  4: 0.277
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.67
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 8192tok, Time: 137.81s, Total Throughput: 59.45tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Give three tips for staying healthy.'
+Generation: '\n2. Healthy living begins in the mind and the mind gives signals to the body. Your skin’s condition can tell a lot about how you are taking care of your health. What advice do you have for those who have dry and cracked skin?\nDrink more water and eat more vegetables and fruits.\n3. Who has inspired you?\nMy grandma: most of what I know about skin, I have learned from her. She passed away 3 years ago; she would have loved to see what I have achieved.\n4. You live a healthy and active lifestyle. What benefits do you experience from this?\nPhysically, I feel good and I basically don’t get sick – perhaps due to having a strong immune system.\nEmotionally and mentally, I enjoy a very positive outlook which encourages me to make positive choices, nurture good relationships and aim at achieving my goals.\n5. What are three habits that you would miss?\nGoing to bed early, meditating and drinking plenty of water.\n6. Do tell us about your travels and Skin Care Manager. What makes you tick, and what do you most enjoy about'
+----------------------------------------
+
+Prompt 2: 'What are the three primary colors?'
+Generation: '\nThe three primary colors, to a human, are red, green, and blue. When red, green, and blue light are combined in the right proportion, it makes white. These three colors can be used to make any color an artist might want.\nCole and Dylan Sprouse are twin actors. They played the role of Ben in the “Friends” television series. In “The Suite Life of Zack and Cody”, they played Cody; they were once again co-stars in the TV series -“The Suite Life on Deck” playing the role of Cameron.\nWhich NFL team was the first to sign an openly gay player?\nMichael Sam, openly gay college football All-American player signed a two-year deal with the St. Louis Rams as an outside linebacker. This signing with the team made him the first openly gay player in the NFL. Unfortunately, he was released by the Rams before the regular season began. Even though he was signed as a practice squad member by the Dallas Cowboys, he didn’t make the team; he had to leave the team when pre-season games were over.\nOn which famous Avenue can you find'
+----------------------------------------
+
+Prompt 3: 'Describe the structure of an atom.'
+Generation: ' Next, explain how this structure loads the atom with a net electric field and how it creates atomic energy wave wavelengths, explaining why atoms are 99.99% space. This question also relates to the origin of energy, but we can keep the focus of all questions to atomic energy.\nThis question can be answered with the help of the book "E=mCSquared: Rethinking Einstein\'s equation", available online and in print at Lulu.com.\nThis theory replaces many previous theories, including quantum mechanics and relativity which were originally created to explain matters about the structure of the atom, but this was also prior to the invention of super computers, many years ago.\nThese theories have resisted other explanations for some time based on what papaer work calculations could tackle, but these calculations can be done on even cell phones.\nThe new theory claims the loose gas of the atom emits an electro-magnetic field in an electron orbital such that the positive nucleus forms a horizon where the warped space of a vacuum energy potential is emitted.\nThese energies produce a predictable rotational unit and a magnetic field with a predictable'
+----------------------------------------
+
+Prompt 4: 'How can we reduce air pollution?'
+Generation: '\nAir pollution could take many more lives if you are unlucky enough to be breathing it in too. In fact, it is responsible for nine per cent of deaths worldwide and is the fifth largest mortality risk, according to the World Health Organization. Air pollution is a mix of particles in the atmosphere, such as ozone, nitrogen dioxide, and microscopic organisms like viruses and bacteria.\nWhen air pollution increases, healthy options within and outside the home are equally challenging to take.\nHow can we avoid excessive exposure?\nThe most important way is to avoid using petrol engines in the first place. Drive an electric car.\nSo what can you do? Most of us do not own electric cars yet such vehicles are still not the norm, and switching to public transport, cycling, or walking is one way of limiting exposure to the harmful gases produced.\nThere are other measures such as using filters in polluted areas, where air quality in cities is considerably worse than that in the surrounding countryside.\nFilter masks have become popular as a result and N95 particulate filters are available in many shapes and'
+----------------------------------------
+
+Prompt 5: 'Describe a time when you had to make a difficult decision.'
+Generation: '\nDiscuss a debate that you would like to be a part of.\nPretend you’ve invented a new board game. Tell us the name of it and describe how you play it.\nWrite about the personality traits that you admire in a teacher.\nDiscuss a gift you have received that you found to be annoying.\nIf you could have any superpower for a day, what would you have and why?\nWhat are the three most important qualities a leader should have and explain why.\nPretend you are a professional baseball player. Write about opening day.\nDescribe a movie that you would like to see over and over again. Explain why you like the movie.\nWhat’s worse, being stuck inside on a rainy day or being stuck outside in the rain?\nWhat hobby could offer a “cash payout” if you were really good at it and why?\nWhat would happen if bananas tasted like strawberries?\nIf you could name a star in the sky, what would you call it and why?\nIf you could create a new state, what would it be called and how would you design its flag?\nTell about'
+----------------------------------------
+
+Prompt 6: 'Identify the odd one out.\n\nTwitter, Instagram, Telegram'
+Generation: ", Snapchat.\n\n   - Snapchat\n\nA: **{{answers[9]}}**\n\n---\n\n## Advanced\n\nI can already subscribe to a channel. Is it, in any way, available to we, the users?\n\n`false`\n\nValues:\n\nTrue. By parsing the `rss` feed and then, using the `async/await` structure we can get a flow of new images\n\n`false`\n\nI am a big fan and I plan to add comments to the photos, such as `I love that`, `Oh, look!` or any other kinds of comments. Will I be able to do so?\n\n`false`\n\nValues:\n\nYes, users and owners are able to post comments. Comments are connected to the author's own feed. Owners are also able to publish news for the users with the same mechanics as they post photos, through pre-prepared files.\n\n`extra`\n\nWhich cell would you probably want to be? Relevance, popularity?\n\n`incorrect`\n\nValues:\n\nNone of those, `fan` is the"
+----------------------------------------
+
+Prompt 7: 'Explain why the following fraction is equivalent to 1/4\n\n4/16'
+Generation: "  How do I aprroach these problems. I need to know how to work it out so I can do more of them thanks\n\nAlso another problem I need to figure out I just don't know where to start do you simplify the one or the top or the bottom or both or how and why\n\n(2X-5) / (2X+3)\n\nComment: You might find answers to these questions in the frequently asked questions [here](http://math.stackexchange.com/help/review-whats-in-the-question-box).\n\nComment: You need to say what you are trying to do.  The first says it is 1/4, so you should provide an argument for that statement.  But you never say what quantity you are looking for.  The second is obviously not equal to 1/1, but you can multiply out the fraction and cancel common factors and see if a common factor can be tanken to 1.  The result should be 5/(2x+3), which is not 1/1.  But it as, if you solve for $ x, x^2-2x+3=(2x+3)(x-1"
+----------------------------------------
+
+Prompt 8: 'Write a short story in third person narration about a protagonist who has to make an important career decision.'
+Generation: '\nDraw a cartoon in which a non-Jew symbolically wants to wish a Jew a “Happy Purim” or seeks to learn something about the holiday.</s><s> I first heard about this book a few years ago from some people I knew. They were involved in the Enneagram, and while I didn’t pay much attention to the information at that time, it was around this time that I read Around the Year with Emmet Fox and first became interested in the practice of the Presence.\nFast forward about a year or so. I bought The Power of the Now by Eckhart Tolle. And I LOVED it! I grew in leaps and bounds in my personal growth practice. Others in my life noticed, too, and made many positive comments. Although I don’t now recall the details, I was re-introduced to The Book of Life – Daily Contemplations by Paul Ferrini at some point during that time. I picked up a used copy at a local book store. Because it’s set up by day, plus I buy and download so many books when they are on special, it took me awhile to get around to and read Ferrini’s.'
+----------------------------------------
+
+Prompt 9: 'Render a 3D model of a house'
+Generation: '?</s><s> Tough, uncomfortable conditions and rugged terrain are often a desirable part of attaining mountain objectives. The XA is an all mountain shoe with its eyes set squarely on the summit. Lightweight, agile and nimble, the XA combines the precision, protection and grip of a fell running shoe together with trail focused cushioning and support.</s><s> PYGMALION is the fourth full length album of Swedens most undisputed Witches Doom Metal act ZOLA JESUS. After literally stunning all those cds ever produced by Zero, following up to the self-confident Ov Pain LP (2nd pressing now available) on Rock Is Hell and the modern Doom Classic Strength of Thousands () will for sure set again a new satisfactory benchmark for the magical transcended Outsider from Sin City. Were here still speaking of Natalie Mering from Seattle trapped by her mystic and ritual Curse – barely existing by other whispers of unhallowed traded Darkness from Shells music… Miami, blood, hell, noise a lot of screams: N.'
+----------------------------------------
+
+Prompt 10: 'Evaluate this sentence for spelling and grammar mistakes\n\nHe finnished his meal and left the resturant'
+Generation: '\n\n##### Dummy model response (after post-processing with regex or stop string):\n`Easy peasy lemon squeezy. Model query 468.`\n\n##### Prompt:\n`#####`\\\n`You enter a wicked maze.  As the (P)layer, you seek the (m)cguffin.  Find it, if you dare.  If you seek help, simply ask for it.`\\\n`Action:`\\\n`#####`\\\n`Instructions unclear, which direction would you like to go?`\\\n`#####`\\\n`#   #`\\\n`## ##`\\\n`#Pm#`\\\n`# ###`\\\n`#   #`\\\n`#####`\\\n`Instructions unclear, which direction would you like to go?`\\\n`#####`\\\n`#   #`\\\n`## ##`\\\n`#Pm#`\\\n`# ###`\\\n`#   #`\\\n`#####`\\\n`Instructions unclear, which direction would you like to go?`\\\n'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 36.68

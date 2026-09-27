@@ -1,0 +1,211 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 271
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 13.85it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.22it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.86it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 10.78it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.01it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.01it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET probe] 1 layers, rows=9, buffers=0.3MB
+[DUET] captured target chain proxy graphs (K=[4, 8], source=residual)
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.5 b=1
+============================================================
+Generating:   0%|          | 0/96 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+[DUET probe] tap check @layer=56 max|probe-engine|=0.000e+00 OK
+Generating:   1%|          | 1/96 [00:11<18:12, 11.50s/it]Generating:   2%|▏         | 2/96 [00:14<09:54,  6.32s/it]Generating:   3%|▎         | 3/96 [00:17<07:23,  4.77s/it]Generating:   4%|▍         | 4/96 [00:19<05:42,  3.73s/it]Generating:   5%|▌         | 5/96 [00:21<04:56,  3.26s/it]Generating:   6%|▋         | 6/96 [00:24<04:44,  3.17s/it]Generating:   7%|▋         | 7/96 [00:27<04:32,  3.06s/it]Generating:   8%|▊         | 8/96 [00:29<04:02,  2.76s/it]Generating:   9%|▉         | 9/96 [00:31<03:39,  2.53s/it]Generating:  10%|█         | 10/96 [00:35<04:05,  2.85s/it]Generating:  11%|█▏        | 11/96 [00:37<03:52,  2.74s/it]Generating:  12%|█▎        | 12/96 [00:40<03:53,  2.77s/it]Generating:  14%|█▎        | 13/96 [00:43<04:03,  2.93s/it]Generating:  15%|█▍        | 14/96 [00:46<03:52,  2.83s/it]Generating:  16%|█▌        | 15/96 [00:48<03:41,  2.73s/it]Generating:  17%|█▋        | 16/96 [00:51<03:32,  2.65s/it]Generating:  18%|█▊        | 17/96 [00:53<03:07,  2.38s/it]Generating:  19%|█▉        | 18/96 [00:55<03:11,  2.45s/it]Generating:  20%|█▉        | 19/96 [00:57<03:00,  2.35s/it]Generating:  21%|██        | 20/96 [00:59<02:46,  2.19s/it]Generating:  22%|██▏       | 21/96 [01:03<03:18,  2.64s/it]Generating:  23%|██▎       | 22/96 [01:05<03:12,  2.61s/it]Generating:  24%|██▍       | 23/96 [01:08<03:15,  2.68s/it]Generating:  25%|██▌       | 24/96 [01:11<03:04,  2.57s/it]Generating:  26%|██▌       | 25/96 [01:14<03:19,  2.82s/it]Generating:  27%|██▋       | 26/96 [01:19<03:56,  3.39s/it]Generating:  28%|██▊       | 27/96 [01:21<03:40,  3.20s/it]Generating:  29%|██▉       | 28/96 [01:24<03:14,  2.87s/it]Generating:  30%|███       | 29/96 [01:26<03:01,  2.72s/it]Generating:  31%|███▏      | 30/96 [01:28<02:55,  2.66s/it]Generating:  32%|███▏      | 31/96 [01:32<03:02,  2.80s/it]Generating:  33%|███▎      | 32/96 [01:34<02:52,  2.69s/it]Generating:  34%|███▍      | 33/96 [01:37<03:01,  2.88s/it]Generating:  35%|███▌      | 34/96 [01:41<03:09,  3.05s/it]Generating:  36%|███▋      | 35/96 [01:44<03:00,  2.96s/it]Generating:  38%|███▊      | 36/96 [01:46<02:48,  2.82s/it]Generating:  39%|███▊      | 37/96 [01:49<02:51,  2.90s/it]Generating:  40%|███▉      | 38/96 [01:51<02:31,  2.61s/it]Generating:  41%|████      | 39/96 [01:54<02:39,  2.80s/it]Generating:  42%|████▏     | 40/96 [01:57<02:27,  2.64s/it]Generating:  43%|████▎     | 41/96 [02:00<02:33,  2.79s/it]Generating:  44%|████▍     | 42/96 [02:03<02:41,  3.00s/it]Generating:  45%|████▍     | 43/96 [02:06<02:29,  2.82s/it]Generating:  46%|████▌     | 44/96 [02:08<02:18,  2.67s/it]Generating:  47%|████▋     | 45/96 [02:11<02:16,  2.68s/it]Generating:  48%|████▊     | 46/96 [02:13<02:14,  2.69s/it]Generating:  49%|████▉     | 47/96 [02:16<02:14,  2.75s/it]Generating:  50%|█████     | 48/96 [02:18<02:05,  2.61s/it]Generating:  51%|█████     | 49/96 [02:21<02:02,  2.60s/it]Generating:  52%|█████▏    | 50/96 [02:24<02:09,  2.81s/it]Generating:  53%|█████▎    | 51/96 [02:27<01:58,  2.63s/it]Generating:  54%|█████▍    | 52/96 [02:29<01:46,  2.43s/it]Generating:  55%|█████▌    | 53/96 [02:32<01:53,  2.63s/it]Generating:  56%|█████▋    | 54/96 [02:35<01:55,  2.75s/it]Generating:  57%|█████▋    | 55/96 [02:37<01:52,  2.74s/it]Generating:  58%|█████▊    | 56/96 [02:40<01:43,  2.59s/it]Generating:  59%|█████▉    | 57/96 [02:43<01:51,  2.85s/it]Generating:  60%|██████    | 58/96 [02:46<01:46,  2.82s/it]Generating:  61%|██████▏   | 59/96 [02:49<01:52,  3.05s/it]Generating:  62%|██████▎   | 60/96 [02:51<01:38,  2.74s/it]Generating:  64%|██████▎   | 61/96 [02:54<01:38,  2.81s/it]Generating:  65%|██████▍   | 62/96 [02:57<01:37,  2.85s/it]Generating:  66%|██████▌   | 63/96 [03:00<01:33,  2.82s/it]Generating:  67%|██████▋   | 64/96 [03:02<01:23,  2.60s/it]Generating:  68%|██████▊   | 65/96 [03:05<01:18,  2.52s/it]Generating:  69%|██████▉   | 66/96 [03:08<01:26,  2.88s/it]Generating:  70%|██████▉   | 67/96 [03:11<01:22,  2.84s/it]Generating:  71%|███████   | 68/96 [03:13<01:13,  2.61s/it]Generating:  72%|███████▏  | 69/96 [03:15<01:03,  2.37s/it]Generating:  73%|███████▎  | 70/96 [03:18<01:08,  2.65s/it]Generating:  74%|███████▍  | 71/96 [03:21<01:06,  2.66s/it]Generating:  75%|███████▌  | 72/96 [03:23<00:59,  2.49s/it]Generating:  76%|███████▌  | 73/96 [03:25<00:56,  2.48s/it]Generating:  77%|███████▋  | 74/96 [03:28<00:52,  2.39s/it]Generating:  78%|███████▊  | 75/96 [03:30<00:50,  2.39s/it]Generating:  79%|███████▉  | 76/96 [03:32<00:45,  2.29s/it]Generating:  80%|████████  | 77/96 [03:35<00:46,  2.42s/it]Generating:  81%|████████▏ | 78/96 [03:37<00:44,  2.48s/it]Generating:  82%|████████▏ | 79/96 [03:40<00:42,  2.49s/it]Generating:  83%|████████▎ | 80/96 [03:42<00:38,  2.41s/it]Generating:  84%|████████▍ | 81/96 [03:44<00:34,  2.31s/it]Generating:  85%|████████▌ | 82/96 [03:48<00:37,  2.66s/it]Generating:  86%|████████▋ | 83/96 [03:51<00:36,  2.80s/it]Generating:  88%|████████▊ | 84/96 [03:54<00:33,  2.80s/it]Generating:  89%|████████▊ | 85/96 [03:56<00:29,  2.65s/it]Generating:  90%|████████▉ | 86/96 [03:58<00:24,  2.46s/it]Generating:  91%|█████████ | 87/96 [04:00<00:22,  2.45s/it]Generating:  92%|█████████▏| 88/96 [04:02<00:18,  2.34s/it]Generating:  93%|█████████▎| 89/96 [04:05<00:16,  2.31s/it]Generating:  94%|█████████▍| 90/96 [04:08<00:16,  2.72s/it]Generating:  95%|█████████▍| 91/96 [04:11<00:13,  2.74s/it]Generating:  96%|█████████▌| 92/96 [04:13<00:09,  2.49s/it]Generating:  97%|█████████▋| 93/96 [04:16<00:07,  2.66s/it]Generating:  98%|█████████▊| 94/96 [04:18<00:04,  2.50s/it]Generating:  99%|█████████▉| 95/96 [04:21<00:02,  2.71s/it]Generating: 100%|██████████| 96/96 [04:24<00:00,  2.63s/it]Generating: 100%|██████████| 96/96 [04:24<00:00,  2.75s/it]
+Final Prefill Throughput: 1898.01tok/s
+Final Decode Throughput: 96.85tok/s
+[metrics] Prefill tokens/time: 18186 / 9.581616s
+[metrics] Decode tokens/time: 24653 / 254.545182s
+[metrics] Avg Tokens per step (incl recovery): 3.46
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.31 (denom=8)
+[metrics] Avg target time per full step (ms): 37.04
+[metrics] Avg target verify time (ms): 26.71
+[metrics] Avg Cache Hits: 0.82
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.819
+[metrics] Avg Phase 2 Accepted Len: 2.58
+[metrics] Avg Phase 2 Acceptance Ratio: 0.645
+[metrics] Avg Tokens per step on Cache Hit: 3.58
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.198
+  1: 0.132
+  2: 0.085
+  3: 0.064
+  4: 0.521
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.91
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 24576tok, Time: 264.37s, Total Throughput: 92.96tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Transform the following sentence into the passive voice\n\nI bought a book'
+Generation: ' yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book yesterday.\n\nI bought a book'
+----------------------------------------
+
+Prompt 2: 'Expand your clientele, meet and network with potential business partners and make new business contacts.\nLearn from seasoned industry experts sharing their knowledge and experience on scaling up productivity, driving profitability and positioning SMEs for sustainability and global Competitiveness.\nReach new markets, improve your corporate identity, showcase and promote your products and services to visitors and buyers.\nExplore potential business deals and commercial partnerships with key trade, commerce and investment representatives from around the Country, the USA and the International Community.\nRaise brand awareness and generate new business opportunities across multiple market sectors.\nBooth prices starts from N50,000 for 2 days. Start Booking Now! Booth prices starts from N50,000 for 2 days. Start Booking Now!\nWe were privilege to meet with Ebeano Supermarket, Shoppers Delite and Just Rite; we took up from there and today we are on the shelf of these malls. The exhibition showed us the way to do business right and to do it effectively and efficiently. The exhibition also made room for us to meet various investors, who have tremendously been of help to the growth of Hyst Global Business Ltd.\nI exhibited at the African Food and Products Exhibition 2018. The Event was a wonderful one and an eye-opener for not just me but for other exhibitors and attendees. From the conference sessions, I acquired knowledge on exportation of goods. The AFPE 2018 was the door opener to my exquisite Zobo Business. I thought to myself that since the Exhibition was for African Food and Products, Zobo is an African drink so I decided to make and sell for the Exhibition. Just like magic, amidst my other products, the zobo made super sales. Now I have a branded Zobo drink.\nThe AFPE 2018 was great, it was an opportunity to have a firsthand understanding of the challenges facing SMEs, helping us know what products they needed and how they can take advantage of our service offerings. The AFPE 2019 gave us a chance to partner with many of them.\nIt was an amazing experience, my business was a month old and I didn’t know anyone. It was the first time I got to be in public and I appreciate the opportunity to be exposed. Coming to the exhibition boosted my sales and created awareness for me when people didn’t know me. I have got contacts from the exhibition and they have formed part of my customer base.\nLagos is a commercial hub and it was important for us to share with the market. There has always been a great need to take our products and services to our end users, offering them values and benefits and we achieved that at the African Food & Products Exhibition 2018.'
+Generation: '\nWe were able to showcase our products and services to the market. We had a lot of people who were interested in our products and services. The whole idea of the exhibition was to create awareness and it was achieved.\nWe are an agro-allied company. We deal in the production of animal feeds, the production of poultry and fishes. We also have a mini-mill and a mini-cassava processing factory. The Exhibition was a great opportunity for us to showcase our products and services. We were able to meet with potential customers and investors.\nThe exhibition was a good platform to showcase our product to the market. We had a lot of people who were interested in our products and services. The whole idea of the exhibition was to create awareness and it was achieved.\nThe exhibition was a good platform to showcase our products to the market. We had a lot of people who were interested in our products and services. The whole idea of the exhibition was to create awareness and it was achieved.\nWe had a lot of people who were interested in our products and services. The whole idea of the exhibition was to create awareness and it was achieved.\nWe'
+----------------------------------------
+
+Prompt 3: 'James earns $20 an hour while working at his main job.  He earns 20% less while working his second job.  He works 30 hours at his main job and half that much at his second job.  How much does he earn per week?'
+Generation: '\n\nI am not sure how to use the 20% less to figure this out.  Can someone show me how to do this problem?\n\nAnswer: Suppose he earns $20 per hour at his first job, and $16 per hour at his second job.  Then $16 = 0.8 \\times 20$, so $16 = 0.8 \\times 20$ and $20 = 1.25 \\times 16$.\n\nNow he works $30$ hours at his first job and $15$ hours at his second job.  So his total earnings are $20 \\times 30 + 16 \\times 15 = 600 + 240 = 840$.\n\nAnswer: If he earns $20$ an hour at his main job, then he earns $20 \\times 0.8 = 16$ an hour at his second job.\n\nHe earns $20 \\times 30 + 16 \\times 15 = 600 + 240 = 840$ per week'
+----------------------------------------
+
+Prompt 4: '\nFIX = """\nAdd more test cases.\n"""\n\ndef vowels_count(s):\n    """Write a function vowels_count which takes a string representing\n    a word as input and returns the number of vowels in the string.\n    Vowels in this case are \'a\', \'e\', \'i\', \'o\', \'u\'. Here, \'y\' is also a\n    vowel, but only when it is at the end of the given word.\n\n    Example:\n    >>> vowels_count("abcde")\n    2\n    >>> vowels_count("ACEDY")\n    3\n    """\n'
+Generation: '\n    # your code here\n    vowels = 0\n    vowels_list = [\'a\', \'e\', \'i\', \'o\', \'u\', \'y\']\n    for i in range(len(s)):\n        if s[i] in vowels_list:\n            vowels += 1\n    return vowels\n\ndef vowels_count_2(s):\n    """Write a function vowels_count which takes a string representing\n    a word as input and returns the number of vowels in the string.\n    Vowels in this case are \'a\', \'e\', \'i\', \'o\', \'u\'. Here, \'y\' is also a\n    vowel, but only when it is at the end of the given word.\n\n    Example:\n    >>> vowels_count("abcde")\n    2\n    >>> vowels_count("ACEDY")\n    3\n    """\n\n    # your code here\n    vowels = 0\n    vowels_list = [\'a\', \'e\', \'i\', \'o\', \'u\', \'y\']'
+----------------------------------------
+
+Prompt 5: 'Create a dialog between two people who are discussing a scientific phenomenon\n\nHydropower'
+Generation: '\n\nAquifer\n\nPetroleum\n\nFossil Fuels\n\nNuclear Power\n\nSolar Power\n\nWind Power\n\nGeothermal Energy\n\nFusion Energy\n\nFission Energy\n\nElectromagnetic Energy\n\nWave Energy\n\nTidal Energy\n\n### 2.2.1\n\nDescribe the process of photosynthesis\n\n### 2.2.2\n\nDescribe the process of cellular respiration\n\n### 2.2.3\n\nDescribe how the chemical reactions of photosynthesis and cellular respiration are related\n\n### 2.2.4\n\nCompare the reactants and products of photosynthesis and cellular respiration\n\n### 2.2.5\n\nExplain the role of photosynthesis in the flow of energy in an ecosystem\n\n### 2.2.6\n\nExplain the role of cellular respiration in the flow of energy in an ecosystem\n\n### 2.2.7\n\nExplain how the chemical energy stored in food is converted to usable energy for'
+----------------------------------------
+
+Prompt 6: 'Originally, from Chicago, now living in Hong Kong, Jeanne studied improvisation in Chicago. She holds a B.S. in Anthropology from Loyola University of Chicago and an M.S. in Historic Preservation from the School of the Art Institute.\nShe has performed, presented and conducted workshops in the US, Europe and Asia. Ms. Lambin’s workshops have been described as “amazing,” “powerful,” and “great fun.” Her work has been featured in the Hong Kong’s Top Notch Storytelling Festival, Liar’s League Hong Kong, Literary Death Match, the Art’s House World Voices Presents, the Moth Chicago, Story Lab and This Much is True. Ms. Lambin is a proud to be a founding member of Improv for Humanity and co-creator of The Quest: Improv for Transformation.'
+Generation: ' She is a featured performer at the 2019 Hong Kong Improv Jamboree.\nMs. Lambin is a passionate advocate for the arts, she is a past president of the Junior League of Chicago and served as a board member on the Chicago Architectural Foundation. She is a current board member of the Hong Kong International Literary Festival.\nLearn more about Jeanne at www.jeannelambin.com\nJOHN BERRY (Director, Facilitator)\nJohn Berry is a professional actor, director, and teacher who has been working in theatre for over 30 years. He has been teaching improvisation for the last 20 years. He has been the Artistic Director of the Hong Kong Improv Jamboree since its inception in 2013. John has taught Improv for Humanity workshops in Hong Kong, Macau, Singapore, and London. He has also taught Improv for Humanity workshops in Hong Kong and Macau. John is a founding member of Improv for Humanity.\nLearn more about John at www.johnberry.com.hk\nLear'
+----------------------------------------
+
+Prompt 7: 'Lee mows one lawn and charges $33. Last week he mowed 16 lawns and three customers each gave him a $10 tip. How many dollars did Lee earn mowing lawns last week?'
+Generation: '\nA. $526\nB. $536\nC. $546\nD. $556\n39. A square has a perimeter of 24 inches. What is the area of the square?\nA. 576 square inches\nB. 676 square inches\nC. 724 square inches\nD. 776 square inches\n40. A student travels 10 miles to school in 30 minutes. How many miles per hour is the student traveling?\nA. 20 miles per hour\nB. 30 miles per hour\nC. 40 miles per hour\nD. 50 miles per hour\n41. A store sells 12 boxes of cereal for $12.00. How much does each box of cereal cost?\nA. $0.50\nB. $0.75\nC. $1.00\nD. $1.25\n42. The number 3 is 3 times the number 1. What is the number 3?\nA. 1\nB. 3'
+----------------------------------------
+
+Prompt 8: '\ndef circular_shift(x, shift):\n    """Circular shift the digits of the integer x, shift the digits right by shift\n    and return the result as a string.\n    If shift > number of digits, return digits reversed.\n    >>> circular_shift(12, 1)\n    "21"\n    >>> circular_shift(12, 2)\n    "12"\n    """\n'
+Generation: '    digits = [str(i) for i in x]\n    if len(digits) < shift:\n        return "".join(digits[::-1])\n    else:\n        return "".join(digits[shift:] + digits[:shift])\n\n\ndef cyclic_shift(x, shift):\n    """Cyclic shift the digits of the integer x, shift the digits right by shift\n    and return the result as a string.\n    If shift > number of digits, return digits reversed.\n    >>> cyclic_shift(12, 1)\n    "21"\n    >>> cyclic_shift(12, 2)\n    "21"\n    """\n    digits = [str(i) for i in x]\n    if len(digits) < shift:\n        return "".join(digits[::-1])\n    else:\n        return "".join(digits[shift:] + digits[:shift])\n\n\ndef cyclic_shift_by_factorial(x, shift):\n    """Cyclic shift the digits of the integer x, shift the digits right by'
+----------------------------------------
+
+Prompt 9: 'Identify the most suitable adverb for the following sentence\n\nShe works'
+Generation: ' very hard.\n\nAnswer: The correct adverb for the above sentence is \\strong{very}.\n\nAnswer: "She works very hard."\n\nThe adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb is very.\n\nAnswer: The adverb'
+----------------------------------------
+
+Prompt 10: 'I grew up with stove top mac and cheese. Luckily my mother often made her own from scratch, but I also had the commercial boxed mac and cheese as well. Personally I’ve always prefered stove top to baked. I know, it is controversial. There is something to that velvety sauce and soft texture. It is simple and concise.\nHowever, as I grew up, the idea of making it from scratch seemed more and more improbable. So I leaned toward the box. Now I am not saying that something is bad if it is in a box but powdered things often don’t feel super healthy in the food realm. Especially if all you are adding to them is butter and hot sauce and maybe tuna from a can. Wait. What?\nYes. I would like to take a moment to address something that we call “Shame Food.” What is Shame Food? Shame Food is food that you only feel comfortable eating in private. Far from any witnesses. My big Shame Food experience was when I was doing social work. I would work all day in a pretty intense environment and then commute home and my wife worked another 5-6 hours. So I would get home, eat something, and then take a nap. That thing became my Shame Food. It was inspired by a natural food company’s spicy mac and cheese. (It has since been discontinued.) I would make mac and cheese and add a lot of cheap hot sauce (this was before we had a sauce business) and a can of tuna. I would not even plate it. I would eat the whole thing out of the pot and then take a nap. I mean the nap wasn’t a choice. That box of noodles is meant to feed a family of four. Plus the amount of hot sauce I added meant I wasn’t really enjoying the meal as much as surviving it. I had to recoup.\nThis recipe isn’t that dish. It is tied to that spicy boxed macaroni and cheese, that my wife introduced me to, and we would eat it together at a time that we didn’t eat much. Also the roots are a stove top mac and cheese. The kind where the only powder involved it mustard powder and the spice comes from a complex sauce with a bright balsamic flavor and a nutty essence that pairs well with the gruyere and trust me if you finish it with toasted sesame, you will not regret it. Please enjoy and feel free to share with us your Shame Food.\nPour the pasta into a strainer and place the empty pot back on the stove.\nTurn heat to medium and add the butter.\nOnce the butter has melted, stir in the flour and use a whisk continue for a minute.\nSlowly add the milk and cream while whisking to combine.\nAdd the mustard powder and stir.\nReduce heat to medium-low and add the mascarpone. Continue to whisk.\nBegin adding the cheese a handful at a time while whisking to combine.\nAdd the Hatch Sesame Balsamic Sauce.\nReturn the pasta to the sauce pan and stir to coat.\nIf the sauce seems a little loose then continue to stir the pasta occasionally on low heat.\nServe in bowls topped with toasted sesame seeds and Mexican oregano.'
+Generation: "\n*If you don't have a balsamic sauce you can make your own by simmering a cup of balsamic vinegar and a tablespoon of honey until it reduces by half.</s><s> If you are in the market for a used Mercury in Arizona, take a moment to browse our current inventory below. You may also contact us now or schedule a test drive so that we may show you your favorite model in person.\nIf you are interested in a used Mercury for sale in Arizona, feel free to visit our dealership in Phoenix, AZ. We may also be able to help you find the used Mercury you are looking for in AZ, even if you live in Avondale, Buckeye, Chandler, Scottsdale or Tempe.</s><s> I’m not sure where the idea came from, but I’ve always liked the idea of a “Summer of Love” type of thing.\nSummer is the time to relax and enjoy the outdoors, to play, to enjoy life.\nI’m not sure what I’ll do for my Summer of Love. I’m not sure what I’ll do for my"
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 32.00

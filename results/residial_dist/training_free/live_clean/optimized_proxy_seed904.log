@@ -1,0 +1,194 @@
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[TF experiment] policy=policy::proxy__full__expected_mix0.25, candidate T=0.7; sampler T=0.7 unchanged
+[bench][deprecated] --duet_phase1_k -> use --duet_k1
+[bench][deprecated] --duet_phase2_k -> use --duet_k2
+[bench][deprecated] --duet_draft_fan_out -> use --duet_p1_fanout
+[bench] --k omitted -> derived k = K1+K2 = 12
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 5
+[bench] seeded with 904
+[Config] duet_proxy_top_k raised 3 → 17 (K_max=8 K_min=4 p1_sum_full=0 p1_sum_short=0 p1_max=0 per_pos=17 total=4 wire_N=17)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 13.49it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.65it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 11.80it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00, 14.25it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.98it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.97it/s]
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=2/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=1/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=3/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[awq-loader] role=target rank=0/4: attached 320 modules, quant storage ≈ 8.89 GB  (source=awq_calibrated, schema=v2)
+[duet] exit-replica lm_head on rank0: [32000, 8192]
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 2976, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 509, 256, 2, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 473, 256, 2, 128])
+[DUET] captured target chain proxy graphs (K=[4, 8], source=proxy)
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+F=5, fan_out_list=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fan_out_list_miss=[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], MQ_LEN=65
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (3 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=True, proxy_top_k=17, draft_fan_out=3, proxy_fan_out=2, K1=8, K2=4, P2_W=15, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+
+============================================================
+SWEEP [1/1] temp=0.7 b=1
+============================================================
+Generating:   0%|          | 0/16 [00:00<?, ?it/s][DUET] warmed acceptance kernels (K=[4, 8])
+Generating:   6%|▋         | 1/16 [00:04<01:13,  4.93s/it]Generating:  12%|█▎        | 2/16 [00:07<00:51,  3.66s/it]Generating:  19%|█▉        | 3/16 [00:10<00:44,  3.42s/it]Generating:  25%|██▌       | 4/16 [00:13<00:37,  3.12s/it]Generating:  31%|███▏      | 5/16 [00:15<00:30,  2.78s/it]Generating:  38%|███▊      | 6/16 [00:18<00:29,  2.91s/it]Generating:  44%|████▍     | 7/16 [00:21<00:25,  2.82s/it]Generating:  50%|█████     | 8/16 [00:23<00:21,  2.66s/it]Generating:  56%|█████▋    | 9/16 [00:27<00:20,  2.88s/it]Generating:  62%|██████▎   | 10/16 [00:31<00:19,  3.30s/it]Generating:  69%|██████▉   | 11/16 [00:34<00:16,  3.20s/it]Generating:  75%|███████▌  | 12/16 [00:36<00:12,  3.01s/it]Generating:  81%|████████▏ | 13/16 [00:40<00:09,  3.25s/it]Generating:  88%|████████▊ | 14/16 [00:43<00:06,  3.23s/it]Generating:  94%|█████████▍| 15/16 [00:47<00:03,  3.29s/it]Generating: 100%|██████████| 16/16 [00:49<00:00,  3.05s/it]Generating: 100%|██████████| 16/16 [00:49<00:00,  3.12s/it]
+Final Prefill Throughput: 1489.21tok/s
+Final Decode Throughput: 85.89tok/s
+[metrics] Prefill tokens/time: 2701 / 1.813714s
+[metrics] Decode tokens/time: 4119 / 47.956857s
+[metrics] Avg Tokens per step (incl recovery): 3.02
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.25 (denom=8)
+[metrics] Avg target time per full step (ms): 36.45
+[metrics] Avg target verify time (ms): 25.88
+[metrics] Avg Cache Hits: 0.82
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.000
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.820
+[metrics] Avg Phase 2 Accepted Len: 2.10
+[metrics] Avg Phase 2 Acceptance Ratio: 0.525
+[metrics] Avg Tokens per step on Cache Hit: 3.10
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.262
+  1: 0.194
+  2: 0.099
+  3: 0.074
+  4: 0.371
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.65
+Model: layerskip_llama2_70b, Mode: CUDA Graphs + Speculative(k=12) + Async + JIT, Total: 4096tok, Time: 49.85s, Total Throughput: 82.17tok/s
+
+================================================================================
+GENERATIONS:
+================================================================================
+
+Prompt 1: 'Transform the following sentence into the passive voice\n\nI bought a book'
+Generation: ' yesterday. (У меня есть книга, которую я купил вчера.)\n\nComment: I would use the perfect tense here, e.g., "I have bought a book yesterday"\n\nComment: "I have a book, which I bought"\n\nComment: I have a book, which I bought yesterday.\n\nComment: I have a book, which was bought yesterday.\n\nComment: I have a book, which was bought by me yesterday.\n\nComment: I have a book, which was bought by me.\n\nComment: I have a book, which was bought by me.\n\nComment: I have a book, which was bought by me.\n\nComment: I have a book, which was bought by me.\n\nAnswer: \\begin{blockquote}\n\nI bought a book yesterday.\n\\end{blockquote}\n\n\\strong{The passive voice can only be used with transitive verbs}.\n\nYour example sentence uses a transitive verb (bought), but the verb is in the active voice.\n\nThe [passive voice](https://www.ef.com/english-resources/english-grammar/'
+----------------------------------------
+
+Prompt 2: 'Expand your clientele, meet and network with potential business partners and make new business contacts.\nLearn from seasoned industry experts sharing their knowledge and experience on scaling up productivity, driving profitability and positioning SMEs for sustainability and global Competitiveness.\nReach new markets, improve your corporate identity, showcase and promote your products and services to visitors and buyers.\nExplore potential business deals and commercial partnerships with key trade, commerce and investment representatives from around the Country, the USA and the International Community.\nRaise brand awareness and generate new business opportunities across multiple market sectors.\nBooth prices starts from N50,000 for 2 days. Start Booking Now! Booth prices starts from N50,000 for 2 days. Start Booking Now!\nWe were privilege to meet with Ebeano Supermarket, Shoppers Delite and Just Rite; we took up from there and today we are on the shelf of these malls. The exhibition showed us the way to do business right and to do it effectively and efficiently. The exhibition also made room for us to meet various investors, who have tremendously been of help to the growth of Hyst Global Business Ltd.\nI exhibited at the African Food and Products Exhibition 2018. The Event was a wonderful one and an eye-opener for not just me but for other exhibitors and attendees. From the conference sessions, I acquired knowledge on exportation of goods. The AFPE 2018 was the door opener to my exquisite Zobo Business. I thought to myself that since the Exhibition was for African Food and Products, Zobo is an African drink so I decided to make and sell for the Exhibition. Just like magic, amidst my other products, the zobo made super sales. Now I have a branded Zobo drink.\nThe AFPE 2018 was great, it was an opportunity to have a firsthand understanding of the challenges facing SMEs, helping us know what products they needed and how they can take advantage of our service offerings. The AFPE 2019 gave us a chance to partner with many of them.\nIt was an amazing experience, my business was a month old and I didn’t know anyone. It was the first time I got to be in public and I appreciate the opportunity to be exposed. Coming to the exhibition boosted my sales and created awareness for me when people didn’t know me. I have got contacts from the exhibition and they have formed part of my customer base.\nLagos is a commercial hub and it was important for us to share with the market. There has always been a great need to take our products and services to our end users, offering them values and benefits and we achieved that at the African Food & Products Exhibition 2018.'
+Generation: ' The Exhibition was a great platform for us and we look forward to the next one.</s><s> Top 10 Richest Women in The World 2018.\nHello friends how are you all? Today we are going to share Top 10 Richest Women in The World 2018 with all of friends. So Friends here is the list of Top 10 Richest Women in The World 2018.\nShe is one of the richest women in the world. She is the only daughter of the founder of L’Oréal, the cosmetics giant.\nShe is the richest woman in the world. She is the daughter of the founder of L’Oréal, the cosmetics giant.\nShe is one of the richest women in the world. She is the chief executive of her family’s retail and real estate company, which owns the Sears chain of department stores.\nShe is one of the richest women in the world. She is a co-owner of the clothing brand Kiabi.\nShe is one of the richest women in the world. She is the daughter of America’s richest family, the Waltons,'
+----------------------------------------
+
+Prompt 3: 'James earns $20 an hour while working at his main job.  He earns 20% less while working his second job.  He works 30 hours at his main job and half that much at his second job.  How much does he earn per week?'
+Generation: "\n\nI know this is a 2 part question.  I was able to answer the first question, which is what 20% less than $20 is.  I used this equation: $20 - 20% = $16, so he makes $16 an hour at his second job.\n\nFor the second question, I used this equation: $16 x 30/2 = $60\n\nThe answer I got was $160, which is the correct answer, but I don't know if I did it right, as I don't know which equation to use in the first place.  Please help.\n\nComment: What is the equation of his earnings from the second job?\n\nComment: I am not sure, I used this equation: $16 x 30/2 = $60.  Is that right?\n\nComment: Is the $30 the amount of hours per week, or per day?\n\nComment: 30 is the amount of hours per week.\n\nAnswer: As you said he earns $16 per hour on the second job. And he earns 20% less"
+----------------------------------------
+
+Prompt 4: '\nFIX = """\nAdd more test cases.\n"""\n\ndef vowels_count(s):\n    """Write a function vowels_count which takes a string representing\n    a word as input and returns the number of vowels in the string.\n    Vowels in this case are \'a\', \'e\', \'i\', \'o\', \'u\'. Here, \'y\' is also a\n    vowel, but only when it is at the end of the given word.\n\n    Example:\n    >>> vowels_count("abcde")\n    2\n    >>> vowels_count("ACEDY")\n    3\n    """\n'
+Generation: '    # your code here\n\n\n\n    return\n\n\ndef is_palindrome(s):\n    """Write a function is_palindrome which takes a string representing\n    a word as input and returns whether the given word is a palindrome.\n\n    A palindrome is a word that is spelled the same in both directions.\n    For example, \'dad\' is a palindrome, while \'dad!\' is not.\n\n    Example:\n    >>> is_palindrome("abccba")\n    True\n    """\n    # your code here\n\n\n\n\n    return\n\n\ndef is_palindrome_permutation(s):\n    """Write a function is_palindrome_permutation which takes a\n    string representing a word as input and returns whether the given\n    word is a palindrome permutation of its letters.\n\n    A string is a palindrome permutation of its letters if you can\n    reorder the letters of the string to make a palindrome.\n\n    For example, \'tactcoa\' is a palindrome permutation because you can\n   '
+----------------------------------------
+
+Prompt 5: 'Create a dialog between two people who are discussing a scientific phenomenon\n\nHydropower'
+Generation: '\n\n1.  The first person is to say that hydropower is a renewable energy source\n2.  The second person is to say that hydropower is not a renewable energy source\n\nCreate a dialog between two people who are discussing a scientific phenomenon\n\nRenewable Energy\n\n1.  The first person is to say that renewable energy is the best source of energy\n2.  The second person is to say that renewable energy is not the best source of energy\n\nCreate a dialog between two people who are discussing a scientific phenomenon\n\nMinerals\n\n1.  The first person is to say that minerals are important\n2.  The second person is to say that minerals are not important\n\nCreate a dialog between two people who are discussing a scientific phenomenon\n\nRenewable Energy\n\n1.  The first person is to say that renewable energy is the best source of energy\n2.  The second person is to say that renewable energy is not the best source of energy\n\nCreate a dialog between two people who are discussing a scientific phenomenon\n\nCoal\n\n1.  The first person is'
+----------------------------------------
+
+Prompt 6: 'Originally, from Chicago, now living in Hong Kong, Jeanne studied improvisation in Chicago. She holds a B.S. in Anthropology from Loyola University of Chicago and an M.S. in Historic Preservation from the School of the Art Institute.\nShe has performed, presented and conducted workshops in the US, Europe and Asia. Ms. Lambin’s workshops have been described as “amazing,” “powerful,” and “great fun.” Her work has been featured in the Hong Kong’s Top Notch Storytelling Festival, Liar’s League Hong Kong, Literary Death Match, the Art’s House World Voices Presents, the Moth Chicago, Story Lab and This Much is True. Ms. Lambin is a proud to be a founding member of Improv for Humanity and co-creator of The Quest: Improv for Transformation.'
+Generation: ' She also teaches improv for personal and professional development.\nJeanne believes it is our birthright to be playful and that playfulness is the key to finding our voice and a better world.\nTo find out more about Jeanne’s workshops and performances, please visit www.jeannelambin.com.\nYou can email Jeanne at: jeanne@jeannelambin.com\nYou can follow Jeanne on Twitter at: @jeannelambin\nYou can find Jeanne on Facebook at Jeanne Lambin.\nFind more of Jeanne’s writing at: www.jeannelambin.com/blog\nCheck out The Quest: Improv for Transformation at: www.thequestimprov.com</s><s> Home » News » New Application Note: Playing Chess with the Light\nA new application note from ID Quantique (IDQ) and the University of Vienna’s Quantum Information Group (QIG) describes the use of a quantum random number generator (QRNG) to generate random moves for an artificial intelligence (AI) chess program. The AI was designed by IDQ’s Dr. Elmar Morscher and QIG’s Dr. Al'
+----------------------------------------
+
+Prompt 7: 'Lee mows one lawn and charges $33. Last week he mowed 16 lawns and three customers each gave him a $10 tip. How many dollars did Lee earn mowing lawns last week?'
+Generation: '\nSusan works at a car dealership and earns $20 for each car she sells. How much money will she earn if she sells 5 cars that are all the same price?\nHow many different ways can the letters in the word MONDAY be arranged?\nMatthew is getting paid $10.50 an hour working at a restaurant. How much will he earn if he works 5 hours?\nWhat is the average of: 1, 3, 2, 7, 6, 3, 1, 4, 2, 1, 2, 3, 2, 6, 4, 2, 7, 1, 2, 3, 6, 5, 1, 2, 6, 5, 9, 3, 3, 4, 2, 3, 6, 1, 4, 1, 9\nWhat is the mean value of the data?\nHow many square centimeters are there in 2 square meters?\nWhat is the perimeter of a square with sides that are 9 centimeters long?'
+----------------------------------------
+
+Prompt 8: '\ndef circular_shift(x, shift):\n    """Circular shift the digits of the integer x, shift the digits right by shift\n    and return the result as a string.\n    If shift > number of digits, return digits reversed.\n    >>> circular_shift(12, 1)\n    "21"\n    >>> circular_shift(12, 2)\n    "12"\n    """\n'
+Generation: '    if shift >= len(str(x)):\n        return str(x)[::-1]\n    else:\n        return str(x)[shift:] + str(x)[:shift]\n\n@lru_cache(maxsize=128)\ndef hex_to_bin(x):\n    """Hex to binary\n    >>> hex_to_bin("deadbeef")\n    "1101111010101101111011011101"\n    """\n    return \'\'.join(bin(int(bit, 16))[2:].lstrip(\'0b\'))\n\ndef bin_to_hex(x):\n    """Binary to hex\n    >>> bin_to_hex("1101111010101101111011011101")\n    "deadbeef"\n    """\n    return int(x, 2).hex()\n\ndef bin_to_octal(x):\n    """Binary to octal\n    >>> bin_to_octal'
+----------------------------------------
+
+Prompt 9: 'Identify the most suitable adverb for the following sentence\n\nShe works'
+Generation: ' \\strong{___}\n\na) diligent\n\nb) diligently\n\nc) diligence\n\nComment: The most suitable adverb would be *diligently*, but since *diligent* is the appropriate answer for the question, you can use *diligently* to answer the question *"How does she work?"*\n\nComment: b) diligently.\n\nComment: @KillingTime Yes, diligently, not diligent.\n\nAnswer: The correct answer is (b) diligently.</s><s> Tags: c#, .net, regex\n\nQuestion: Matching a pattern with a regex\n\nI have the following string:\n\n\\begin{code}\n1361160780_INSERT_INTO_activos_20130313_091941_20130313_092144_20130313_092203_20130313_092216_20130313_092226'
+----------------------------------------
+
+Prompt 10: 'I grew up with stove top mac and cheese. Luckily my mother often made her own from scratch, but I also had the commercial boxed mac and cheese as well. Personally I’ve always prefered stove top to baked. I know, it is controversial. There is something to that velvety sauce and soft texture. It is simple and concise.\nHowever, as I grew up, the idea of making it from scratch seemed more and more improbable. So I leaned toward the box. Now I am not saying that something is bad if it is in a box but powdered things often don’t feel super healthy in the food realm. Especially if all you are adding to them is butter and hot sauce and maybe tuna from a can. Wait. What?\nYes. I would like to take a moment to address something that we call “Shame Food.” What is Shame Food? Shame Food is food that you only feel comfortable eating in private. Far from any witnesses. My big Shame Food experience was when I was doing social work. I would work all day in a pretty intense environment and then commute home and my wife worked another 5-6 hours. So I would get home, eat something, and then take a nap. That thing became my Shame Food. It was inspired by a natural food company’s spicy mac and cheese. (It has since been discontinued.) I would make mac and cheese and add a lot of cheap hot sauce (this was before we had a sauce business) and a can of tuna. I would not even plate it. I would eat the whole thing out of the pot and then take a nap. I mean the nap wasn’t a choice. That box of noodles is meant to feed a family of four. Plus the amount of hot sauce I added meant I wasn’t really enjoying the meal as much as surviving it. I had to recoup.\nThis recipe isn’t that dish. It is tied to that spicy boxed macaroni and cheese, that my wife introduced me to, and we would eat it together at a time that we didn’t eat much. Also the roots are a stove top mac and cheese. The kind where the only powder involved it mustard powder and the spice comes from a complex sauce with a bright balsamic flavor and a nutty essence that pairs well with the gruyere and trust me if you finish it with toasted sesame, you will not regret it. Please enjoy and feel free to share with us your Shame Food.\nPour the pasta into a strainer and place the empty pot back on the stove.\nTurn heat to medium and add the butter.\nOnce the butter has melted, stir in the flour and use a whisk continue for a minute.\nSlowly add the milk and cream while whisking to combine.\nAdd the mustard powder and stir.\nReduce heat to medium-low and add the mascarpone. Continue to whisk.\nBegin adding the cheese a handful at a time while whisking to combine.\nAdd the Hatch Sesame Balsamic Sauce.\nReturn the pasta to the sauce pan and stir to coat.\nIf the sauce seems a little loose then continue to stir the pasta occasionally on low heat.\nServe in bowls topped with toasted sesame seeds and Mexican oregano.'
+Generation: '\nTry the Hatch Chipotle Ketchup on the side.\nThis entry was posted in Recipes and tagged balsamic, cheese, chipotle, hatch chiles, ketchup, mac and cheese, mexican oregano, oregano, pasta, sesame, stove top.</s><s> To make your stay as comfortable as possible the hotel offers you a wide range of services: 24/7 front desk assistance, bicycle rent, dry cleaning service, free Wi-Fi, laundry service, room service, safe at front desk. An excellent option for a journey will be a nice and comfortable apartment. You will be offered comfortable room in this hotel, also you will be pleased with a high quality room service. For guests, who wish to eat tasty, are offered a restaurant. This hotel is suitable for people who love active leisure, because it offers a sauna. If you want to share your impressions about this hotel, you may leave a comment.\nHow to book a room in Grand Hotel Donon?\nWhere can I park a car at Grand Hotel Donon?\nWhat are the hotel amenities'
+----------------------------------------
+Engine exited!
+[LLMEngine] Exiting (hard=True)
+[metrics] Avg draft step time (ms): 31.87

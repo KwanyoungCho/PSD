@@ -1,0 +1,187 @@
+{
+  "record": {
+    "dataset": "alpaca",
+    "seed": 123,
+    "numseqs": 32,
+    "output_len": 256,
+    "elapsed_s": 172.16591620445251,
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD/ssd/bench/bench.py",
+      "--llama",
+      "--size",
+      "70",
+      "--gpus",
+      "5",
+      "--model_path",
+      "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+      "--draft_path",
+      "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+      "--quant_awq",
+      "--quant_awq_artifact",
+      "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+      "--alpaca",
+      "--numseqs",
+      "32",
+      "--output_len",
+      "256",
+      "--b",
+      "1",
+      "--temp",
+      "1.0",
+      "--seed",
+      "123",
+      "--async",
+      "--spec",
+      "--duet",
+      "--duet_exit_layer",
+      "56",
+      "--duet_phase1_k",
+      "8",
+      "--duet_phase2_k",
+      "4",
+      "--duet_draft_fan_out",
+      "3",
+      "--duet_p2_budget",
+      "15",
+      "--duet_p1_tree_policy",
+      "off",
+      "--duet_p2_tree_policy",
+      "off",
+      "--duet_only_proxy"
+    ],
+    "n_steps": 3025,
+    "n_samples": 392,
+    "n_rows": 1960,
+    "manifest": "alpaca_seed123.json",
+    "validation": "exit, throughput marker, tap exact match, all prompts, all sampled steps, finite float32 probabilities"
+  },
+  "probe": {
+    "schema": "duet_full_distribution_v1",
+    "layers": [
+      56,
+      79
+    ],
+    "exit_layer": 56,
+    "temperature": 1.0,
+    "stride": 8,
+    "n_steps": 3025,
+    "n_samples": 392,
+    "n_rows": 1960,
+    "seq_steps": {
+      "1": 112,
+      "2": 104,
+      "3": 97,
+      "4": 90,
+      "5": 84,
+      "6": 98,
+      "7": 100,
+      "8": 107,
+      "9": 96,
+      "10": 103,
+      "11": 90,
+      "12": 82,
+      "13": 103,
+      "14": 93,
+      "15": 86,
+      "16": 95,
+      "17": 89,
+      "18": 59,
+      "19": 92,
+      "20": 87,
+      "21": 92,
+      "22": 102,
+      "23": 94,
+      "24": 108,
+      "25": 91,
+      "26": 111,
+      "27": 97,
+      "28": 78,
+      "29": 108,
+      "30": 93,
+      "31": 93,
+      "32": 91
+    },
+    "chunks": [
+      {
+        "file": "alpaca_seed123/chunk_0000.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0001.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0002.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0003.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0004.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0005.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0006.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0007.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0008.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0009.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0010.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0011.npz",
+        "rows": 160
+      },
+      {
+        "file": "alpaca_seed123/chunk_0012.npz",
+        "rows": 40
+      }
+    ],
+    "max_prob_sum_error": 8.344650268554688e-07,
+    "sampling": "per-sequence local verification step 0, stride, 2*stride, ...",
+    "dtype": "float32; bonus draft row zero and y=-1"
+  },
+  "replay_sha256": "5db9cb828e7405ee84e683cc941606217c6d06c31cbb3fa723d21ab380a18547",
+  "policies": {
+    "taus": [
+      0.65,
+      0.8,
+      0.9,
+      1.0,
+      1.1,
+      1.25,
+      1.5
+    ],
+    "lambdas": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "main_topm": 17,
+    "budget": 15
+  },
+  "train": "seq_id 1..16 in every dataset; same prompt split across seeds",
+  "test": "seq_id 17..32 in every dataset; never used to select hyperparameters"
+}

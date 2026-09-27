@@ -1,0 +1,675 @@
+{
+  "dataset": "mixed",
+  "stage": "confirmation",
+  "temperature": 0.7,
+  "seed": 271,
+  "numseqs": 96,
+  "output_len": 256,
+  "n_steps": 7932,
+  "n_samples": 1033,
+  "n_rows": 5165,
+  "elapsed_s": 338.5361478328705,
+  "manifest": "mixed_t0.7_seed271.json",
+  "command": [
+    "/home/chokwans99/PSD/ssd/.venv/bin/python",
+    "-O",
+    "/home/chokwans99/PSD/ssd/bench/bench.py",
+    "--llama",
+    "--size",
+    "70",
+    "--gpus",
+    "5",
+    "--model_path",
+    "/home/chokwans99/awq_calibrated/layerskip_llama2_70b",
+    "--draft_path",
+    "/data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0",
+    "--quant_awq",
+    "--quant_awq_artifact",
+    "/home/chokwans99/awq_artifacts/layerskip70b_awq_tp4",
+    "--alpaca",
+    "--numseqs",
+    "96",
+    "--output_len",
+    "256",
+    "--b",
+    "1",
+    "--temp",
+    "0.7",
+    "--seed",
+    "271",
+    "--async",
+    "--spec",
+    "--duet",
+    "--duet_exit_layer",
+    "56",
+    "--duet_phase1_k",
+    "8",
+    "--duet_phase2_k",
+    "4",
+    "--duet_draft_fan_out",
+    "3",
+    "--duet_p2_budget",
+    "15",
+    "--duet_p1_tree_policy",
+    "off",
+    "--duet_p2_tree_policy",
+    "off",
+    "--duet_only_proxy"
+  ],
+  "mapping": [
+    {
+      "seq_id": 1,
+      "dataset": "alpaca",
+      "source_row": 65,
+      "text_sha256": "78d2f73347efb313f61818c69c872d15c9986d6a9fde04a3c1759ca41a001f1d"
+    },
+    {
+      "seq_id": 2,
+      "dataset": "c4",
+      "source_row": 65,
+      "text_sha256": "d71d3b9b50040fe4e3f9ba9035e71940ec48a00f43c88b0a5dfba5e476bceabf"
+    },
+    {
+      "seq_id": 3,
+      "dataset": "gsm",
+      "source_row": 65,
+      "text_sha256": "01a0545c22dc10a57b33d14b5d726669a9252fda8d8a5b78a21fb40e8db6996a"
+    },
+    {
+      "seq_id": 4,
+      "dataset": "humaneval",
+      "source_row": 65,
+      "text_sha256": "b1ff059f78c9b9ca75c725fd3dccd542129ecc61344bb4a44596e13f4623fcf1"
+    },
+    {
+      "seq_id": 5,
+      "dataset": "alpaca",
+      "source_row": 66,
+      "text_sha256": "ac09888baf261d07d9145072e17c27b684b1b8c90225796ab58ea611bbe713dd"
+    },
+    {
+      "seq_id": 6,
+      "dataset": "c4",
+      "source_row": 66,
+      "text_sha256": "717a4e1e9c17fa483def41411a51ba7b0279f91e634b46b6bd57c0c948369b8f"
+    },
+    {
+      "seq_id": 7,
+      "dataset": "gsm",
+      "source_row": 66,
+      "text_sha256": "d48747fe96f2dfe0dee4a7284e0be8f24d495f550f7a9c0819c0e74ea420aee8"
+    },
+    {
+      "seq_id": 8,
+      "dataset": "humaneval",
+      "source_row": 66,
+      "text_sha256": "97a5310f6ed33f3e071de2e6f91dba833f0bcab9ca83887792dd9c72d4f063ef"
+    },
+    {
+      "seq_id": 9,
+      "dataset": "alpaca",
+      "source_row": 67,
+      "text_sha256": "478c8db21173a44cdbe8db793a9d6c549983e555634078d0a9e153d27d3d4de0"
+    },
+    {
+      "seq_id": 10,
+      "dataset": "c4",
+      "source_row": 67,
+      "text_sha256": "f22fc1bc166b507a1a79795e5530457f5544eaa9fc1939dd9ae9823ab2115a63"
+    },
+    {
+      "seq_id": 11,
+      "dataset": "gsm",
+      "source_row": 67,
+      "text_sha256": "e0efbdc0b56d61fd49894c0379397faaa0d8e08e0c4d139d2375831bbe033e68"
+    },
+    {
+      "seq_id": 12,
+      "dataset": "humaneval",
+      "source_row": 67,
+      "text_sha256": "bf2b14bfeab2fea94ee1374415e4a82bc0eb01b305de8d5af081f6e346368ce5"
+    },
+    {
+      "seq_id": 13,
+      "dataset": "alpaca",
+      "source_row": 68,
+      "text_sha256": "6dcb4e5b25b126eb846f8b420856671b2aa3e4670105c76dd8f296484d4684e5"
+    },
+    {
+      "seq_id": 14,
+      "dataset": "c4",
+      "source_row": 68,
+      "text_sha256": "e1a94826ee32d5169d9b567be4a7542fa73fcfa3372435d1877424215b07224d"
+    },
+    {
+      "seq_id": 15,
+      "dataset": "gsm",
+      "source_row": 68,
+      "text_sha256": "9a2e593195f9e272623b51abf9b34bdf8d6939d63b05ed5e080ad8c01432aab3"
+    },
+    {
+      "seq_id": 16,
+      "dataset": "humaneval",
+      "source_row": 68,
+      "text_sha256": "108119f29464ef285271bb51933f37a4f16e29137dadb0552938ccd197019837"
+    },
+    {
+      "seq_id": 17,
+      "dataset": "alpaca",
+      "source_row": 69,
+      "text_sha256": "9e7e47ded084db7ec7b58302bf1c176b7d0b87ce01ae176aa5c6d1077b895bf1"
+    },
+    {
+      "seq_id": 18,
+      "dataset": "c4",
+      "source_row": 69,
+      "text_sha256": "a0fa8db64ce3b8b94bdab7c8116332298ab0d04f89141b3de6b78a4f0d2f4b0a"
+    },
+    {
+      "seq_id": 19,
+      "dataset": "gsm",
+      "source_row": 69,
+      "text_sha256": "2050a535fd69a88a63e9bb463efa1c580254c1b09eecc48aeee9f398a5db9cfd"
+    },
+    {
+      "seq_id": 20,
+      "dataset": "humaneval",
+      "source_row": 69,
+      "text_sha256": "c87f29f22fce056a04347cf59fb730f7c0fe3fcfd29bf59d5420cf5d648a8e88"
+    },
+    {
+      "seq_id": 21,
+      "dataset": "alpaca",
+      "source_row": 70,
+      "text_sha256": "e1336ee491daacfc88038c0eb4a0dd7c2e4ba1eeb53cd3b74017cdd6375e8160"
+    },
+    {
+      "seq_id": 22,
+      "dataset": "c4",
+      "source_row": 70,
+      "text_sha256": "a045c3f80bfb26d6cc838eae4fbf770ebcc9c4b22106a4179e2a9579f514c634"
+    },
+    {
+      "seq_id": 23,
+      "dataset": "gsm",
+      "source_row": 70,
+      "text_sha256": "39a5fb6057cf9c4c16b4f7261ef4e22126352be3fe8a2f2e73ec00c55f442ea0"
+    },
+    {
+      "seq_id": 24,
+      "dataset": "humaneval",
+      "source_row": 70,
+      "text_sha256": "d111c9c900e3fe63cdcc977507f34b32f49d9c5d6db817fd4b85f323aacb7160"
+    },
+    {
+      "seq_id": 25,
+      "dataset": "alpaca",
+      "source_row": 71,
+      "text_sha256": "dff149c5e85045fa41234b097b7c42f834a16d026bd5aa793d53aca81e8a27d5"
+    },
+    {
+      "seq_id": 26,
+      "dataset": "c4",
+      "source_row": 71,
+      "text_sha256": "b1c44132cc452ca348f03acc118c2b9a2040ea548e69d146898c8cbbae6ff54d"
+    },
+    {
+      "seq_id": 27,
+      "dataset": "gsm",
+      "source_row": 71,
+      "text_sha256": "39f26f8a429fdc7d6da7a511b974d7e3b4a61dcaee99a0bf10de6c773bf39089"
+    },
+    {
+      "seq_id": 28,
+      "dataset": "humaneval",
+      "source_row": 71,
+      "text_sha256": "3d22349507ecef43d8e4bc3b8c8d7867157df49328381982b06fdf13f8c9b587"
+    },
+    {
+      "seq_id": 29,
+      "dataset": "alpaca",
+      "source_row": 72,
+      "text_sha256": "44b4536e2b36cdecf23c764c392c39c5edfa7b0d5740d26fa88d6f796cd0370b"
+    },
+    {
+      "seq_id": 30,
+      "dataset": "c4",
+      "source_row": 72,
+      "text_sha256": "7b09ec6b74c1b39a0b705a27f5d55080d98c3f3af68880b7c730034292e1fcfe"
+    },
+    {
+      "seq_id": 31,
+      "dataset": "gsm",
+      "source_row": 72,
+      "text_sha256": "502ffb689332b8079f4f5e7c2b5802973ad560c4f41e3af953e29239a7af8995"
+    },
+    {
+      "seq_id": 32,
+      "dataset": "humaneval",
+      "source_row": 72,
+      "text_sha256": "dccba9d6691759c6e0c2e857a40cffb6704ec48167c2199e2053daac9b7b484c"
+    },
+    {
+      "seq_id": 33,
+      "dataset": "alpaca",
+      "source_row": 73,
+      "text_sha256": "8514992c412f0a32bb07a7bb6073a116de6f66fe414af09f9ee4962f3ed3eeac"
+    },
+    {
+      "seq_id": 34,
+      "dataset": "c4",
+      "source_row": 73,
+      "text_sha256": "b70a2c018727228cd551325224554a49b4cda9497bcdcb37bd230fdff6d907bf"
+    },
+    {
+      "seq_id": 35,
+      "dataset": "gsm",
+      "source_row": 73,
+      "text_sha256": "0d0539ae81f0364cacac73ccfb599ce9288a6eb7024ac9e45cfc4492224e2201"
+    },
+    {
+      "seq_id": 36,
+      "dataset": "humaneval",
+      "source_row": 73,
+      "text_sha256": "e6356a7217c06511fb91e78936c18ab6d8b05a3970b5bbf4ef6f3e97e819dba8"
+    },
+    {
+      "seq_id": 37,
+      "dataset": "alpaca",
+      "source_row": 74,
+      "text_sha256": "08db967a8c1b66643bbc3ac8fd0f3d291680deb3cbf23aced457bdd20f2461c6"
+    },
+    {
+      "seq_id": 38,
+      "dataset": "c4",
+      "source_row": 74,
+      "text_sha256": "159c5ef0278a28e2dc68325bc94f90023b16e58723beabedd9865359c1eeb168"
+    },
+    {
+      "seq_id": 39,
+      "dataset": "gsm",
+      "source_row": 74,
+      "text_sha256": "86ba5b70f686721f10c984b1c9d0f647ffe292e03fb9640b0587817c9b692523"
+    },
+    {
+      "seq_id": 40,
+      "dataset": "humaneval",
+      "source_row": 74,
+      "text_sha256": "7f532f2484b9af7672fa6d0a099ddeb9953633be986368ffbb0e5f1833003f2c"
+    },
+    {
+      "seq_id": 41,
+      "dataset": "alpaca",
+      "source_row": 75,
+      "text_sha256": "db0e131ba55ddccbe2d35be8fbf40022ff8e75074589b4de1198b5f481fd3420"
+    },
+    {
+      "seq_id": 42,
+      "dataset": "c4",
+      "source_row": 75,
+      "text_sha256": "0a66336203453a0bf11b916d43fda498382c1f089669470a99140a3ecfac6a12"
+    },
+    {
+      "seq_id": 43,
+      "dataset": "gsm",
+      "source_row": 75,
+      "text_sha256": "b5a344d0eb7335cd922fcf39db8cf7ec8dd094cdbd5c658b79218c1c09081e27"
+    },
+    {
+      "seq_id": 44,
+      "dataset": "humaneval",
+      "source_row": 75,
+      "text_sha256": "82987935aacfb83baa2f77f46cccd7a163681646a16725cf73f1b6f177e13999"
+    },
+    {
+      "seq_id": 45,
+      "dataset": "alpaca",
+      "source_row": 76,
+      "text_sha256": "b36fed9a451cc512930d1de08b519851c4b7412de3ba2052c25967f4c64bb0ac"
+    },
+    {
+      "seq_id": 46,
+      "dataset": "c4",
+      "source_row": 76,
+      "text_sha256": "db991ed45c09d59bd3cbcc4f4a638d61d7b8a486fa1e41d51ad848471fe29268"
+    },
+    {
+      "seq_id": 47,
+      "dataset": "gsm",
+      "source_row": 76,
+      "text_sha256": "b384164045eb813d680c4f4a738715f5d615b01498517b885af5ff040e3ee933"
+    },
+    {
+      "seq_id": 48,
+      "dataset": "humaneval",
+      "source_row": 76,
+      "text_sha256": "7cf86f190e59ffb546082ac13a12b9a6568828474723e00f2859426f01b02517"
+    },
+    {
+      "seq_id": 49,
+      "dataset": "alpaca",
+      "source_row": 77,
+      "text_sha256": "b269f7f64289c67b217555801df5ea434ee064ce27e14eb4bd383bcebaa0acad"
+    },
+    {
+      "seq_id": 50,
+      "dataset": "c4",
+      "source_row": 77,
+      "text_sha256": "b8e021c14745b0e99124c1853fdafe518d565d85dae7ae9d54b3bff266bbb9df"
+    },
+    {
+      "seq_id": 51,
+      "dataset": "gsm",
+      "source_row": 77,
+      "text_sha256": "78a19fb7a7c362c44a098701ace9d6954ce8321d6d8f338ed058fc3bcc3c006a"
+    },
+    {
+      "seq_id": 52,
+      "dataset": "humaneval",
+      "source_row": 77,
+      "text_sha256": "7188910699ed5b3db78665390a19aa376450b972e2fc6d3f49a13b6dcb2f5e45"
+    },
+    {
+      "seq_id": 53,
+      "dataset": "alpaca",
+      "source_row": 78,
+      "text_sha256": "c514f9ad1666b212cfe66d591117bfb00944788d6a61299c3701f8056cb37817"
+    },
+    {
+      "seq_id": 54,
+      "dataset": "c4",
+      "source_row": 78,
+      "text_sha256": "7b4d3d777e85cc9a076008663dd11a8c1eeb634e7e034c394e7406b1d1ae9b21"
+    },
+    {
+      "seq_id": 55,
+      "dataset": "gsm",
+      "source_row": 78,
+      "text_sha256": "f8ac079613e10824401afe9b931c6a2bed7b58b9c6c1f00f9818c0a27b0d1bb6"
+    },
+    {
+      "seq_id": 56,
+      "dataset": "humaneval",
+      "source_row": 78,
+      "text_sha256": "e6f31e8a38810b0fe71271dbd0041d770b95167429690587f27aa75c27798d24"
+    },
+    {
+      "seq_id": 57,
+      "dataset": "alpaca",
+      "source_row": 79,
+      "text_sha256": "24ecb9a793c9ada737f375bb8df1cc751431039e38adb17dd452bd1b73a1a954"
+    },
+    {
+      "seq_id": 58,
+      "dataset": "c4",
+      "source_row": 79,
+      "text_sha256": "6eeef759b51d916e529164c1cab47bf7396abbfaba8c6cd38e9ac7ec7746d4db"
+    },
+    {
+      "seq_id": 59,
+      "dataset": "gsm",
+      "source_row": 79,
+      "text_sha256": "d702bfb092474e75fa857ae341aa04b08e76e2238a7ee24ab3aa7efaddee7b11"
+    },
+    {
+      "seq_id": 60,
+      "dataset": "humaneval",
+      "source_row": 79,
+      "text_sha256": "b5cf00dc0903142da48d202ff724887714d4dcb10a2f1d04c357fce6933e4ccf"
+    },
+    {
+      "seq_id": 61,
+      "dataset": "alpaca",
+      "source_row": 80,
+      "text_sha256": "218ecc9c6a0149d8c8743b3067be4f3b0f65263778ed2e5e9d5956a74ab541b3"
+    },
+    {
+      "seq_id": 62,
+      "dataset": "c4",
+      "source_row": 80,
+      "text_sha256": "020c788aa05d932105411caa48b513d027a04ad28fbe770d16f2873edcfdd378"
+    },
+    {
+      "seq_id": 63,
+      "dataset": "gsm",
+      "source_row": 80,
+      "text_sha256": "affac4f5c7e9c1b028d2ce61899565ca695d37bb8c5c7eb54d0bec20f76d3e45"
+    },
+    {
+      "seq_id": 64,
+      "dataset": "humaneval",
+      "source_row": 80,
+      "text_sha256": "5ca30b933e22273c9c449f982a4b5c290e7293d656b24d9b4a2644d4a6e04908"
+    },
+    {
+      "seq_id": 65,
+      "dataset": "alpaca",
+      "source_row": 81,
+      "text_sha256": "ee302347d801e7a824b8b8972cc7fc95c193f3db354edd69d565364c893fc49c"
+    },
+    {
+      "seq_id": 66,
+      "dataset": "c4",
+      "source_row": 81,
+      "text_sha256": "69c7cae8fb2c4939ba83a6d4ec8fea44cb053d9db159b025c296ff1a20687288"
+    },
+    {
+      "seq_id": 67,
+      "dataset": "gsm",
+      "source_row": 81,
+      "text_sha256": "0437cce94121afd840a2155d9518f0e96f8bd04adc1cde68653707dbb8c52379"
+    },
+    {
+      "seq_id": 68,
+      "dataset": "humaneval",
+      "source_row": 81,
+      "text_sha256": "c362d5f51f5ab70e8cfc55bbec32da02d6b54023a5d1d923b8239f4b79f671b0"
+    },
+    {
+      "seq_id": 69,
+      "dataset": "alpaca",
+      "source_row": 82,
+      "text_sha256": "042c637c628939982782eb66d0ef33d251ad0574d44962407655ff946f1a1309"
+    },
+    {
+      "seq_id": 70,
+      "dataset": "c4",
+      "source_row": 82,
+      "text_sha256": "27db22ba061d31836dc35bc3cdefdd96a770d3c53eb50c321ed0ada7c96c6ae4"
+    },
+    {
+      "seq_id": 71,
+      "dataset": "gsm",
+      "source_row": 82,
+      "text_sha256": "5c1e4dec2e8829e68fb724032897870035bf18b17778ce7a375f00a522c21a0b"
+    },
+    {
+      "seq_id": 72,
+      "dataset": "humaneval",
+      "source_row": 82,
+      "text_sha256": "50c4749489d54508f2d7f28d87dfc828fc3be29f879472fc72129b72aa6e1ea5"
+    },
+    {
+      "seq_id": 73,
+      "dataset": "alpaca",
+      "source_row": 83,
+      "text_sha256": "22ff5117af57de1aa4540dea6bad17eed4b3e37a63a752e905a72eec4dc301d3"
+    },
+    {
+      "seq_id": 74,
+      "dataset": "c4",
+      "source_row": 83,
+      "text_sha256": "94b2c9252bea3c31425b2953996e566191b392c1e9e60c53aac2fbdd075c7e55"
+    },
+    {
+      "seq_id": 75,
+      "dataset": "gsm",
+      "source_row": 83,
+      "text_sha256": "c7b34b999ba8f6917444eb8e3a7d701128e8b3d35339857dbe1c22380f651235"
+    },
+    {
+      "seq_id": 76,
+      "dataset": "humaneval",
+      "source_row": 83,
+      "text_sha256": "00fbd0cd39aff54259d4924453135a867ef657f0c1701662f70b391d0140455f"
+    },
+    {
+      "seq_id": 77,
+      "dataset": "alpaca",
+      "source_row": 84,
+      "text_sha256": "1868401038f618f25df2f6941f0899ff4bba96f065011781affbb77dfbbff383"
+    },
+    {
+      "seq_id": 78,
+      "dataset": "c4",
+      "source_row": 84,
+      "text_sha256": "7c46239553f080b1481a08638d5e6f57e45b8c0966e7de9a80737372b1f69c21"
+    },
+    {
+      "seq_id": 79,
+      "dataset": "gsm",
+      "source_row": 84,
+      "text_sha256": "a869e44547ce2413df798ebfec7fc4f572cf3a4ab984eb011833b3e431de070b"
+    },
+    {
+      "seq_id": 80,
+      "dataset": "humaneval",
+      "source_row": 84,
+      "text_sha256": "95756b802178f59a46858750c8ad466939feb5b7d482afdf98a9b61b8bf88742"
+    },
+    {
+      "seq_id": 81,
+      "dataset": "alpaca",
+      "source_row": 85,
+      "text_sha256": "ed539b4582c42b965457ac5cfa041202e26da4287055059830735f2d201a9a2a"
+    },
+    {
+      "seq_id": 82,
+      "dataset": "c4",
+      "source_row": 85,
+      "text_sha256": "b13a46a0b3afb546022090ee0a03c0ae63737eca82d0097a31792bb0be50ec76"
+    },
+    {
+      "seq_id": 83,
+      "dataset": "gsm",
+      "source_row": 85,
+      "text_sha256": "111d72db39e60e494d6bff18c61dd350e00b8adf1bfd9a2c8386b9802c10597a"
+    },
+    {
+      "seq_id": 84,
+      "dataset": "humaneval",
+      "source_row": 85,
+      "text_sha256": "f9698fd44142e93de812dd060202f61c2e6126f3c43157fe2fd9949072ced550"
+    },
+    {
+      "seq_id": 85,
+      "dataset": "alpaca",
+      "source_row": 86,
+      "text_sha256": "a159ad90479aab8ec112990f22e44a40f09019e596bddf8359c083eb5b50dc99"
+    },
+    {
+      "seq_id": 86,
+      "dataset": "c4",
+      "source_row": 86,
+      "text_sha256": "7619c50b8aba664994536d7adbe37dab7a9a9a912366cf8fe2168ac6a5c3486e"
+    },
+    {
+      "seq_id": 87,
+      "dataset": "gsm",
+      "source_row": 86,
+      "text_sha256": "64dfad66336d7e34ad56521234ba83839bec89d950115be2832041ceec5780a4"
+    },
+    {
+      "seq_id": 88,
+      "dataset": "humaneval",
+      "source_row": 86,
+      "text_sha256": "69e95c44cd426fdb817b99e0aa9748aca27db9f2ec27f2f41911273ee86719a5"
+    },
+    {
+      "seq_id": 89,
+      "dataset": "alpaca",
+      "source_row": 87,
+      "text_sha256": "3d1560558dffd7a4baf1a346c3610bb23473ce7f1592ad4dfbad5a4c2c631c8d"
+    },
+    {
+      "seq_id": 90,
+      "dataset": "c4",
+      "source_row": 87,
+      "text_sha256": "8cca93ebabbae0d4dcf93d78bba27f01c0d5294865ebadd6cd8a6faf202a40ea"
+    },
+    {
+      "seq_id": 91,
+      "dataset": "gsm",
+      "source_row": 87,
+      "text_sha256": "4e78856e0b87bb29e355c5f06f42d7dbc13d221da57bcefddeaad79de0156d84"
+    },
+    {
+      "seq_id": 92,
+      "dataset": "humaneval",
+      "source_row": 87,
+      "text_sha256": "be48290ae8a1107786a76a41b0178ecca372e1f382f11f7fc2fef52c5c89e837"
+    },
+    {
+      "seq_id": 93,
+      "dataset": "alpaca",
+      "source_row": 88,
+      "text_sha256": "717ef884ff970cd2640a0b427780176dd7b5a5f21ab9020a4108e69988b6577d"
+    },
+    {
+      "seq_id": 94,
+      "dataset": "c4",
+      "source_row": 88,
+      "text_sha256": "205fe57e55a38a4055170be61ff6b533899b164f6643180b3349f7292b3e1eea"
+    },
+    {
+      "seq_id": 95,
+      "dataset": "gsm",
+      "source_row": 88,
+      "text_sha256": "c608ebecb5a9d635a1296c8d676be06f0385daf0b02dfc2eaf623ec7c509a729"
+    },
+    {
+      "seq_id": 96,
+      "dataset": "humaneval",
+      "source_row": 88,
+      "text_sha256": "1af0f4860febf4c7d6203ee92ee3857bea22dcdfe65e1d280831ff9f4fbf0c38"
+    }
+  ],
+  "dataset_sha256": "48f369e704d9d61df4077381bae4743d1b75717899f60f1101b572f2bb9a2b06",
+  "max_probability_sum_error": 4.832357956008337e-07,
+  "snapshot_sha256": {
+    "mixed_t0.7_seed271/chunk_0000.npz": "f51b6a7921bd737e31ca3a30967670573f5034a1fa55d9aca76aa3600b74e2f1",
+    "mixed_t0.7_seed271/chunk_0001.npz": "8925587174f99788883a7cf8896abe439fa98b38be7a7bb8951e8109b6efdcc6",
+    "mixed_t0.7_seed271/chunk_0002.npz": "3a80cfc36a0dd7735ae2b0faa953ba8da69a8479878d531193c2543519963eea",
+    "mixed_t0.7_seed271/chunk_0003.npz": "e847420c3de5da1d71d00d88c2806d854c37d569395f947d7d7224ef93042be2",
+    "mixed_t0.7_seed271/chunk_0004.npz": "87cae158102980988d15b24d92680a4b46b36f61ad751b41c40b811a5e325b75",
+    "mixed_t0.7_seed271/chunk_0005.npz": "caf8f1c92b7e348f5d03ced4d77b170cdf51879fbe628e50acb0c7a81030f7ad",
+    "mixed_t0.7_seed271/chunk_0006.npz": "c9d71b4ac0908ba8952802afdbd12525d625d3130cc2a0209119601ab59bb3ea",
+    "mixed_t0.7_seed271/chunk_0007.npz": "5eea7d123087f036525f32c3eb10052f7811587a75ca38003a435589f5a84aa5",
+    "mixed_t0.7_seed271/chunk_0008.npz": "836b1b66374881c9a8663df0abdeb1b974d0b5945fa8baed4f6f4f7993d139d4",
+    "mixed_t0.7_seed271/chunk_0009.npz": "51849a88541d64888a23d99d8fbf35ffa31774dd601637ee2b9136272fb52981",
+    "mixed_t0.7_seed271/chunk_0010.npz": "bdae8a70c959c9a48b729fc09a75209be07fff7b66e74085d3a63a738c7255cb",
+    "mixed_t0.7_seed271/chunk_0011.npz": "7d4a7fad4df898c33ae5297e9f12d3701e23143f2813945379e834f7f429075d",
+    "mixed_t0.7_seed271/chunk_0012.npz": "e22cce870829caff1cf26c13babceb11de6f94eb18f7a70bb29aebe214cb9578",
+    "mixed_t0.7_seed271/chunk_0013.npz": "d3350fad6951ff0d08db3099592e1c048d1ca772e6ecbef4123b26a2b57ed4c3",
+    "mixed_t0.7_seed271/chunk_0014.npz": "8f42e6de6e2ceeee0e4e3a84ebf2592554ee8cdf4e3963cadef66291de6e407c",
+    "mixed_t0.7_seed271/chunk_0015.npz": "0a3d19febbd35bc64d655259ebe7d40fa93d6f093d2185ebabe3f423ebcd4537",
+    "mixed_t0.7_seed271/chunk_0016.npz": "20c35f316a0cb758457a85e2fbf196173425e97e80ad362776cff66d00be665c",
+    "mixed_t0.7_seed271/chunk_0017.npz": "10a46e718b4bc72e5804a6252e21071f499c4618fa194e14cb684f4833d066f1",
+    "mixed_t0.7_seed271/chunk_0018.npz": "30f4098082db4986142b9dadfd8cd9a0aaef8d1636527a3debf3b9202f5c270f",
+    "mixed_t0.7_seed271/chunk_0019.npz": "7e77637bec2e417b5030f90e7c11e11aea36094b55ae984f45c0474a950ca56d",
+    "mixed_t0.7_seed271/chunk_0020.npz": "b3db463da7d6e594a0df35eff2249b370422892a814b235eb8ac12d0dcd32110",
+    "mixed_t0.7_seed271/chunk_0021.npz": "37333dca0526fdc74e8d7a7fa6163974e35c0128fdfbfbb762336cf113126637",
+    "mixed_t0.7_seed271/chunk_0022.npz": "db3b51ee3246e586601f9cc92cc1d3ac5f79e432e3b30582d3d658a538fdcd5f",
+    "mixed_t0.7_seed271/chunk_0023.npz": "ac9e00ec22130113e33f4975d4b9c2a3c2ee0b57f7cd2e83b67c837f25d995ae",
+    "mixed_t0.7_seed271/chunk_0024.npz": "71790cc91efe23c50238974416c0733bd2e2b97d7e963d62b4811463d40a6a5a",
+    "mixed_t0.7_seed271/chunk_0025.npz": "4170ddb5434df6b81bd023cb9664284beaed083fba92e15db15fbd97b5fa7284",
+    "mixed_t0.7_seed271/chunk_0026.npz": "fca7b7aabf91e55cb85a11b0fb899114d2c10fec9904137e3133bd0a12aca9f5",
+    "mixed_t0.7_seed271/chunk_0027.npz": "e0585f9db70e7759d4cf5674d1e16140d369d1e54c21c45bf64d0f6504a83ce2",
+    "mixed_t0.7_seed271/chunk_0028.npz": "670da01e3ea8256b2ee6d05d76bb02e9ead81e2feab4f717c7a720593f01fcba",
+    "mixed_t0.7_seed271/chunk_0029.npz": "4f3755e0fb1f32ff8944d32667084e41f9305c34aa8d75e9adc589afaf1185c6",
+    "mixed_t0.7_seed271/chunk_0030.npz": "65255ad71b5a4c801af3b6e24bb3696d3b0a323bef4cfe71322110db5927f8c5",
+    "mixed_t0.7_seed271/chunk_0031.npz": "6ae7b3acf19bdffa11b24888f8a1a5160c3478e3362d7576e3b3e372034af79a",
+    "mixed_t0.7_seed271/chunk_0032.npz": "0412ef3bde7b02c5cfa119061b807d57db53c25e8a64b3a934410ef391039d34"
+  },
+  "validation": "exit, log, exact tap, finite normalized float32, all prompt/step IDs and stride"
+}

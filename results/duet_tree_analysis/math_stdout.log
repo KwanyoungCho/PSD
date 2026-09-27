@@ -1,0 +1,76 @@
+{
+  "seed": 921,
+  "production_ladder_max_abs_error": 4.878966897159387e-09,
+  "online_score_hand_calculation_max_error": 5.551115123125783e-17,
+  "online_score_preserves_raw_q": true,
+  "exact_dp_vs_enumeration_checks": 800,
+  "subtree_reward_identity_checks": 800,
+  "greedy_q_objective_failures": 1,
+  "greedy_failure_example": {
+    "par": [
+      -1,
+      -1,
+      1,
+      -1,
+      1,
+      3,
+      3,
+      0
+    ],
+    "sib": [
+      0,
+      1,
+      0,
+      2,
+      1,
+      0,
+      1,
+      0
+    ],
+    "raw_q": [
+      0.0491506056781134,
+      0.1374091759658662,
+      0.30214713396848963,
+      0.09637758125978592,
+      0.1158550314028931,
+      0.06759151742111504,
+      0.1987838287975204,
+      0.22403408380223722
+    ],
+    "budget": 6,
+    "greedy": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      6
+    ],
+    "dp": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      7
+    ],
+    "greedy_value": 0.350127763178614,
+    "dp_value": 0.35138610691081607
+  },
+  "perfect_draft": {
+    "reach": [
+      1.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    "q_product": [
+      0.4,
+      0.35,
+      0.13999999999999999,
+      0.16000000000000003
+    ]
+  },
+  "production_sha256": "5e5d33ef918e2a074e7a8537ea1b6078a68366047f738adda34ed036e598ddc0"
+}
+pruning bias: {'full': [0.4, 0.3, 0.3], 'production_rerank': [0.4, 0.31875, 0.28125], 'fixed_prefix': [0.4, 0.3, 0.3], 'target_match': [0.4, 0.3, 0.3]} TV= 0.01875

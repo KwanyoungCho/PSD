@@ -1,0 +1,122 @@
+{
+  "configs": [
+    {
+      "tag": "chain_e56_k10_4_w8",
+      "exit": 56,
+      "k1": 10,
+      "k2": 4,
+      "budget": 8,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "chain_e56_k10_4_w24",
+      "exit": 56,
+      "k1": 10,
+      "k2": 4,
+      "budget": 24,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "p2tree_e56_k10_4_w15_n12v8_n8v4",
+      "exit": 56,
+      "k1": 10,
+      "k2": 4,
+      "budget": 15,
+      "mode": "p2tree",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 4,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "p2tree_e56_k10_4_w15_n12v8_n8v8",
+      "exit": 56,
+      "k1": 10,
+      "k2": 4,
+      "budget": 15,
+      "mode": "p2tree",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "fulltree_e56_k10_4_w15_n12v8_n8v8",
+      "exit": 56,
+      "k1": 10,
+      "k2": 4,
+      "budget": 15,
+      "mode": "fulltree",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "chain_e56_k10_4_w15_proxy__topm__original",
+      "exit": 56,
+      "k1": 10,
+      "k2": 4,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "policy::proxy__topm__original"
+    },
+    {
+      "tag": "chain_e56_k10_4_w15_proxy__full__expected_mix0.25",
+      "exit": 56,
+      "k1": 10,
+      "k2": 4,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "policy::proxy__full__expected_mix0.25"
+    },
+    {
+      "tag": "chain_e40_k2_2_w15",
+      "exit": 40,
+      "k1": 2,
+      "k2": 2,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    },
+    {
+      "tag": "chain_e56_k2_2_w15",
+      "exit": 56,
+      "k1": 2,
+      "k2": 2,
+      "budget": 15,
+      "mode": "chain",
+      "n1": 12,
+      "v1": 8,
+      "n2": 8,
+      "v2": 8,
+      "candidate": "legacy"
+    }
+  ],
+  "note": "Separate shape/source and low-K boundary feasibility. Not part of primary 19-config regret benchmark."
+}

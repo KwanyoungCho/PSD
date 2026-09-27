@@ -1721,6 +1721,18 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
                 _ev_side = duet_record("exit_proxy_side")
                 exit_h = (graph_vars["exit_hidden"][:flat]
                           + graph_vars["exit_residual"][:flat])
+                _pslot = getattr(model_runner.model.model, "_probe_slot", None)
+                if _pslot is not None and not getattr(
+                        model_runner, "_probe_checked", False):
+                    model_runner._probe_checked = True
+                    _sl = _pslot.get(int(config.duet_exit_layer))
+                    _ph = model_runner.model.model._probe_h[_sl, :flat]
+                    _pr = model_runner.model.model._probe_r[_sl, :flat]
+                    _d = ((_ph + _pr) - exit_h).abs().max().item()
+                    print(f"[DUET probe] tap check @layer="
+                          f"{config.duet_exit_layer} max|probe-engine|="
+                          f"{_d:.3e} {'OK' if _d == 0.0 else 'MISMATCH'}",
+                          flush=True)
                 normed = model_runner.model.model.norm(exit_h, None)
                 _el_full = torch.nn.functional.linear(normed, _replica)
                 duet_proxy_fn(_el_full, orig_bs)
@@ -1735,6 +1747,23 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         _ev_el = duet_record("exit_logits")
         flat = orig_bs * k_plus_1
         exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
+        # Probe self-check (once): the probe slot for duet_exit_layer must
+        # hold exactly what graph_pre produced, or the tap convention is off
+        # by a layer and every probe number is wrong.
+        _pslot = getattr(model_runner.model.model, "_probe_slot", None)
+        if _pslot is not None and not getattr(model_runner, "_probe_checked", False):
+            model_runner._probe_checked = True
+            _sl = _pslot.get(int(config.duet_exit_layer))
+            if _sl is None:
+                print("[DUET probe] exit layer not in probe set; "
+                      "tap convention UNVERIFIED", flush=True)
+            else:
+                _ph = model_runner.model.model._probe_h[_sl, :flat]
+                _pr = model_runner.model.model._probe_r[_sl, :flat]
+                _d = (( _ph + _pr) - exit_h).abs().max().item()
+                print(f"[DUET probe] tap check @layer={config.duet_exit_layer} "
+                      f"max|probe-engine|={_d:.3e} "
+                      f"{'OK' if _d == 0.0 else 'MISMATCH'}", flush=True)
         normed = model_runner.model.model.norm(exit_h, None)
         if getattr(config, "duet_exit_topm_gather", False):
             # B>1 not supported for this gate (docs/duet/13 §6) — the y_tok

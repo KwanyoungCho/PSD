@@ -1,0 +1,390 @@
+{
+  "plan": {
+    "temperature": 0.7,
+    "seeds": [
+      801,
+      802
+    ],
+    "policies": {
+      "legacy": "legacy",
+      "matched_proxy": "policy::proxy__topm__original",
+      "optimized_proxy": "policy::proxy__full__expected_mix0.25",
+      "selected": "policy::complement_power1__full__expected_mix0.25",
+      "original_residual": "legacy"
+    },
+    "orders": [
+      [
+        "legacy",
+        "matched_proxy",
+        "optimized_proxy",
+        "selected"
+      ],
+      [
+        "selected",
+        "optimized_proxy",
+        "matched_proxy",
+        "legacy"
+      ]
+    ],
+    "num_prompts": 16,
+    "mapping": [
+      {
+        "seq_id": 1,
+        "dataset": "alpaca",
+        "source_row": 65,
+        "text_sha256": "78d2f73347efb313f61818c69c872d15c9986d6a9fde04a3c1759ca41a001f1d"
+      },
+      {
+        "seq_id": 2,
+        "dataset": "c4",
+        "source_row": 65,
+        "text_sha256": "d71d3b9b50040fe4e3f9ba9035e71940ec48a00f43c88b0a5dfba5e476bceabf"
+      },
+      {
+        "seq_id": 3,
+        "dataset": "gsm",
+        "source_row": 65,
+        "text_sha256": "01a0545c22dc10a57b33d14b5d726669a9252fda8d8a5b78a21fb40e8db6996a"
+      },
+      {
+        "seq_id": 4,
+        "dataset": "humaneval",
+        "source_row": 65,
+        "text_sha256": "b1ff059f78c9b9ca75c725fd3dccd542129ecc61344bb4a44596e13f4623fcf1"
+      },
+      {
+        "seq_id": 5,
+        "dataset": "alpaca",
+        "source_row": 66,
+        "text_sha256": "ac09888baf261d07d9145072e17c27b684b1b8c90225796ab58ea611bbe713dd"
+      },
+      {
+        "seq_id": 6,
+        "dataset": "c4",
+        "source_row": 66,
+        "text_sha256": "717a4e1e9c17fa483def41411a51ba7b0279f91e634b46b6bd57c0c948369b8f"
+      },
+      {
+        "seq_id": 7,
+        "dataset": "gsm",
+        "source_row": 66,
+        "text_sha256": "d48747fe96f2dfe0dee4a7284e0be8f24d495f550f7a9c0819c0e74ea420aee8"
+      },
+      {
+        "seq_id": 8,
+        "dataset": "humaneval",
+        "source_row": 66,
+        "text_sha256": "97a5310f6ed33f3e071de2e6f91dba833f0bcab9ca83887792dd9c72d4f063ef"
+      },
+      {
+        "seq_id": 9,
+        "dataset": "alpaca",
+        "source_row": 67,
+        "text_sha256": "478c8db21173a44cdbe8db793a9d6c549983e555634078d0a9e153d27d3d4de0"
+      },
+      {
+        "seq_id": 10,
+        "dataset": "c4",
+        "source_row": 67,
+        "text_sha256": "f22fc1bc166b507a1a79795e5530457f5544eaa9fc1939dd9ae9823ab2115a63"
+      },
+      {
+        "seq_id": 11,
+        "dataset": "gsm",
+        "source_row": 67,
+        "text_sha256": "e0efbdc0b56d61fd49894c0379397faaa0d8e08e0c4d139d2375831bbe033e68"
+      },
+      {
+        "seq_id": 12,
+        "dataset": "humaneval",
+        "source_row": 67,
+        "text_sha256": "bf2b14bfeab2fea94ee1374415e4a82bc0eb01b305de8d5af081f6e346368ce5"
+      },
+      {
+        "seq_id": 13,
+        "dataset": "alpaca",
+        "source_row": 68,
+        "text_sha256": "6dcb4e5b25b126eb846f8b420856671b2aa3e4670105c76dd8f296484d4684e5"
+      },
+      {
+        "seq_id": 14,
+        "dataset": "c4",
+        "source_row": 68,
+        "text_sha256": "e1a94826ee32d5169d9b567be4a7542fa73fcfa3372435d1877424215b07224d"
+      },
+      {
+        "seq_id": 15,
+        "dataset": "gsm",
+        "source_row": 68,
+        "text_sha256": "9a2e593195f9e272623b51abf9b34bdf8d6939d63b05ed5e080ad8c01432aab3"
+      },
+      {
+        "seq_id": 16,
+        "dataset": "humaneval",
+        "source_row": 68,
+        "text_sha256": "108119f29464ef285271bb51933f37a4f16e29137dadb0552938ccd197019837"
+      }
+    ],
+    "output_len": 256,
+    "dataset_sha256": "7871a583afb9162e5108180a51737d88cf86d1cfd60b3c505ab7663f40cc641d",
+    "frozen_sha256": "e543fefafa6249bb71a041120cdae4c0ecb35282f07f9094c55ca758d7b32de9",
+    "note": "Small prespecified throughput screen; two seeds, reverse arm order. No distribution probes. All arms use identical prompts and output limits. Not a full Mirror-SD comparison.",
+    "secondary_original_residual": {
+      "arm": "original_residual",
+      "seeds": [
+        801,
+        802
+      ],
+      "temperature": 0.7,
+      "candidate_temperature": 1.0,
+      "source": "residual",
+      "policy": "legacy",
+      "note": "Canonical original DUET PS rule, added as a secondary runtime control after the first four-arm repetition. No parameter tuning or winner selection."
+    }
+  },
+  "records": [
+    {
+      "arm": "legacy",
+      "seed": 801,
+      "decode_tokens": 4124,
+      "decode_s": 49.560695628635585,
+      "decode_tps": 83.21109999951658,
+      "wall_tps": 79.38406692162916,
+      "steps": 1378,
+      "cache_hit": 0.7946298984034833,
+      "tokens_per_step": 2.992743105950653,
+      "target_step_ms": 37.358586827699604,
+      "tokens_per_hit_step": 3.0821917808219177,
+      "tokens_per_miss_step": 2.646643109540636,
+      "candidate_calls_by_K": {
+        "4": 1378
+      }
+    },
+    {
+      "arm": "legacy",
+      "seed": 802,
+      "decode_tokens": 4130,
+      "decode_s": 47.727270484901965,
+      "decode_tps": 86.53333739892969,
+      "wall_tps": 82.57272770451365,
+      "steps": 1339,
+      "cache_hit": 0.8230022404779687,
+      "tokens_per_step": 3.084391336818521,
+      "target_step_ms": 36.96359973470332,
+      "tokens_per_hit_step": 3.1578947368421053,
+      "tokens_per_miss_step": 2.742616033755274,
+      "candidate_calls_by_K": {
+        "4": 1339
+      }
+    },
+    {
+      "arm": "matched_proxy",
+      "seed": 801,
+      "decode_tokens": 4115,
+      "decode_s": 46.8548998683691,
+      "decode_tps": 87.82432598427047,
+      "wall_tps": 83.87417093253639,
+      "steps": 1318,
+      "cache_hit": 0.8080424886191199,
+      "tokens_per_step": 3.122154779969651,
+      "target_step_ms": 36.95518724264477,
+      "tokens_per_hit_step": 3.224413145539906,
+      "tokens_per_miss_step": 2.691699604743083,
+      "candidate_calls_by_K": {
+        "4": 1318
+      }
+    },
+    {
+      "arm": "matched_proxy",
+      "seed": 802,
+      "decode_tokens": 4126,
+      "decode_s": 49.23026998806745,
+      "decode_tps": 83.81022490837589,
+      "wall_tps": 79.84372922095277,
+      "steps": 1356,
+      "cache_hit": 0.8089970501474927,
+      "tokens_per_step": 3.0427728613569323,
+      "target_step_ms": 37.704808794664785,
+      "tokens_per_hit_step": 3.1194165907019142,
+      "tokens_per_miss_step": 2.718146718146718,
+      "candidate_calls_by_K": {
+        "4": 1356
+      }
+    },
+    {
+      "arm": "optimized_proxy",
+      "seed": 801,
+      "decode_tokens": 4130,
+      "decode_s": 45.05245184432715,
+      "decode_tps": 91.67092646301857,
+      "wall_tps": 87.05259652028867,
+      "steps": 1290,
+      "cache_hit": 0.8612403100775193,
+      "tokens_per_step": 3.201550387596899,
+      "target_step_ms": 36.383555960386275,
+      "tokens_per_hit_step": 3.27992799279928,
+      "tokens_per_miss_step": 2.7150837988826817,
+      "candidate_calls_by_K": {
+        "4": 1290
+      }
+    },
+    {
+      "arm": "optimized_proxy",
+      "seed": 802,
+      "decode_tokens": 4115,
+      "decode_s": 46.28257103729993,
+      "decode_tps": 88.91035886238147,
+      "wall_tps": 84.94809670831975,
+      "steps": 1304,
+      "cache_hit": 0.8496932515337423,
+      "tokens_per_step": 3.1556748466257667,
+      "target_step_ms": 36.89164401627934,
+      "tokens_per_hit_step": 3.2193140794223827,
+      "tokens_per_miss_step": 2.795918367346939,
+      "candidate_calls_by_K": {
+        "4": 1304
+      }
+    },
+    {
+      "arm": "original_residual",
+      "seed": 801,
+      "decode_tokens": 4120,
+      "decode_s": 46.51767452433705,
+      "decode_tps": 88.56848589549557,
+      "wall_tps": 84.57365889129844,
+      "steps": 1298,
+      "cache_hit": 0.7773497688751926,
+      "tokens_per_step": 3.174114021571649,
+      "target_step_ms": 37.21538157538554,
+      "tokens_per_hit_step": 3.2259663032705648,
+      "tokens_per_miss_step": 2.9930795847750864,
+      "candidate_calls_by_K": {
+        "4": 1298
+      }
+    },
+    {
+      "arm": "original_residual",
+      "seed": 802,
+      "decode_tokens": 4128,
+      "decode_s": 46.590871738269925,
+      "decode_tps": 88.60104664256033,
+      "wall_tps": 84.47590121930484,
+      "steps": 1295,
+      "cache_hit": 0.7722007722007722,
+      "tokens_per_step": 3.1876447876447878,
+      "target_step_ms": 37.34675667286034,
+      "tokens_per_hit_step": 3.282,
+      "tokens_per_miss_step": 2.8677966101694916,
+      "candidate_calls_by_K": {
+        "4": 1295
+      }
+    },
+    {
+      "arm": "selected",
+      "seed": 801,
+      "decode_tokens": 4120,
+      "decode_s": 47.976828454993665,
+      "decode_tps": 85.87478857350709,
+      "wall_tps": 82.11006966370766,
+      "steps": 1349,
+      "cache_hit": 0.816160118606375,
+      "tokens_per_step": 3.0541141586360268,
+      "target_step_ms": 36.90170023590326,
+      "tokens_per_hit_step": 3.1489554950045413,
+      "tokens_per_miss_step": 2.6330645161290325,
+      "candidate_calls_by_K": {
+        "4": 1349
+      }
+    },
+    {
+      "arm": "selected",
+      "seed": 802,
+      "decode_tokens": 4121,
+      "decode_s": 47.072301710024476,
+      "decode_tps": 87.54617578265554,
+      "wall_tps": 83.35473386515773,
+      "steps": 1337,
+      "cache_hit": 0.8264771877337322,
+      "tokens_per_step": 3.082273747195213,
+      "target_step_ms": 36.67050167870874,
+      "tokens_per_hit_step": 3.1610859728506786,
+      "tokens_per_miss_step": 2.706896551724138,
+      "candidate_calls_by_K": {
+        "4": 1337
+      }
+    }
+  ],
+  "arms": {
+    "legacy": {
+      "pooled_decode_tps": 84.84091434666617,
+      "mean_run_decode_tps": 84.87221869922314,
+      "run_decode_tps": [
+        83.21109999951658,
+        86.53333739892969
+      ],
+      "pooled_cache_hit": 0.8086124401913876,
+      "mean_tokens_per_step": 3.038567221384587,
+      "paired_tps_gain_percent_vs_legacy": [
+        0.0,
+        0.0
+      ]
+    },
+    "matched_proxy": {
+      "pooled_decode_tps": 85.76765813406065,
+      "mean_run_decode_tps": 85.81727544632318,
+      "run_decode_tps": [
+        87.82432598427047,
+        83.81022490837589
+      ],
+      "pooled_cache_hit": 0.8085265519820494,
+      "mean_tokens_per_step": 3.0824638206632917,
+      "paired_tps_gain_percent_vs_legacy": [
+        5.544003125521346,
+        -3.1468941016338126
+      ]
+    },
+    "optimized_proxy": {
+      "pooled_decode_tps": 90.2720527117595,
+      "mean_run_decode_tps": 90.29064266270002,
+      "run_decode_tps": [
+        91.67092646301857,
+        88.91035886238147
+      ],
+      "pooled_cache_hit": 0.8554356206630687,
+      "mean_tokens_per_step": 3.178612617111333,
+      "paired_tps_gain_percent_vs_legacy": [
+        10.166704278096494,
+        2.74694301052254
+      ]
+    },
+    "selected": {
+      "pooled_decode_tps": 86.70252937288863,
+      "mean_run_decode_tps": 86.71048217808132,
+      "run_decode_tps": [
+        85.87478857350709,
+        87.54617578265554
+      ],
+      "pooled_cache_hit": 0.8212956068503351,
+      "mean_tokens_per_step": 3.06819395291562,
+      "paired_tps_gain_percent_vs_legacy": [
+        3.201121694108111,
+        1.1704603268177793
+      ]
+    },
+    "original_residual": {
+      "pooled_decode_tps": 88.58477906783142,
+      "mean_run_decode_tps": 88.58476626902795,
+      "run_decode_tps": [
+        88.56848589549557,
+        88.60104664256033
+      ],
+      "pooled_cache_hit": 0.7747782491322792,
+      "mean_tokens_per_step": 3.180879404608218,
+      "paired_tps_gain_percent_vs_legacy": [
+        6.438306783602332,
+        2.389494391159608
+      ]
+    }
+  },
+  "limitation": "Exploratory pilot: some generation intervals overlapped GPU2 analysis. The original residual control was added afterward. Two seeds on the same 16 prompts; first four arms used reverse order. Use LIVE_CLEAN.md for the isolated allocation comparison. Do not bootstrap individual steps as independent throughput replications or call this a full Mirror-SD benchmark."
+}

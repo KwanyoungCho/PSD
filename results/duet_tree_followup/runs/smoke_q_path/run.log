@@ -1,0 +1,202 @@
+[tree followup hook] q_path; gain SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+[bench] --k omitted -> derived k = K1+K2 = 6
+[bench] --f omitted -> derived f = p1_fanout + ceil(budget/(K1+1)) = 6
+[bench] seeded with 1
+[Config] duet_proxy_top_k raised 3 → 22 (K_max=4 K_min=2 p1_sum_full=27 p1_sum_short=9 p1_max=3 per_pos=20 total=22 wire_N=44)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=22, draft_fan_out=3, proxy_fan_out=3, K1=4, K2=2, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 4 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[tree followup hook] q_path; gain SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+`torch_dtype` is deprecated! Use `dtype` instead!
+[tree followup hook] q_path; gain SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=22, draft_fan_out=3, proxy_fan_out=3, K1=4, K2=2, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=15, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+[tree followup hook] q_path; gain SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+`torch_dtype` is deprecated! Use `dtype` instead!
+[tree followup hook] q_path; gain SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[load_model] loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.94it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.93it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.40it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.39it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.05it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.05it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.94it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.94it/s]
+Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.46it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.46it/s]
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 552, in setup_and_warmup_model_and_cudagraphs
+    apply_ssd_awq_artifact(
+  File "/home/chokwans99/PSD/ssd/ssd/quant/loader.py", line 81, in apply_ssd_awq_artifact
+    state = build_awq_state(raw, device=device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/quant/build.py", line 213, in build_awq_state
+    qw_cuda = raw.qweight.to(device, non_blocking=True).contiguous()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 56.00 MiB. GPU 2 has a total capacity of 23.52 GiB of which 15.81 MiB is free. Process 3831893 has 1.68 GiB memory in use. Including non-PyTorch memory, this process has 6.46 GiB memory in use. Process 3833842 has 15.34 GiB memory in use. Of the allocated memory 5.88 GiB is allocated by PyTorch, and 41.23 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Process SpawnProcess-3:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 552, in setup_and_warmup_model_and_cudagraphs
+    apply_ssd_awq_artifact(
+  File "/home/chokwans99/PSD/ssd/ssd/quant/loader.py", line 81, in apply_ssd_awq_artifact
+    state = build_awq_state(raw, device=device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/quant/build.py", line 224, in build_awq_state
+    marlin_qzeros = marlin_zero_points_from_awq(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/quant/marlin_utils.py", line 119, in marlin_zero_points_from_awq
+    return _pack_cols_int32(z, num_bits=num_bits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/quant/marlin_utils.py", line 75, in _pack_cols_int32
+    packed = (reshaped * (1 << shifts).to(torch.int32)).sum(dim=-1).to(torch.int32)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 MiB. GPU 3 has a total capacity of 23.52 GiB of which 1.19 MiB is free. Including non-PyTorch memory, this process has 8.16 GiB memory in use. Process 3833843 has 15.34 GiB memory in use. Of the allocated memory 7.56 GiB is allocated by PyTorch, and 67.18 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 552, in setup_and_warmup_model_and_cudagraphs
+    apply_ssd_awq_artifact(
+  File "/home/chokwans99/PSD/ssd/ssd/quant/loader.py", line 81, in apply_ssd_awq_artifact
+    state = build_awq_state(raw, device=device)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/quant/build.py", line 224, in build_awq_state
+    marlin_qzeros = marlin_zero_points_from_awq(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/quant/marlin_utils.py", line 119, in marlin_zero_points_from_awq
+    return _pack_cols_int32(z, num_bits=num_bits)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/quant/marlin_utils.py", line 75, in _pack_cols_int32
+    packed = (reshaped * (1 << shifts).to(torch.int32)).sum(dim=-1).to(torch.int32)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 MiB. GPU 1 has a total capacity of 23.52 GiB of which 1.12 MiB is free. Including non-PyTorch memory, this process has 8.16 GiB memory in use. Process 3833841 has 15.34 GiB memory in use. Of the allocated memory 7.56 GiB is allocated by PyTorch, and 67.18 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/chokwans99/PSD/results/duet_tree_followup/run_full.py", line 83, in <module>
+[rank0]:     if __name__=='__main__':main()
+[rank0]:                             ^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/results/duet_tree_followup/run_full.py", line 80, in main
+[rank0]:     bench.main()
+[rank0]:   File "/home/chokwans99/PSD/ssd/bench/bench.py", line 625, in main
+[rank0]:     llm = LLM(model_path, **llm_kwargs)
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/llm_engine.py", line 128, in __init__
+[rank0]:     self.model_runner = ModelRunner(
+[rank0]:                         ^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+[rank0]:     model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 552, in setup_and_warmup_model_and_cudagraphs
+[rank0]:     apply_ssd_awq_artifact(
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/quant/loader.py", line 81, in apply_ssd_awq_artifact
+[rank0]:     state = build_awq_state(raw, device=device)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/quant/build.py", line 224, in build_awq_state
+[rank0]:     marlin_qzeros = marlin_zero_points_from_awq(
+[rank0]:                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/quant/marlin_utils.py", line 119, in marlin_zero_points_from_awq
+[rank0]:     return _pack_cols_int32(z, num_bits=num_bits)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/ssd/quant/marlin_utils.py", line 75, in _pack_cols_int32
+[rank0]:     packed = (reshaped * (1 << shifts).to(torch.int32)).sum(dim=-1).to(torch.int32)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_device.py", line 103, in __torch_function__
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 MiB. GPU 0 has a total capacity of 23.52 GiB of which 1.12 MiB is free. Including non-PyTorch memory, this process has 8.16 GiB memory in use. Process 3833840 has 15.34 GiB memory in use. Of the allocated memory 7.56 GiB is allocated by PyTorch, and 67.18 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+[load_model] finished loading model from /home/chokwans99/awq_calibrated/layerskip_llama2_70b
+Process SpawnProcess-4:
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/draft_runner.py", line 133, in __init__
+    super().__init__(self.draft_cfg, rank=rank, event=None, is_draft=True, num_tp_gpus=1, init_q=init_q)
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 199, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/ssd/engine/model_runner.py", line 672, in setup_and_warmup_model_and_cudagraphs
+    self.async_pg = dist.new_group(ranks=[0, self.draft_rank])
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py", line 95, in wrapper
+    func_return = func(*args, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py", line 5254, in new_group
+    return _new_group_with_tag(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py", line 5344, in _new_group_with_tag
+    pg, pg_store = _new_process_group_helper(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/distributed/distributed_c10d.py", line 2125, in _new_process_group_helper
+    eager_backend.eager_connect_single_device(device_id)
+torch.distributed.DistBackendError: NCCL error in: /pytorch/torch/csrc/distributed/c10d/NCCLUtils.cpp:217, remote process exited or there was a network error, NCCL version 2.27.3
+ncclRemoteError: A call failed possibly due to a network error or a remote process exiting prematurely.
+Last error:
+socketProgress: Connection closed by remote peer eslab19<56682>
+[load_model] finished loading model from /data/chokwans99/models/TinyLlama-1.1B-Chat-v1.0
+[rank0]:[W923 00:11:23.274873467 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())

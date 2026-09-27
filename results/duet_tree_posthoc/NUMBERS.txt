@@ -1,0 +1,36 @@
+{
+  "scope": "Posthoc diagnostics; local allocation gain is not end-to-end AL improvement.",
+  "corpus_questions": 480,
+  "executed_turns": 1120,
+  "trees": 37869,
+  "nodes": 262145,
+  "q_path_reach_mse": 0.07967258244663948,
+  "frozen_reach_mse": 0.06769847999899291,
+  "frozen_mse_reduction_percent": 15.029138104901019,
+  "rich_crossfit_reach_mse": 0.061474891981002026,
+  "budget4_q_path_dp": 2.0802020409071424,
+  "budget4_frozen_dp": 2.1246114416378052,
+  "budget4_rich_dp": 2.129950072566896,
+  "budget4_oracle_dp": 2.243995926809548,
+  "frozen_first_sibling_choice": 1.0,
+  "oracle_later_sibling_choice": 0.14224927932772025,
+  "fanout_breadth": 0.514846944523217,
+  "fanout_frozen_curve": 0.5300554963848392,
+  "fanout_delta": {
+    "mean": 0.015208551861622177,
+    "ci95": [
+      0.006918773004643482,
+      0.023941315098146062
+    ],
+    "questions": 369
+  },
+  "fanout_gain_percent": 2.953994779109803,
+  "original_untraced_al": {
+    "q_path": 2.0651326883,
+    "frozen": 2.1003084298,
+    "delta_ci95": [
+      -0.00248884,
+      0.07205639
+    ]
+  }
+}

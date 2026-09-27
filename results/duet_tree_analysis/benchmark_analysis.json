@@ -1,0 +1,825 @@
+{
+  "scope": "No full-distribution observer; request generation wall includes prefill; 16 reused prompts x 2 seeds; no policy reselection.",
+  "by_seed": {
+    "921": {
+      "q_path": {
+        "output_tokens": 2048,
+        "wall_s": 29.601401329040527,
+        "output_tps": 69.18591377600778,
+        "hit_al": 1.9327210517313076,
+        "hit_rate": 0.8497568345041483,
+        "steps": 48.0,
+        "output_per_step": 2.765490395636294,
+        "nodes": 6.825677188074847
+      },
+      "phase_sibling_q_bin": {
+        "output_tokens": 2048,
+        "wall_s": 28.98197889328003,
+        "output_tps": 70.66460187350644,
+        "hit_al": 2.1717517997463442,
+        "hit_rate": 0.818895405772263,
+        "steps": 44.75,
+        "output_per_step": 2.9761667770466302,
+        "nodes": 6.969573985995918
+      }
+    },
+    "922": {
+      "q_path": {
+        "output_tokens": 2048,
+        "wall_s": 29.788597345352173,
+        "output_tps": 68.75113911060144,
+        "hit_al": 1.8772099429984603,
+        "hit_rate": 0.8255301869644975,
+        "steps": 48.25,
+        "output_per_step": 2.7302830701342993,
+        "nodes": 6.792093234280734
+      },
+      "phase_sibling_q_bin": {
+        "output_tokens": 2048,
+        "wall_s": 29.29415273666382,
+        "output_tps": 69.91156284362425,
+        "hit_al": 2.012458584256626,
+        "hit_rate": 0.8344556494949333,
+        "steps": 46.375,
+        "output_per_step": 2.833973650538592,
+        "nodes": 6.833588065091414
+      }
+    }
+  },
+  "aggregate": {
+    "q_path": {
+      "output_tokens": 4096,
+      "wall_s": 59.3899986743927,
+      "output_tps": 68.96784124304216,
+      "hit_al": 1.9049654973648837,
+      "hit_rate": 0.837643510734323,
+      "steps": 48.125,
+      "output_per_step": 2.7478867328852967,
+      "nodes": 6.808885211177791
+    },
+    "phase_sibling_q_bin": {
+      "output_tokens": 4096,
+      "wall_s": 58.27613162994385,
+      "output_tps": 70.28606541713837,
+      "hit_al": 2.092105192001485,
+      "hit_rate": 0.8266755276335982,
+      "steps": 45.5625,
+      "output_per_step": 2.9050702137926114,
+      "nodes": 6.901581025543666
+    }
+  },
+  "paired": {
+    "hit_al": {
+      "mean_delta": 0.18713969463660107,
+      "ci95": [
+        -0.03824357695618842,
+        0.40388870287111894
+      ]
+    },
+    "hit_rate": {
+      "mean_delta": -0.010967983100724811,
+      "ci95": [
+        -0.04102225221258998,
+        0.018520800558302956
+      ]
+    },
+    "output_per_step": {
+      "mean_delta": 0.1571834809073147,
+      "ci95": [
+        -0.03450934449383803,
+        0.34193107407183665
+      ]
+    },
+    "steps": {
+      "mean_delta": -2.5625,
+      "ci95": [
+        -5.56328125,
+        0.6875
+      ]
+    },
+    "nodes": {
+      "mean_delta": 0.0926958143658757,
+      "ci95": [
+        -0.04227111400196862,
+        0.23842389711297612
+      ]
+    },
+    "output_tps_relative": {
+      "point": 0.019113606433624586,
+      "ci95": [
+        -0.04016003828715038,
+        0.08006277168856321
+      ]
+    }
+  },
+  "records": {
+    "q_path": [
+      {
+        "prompt": 0,
+        "seed": 921,
+        "wall_s": 1.6975131034851074,
+        "output_tokens": 128,
+        "hit_al": 2.051282051282051,
+        "hit_rate": 0.8666666666666667,
+        "steps": 45,
+        "output_per_step": 2.8444444444444446,
+        "nodes": 6.794871794871795
+      },
+      {
+        "prompt": 1,
+        "seed": 921,
+        "wall_s": 1.9587979316711426,
+        "output_tokens": 128,
+        "hit_al": 1.725,
+        "hit_rate": 0.8333333333333334,
+        "steps": 48,
+        "output_per_step": 2.6666666666666665,
+        "nodes": 6.45
+      },
+      {
+        "prompt": 2,
+        "seed": 921,
+        "wall_s": 2.0857625007629395,
+        "output_tokens": 128,
+        "hit_al": 1.4047619047619047,
+        "hit_rate": 0.7636363636363637,
+        "steps": 55,
+        "output_per_step": 2.327272727272727,
+        "nodes": 6.095238095238095
+      },
+      {
+        "prompt": 3,
+        "seed": 921,
+        "wall_s": 1.7364451885223389,
+        "output_tokens": 128,
+        "hit_al": 1.951219512195122,
+        "hit_rate": 0.8913043478260869,
+        "steps": 46,
+        "output_per_step": 2.782608695652174,
+        "nodes": 6.512195121951219
+      },
+      {
+        "prompt": 4,
+        "seed": 921,
+        "wall_s": 2.1659817695617676,
+        "output_tokens": 128,
+        "hit_al": 1.2941176470588236,
+        "hit_rate": 0.864406779661017,
+        "steps": 59,
+        "output_per_step": 2.169491525423729,
+        "nodes": 6.490196078431373
+      },
+      {
+        "prompt": 5,
+        "seed": 921,
+        "wall_s": 2.224008798599243,
+        "output_tokens": 128,
+        "hit_al": 1.619047619047619,
+        "hit_rate": 0.8076923076923077,
+        "steps": 52,
+        "output_per_step": 2.4615384615384617,
+        "nodes": 6.333333333333333
+      },
+      {
+        "prompt": 6,
+        "seed": 921,
+        "wall_s": 1.7011394500732422,
+        "output_tokens": 128,
+        "hit_al": 1.9761904761904763,
+        "hit_rate": 0.9333333333333333,
+        "steps": 45,
+        "output_per_step": 2.8444444444444446,
+        "nodes": 6.595238095238095
+      },
+      {
+        "prompt": 7,
+        "seed": 921,
+        "wall_s": 1.678544044494629,
+        "output_tokens": 128,
+        "hit_al": 2.4166666666666665,
+        "hit_rate": 0.8372093023255814,
+        "steps": 43,
+        "output_per_step": 2.9767441860465116,
+        "nodes": 7.416666666666667
+      },
+      {
+        "prompt": 8,
+        "seed": 921,
+        "wall_s": 1.933034896850586,
+        "output_tokens": 128,
+        "hit_al": 1.5681818181818181,
+        "hit_rate": 0.8461538461538461,
+        "steps": 52,
+        "output_per_step": 2.4615384615384617,
+        "nodes": 6.613636363636363
+      },
+      {
+        "prompt": 9,
+        "seed": 921,
+        "wall_s": 2.4096734523773193,
+        "output_tokens": 128,
+        "hit_al": 1.368421052631579,
+        "hit_rate": 0.6229508196721312,
+        "steps": 61,
+        "output_per_step": 2.098360655737705,
+        "nodes": 7.0
+      },
+      {
+        "prompt": 10,
+        "seed": 921,
+        "wall_s": 1.9323205947875977,
+        "output_tokens": 128,
+        "hit_al": 1.574468085106383,
+        "hit_rate": 0.9038461538461539,
+        "steps": 52,
+        "output_per_step": 2.4615384615384617,
+        "nodes": 6.531914893617022
+      },
+      {
+        "prompt": 11,
+        "seed": 921,
+        "wall_s": 1.436178207397461,
+        "output_tokens": 128,
+        "hit_al": 2.588235294117647,
+        "hit_rate": 0.918918918918919,
+        "steps": 37,
+        "output_per_step": 3.4594594594594597,
+        "nodes": 7.470588235294118
+      },
+      {
+        "prompt": 12,
+        "seed": 921,
+        "wall_s": 2.204444169998169,
+        "output_tokens": 128,
+        "hit_al": 1.1428571428571428,
+        "hit_rate": 0.8166666666666667,
+        "steps": 60,
+        "output_per_step": 2.1333333333333333,
+        "nodes": 6.816326530612245
+      },
+      {
+        "prompt": 13,
+        "seed": 921,
+        "wall_s": 1.8637309074401855,
+        "output_tokens": 128,
+        "hit_al": 1.7857142857142858,
+        "hit_rate": 0.875,
+        "steps": 48,
+        "output_per_step": 2.6666666666666665,
+        "nodes": 6.380952380952381
+      },
+      {
+        "prompt": 14,
+        "seed": 921,
+        "wall_s": 1.3366706371307373,
+        "output_tokens": 128,
+        "hit_al": 3.064516129032258,
+        "hit_rate": 0.9117647058823529,
+        "steps": 34,
+        "output_per_step": 3.764705882352941,
+        "nodes": 7.709677419354839
+      },
+      {
+        "prompt": 15,
+        "seed": 921,
+        "wall_s": 1.2371556758880615,
+        "output_tokens": 128,
+        "hit_al": 3.392857142857143,
+        "hit_rate": 0.9032258064516129,
+        "steps": 31,
+        "output_per_step": 4.129032258064516,
+        "nodes": 8.0
+      },
+      {
+        "prompt": 0,
+        "seed": 922,
+        "wall_s": 1.8983547687530518,
+        "output_tokens": 128,
+        "hit_al": 1.7692307692307692,
+        "hit_rate": 0.78,
+        "steps": 50,
+        "output_per_step": 2.56,
+        "nodes": 6.6923076923076925
+      },
+      {
+        "prompt": 1,
+        "seed": 922,
+        "wall_s": 2.5763158798217773,
+        "output_tokens": 128,
+        "hit_al": 1.2702702702702702,
+        "hit_rate": 0.5692307692307692,
+        "steps": 65,
+        "output_per_step": 1.9692307692307693,
+        "nodes": 6.54054054054054
+      },
+      {
+        "prompt": 2,
+        "seed": 922,
+        "wall_s": 1.9759225845336914,
+        "output_tokens": 128,
+        "hit_al": 1.5227272727272727,
+        "hit_rate": 0.8301886792452831,
+        "steps": 53,
+        "output_per_step": 2.4150943396226414,
+        "nodes": 6.363636363636363
+      },
+      {
+        "prompt": 3,
+        "seed": 922,
+        "wall_s": 1.3206737041473389,
+        "output_tokens": 128,
+        "hit_al": 2.787878787878788,
+        "hit_rate": 0.9705882352941176,
+        "steps": 34,
+        "output_per_step": 3.764705882352941,
+        "nodes": 7.696969696969697
+      },
+      {
+        "prompt": 4,
+        "seed": 922,
+        "wall_s": 2.0364091396331787,
+        "output_tokens": 128,
+        "hit_al": 1.3555555555555556,
+        "hit_rate": 0.8181818181818182,
+        "steps": 55,
+        "output_per_step": 2.327272727272727,
+        "nodes": 6.377777777777778
+      },
+      {
+        "prompt": 5,
+        "seed": 922,
+        "wall_s": 2.318845510482788,
+        "output_tokens": 128,
+        "hit_al": 1.4864864864864864,
+        "hit_rate": 0.6851851851851852,
+        "steps": 54,
+        "output_per_step": 2.3703703703703702,
+        "nodes": 6.783783783783784
+      },
+      {
+        "prompt": 6,
+        "seed": 922,
+        "wall_s": 1.7099595069885254,
+        "output_tokens": 128,
+        "hit_al": 2.0,
+        "hit_rate": 0.8666666666666667,
+        "steps": 45,
+        "output_per_step": 2.8444444444444446,
+        "nodes": 6.589743589743589
+      },
+      {
+        "prompt": 7,
+        "seed": 922,
+        "wall_s": 1.3750596046447754,
+        "output_tokens": 128,
+        "hit_al": 2.875,
+        "hit_rate": 0.9142857142857143,
+        "steps": 35,
+        "output_per_step": 3.657142857142857,
+        "nodes": 7.4375
+      },
+      {
+        "prompt": 8,
+        "seed": 922,
+        "wall_s": 2.0557644367218018,
+        "output_tokens": 128,
+        "hit_al": 1.380952380952381,
+        "hit_rate": 0.7636363636363637,
+        "steps": 55,
+        "output_per_step": 2.327272727272727,
+        "nodes": 6.428571428571429
+      },
+      {
+        "prompt": 9,
+        "seed": 922,
+        "wall_s": 1.8702943325042725,
+        "output_tokens": 128,
+        "hit_al": 2.3333333333333335,
+        "hit_rate": 0.6666666666666666,
+        "steps": 45,
+        "output_per_step": 2.8444444444444446,
+        "nodes": 7.2
+      },
+      {
+        "prompt": 10,
+        "seed": 922,
+        "wall_s": 1.9241752624511719,
+        "output_tokens": 128,
+        "hit_al": 1.5208333333333333,
+        "hit_rate": 0.9230769230769231,
+        "steps": 52,
+        "output_per_step": 2.4615384615384617,
+        "nodes": 6.1875
+      },
+      {
+        "prompt": 11,
+        "seed": 922,
+        "wall_s": 1.5332586765289307,
+        "output_tokens": 128,
+        "hit_al": 2.342857142857143,
+        "hit_rate": 0.875,
+        "steps": 40,
+        "output_per_step": 3.2,
+        "nodes": 7.228571428571429
+      },
+      {
+        "prompt": 12,
+        "seed": 922,
+        "wall_s": 1.8910911083221436,
+        "output_tokens": 128,
+        "hit_al": 1.6,
+        "hit_rate": 0.8823529411764706,
+        "steps": 51,
+        "output_per_step": 2.5098039215686274,
+        "nodes": 6.533333333333333
+      },
+      {
+        "prompt": 13,
+        "seed": 922,
+        "wall_s": 1.959528923034668,
+        "output_tokens": 128,
+        "hit_al": 1.5476190476190477,
+        "hit_rate": 0.8235294117647058,
+        "steps": 51,
+        "output_per_step": 2.5098039215686274,
+        "nodes": 6.261904761904762
+      },
+      {
+        "prompt": 14,
+        "seed": 922,
+        "wall_s": 1.8114619255065918,
+        "output_tokens": 128,
+        "hit_al": 1.8372093023255813,
+        "hit_rate": 0.9148936170212766,
+        "steps": 47,
+        "output_per_step": 2.723404255319149,
+        "nodes": 7.0
+      },
+      {
+        "prompt": 15,
+        "seed": 922,
+        "wall_s": 1.5314819812774658,
+        "output_tokens": 128,
+        "hit_al": 2.4054054054054053,
+        "hit_rate": 0.925,
+        "steps": 40,
+        "output_per_step": 3.2,
+        "nodes": 7.351351351351352
+      }
+    ],
+    "phase_sibling_q_bin": [
+      {
+        "prompt": 0,
+        "seed": 921,
+        "wall_s": 2.3276431560516357,
+        "output_tokens": 128,
+        "hit_al": 1.3777777777777778,
+        "hit_rate": 0.8035714285714286,
+        "steps": 56,
+        "output_per_step": 2.2857142857142856,
+        "nodes": 6.844444444444444
+      },
+      {
+        "prompt": 1,
+        "seed": 921,
+        "wall_s": 2.2810137271881104,
+        "output_tokens": 128,
+        "hit_al": 1.6,
+        "hit_rate": 0.7407407407407407,
+        "steps": 54,
+        "output_per_step": 2.3703703703703702,
+        "nodes": 6.525
+      },
+      {
+        "prompt": 2,
+        "seed": 921,
+        "wall_s": 1.8483989238739014,
+        "output_tokens": 128,
+        "hit_al": 1.837837837837838,
+        "hit_rate": 0.7708333333333334,
+        "steps": 48,
+        "output_per_step": 2.6666666666666665,
+        "nodes": 6.891891891891892
+      },
+      {
+        "prompt": 3,
+        "seed": 921,
+        "wall_s": 1.3320097923278809,
+        "output_tokens": 128,
+        "hit_al": 3.1666666666666665,
+        "hit_rate": 0.9090909090909091,
+        "steps": 33,
+        "output_per_step": 3.878787878787879,
+        "nodes": 7.666666666666667
+      },
+      {
+        "prompt": 4,
+        "seed": 921,
+        "wall_s": 2.091477870941162,
+        "output_tokens": 128,
+        "hit_al": 1.8,
+        "hit_rate": 0.8,
+        "steps": 50,
+        "output_per_step": 2.56,
+        "nodes": 6.775
+      },
+      {
+        "prompt": 5,
+        "seed": 921,
+        "wall_s": 1.8339965343475342,
+        "output_tokens": 128,
+        "hit_al": 2.966666666666667,
+        "hit_rate": 0.8571428571428571,
+        "steps": 35,
+        "output_per_step": 3.657142857142857,
+        "nodes": 7.466666666666667
+      },
+      {
+        "prompt": 6,
+        "seed": 921,
+        "wall_s": 1.9439306259155273,
+        "output_tokens": 128,
+        "hit_al": 1.894736842105263,
+        "hit_rate": 0.7916666666666666,
+        "steps": 48,
+        "output_per_step": 2.6666666666666665,
+        "nodes": 6.7105263157894735
+      },
+      {
+        "prompt": 7,
+        "seed": 921,
+        "wall_s": 1.3394100666046143,
+        "output_tokens": 128,
+        "hit_al": 3.033333333333333,
+        "hit_rate": 0.9090909090909091,
+        "steps": 33,
+        "output_per_step": 3.878787878787879,
+        "nodes": 7.633333333333334
+      },
+      {
+        "prompt": 8,
+        "seed": 921,
+        "wall_s": 1.5700123310089111,
+        "output_tokens": 128,
+        "hit_al": 2.2777777777777777,
+        "hit_rate": 0.8780487804878049,
+        "steps": 41,
+        "output_per_step": 3.1219512195121952,
+        "nodes": 6.611111111111111
+      },
+      {
+        "prompt": 9,
+        "seed": 921,
+        "wall_s": 2.478409767150879,
+        "output_tokens": 128,
+        "hit_al": 1.3714285714285714,
+        "hit_rate": 0.5645161290322581,
+        "steps": 62,
+        "output_per_step": 2.064516129032258,
+        "nodes": 6.371428571428571
+      },
+      {
+        "prompt": 10,
+        "seed": 921,
+        "wall_s": 1.7003684043884277,
+        "output_tokens": 128,
+        "hit_al": 2.1052631578947367,
+        "hit_rate": 0.8636363636363636,
+        "steps": 44,
+        "output_per_step": 2.909090909090909,
+        "nodes": 7.131578947368421
+      },
+      {
+        "prompt": 11,
+        "seed": 921,
+        "wall_s": 1.2495088577270508,
+        "output_tokens": 128,
+        "hit_al": 3.3666666666666667,
+        "hit_rate": 0.967741935483871,
+        "steps": 31,
+        "output_per_step": 4.129032258064516,
+        "nodes": 7.8
+      },
+      {
+        "prompt": 12,
+        "seed": 921,
+        "wall_s": 1.8021137714385986,
+        "output_tokens": 128,
+        "hit_al": 1.6666666666666667,
+        "hit_rate": 0.875,
+        "steps": 48,
+        "output_per_step": 2.6666666666666665,
+        "nodes": 6.476190476190476
+      },
+      {
+        "prompt": 13,
+        "seed": 921,
+        "wall_s": 1.9125452041625977,
+        "output_tokens": 128,
+        "hit_al": 1.75,
+        "hit_rate": 0.8163265306122449,
+        "steps": 49,
+        "output_per_step": 2.6122448979591835,
+        "nodes": 6.375
+      },
+      {
+        "prompt": 14,
+        "seed": 921,
+        "wall_s": 1.7872059345245361,
+        "output_tokens": 128,
+        "hit_al": 1.8235294117647058,
+        "hit_rate": 0.7391304347826086,
+        "steps": 46,
+        "output_per_step": 2.782608695652174,
+        "nodes": 6.911764705882353
+      },
+      {
+        "prompt": 15,
+        "seed": 921,
+        "wall_s": 1.483933925628662,
+        "output_tokens": 128,
+        "hit_al": 2.7096774193548385,
+        "hit_rate": 0.8157894736842105,
+        "steps": 38,
+        "output_per_step": 3.3684210526315788,
+        "nodes": 7.32258064516129
+      },
+      {
+        "prompt": 0,
+        "seed": 922,
+        "wall_s": 2.2107973098754883,
+        "output_tokens": 128,
+        "hit_al": 1.3125,
+        "hit_rate": 0.8135593220338984,
+        "steps": 59,
+        "output_per_step": 2.169491525423729,
+        "nodes": 6.270833333333333
+      },
+      {
+        "prompt": 1,
+        "seed": 922,
+        "wall_s": 1.986654281616211,
+        "output_tokens": 128,
+        "hit_al": 1.7804878048780488,
+        "hit_rate": 0.8367346938775511,
+        "steps": 49,
+        "output_per_step": 2.6122448979591835,
+        "nodes": 6.634146341463414
+      },
+      {
+        "prompt": 2,
+        "seed": 922,
+        "wall_s": 2.0289113521575928,
+        "output_tokens": 128,
+        "hit_al": 1.5333333333333334,
+        "hit_rate": 0.8333333333333334,
+        "steps": 54,
+        "output_per_step": 2.3703703703703702,
+        "nodes": 6.155555555555556
+      },
+      {
+        "prompt": 3,
+        "seed": 922,
+        "wall_s": 1.6212174892425537,
+        "output_tokens": 128,
+        "hit_al": 2.2051282051282053,
+        "hit_rate": 0.9285714285714286,
+        "steps": 42,
+        "output_per_step": 3.0476190476190474,
+        "nodes": 6.6923076923076925
+      },
+      {
+        "prompt": 4,
+        "seed": 922,
+        "wall_s": 1.9841032028198242,
+        "output_tokens": 128,
+        "hit_al": 1.558139534883721,
+        "hit_rate": 0.8113207547169812,
+        "steps": 53,
+        "output_per_step": 2.4150943396226414,
+        "nodes": 6.511627906976744
+      },
+      {
+        "prompt": 5,
+        "seed": 922,
+        "wall_s": 2.040517807006836,
+        "output_tokens": 128,
+        "hit_al": 2.1515151515151514,
+        "hit_rate": 0.7333333333333333,
+        "steps": 45,
+        "output_per_step": 2.8444444444444446,
+        "nodes": 7.151515151515151
+      },
+      {
+        "prompt": 6,
+        "seed": 922,
+        "wall_s": 1.960832118988037,
+        "output_tokens": 128,
+        "hit_al": 1.8717948717948718,
+        "hit_rate": 0.8125,
+        "steps": 48,
+        "output_per_step": 2.6666666666666665,
+        "nodes": 6.871794871794871
+      },
+      {
+        "prompt": 7,
+        "seed": 922,
+        "wall_s": 1.3672382831573486,
+        "output_tokens": 128,
+        "hit_al": 2.9375,
+        "hit_rate": 0.9411764705882353,
+        "steps": 34,
+        "output_per_step": 3.764705882352941,
+        "nodes": 7.1875
+      },
+      {
+        "prompt": 8,
+        "seed": 922,
+        "wall_s": 1.6510505676269531,
+        "output_tokens": 128,
+        "hit_al": 2.1052631578947367,
+        "hit_rate": 0.8837209302325582,
+        "steps": 43,
+        "output_per_step": 2.9767441860465116,
+        "nodes": 6.7368421052631575
+      },
+      {
+        "prompt": 9,
+        "seed": 922,
+        "wall_s": 2.398425817489624,
+        "output_tokens": 128,
+        "hit_al": 1.3333333333333333,
+        "hit_rate": 0.65,
+        "steps": 60,
+        "output_per_step": 2.1333333333333333,
+        "nodes": 7.076923076923077
+      },
+      {
+        "prompt": 10,
+        "seed": 922,
+        "wall_s": 1.7238743305206299,
+        "output_tokens": 128,
+        "hit_al": 1.9210526315789473,
+        "hit_rate": 0.8444444444444444,
+        "steps": 45,
+        "output_per_step": 2.8444444444444446,
+        "nodes": 6.184210526315789
+      },
+      {
+        "prompt": 11,
+        "seed": 922,
+        "wall_s": 1.4358410835266113,
+        "output_tokens": 128,
+        "hit_al": 2.735294117647059,
+        "hit_rate": 0.9444444444444444,
+        "steps": 36,
+        "output_per_step": 3.5555555555555554,
+        "nodes": 7.470588235294118
+      },
+      {
+        "prompt": 12,
+        "seed": 922,
+        "wall_s": 1.890256404876709,
+        "output_tokens": 128,
+        "hit_al": 1.6511627906976745,
+        "hit_rate": 0.86,
+        "steps": 50,
+        "output_per_step": 2.56,
+        "nodes": 6.5813953488372094
+      },
+      {
+        "prompt": 13,
+        "seed": 922,
+        "wall_s": 1.7401974201202393,
+        "output_tokens": 128,
+        "hit_al": 2.4516129032258065,
+        "hit_rate": 0.775,
+        "steps": 40,
+        "output_per_step": 3.2,
+        "nodes": 6.903225806451613
+      },
+      {
+        "prompt": 14,
+        "seed": 922,
+        "wall_s": 1.79520583152771,
+        "output_tokens": 128,
+        "hit_al": 1.951219512195122,
+        "hit_rate": 0.8723404255319149,
+        "steps": 47,
+        "output_per_step": 2.723404255319149,
+        "nodes": 6.975609756097561
+      },
+      {
+        "prompt": 15,
+        "seed": 922,
+        "wall_s": 1.4590294361114502,
+        "output_tokens": 128,
+        "hit_al": 2.7,
+        "hit_rate": 0.8108108108108109,
+        "steps": 37,
+        "output_per_step": 3.4594594594594597,
+        "nodes": 7.933333333333334
+      }
+    ]
+  }
+}

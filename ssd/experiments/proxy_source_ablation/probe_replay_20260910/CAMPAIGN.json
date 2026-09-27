@@ -1,0 +1,117 @@
+{
+  "created_utc": "2026-09-10T12:02:25.944241+00:00",
+  "source_url": "https://chatgpt.com/s/t_6aa29a78c4488191a8443e4d147cc79e",
+  "source_title": "\uc218\uc2dd \uae30\ubc18 \ud6c4\ubcf4\uc120\uc815 \ubd84\uc11d",
+  "source_text_sha256": "ec259912c0bc99e71cc086f3ed090704d9233a9885c4aeba7f353e43871dd87a",
+  "git_head": "a82f7d24fb36827a9a81a3567f344dccb71f193e",
+  "measurement_sha256": {
+    "ssd/ssd/engine/helpers/distribution_probe.py": "06e115d0a8165d470595a03ada521974dfe92cba547542fe2760f8e021ccd71d",
+    "ssd/ssd/engine/helpers/entropy_probe.py": "f7f0ea6b67c5101df57e24964d2d71216fbbad6b4815e5397776e5395728060b",
+    "ssd/ssd/engine/verifier.py": "60894f8a53c648c1ef9d62e316ff3e90b86eef750f81febd947313cd7df02416",
+    "ssd/ssd/engine/model_runner.py": "1e4942fa6bfdb9e39ed96e3cf82432f0eb8c14d595982cdceb83eed8baa74ae5",
+    "ssd/ssd/engine/helpers/cudagraph_helpers.py": "775713f0ba5aa1fbe3dbd70a6887712e7f897203edee7ec262a4dc0565a8a37a",
+    "ssd/ssd/models/llama3.py": "c95e9458ffe2e0644679443913f8e97baa5c4a01dcd7896a59cf3d129b51e303",
+    "ssd/ssd/engine/llm_engine.py": "3e18bf4b1b49427ff0dda11fe7fb39e48044a97d2ebc6232d41ef45f7db798d1",
+    "ssd/experiments/proxy_source_ablation/probe_replay_20260910/run.py": "63536609e4c22c0a143f01fe3dac81ec0abcf435331725c32106a07b931a844e",
+    "ssd/experiments/proxy_source_ablation/probe_replay_20260910/README.md": "dbc06b9f75e5ef59f185667789646a46957f0aa760756678fc1d13ce4c666cb9"
+  },
+  "prior_campaign": "probe_entropy_20260910",
+  "prior_environment": {
+    "host": "eslab19",
+    "python": "3.12.7",
+    "torch": "2.8.0+cu128",
+    "numpy": "2.3.3",
+    "datasets": {
+      "alpaca": {
+        "path": "/home/chokwans99/ssd_datasets/processed_datasets/alpaca/alpaca_data_10000.jsonl",
+        "resolved": "/data/ssd_datasets/processed_datasets/alpaca/alpaca_data_100.jsonl",
+        "sha256": "16bd6c6543b536daf88501ff1b4b9ba19f570a43b9bc2a860071e85b9ee3e8fb",
+        "rows": 100
+      },
+      "c4": {
+        "path": "/home/chokwans99/ssd_datasets/processed_datasets/c4/c4_data_10000.jsonl",
+        "resolved": "/home/chokwans99/ssd_datasets/processed_datasets/c4/c4_data_10000.jsonl",
+        "sha256": "fca555a0773d40f6f34c08661d8ad79454c74d43107dd12a32b6f8c760b6daae",
+        "rows": 95
+      },
+      "gsm": {
+        "path": "/home/chokwans99/ssd_datasets/processed_datasets/gsm8k/gsm8k_data_10000.jsonl",
+        "resolved": "/data/ssd_datasets/processed_datasets/gsm8k/gsm8k_data_100.jsonl",
+        "sha256": "225ccd7121b68deb153c2928900351264c386504801a2fa9603d931ce9c44f83",
+        "rows": 100
+      },
+      "humaneval": {
+        "path": "/home/chokwans99/ssd_datasets/processed_datasets/humaneval/humaneval_data_10000.jsonl",
+        "resolved": "/data/ssd_datasets/processed_datasets/humaneval/humaneval_data_100.jsonl",
+        "sha256": "86198e7d6d143079393bdae63aae5321d5ffe7135b01178fa2f6af47ef9db577",
+        "rows": 100
+      }
+    }
+  },
+  "protocol": {
+    "datasets": [
+      "alpaca",
+      "c4",
+      "gsm",
+      "humaneval"
+    ],
+    "seeds": [
+      42,
+      123
+    ],
+    "prompts": 32,
+    "max_output_tokens": 256,
+    "probe_layers": [
+      56,
+      79
+    ],
+    "stride": 8,
+    "train_prompt_ids": [
+      1,
+      16
+    ],
+    "test_prompt_ids": [
+      17,
+      32
+    ],
+    "tau_grid": [
+      0.65,
+      0.8,
+      0.9,
+      1,
+      1.1,
+      1.25,
+      1.5
+    ],
+    "lambda_grid": [
+      0,
+      0.25,
+      0.5,
+      0.75,
+      1
+    ]
+  },
+  "finished_utc": "2026-09-10T12:21:45.045261+00:00",
+  "totals": {
+    "runs": 8,
+    "generations": 256,
+    "verification_steps": 22990,
+    "sampled_steps": 2995,
+    "contexts": 14975,
+    "reject_positions": 11980,
+    "unique_prompts": 128
+  },
+  "report": "/home/chokwans99/PSD/results/residial_dist/shared_review/REPORT.md",
+  "analysis_sha256": {
+    "checks.py": "34c2089e17ab08ffbc2004a54b1a315d4928b6ff24691e76bf919fbb92528cfc",
+    "aggregate.py": "9b2a22b6015f85f2b39f06e884609a1cc2a6a76164e0ca373dc7d5c96a084690",
+    "replay.py": "5db9cb828e7405ee84e683cc941606217c6d06c31cbb3fa723d21ab380a18547",
+    "calibrate_exact.py": "d21a7d09a8e8ae3b974bf80d689ac9c8794b9383fef6d8b593e9635906f253e4",
+    "audit.py": "7bfd13a46e6ff306ddf6ac78d5cb617dbcb882fc533bc3fa5b7efb89252c11f5",
+    "make_report.py": "c0c78fbf4c61b1a864403d676f79ed68e4bcd6fdb7fde3b8222bf42c99e5a59b"
+  },
+  "final_protocol_sha256": "dd8b1c3033d5b240920634948b64f2fbcb1e2979a378a9638ad91e412dddad18",
+  "protocol_additions": "rank permutation oracle added after partial inspection; continuous KL refinement uses training prompts only",
+  "validation": "/home/chokwans99/PSD/results/residial_dist/shared_review/validation.json",
+  "report_generator_finalized_utc": "2026-09-10T12:22:44.997235+00:00"
+}

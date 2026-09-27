@@ -1,0 +1,267 @@
+analyzed 0 / 37869
+analyzed 5000 / 37869
+analyzed 10000 / 37869
+analyzed 15000 / 37869
+analyzed 20000 / 37869
+analyzed 25000 / 37869
+analyzed 30000 / 37869
+analyzed 35000 / 37869
+{
+  "coverage": [
+    {
+      "policy": "q_path",
+      "turns": 560,
+      "questions": 480,
+      "trees": 18991,
+      "nonfinal_trees": 18499,
+      "nodes": 131417,
+      "questions_with_hits": 463,
+      "raw_snapshots": 594
+    },
+    {
+      "policy": "phase_sibling_q_bin",
+      "turns": 560,
+      "questions": 480,
+      "trees": 18878,
+      "nonfinal_trees": 18397,
+      "nodes": 130728,
+      "questions_with_hits": 460,
+      "raw_snapshots": 590
+    }
+  ],
+  "primary": {
+    "trees": 36896,
+    "means": {
+      "n": 6.967117496721158,
+      "true_al": 2.1213250586025727,
+      "observed_al": 2.11661084631383,
+      "coin_variance": 0.33697194163186905,
+      "oracle_observed_mse": 0.3374444001719908,
+      "observed_minus_exact": -0.00471421228874291,
+      "q_path_reach_mse": 0.07967258244663948,
+      "q_path_pred_al": 2.0453515056910265,
+      "q_path_al_bias": -0.0759735529115457,
+      "q_path_al_mse": 0.6742182159397411,
+      "q_path_observed_mse": 1.0057707972240324,
+      "frozen_reach_mse": 0.06769847999899291,
+      "frozen_pred_al": 2.2712828454758793,
+      "frozen_al_bias": 0.14995778687330677,
+      "frozen_al_mse": 0.6917166854940051,
+      "frozen_observed_mse": 1.027797343262636,
+      "same8_depth_reach_mse": 0.06788971416393881,
+      "same8_depth_pred_al": 2.248362615042014,
+      "same8_depth_al_bias": 0.12703755643944167,
+      "same8_depth_al_mse": 0.6774596233617766,
+      "same8_depth_observed_mse": 1.0089928361234373,
+      "same8_rich_reach_mse": 0.06926631477391056,
+      "same8_rich_pred_al": 2.2435428942940594,
+      "same8_rich_al_bias": 0.1222178356914868,
+      "same8_rich_al_mse": 0.6846651220968559,
+      "same8_rich_observed_mse": 1.0142765801316334,
+      "refit_q_reach_mse": 0.06208483768283685,
+      "refit_q_pred_al": 2.115198219216161,
+      "refit_q_al_bias": -0.006126839386411442,
+      "refit_q_al_mse": 0.5946798978843167,
+      "refit_q_observed_mse": 0.9279913006661297,
+      "depth_q_reach_mse": 0.062103132397581105,
+      "depth_q_pred_al": 2.1113746969183165,
+      "depth_q_al_bias": -0.009950361684255962,
+      "depth_q_al_mse": 0.5945183095469354,
+      "depth_q_observed_mse": 0.9279257828622672,
+      "cond_depth_q_reach_mse": 0.061816291954897566,
+      "cond_depth_q_pred_al": 2.1233852862438205,
+      "cond_depth_q_al_bias": 0.002060227641247782,
+      "cond_depth_q_al_mse": 0.5823799625938848,
+      "cond_depth_q_observed_mse": 0.9161931628223753,
+      "draft_rich_reach_mse": 0.061474891981002026,
+      "draft_rich_pred_al": 2.1089098765251344,
+      "draft_rich_al_bias": -0.012415182077438197,
+      "draft_rich_al_mse": 0.5792926483074504,
+      "draft_rich_observed_mse": 0.912463580451381,
+      "direct_beta_reach_mse": 0.061143349599654014,
+      "direct_beta_pred_al": 2.101846065022613,
+      "direct_beta_al_bias": -0.019478993579959435,
+      "direct_beta_al_mse": 0.5780203292947328,
+      "direct_beta_observed_mse": 0.9111607073286588,
+      "rich_from_q_path_reach_mse": 0.061592076552631055,
+      "rich_from_q_path_pred_al": 2.1131799761246586,
+      "rich_from_q_path_al_bias": -0.008145082477914326,
+      "rich_from_q_path_al_mse": 0.5805186488350629,
+      "rich_from_q_path_observed_mse": 0.9134659413010827,
+      "rich_from_phase_sibling_q_bin_reach_mse": 0.06161075860523296,
+      "rich_from_phase_sibling_q_bin_pred_al": 2.10606013536325,
+      "rich_from_phase_sibling_q_bin_al_bias": -0.015264923239322603,
+      "rich_from_phase_sibling_q_bin_al_mse": 0.5802810182074566,
+      "rich_from_phase_sibling_q_bin_observed_mse": 0.9135968397973824,
+      "frozen_alpha_mse": 0.11332451838947914,
+      "same8_depth_alpha_mse": 0.11510702087769686,
+      "same8_rich_alpha_mse": 0.117632412583327,
+      "refit_q_alpha_mse": 0.10693555118299593,
+      "depth_q_alpha_mse": 0.1072912179088434,
+      "cond_depth_q_alpha_mse": 0.10421495378138568,
+      "draft_rich_alpha_mse": 0.1043832818167834,
+      "oracle_parent_frozen_local_mse": 0.046811262820324606,
+      "frozen_parent_oracle_local_mse": 0.021815316448602948,
+      "early_leaf_terminal": 0.2323114202694926,
+      "depth_cap_terminal": 0.41313996444928147,
+      "internal_rejection_terminal": 0.354548615281226,
+      "early_leaf_extra_upper": 0.5413986955762115,
+      "internal_rejection_gap": 0.8791122757345792,
+      "early_leaf_below_q_threshold_mass": 0.015558607358943896,
+      "unused_node_budget": 0.5747185331922056,
+      "underfilled_tree": 0.12496728871441769,
+      "zero_reach_node_fraction": 0.4548117666132489,
+      "low_reach_node_fraction": 0.54443948364973
+    },
+    "reach_vs_q": {
+      "frozen": {
+        "mean": -0.011974102447646573,
+        "ci95": [
+          -0.013297107515769931,
+          -0.010684430165218858
+        ],
+        "questions": 476
+      },
+      "same8_depth": {
+        "mean": -0.01178286828270067,
+        "ci95": [
+          -0.01304662059151491,
+          -0.010505871197637165
+        ],
+        "questions": 476
+      },
+      "same8_rich": {
+        "mean": -0.010406267672728925,
+        "ci95": [
+          -0.011675091750083078,
+          -0.009149069394104214
+        ],
+        "questions": 476
+      },
+      "refit_q": {
+        "mean": -0.017587744763802628,
+        "ci95": [
+          -0.018640870833747783,
+          -0.01657299545111017
+        ],
+        "questions": 476
+      },
+      "depth_q": {
+        "mean": -0.017569450049058376,
+        "ci95": [
+          -0.0186177952588774,
+          -0.016556441942574177
+        ],
+        "questions": 476
+      },
+      "cond_depth_q": {
+        "mean": -0.017856290491741915,
+        "ci95": [
+          -0.01889652395198069,
+          -0.016851048561684363
+        ],
+        "questions": 476
+      },
+      "draft_rich": {
+        "mean": -0.018197690465637455,
+        "ci95": [
+          -0.01924560594232086,
+          -0.01717519455639262
+        ],
+        "questions": 476
+      },
+      "direct_beta": {
+        "mean": -0.018529232846985468,
+        "ci95": [
+          -0.01958007393647509,
+          -0.01750837497136168
+        ],
+        "questions": 476
+      }
+    },
+    "reach_vs_frozen": {
+      "refit_q": {
+        "mean": -0.005613642316156055,
+        "ci95": [
+          -0.006063778004809109,
+          -0.005172854442819995
+        ],
+        "questions": 476
+      },
+      "depth_q": {
+        "mean": -0.005595347601411803,
+        "ci95": [
+          -0.006062385635897385,
+          -0.005135394103453161
+        ],
+        "questions": 476
+      },
+      "cond_depth_q": {
+        "mean": -0.005882188044095342,
+        "ci95": [
+          -0.006365592834717154,
+          -0.005399992643788471
+        ],
+        "questions": 476
+      },
+      "draft_rich": {
+        "mean": -0.006223588017990882,
+        "ci95": [
+          -0.006692499168980019,
+          -0.005747943048992707
+        ],
+        "questions": 476
+      },
+      "direct_beta": {
+        "mean": -0.006555130399338895,
+        "ci95": [
+          -0.007025026914315258,
+          -0.006077837006416887
+        ],
+        "questions": 476
+      }
+    },
+    "reach_vs_refit": {
+      "depth_q": {
+        "mean": 1.8294714744251928e-05,
+        "ci95": [
+          -8.930286809765793e-06,
+          4.5420606522303676e-05
+        ],
+        "questions": 476
+      },
+      "cond_depth_q": {
+        "mean": -0.0002685457279392872,
+        "ci95": [
+          -0.00035592922610917007,
+          -0.00018211965035591705
+        ],
+        "questions": 476
+      },
+      "draft_rich": {
+        "mean": -0.000609945701834827,
+        "ci95": [
+          -0.0007209172699510728,
+          -0.0004964296754790449
+        ],
+        "questions": 476
+      },
+      "direct_beta": {
+        "mean": -0.0009414880831828398,
+        "ci95": [
+          -0.0010658089256652058,
+          -0.0008217588956055708
+        ],
+        "questions": 476
+      }
+    },
+    "observed_minus_exact": {
+      "mean": -0.00471421228874291,
+      "ci95": [
+        -0.011706903702051213,
+        0.0016649899497488204
+      ],
+      "questions": 476
+    }
+  }
+}

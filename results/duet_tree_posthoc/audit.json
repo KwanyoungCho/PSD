@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "jobs": [
+    {
+      "policy": "q_path",
+      "questions": 480,
+      "turns": 560,
+      "trees": 18991,
+      "nodes": 131417,
+      "phase_counts": {
+        "2": 4623,
+        "1": 14368
+      },
+      "raw_audits": 594,
+      "max_recompute_error": 0.0,
+      "maximum_float32_vs_normalized_double_reach_error": 6.345257687057071e-07,
+      "records_sha256": "7b0606123e4b030dbb3609bb51644880b4cdf08774c1684e435f4761a3c55922",
+      "trees_sha256": "227be12cc01cf1bb0d38e8735ded9620ce8d917cf22871bc03c6eb109ea513f7"
+    },
+    {
+      "policy": "phase_sibling_q_bin",
+      "questions": 480,
+      "turns": 560,
+      "trees": 18878,
+      "nodes": 130728,
+      "phase_counts": {
+        "2": 4527,
+        "1": 14351
+      },
+      "raw_audits": 590,
+      "max_recompute_error": 0.0,
+      "maximum_float32_vs_normalized_double_reach_error": 1.5148771587147891e-06,
+      "records_sha256": "259d6814e3a21a623d7ddc807b528042d14b693ca0d80876769875979b5f4b52",
+      "trees_sha256": "5f4b483113fdeb4a9406b095750138c2679545b5e4f6978abfd93d9c7e8d784a"
+    }
+  ],
+  "checks": [
+    "all questions and actual multi-turn history",
+    "natural EOS/cap and emitted suffix accounting",
+    "every hit mapped one-to-one to a tree",
+    "phase, depth, node budgets and score hook",
+    "exact reach and terminal identities",
+    "every deterministic raw snapshot re-derived",
+    "frozen calibration and collector source checksums"
+  ],
+  "limits": [
+    "Observer changes asynchronous timing. No TPS or paired-trajectory AL gain claim.",
+    "Served trees only; unexpanded future distributions and unused root allocations are not observed."
+  ]
+}
