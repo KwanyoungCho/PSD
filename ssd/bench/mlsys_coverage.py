@@ -106,6 +106,7 @@ def main():
         speculate=args.mode != "ar", draft_async=async_mode,
         jit_speculate=True, speculate_k=args.k1 + args.k2 if duet else args.k1,
         async_fan_out=args.draft_fan_out + args.proxy_fan_out,
+        duet_p1_tree_policy="off", duet_p2_tree_policy="off",
     )
     if args.draft:
         kwargs["draft"] = args.draft

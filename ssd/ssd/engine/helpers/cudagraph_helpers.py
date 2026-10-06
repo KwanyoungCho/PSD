@@ -1695,8 +1695,8 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     duet_close("graph_pre", _ev)
 
     if getattr(config, "duet_exit_replica", False):
-        # B>1 not supported for this gate (docs/duet/13 §6).
-        assert orig_bs == 1, "duet_exit_replica: B>1 not supported (docs/duet/13 §6)"
+        # The replica head and callback use flattened B*(K+1) rows.
+        # Only live rows enter the proxy; CUDA-graph padding stays excluded.
         # ====== Exit-replica overlap (docs/duet/09 WS3c) ======
         # NO TP collective: ranks 1+ fall straight through to graph_post
         # (the exit rendezvous point disappears). Rank 0 — the only rank

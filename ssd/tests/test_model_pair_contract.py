@@ -13,6 +13,13 @@ from ssd.utils.misc import validate_speculative_vocab
 
 
 class TestModelPair(unittest.TestCase):
+    def test_non_duet_response_width_is_chain_k(self):
+        with patch("ssd.config.os.path.isdir", return_value=True), \
+             patch("ssd.config.AutoConfig.from_pretrained", return_value=LlamaConfig()):
+            cfg = Config(model="/target", draft="/draft", speculate=True, speculate_k=4)
+        self.assertFalse(cfg.duet_tree_enabled)
+        self.assertEqual(cfg.duet_response_token_width, 4)
+
     def test_equal_vocab_size_does_not_imply_compatible_ids(self):
         target = SimpleNamespace(get_vocab=lambda: {"a": 0, "b": 1})
         draft = SimpleNamespace(get_vocab=lambda: {"b": 0, "a": 1})

@@ -105,6 +105,8 @@ class TestM4GateLift(GateEnvMixin, unittest.TestCase):
 class TestM4B1OnlyGateGuard(GateEnvMixin, unittest.TestCase):
     def test_each_gate_rejected_at_b2(self):
         for gate in GATES:
+            if gate == "SSD_DUET_EXIT_REPLICA":
+                continue  # batched replica path is now supported
             with self.subTest(gate=gate):
                 os.environ[gate] = "1"
                 try:
@@ -127,6 +129,10 @@ class TestM4B1OnlyGateGuard(GateEnvMixin, unittest.TestCase):
                     self.assertEqual(cfg.max_num_seqs, 1)
                 finally:
                     del os.environ[gate]
+
+    def test_exit_replica_allowed_at_b8(self):
+        with patch.dict(os.environ, {"SSD_DUET_EXIT_REPLICA": "1"}):
+            self.assertTrue(_champion_config(8).duet_exit_replica)
 
 
 if __name__ == "__main__":

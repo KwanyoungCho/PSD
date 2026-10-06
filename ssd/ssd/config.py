@@ -246,8 +246,9 @@ class Config:
     @property
     def duet_tree_enabled(self) -> bool:
         """Whether either phase may serve a dynamic tree response."""
-        return (self.duet_p1_tree_policy == "on"
-                or self.duet_p2_tree_policy == "on")
+        return (self.duet_enabled and
+                (self.duet_p1_tree_policy == "on"
+                 or self.duet_p2_tree_policy == "on"))
 
     @property
     def duet_tree_wire_nodes(self) -> int:
@@ -624,10 +625,9 @@ class Config:
             # at config time instead of hitting the runtime B==1 asserts
             # mid-run.
             if self.max_num_seqs > 1 and (
-                    self.duet_exit_topm_gather or self.duet_exit_replica
-                    or self.duet_proxy_on_draft):
+                    self.duet_exit_topm_gather or self.duet_proxy_on_draft):
                 raise ValueError(
-                    "SSD_DUET_EXIT_TOPM_GATHER / SSD_DUET_EXIT_REPLICA / "
+                    "SSD_DUET_EXIT_TOPM_GATHER / "
                     "SSD_DUET_PROXY_ON_DRAFT are B==1-only gates "
                     "(docs/duet/13 §6, out of scope v1); unset them or run "
                     f"with max_num_seqs=1 (got max_num_seqs={self.max_num_seqs})."

@@ -988,9 +988,14 @@ class Verifier(VerifierBase):
         # to _compute_and_send_proxy_tree before reaching this function.
         # Keeping the whole Policy-B calculation in one CUDA graph removes
         # the many small launches that appeared as a 4--6 ms proxy bar.
-        _chain_graph = getattr(self, "_chain_proxy_graphs", {}).get(int(K))
+        _chain_graphs = getattr(self, "_chain_proxy_graphs", {})
+        _chain_graph = _chain_graphs.get(int(K)) if B == 1 else None
+        if B > 1:
+            _buckets = [key[0] for key in _chain_graphs
+                        if isinstance(key, tuple) and key[1] == K and key[0] >= B]
+            if _buckets:
+                _chain_graph = _chain_graphs[(min(_buckets), K)]
         if (_chain_graph is not None
-                and B == 1
                 and self.jit_speculate
                 and config.duet_policy == "b"
                 and not _E0_TRACE):
@@ -998,14 +1003,18 @@ class Verifier(VerifierBase):
                 duet_record as _mr_chain, duet_close as _mc_chain)
             _ev_graph = _mr_chain(
                 "chain_proxy_graph_replay", parent="exit_proxy_side")
-            chosen_pos, chosen_tok, _ = _chain_graph.replay(
-                exit_logits[0], logits_q[0], draft_tokens[0, :K])
+            if B == 1:
+                chosen_pos, chosen_tok, _ = _chain_graph.replay(
+                    exit_logits[0], logits_q[0], draft_tokens[0, :K])
+            else:
+                chosen_pos, chosen_tok, _ = _chain_graph.replay(
+                    exit_logits, logits_q, draft_tokens[:, :K], valid_k)
             _mc_chain("chain_proxy_graph_replay", _ev_graph)
             _ev_send = _mr_chain(
                 "proxy_send_enqueue", parent="exit_proxy_side")
             Verifier._send_proxy_wire(
                 self, config, async_pg, draft_rank,
-                chosen_pos, chosen_tok)
+                chosen_pos.reshape(-1), chosen_tok.reshape(-1))
             _mc_chain("proxy_send_enqueue", _ev_send)
             return
 

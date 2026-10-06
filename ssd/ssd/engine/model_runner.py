@@ -1145,6 +1145,20 @@ class ModelRunner:
                     pack_scores=pack_scores,
                     dtype=cfg.hf_config.torch_dtype,
                     device=self.device)
+            from ssd.layers.fi_attn import graph_batch_sizes
+            from ssd.engine.helpers.batched_proxy import BatchedChainProxyCUDAGraph
+            batched_buckets = (graph_batch_sizes(cfg.max_num_seqs)
+                               if os.environ.get("SSD_BATCHED_PROXY_GRAPH", "1") != "0"
+                               else [])
+            for b in batched_buckets:
+                if b == 1:
+                    continue
+                for k in widths:
+                    self._chain_proxy_graphs_prebuilt[(b, k)] = BatchedChainProxyCUDAGraph(
+                        batch_size=b, k=k, vocab_size=cfg.hf_config.vocab_size,
+                        top_k=cfg.duet_proxy_top_k, wire_n=cfg.duet_proxy_wire_N,
+                        pack_scores=pack_scores, dtype=cfg.hf_config.torch_dtype,
+                        device=self.device)
             print("[DUET] captured target chain proxy graphs "
                   f"(K={widths})", flush=True)
 
