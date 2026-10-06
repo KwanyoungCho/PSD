@@ -11,10 +11,34 @@ from ssd import SamplingParams
 from ssd.engine.sequence import Sequence, SequenceStatus
 from ssd.engine.scheduler import Scheduler
 from ssd.engine.step import SpecDecodeStep
+from ssd.engine.block_manager import BlockManager
 from ssd.engine.helpers.speculate_types import VerifyResult
 
 
 class TestOutputAccounting(unittest.TestCase):
+    def test_completed_block_hash_points_to_its_own_physical_page(self):
+        old_size = getattr(Sequence, "block_size", None)
+        Sequence.block_size = 4
+        try:
+            seq = Sequence(list(range(9)))
+            manager = BlockManager(4, 4)
+            pages = manager._allocate_n_blocks(3)
+            table = [p.block_id for p in pages]
+            scheduler = Scheduler.__new__(Scheduler)
+            h = -1
+            for index in (0, 1):
+                scheduler._finalize_block(manager, seq, table, index)
+                tokens = list(range(index*4, (index+1)*4))
+                h = manager.compute_hash(tokens, h)
+                self.assertEqual(manager.blocks[table[index]].hash, h)
+                self.assertEqual(manager.hash_to_block_id[h], table[index])
+            self.assertEqual(manager.blocks[table[2]].hash, -1)
+        finally:
+            if old_size is None:
+                del Sequence.block_size
+            else:
+                Sequence.block_size = old_size
+
     def test_preemption_preserves_output_and_remaining_budget(self):
         seq = Sequence([10, 11], SamplingParams(max_new_tokens=4))
         seq.append_token(20)

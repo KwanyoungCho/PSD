@@ -42,6 +42,7 @@ def parse_args():
     p.add_argument("--memory-fraction", type=float, default=.45)
     p.add_argument("--ignore-eos", action="store_true")
     p.add_argument("--greedy-only", action="store_true", help="Specialize all captured samplers for T=0")
+    p.add_argument("--audit-preemption", action="store_true", help="Save CPU prefix snapshots for independent HF audit (diagnostic runs only)")
     p.add_argument("--ragged-limits", action="store_true",
                    help="Vary output caps to exercise batch shrink/refill")
     p.add_argument("--output", type=Path, required=True)
@@ -170,6 +171,19 @@ def main():
             batched_proxy_graph=os.environ.get("SSD_BATCHED_PROXY_GRAPH", "1") == "1",
             exit_replica=llm.config.duet_exit_replica,
             jit_speculate=llm.config.jit_speculate)
+        preemption_events = []
+        if args.audit_preemption:
+            lookup = {tuple(ids): i for i, ids in enumerate(prompts)}
+            if len(lookup) != len(prompts):
+                raise ValueError("Preemption audit requires unique tokenized prompts")
+            original_preempt = llm.scheduler.preempt
+
+            def observe_preempt(seq):
+                index = lookup[tuple(seq.token_ids[:seq.initial_num_prompt_tokens])]
+                preemption_events.append(dict(question=index,
+                    output_position=seq.num_completion_tokens, prefix_ids=list(seq.token_ids)))
+                original_preempt(seq)
+            llm.scheduler.preempt = observe_preempt
         for temperature in args.temperatures:
             for batch in args.batches:
                 # Captured capacity stays fixed; only the scheduler limit changes.
@@ -178,6 +192,7 @@ def main():
                                       ignore_eos=args.ignore_eos)
                 llm.generate(prompts[:batch], warm, use_tqdm=False)
                 for seed in args.seeds:
+                    preemption_events.clear()
                     random.seed(seed)
                     torch.manual_seed(seed)
                     # SSD_SEED seeds draft process at startup. Each cell records
@@ -204,6 +219,8 @@ def main():
                                 target_peak_reserved_bytes=torch.cuda.max_memory_reserved(),
                                 summary=summarize(metrics, outputs, wall, args.mode != "ar"))
                     report["cells"].append(cell)
+                    if args.audit_preemption:
+                        cell["preemption_events"] = list(preemption_events)
                     save()
                     print("COVERAGE_CELL", json.dumps({k: cell[k] for k in
                           ("batch", "temperature", "seed", "summary")}), flush=True)

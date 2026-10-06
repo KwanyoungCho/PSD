@@ -37,7 +37,9 @@ def main():
                       "--format=csv,noheader,nounits"]).splitlines()
         return [r for r in rows if r.split(",")[0] in uuids]
 
-    manifest = []
+    # Keep the provenance of completed jobs when resuming a partial campaign.
+    manifest_path = a.directory / "campaign.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else []
     for i, job in enumerate(jobs):
         name = job["name"]
         if Path(name).name != name:
@@ -51,7 +53,8 @@ def main():
         busy = processes()
         if busy:
             raise RuntimeError(f"Selected GPUs already busy; no job started: {busy}")
-        env = dict(os.environ, CUDA_VISIBLE_DEVICES=a.gpus, SSD_CUDA_ARCH="8.9",
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=a.gpus,
+                   SSD_CUDA_ARCH=os.environ.get("SSD_CUDA_ARCH", "8.9"),
                    SSD_ATTN_BACKEND="auto", SSD_DIST_PORT=str(a.port+i),
                    OMP_NUM_THREADS="4", SSD_SEED="0", SSD_CHAIN_PROXY_GRAPH="1",
                    SSD_FAST_VERIFY="1",
@@ -99,7 +102,7 @@ def main():
         result = json.loads(output.read_text()) if output.exists() else {}
         row["status"] = result.get("status", "missing")
         manifest.append(row)
-        (a.directory / "campaign.json").write_text(json.dumps(manifest, indent=2))
+        manifest_path.write_text(json.dumps(manifest, indent=2))
         print("END", name, row["status"], "external", row["external_pids"], flush=True)
         if row["status"] != "complete" or row["returncode"] != 0:
             raise RuntimeError(f"Failed job: {name}; inspect its log")
