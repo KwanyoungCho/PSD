@@ -447,8 +447,10 @@ def run_fi_tree_decode_cudagraph(model_runner, input_ids, positions, last_only, 
         # per step. Fall back to the tolist path when it's not pre-computed
         # (non-DUET / non-tree paths).
         _ctx_chl = getattr(context, "active_cache_hits_list", None)
-        if _ctx_chl is not None and len(_ctx_chl) >= B:
-            cache_hits_list = _ctx_chl[:B]
+        if _ctx_chl is not None and len(_ctx_chl) >= orig_B:
+            # Non-power-of-two batches have inactive CUDA-graph lanes.
+            # The CPU hit list needs the same zero padding as cache_hits.
+            cache_hits_list = _ctx_chl[:orig_B] + [0] * (B - orig_B)
         else:
             cache_hits_list = cache_hits[:B].tolist()
 

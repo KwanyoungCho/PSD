@@ -70,7 +70,7 @@ class TestP2ExecutorWarmup(unittest.TestCase):
                                                                 16 << 30)):
             DraftRunner._warmup_p2_tree_executor(runner)
 
-        self.assertEqual(sorted(executor.graphs), list(range(1, 8)))
+        self.assertEqual(sorted(executor.graphs), list(range(1, 9)))
         self.assertTrue(torch.equal(before, gen.get_state()))
 
 

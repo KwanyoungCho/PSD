@@ -112,19 +112,29 @@ class Attention(nn.Module):
                     o = fi_backend.run_ragged(q, k, v)
             else:
                 if context.block_tables is not None:
-                    k, v = k_cache, v_cache
-
-                k = k.view(-1, self.num_kv_heads, self.head_dim)
-                v = v.view(-1, self.num_kv_heads, self.head_dim)
-                o = flash_attn_varlen_func(
-                    q, k, v,
-                    max_seqlen_q=context.max_seqlen_q,
-                    cu_seqlens_q=context.cu_seqlens_q,
-                    max_seqlen_k=context.max_seqlen_k,
-                    cu_seqlens_k=context.cu_seqlens_k,
-                    softmax_scale=self.scale,
-                    causal=True,
-                )
+                    # Prefix-cache blocks are noncontiguous physical pages.
+                    # Flattening them as packed K/V ignores block_tables and
+                    # reads another request's context, including uncached
+                    # rows in a mixed cached/uncached prefill batch.
+                    o = flash_attn_with_kvcache(
+                        q, k_cache, v_cache,
+                        cache_seqlens=(context.cu_seqlens_k[1:]
+                                       - context.cu_seqlens_k[:-1]),
+                        page_table=context.block_tables,
+                        cu_seqlens_q=context.cu_seqlens_q,
+                        max_seqlen_q=context.max_seqlen_q,
+                        softmax_scale=self.scale, causal=True,
+                    )
+                else:
+                    o = flash_attn_varlen_func(
+                        q, k, v,
+                        max_seqlen_q=context.max_seqlen_q,
+                        cu_seqlens_q=context.cu_seqlens_q,
+                        max_seqlen_k=context.max_seqlen_k,
+                        cu_seqlens_k=context.cu_seqlens_k,
+                        softmax_scale=self.scale,
+                        causal=True,
+                    )
         else:
             # P2-tree TREE_VERIFY (T3.1b, docs/duet/internal/20): 명시 mode — 현행
             # 암묵 dispatch(cu_seqlens 유무)로는 트리 mask를 표현할 수

@@ -111,6 +111,15 @@ class DraftRunner(ModelRunner):
             d_model_target=cfg.hf_config.hidden_size if cfg.use_eagle and cfg.hf_config else None,
             enforce_eager=cfg.enforce_eager,
         )
+        # replace() reloads BOTH configs from the draft checkpoint. AMD's
+        # checkpoint advertises float32, which FlashAttention cannot run.
+        # Preserve the target runtime dtype before constructing draft layers,
+        # graphs and communication buffers (also matches verifier q logits).
+        runtime_dtype = getattr(cfg.hf_config, "torch_dtype", None)
+        if runtime_dtype is not None:
+            draft_cfg.hf_config.torch_dtype = runtime_dtype
+            draft_cfg.draft_hf_config.torch_dtype = runtime_dtype
+            cfg.draft_hf_config.torch_dtype = runtime_dtype
         if getattr(cfg, "extend_draft_rope", False):
             # dataclasses.replace() re-enters Config.__post_init__ with the
             # draft as `model`, where its native max_position_embeddings

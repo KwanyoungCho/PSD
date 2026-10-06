@@ -166,7 +166,10 @@ class Scheduler:
         scheduled_seqs = []
         num_batched_tokens = 0 # within this round only 
         
-        while self.waiting: 
+        # B is the maximum number of live requests, not merely a decode
+        # slice size. Admitting the entire corpus inflated KV use and made
+        # B sweeps rotate an unbounded queue of already-prefilled requests.
+        while self.waiting and len(self.running) < self.max_num_seqs:
 
             seq = self.waiting[0]
 

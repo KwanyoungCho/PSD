@@ -2,6 +2,14 @@ import torch
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
 from ssd.config import Config
 
+
+def _materialize_verified(speculations, counts, recovery):
+    # One small transfer for the whole ragged batch, rather than a separate
+    # synchronizing .tolist() for every row plus starts/counts/recovery.
+    rows = torch.cat((counts[:, None], recovery[:, None], speculations),
+                     dim=1).tolist()
+    return [r[2:3 + r[0]] for r in rows], [r[1] for r in rows]
+
 def verify(
     logits_p: torch.Tensor,
     logits_q: torch.Tensor,
@@ -13,6 +21,7 @@ def verify(
     async_fan_out: int | None = None,
     jit_speculate: bool = False,
     valid_k: torch.Tensor | None = None,
+    all_greedy: bool = False,
 ) -> tuple[list[list[int]], list[int]]:
     """
     Speculative‐decoding verification:
@@ -49,6 +58,15 @@ def verify(
         torch.full_like(first_mismatch, K)
     )                                                    # [B]
     batch_idx = torch.arange(B, device=device)
+
+    # The engine knows temperatures from CPU Sequence metadata. This hint
+    # avoids two GPU temperature readbacks on the all-greedy path. It must
+    # only be true when BOTH target and draft temperatures are zero.
+    if all_greedy:
+        if valid_k is not None:
+            accept_greedy = torch.minimum(accept_greedy, valid_k)
+        return _materialize_verified(
+            speculations, accept_greedy, preds_p[batch_idx, accept_greedy])
 
     # 2) Ratio‐based acceptance (only needed if any temp>0)
     # ------------------------------------------------------
@@ -191,14 +209,4 @@ def verify(
 
     # 4) Materialize ragged accepted_suffixes
     # ---------------------------------------
-    accepted_suffixes: list[list[int]] = []
-    # previous recovery
-    starts = speculations[:, 0].tolist()
-    counts = accept_until.tolist()
-
-    for b in range(B):
-        n = counts[b]
-        suffix = [starts[b]] + draft_tokens[b, :n].tolist()
-        accepted_suffixes.append(suffix)
-
-    return accepted_suffixes, rec_final.tolist()
+    return _materialize_verified(speculations, accept_until, rec_final)

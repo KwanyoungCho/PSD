@@ -514,6 +514,8 @@ class Verifier(VerifierBase):
                 async_fan_out=self.async_fan_out,
                 jit_speculate=self.jit_speculate,
                 valid_k=speculate_result.valid_k,
+                all_greedy=(all(t == 0 for t in temps_target)
+                            and all(t == 0 for t in temps_draft)),
             )
             _mc("chain_accept", _mev_chain_accept)
         _mc("verify_sample_accept", _mev_vs)

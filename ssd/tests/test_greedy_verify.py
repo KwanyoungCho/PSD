@@ -35,6 +35,19 @@ class TestGreedyRecovery(unittest.TestCase):
     def test_cpu_mixed_temperature(self):
         self._check_ragged("cpu", mixed_temperature=True)
 
+    def test_greedy_fast_path_matches_general_path(self):
+        torch.manual_seed(17)
+        for device in ["cpu"] + (["cuda"] if torch.cuda.is_available() else []):
+            p = torch.randn(8, 5, 32, device=device)
+            q = torch.randn(8, 4, 32, device=device)
+            tokens = torch.cat((torch.zeros(8, 1, dtype=torch.long, device=device),
+                                p[:, :-1].argmax(-1)), dim=1)
+            temps = torch.zeros(8, device=device)
+            vk = torch.tensor([1, 2, 3, 4, 4, 3, 2, 1], device=device)
+            expected = verify(p, q, tokens, temps, temps, valid_k=vk)
+            actual = verify(p, q, tokens, temps, temps, valid_k=vk, all_greedy=True)
+            self.assertEqual(expected, actual)
+
     @unittest.skipUnless(torch.cuda.is_available(), "requires CUDA")
     def test_cuda_ragged(self):
         self._check_ragged("cuda")
