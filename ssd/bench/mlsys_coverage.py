@@ -35,6 +35,9 @@ def parse_args():
     p.add_argument("--input-cap", type=int, default=512)
     p.add_argument("--k1", type=int, default=4)
     p.add_argument("--k2", type=int, default=2)
+    p.add_argument("--draft-fan-out", type=int, default=2)
+    p.add_argument("--proxy-fan-out", type=int, default=1)
+    p.add_argument("--p1-tree", action="store_true")
     p.add_argument("--exit-layer", type=int, default=21)
     p.add_argument("--memory-fraction", type=float, default=.45)
     p.add_argument("--ignore-eos", action="store_true")
@@ -102,7 +105,7 @@ def main():
         gpu_memory_utilization=args.memory_fraction,
         speculate=args.mode != "ar", draft_async=async_mode,
         jit_speculate=True, speculate_k=args.k1 + args.k2 if duet else args.k1,
-        async_fan_out=3,
+        async_fan_out=args.draft_fan_out + args.proxy_fan_out,
     )
     if args.draft:
         kwargs["draft"] = args.draft
@@ -110,10 +113,13 @@ def main():
         kwargs.update(
             duet_enabled=True, duet_exit_layer=args.exit_layer,
             duet_phase1_k=args.k1, duet_phase2_k=args.k2,
-            duet_draft_fan_out=2, duet_p1_tree_policy="off",
+            duet_draft_fan_out=args.draft_fan_out,
+            duet_p1_tree_policy="on" if args.p1_tree else "off",
             duet_p2_tree_policy="on" if args.mode == "duet-tree" else "off",
             duet_p2_tree_max_nodes=args.k2 * 2,
             duet_p2_tree_verify_nodes=args.k2 * 2,  # G=M, no pruning
+            duet_p1_tree_max_nodes=args.k1 * 2,
+            duet_p1_tree_verify_nodes=args.k1 * 2,
         )
     if args.mode == "duet-tree" and (args.batches != [1] or 0 in args.temperatures):
         raise ValueError("Dynamic tree validation currently requires B=1 and T>0; use duet-chain for B>1/T=0")

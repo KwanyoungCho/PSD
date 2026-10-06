@@ -12,9 +12,22 @@ from ssd.layers.attention import Attention
 from ssd.utils.context import set_context, reset_context
 from ssd.engine.scheduler import Scheduler
 from ssd.engine.sequence import Sequence
+from ssd.engine.block_manager import BlockManager
 
 
 class TestAdmission(unittest.TestCase):
+    def test_fully_cached_prompt_keeps_a_query_token(self):
+        with patch.object(Sequence, "block_size", 4, create=True):
+            for draft in (False, True):
+                bm = BlockManager(8, 4, is_draft=draft)
+                first = Sequence(list(range(8)))
+                bm.allocate(first)
+                second = Sequence(list(range(8)))
+                bm.allocate(second)
+                cached = second.num_draft_cached_tokens if draft else second.num_cached_tokens
+                self.assertEqual(cached, 7)
+                self.assertEqual(len(second) - cached, 1)
+
     def test_prefill_respects_live_batch_limit(self):
         scheduler = Scheduler.__new__(Scheduler)
         scheduler.max_num_seqs = 2

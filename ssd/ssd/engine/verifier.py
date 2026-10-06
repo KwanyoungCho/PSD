@@ -560,6 +560,8 @@ class Verifier(VerifierBase):
                 _src = int(_ps_cpu[i].item()) if _ps_cpu is not None else 0
                 self.metrics["phase_events"].append({
                     "tree": _tree_meta_arg is not None,
+                    "batch_size": batch_size,
+                    "verify_width": _step_lookahead,
                     "step_id": (int(speculate_result.step_id)
                                 if speculate_result.step_id is not None else None),
                     "source": _src,
