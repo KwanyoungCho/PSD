@@ -11,8 +11,16 @@ def summarize_file(path):
     run = json.loads(path.read_text())
     if run.get("status") != "complete":
         return []
+    manifest_path = path.parent / "campaign.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else []
+    job = next((j for j in manifest if j["name"] == path.stem), {})
     result = []
     for cell in run["cells"]:
+        cell_summary = dict(cell["summary"])
+        cell_summary["decode_tps_reported"] = cell_summary["decode_tps"]
+        count = (sum(len(o["token_ids"]) for o in cell["outputs"])
+                 if run["args"]["mode"] != "ar" else cell["metrics"]["decode_total_tokens"])
+        cell_summary["decode_tps"] = count / cell["metrics"]["decode_total_time"]
         events = cell["metrics"].get("phase_events", [])
         steps = defaultdict(list)
         for ev in events:
@@ -20,11 +28,13 @@ def summarize_file(path):
         needed = sum((ev.get("valid_k") or 0)+1 for ev in events)
         dense = sum((ev.get("verify_width") or 0)+1 for ev in events)
         row = dict(file=str(path), mode=run["args"]["mode"],
+                   foreign_gpu_processes=json.dumps(job.get("external_pids", [])),
+                   profiled=run["env"].get("SSD_PROFILE_DUET") == "1",
                    batch=cell["batch"], temperature=cell["temperature"], seed=cell["seed"],
                    n_prompts=len(run["prompt_ids"]), truncated=run["truncated_prompts"],
                    k1=run["args"]["k1"], k2=run["args"]["k2"],
                    dfo=run["args"]["draft_fan_out"],
-                   **cell["summary"],
+                   **cell_summary,
                    target_peak_allocated_gib=cell["target_peak_allocated_bytes"]/2**30,
                    target_peak_reserved_gib=cell["target_peak_reserved_bytes"]/2**30)
         if events:

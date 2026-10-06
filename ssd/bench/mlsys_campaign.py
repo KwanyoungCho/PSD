@@ -54,6 +54,7 @@ def main():
         env = dict(os.environ, CUDA_VISIBLE_DEVICES=a.gpus, SSD_CUDA_ARCH="8.9",
                    SSD_ATTN_BACKEND="auto", SSD_DIST_PORT=str(a.port+i),
                    OMP_NUM_THREADS="4", SSD_SEED="0", SSD_CHAIN_PROXY_GRAPH="1",
+                   SSD_FAST_VERIFY="1",
                    SSD_BATCHED_PROXY_GRAPH="1", SSD_DUET_EXIT_REPLICA="0",
                    SSD_ASYNC_PROXY_SEND="1", SSD_PROXY_STREAM="0")
         env.update(job.get("env", {}))

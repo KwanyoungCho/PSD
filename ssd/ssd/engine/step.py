@@ -195,4 +195,6 @@ class SpecDecodeStep(InferenceStep):
             toks = sum(len(s) for s in out_verify_result.new_suffixes)
             print(f"[PROFILE target] handshake={(_t1-_t0)*1000:.2f}ms verify={(_t2-_t1)*1000:.2f}ms postprocess={(_t3-_t2)*1000:.2f}ms total={(_t3-_t0)*1000:.2f}ms {hits_str} toks={toks}", flush=True)
 
-        return sum(len(s) for s in out_verify_result.new_suffixes)
+        # Verification may accept past EOS or the requested output cap.
+        # Throughput counts only tokens actually committed by the scheduler.
+        return sum(seq.num_tokens - before[1] for seq, before in zip(seqs, saved))

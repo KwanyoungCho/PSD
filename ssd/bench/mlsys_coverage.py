@@ -51,12 +51,17 @@ def mean(values):
     return sum(values) / len(values) if values else None
 
 
-def summarize(metrics, outputs, wall):
+def summarize(metrics, outputs, wall, speculative=False):
     events = metrics.get("phase_events", [])
     total = sum(len(o["token_ids"]) for o in outputs)
+    # Speculative prefill defers its recovery token until the first decode.
+    # Thus all returned output tokens belong to decode. AR emits its first
+    # token during prefill and has a correct per-step decode counter.
+    decode_tokens = total if speculative else metrics["decode_total_tokens"]
     return dict(
         output_tokens=total, wall_s=wall, end_to_end_tps=total / wall,
-        decode_tps=(metrics["decode_total_tokens"] / metrics["decode_total_time"]
+        decode_output_tokens=decode_tokens,
+        decode_tps=(decode_tokens / metrics["decode_total_time"]
                     if metrics["decode_total_time"] else None),
         al_including_recovery=mean(metrics["accepted_suffix_lens_with_recovery"]),
         accepted_draft_tokens=mean([e["accepted_spec_len"] for e in events]),
@@ -74,6 +79,10 @@ def main():
         raise FileExistsError(f"Refusing to overwrite {args.output}")
     if min(args.batches) < 1 or args.max_new_tokens < 1:
         raise ValueError("Batch sizes and output length must be positive")
+    if min(args.temperatures) < 0:
+        raise ValueError("Temperatures must be nonnegative")
+    if args.p1_tree and args.mode != "duet-tree":
+        raise ValueError("--p1-tree requires --mode duet-tree to label execution correctly")
     if args.mode != "ar" and not args.draft:
         raise ValueError("--draft is required for speculative modes")
     os.environ.setdefault("SSD_HF_CACHE", str(Path(args.target).parent))
@@ -147,10 +156,16 @@ def main():
         tmp.replace(args.output)
 
     save()
-    llm = LLM(args.target, **kwargs)
-    report["target_dtype"] = str(llm.config.hf_config.torch_dtype)
-    report["draft_dtype"] = str(llm.config.draft_hf_config.torch_dtype) if args.mode != "ar" else None
+    llm = None
     try:
+        llm = LLM(args.target, **kwargs)
+        report["target_dtype"] = str(llm.config.hf_config.torch_dtype)
+        report["draft_dtype"] = str(llm.config.draft_hf_config.torch_dtype) if args.mode != "ar" else None
+        report["effective_features"] = dict(
+            fast_verify=os.environ.get("SSD_FAST_VERIFY", "1") == "1",
+            batched_proxy_graph=os.environ.get("SSD_BATCHED_PROXY_GRAPH", "1") == "1",
+            exit_replica=llm.config.duet_exit_replica,
+            jit_speculate=llm.config.jit_speculate)
         for temperature in args.temperatures:
             for batch in args.batches:
                 # Captured capacity stays fixed; only the scheduler limit changes.
@@ -183,7 +198,7 @@ def main():
                                 outputs=outputs, metrics=json.loads(json.dumps(metrics)),
                                 target_peak_allocated_bytes=torch.cuda.max_memory_allocated(),
                                 target_peak_reserved_bytes=torch.cuda.max_memory_reserved(),
-                                summary=summarize(metrics, outputs, wall))
+                                summary=summarize(metrics, outputs, wall, args.mode != "ar"))
                     report["cells"].append(cell)
                     save()
                     print("COVERAGE_CELL", json.dumps({k: cell[k] for k in
@@ -195,7 +210,8 @@ def main():
         save()
         raise
     finally:
-        llm.exit(hard=False)
+        if llm is not None:
+            llm.exit(hard=False)
 
 
 if __name__ == "__main__":

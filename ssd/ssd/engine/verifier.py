@@ -516,7 +516,7 @@ class Verifier(VerifierBase):
                 valid_k=speculate_result.valid_k,
                 all_greedy=(all(t == 0 for t in temps_target)
                             and all(t == 0 for t in temps_draft)),
-                all_stochastic=(os.environ.get("SSD_FAST_VERIFY", "0") == "1"
+                all_stochastic=(os.environ.get("SSD_FAST_VERIFY", "1") == "1"
                                 and all(t > 0 for t in temps_target)
                                 and all(t > 0 for t in temps_draft)),
             )

@@ -41,6 +41,7 @@ METRICS = {
     "decode_total_time": 0,
     "prefill_total_tokens": 0,
     "decode_total_tokens": 0,
+    "preemptions": 0,
     "target_step_times": [],
     "target_verify_times": [],
 }
@@ -464,6 +465,7 @@ class LLMEngine:
     ) -> list[str]:
         for k in METRICS:
             METRICS[k] = [] if isinstance(METRICS[k], list) else 0
+        preemptions_before = getattr(self.scheduler, "preemption_count", 0)
 
         if use_tqdm:
             pbar = tqdm(total=len(prompts),
@@ -512,6 +514,7 @@ class LLMEngine:
         if use_tqdm:
             pbar.close()
 
+        METRICS["preemptions"] = getattr(self.scheduler, "preemption_count", 0) - preemptions_before
         if not stream_callback:
             self.log_metrics()
 

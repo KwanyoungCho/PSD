@@ -269,6 +269,7 @@ class Scheduler:
         return scheduled_seqs, False
 
     def preempt(self, seq: Sequence):
+        self.preemption_count = getattr(self, "preemption_count", 0) + 1
         # print(f"[_preempt] Seq {seq.seq_id}: preempting sequence", flush=True)
         seq.status = SequenceStatus.WAITING
         seq.recovery_token_id = None
