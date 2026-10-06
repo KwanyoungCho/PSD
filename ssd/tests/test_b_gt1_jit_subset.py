@@ -18,6 +18,7 @@ Run from project root (/home/chokwans99/PSD/ssd):
     python -m unittest tests.test_b_gt1_jit_subset
 """
 import unittest
+from unittest.mock import patch
 
 import torch
 
@@ -41,6 +42,12 @@ def _mixed_keys():
 
 class _GateMixin:
     def setUp(self):
+        # Flags are read at module import in production. Test import order
+        # must not silently disable the split-width fixture.
+        for name in ("SPLIT_K1K2_MODE", "DUET_JIT_SHORT"):
+            patcher = patch.object(dr_mod, name, True)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self._saved = dr_mod.DUET_JIT_SUBSET
         dr_mod.DUET_JIT_SUBSET = True
 

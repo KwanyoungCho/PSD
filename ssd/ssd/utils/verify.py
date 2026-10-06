@@ -22,6 +22,7 @@ def verify(
     jit_speculate: bool = False,
     valid_k: torch.Tensor | None = None,
     all_greedy: bool = False,
+    all_stochastic: bool = False,
 ) -> tuple[list[list[int]], list[int]]:
     """
     Speculative‐decoding verification:
@@ -35,6 +36,12 @@ def verify(
        accept_until = min(accept_until, valid_k) guarantees padded positions
        can never be accepted. None (default) keeps every other caller unchanged.
     """
+
+    if all_stochastic and jit_speculate:
+        from ssd.utils.verify_fast import verify_stochastic
+        return verify_stochastic(
+            logits_p, logits_q, speculations, temperatures_target,
+            temperatures_draft, valid_k, sampler_x, async_fan_out)
 
     device = logits_p.device
     B, Kp1, V = logits_p.shape
