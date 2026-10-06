@@ -1,0 +1,315 @@
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+Draft runner created on rank 1 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[model_runner about to wrapper.init()] graph_bs_list=[1, 2, 4, 8]
+wrapper backend is auto
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=3
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=3
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=3
+[load_model] loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=3
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 10.26it/s]
+Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.28it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.04it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.02s/it]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.02it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 12, 1991, 256, 12, 64])
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 36, 256, 32, 128])
+About to capture FI cudagraphs for bs=[1, 2, 4, 8] key=fi_tree_decode MQ_LEN=8
+  [FI capture] bs=8 key=fi_tree_decode starting...
+  [FI capture] bs=8 key=fi_tree_decode warmup...
+  [FI capture] bs=8 key=fi_tree_decode warmup done, capturing...
+  [FI capture] bs=4 key=fi_tree_decode starting...
+  [FI capture] bs=4 key=fi_tree_decode warmup...
+  [FI capture] bs=4 key=fi_tree_decode warmup done, capturing...
+F=2, fan_out_list=[2, 2, 2, 2], fan_out_list_miss=[2, 2, 2, 2], MQ_LEN=8
+  [FI capture] bs=2 key=fi_tree_decode starting...
+  [FI capture] bs=2 key=fi_tree_decode warmup...
+  [FI capture] bs=2 key=fi_tree_decode warmup done, capturing...
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=2, fan_out_list=[2, 2, 2, 2], fan_out_list_miss=[2, 2, 2, 2], MQ_LEN=8
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 61.43tok/s
+Final Decode Throughput: 45.94tok/s
+[metrics] Prefill tokens/time: 28 / 0.455821s
+[metrics] Decode tokens/time: 16 / 0.348307s
+[metrics] Avg Tokens per step (incl recovery): 1.50
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.17 (denom=3)
+[metrics] Avg target time per full step (ms): 61.86
+[metrics] Avg target verify time (ms): 17.37
+[metrics] Avg Cache Hits: 0.17
+[metrics] Avg Tokens per step on Cache Hit: 1.50
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.500
+  1: 0.500
+  2: 0.000
+  3: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.50
+Final Prefill Throughput: 7003.76tok/s
+Final Decode Throughput: 127.06tok/s
+[metrics] Prefill tokens/time: 9152 / 1.306727s
+[metrics] Decode tokens/time: 3072 / 24.178265s
+[metrics] Avg Tokens per step (incl recovery): 2.31
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.44 (denom=3)
+[metrics] Avg target time per full step (ms): 18.14
+[metrics] Avg target verify time (ms): 15.83
+[metrics] Avg Cache Hits: 0.50
+[metrics] Avg Tokens per step on Cache Hit: 2.83
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.280
+  1: 0.128
+  2: 0.072
+  3: 0.520
+[metrics] Avg Tokens per step on Cache Miss: 1.78
+COVERAGE_CELL {"batch": 1, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 25.49436636408791, "end_to_end_tps": 120.49720931002649, "decode_output_tokens": 3072, "decode_tps": 127.05626109592458, "al_including_recovery": 2.3065585851142227, "accepted_draft_tokens": 1.3065585851142225, "cache_hit": 0.5018422991893884, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1357}}
+Final Prefill Throughput: 3501.39tok/s
+Final Decode Throughput: 141.34tok/s
+[metrics] Prefill tokens/time: 67 / 0.019135s
+[metrics] Decode tokens/time: 32 / 0.226399s
+[metrics] Avg Tokens per step (incl recovery): 1.62
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.21 (denom=3)
+[metrics] Avg target time per full step (ms): 18.89
+[metrics] Avg target verify time (ms): 15.78
+[metrics] Avg Cache Hits: 0.25
+[metrics] Avg Tokens per step on Cache Hit: 2.20
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.400
+  1: 0.200
+  2: 0.200
+  3: 0.200
+[metrics] Avg Tokens per step on Cache Miss: 1.44
+Final Prefill Throughput: 7256.51tok/s
+Final Decode Throughput: 238.59tok/s
+[metrics] Prefill tokens/time: 9152 / 1.261212s
+[metrics] Decode tokens/time: 3072 / 12.875531s
+[metrics] Avg Tokens per step (incl recovery): 2.31
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.44 (denom=3)
+[metrics] Avg target time per full step (ms): 19.47
+[metrics] Avg target verify time (ms): 16.12
+[metrics] Avg Cache Hits: 0.50
+[metrics] Avg Tokens per step on Cache Hit: 2.83
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.280
+  1: 0.128
+  2: 0.072
+  3: 0.520
+[metrics] Avg Tokens per step on Cache Miss: 1.78
+COVERAGE_CELL {"batch": 2, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 14.143090512836352, "end_to_end_tps": 217.2085370741165, "decode_output_tokens": 3072, "decode_tps": 238.59210068328156, "al_including_recovery": 2.3065585851142227, "accepted_draft_tokens": 1.3065585851142225, "cache_hit": 0.5018422991893884, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1357}}
+Final Prefill Throughput: 6616.88tok/s
+Final Decode Throughput: 272.11tok/s
+[metrics] Prefill tokens/time: 147 / 0.022216s
+[metrics] Decode tokens/time: 64 / 0.235201s
+[metrics] Avg Tokens per step (incl recovery): 1.64
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.21 (denom=3)
+[metrics] Avg target time per full step (ms): 19.80
+[metrics] Avg target verify time (ms): 16.09
+[metrics] Avg Cache Hits: 0.42
+[metrics] Avg Tokens per step on Cache Hit: 1.76
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.529
+  1: 0.294
+  2: 0.059
+  3: 0.118
+[metrics] Avg Tokens per step on Cache Miss: 1.56
+Final Prefill Throughput: 7512.55tok/s
+Final Decode Throughput: 441.93tok/s
+[metrics] Prefill tokens/time: 9152 / 1.218227s
+[metrics] Decode tokens/time: 3072 / 6.951255s
+[metrics] Avg Tokens per step (incl recovery): 2.30
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.43 (denom=3)
+[metrics] Avg target time per full step (ms): 21.22
+[metrics] Avg target verify time (ms): 16.63
+[metrics] Avg Cache Hits: 0.51
+[metrics] Avg Tokens per step on Cache Hit: 2.82
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.282
+  1: 0.128
+  2: 0.074
+  3: 0.515
+[metrics] Avg Tokens per step on Cache Miss: 1.77
+COVERAGE_CELL {"batch": 4, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 8.173664164962247, "end_to_end_tps": 375.84123081159026, "decode_output_tokens": 3072, "decode_tps": 441.9346172817079, "al_including_recovery": 2.299044819985305, "accepted_draft_tokens": 1.2990448199853049, "cache_hit": 0.5033063923585599, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1361}}
+Final Prefill Throughput: 9990.55tok/s
+Final Decode Throughput: 469.58tok/s
+[metrics] Prefill tokens/time: 429 / 0.042941s
+[metrics] Decode tokens/time: 128 / 0.272585s
+[metrics] Avg Tokens per step (incl recovery): 1.78
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.26 (denom=3)
+[metrics] Avg target time per full step (ms): 22.54
+[metrics] Avg target verify time (ms): 16.89
+[metrics] Avg Cache Hits: 0.36
+[metrics] Avg Tokens per step on Cache Hit: 2.03
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.467
+  1: 0.267
+  2: 0.033
+  3: 0.233
+[metrics] Avg Tokens per step on Cache Miss: 1.62
+Final Prefill Throughput: 7891.59tok/s
+Final Decode Throughput: 760.42tok/s
+[metrics] Prefill tokens/time: 9152 / 1.159715s
+[metrics] Decode tokens/time: 3072 / 4.039867s
+[metrics] Avg Tokens per step (incl recovery): 2.31
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.44 (denom=3)
+[metrics] Avg target time per full step (ms): 23.64
+[metrics] Avg target verify time (ms): 17.82
+[metrics] Avg Cache Hits: 0.52
+[metrics] Avg Tokens per step on Cache Hit: 2.83
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.281
+  1: 0.127
+  2: 0.072
+  3: 0.520
+[metrics] Avg Tokens per step on Cache Miss: 1.78
+COVERAGE_CELL {"batch": 8, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 5.2037281601224095, "end_to_end_tps": 590.3459799344583, "decode_output_tokens": 3072, "decode_tps": 760.4210440008613, "al_including_recovery": 2.3065585851142227, "accepted_draft_tokens": 1.3065585851142225, "cache_hit": 0.5003684598378777, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1357}}
+Final Prefill Throughput: 1557.05tok/s
+Final Decode Throughput: 87.14tok/s
+[metrics] Prefill tokens/time: 28 / 0.017983s
+[metrics] Decode tokens/time: 16 / 0.183609s
+[metrics] Avg Tokens per step (incl recovery): 2.38
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.46 (denom=3)
+[metrics] Avg target time per full step (ms): 22.40
+[metrics] Avg target verify time (ms): 20.55
+[metrics] Avg Cache Hits: 0.25
+[metrics] Avg Tokens per step on Cache Hit: 2.00
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 1.000
+  2: 0.000
+  3: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.50
+Final Prefill Throughput: 7044.32tok/s
+Final Decode Throughput: 100.94tok/s
+[metrics] Prefill tokens/time: 9152 / 1.299203s
+[metrics] Decode tokens/time: 2950 / 29.224399s
+[metrics] Avg Tokens per step (incl recovery): 1.91
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.30 (denom=3)
+[metrics] Avg target time per full step (ms): 18.95
+[metrics] Avg target verify time (ms): 16.49
+[metrics] Avg Cache Hits: 0.36
+[metrics] Avg Tokens per step on Cache Hit: 2.26
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.421
+  1: 0.191
+  2: 0.093
+  3: 0.295
+[metrics] Avg Tokens per step on Cache Miss: 1.72
+COVERAGE_CELL {"batch": 1, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2950, "wall_s": 30.53387046791613, "end_to_end_tps": 96.61402091489684, "decode_output_tokens": 2950, "decode_tps": 100.94305184563832, "al_including_recovery": 1.9149072296865004, "accepted_draft_tokens": 0.9149072296865003, "cache_hit": 0.3646833013435701, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1563}}
+Final Prefill Throughput: 3576.50tok/s
+Final Decode Throughput: 104.99tok/s
+[metrics] Prefill tokens/time: 67 / 0.018733s
+[metrics] Decode tokens/time: 32 / 0.304791s
+[metrics] Avg Tokens per step (incl recovery): 1.23
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.08 (denom=3)
+[metrics] Avg target time per full step (ms): 19.03
+[metrics] Avg target verify time (ms): 16.29
+[metrics] Avg Cache Hits: 0.28
+[metrics] Avg Tokens per step on Cache Hit: 1.14
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.857
+  1: 0.143
+  2: 0.000
+  3: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.26
+Final Prefill Throughput: 7185.52tok/s
+Final Decode Throughput: 185.90tok/s
+[metrics] Prefill tokens/time: 9152 / 1.273673s
+[metrics] Decode tokens/time: 2787 / 14.992225s
+[metrics] Avg Tokens per step (incl recovery): 1.86
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.29 (denom=3)
+[metrics] Avg target time per full step (ms): 20.13
+[metrics] Avg target verify time (ms): 16.72
+[metrics] Avg Cache Hits: 0.36
+[metrics] Avg Tokens per step on Cache Hit: 2.29
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.420
+  1: 0.173
+  2: 0.099
+  3: 0.308
+[metrics] Avg Tokens per step on Cache Miss: 1.62
+COVERAGE_CELL {"batch": 2, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2787, "wall_s": 16.27184029808268, "end_to_end_tps": 171.27749221631643, "decode_output_tokens": 2787, "decode_tps": 185.89635834010318, "al_including_recovery": 1.861202908129544, "accepted_draft_tokens": 0.8612029081295439, "cache_hit": 0.3588896232650364, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1513}}
+Final Prefill Throughput: 6615.70tok/s
+Final Decode Throughput: 209.98tok/s
+[metrics] Prefill tokens/time: 147 / 0.022220s
+[metrics] Decode tokens/time: 64 / 0.304788s
+[metrics] Avg Tokens per step (incl recovery): 1.30
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.10 (denom=3)
+[metrics] Avg target time per full step (ms): 20.44
+[metrics] Avg target verify time (ms): 16.81
+[metrics] Avg Cache Hits: 0.22
+[metrics] Avg Tokens per step on Cache Hit: 1.08
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.917
+  1: 0.083
+  2: 0.000
+  3: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.37
+Final Prefill Throughput: 7475.35tok/s
+Final Decode Throughput: 356.40tok/s
+[metrics] Prefill tokens/time: 9152 / 1.224291s
+[metrics] Decode tokens/time: 2856 / 8.013383s
+[metrics] Avg Tokens per step (incl recovery): 1.93
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.31 (denom=3)
+[metrics] Avg target time per full step (ms): 21.74
+[metrics] Avg target verify time (ms): 17.29
+[metrics] Avg Cache Hits: 0.34
+[metrics] Avg Tokens per step on Cache Hit: 2.26
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.408
+  1: 0.219
+  2: 0.078
+  3: 0.295
+[metrics] Avg Tokens per step on Cache Miss: 1.76
+COVERAGE_CELL {"batch": 4, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2856, "wall_s": 9.242439619032666, "end_to_end_tps": 309.00932196719236, "decode_output_tokens": 2856, "decode_tps": 356.40377507380606, "al_including_recovery": 1.9254327563249, "accepted_draft_tokens": 0.9254327563249002, "cache_hit": 0.33422103861517977, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1502}}
+Final Prefill Throughput: 10037.31tok/s
+Final Decode Throughput: 362.42tok/s
+[metrics] Prefill tokens/time: 429 / 0.042741s
+[metrics] Decode tokens/time: 113 / 0.311790s
+[metrics] Avg Tokens per step (incl recovery): 1.79
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.26 (denom=3)
+[metrics] Avg target time per full step (ms): 22.16
+[metrics] Avg target verify time (ms): 17.22
+[metrics] Avg Cache Hits: 0.16
+[metrics] Avg Tokens per step on Cache Hit: 2.14
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.500
+  1: 0.143
+  2: 0.071
+  3: 0.286
+[metrics] Avg Tokens per step on Cache Miss: 1.70
+Final Prefill Throughput: 7902.61tok/s
+Final Decode Throughput: 609.07tok/s
+[metrics] Prefill tokens/time: 9152 / 1.158098s
+[metrics] Decode tokens/time: 2775 / 4.556156s
+[metrics] Avg Tokens per step (incl recovery): 1.92
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.31 (denom=3)
+[metrics] Avg target time per full step (ms): 24.32
+[metrics] Avg target verify time (ms): 18.58
+[metrics] Avg Cache Hits: 0.34
+[metrics] Avg Tokens per step on Cache Hit: 2.43
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.356
+  1: 0.200
+  2: 0.103
+  3: 0.342
+[metrics] Avg Tokens per step on Cache Miss: 1.67
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2775, "wall_s": 5.7177572881337255, "end_to_end_tps": 485.33014959537735, "decode_output_tokens": 2775, "decode_tps": 609.0660574061123, "al_including_recovery": 1.921864290610007, "accepted_draft_tokens": 0.9218642906100069, "cache_hit": 0.3331048663468129, "phase1_hit": 0.0, "phase2_hit": 0.0, "tree_verify_events": 0, "verify_events": 1459}}
+[LLMEngine] Exiting (hard=False)
+[metrics] Avg draft step time (ms): 5.96
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1007 00:45:48.806936320 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

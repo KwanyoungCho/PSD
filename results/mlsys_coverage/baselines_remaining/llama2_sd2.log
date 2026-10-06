@@ -1,0 +1,117 @@
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=2
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=2
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.42it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.17it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.11it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.15it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 37, 256, 32, 128])
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=2
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=2
+[load_model] loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 12.10it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 12, 469, 256, 12, 64])
+Draft runner created on rank 0 (no async)
+[LLMEngine] finished llm_engine init
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=28 recovery=13
+Final Prefill Throughput: 92.62tok/s
+Final Decode Throughput: 358.42tok/s
+[metrics] Prefill tokens/time: 429 / 4.631772s
+[metrics] Decode tokens/time: 132 / 0.368282s
+[metrics] Avg Tokens per step (incl recovery): 1.50
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.25 (denom=2)
+[metrics] Avg target time per full step (ms): 312.51
+[metrics] Avg target verify time (ms): 21.51
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=28 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=29 recovery=29889
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=55 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=26 recovery=306
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=22 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=59 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=61 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=37 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=1033
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=357 recovery=869
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=368 recovery=323
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=3614
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=470
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=446 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=664
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=11 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=13 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=17 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=14 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=21 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=13 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=12 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=11 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=53 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=44 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=45 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=38 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=78 recovery=13
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=73 recovery=1128
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=15848
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=2879
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=29889
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=3900
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=11775
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=29871
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=385
+Final Prefill Throughput: 6481.16tok/s
+Final Decode Throughput: 630.42tok/s
+[metrics] Prefill tokens/time: 9152 / 1.412092s
+[metrics] Decode tokens/time: 4458 / 7.071447s
+[metrics] Avg Tokens per step (incl recovery): 1.81
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.40 (denom=2)
+[metrics] Avg target time per full step (ms): 23.25
+[metrics] Avg target verify time (ms): 18.28
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 4433, "wall_s": 8.4890360198915, "end_to_end_tps": 522.202990965358, "decode_tps": 630.4225935142281, "al_including_recovery": 1.806320907617504, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

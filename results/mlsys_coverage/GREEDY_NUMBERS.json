@@ -1,0 +1,111 @@
+{
+  "runs": {
+    "full_greedy/llama2_reference.json": {
+      "decode_tps": 773.0766392162882,
+      "end_to_end_tps": 583.7242766695547,
+      "al_including_recovery": 2.2399971214738055,
+      "n_prompts": 480,
+      "k1": 4,
+      "gpu_uuids": [
+        "GPU-13825050-f567-b638-9467-d4b135c4fad2",
+        "GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10"
+      ]
+    },
+    "full_greedy/llama2_specialized.json": {
+      "decode_tps": 775.0256317013784,
+      "end_to_end_tps": 585.8378380922413,
+      "al_including_recovery": 2.2399971214738055,
+      "n_prompts": 480,
+      "k1": 4,
+      "gpu_uuids": [
+        "GPU-13825050-f567-b638-9467-d4b135c4fad2",
+        "GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10"
+      ]
+    },
+    "full_greedy/llama3_reference.json": {
+      "decode_tps": 780.0103790833973,
+      "end_to_end_tps": 535.8442196564645,
+      "al_including_recovery": 2.7512171372930867,
+      "n_prompts": 480,
+      "k1": 4,
+      "gpu_uuids": [
+        "GPU-13825050-f567-b638-9467-d4b135c4fad2",
+        "GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10"
+      ]
+    },
+    "full_greedy/llama3_specialized.json": {
+      "decode_tps": 783.320172755869,
+      "end_to_end_tps": 536.9407601659318,
+      "al_including_recovery": 2.7512171372930867,
+      "n_prompts": 480,
+      "k1": 4,
+      "gpu_uuids": [
+        "GPU-13825050-f567-b638-9467-d4b135c4fad2",
+        "GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10"
+      ]
+    },
+    "closing/llama2_k62.json": {
+      "decode_tps": 805.8081593496213,
+      "end_to_end_tps": 605.0390737992639,
+      "al_including_recovery": 2.38268602264954,
+      "n_prompts": 480,
+      "k1": 6,
+      "gpu_uuids": [
+        "GPU-13825050-f567-b638-9467-d4b135c4fad2",
+        "GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10"
+      ]
+    },
+    "greedy_repeat/llama2_k42_repeat.json": {
+      "decode_tps": 777.687700838973,
+      "end_to_end_tps": 592.3131019979214,
+      "al_including_recovery": 2.2399971214738055,
+      "n_prompts": 480,
+      "k1": 4,
+      "gpu_uuids": [
+        "GPU-211c89c3-d6d1-dfa7-b816-e6ee65c35c82",
+        "GPU-98b22d7c-597c-b851-af6b-1f0c7b4c6904"
+      ]
+    },
+    "greedy_repeat/llama2_k62_repeat.json": {
+      "decode_tps": 807.8273096960594,
+      "end_to_end_tps": 609.5116541361962,
+      "al_including_recovery": 2.38268602264954,
+      "n_prompts": 480,
+      "k1": 6,
+      "gpu_uuids": [
+        "GPU-211c89c3-d6d1-dfa7-b816-e6ee65c35c82",
+        "GPU-98b22d7c-597c-b851-af6b-1f0c7b4c6904"
+      ]
+    }
+  },
+  "comparisons": [
+    {
+      "reference": "full_greedy/llama2_reference.json",
+      "candidate": "full_greedy/llama2_specialized.json",
+      "decode_gain_percent": 0.2521085732283934,
+      "exact_outputs": 480,
+      "output_count": 480
+    },
+    {
+      "reference": "full_greedy/llama3_reference.json",
+      "candidate": "full_greedy/llama3_specialized.json",
+      "decode_gain_percent": 0.42432687579889716,
+      "exact_outputs": 480,
+      "output_count": 480
+    },
+    {
+      "reference": "full_greedy/llama2_specialized.json",
+      "candidate": "closing/llama2_k62.json",
+      "decode_gain_percent": 3.971807691142737,
+      "exact_outputs": 454,
+      "output_count": 480
+    },
+    {
+      "reference": "greedy_repeat/llama2_k42_repeat.json",
+      "candidate": "greedy_repeat/llama2_k62_repeat.json",
+      "decode_gain_percent": 3.8755414062189297,
+      "exact_outputs": 454,
+      "output_count": 480
+    }
+  ]
+}

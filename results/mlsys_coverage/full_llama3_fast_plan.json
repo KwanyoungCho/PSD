@@ -1,0 +1,206 @@
+[
+  {
+    "name": "llama3_fast_s2026",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2026"
+    ],
+    "env": {
+      "SSD_SEED": "2026",
+      "SSD_FAST_VERIFY": "1",
+      "SSD_BATCHED_PROXY_GRAPH": "1"
+    }
+  },
+  {
+    "name": "llama3_fast_s2027",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2027"
+    ],
+    "env": {
+      "SSD_SEED": "2027",
+      "SSD_FAST_VERIFY": "1",
+      "SSD_BATCHED_PROXY_GRAPH": "1"
+    }
+  },
+  {
+    "name": "llama3_fast_s2028",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2028"
+    ],
+    "env": {
+      "SSD_SEED": "2028",
+      "SSD_FAST_VERIFY": "1",
+      "SSD_BATCHED_PROXY_GRAPH": "1"
+    }
+  },
+  {
+    "name": "llama3_ar_s2026",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "ar",
+      "--seeds",
+      "2026"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "1",
+      "SSD_SEED": "2026"
+    }
+  },
+  {
+    "name": "llama3_ssd_s2026",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "ssd",
+      "--seeds",
+      "2026",
+      "--k1",
+      "3",
+      "--draft-fan-out",
+      "1"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "1",
+      "SSD_SEED": "2026"
+    }
+  },
+  {
+    "name": "llama3_ssd_s2027",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "ssd",
+      "--seeds",
+      "2027",
+      "--k1",
+      "3",
+      "--draft-fan-out",
+      "1"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "1",
+      "SSD_SEED": "2027"
+    }
+  },
+  {
+    "name": "llama3_ssd_s2028",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "ssd",
+      "--seeds",
+      "2028",
+      "--k1",
+      "3",
+      "--draft-fan-out",
+      "1"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "1",
+      "SSD_SEED": "2028"
+    }
+  }
+]

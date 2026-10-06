@@ -1,0 +1,116 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=4
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=4
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.17it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.22it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.24it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.78it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.52it/s]
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 116, 256, 8, 128])
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=4
+Finishing Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=4
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.03it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.02it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 873, 256, 2, 64])
+Draft runner created on rank 0 (no async)
+[LLMEngine] finished llm_engine init
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=22 recovery=30834
+Final Prefill Throughput: 141.59tok/s
+Final Decode Throughput: 271.84tok/s
+[metrics] Prefill tokens/time: 372 / 2.627355s
+[metrics] Decode tokens/time: 113 / 0.415679s
+[metrics] Avg Tokens per step (incl recovery): 2.61
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.40 (denom=4)
+[metrics] Avg target time per full step (ms): 234.08
+[metrics] Avg target verify time (ms): 23.71
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=22 recovery=5560
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=29 recovery=2073
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=25 recovery=362
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=21 recovery=220
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=28 recovery=763
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=53 recovery=578
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=52 recovery=198
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=33 recovery=9419
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=24948
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=304 recovery=27616
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=28185
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=320
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=366 recovery=54974
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=315
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=1938
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=10 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=12 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=14 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=10 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=18 recovery=482
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=11 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=11 recovery=11208
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=9 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=52 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=39 recovery=117054
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=40 recovery=83017
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=34 recovery=362
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=73 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=64 recovery=3639
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=60 recovery=128001
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=842
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=21
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=65636
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=2403
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=15278
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=6890
+[spec_prefill] target prefill
+[PREFILL] seq0 prompt_len=512 recovery=520
+Final Prefill Throughput: 5259.85tok/s
+Final Decode Throughput: 611.47tok/s
+[metrics] Prefill tokens/time: 8791 / 1.671340s
+[metrics] Decode tokens/time: 3498 / 5.720685s
+[metrics] Avg Tokens per step (incl recovery): 2.60
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.40 (denom=4)
+[metrics] Avg target time per full step (ms): 33.76
+[metrics] Avg target verify time (ms): 20.07
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 3498, "wall_s": 7.396465914091095, "end_to_end_tps": 472.9285635367992, "decode_output_tokens": 3498, "decode_tps": 611.4652707511259, "al_including_recovery": 2.6043956043956045, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

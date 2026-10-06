@@ -1,0 +1,58 @@
+[
+  {
+    "name": "llama2_ragged_b16",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "3",
+      "8",
+      "16",
+      "--temperatures",
+      "0",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "32",
+      "--max-new-tokens",
+      "48",
+      "--mode",
+      "duet-chain",
+      "--ragged-limits"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "1"
+    }
+  },
+  {
+    "name": "llama3_ragged_b16",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "3",
+      "8",
+      "16",
+      "--temperatures",
+      "0",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "32",
+      "--max-new-tokens",
+      "48",
+      "--mode",
+      "duet-chain",
+      "--ragged-limits"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "1"
+    }
+  }
+]

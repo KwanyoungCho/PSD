@@ -1,0 +1,23 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.17it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.21it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.23it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.77it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.51it/s]
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 116, 256, 8, 128])
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 871.59tok/s
+Final Decode Throughput: 452.19tok/s
+[metrics] Prefill tokens/time: 380 / 0.435982s
+[metrics] Decode tokens/time: 120 / 0.265376s
+Final Prefill Throughput: 9083.84tok/s
+Final Decode Throughput: 416.95tok/s
+[metrics] Prefill tokens/time: 8839 / 0.973047s
+[metrics] Decode tokens/time: 2967 / 7.115908s
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 3015, "wall_s": 8.094349228776991, "end_to_end_tps": 372.48207543122635, "decode_tps": 416.95313401517416, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

@@ -1,0 +1,262 @@
+{
+  "dtype": "torch.bfloat16",
+  "reference_path": "results/mlsys_coverage/stress/llama3_ragged_b16.json",
+  "reference_mode": "duet-chain",
+  "reference_batch": 3,
+  "candidate_path": "results/mlsys_coverage/stress/llama3_ragged_b16.json",
+  "divergences": [
+    {
+      "batch": 8,
+      "question": 1,
+      "position": 17,
+      "ar_token": 19463,
+      "duet_token": 1828,
+      "hf_top_ids": [
+        19463,
+        1828,
+        29736,
+        1455,
+        49316
+      ],
+      "hf_top_logits": [
+        21.375,
+        21.25,
+        19.375,
+        18.875,
+        18.125
+      ],
+      "ar_logit": 21.375,
+      "duet_logit": 21.25
+    },
+    {
+      "batch": 8,
+      "question": 2,
+      "position": 1,
+      "ar_token": 28597,
+      "duet_token": 32,
+      "hf_top_ids": [
+        32,
+        28597,
+        10464,
+        16,
+        17
+      ],
+      "hf_top_logits": [
+        14.125,
+        14.125,
+        13.8125,
+        13.75,
+        13.4375
+      ],
+      "ar_logit": 14.125,
+      "duet_logit": 14.125
+    },
+    {
+      "batch": 8,
+      "question": 7,
+      "position": 5,
+      "ar_token": 86489,
+      "duet_token": 4610,
+      "hf_top_ids": [
+        86489,
+        4610,
+        25844,
+        2761,
+        9072
+      ],
+      "hf_top_logits": [
+        15.125,
+        15.0625,
+        14.375,
+        14.125,
+        13.25
+      ],
+      "ar_logit": 15.125,
+      "duet_logit": 15.0625
+    },
+    {
+      "batch": 8,
+      "question": 10,
+      "position": 1,
+      "ar_token": 14569,
+      "duet_token": 26946,
+      "hf_top_ids": [
+        14569,
+        26946,
+        358,
+        41469,
+        40
+      ],
+      "hf_top_logits": [
+        11.375,
+        11.3125,
+        11.1875,
+        10.625,
+        10.4375
+      ],
+      "ar_logit": 11.375,
+      "duet_logit": 11.3125
+    },
+    {
+      "batch": 8,
+      "question": 15,
+      "position": 21,
+      "ar_token": 6710,
+      "duet_token": 264,
+      "hf_top_ids": [
+        6710,
+        36858,
+        264,
+        294,
+        54524
+      ],
+      "hf_top_logits": [
+        14.25,
+        14.25,
+        14.1875,
+        14.125,
+        13.3125
+      ],
+      "ar_logit": 14.25,
+      "duet_logit": 14.1875
+    },
+    {
+      "batch": 8,
+      "question": 31,
+      "position": 17,
+      "ar_token": 389,
+      "duet_token": 320,
+      "hf_top_ids": [
+        320,
+        389,
+        304,
+        369,
+        13
+      ],
+      "hf_top_logits": [
+        20.25,
+        20.25,
+        19.125,
+        18.25,
+        17.375
+      ],
+      "ar_logit": 20.25,
+      "duet_logit": 20.25
+    },
+    {
+      "batch": 16,
+      "question": 2,
+      "position": 1,
+      "ar_token": 28597,
+      "duet_token": 32,
+      "hf_top_ids": [
+        32,
+        28597,
+        10464,
+        16,
+        17
+      ],
+      "hf_top_logits": [
+        14.125,
+        14.125,
+        13.8125,
+        13.75,
+        13.4375
+      ],
+      "ar_logit": 14.125,
+      "duet_logit": 14.125
+    },
+    {
+      "batch": 16,
+      "question": 7,
+      "position": 5,
+      "ar_token": 86489,
+      "duet_token": 4610,
+      "hf_top_ids": [
+        86489,
+        4610,
+        25844,
+        2761,
+        9072
+      ],
+      "hf_top_logits": [
+        15.125,
+        15.0625,
+        14.375,
+        14.125,
+        13.25
+      ],
+      "ar_logit": 15.125,
+      "duet_logit": 15.0625
+    },
+    {
+      "batch": 16,
+      "question": 10,
+      "position": 1,
+      "ar_token": 14569,
+      "duet_token": 26946,
+      "hf_top_ids": [
+        14569,
+        26946,
+        358,
+        41469,
+        40
+      ],
+      "hf_top_logits": [
+        11.375,
+        11.3125,
+        11.1875,
+        10.625,
+        10.4375
+      ],
+      "ar_logit": 11.375,
+      "duet_logit": 11.3125
+    },
+    {
+      "batch": 16,
+      "question": 15,
+      "position": 21,
+      "ar_token": 6710,
+      "duet_token": 264,
+      "hf_top_ids": [
+        6710,
+        36858,
+        264,
+        294,
+        54524
+      ],
+      "hf_top_logits": [
+        14.25,
+        14.25,
+        14.1875,
+        14.125,
+        13.3125
+      ],
+      "ar_logit": 14.25,
+      "duet_logit": 14.1875
+    },
+    {
+      "batch": 16,
+      "question": 31,
+      "position": 17,
+      "ar_token": 389,
+      "duet_token": 320,
+      "hf_top_ids": [
+        320,
+        389,
+        304,
+        369,
+        13
+      ],
+      "hf_top_logits": [
+        20.25,
+        20.25,
+        19.125,
+        18.25,
+        17.375
+      ],
+      "ar_logit": 20.25,
+      "duet_logit": 20.25
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.30it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.14it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.09it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.12it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 37, 256, 32, 128])
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 69.29tok/s
+Final Decode Throughput: 66.19tok/s
+[metrics] Prefill tokens/time: 29 / 0.418555s
+[metrics] Decode tokens/time: 15 / 0.226633s
+Final Prefill Throughput: 7168.33tok/s
+Final Decode Throughput: 66.05tok/s
+[metrics] Prefill tokens/time: 9200 / 1.283423s
+[metrics] Decode tokens/time: 3024 / 45.780811s
+COVERAGE_CELL {"batch": 1, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 47.075595462927595, "end_to_end_tps": 65.25674226296775, "decode_output_tokens": 3024, "decode_tps": 66.05387605233726, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 3727.77tok/s
+Final Decode Throughput: 128.40tok/s
+[metrics] Prefill tokens/time: 69 / 0.018510s
+[metrics] Decode tokens/time: 30 / 0.233647s
+Final Prefill Throughput: 9283.10tok/s
+Final Decode Throughput: 126.27tok/s
+[metrics] Prefill tokens/time: 9200 / 0.991048s
+[metrics] Decode tokens/time: 3024 / 23.947880s
+COVERAGE_CELL {"batch": 2, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 24.945704268990085, "end_to_end_tps": 123.14745524417974, "decode_output_tokens": 3024, "decode_tps": 126.27422337126968, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 7009.67tok/s
+Final Decode Throughput: 252.25tok/s
+[metrics] Prefill tokens/time: 151 / 0.021542s
+[metrics] Decode tokens/time: 60 / 0.237858s
+Final Prefill Throughput: 10571.41tok/s
+Final Decode Throughput: 246.32tok/s
+[metrics] Prefill tokens/time: 9200 / 0.870272s
+[metrics] Decode tokens/time: 3024 / 12.276780s
+COVERAGE_CELL {"batch": 4, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 13.151392140891403, "end_to_end_tps": 233.58743827950212, "decode_output_tokens": 3024, "decode_tps": 246.31866841609263, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 10274.56tok/s
+Final Decode Throughput: 487.85tok/s
+[metrics] Prefill tokens/time: 437 / 0.042532s
+[metrics] Decode tokens/time: 120 / 0.245977s
+Final Prefill Throughput: 10999.05tok/s
+Final Decode Throughput: 472.00tok/s
+[metrics] Prefill tokens/time: 9200 / 0.836436s
+[metrics] Decode tokens/time: 3024 / 6.406799s
+COVERAGE_CELL {"batch": 8, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 3072, "wall_s": 7.2465180370491, "end_to_end_tps": 423.9277380245049, "decode_output_tokens": 3024, "decode_tps": 471.9985878717853, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 1685.94tok/s
+Final Decode Throughput: 66.59tok/s
+[metrics] Prefill tokens/time: 29 / 0.017201s
+[metrics] Decode tokens/time: 15 / 0.225268s
+Final Prefill Throughput: 7176.19tok/s
+Final Decode Throughput: 66.00tok/s
+[metrics] Prefill tokens/time: 9200 / 1.282017s
+[metrics] Decode tokens/time: 2827 / 42.831315s
+COVERAGE_CELL {"batch": 1, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2875, "wall_s": 44.12406561290845, "end_to_end_tps": 65.15718712826231, "decode_output_tokens": 2827, "decode_tps": 66.00311013802016, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 3725.22tok/s
+Final Decode Throughput: 128.54tok/s
+[metrics] Prefill tokens/time: 69 / 0.018522s
+[metrics] Decode tokens/time: 30 / 0.233387s
+Final Prefill Throughput: 7281.19tok/s
+Final Decode Throughput: 123.92tok/s
+[metrics] Prefill tokens/time: 9200 / 1.263530s
+[metrics] Decode tokens/time: 2733 / 22.054269s
+COVERAGE_CELL {"batch": 2, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2781, "wall_s": 23.324416304007173, "end_to_end_tps": 119.23127952068921, "decode_output_tokens": 2733, "decode_tps": 123.92158806230667, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 7046.72tok/s
+Final Decode Throughput: 252.92tok/s
+[metrics] Prefill tokens/time: 151 / 0.021428s
+[metrics] Decode tokens/time: 60 / 0.237225s
+Final Prefill Throughput: 8181.50tok/s
+Final Decode Throughput: 238.44tok/s
+[metrics] Prefill tokens/time: 9200 / 1.124488s
+[metrics] Decode tokens/time: 2918 / 12.238016s
+COVERAGE_CELL {"batch": 4, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2966, "wall_s": 13.367262949002907, "end_to_end_tps": 221.88536361673354, "decode_output_tokens": 2918, "decode_tps": 238.43733529423153, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 10249.65tok/s
+Final Decode Throughput: 432.19tok/s
+[metrics] Prefill tokens/time: 437 / 0.042636s
+[metrics] Decode tokens/time: 105 / 0.242946s
+Final Prefill Throughput: 9759.66tok/s
+Final Decode Throughput: 429.83tok/s
+[metrics] Prefill tokens/time: 9200 / 0.942656s
+[metrics] Decode tokens/time: 2747 / 6.390868s
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2795, "wall_s": 7.337075885850936, "end_to_end_tps": 380.9419506468472, "decode_output_tokens": 2747, "decode_tps": 429.8320570942397, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

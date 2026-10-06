@@ -1,0 +1,600 @@
+[
+  {
+    "name": "llama3_eager",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "4",
+      "--k2",
+      "2"
+    ],
+    "env": {
+      "SSD_BATCHED_PROXY_GRAPH": "0",
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_graph",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_replica",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_DUET_EXIT_REPLICA": "1",
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_k22d4",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "2",
+      "--k2",
+      "2",
+      "--draft-fan-out",
+      "4"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_k33d3",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "3",
+      "--k2",
+      "3",
+      "--draft-fan-out",
+      "3"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_k44d2",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "4",
+      "--k2",
+      "4"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_ssd2",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "ssd",
+      "--k1",
+      "2"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_ssd4",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "ssd",
+      "--k1",
+      "4"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_ar",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "ar"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_profile_eager",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_BATCHED_PROXY_GRAPH": "0",
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DUET_MAX_EVENTS": "20000",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/profiles/llama3_profile_eager",
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama3_profile_graph",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DUET_MAX_EVENTS": "20000",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/profiles/llama3_profile_graph",
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_eager",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "4",
+      "--k2",
+      "2"
+    ],
+    "env": {
+      "SSD_BATCHED_PROXY_GRAPH": "0",
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_graph",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_replica",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_DUET_EXIT_REPLICA": "1",
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_k22d4",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "2",
+      "--k2",
+      "2",
+      "--draft-fan-out",
+      "4"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_k33d3",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "3",
+      "--k2",
+      "3",
+      "--draft-fan-out",
+      "3"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_k44d2",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain",
+      "--k1",
+      "4",
+      "--k2",
+      "4"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_ssd2",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "ssd",
+      "--k1",
+      "2"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_ssd4",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "ssd",
+      "--k1",
+      "4"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_ar",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "ar"
+    ],
+    "env": {
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_profile_eager",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_BATCHED_PROXY_GRAPH": "0",
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DUET_MAX_EVENTS": "20000",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/profiles/llama2_profile_eager",
+      "SSD_FAST_VERIFY": "0"
+    }
+  },
+  {
+    "name": "llama2_profile_graph",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-chain"
+    ],
+    "env": {
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DUET_MAX_EVENTS": "20000",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/profiles/llama2_profile_graph",
+      "SSD_FAST_VERIFY": "0"
+    }
+  }
+]

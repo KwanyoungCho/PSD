@@ -1,0 +1,86 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.16it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.19it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.21it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.74it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.49it/s]
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 116, 256, 8, 128])
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 55.66tok/s
+Final Decode Throughput: 58.58tok/s
+[metrics] Prefill tokens/time: 23 / 0.413193s
+[metrics] Decode tokens/time: 15 / 0.256055s
+Final Prefill Throughput: 6427.40tok/s
+Final Decode Throughput: 58.76tok/s
+[metrics] Prefill tokens/time: 8839 / 1.375207s
+[metrics] Decode tokens/time: 2199 / 37.421120s
+COVERAGE_CELL {"batch": 1, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2247, "wall_s": 38.80663119093515, "end_to_end_tps": 57.90247519668436, "decode_tps": 58.763607376050956, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 2749.01tok/s
+Final Decode Throughput: 115.60tok/s
+[metrics] Prefill tokens/time: 56 / 0.020371s
+[metrics] Decode tokens/time: 30 / 0.259524s
+Final Prefill Throughput: 7820.76tok/s
+Final Decode Throughput: 112.25tok/s
+[metrics] Prefill tokens/time: 8839 / 1.130197s
+[metrics] Decode tokens/time: 2199 / 19.589484s
+COVERAGE_CELL {"batch": 2, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2247, "wall_s": 20.726067451993003, "end_to_end_tps": 108.41419894076095, "decode_tps": 112.2541049993552, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 5805.44tok/s
+Final Decode Throughput: 229.87tok/s
+[metrics] Prefill tokens/time: 131 / 0.022565s
+[metrics] Decode tokens/time: 60 / 0.261021s
+Final Prefill Throughput: 15953.68tok/s
+Final Decode Throughput: 220.63tok/s
+[metrics] Prefill tokens/time: 8839 / 0.554041s
+[metrics] Decode tokens/time: 2199 / 9.966868s
+COVERAGE_CELL {"batch": 4, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2247, "wall_s": 10.525323278037831, "end_to_end_tps": 213.48512921105203, "decode_tps": 220.63098857879248, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 9808.48tok/s
+Final Decode Throughput: 453.61tok/s
+[metrics] Prefill tokens/time: 380 / 0.038742s
+[metrics] Decode tokens/time: 120 / 0.264543s
+Final Prefill Throughput: 25645.33tok/s
+Final Decode Throughput: 392.08tok/s
+[metrics] Prefill tokens/time: 8839 / 0.344663s
+[metrics] Decode tokens/time: 2205 / 5.623829s
+COVERAGE_CELL {"batch": 8, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2253, "wall_s": 5.971162084955722, "end_to_end_tps": 377.31348905708137, "decode_tps": 392.08164820316745, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 1179.46tok/s
+Final Decode Throughput: 58.99tok/s
+[metrics] Prefill tokens/time: 23 / 0.019501s
+[metrics] Decode tokens/time: 15 / 0.254270s
+Final Prefill Throughput: 9658.89tok/s
+Final Decode Throughput: 58.94tok/s
+[metrics] Prefill tokens/time: 8839 / 0.915116s
+[metrics] Decode tokens/time: 2390 / 40.549284s
+COVERAGE_CELL {"batch": 1, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2438, "wall_s": 41.47372471401468, "end_to_end_tps": 58.784206550326026, "decode_tps": 58.9406220193039, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 2756.10tok/s
+Final Decode Throughput: 115.58tok/s
+[metrics] Prefill tokens/time: 56 / 0.020319s
+[metrics] Decode tokens/time: 30 / 0.259570s
+Final Prefill Throughput: 10417.86tok/s
+Final Decode Throughput: 113.63tok/s
+[metrics] Prefill tokens/time: 8839 / 0.848447s
+[metrics] Decode tokens/time: 2427 / 21.359657s
+COVERAGE_CELL {"batch": 2, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2475, "wall_s": 22.214785641990602, "end_to_end_tps": 111.41228368738932, "decode_tps": 113.62541771413613, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 5862.39tok/s
+Final Decode Throughput: 230.68tok/s
+[metrics] Prefill tokens/time: 131 / 0.022346s
+[metrics] Decode tokens/time: 60 / 0.260100s
+Final Prefill Throughput: 12259.77tok/s
+Final Decode Throughput: 217.75tok/s
+[metrics] Prefill tokens/time: 8839 / 0.720976s
+[metrics] Decode tokens/time: 2310 / 10.608619s
+COVERAGE_CELL {"batch": 4, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2358, "wall_s": 11.334042416187003, "end_to_end_tps": 208.04580690754798, "decode_tps": 217.74747286436326, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 9774.45tok/s
+Final Decode Throughput: 398.60tok/s
+[metrics] Prefill tokens/time: 380 / 0.038877s
+[metrics] Decode tokens/time: 105 / 0.263420s
+Final Prefill Throughput: 19747.26tok/s
+Final Decode Throughput: 397.94tok/s
+[metrics] Prefill tokens/time: 8839 / 0.447606s
+[metrics] Decode tokens/time: 2243 / 5.636561s
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 0, "summary": {"output_tokens": 2291, "wall_s": 6.087170148035511, "end_to_end_tps": 376.3653626043894, "decode_tps": 397.9377077757927, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)
