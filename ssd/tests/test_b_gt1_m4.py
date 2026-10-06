@@ -18,15 +18,15 @@ Requires the local model dirs (config.json only):
 """
 import os
 import unittest
+import tempfile
+from unittest.mock import patch
+from transformers import LlamaConfig
 
 os.environ.setdefault("SSD_HF_CACHE", "/data2/chokwans99/models")
 os.environ.setdefault("SSD_DATASET_DIR", "/data2/chokwans99/datasets")
 os.environ["SSD_FORCE_SPLIT_K1K2"] = "1"
 
 from ssd.config import Config
-
-TARGET = "/data2/chokwans99/awq_calibrated/layerskip_llama2_70b"
-DRAFT = "/data2/chokwans99/awq_calibrated/tinyllama_1b"
 
 GATES = (
     "SSD_DUET_EXIT_TOPM_GATHER",
@@ -37,9 +37,17 @@ GATES = (
 
 def _champion_config(max_num_seqs: int) -> Config:
     """Champion E9K24_jit shape (k=13, K1=9, K2=4, exit 56, dfo=2)."""
+    # Exercise real Config validation without a server-specific weight path.
+    with tempfile.TemporaryDirectory() as path, patch(
+            "ssd.config.AutoConfig.from_pretrained",
+            side_effect=lambda *_a, **_k: LlamaConfig(num_hidden_layers=80)):
+        return _config_for_path(path, max_num_seqs)
+
+
+def _config_for_path(path, max_num_seqs):
     return Config(
-        model=TARGET,
-        draft=DRAFT,
+        model=path,
+        draft=path,
         max_num_seqs=max_num_seqs,
         num_gpus=5,
         speculate=True,

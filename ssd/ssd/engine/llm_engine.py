@@ -3,7 +3,7 @@ import ssd.paths  # noqa: F401 — sets TORCH_CUDA_ARCH_LIST before flashinfer i
 
 from ssd.config import Config
 from ssd.sampling_params import SamplingParams
-from ssd.utils.misc import infer_model_family
+from ssd.utils.misc import validate_speculative_vocab
 from ssd.engine.sequence import Sequence
 from ssd.engine.scheduler import Scheduler
 from ssd.engine.model_runner import ModelRunner
@@ -59,31 +59,15 @@ class LLMEngine:
             2 * config.speculate_k + 2), "ERROR: support for block size < 2*k+2 is not implemented"
         assert config.num_gpus > 1 or not config.draft_async, "ERROR: draft_async requires at least 2 gpus"
             
-        # Check that target and draft are from the same family.
-        # Cross-family draft (e.g. Qwama = Qwen2 arch with Llama-3 vocab,
-        # paired against a Llama-3 target) is allowed *iff* vocab_size
-        # matches — token-id-level speculation is well-defined whenever
-        # the two tokenizers share an id-space. The same-family check was
-        # always a proxy for that.
-        if config.speculate:
-            target_family = infer_model_family(config.model)
-            draft_family = infer_model_family(config.draft)
-            if target_family != draft_family:
-                from transformers import AutoConfig
-                target_vocab = AutoConfig.from_pretrained(config.model).vocab_size
-                draft_vocab = AutoConfig.from_pretrained(config.draft).vocab_size
-                assert target_vocab == draft_vocab, (
-                    f"ERROR: target/draft family mismatch "
-                    f"({target_family} vs {draft_family}) and vocab_size "
-                    f"mismatch ({target_vocab} vs {draft_vocab}). "
-                    f"Cross-family SD requires vocab equality."
-                )
-                print(
-                    f"[LLMEngine] cross-family draft allowed: "
-                    f"target_family={target_family} draft_family={draft_family} "
-                    f"vocab_size={target_vocab} (equal)",
-                    flush=True,
-                )
+        self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
+        # EAGLE uses the target's token IDs by construction and may not ship
+        # a separate tokenizer. Independent draft models must prove the map.
+        if config.speculate and not config.use_eagle:
+            validate_speculative_vocab(
+                self.tokenizer,
+                AutoTokenizer.from_pretrained(config.draft, use_fast=True),
+                config.hf_config.vocab_size, config.draft_hf_config.vocab_size)
+        os.environ.setdefault("SSD_SHM_NAME", f"ssd_{os.getpid()}")
 
         self.ps = []
         self.events = []
@@ -160,7 +144,6 @@ class LLMEngine:
             self.draft_cfg = self.draft_runner.draft_cfg
             print(f'Draft runner created on rank 0 (no async)', flush=True)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
         config.eos = self.tokenizer.eos_token_id
         self.scheduler = Scheduler(config, draft_cfg=self.draft_cfg if config.speculate else None)
         assert config.max_model_len == self.scheduler.max_model_len
@@ -265,25 +248,9 @@ class LLMEngine:
                     self.draft_ps.join(timeout=2)
         except Exception:
             pass
-        # 5) Kill resource tracker so it doesn't print spurious warnings,
-        #    then clean up POSIX semaphores ourselves before hard exit.
-        try:
-            import signal
-            from multiprocessing.resource_tracker import _resource_tracker
-            if _resource_tracker._pid is not None:
-                os.kill(_resource_tracker._pid, signal.SIGKILL)
-                os.waitpid(_resource_tracker._pid, 0)
-        except Exception:
-            pass
-        try:
-            from pathlib import Path
-            for sem in Path("/dev/shm").glob("sem.*"):
-                try:
-                    sem.unlink()
-                except OSError:
-                    pass
-        except Exception:
-            pass
+        # Leave semaphore cleanup to multiprocessing's per-process tracker.
+        # Unlinking every /dev/shm/sem.* corrupts concurrent benchmark runs
+        # (and unrelated applications) on this shared server.
         # 6) Force-exit current process if requested
         if hard:
             os._exit(0)

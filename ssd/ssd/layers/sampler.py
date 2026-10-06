@@ -26,7 +26,9 @@ class Sampler(nn.Module):
         zero_mask = temps == 0
         
         # Note: keep inplace ops for speed
-        logits_cpy.div_(temperatures.unsqueeze(dim=1))
+        # Keep the graph branch-free while avoiding NaNs in greedy rows.
+        # Their sampled values are discarded by the final where().
+        logits_cpy.div_(temperatures.clamp_min(1e-8).unsqueeze(dim=1))
         probs = torch.softmax(logits_cpy, dim=-1, dtype=torch.float)
         
         # Apply sampler_x rescaling when conditions are met

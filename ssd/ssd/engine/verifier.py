@@ -248,11 +248,10 @@ class Verifier(VerifierBase):
             # M1 (docs/duet/13 §1/§5): per-step lookahead dispatches on
             # vk_max = max(valid_k) over the batch. Short seqs are padded to
             # vk_max; their REAL width rides in valid_k and is enforced by the
-            # per-seq accept clamp in verify() below. The .max().item() here
-            # REPLACES the former torch.unique() GPU→CPU sync (not an extra
-            # one). For non-hybrid path defaults to self.lookahead = K_long.
+            # per-seq accept clamp in verify() below. SpeculatorAsync already
+            # slices to vk_max+1; shape metadata avoids another GPU readback.
             if speculate_result.valid_k is not None and config.duet_phase1_k is not None:
-                _step_lookahead = int(speculate_result.valid_k.max().item())
+                _step_lookahead = speculate_result.speculations.size(1) - 1
             else:
                 _step_lookahead = self.lookahead
             # ===== TRACE point 2: speculator → verifier boundary =====
@@ -558,6 +557,7 @@ class Verifier(VerifierBase):
             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
                 _src = int(_ps_cpu[i].item()) if _ps_cpu is not None else 0
                 self.metrics["phase_events"].append({
+                    "tree": _tree_meta_arg is not None,
                     "step_id": (int(speculate_result.step_id)
                                 if speculate_result.step_id is not None else None),
                     "source": _src,

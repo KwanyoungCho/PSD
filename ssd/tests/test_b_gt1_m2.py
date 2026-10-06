@@ -22,6 +22,7 @@ via top-level `tests.X` keeps imports lean.)
 """
 import os
 import unittest
+from unittest.mock import patch
 
 # Env must be set BEFORE importing ssd.engine.draft_runner: module-level
 # constants SPLIT_K1K2_MODE / DUET_JIT_SHORT are baked at import time.
@@ -94,6 +95,7 @@ def _make_runner(jit_calls, empty_cache=False):
         (r.tree_cache_keys, r.tree_cache_tokens,
          r.tree_cache_logits, r.tree_cache_valid_k) = _make_cache()
     r.tree_cache_activations = None
+    r.tree_cache_is_tree = None
     r._last_n_draft_keys = 2
 
     def _fake_jit(request_keys, num_tokens, out_logits, out_tokens,
@@ -121,7 +123,15 @@ def _call(r, request_keys):
         r, request_keys, B, K_LONG, num_tokens, temperatures, dbt)
 
 
-class TestMixedHitMissFill(unittest.TestCase):
+class SplitModeTestCase(unittest.TestCase):
+    def setUp(self):
+        for name in ("SPLIT_K1K2_MODE", "DUET_JIT_SHORT"):
+            patcher = patch.object(dr_mod, name, True)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+
+class TestMixedHitMissFill(SplitModeTestCase):
     """Design §2: B=3 hit/miss/hit — JIT all, then cache overwrites hits."""
 
     def _mixed_keys(self):
@@ -237,7 +247,7 @@ class TestMixedHitMissFill(unittest.TestCase):
         self.assertEqual(vk_scalar, K2)
 
 
-class TestB1Identity(unittest.TestCase):
+class TestB1Identity(SplitModeTestCase):
     """B=1 can only be all-hit or all-miss — both must match the pre-M2 path."""
 
     def test_b1_hit(self):

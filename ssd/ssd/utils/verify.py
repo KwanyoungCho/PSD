@@ -49,8 +49,6 @@ def verify(
         torch.full_like(first_mismatch, K)
     )                                                    # [B]
     batch_idx = torch.arange(B, device=device)
-    # greedy recovery = preds_p[b, accept_greedy[b]]
-    rec_greedy = preds_p[batch_idx, accept_greedy]       # [B]
 
     # 2) Ratio‐based acceptance (only needed if any temp>0)
     # ------------------------------------------------------
@@ -139,6 +137,11 @@ def verify(
     # must never be accepted.
     if valid_k is not None:
         accept_until = torch.minimum(accept_until, valid_k)
+
+    # A short row can match padding after all its REAL proposals were
+    # accepted. Recovery must follow the clamped prefix, never padding.
+    # This also covers greedy target rows in a mixed-temperature batch.
+    rec_greedy = preds_p[batch_idx, accept_until]
 
     # 3) Construct the recovery distribution and sample
     # For rows with temps_t>0:

@@ -1431,16 +1431,19 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
 
 
 # --- T2.0: P_iv wire 비트-pack (설계 v6 D2; tree policy != off 게이트) ---
-PIV_SHIFT = 15                      # 토큰은 비트 0-14 (vocab ≤ 32768 가드)
+PIV_SHIFT = 32                      # uint32 token IDs, including Llama-3
 PIV_BITS = 16                       # log10 P_iv ∈ [-6, 0] 16비트 양자화
-PIV_VER_BIT = 31                    # 버전/유효 마커
+PIV_VER_BIT = 48                    # v2 marker; rejects the old 15-bit wire
 _PIV_QMAX = (1 << PIV_BITS) - 1
 _TOK_MASK = (1 << PIV_SHIFT) - 1
 _LOG_MIN = -6.0
 
 
 def pack_piv(chosen_tok: torch.Tensor, piv: torch.Tensor) -> torch.Tensor:
-    """chosen_tok int64의 비트 15-30에 양자화 log10(P_iv)를 pack.
+    """Pack uint32 token IDs and quantized log10(P_iv) in one int64.
+
+    Token bits 0-31, probability bits 32-47, format marker bit 48.
+    Both peers must run this format. The payload remains one int64/token.
 
     양자화 오차 ≤ 반스텝 (6데케이드/65535 ≈ 9.2e-5 데케이드). NCCL
     호출 수·크기 불변 (같은 int64 자리). 수신측은 dedup **이전**에

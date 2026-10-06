@@ -363,6 +363,7 @@ class TestProxyHPadding(unittest.TestCase):
         top_k = 6                                     # (K2+1)*6 = 30 >= 28
         cfg = SimpleNamespace(
             duet_proxy_top_k=top_k, duet_tree_policy="off", duet_proxy_on_draft=False,
+            duet_proxy_source="residual",
             duet_exit_replica=False, jit_speculate=True,
             duet_proxy_fan_out=1, duet_policy="b",
             duet_proxy_wire_N=WIRE_N, max_num_seqs=4,

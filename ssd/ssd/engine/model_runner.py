@@ -214,23 +214,26 @@ class ModelRunner:
             print(f'F={self.config.async_fan_out}, fan_out_list={self.config.fan_out_list}, fan_out_list_miss={self.config.fan_out_list_miss}, MQ_LEN={self.config.MQ_LEN}', flush=True)
 
         if should_use_dist: # (draft model when async=False or just single gpu logic) doesn't even enter this loop 
+            # One namespace per engine, inherited by spawned TP workers.
+            # Never unlink another experiment's shared-memory segment.
+            shm_name = os.environ.get("SSD_SHM_NAME", "ssd")
             if self.is_draft and self.draft_async: 
                 pass # handled on draft runner after this init, includes doing draft_loop
             elif self.rank == 0: # target in a distributed setup 
                 # Try to clean up any existing shared memory first
                 try:
-                    existing_shm = SharedMemory(name="ssd")
+                    existing_shm = SharedMemory(name=shm_name)
                     existing_shm.close() # here we bind it 
                     existing_shm.unlink()
                 except FileNotFoundError:
                     # can proceed, nothing to clean up 
                     pass
                 
-                self.shm = SharedMemory(name="ssd", create=True, size=2**28)
+                self.shm = SharedMemory(name=shm_name, create=True, size=2**28)
                 dist.barrier(group=self.tp_pg, device_ids=[self.rank]) # leader on tp_group 
             else: 
                 dist.barrier(group=self.tp_pg, device_ids=[self.rank]) # follower on tp_group, don't want them hooking onto shm before its been created 
-                self.shm = SharedMemory(name="ssd")
+                self.shm = SharedMemory(name=shm_name)
                 self.loop()
                 
         if self.verbose: print(f'-----{model_type}MODEL RUNNER INITIALIZED----', flush=True)

@@ -47,7 +47,7 @@ class TestP2ExecutorWarmup(unittest.TestCase):
 
         gen = torch.Generator().manual_seed(1234)
         before = gen.get_state().clone()
-        executor = SimpleNamespace(F=3, W=10, gen=gen, graphs={})
+        executor = SimpleNamespace(F=3, W=10, total_cells=30, gen=gen, graphs={})
 
         def capture(bucket):
             # Model the graph warmup's real sampling side effect.
@@ -800,6 +800,22 @@ class TestPivPack(unittest.TestCase):
         tok = torch.tensor([[5, 100]], dtype=torch.int64)
         packed = pack_piv(tok, torch.tensor([[0.5, 0.001]]))
         self.assertFalse(bool((packed == tok).any()))
+
+    def test_large_vocabulary_roundtrip(self):
+        from ssd.engine.helpers.p2_tree import pack_piv, unpack_piv
+        tok = torch.tensor([[0, 32767, 32768, 128255, 151935, 2**32-1]])
+        p = torch.tensor([[1., .5, .2, .01, 1e-4, 1e-6]])
+        packed = pack_piv(tok, p)
+        recovered, prob = unpack_piv(packed)
+        self.assertTrue(torch.equal(tok, recovered))
+        self.assertEqual(packed.dtype, torch.int64)
+        self.assertLess(float((prob.log10() - p.log10()).abs().max()),
+                        6. / 65535)
+
+    def test_old_wire_rejected(self):
+        from ssd.engine.helpers.p2_tree import unpack_piv
+        with self.assertRaises(ValueError):
+            unpack_piv(torch.tensor([123 | (42 << 15) | (1 << 31)]))
     def test_version_bit_enforced(self):
         from ssd.engine.helpers.p2_tree import unpack_piv
         with self.assertRaises(ValueError):
