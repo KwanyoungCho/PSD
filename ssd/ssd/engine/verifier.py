@@ -457,8 +457,14 @@ class Verifier(VerifierBase):
             seq.draft_temperature if seq.draft_temperature is not None else seq.temperature
             for seq in seqs
         ]
-        temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
-        temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
+        greedy_batch = all(t == 0 for t in temps_target) and all(t == 0 for t in temps_draft)
+        if greedy_batch and _tree_meta_arg is None and not _E0_TRACE:
+            # The pure greedy verifier never reads temperature tensors.
+            # Avoid pageable H2D copies that wait behind the target forward.
+            temperatures_target = temperatures_draft = None
+        else:
+            temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
+            temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
 
         # ===== E0: 최종층 분포 기록 (P0 확장 — 기본 OFF, 전용 런 전용) =====
         if _E0_TRACE:
@@ -514,8 +520,7 @@ class Verifier(VerifierBase):
                 async_fan_out=self.async_fan_out,
                 jit_speculate=self.jit_speculate,
                 valid_k=speculate_result.valid_k,
-                all_greedy=(all(t == 0 for t in temps_target)
-                            and all(t == 0 for t in temps_draft)),
+                all_greedy=greedy_batch,
                 all_stochastic=(os.environ.get("SSD_FAST_VERIFY", "1") == "1"
                                 and all(t > 0 for t in temps_target)
                                 and all(t > 0 for t in temps_draft)),

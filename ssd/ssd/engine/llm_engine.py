@@ -260,6 +260,10 @@ class LLMEngine:
             os._exit(0)
 
     def add_request(self, prompt: str | list[int], sampling_params: SamplingParams):
+        if self.config.greedy_only and (
+                sampling_params.temperature != 0 or
+                sampling_params.draft_temperature not in (None, 0)):
+            raise ValueError("greedy_only requires target and draft temperatures of 0")
         if isinstance(prompt, str):
             prompt = self.tokenizer.encode(prompt)
         seq = Sequence(prompt, sampling_params)

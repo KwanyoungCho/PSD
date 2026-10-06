@@ -41,6 +41,7 @@ def parse_args():
     p.add_argument("--exit-layer", type=int, default=21)
     p.add_argument("--memory-fraction", type=float, default=.45)
     p.add_argument("--ignore-eos", action="store_true")
+    p.add_argument("--greedy-only", action="store_true", help="Specialize all captured samplers for T=0")
     p.add_argument("--ragged-limits", action="store_true",
                    help="Vary output caps to exercise batch shrink/refill")
     p.add_argument("--output", type=Path, required=True)
@@ -81,6 +82,8 @@ def main():
         raise ValueError("Batch sizes and output length must be positive")
     if min(args.temperatures) < 0:
         raise ValueError("Temperatures must be nonnegative")
+    if args.greedy_only and any(t != 0 for t in args.temperatures):
+        raise ValueError("--greedy-only requires all --temperatures to be 0")
     if args.p1_tree and args.mode != "duet-tree":
         raise ValueError("--p1-tree requires --mode duet-tree to label execution correctly")
     if args.mode != "ar" and not args.draft:
@@ -113,6 +116,7 @@ def main():
         max_num_batched_tokens=max(args.batches) * args.max_model_len,
         gpu_memory_utilization=args.memory_fraction,
         speculate=args.mode != "ar", draft_async=async_mode,
+        greedy_only=args.greedy_only,
         jit_speculate=True, speculate_k=args.k1 + args.k2 if duet else args.k1,
         async_fan_out=args.draft_fan_out + args.proxy_fan_out,
         duet_p1_tree_policy="off", duet_p2_tree_policy="off",

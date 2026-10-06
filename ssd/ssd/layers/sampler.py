@@ -9,14 +9,18 @@ _SEED = int(os.environ.get("SSD_SEED", "0"))
 torch.manual_seed(_SEED)
 
 class Sampler(nn.Module): 
-    def __init__(self, sampler_x: float | None = None, async_fan_out: int = 3):
+    def __init__(self, sampler_x: float | None = None, async_fan_out: int = 3,
+                 greedy_only: bool = False):
         super().__init__()
         self.sampler_x = sampler_x
         self.F = async_fan_out # will need to accomodate lists for hit/miss eventually 
+        self.greedy_only = greedy_only
     
     @torch.inference_mode() # what shape are logits during tree decode? MQ_LEN, 
     def forward(self, logits: torch.Tensor, temperatures: torch.Tensor, is_tree: bool = False):
         # logits: [B, V], temperatures: [B]
+        if self.greedy_only:
+            return logits.argmax(dim=-1)
         
         logits_cpy = logits.to(torch.float) 
         greedy_tokens = logits_cpy.argmax(dim=-1)

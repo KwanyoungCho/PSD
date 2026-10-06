@@ -76,6 +76,9 @@ class Config:
     # spec config args
     draft_hf_config: AutoConfig | None = None
     speculate: bool = False 
+    # Capture a pure argmax sampler for engines serving only T_target=T_draft=0.
+    # The request boundary rejects incompatible temperatures.
+    greedy_only: bool = False
     draft: str = DEFAULT_DRAFT
     speculate_k: int = 1
     draft_async: bool = False
