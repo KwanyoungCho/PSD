@@ -53,6 +53,9 @@ class LLMEngine:
         config_kwargs = {k: v for k, v in kwargs.items() if k in config_fields}
         config = Config(model, **config_kwargs)
         self.config = config
+        if config.speculate and not config.draft_async:
+            from ssd.layers.layernorm import prepare_norms_for_colocation
+            prepare_norms_for_colocation()
         Sequence.block_size = config.kvcache_block_size 
 
         assert config.kvcache_block_size >= (

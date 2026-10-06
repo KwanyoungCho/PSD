@@ -12,6 +12,8 @@ def main():
     parser.add_argument("--ar", type=Path, required=True)
     parser.add_argument("--duet", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--reference-batch", type=int,
+                        help="Compare all batches to this batch in --ar (also permits a DUET reference)")
     args = parser.parse_args()
     ar, duet = json.loads(args.ar.read_text()), json.loads(args.duet.read_text())
     if ar["prompt_sha256"] != duet["prompt_sha256"]:
@@ -25,7 +27,8 @@ def main():
     for cell in duet["cells"]:
         if cell["temperature"] != 0:
             continue
-        ref = next(c for c in ar["cells"] if c["batch"] == cell["batch"] and c["temperature"] == 0)
+        reference_batch = args.reference_batch or cell["batch"]
+        ref = next(c for c in ar["cells"] if c["batch"] == reference_batch and c["temperature"] == 0)
         for i, (a, d) in enumerate(zip(ref["outputs"], cell["outputs"])):
             if a["token_ids"] == d["token_ids"]:
                 continue
@@ -44,7 +47,10 @@ def main():
                        duet_logit=float(logits[d["token_ids"][pos]]))
             rows.append(row)
             print(row, flush=True)
-    args.output.write_text(json.dumps(dict(dtype=str(model.dtype), divergences=rows), indent=2))
+    args.output.write_text(json.dumps(dict(dtype=str(model.dtype),
+        reference_path=str(args.ar), reference_mode=ar["args"]["mode"],
+        reference_batch=args.reference_batch, candidate_path=str(args.duet),
+        divergences=rows), indent=2))
 
 
 if __name__ == "__main__":
