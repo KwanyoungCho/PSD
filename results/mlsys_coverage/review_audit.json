@@ -1,0 +1,570 @@
+{
+  "scope": "Static code/history inspection and reaggregation of existing profiles; no new GPU run.",
+  "base": "a82f7d24fb36827a9a81a3567f344dccb71f193e",
+  "systems": "68d0a26d17303a416ad3f27009454ba3ced814be",
+  "research": "cc4a3ba11475aeaf6c20069c9a65315f78b0cf1e",
+  "upstream_inspected_sha": "d7eb8fa0edb77a6d0876af1903367b9bb82f54e7",
+  "runtime_overlap": [
+    "ssd/ssd/config.py",
+    "ssd/ssd/engine/helpers/cudagraph_helpers.py",
+    "ssd/ssd/engine/helpers/p2_tree.py",
+    "ssd/ssd/engine/llm_engine.py",
+    "ssd/ssd/engine/model_runner.py",
+    "ssd/ssd/engine/verifier.py"
+  ],
+  "commits": [
+    "503fa96 Fix ragged greedy recovery and add MLSys coverage checks",
+    "317741d Fix paged prefix prefill and bound batch admission; reduce verify synchronization",
+    "78d28d8 Keep a prefill query for fully cached prompts and record batch padding",
+    "f50e74a Extend captured proxy ranking and exit-replica overlap to batched DUET",
+    "aabc246 Add branch-free stochastic verification and isolated throughput campaigns",
+    "13f42d8 Keep colocated model norm constants capturable and audit batch numeric differences",
+    "7260f28 Count emitted decode tokens and preserve output budgets across preemption",
+    "7d3e52b Specialize greedy samplers in captured engines and remove temperature readbacks",
+    "e2dd89f Fix completed KV block hashes and audit preemption on dense models",
+    "a3572e6 Record dense-model batching and greedy throughput evidence and handover",
+    "721df75 Add packed chain verification and mixed-miss direct-target experiment",
+    "0974b14 Enable greedy dynamic tree verification and fix Qwama P1 workspace",
+    "14b4b81 Add experimental batched tree round executor and dense draft diagnostics",
+    "6c1df2f Add opt-in reuse of validated tree glue topology and extend regression suite",
+    "893a6b5 Audit batched draft roots against independent full-precision reference",
+    "715d961 Distinguish failed workers from stale running result files",
+    "ec8bc97 Record full-model round-two results and remaining batched-tree scope",
+    "7af3f5c Connect request-isolated batched dynamic tree serving and exact verification",
+    "33dda1e Share batch tree attention scratch and capture root scoring and acceptance",
+    "72475b8 Capture per-request tree input preparation across the batch",
+    "d7fea9f Use short target query buckets for batches with smaller tree views",
+    "c8f7b94 Respect configured sibling capacity in batch verification and test stochastic walks",
+    "413afca Include batched serving checks in the full regression suite",
+    "800f011 Ignore exhausted zero-probability WOR padding in batched acceptance",
+    "225d1ab Preserve greedy tie breaking inside mixed-temperature batches",
+    "30d8851 Add opt-in ragged tree target queries with re-planned captured attention",
+    "b90f118 Preserve generation prefixes when capping batched verification trees",
+    "68d0a26 Record completed batched tree serving, full-model comparisons and handover"
+  ],
+  "code_file_numstat": [
+    "265\t0\tssd/bench/batched_tree_microbench.py",
+    "124\t0\tssd/bench/mlsys_campaign.py",
+    "237\t0\tssd/bench/mlsys_coverage.py",
+    "57\t0\tssd/bench/mlsys_greedy_audit.py",
+    "50\t0\tssd/bench/mlsys_preemption_audit.py",
+    "84\t0\tssd/bench/mlsys_summarize.py",
+    "55\t0\tssd/bench/mlsys_verify_bench.py",
+    "1\t0\tssd/pyproject.toml",
+    "11\t9\tssd/ssd/config.py",
+    "10\t1\tssd/ssd/engine/block_manager.py",
+    "93\t36\tssd/ssd/engine/draft_runner.py",
+    "86\t0\tssd/ssd/engine/helpers/batch_tree_common.py",
+    "345\t0\tssd/ssd/engine/helpers/batch_tree_draft.py",
+    "133\t0\tssd/ssd/engine/helpers/batch_tree_forward.py",
+    "68\t0\tssd/ssd/engine/helpers/batch_tree_inputs.py",
+    "61\t0\tssd/ssd/engine/helpers/batch_tree_roots.py",
+    "203\t0\tssd/ssd/engine/helpers/batch_tree_sampling.py",
+    "120\t0\tssd/ssd/engine/helpers/batch_tree_verify.py",
+    "83\t0\tssd/ssd/engine/helpers/batched_proxy.py",
+    "154\t0\tssd/ssd/engine/helpers/batched_tree_executor.py",
+    "65\t30\tssd/ssd/engine/helpers/cudagraph_helpers.py",
+    "5\t7\tssd/ssd/engine/helpers/p1_tree.py",
+    "58\t14\tssd/ssd/engine/helpers/p2_tree.py",
+    "25\t9\tssd/ssd/engine/helpers/p2_tree_executor.py",
+    "139\t0\tssd/ssd/engine/helpers/packed_tree_forward.py",
+    "110\t0\tssd/ssd/engine/helpers/packed_verify.py",
+    "20\t0\tssd/ssd/engine/helpers/tree_host_topology.py",
+    "23\t46\tssd/ssd/engine/llm_engine.py",
+    "59\t9\tssd/ssd/engine/model_runner.py",
+    "10\t5\tssd/ssd/engine/scheduler.py",
+    "9\t3\tssd/ssd/engine/sequence.py",
+    "19\t0\tssd/ssd/engine/speculator_async.py",
+    "3\t1\tssd/ssd/engine/step.py",
+    "60\t24\tssd/ssd/engine/verifier.py",
+    "24\t14\tssd/ssd/layers/attention.py",
+    "9\t0\tssd/ssd/layers/layernorm.py",
+    "8\t2\tssd/ssd/layers/sampler.py",
+    "17\t0\tssd/ssd/utils/misc.py",
+    "31\t13\tssd/ssd/utils/verify.py",
+    "42\t0\tssd/ssd/utils/verify_fast.py",
+    "7\t0\tssd/tests/test_b_gt1_jit_subset.py",
+    "12\t2\tssd/tests/test_b_gt1_m2.py",
+    "19\t5\tssd/tests/test_b_gt1_m4.py",
+    "1\t0\tssd/tests/test_b_gt1_m6_verify_window.py",
+    "340\t0\tssd/tests/test_batch_tree_serving.py",
+    "60\t0\tssd/tests/test_batched_proxy.py",
+    "89\t0\tssd/tests/test_batched_tree_executor.py",
+    "90\t0\tssd/tests/test_cached_prefill.py",
+    "34\t0\tssd/tests/test_colocated_norm.py",
+    "52\t0\tssd/tests/test_greedy_sampler.py",
+    "42\t0\tssd/tests/test_greedy_tree.py",
+    "61\t0\tssd/tests/test_greedy_verify.py",
+    "50\t0\tssd/tests/test_model_pair_contract.py",
+    "88\t0\tssd/tests/test_output_accounting.py",
+    "1\t1\tssd/tests/test_p1_dynamic_tree.py",
+    "19\t3\tssd/tests/test_p2_tree_alloc.py",
+    "90\t0\tssd/tests/test_packed_verify.py",
+    "65\t0\tssd/tests/test_stochastic_verify.py",
+    "22\t0\tssd/tests/test_tree_host_topology.py",
+    "26\t0\tssd/uv.lock"
+  ],
+  "source_patterns": {
+    "prefill_cache_flatten": {
+      "path": "ssd/layers/attention.py",
+      "needles": [
+        "k, v = k_cache, v_cache"
+      ],
+      "earliest_local": true,
+      "paper_base": true,
+      "systems": false,
+      "public_upstream": true,
+      "upstream_file_sha256": "20939ca7897b0135c8d72360b0c98c6e90ea07ec62c9bc6278cacc42c64c315a"
+    },
+    "unbounded_prefill_admission": {
+      "path": "ssd/engine/scheduler.py",
+      "needles": [
+        "while self.waiting:"
+      ],
+      "earliest_local": true,
+      "paper_base": true,
+      "systems": false,
+      "public_upstream": true,
+      "upstream_file_sha256": "8733d3697da1c590a9e5f84304426166a4595d19f0158718db13621c4d91b1fb"
+    },
+    "mutable_prompt_boundary": {
+      "path": "ssd/engine/sequence.py",
+      "needles": [
+        "return self.num_tokens - self.num_prompt_tokens"
+      ],
+      "earliest_local": true,
+      "paper_base": true,
+      "systems": false,
+      "public_upstream": true,
+      "upstream_file_sha256": "d97aa6e04907c79b8857a8db13bccaa9acc7c73310a62e7e6ee24bb0e8e1cc8a"
+    },
+    "preemption_moves_boundary": {
+      "path": "ssd/engine/scheduler.py",
+      "needles": [
+        "seq.num_prompt_tokens = seq.num_tokens"
+      ],
+      "earliest_local": true,
+      "paper_base": true,
+      "systems": true,
+      "public_upstream": true,
+      "upstream_file_sha256": "8733d3697da1c590a9e5f84304426166a4595d19f0158718db13621c4d91b1fb"
+    },
+    "block_hash_last_page": {
+      "path": "ssd/engine/scheduler.py",
+      "needles": [
+        "last_block = block_manager.blocks[block_table[-1]]"
+      ],
+      "earliest_local": true,
+      "paper_base": true,
+      "systems": false,
+      "public_upstream": true,
+      "upstream_file_sha256": "8733d3697da1c590a9e5f84304426166a4595d19f0158718db13621c4d91b1fb"
+    },
+    "raw_suffix_tps_counter": {
+      "path": "ssd/engine/step.py",
+      "needles": [
+        "return sum(len(s) for s in out_verify_result.new_suffixes)"
+      ],
+      "earliest_local": true,
+      "paper_base": true,
+      "systems": false,
+      "public_upstream": true,
+      "upstream_file_sha256": "0b3e0d44665803e8d3d1910f4f31f121ce3cf0794ae51fd9d3261602f68b37dc"
+    },
+    "ragged_length_clamp": {
+      "path": "ssd/utils/verify.py",
+      "needles": [
+        "accept_until = torch.minimum(accept_until, valid_k)"
+      ],
+      "earliest_local": false,
+      "paper_base": true,
+      "systems": true,
+      "public_upstream": false,
+      "upstream_file_sha256": "d2bca39bf241fca70d7b2596b2d46228516d6882bb9114bf27f31bdc84d713e0"
+    }
+  },
+  "profiles": {
+    "llama2": {
+      "results/mlsys_coverage/profiles/llama2_profile_fast/duet_profile_draft_004924.json": {
+        "sha256": "049eb6a7bf5cdecf40113d7411d5485a5781224a53bc208f751606b4e9cad9ef",
+        "labels": {
+          "draft_recv_request": {
+            "n": 274,
+            "median_ms": 0.19776000082492828
+          },
+          "hit_cache_respond_hit": {
+            "n": 52,
+            "median_ms": 0.6533440053462982
+          },
+          "draft_response_pack": {
+            "n": 274,
+            "median_ms": 0.050175998359918594
+          },
+          "draft_send_fused": {
+            "n": 274,
+            "median_ms": 0.08297599852085114
+          },
+          "draft_send_chain_q": {
+            "n": 274,
+            "median_ms": 0.20684799551963806
+          },
+          "draft_send_response": {
+            "n": 274,
+            "median_ms": 0.3087199926376343
+          },
+          "draft_glue_replay": {
+            "n": 274,
+            "median_ms": 0.6737920045852661
+          },
+          "glue": {
+            "n": 274,
+            "median_ms": 1.242624044418335
+          },
+          "phase1_prep": {
+            "n": 1096,
+            "median_ms": 0.09625600278377533
+          },
+          "phase1_replay": {
+            "n": 1096,
+            "median_ms": 0.8611840009689331
+          },
+          "phase1_build": {
+            "n": 274,
+            "median_ms": 5.656064033508301
+          },
+          "proxy_wait": {
+            "n": 274,
+            "median_ms": 6.642175912857056
+          },
+          "phase2_build": {
+            "n": 274,
+            "median_ms": 0.36711999773979187
+          },
+          "phase2_prep": {
+            "n": 548,
+            "median_ms": 0.4039519876241684
+          },
+          "phase2_replay": {
+            "n": 548,
+            "median_ms": 0.737280011177063
+          },
+          "p2_cache_merge": {
+            "n": 274,
+            "median_ms": 0.11161600053310394
+          },
+          "merge_cache": {
+            "n": 274,
+            "median_ms": 0.11468800157308578
+          },
+          "draft_recv_cmd": {
+            "n": 311,
+            "median_ms": 4.5167999267578125
+          },
+          "hit_cache_respond_hit_k2": {
+            "n": 2,
+            "median_ms": 0.85657599568367
+          },
+          "hit_cache_respond_miss": {
+            "n": 4,
+            "median_ms": 1.89137601852417
+          },
+          "hit_cache_respond_mixed": {
+            "n": 211,
+            "median_ms": 2.504703998565674
+          },
+          "hit_cache_respond_hit_k1": {
+            "n": 5,
+            "median_ms": 0.6399999856948853
+          }
+        }
+      },
+      "results/mlsys_coverage/profiles/llama2_profile_fast/duet_profile_target_rank0_004924.json": {
+        "sha256": "68bb684b20c8e7062d1308bc6c072ed063e42be1df8f2e8b1fecfc6bdadeec4f",
+        "labels": {
+          "target_send_request": {
+            "n": 274,
+            "median_ms": 0.2170879989862442
+          },
+          "target_recv_fused": {
+            "n": 274,
+            "median_ms": 2.6501119136810303
+          },
+          "target_response_meta_read": {
+            "n": 274,
+            "median_ms": 0.002047999994829297
+          },
+          "target_recv_chain_q": {
+            "n": 274,
+            "median_ms": 0.2959359884262085
+          },
+          "target_recv_response_wait": {
+            "n": 274,
+            "median_ms": 2.956800103187561
+          },
+          "target_response_received": {
+            "n": 274,
+            "median_ms": 0.002047999994829297
+          },
+          "target_spec_wait": {
+            "n": 274,
+            "median_ms": 4.028336048126221
+          },
+          "verify_setup": {
+            "n": 274,
+            "median_ms": 0.14032000303268433
+          },
+          "graph_pre": {
+            "n": 274,
+            "median_ms": 12.16102409362793
+          },
+          "exit_logits": {
+            "n": 274,
+            "median_ms": 0.317440003156662
+          },
+          "chain_proxy_graph_replay": {
+            "n": 274,
+            "median_ms": 0.17510400712490082
+          },
+          "proxy_send_enqueue": {
+            "n": 274,
+            "median_ms": 0.005119999870657921
+          },
+          "exit_proxy_side": {
+            "n": 274,
+            "median_ms": 0.18636800348758698
+          },
+          "exit_proxy_launch": {
+            "n": 274,
+            "median_ms": 0.19046400487422943
+          },
+          "graph_post": {
+            "n": 274,
+            "median_ms": 5.5311360359191895
+          },
+          "final_logits": {
+            "n": 274,
+            "median_ms": 0.3123199939727783
+          },
+          "verify_accept_prep": {
+            "n": 274,
+            "median_ms": 0.03891199827194214
+          },
+          "chain_accept": {
+            "n": 274,
+            "median_ms": 0.7322240173816681
+          },
+          "verify_sample_accept": {
+            "n": 274,
+            "median_ms": 0.7535199820995331
+          },
+          "target_postprocess": {
+            "n": 274,
+            "median_ms": 0.027615999802947044
+          }
+        },
+        "paired_pre_post_sum": {
+          "n": 270,
+          "median_ms": 17.694720029830933
+        }
+      }
+    },
+    "llama3": {
+      "results/mlsys_coverage/profiles/llama3_profile_fast/duet_profile_draft_003901.json": {
+        "sha256": "c8c99657a582a9833605ed53390f0877a5fc6d4dde79f0a4f4822679406c5abd",
+        "labels": {
+          "draft_recv_request": {
+            "n": 165,
+            "median_ms": 0.17027199268341064
+          },
+          "hit_cache_respond_mixed": {
+            "n": 138,
+            "median_ms": 4.740607976913452
+          },
+          "draft_response_pack": {
+            "n": 165,
+            "median_ms": 0.04710400104522705
+          },
+          "draft_send_fused": {
+            "n": 165,
+            "median_ms": 0.07782399654388428
+          },
+          "draft_send_chain_q": {
+            "n": 165,
+            "median_ms": 0.5601279735565186
+          },
+          "draft_send_response": {
+            "n": 165,
+            "median_ms": 0.652288019657135
+          },
+          "draft_glue_replay": {
+            "n": 165,
+            "median_ms": 1.8257919549942017
+          },
+          "glue": {
+            "n": 165,
+            "median_ms": 2.519040107727051
+          },
+          "phase1_prep": {
+            "n": 660,
+            "median_ms": 0.08601599931716919
+          },
+          "phase1_replay": {
+            "n": 660,
+            "median_ms": 2.65830397605896
+          },
+          "phase1_build": {
+            "n": 165,
+            "median_ms": 13.842432022094727
+          },
+          "proxy_wait": {
+            "n": 165,
+            "median_ms": 0.002047999994829297
+          },
+          "phase2_build": {
+            "n": 165,
+            "median_ms": 0.3164159953594208
+          },
+          "phase2_prep": {
+            "n": 330,
+            "median_ms": 0.3036000058054924
+          },
+          "phase2_replay": {
+            "n": 330,
+            "median_ms": 2.4883201122283936
+          },
+          "p2_cache_merge": {
+            "n": 165,
+            "median_ms": 0.4188160002231598
+          },
+          "merge_cache": {
+            "n": 165,
+            "median_ms": 0.42188799381256104
+          },
+          "draft_recv_cmd": {
+            "n": 198,
+            "median_ms": 0.0342399999499321
+          },
+          "hit_cache_respond_hit": {
+            "n": 21,
+            "median_ms": 0.5888000130653381
+          },
+          "hit_cache_respond_miss": {
+            "n": 3,
+            "median_ms": 4.35916805267334
+          },
+          "hit_cache_respond_hit_k1": {
+            "n": 3,
+            "median_ms": 0.5785599946975708
+          }
+        }
+      },
+      "results/mlsys_coverage/profiles/llama3_profile_fast/duet_profile_target_rank0_003901.json": {
+        "sha256": "737279e97c74722cf92662a751a3d5f7bebb575c17c70051d4adc799eedc49d7",
+        "labels": {
+          "target_send_request": {
+            "n": 165,
+            "median_ms": 0.2067520022392273
+          },
+          "target_recv_fused": {
+            "n": 165,
+            "median_ms": 4.996096134185791
+          },
+          "target_response_meta_read": {
+            "n": 165,
+            "median_ms": 0.002047999994829297
+          },
+          "target_recv_chain_q": {
+            "n": 165,
+            "median_ms": 0.6727679967880249
+          },
+          "target_recv_response_wait": {
+            "n": 165,
+            "median_ms": 5.67193603515625
+          },
+          "target_response_received": {
+            "n": 165,
+            "median_ms": 0.002047999994829297
+          },
+          "target_spec_wait": {
+            "n": 165,
+            "median_ms": 6.7130560874938965
+          },
+          "verify_setup": {
+            "n": 165,
+            "median_ms": 0.130048006772995
+          },
+          "graph_pre": {
+            "n": 165,
+            "median_ms": 12.404735565185547
+          },
+          "exit_logits": {
+            "n": 165,
+            "median_ms": 1.2042239904403687
+          },
+          "chain_proxy_graph_replay": {
+            "n": 165,
+            "median_ms": 0.32051199674606323
+          },
+          "proxy_send_enqueue": {
+            "n": 165,
+            "median_ms": 0.005119999870657921
+          },
+          "exit_proxy_side": {
+            "n": 165,
+            "median_ms": 0.3307519853115082
+          },
+          "exit_proxy_launch": {
+            "n": 165,
+            "median_ms": 0.33484798669815063
+          },
+          "graph_post": {
+            "n": 165,
+            "median_ms": 5.657599925994873
+          },
+          "final_logits": {
+            "n": 165,
+            "median_ms": 1.2021759748458862
+          },
+          "verify_accept_prep": {
+            "n": 165,
+            "median_ms": 0.035840000957250595
+          },
+          "chain_accept": {
+            "n": 165,
+            "median_ms": 0.7090880274772644
+          },
+          "verify_sample_accept": {
+            "n": 165,
+            "median_ms": 0.7291839718818665
+          },
+          "target_postprocess": {
+            "n": 165,
+            "median_ms": 0.027135999873280525
+          }
+        },
+        "paired_pre_post_sum": {
+          "n": 165,
+          "median_ms": 18.059200286865234
+        }
+      }
+    }
+  },
+  "profile_scope": "Historical round1 instrumented chain profiles, nominal B8/K1=4/K2=2/exit21; step_id>=10; includes batch shrink. Component medians are not same-step critical paths or final round3 timings.",
+  "draft_forest_capture_counts": {
+    "llama2": {
+      "steps": 3691,
+      "tree_hits": 22478,
+      "phase1_replays": 3691,
+      "phase2_replays": 3691,
+      "captures": 32
+    },
+    "llama3": {
+      "steps": 2715,
+      "tree_hits": 15513,
+      "phase1_replays": 2715,
+      "phase2_replays": 2715,
+      "captures": 30
+    }
+  },
+  "graph_counter_scope": "captures counts draft forest executors only; excludes target/glue/root/input/accept captures and is cumulative over warmup plus two passes."
+}

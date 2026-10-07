@@ -1,5 +1,7 @@
 # B>1 dynamic tree 실행 경로 인수인계
 
+**Merge 전에 읽을 단일 기준 문서:** [MERGE_REVIEW.md](../MERGE_REVIEW.md). 전체 commit/파일 inventory와 연구 branch의 의미상 충돌 검토를 포함한다.
+
 - 작업 checkout: `/home/chokwans99/PSD-mlsys-coverage`, branch `feat/duet-mlsys-coverage`.
 - 논문 기준: `feat/duet-p2tree-g0@a82f7d2`. 원래 `/home/chokwans99/PSD`의 root-selection 연구 파일은 수정하지 않았다.
 - Python: `/home/chokwans99/PSD/ssd/.venv/bin/python`. 공유 환경에 `uv sync`하지 않는다.

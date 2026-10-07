@@ -1,5 +1,7 @@
 # Full-model MLSys systems 실험 인수인계
 
+**다른 서버 merge의 기준 문서:** [MERGE_REVIEW.md](MERGE_REVIEW.md). 전체 commit/변경 파일 목록, 충돌 검토, SSD 공정 비교, 질문 답변과 미완료 작업을 한곳에 정리했다.
+
 **최신 인수인계:** [round3/REPORT.md](round3/REPORT.md) / [round3/HANDOVER.md](round3/HANDOVER.md). B>1 tree end-to-end 통합과 두 full-model pair 검증을 추가했다.
 
 **2026-10-07 후속 작업:** [round2/REPORT.md](round2/REPORT.md)와 [round2/HANDOVER.md](round2/HANDOVER.md)를 먼저 읽는다. 아래 기록은 1차 실험이다.

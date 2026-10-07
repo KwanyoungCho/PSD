@@ -1,5 +1,7 @@
 # B>1 dynamic tree 통합·최적화·full-model 검증
 
+**전체 작업과 질문 답변:** [통합 merge 검토 문서](../MERGE_REVIEW.md). 기존 B1 tree 기능과 이번 B>1 확장, 공통 SSD 수정, TPS 집계 방향, 이전 selector 연구와 미완료 최적화를 구분한다.
+
 기준: `feat/duet-p2tree-g0@a82f7d2`. 작업: `feat/duet-mlsys-coverage`, `/home/chokwans99/PSD-mlsys-coverage`. 실험일: 2026-10-07.
 
 ## 이번 작업의 결론

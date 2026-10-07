@@ -1,5 +1,7 @@
 # 논문 branch 기반 full-model / batching / greedy 검증
 
+**통합 검토 문서:** [MERGE_REVIEW.md](MERGE_REVIEW.md)에 전체 변경·SSD와의 공통 수정·과거 논문 영향 조건·사용자 질문 14개·이전 tree 연구·merge 체크리스트·남은 최적화를 모았다.
+
 **최신 상태:** B>1 dynamic tree 통합·full-model 검증은 [round3/REPORT.md](round3/REPORT.md), 재현은 [round3/HANDOVER.md](round3/HANDOVER.md). 아래는 1차 실험의 역사적 기록이다.
 
 실험일: 2026-10-06~07. 기준: `feat/duet-p2tree-g0@a82f7d2`.
