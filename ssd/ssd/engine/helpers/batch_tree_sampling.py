@@ -143,6 +143,12 @@ def verify_batch(logits_p,logits_q,tokens,topology,target_temps,draft_temps,
         tt=torch.as_tensor(target_temps,device=dev,dtype=torch.float32)
         dt=torch.as_tensor(draft_temps,device=dev,dtype=torch.float32)
         p=(logits_p.float()/tt.clamp_min(1e-10)[:,None,None]).softmax(-1)
+        # Mixed batches may include T=0 requests. Dividing by a tiny
+        # temperature gives a uniform distribution over tied maxima;
+        # greedy instead selects torch.argmax's first index deterministically.
+        argmax=logits_p.argmax(-1,keepdim=True)
+        greedy_p=torch.zeros_like(p).scatter(2,argmax,1)
+        p=torch.where((tt==0)[:,None,None],greedy_p,p)
         q=q_probs_from_logits(logits_q.reshape(B*N,V),
                              dt[:,None].expand(B,N).reshape(-1),sampler_x,fan_out).view(B,N,V)
         alpha,_,residual=ladder(tokens,p,q,topology,N,exact=True)

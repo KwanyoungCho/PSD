@@ -286,5 +286,18 @@ class ExhaustedProposal(unittest.TestCase):
         self.assertLess((torch.bincount(emitted,minlength=V)/B-p).abs().max().item(),.009)
 
 
+class MixedTemperatures(unittest.TestCase):
+    def test_greedy_row_breaks_ties_deterministically_in_sampling_batch(self):
+        B,N,V=128,3,5
+        p=torch.zeros(B,N+1,V);p[:64,:,1]=p[:64,:,2]=5
+        q=torch.zeros(B,N,V)
+        tokens=torch.tensor([2,1,4]).expand(B,N)
+        base=pack_topologies([[-1,-1,1]],[[0,1,0]],N,'cpu')
+        topo={k:v.expand(B,*v.shape[1:]) for k,v in base.items()}
+        path,recovery,_=verify_batch(p,q,tokens,topo,[0.]*64+[.7]*64,[0.]*64+[.7]*64)
+        self.assertTrue((path[:64,0]==1).all())
+        self.assertTrue((recovery[:64]==1).all())
+
+
 if __name__ == '__main__':
     unittest.main()
