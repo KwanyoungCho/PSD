@@ -3,7 +3,8 @@ set -euo pipefail
 # Invoke from any directory. Override MLSYS_PYTHON and CUDA_VISIBLE_DEVICES.
 cd "$(dirname "${BASH_SOURCE[0]}")/../../ssd"
 mlsys_python=${MLSYS_PYTHON:-/home/chokwans99/PSD/ssd/.venv/bin/python}
-export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+# An explicitly empty value means CPU-only; do not silently allocate GPU0.
+export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES-0}
 export SSD_CUDA_ARCH=${SSD_CUDA_ARCH:-8.9}
 export SSD_HF_CACHE=${SSD_HF_CACHE:-/tmp}
 export SSD_DATASET_DIR=${SSD_DATASET_DIR:-/tmp}
@@ -20,4 +21,4 @@ exec "$mlsys_python" -m unittest \
   tests.test_p1_dynamic_tree tests.test_p2_executor_parity tests.test_executor_premises \
   tests.test_tree_verify_planless tests.test_tree_host_topology \
   tests.test_batch_tree_serving \
-  tests.test_tree_round4 tests.test_tree_fused_math
+  tests.test_tree_round4 tests.test_tree_fused_math tests.test_root_policy

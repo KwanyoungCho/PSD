@@ -89,6 +89,22 @@ class RootPolicyTests(unittest.TestCase):
         torch.testing.assert_close(term.sum(1),torch.ones(1))
 
     @unittest.skipUnless(torch.cuda.is_available(),'CUDA graph contract')
+    def test_model_default_dtype_does_not_round_live_temperature(self):
+        from ssd.engine.helpers.p2_tree import ChainProxyCUDAGraph
+        before=torch.get_default_dtype()
+        try:
+            torch.set_default_dtype(torch.bfloat16)
+            graph=ChainProxyCUDAGraph(2,37,5,5,True,torch.bfloat16,'cuda',policy=POLICY)
+            self.assertEqual(graph.tt.dtype,torch.float32)
+            e=torch.randn(3,37,device='cuda');q=torch.randn(2,37,device='cuda')
+            tok=torch.tensor([1,3],device='cuda')
+            actual=graph.replay(e,q,tok,.7,.61)
+            expected=chain_candidates(e[None],q[None],tok[None],tok.new_tensor([2]),
+                5,5,True,.7,.61,**POLICY)
+            for a,b in zip(actual,expected):torch.testing.assert_close(a,b[0])
+        finally:torch.set_default_dtype(before)
+
+    @unittest.skipUnless(torch.cuda.is_available(),'CUDA graph contract')
     def test_graph_reads_live_temperatures_chain_and_tree(self):
         device='cuda';torch.manual_seed(71)
         e=torch.randn(2,5,257,device=device);q=torch.randn(2,4,257,device=device)
