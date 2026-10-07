@@ -244,3 +244,31 @@ class ArenaInputs(unittest.TestCase):
             for x,y in zip(ar.wrappers[2],expected[b]['pages']):torch.testing.assert_close(x._paged_kv_indices_buf,y)
         for x in arenas[3].in_slot:self.assertTrue((x==-1).all())
         self.assertFalse(arenas[3].in_root_piv.any())
+
+class StochasticWalk(unittest.TestCase):
+    def test_fixed_node_coins_match_scalar_walk_at_every_depth(self):
+        torch.manual_seed(982)
+        B,N,V=200,6,17
+        par=[-1,-1,0,0,1,4];sib=[0,1,0,1,0,0]
+        p=torch.randn(B,N+1,V);q=torch.randn(B,N,V)
+        q[:,1]=q[:,0];q[:,3]=q[:,2]
+        tok=torch.tensor([2,4,8,10,12,15]).expand(B,N)
+        coins=torch.rand(B,N)
+        topo={k:v.expand(B,*v.shape[1:]) for k,v in pack_topologies([par],[sib],N,'cpu').items()}
+        actual,_,terminal=verify_batch(p,q,tok,topo,[.7]*B,[1.2]*B,uniforms=coins)
+        for b in range(B):
+            ctx=-1;path=[]
+            while True:
+                children=[j for j,parent in enumerate(par) if parent==ctx]
+                if not children:break
+                R=(p[b,ctx+1]/.7).softmax(-1);D=(q[b,children[0]]/1.2).softmax(-1)
+                choice=None
+                for j in children:
+                    t=tok[b,j]
+                    if coins[b,j]<min(1,(R[t]/D[t]).item()):choice=j;break
+                    R=(R-D).clamp_min(0);R=R/R.sum() if R.sum()>1e-12 else R
+                    D[t]=0;D=D/D.sum() if D.sum()>1e-12 else D
+                if choice is None:break
+                path.append(choice);ctx=choice
+            self.assertEqual(actual[b].tolist(),path+[-1]*(N-len(path)))
+            self.assertEqual(terminal[b,0].item(),ctx+1)

@@ -3,8 +3,8 @@ import torch
 from ssd.engine.helpers.p2_tree import pack_piv, pack_tree_proxy_topology, q_probs_from_logits
 
 
-def pack_topologies(parents, siblings, n, device):
-    entries=[pack_tree_proxy_topology(p,s,n) for p,s in zip(parents,siblings)]
+def pack_topologies(parents, siblings, n, device,c_max=3):
+    entries=[pack_tree_proxy_topology(p,s,n,c_max=c_max) for p,s in zip(parents,siblings)]
     return {k:torch.stack([e[k] for e in entries]).to(device) for k in entries[0]}
 
 
@@ -85,11 +85,12 @@ def candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k):
 
 class BatchedTreeProxy:
     @torch.inference_mode()
-    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None,q_dtype=None):
+    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None,q_dtype=None,c_max=3):
         self.exit=torch.zeros(b,n+1,v,dtype=dtype,device=device)
         self.q=torch.zeros(b,n,v,dtype=q_dtype or dtype,device=device)
         self.tokens=torch.zeros(b,n,dtype=torch.int64,device=device)
-        self.topology=pack_topologies([[]]*b,[[]]*b,n,device)
+        self.c_max=c_max
+        self.topology=pack_topologies([[]]*b,[[]]*b,n,device,c_max)
         def run(): return candidates(self.exit,self.q,self.tokens,self.topology,wire_n,depth,top_k)
         for _ in range(2): run()
         torch.cuda.synchronize(device)
@@ -100,7 +101,7 @@ class BatchedTreeProxy:
         B=len(parents)
         N=self.tokens.shape[1]
         pad=self.tokens.shape[0]-B
-        topo=pack_topologies(parents+[[]]*pad,siblings+[[]]*pad,N,self.tokens.device)
+        topo=pack_topologies(parents+[[]]*pad,siblings+[[]]*pad,N,self.tokens.device,self.c_max)
         for name in self.topology: self.topology[name].copy_(topo[name])
         self.tokens.zero_(); self.q.zero_()
         self.tokens[:B,:tokens.shape[1]].copy_(tokens)

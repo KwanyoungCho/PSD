@@ -29,7 +29,8 @@ def verify(verifier,seqs,result):
         tree=int(wire[b,0])>0
         if tree:
             ti=parse_tree_ints(wire[b],cfg.duet_tree_wire_nodes)
-            validate_tree_ints(ti,cfg.duet_tree_wire_nodes,cfg.hf_config.vocab_size,sibling_capacity=3)
+            validate_tree_ints(ti,cfg.duet_tree_wire_nodes,cfg.hf_config.vocab_size,
+                               sibling_capacity=cfg.duet_tree_c_tensor)
             n=ti['valid']
             if n!=valid[b] or ti['epoch']!=2:
                 raise RuntimeError('Batched tree wire version/length mismatch')
@@ -53,7 +54,7 @@ def verify(verifier,seqs,result):
         p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
                            cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
-                           q_dtype=result.logits_q.dtype)
+                           q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor)
         r._batch_tree_proxies[proxy_key]=p
         if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
     proxy=r._batch_tree_proxies[proxy_key]
