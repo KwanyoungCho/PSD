@@ -1,8 +1,9 @@
 """Batched target tree verification and request-specific KV commits."""
 from time import perf_counter
+import os
 import torch
 from ssd.engine.helpers.batch_tree_common import capacity
-from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy, verify_batch, pack_topologies
+from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy, BatchedTreeAccept, verify_batch
 from ssd.engine.helpers.p2_tree import parse_tree_ints, validate_tree_ints, commit_copy_plan
 from ssd.engine.helpers.speculate_types import VerifyResult
 
@@ -47,7 +48,8 @@ def verify(verifier,seqs,result):
     if cap not in r._batch_tree_proxies:
         p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
                            cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
-                           cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool)
+                           cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
+                           q_dtype=result.logits_q.dtype)
         r._batch_tree_proxies[cap]=p
         if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
     proxy=r._batch_tree_proxies[cap]
@@ -65,9 +67,20 @@ def verify(verifier,seqs,result):
     finally:
         r._duet_proxy_fn=None
     topology={k:v[:B] for k,v in proxy.topology.items()}
-    paths,recoveries,terminal=verify_batch(logits,q,tokens,topology,tt,dt,
-                                          verifier.sampler_x,verifier.async_fan_out,
-                                          greedy=all(t==0 for t in tt))
+    greedy=all(t==0 for t in tt)
+    if os.getenv('SSD_BATCH_TREE_ACCEPT_GRAPH','1')=='1':
+        if not hasattr(r,'_batch_tree_accept'):
+            r._batch_tree_accept={};r._batch_tree_accept_pool=None
+        key=cap,greedy
+        if key not in r._batch_tree_accept:
+            graph=BatchedTreeAccept(proxy,verifier.sampler_x,verifier.async_fan_out,
+                                    greedy,pool=r._batch_tree_accept_pool)
+            r._batch_tree_accept[key]=graph
+            if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=graph.graph.pool()
+        paths,recoveries,terminal=r._batch_tree_accept[key].replay(logits,tt,dt)
+    else:
+        paths,recoveries,terminal=verify_batch(logits,q,tokens,topology,tt,dt,
+                                              verifier.sampler_x,verifier.async_fan_out,greedy)
     result_cpu=torch.cat([paths,recoveries,terminal],1).cpu().tolist()
     suffixes=[]; recovery=[]; src=[]; dst=[]
     for b,s in enumerate(seqs):

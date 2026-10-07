@@ -13,6 +13,16 @@ class BatchedTreeForward:
         self.graphs = {}
         self.pool = None
 
+    def workspace(self):
+        # All ancestor forwards and forest rounds run on this runner's
+        # compute stream. Float scratch contains no persistent plan state.
+        r=self.r
+        if not hasattr(r,'_batch_tree_float_workspace'):
+            r._batch_tree_float_workspace=torch.empty(
+                int(os.getenv('SSD_BATCH_TREE_WORKSPACE_MB','128'))*2**20,
+                dtype=torch.uint8,device=r.device)
+        return r._batch_tree_float_workspace
+
     def _context(self, g):
         kwargs = dict(is_prefill=False, slot_mapping=g['slots'],
                       context_lens=g['lens'], block_tables=g['blocks'])
@@ -31,8 +41,7 @@ class BatchedTreeForward:
         r = self.r
         dev,dtype,hf = r.device,r.hf_config.torch_dtype,r.hf_config
         cols = pages*r.block_size
-        ws = torch.empty(int(os.getenv('SSD_BATCH_TREE_WORKSPACE_MB','128'))*2**20,
-                         dtype=torch.uint8,device=dev)
+        ws = self.workspace()
         qo = torch.arange(batch+1,dtype=torch.int32,device=dev)*width
         kv = torch.arange(batch+1,dtype=torch.int32,device=dev)*pages
         indices = torch.zeros(batch*pages,dtype=torch.int32,device=dev)

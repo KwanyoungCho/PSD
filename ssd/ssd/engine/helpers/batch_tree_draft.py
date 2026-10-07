@@ -25,6 +25,8 @@ class BatchedDuetDraft:
         self.staged={}
         self.forests={}
         self.executors={}
+        self.root_graphs={}
+        self.root_graph_pool=None
         self.graph_pool=None
         self.glue=BatchedTreeForward(runner,split=False)
         self.stats=dict(steps=0,tree_hits=0,phase1_replays=0,phase2_replays=0,captures=0)
@@ -70,9 +72,10 @@ class BatchedDuetDraft:
         arenas=self.forests[key][:batch]
         graph_key=phase,contexts,batch
         if graph_key not in self.executors:
-            self.executors[graph_key]=BatchedTreeExecutor(arenas,staging_only=True)
+            self.executors[graph_key]=BatchedTreeExecutor(arenas,staging_only=True,
+                                                        workspace=self.glue.workspace())
         executor=self.executors[graph_key]
-        executor.prepare(pages)
+        if pages is not None:executor.prepare(pages)
         return executor,arenas
 
     def _prepare_arena(self,ex,row,page_bucket,tokens,scores,context_ids,temp,active=True):
@@ -219,7 +222,9 @@ class BatchedDuetDraft:
         dist.send(q,dst=0,group=r.async_pg)
         work,proxy_buf=r._irecv_duet_proxy(B,K)
         # One ancestor-masked draft forward covers both tree and chain rows.
-        glue=self.glue.run(rows,max_valid+1)
+        glue_width=next(x for x in sorted({cfg.duet_phase1_k+1,cfg.duet_phase2_k+1,
+                                           cfg.duet_response_token_width+1}) if x>=max_valid+1)
+        glue=self.glue.run(rows,glue_width)
         for b,entry in enumerate(hits):
             if entry is None or not entry['tree']: continue
             row=rows[b]; start=row['prefix']; n=len(row['tokens'])
@@ -242,22 +247,38 @@ class BatchedDuetDraft:
         if not cfg.duet_only_proxy:
             # Discover round-zero width before selecting the shared page
             # canvas. All arenas use the same context bucket and top-W budget.
-            exs,_=self._forest(1,cb,bc,1)
+            exs,_=self._forest(1,cb,bc,None)
             sample=exs.first
             pages=capacity(max((row['prefix']+len(row['tokens'])+sample.round_ends[0]+r.block_size-1)//r.block_size for row in rows))
             exs,arenas=self._forest(1,cb,bc,pages)
+            batched_roots=None
+            if os.getenv('SSD_BATCH_TREE_ROOT_GRAPH','1')=='1':
+                from ssd.engine.helpers.batch_tree_roots import BatchedP1Roots
+                key=bc,cb
+                if key not in self.root_graphs:
+                    g=BatchedP1Roots(bc,cb,r.hf_config.vocab_size,r.hf_config.torch_dtype,
+                        r.device,arenas[0].roots_per_position,cfg.sampler_x,cfg.async_fan_out,
+                        pool=self.root_graph_pool)
+                    self.root_graphs[key]=g
+                    if self.root_graph_pool is None:self.root_graph_pool=g.graph.pool()
+                roots_graph=self.root_graphs[key]
+                batched_roots=roots_graph.replay(rows,glue,temps)
             params=[]
             for b in range(bc):
                 row=rows[min(b,B-1)]
                 n=len(row['tokens']); pfo=arenas[b].roots_per_position
                 _,_,visible=context_topology(row['parents'])
-                roots=build_uniform_p1_roots(glue[min(b,B-1),:n],
-                    torch.tensor(row['tokens'],device=r.device),pfo,
-                    torch.full((n,),temps[min(b,B-1)],device=r.device),
-                    sampler_x=cfg.sampler_x,async_fan_out=cfg.async_fan_out,
-                    context_glue_rows=torch.as_tensor(visible,device=r.device),root_width=arenas[b].R)
                 nr=n*pfo
-                rt=roots['tokens'][:nr]; sc=roots['scores'][:nr]; ci=roots['context_ids'][:nr]
+                if batched_roots is not None:
+                    rt=batched_roots[0][b,:nr];sc=batched_roots[1][b,:nr]
+                    ci=roots_graph.context_ids[:nr]
+                else:
+                    roots=build_uniform_p1_roots(glue[min(b,B-1),:n],
+                        torch.tensor(row['tokens'],device=r.device),pfo,
+                        torch.full((n,),temps[min(b,B-1)],device=r.device),
+                        sampler_x=cfg.sampler_x,async_fan_out=cfg.async_fan_out,
+                        context_glue_rows=torch.as_tensor(visible,device=r.device),root_width=arenas[b].R)
+                    rt=roots['tokens'][:nr]; sc=roots['scores'][:nr]; ci=roots['context_ids'][:nr]
                 if b>=B: sc=torch.zeros_like(sc)
                 safe=self._prepare_arena(arenas[b],row,pages,rt,sc,ci,temps[min(b,B-1)],active=b<B)
                 if b<B:
@@ -282,7 +303,7 @@ class BatchedDuetDraft:
         ci=pos.gather(1,pick).clamp(0,contexts-1)
         rt=tok.gather(1,pick)
         sc=torch.where(valid.gather(1,pick),score.gather(1,pick),0)
-        exs,_=self._forest(2,cb,bc,1)
+        exs,_=self._forest(2,cb,bc,None)
         sample=exs.first
         pages=capacity(max((row['prefix']+len(row['tokens'])+sample.round_ends[0]+r.block_size-1)//r.block_size for row in rows))
         exs,arenas=self._forest(2,cb,bc,pages)

@@ -47,6 +47,11 @@ def ladder(tokens,p,q,topology,depth,exact=False):
         newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
         draft=torch.where(valid,newer,draft)
     alpha=torch.stack(alphas,-1)
+    residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
+    if exact:
+        # Verification consumes conditional accept probabilities and the
+        # terminal residual; proxy reach scores would be discarded.
+        return alpha,None,residual
     presib=torch.stack(pre,-1)
     par=(topology['par']+1).clamp(0,N)
     sib=topology['sib']
@@ -57,7 +62,6 @@ def ladder(tokens,p,q,topology,depth,exact=False):
         reach=base*torch.cat([one,reach],1).gather(1,par)
     valid_ctx=torch.cat([torch.ones(B,1,dtype=torch.bool,device=dev),topology['node_valid']],1)
     term=torch.cat([one,reach],1)*all_reject.squeeze(-1)*valid_ctx
-    residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
     return alpha,term,residual
 
 
@@ -81,9 +85,9 @@ def candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k):
 
 class BatchedTreeProxy:
     @torch.inference_mode()
-    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None):
+    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None,q_dtype=None):
         self.exit=torch.zeros(b,n+1,v,dtype=dtype,device=device)
-        self.q=torch.zeros(b,n,v,dtype=dtype,device=device)
+        self.q=torch.zeros(b,n,v,dtype=q_dtype or dtype,device=device)
         self.tokens=torch.zeros(b,n,dtype=torch.int64,device=device)
         self.topology=pack_topologies([[]]*b,[[]]*b,n,device)
         def run(): return candidates(self.exit,self.q,self.tokens,self.topology,wire_n,depth,top_k)
@@ -158,3 +162,30 @@ def verify_batch(logits_p,logits_q,tokens,topology,target_temps,draft_temps,
     else:
         recovery=torch.multinomial(residual[bi[:,0],ctx[:,0]],1)
     return path,recovery,ctx
+
+
+class BatchedTreeAccept:
+    """Capture the entire exact walk, including independent CUDA RNG draws."""
+    @torch.inference_mode()
+    def __init__(self, proxy, sampler_x, fan_out, greedy, pool=None):
+        self.proxy=proxy
+        self.logits=torch.zeros_like(proxy.exit)
+        b=proxy.tokens.shape[0]
+        self.tt=torch.ones(b,device=proxy.tokens.device)
+        self.dt=torch.ones_like(self.tt)
+        def run():
+            return verify_batch(self.logits,proxy.q,proxy.tokens,proxy.topology,
+                                self.tt,self.dt,sampler_x,fan_out,greedy)
+        for _ in range(2): run()
+        torch.cuda.synchronize(proxy.tokens.device)
+        self.graph=torch.cuda.CUDAGraph()
+        with torch.cuda.graph(self.graph,pool=pool): self.out=run()
+
+    @torch.inference_mode()
+    def replay(self,logits,tt,dt):
+        b=logits.shape[0]
+        self.logits[:b].copy_(logits)
+        self.tt[:b].copy_(torch.as_tensor(tt,device=self.tt.device))
+        self.dt[:b].copy_(torch.as_tensor(dt,device=self.dt.device))
+        self.graph.replay()
+        return tuple(x[:b] for x in self.out)

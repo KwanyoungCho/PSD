@@ -10,7 +10,7 @@ from ssd.utils.context import set_context, reset_context
 
 
 class BatchedTreeExecutor:
-    def __init__(self, executors, staging_only=False):
+    def __init__(self, executors, staging_only=False, workspace=None):
         if not executors:
             raise ValueError("empty tree batch")
         self.executors = tuple(executors)
@@ -28,6 +28,7 @@ class BatchedTreeExecutor:
         self.graphs = {}
         self.workspaces = {}
         self.staging_only = staging_only
+        self.shared_workspace=workspace
 
     def prepare(self, page_bucket):
         if page_bucket in self.wrappers:
@@ -52,7 +53,11 @@ class BatchedTreeExecutor:
             if page_bucket not in ex._local_idx_by_bucket:
                 ex._local_idx_by_bucket[page_bucket] = torch.full_like(ex._local_idx, -1)
             ex._local_idx = ex._local_idx_by_bucket[page_bucket]
-        workspace = torch.empty(a._workspace_bytes, dtype=torch.uint8, device=a.dev)
+        workspace = self.shared_workspace
+        if workspace is None:
+            workspace = torch.empty(a._workspace_bytes, dtype=torch.uint8, device=a.dev)
+        elif workspace.numel()<a._workspace_bytes:
+            raise ValueError('Shared attention workspace is smaller than the forest requirement')
         self.workspaces[page_bucket] = workspace
         pages = page_bucket + a.canvas_extra_pages
         canvas = pages * a.bs

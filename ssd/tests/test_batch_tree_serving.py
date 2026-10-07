@@ -145,3 +145,61 @@ class ForwardAttention(unittest.TestCase):
         expected=reference();out2=forward.run(rows,5)
         for b,y in enumerate(expected):torch.testing.assert_close(out2[b,:len(y)].float(),y,atol=.001,rtol=.005)
         torch.testing.assert_close(out[0],out2[0],atol=0,rtol=0)
+
+@unittest.skipUnless(torch.cuda.is_available(),'CUDA required')
+class CapturedAcceptance(unittest.TestCase):
+    @torch.inference_mode()
+    def test_graph_uses_updated_topology_and_greedy_logits(self):
+        from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy,BatchedTreeAccept
+        dev=torch.device('cuda:0');B,N,V=4,5,11
+        proxy=BatchedTreeProxy(B,N,V,torch.float16,dev,7,N,5)
+        graph=BatchedTreeAccept(proxy,None,1,True)
+        torch.manual_seed(9)
+        for pars,sibs in [([[-1,-1,0,1],[-1,0],[]],[[0,1,0,0],[0,0],[]]),
+                          ([[-1,0,1],[-1,-1,-1]],[[0,0,0],[0,1,2]])]:
+            b=len(pars);tok=torch.randint(0,V,(b,N),device=dev)
+            p=torch.randn(b,N+1,V,device=dev,dtype=torch.float16);q=torch.randn(b,N,V,device=dev,dtype=torch.float16)
+            proxy.prepare(pars,sibs,tok,q)
+            ref=verify_batch(p,q,tok,{k:v[:b] for k,v in proxy.topology.items()},[0]*b,[0]*b,greedy=True)
+            out=graph.replay(p,[0]*b,[0]*b)
+            for a,z in zip(out,ref):torch.testing.assert_close(a,z)
+    @torch.inference_mode()
+    def test_stochastic_graph_refreshes_rng_and_recovers_target(self):
+        from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy,BatchedTreeAccept
+        dev=torch.device('cuda:0');B,N,V=128,1,5
+        proxy=BatchedTreeProxy(B,N,V,torch.float32,dev,3,N,3)
+        graph=BatchedTreeAccept(proxy,None,1,False)
+        # Empty proposals reduce exactly to direct target sampling. This also
+        # verifies RNG advances on replay instead of repeating capture draws.
+        p=torch.tensor([.03,.51,.09,.3,.07],device=dev)
+        logits=p.log().expand(B,N+1,V)
+        counts=torch.zeros(V,device=dev);first=None;changed=False
+        for _ in range(200):
+            out=graph.replay(logits,[1]*B,[1]*B)[1][:,0]
+            if first is None:first=out.clone()
+            else:changed|=not torch.equal(first,out)
+            counts+=torch.bincount(out,minlength=V)
+        self.assertTrue(changed)
+        self.assertLess((counts/counts.sum()-p).abs().max().item(),.015)
+
+class RootRanking(unittest.TestCase):
+    def test_batched_p1_matches_ragged_single_request_policy(self):
+        from ssd.engine.helpers.batch_tree_roots import root_candidates
+        from ssd.engine.helpers.p1_tree import build_uniform_p1_roots
+        from ssd.engine.helpers.tree_host_topology import context_topology
+        torch.manual_seed(413)
+        B,P,V,U=3,6,31,2
+        logits=torch.randn(B,P,V)
+        tokens=torch.randint(V,(B,P))
+        parents=[[-1,-1,0,1],[-1,0],[]]
+        lens=torch.tensor([len(p)+1 for p in parents]);temps=torch.tensor([.7,0.,1.2])
+        vis=torch.zeros(B,P,P,dtype=torch.uint8)
+        for b,par in enumerate(parents):vis[b,:lens[b],:lens[b]]=torch.as_tensor(context_topology(par)[2])
+        for sampler_x in (None,1.3):
+            tok,score=root_candidates(logits,tokens,vis,lens,temps,U,sampler_x,3)
+            for b,n in enumerate(lens.tolist()):
+                ref=build_uniform_p1_roots(logits[b,:n],tokens[b,:n],U,temps[b].expand(n),
+                    sampler_x=sampler_x,async_fan_out=3,context_glue_rows=vis[b,:n,:n])
+                torch.testing.assert_close(tok[b,:n*U],ref['tokens'])
+                torch.testing.assert_close(score[b,:n*U],ref['scores'],atol=1e-7,rtol=2e-6)
+                self.assertFalse(score[b,n*U:].any())
