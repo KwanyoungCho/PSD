@@ -40,6 +40,7 @@ def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K):
     spec_ext = speculations_tokens[:, :ext_w].tolist()
     for i, seq in enumerate(seqs):
         vk_i = vk_list[i] if vk_list is not None else K
+        seq.verify_valid_k = vk_i
         seq.token_ids.extend(spec_ext[i])
         seq.num_tokens = len(seq.token_ids)
         seq.last_token = seq.token_ids[-1]

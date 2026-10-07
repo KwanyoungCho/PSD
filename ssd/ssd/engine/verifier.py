@@ -418,7 +418,9 @@ class Verifier(VerifierBase):
             _tree_wire_gpu_source
         result = self.target_model_runner.call(
             "run", seqs, False, False, True, None, _step_lh_arg,
-            _tree_meta_arg)
+            _tree_meta_arg,
+            ([getattr(s, "verify_valid_k", _step_lookahead) for s in seqs]
+             if config.duet_enabled else None))
 
         # DUET: clear proxy function
         if config.duet_enabled:
@@ -1101,6 +1103,13 @@ class Verifier(VerifierBase):
                 [topk_probs, pE_K_topk_probs.unsqueeze(1)], dim=1)            # [B, K+1, top_k]
             correction_topk_ids = torch.cat(
                 [topk_ids, pE_K_topk_ids.unsqueeze(1)], dim=1)                # [B, K+1, top_k]
+            if (os.environ.get("SSD_MIXED_MISS_AR", "0") == "1"
+                    and valid_k is not None):
+                ep, ei = p_E[:, 0].topk(top_k, dim=-1)
+                ep = ep / ep.sum(-1, keepdim=True).clamp_min(1e-10)
+                empty = (valid_k == 0)[:, None]
+                correction_topk_probs[:, 0] = torch.where(empty, ep, correction_topk_probs[:, 0])
+                correction_topk_ids[:, 0] = torch.where(empty, ei, correction_topk_ids[:, 0])
 
             # Global top-N. wire_N is config-fixed (K_max+1 worst-case).
             # top_k auto-raise (config.py) ensures (K+1)*top_k ≥ wire_N for current step's K.

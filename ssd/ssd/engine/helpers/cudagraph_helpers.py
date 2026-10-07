@@ -1418,7 +1418,8 @@ def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
 
 
 @torch.inference_mode()
-def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None):
+def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None,
+                                  packed_shape=None):
     """DUET split verify CudaGraph.
     graph_pre: layers [0, exit_layer] → exit_hidden, exit_residual
     graph_post: layers [exit_layer+1, L-1] + norm → outputs
@@ -1436,31 +1437,41 @@ def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
     if lookahead is None:
         lookahead = config.speculate_k
     k_plus_1 = lookahead + 1
+    if packed_shape is not None:
+        # Real sequence capacity plus one zero-write padding sequence.
+        max_bs = int(packed_shape[0]) + 1
+    flat_capacity = (int(packed_shape[1]) if packed_shape is not None
+                     else max_bs * k_plus_1)
     exit_layer = config.duet_exit_layer
     H = hf_config.hidden_size
 
-    input_ids = torch.zeros(max_bs * k_plus_1, dtype=torch.int64)
-    positions = torch.zeros(max_bs * k_plus_1, dtype=torch.int64)
-    slot_mapping = torch.zeros(max_bs * k_plus_1, dtype=torch.int32)
+    input_ids = torch.zeros(flat_capacity, dtype=torch.int64)
+    positions = torch.zeros(flat_capacity, dtype=torch.int64)
+    slot_mapping = torch.zeros(flat_capacity, dtype=torch.int32)
     context_lens = torch.zeros(max_bs, dtype=torch.int32)
     block_tables = torch.zeros(max_bs, model_runner.max_num_blocks, dtype=torch.int32)
     cu_seqlens_q = torch.zeros(max_bs + 1, dtype=torch.int32)
-    exit_hidden = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
-    exit_residual = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
-    outputs = torch.zeros(max_bs * k_plus_1, H, dtype=hf_config.torch_dtype)
+    exit_hidden = torch.zeros(flat_capacity, H, dtype=hf_config.torch_dtype)
+    exit_residual = torch.zeros(flat_capacity, H, dtype=hf_config.torch_dtype)
+    outputs = torch.zeros(flat_capacity, H, dtype=hf_config.torch_dtype)
 
     base = [1, 2, 4, 8]
     dynamic = list(range(16, max_bs + 1, 16))
     all_b = sorted(set(base + dynamic + [max_bs]))
     all_N = [b for b in all_b if b <= max_bs]
+    if packed_shape is not None:
+        all_N = [max_bs]
 
     graphs_pre = {}
     graphs_post = {}
     # graph_pool: passed in (for short bucket sharing pool with long); else None at first capture
 
     for bs in reversed(all_N):
-        flat = bs * k_plus_1
+        flat = flat_capacity if packed_shape is not None else bs * k_plus_1
         seqlen_q = torch.full((bs,), k_plus_1, dtype=torch.int32)
+        if packed_shape is not None:
+            seqlen_q = ((torch.arange(bs) + 1) * k_plus_1).clamp(max=flat)
+            seqlen_q = torch.diff(torch.cat((seqlen_q.new_zeros(1), seqlen_q)))
         cu = cu_seqlens_q[:bs + 1]
         cu.zero_()
         cu[1:].copy_(torch.cumsum(seqlen_q, 0))
@@ -1534,6 +1545,8 @@ def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
         outputs=outputs,
         lookahead=lookahead,  # so run_duet_verify_cudagraph picks the right k_plus_1
     )
+    if packed_shape is not None:
+        graph_vars["packed_shape"] = tuple(packed_shape)
     return graph_vars, graph_pool, graphs_pre, graphs_post, all_N
 
 
@@ -1622,20 +1635,37 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     # lookahead key was added in v1; fallback to speculate_k for legacy graph_vars.
     lookahead = graph_vars.get("lookahead", config.speculate_k)
     k_plus_1 = lookahead + 1
-    orig_bs = input_ids.size(0) // k_plus_1
+    packed = graph_vars.get("packed_shape")
+    orig_bs = (len(model_runner._duet_packed_meta["valid_k"])
+               if packed else input_ids.size(0) // k_plus_1)
+    live_flat = input_ids.size(0)
 
     _ev_setup = duet_record("verify_setup")
-    wrapper_bs = next(
-        x for x in model_runner.graph_bs_list[bucket] if x >= orig_bs)
+    wrapper_bs = (packed[0] + 1 if packed else next(
+        x for x in model_runner.graph_bs_list[bucket] if x >= orig_bs))
     graph_pre = model_runner.graphs[f"{bucket}_pre"][wrapper_bs]
     graph_post = model_runner.graphs[f"{bucket}_post"][wrapper_bs]
 
-    for k, v in graph_vars.items():
+    if packed:
+        from ssd.engine.helpers.packed_verify import stage_packed_graph
+        stage_packed_graph(graph_vars, input_ids, positions, context)
+        # Proxy/acceptance retain their established dense row contract.
+        # Only the transformer and LM-head queries are packed.
+        dense_rows = model_runner._duet_packed_meta["dense_rows"]
+        if duet_proxy_fn is not None:
+            original_proxy_fn = duet_proxy_fn
+            def duet_proxy_fn(logits, bs):
+                return original_proxy_fn(
+                    logits.reshape(-1, logits.size(-1)).index_select(0, dense_rows), bs)
+
+    for k, v in (() if packed else graph_vars.items()):
         if k not in ("outputs", "exit_hidden", "exit_residual", "lookahead"):
             v.zero_()
 
     # Padding (same pattern as run_verify_cudagraph)
-    if wrapper_bs > orig_bs:
+    if packed:
+        bs = wrapper_bs
+    elif wrapper_bs > orig_bs:
         pad_bs = wrapper_bs - orig_bs
         pad_flat = pad_bs * k_plus_1
         dev = input_ids.device
@@ -1655,17 +1685,18 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         context_lens = context.context_lens
         bs = orig_bs
 
-    graph_vars["input_ids"][:bs * k_plus_1] = input_ids
-    graph_vars["positions"][:bs * k_plus_1] = positions
-    graph_vars["slot_mapping"][:bs * k_plus_1] = slot_mapping
-    graph_vars["context_lens"][:bs] = context_lens
-    seqlen_q = torch.full(
-        (bs,), k_plus_1, dtype=torch.int32, device=graph_vars["cu_seqlens_q"].device)
-    cu = graph_vars["cu_seqlens_q"][:bs + 1]
-    cu.zero_()
-    cu[1:].copy_(torch.cumsum(seqlen_q, 0))
-    if block_tables is not None:
-        graph_vars["block_tables"][:bs, :block_tables.size(1)] = block_tables
+    if not packed:
+        graph_vars["input_ids"][:bs * k_plus_1] = input_ids
+        graph_vars["positions"][:bs * k_plus_1] = positions
+        graph_vars["slot_mapping"][:bs * k_plus_1] = slot_mapping
+        graph_vars["context_lens"][:bs] = context_lens
+        seqlen_q = torch.full(
+            (bs,), k_plus_1, dtype=torch.int32, device=graph_vars["cu_seqlens_q"].device)
+        cu = graph_vars["cu_seqlens_q"][:bs + 1]
+        cu.zero_()
+        cu[1:].copy_(torch.cumsum(seqlen_q, 0))
+        if block_tables is not None:
+            graph_vars["block_tables"][:bs, :block_tables.size(1)] = block_tables
 
     duet_close("verify_setup", _ev_setup)
 
@@ -1709,7 +1740,7 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         # event put both endpoints on the default stream, so a long-looking
         # bar could be stream contention rather than exit computation.
         _ev_el = duet_record("exit_proxy_launch")
-        flat = orig_bs * k_plus_1
+        flat = live_flat
         _replica = getattr(model_runner, "_duet_lm_head_replica", None)
         if duet_proxy_fn is not None and _replica is not None:
             _es = getattr(model_runner, "_duet_exit_stream", None)
@@ -1735,7 +1766,7 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     else:
         # ====== Mid-forward: exit logits (norm + lm_head on exit_hidden) ======
         _ev_el = duet_record("exit_logits")
-        flat = orig_bs * k_plus_1
+        flat = live_flat
         exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
         normed = model_runner.model.model.norm(exit_h, None)
         if getattr(config, "duet_exit_topm_gather", False):
@@ -1803,6 +1834,8 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     _ev_fl = duet_record("final_logits")
     outputs = graph_vars["outputs"][:flat]
     logits = model_runner.model.compute_logits(outputs, last_only)
+    if packed and logits is not None:
+        logits = logits.reshape(-1, logits.size(-1)).index_select(0, dense_rows)
     duet_close("final_logits", _ev_fl)
     return logits
 

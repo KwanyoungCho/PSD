@@ -1127,7 +1127,16 @@ class DraftRunner(ModelRunner):
                 # print(f'[hit_cache_and_respond] found a cache miss, running jit speculate', flush=True)
                 if self.config.verbose:
                     print(f"[hit_cache_and_respond] Running JIT speculate for cache misses", flush=True)
-                if DUET_JIT_SUBSET and _any_hit and not self.config.use_eagle:
+                if (os.environ.get("SSD_MIXED_MISS_AR", "0") == "1"
+                        and self.config.duet_enabled and _any_hit and B > 1
+                        and not self.config.use_eagle
+                        and not getattr(self.config, "duet_tree_enabled", False)):
+                    # Serve ready cache rows immediately. Miss rows contain
+                    # no proposal; target samples directly after recovery.
+                    # The batched glue pass still writes their recovery KV.
+                    # All-miss and startup batches retain ordinary JIT.
+                    valid_k = torch.where(cache_hits, valid_k, 0)
+                elif DUET_JIT_SUBSET and _any_hit and not self.config.use_eagle:
                     # Mixed batch, subset gate on: JIT only the miss rows.
                     # nonzero() syncs on the data-dependent shape — this
                     # replaces the .all() sync of the branch condition class,

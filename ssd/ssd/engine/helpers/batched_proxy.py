@@ -1,4 +1,5 @@
 """Captured batched Policy B, preserving the eager ragged-chain policy."""
+import os
 import torch
 
 
@@ -14,6 +15,14 @@ def batched_chain_candidates(exit_logits, q_logits, tokens, valid_k,
     residual.scatter_(2, gather, 0.)
     prob, ids = residual.topk(top_k, dim=-1)
     prob = prob / prob.sum(-1, keepdim=True).clamp(min=1e-10)
+    if os.environ.get("SSD_MIXED_MISS_AR", "0") == "1":
+        # Zero proposals means an ordinary target draw, not residual
+        # correction. Do not exclude the arbitrary padded draft token.
+        ep, ei = e[:, 0].topk(top_k, dim=-1)
+        ep = ep / ep.sum(-1, keepdim=True).clamp_min(1e-10)
+        empty = (valid_k == 0)[:, None]
+        prob[:, 0] = torch.where(empty, ep, prob[:, 0])
+        ids[:, 0] = torch.where(empty, ei, ids[:, 0])
     padding = torch.arange(k, device=e.device)[None] >= valid_k[:, None]
     accept = accept.masked_fill(padding, 0.)
     prod = accept.cumprod(1)

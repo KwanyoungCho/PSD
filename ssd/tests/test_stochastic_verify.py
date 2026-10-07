@@ -9,6 +9,20 @@ from ssd.utils.verify_fast import verify_stochastic
 
 
 class TestStochasticFastVerify(unittest.TestCase):
+    def test_zero_proposal_rows_sample_target_without_residual_correction(self):
+        n=20000
+        torch.manual_seed(419)
+        p0=torch.tensor([.05,.20,.30,.45])
+        q0=torch.tensor([.85,.10,.03,.02])
+        p=p0.log().view(1,1,4).expand(n,3,4)
+        q=q0.log().view(1,1,4).expand(n,2,4)
+        spec=torch.zeros(n,3,dtype=torch.long)
+        suffix, recovery=verify_stochastic(p,q,spec,torch.ones(n),torch.ones(n),
+                                          valid_k=torch.zeros(n,dtype=torch.long))
+        self.assertTrue(all(s == [0] for s in suffix))
+        freq=torch.tensor(recovery).bincount(minlength=4)/n
+        self.assertTrue(bool(((freq-p0).abs()<.015).all()),freq)
+
     def test_same_coins_match_general_verifier(self):
         devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
         for device in devices:

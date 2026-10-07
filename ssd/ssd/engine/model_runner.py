@@ -757,6 +757,9 @@ class ModelRunner:
                           + (f' + duet_verify_k2 CG (K2={K2})' if K2 < K1
                              else f' (K2==K1, k2 SKIPPED)'),
                           flush=True)
+                    if os.environ.get("SSD_PACKED_VERIFY", "0") == "1":
+                        from ssd.engine.helpers.packed_verify import capture_packed_graphs
+                        capture_packed_graphs(self)
                     # T3.2: P2-tree verify bucket capture (policy != off)
                     if getattr(self.config, "duet_tree_enabled", False) \
                             and getattr(
@@ -1532,6 +1535,11 @@ class ModelRunner:
         valid_k). At K1==K2, duet_verify_k2 is not captured — both lookaheads
         route to duet_verify_k1.
         """
+        if getattr(self, "_duet_packed_meta", None) is not None:
+            name = self._duet_packed_buckets[self._duet_packed_meta["shape"]]
+            return run_duet_verify_cudagraph(
+                self, input_ids, positions, last_only, self.graph_vars[name],
+                duet_proxy_fn=self._duet_proxy_fn, bucket=name)
         K1 = self.config.duet_phase1_k
         K2 = self.config.duet_phase2_k
         _step_lookahead = getattr(self, "_duet_step_lookahead", K1)
@@ -1931,6 +1939,7 @@ class ModelRunner:
         hidden_states: torch.Tensor | None = None,
         step_lookahead: int | None = None,
         tree_meta: list | None = None,
+        valid_k_cpu: list | None = None,
     ) -> list[int] | tuple[list[int], torch.Tensor]:
         # v1 hybrid: step_lookahead must be the same on every TP rank for the
         # CG bucket dispatch to stay in sync (otherwise rank 0 picks
@@ -1943,16 +1952,23 @@ class ModelRunner:
         # 동일 수신. None이면 리셋 (체인 step이 트리 분기를 타지 않도록
         # 매 호출 무조건 대입).
         self._duet_tree_meta = tree_meta
+        self._duet_packed_meta = None
         _pt = os.environ.get("SSD_PROFILE_TARGET", "0") == "1" and not is_prefill and not last_only
         if _pt:
             torch.cuda.synchronize()
             _r0 = time.perf_counter()
 
-        if is_prefill:
+        if (not is_prefill and not last_only and tree_meta is None
+                and valid_k_cpu is not None and len(seqs) > 1
+                and hasattr(self, "_duet_packed_buckets")):
+            from ssd.engine.helpers.packed_verify import prepare_packed_verify
+            input_ids, positions = prepare_packed_verify(
+                self, seqs, valid_k_cpu, self._duet_step_lookahead)
+        elif is_prefill:
             input_ids, positions = self.prepare_prefill(seqs)
         else:
             input_ids, positions = self.prepare_decode(seqs, verify=not last_only)
-        temperatures = self.prepare_sample(seqs) if self.rank == 0 else None
+        temperatures = self.prepare_sample(seqs) if self.rank == 0 and last_only else None
 
         if _pt:
             torch.cuda.synchronize()
