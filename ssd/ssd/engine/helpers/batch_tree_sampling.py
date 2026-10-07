@@ -99,7 +99,7 @@ class BatchedTreeProxy:
         self.tokens=torch.zeros(b,n,dtype=torch.int64,device=device)
         self.c_max=c_max
         self.topology=pack_topologies([[]]*b,[[]]*b,n,device,c_max)
-        self.tt=torch.ones(b,device=device); self.dt=torch.ones(b,device=device)
+        self.tt=torch.ones(b,dtype=torch.float32,device=device); self.dt=torch.ones_like(self.tt)
         def run(): return candidates(self.exit,self.q,self.tokens,self.topology,wire_n,depth,top_k,
                                      self.tt,self.dt,**(policy or {}))
         for _ in range(2): run()
@@ -110,8 +110,8 @@ class BatchedTreeProxy:
     @torch.inference_mode()
     def prepare(self,parents,siblings,tokens,q,target_temps=1.0,draft_temps=1.0):
         B=len(parents)
-        self.tt[:B].copy_(torch.as_tensor(target_temps,device=self.tt.device))
-        self.dt[:B].copy_(torch.as_tensor(draft_temps,device=self.dt.device))
+        self.tt[:B].copy_(torch.as_tensor(target_temps,dtype=torch.float32,device=self.tt.device))
+        self.dt[:B].copy_(torch.as_tensor(draft_temps,dtype=torch.float32,device=self.dt.device))
         N=self.tokens.shape[1]
         pad=self.tokens.shape[0]-B
         topo=pack_topologies(parents+[[]]*pad,siblings+[[]]*pad,N,self.tokens.device,self.c_max)
@@ -149,8 +149,8 @@ def verify_batch(logits_p,logits_q,tokens,topology,target_temps,draft_temps,
         accepted=(child_tokens==argmax[:,:,None])&topology['child_valid']
         residual=None
     else:
-        tt=torch.as_tensor(target_temps,device=dev,dtype=torch.float32)
-        dt=torch.as_tensor(draft_temps,device=dev,dtype=torch.float32)
+        tt=torch.as_tensor(target_temps,dtype=torch.float32,device=dev,dtype=torch.float32)
+        dt=torch.as_tensor(draft_temps,dtype=torch.float32,device=dev,dtype=torch.float32)
         p=(logits_p.float()/tt.clamp_min(1e-10)[:,None,None]).softmax(-1)
         # Mixed batches may include T=0 requests. Dividing by a tiny
         # temperature gives a uniform distribution over tied maxima;
@@ -192,7 +192,7 @@ class BatchedTreeAccept:
         self.proxy=proxy
         self.logits=torch.zeros_like(proxy.exit)
         b=proxy.tokens.shape[0]
-        self.tt=torch.ones(b,device=proxy.tokens.device)
+        self.tt=torch.ones(b,dtype=torch.float32,device=proxy.tokens.device)
         self.dt=torch.ones_like(self.tt)
         def run():
             return verify_batch(self.logits,proxy.q,proxy.tokens,proxy.topology,
@@ -206,7 +206,7 @@ class BatchedTreeAccept:
     def replay(self,logits,tt,dt):
         b=logits.shape[0]
         self.logits[:b].copy_(logits)
-        self.tt[:b].copy_(torch.as_tensor(tt,device=self.tt.device))
-        self.dt[:b].copy_(torch.as_tensor(dt,device=self.dt.device))
+        self.tt[:b].copy_(torch.as_tensor(tt,dtype=torch.float32,device=self.tt.device))
+        self.dt[:b].copy_(torch.as_tensor(dt,dtype=torch.float32,device=self.dt.device))
         self.graph.replay()
         return tuple(x[:b] for x in self.out)

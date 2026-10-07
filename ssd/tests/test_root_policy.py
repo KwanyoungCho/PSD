@@ -3,6 +3,11 @@ os.environ.setdefault('SSD_HF_CACHE','/tmp')
 os.environ.setdefault('SSD_DATASET_DIR','/tmp')
 import unittest
 import torch
+import json
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 from ssd.engine.helpers.root_policy import chain_candidates, tree_candidates
 from ssd.engine.helpers.batch_tree_sampling import pack_topologies, ladder, BatchedTreeProxy
 from ssd.engine.helpers.batched_proxy import BatchedChainProxyCUDAGraph
@@ -13,6 +18,18 @@ POLICY=dict(source='complement',normalization='full',overlap_mix=.25)
 
 
 class RootPolicyTests(unittest.TestCase):
+    def test_gain_curve_prefix_for_narrower_sibling_width(self):
+        from ssd.engine.helpers.tree_expansion_policy import TreeExpansionPolicy
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'gain.json'
+            path.write_text(json.dumps({'curves':{'1':[0.,.5,.7,.8]}}))
+            for width in (1,2,3):
+                ex=SimpleNamespace(C=width,NV=4,phase='p1',policy='dynamic',dev='cpu',
+                    cfg=SimpleNamespace(duet_p1_tree_policy='on',duet_p1_tree_verify_nodes=4))
+                with patch.dict(os.environ,SSD_TREE_EXPANSION_POLICY='q_gain',
+                                SSD_TREE_GAIN_CALIBRATION=str(path)):
+                    self.assertIsNotNone(TreeExpansionPolicy(ex).gain)
+
     def test_against_scalar_reference_and_actual_temperature(self):
         e=torch.tensor([[[.8,.1,.06,.04],[.1,.6,.2,.1],[.3,.4,.2,.1]]]).log()
         q=torch.tensor([[[.5,.3,.1,.1],[.3,.4,.2,.1]]]).log()

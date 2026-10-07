@@ -1136,7 +1136,7 @@ class TreeProxyCUDAGraph:
                                         device=self.device)
         self.topology = topo
         self.valid = 0
-        self.tt=torch.ones(1,device=self.device); self.dt=torch.ones_like(self.tt)
+        self.tt=torch.ones(1,dtype=torch.float32,device=self.device); self.dt=torch.ones_like(self.tt)
 
         # Warm every op before capture; allocation/compilation is forbidden
         # inside a first production replay.
@@ -1203,8 +1203,8 @@ class TreeProxyCUDAGraph:
                 "tree proxy graph input mismatch: "
                 f"valid={valid} exit={tuple(exit_logits.shape)} "
                 f"q={tuple(q_logits.shape)} tok={tuple(tokens.shape)}")
-        self.tt.copy_(torch.as_tensor(target_temps,device=self.device).reshape(-1))
-        self.dt.copy_(torch.as_tensor(draft_temps,device=self.device).reshape(-1))
+        self.tt.copy_(torch.as_tensor(target_temps,dtype=torch.float32,device=self.device).reshape(-1))
+        self.dt.copy_(torch.as_tensor(draft_temps,dtype=torch.float32,device=self.device).reshape(-1))
         self.in_exit.zero_()
         self.in_q.zero_()
         self.in_tokens.zero_()
@@ -1296,7 +1296,7 @@ class ChainProxyCUDAGraph:
         self.in_tokens = torch.zeros(
             self.k, dtype=torch.int64, device=self.device)
 
-        self.tt=torch.ones(1,device=self.device); self.dt=torch.ones_like(self.tt)
+        self.tt=torch.ones(1,dtype=torch.float32,device=self.device); self.dt=torch.ones_like(self.tt)
         warm = torch.cuda.Stream(device=self.device)
         warm.wait_stream(torch.cuda.current_stream(self.device))
         with torch.cuda.stream(warm):
@@ -1322,8 +1322,8 @@ class ChainProxyCUDAGraph:
                 "chain proxy graph input mismatch: "
                 f"K={self.k} exit={tuple(exit_logits.shape)} "
                 f"q={tuple(q_logits.shape)} tok={tuple(tokens.shape)}")
-        self.tt.copy_(torch.as_tensor(target_temps,device=self.device).reshape(-1))
-        self.dt.copy_(torch.as_tensor(draft_temps,device=self.device).reshape(-1))
+        self.tt.copy_(torch.as_tensor(target_temps,dtype=torch.float32,device=self.device).reshape(-1))
+        self.dt.copy_(torch.as_tensor(draft_temps,dtype=torch.float32,device=self.device).reshape(-1))
         self.in_exit.copy_(exit_logits)
         self.in_q.copy_(q_logits)
         self.in_tokens.copy_(tokens[:self.k])

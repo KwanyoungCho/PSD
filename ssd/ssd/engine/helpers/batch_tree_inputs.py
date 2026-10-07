@@ -15,7 +15,7 @@ class BatchedArenaInputs:
         self.tokens=torch.zeros(B,ex.R,dtype=torch.int64,device=ex.dev)
         self.scores=torch.zeros(B,ex.R,device=ex.dev)
         self.contexts=torch.zeros_like(self.tokens)
-        self.temps=torch.ones(B,device=ex.dev)
+        self.temps=torch.ones(B,dtype=torch.float32,device=ex.dev)
         def run():
             for b,ar in enumerate(executor.executors):
                 row=self.meta[b];prefix,n,safe=row[0],row[1],row[2]
@@ -63,6 +63,6 @@ class BatchedArenaInputs:
                 tok,score,ctx=params[b];nr=len(tok)
                 self.tokens[b,:nr].copy_(tok);self.scores[b,:nr].copy_(score);self.contexts[b,:nr].copy_(ctx)
         self.meta.copy_(host)
-        self.temps[:B].copy_(torch.tensor(temps))
+        self.temps[:B].copy_(torch.tensor(temps,dtype=torch.float32))
         self.graph.replay()
         return safe

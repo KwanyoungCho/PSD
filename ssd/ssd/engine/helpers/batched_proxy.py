@@ -58,7 +58,7 @@ class BatchedChainProxyCUDAGraph:
         self.in_q = torch.zeros(batch_size, k, vocab_size, dtype=dtype, device=device)
         self.in_tokens = torch.zeros(batch_size, k, dtype=torch.long, device=device)
         self.in_valid_k = torch.full((batch_size,), k, dtype=torch.long, device=device)
-        self.tt=torch.ones(batch_size,device=device); self.dt=torch.ones_like(self.tt)
+        self.tt=torch.ones(batch_size,dtype=torch.float32,device=device); self.dt=torch.ones_like(self.tt)
         args = (self.in_exit, self.in_q, self.in_tokens, self.in_valid_k,
                 top_k, wire_n, pack_scores, self.tt, self.dt, policy or {})
         stream = torch.cuda.Stream(device=device)
@@ -76,8 +76,8 @@ class BatchedChainProxyCUDAGraph:
         b = int(exit_logits.shape[0])
         if not 0 < b <= self.batch_size or exit_logits.shape[1:] != self.in_exit.shape[1:]:
             raise ValueError("Batched proxy input does not match captured shape")
-        self.tt[:b].copy_(torch.as_tensor(target_temps,device=self.tt.device))
-        self.dt[:b].copy_(torch.as_tensor(draft_temps,device=self.dt.device))
+        self.tt[:b].copy_(torch.as_tensor(target_temps,dtype=torch.float32,device=self.tt.device))
+        self.dt[:b].copy_(torch.as_tensor(draft_temps,dtype=torch.float32,device=self.dt.device))
         self.in_exit[:b].copy_(exit_logits)
         self.in_q[:b].copy_(q_logits)
         self.in_tokens[:b].copy_(tokens[:, :self.k])

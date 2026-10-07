@@ -35,7 +35,7 @@ class BatchedP1Roots:
         self.tokens=torch.zeros(b,p,dtype=torch.int64,device=device)
         self.visibility=torch.zeros(b,p,p,dtype=torch.uint8,device=device)
         self.lengths=torch.zeros(b,dtype=torch.int64,device=device)
-        self.temps=torch.ones(b,device=device)
+        self.temps=torch.ones(b,dtype=torch.float32,device=device)
         self.context_ids=torch.arange(p,device=device).repeat_interleave(u)
         def run():return root_candidates(self.logits,self.tokens,self.visibility,self.lengths,self.temps,u,sampler_x,fan_out)
         for _ in range(2):run()
@@ -56,6 +56,6 @@ class BatchedP1Roots:
         self.logits.zero_();self.logits[:b,:glue.shape[1]].copy_(glue)
         self.tokens.copy_(host_tokens);self.visibility.copy_(host_vis)
         self.lengths.copy_(torch.tensor(lengths))
-        self.temps[:b].copy_(torch.tensor(temps))
+        self.temps[:b].copy_(torch.tensor(temps,dtype=torch.float32))
         self.graph.replay()
         return self.out
