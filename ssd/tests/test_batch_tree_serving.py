@@ -272,6 +272,19 @@ class StochasticWalk(unittest.TestCase):
             self.assertEqual(actual[b].tolist(),path+[-1]*(N-len(path)))
             self.assertEqual(terminal[b,0].item(),ctx+1)
 
+class ExhaustedProposal(unittest.TestCase):
+    def test_zero_mass_wor_padding_does_not_bias_target(self):
+        torch.manual_seed(41)
+        B,N,V=30000,3,3
+        p=torch.tensor([.2,.3,.5]);q=torch.tensor([1.,0.,0.])
+        tok=torch.tensor([0,1,2]).expand(B,N)
+        base=pack_topologies([[-1]*N],[[0,1,2]],N,'cpu')
+        topo={k:v.expand(B,*v.shape[1:]) for k,v in base.items()}
+        path,recovery,_=verify_batch(p.log().expand(B,N+1,V),q.log().expand(B,N,V),tok,topo,[1.]*B,[1.]*B)
+        emitted=torch.where(path[:,0]>=0,tok.gather(1,path[:,:1].clamp_min(0))[:,0],recovery[:,0])
+        self.assertFalse((path[:,0]>0).any())
+        self.assertLess((torch.bincount(emitted,minlength=V)/B-p).abs().max().item(),.009)
+
 
 if __name__ == '__main__':
     unittest.main()

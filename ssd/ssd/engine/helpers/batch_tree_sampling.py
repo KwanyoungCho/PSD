@@ -33,6 +33,11 @@ def ladder(tokens,p,q,topology,depth,exact=False):
         tj=tok_ext.gather(1,child[:,:,s]).unsqueeze(-1)
         valid=cv[:,:,s:s+1]
         d=draft.gather(2,tj)
+        if exact:
+            # Finite-precision softmax may have fewer than C nonzero atoms.
+            # WOR top-k then contains zero-mass padding after exhaustion;
+            # those entries cannot be accepted as genuine proposals.
+            valid=valid&(d>0)
         denom=torch.where(d>0,d,torch.ones_like(d)) if exact else d+1e-10
         alpha=(residual.gather(2,tj)/denom).clamp(max=1)*valid
         alphas.append(alpha.squeeze(-1))
