@@ -7,11 +7,15 @@ from ssd.engine.helpers.batch_tree_common import capacity
 from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy, BatchedTreeAccept, verify_batch
 from ssd.engine.helpers.p2_tree import parse_tree_ints, validate_tree_ints, commit_copy_plan
 from ssd.engine.helpers.speculate_types import VerifyResult
+from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
+
+DETAIL_TREE = os.getenv('SSD_PROFILE_DUET_DETAIL', '0') == '1'
 
 
 @torch.inference_mode()
 def verify(verifier,seqs,result):
     t0=perf_counter()
+    prepare_event=duet_record('batch_tree_prepare') if DETAIL_TREE else None
     r=verifier.target_model_runner
     cfg=r.config
     B=len(seqs)
@@ -52,18 +56,21 @@ def verify(verifier,seqs,result):
     cap=capacity(B)
     proxy_key=cap,N
     if proxy_key not in r._batch_tree_proxies:
+        capture_event=duet_record('batch_proxy_capture') if DETAIL_TREE else None
         p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
                            cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k, int(os.getenv("SSD_DUET_MISS_K", "0"))),
                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
                            q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor,policy=root_options(cfg))
         r._batch_tree_proxies[proxy_key]=p
         if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
+        if DETAIL_TREE:duet_close('batch_proxy_capture',capture_event)
     proxy=r._batch_tree_proxies[proxy_key]
     tokens=torch.zeros(B,N,dtype=torch.int64,device=r.device)
     tokens[:,:step_width].copy_(result.speculations[:,1:])
     q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
     q[:,:result.logits_q.shape[1]].copy_(result.logits_q)
     proxy.prepare(parents,siblings,tokens,q,tt,dt)
+    if DETAIL_TREE:duet_close('batch_tree_prepare',prepare_event)
     def callback(logits,b):
         pos,packed=proxy.replay(logits)
         verifier._send_proxy_wire(cfg,r.async_pg,r.draft_rank,pos[:B],packed[:B])
@@ -73,21 +80,26 @@ def verify(verifier,seqs,result):
     finally:
         r._duet_proxy_fn=None
     topology={k:v[:B] for k,v in proxy.topology.items()}
+    accept_event=duet_record('batch_tree_accept') if DETAIL_TREE else None
     greedy=all(t==0 for t in tt)
     if os.getenv('SSD_BATCH_TREE_ACCEPT_GRAPH','1')=='1':
         if not hasattr(r,'_batch_tree_accept'):
             r._batch_tree_accept={};r._batch_tree_accept_pool=None
         key=cap,N,greedy
         if key not in r._batch_tree_accept:
+            capture_event=duet_record('batch_accept_capture') if DETAIL_TREE else None
             graph=BatchedTreeAccept(proxy,verifier.sampler_x,verifier.async_fan_out,
                                     greedy,pool=r._batch_tree_accept_pool)
             r._batch_tree_accept[key]=graph
             if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=graph.graph.pool()
+            if DETAIL_TREE:duet_close('batch_accept_capture',capture_event)
         paths,recoveries,terminal=r._batch_tree_accept[key].replay(logits,tt,dt)
     else:
         paths,recoveries,terminal=verify_batch(logits,q,tokens,topology,tt,dt,
                                               verifier.sampler_x,verifier.async_fan_out,greedy)
     result_cpu=torch.cat([paths,recoveries,terminal],1).cpu().tolist()
+    if DETAIL_TREE:duet_close('batch_tree_accept',accept_event)
+    commit_event=duet_record('batch_tree_commit') if DETAIL_TREE else None
     suffixes=[]; recovery=[]; src=[]; dst=[]
     for b,s in enumerate(seqs):
         path=[j for j in result_cpu[b][:N] if j>=0]
@@ -126,4 +138,5 @@ def verify(verifier,seqs,result):
         m['accepted_suffix_lens_on_hit' if hits[b] else 'accepted_suffix_lens_on_miss'].append(length)
         if hits[b] and phases[b] in (1,2):
             m[f'accepted_lens_phase{phases[b]}_hit'].append(length-1)
+    if DETAIL_TREE:duet_close('batch_tree_commit',commit_event)
     return VerifyResult(suffixes,recovery)
