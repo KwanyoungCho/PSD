@@ -6,7 +6,8 @@ from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
 class TreeProxySideStream:
     def __init__(self, device):
         self.stream=torch.cuda.Stream(device=device)
-        self.done=None
+        self.done=torch.cuda.Event()
+        self.pending=False
 
     def launch(self, logits, batch, callback):
         # Exit logits and topology/q preparation belong to the calling stream.
@@ -16,12 +17,12 @@ class TreeProxySideStream:
             event=duet_record('batch_proxy_side')
             callback(logits,batch)
             duet_close('batch_proxy_side',event)
-            self.done=torch.cuda.Event()
             self.done.record(self.stream)
+            self.pending=True
 
     def finish(self):
         # Enqueue after final target logits, before acceptance or graph-pool
         # reuse. This does not block the CPU or serialize the target post layers.
-        if self.done is not None:
+        if self.pending:
             torch.cuda.current_stream(self.stream.device).wait_event(self.done)
-            self.done=None
+            self.pending=False
