@@ -1,3 +1,4 @@
+from ssd.engine.helpers.root_policy import options as root_options
 import os
 from ssd.engine.helpers.e0_trace import E0_TRACE as _E0_TRACE
 from ssd.engine.helpers import e0_trace as _e0
@@ -73,7 +74,7 @@ class Verifier(VerifierBase):
                     depth_steps=_tree_depth_steps,
                     top_k=_cfg.duet_proxy_top_k,
                     dtype=_cfg.hf_config.torch_dtype,
-                    device=self.device)
+                    device=self.device, policy=root_options(_cfg))
             if self._tree_proxy_graphs:
                 print("[DUET tree] captured target proxy graphs lazily "
                       f"(buckets={sorted(self._tree_proxy_graphs)})",
@@ -371,6 +372,10 @@ class Verifier(VerifierBase):
             cache_hits = speculate_result.cache_hits                                  # [B] or None
 
             _tree_meta_for_proxy = _tree_meta_arg
+            if config.duet_proxy_on_draft or config.duet_exit_topm_gather:
+                if any(s.temperature != 1.0 or (s.draft_temperature is not None
+                       and s.draft_temperature != 1.0) for s in seqs):
+                    raise NotImplementedError("Raw/top-M legacy proxy supports candidate T=1 only; use full-vocabulary proxy for actual request temperature")
 
             # 리뷰3-9: 트리 Policy-B는 실제 verify 보행과 같은 분포로 —
             # p^E는 target temp, q는 draft temp+sampler_x (B=1 스칼라).
@@ -396,7 +401,10 @@ class Verifier(VerifierBase):
                     self._compute_and_send_proxy(
                         exit_logits, draft_tokens, logits_q, orig_bs,
                         _vk, async_pg, draft_rank, cache_hits=cache_hits,
-                        valid_k=speculate_result.valid_k)
+                        valid_k=speculate_result.valid_k,
+                        target_temps=[s.temperature for s in seqs],
+                        draft_temps=[s.draft_temperature if s.draft_temperature is not None
+                                     else s.temperature for s in seqs])
 
             self.target_model_runner._duet_proxy_fn = _proxy_fn
 
@@ -830,7 +838,7 @@ class Verifier(VerifierBase):
             _ev_graph = _mr_tree_coarse(
                 "tree_proxy_graph_replay", parent="exit_proxy_side")
             chosen_pos, chosen_tok, _top_v = _proxy_graph.replay(
-                exit_logits[0], logits_q[0], draft_tokens[0])
+                exit_logits[0], logits_q[0], draft_tokens[0], temp_p, temp_d)
             _mc_tree_coarse("tree_proxy_graph_replay", _ev_graph)
             _ev_send = _mr_tree_coarse(
                 "proxy_send_enqueue", parent="exit_proxy_side")
@@ -840,58 +848,15 @@ class Verifier(VerifierBase):
             _mc_tree_coarse("proxy_send_enqueue", _ev_send)
             return
 
-        # 리뷰3-9(분포 미러)는 **동일-시드 A/B로 원복** (2026-08-04):
-        # temp/sampler_x 반영판은 hit +0.011에 P2AL 2.13→1.94 —
-        # 날카로워진 p^E가 wire 후보를 얕은 ctx로 몰아 깊이를 깎았다
-        # (tok/step 4.55→4.36 순손실). plain softmax가 체인 proxy와도
-        # 일관된 경험적 동작점 — 재도전은 P_iv 랭킹·β·prior 공동
-        # recalibration으로만 (T6 부채; 20번 판정표 참조).
-        _ev_softmax = (_mr_tree("tree_proxy_softmax")
-                       if _detail_profile else None)
-        p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
-        q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
-        tokens = draft_tokens[0, :valid].to(p_E.device)
-        if _detail_profile:
-            _mc_tree("tree_proxy_softmax", _ev_softmax)
-
-        _ev_ladder = (_mr_tree("tree_proxy_accept_residual")
-                      if _detail_profile else None)
-        _alpha, term, resid = tree_policy_b_ladder(
-            par, sib, tokens, p_E, q_rows)
-        if _detail_profile:
-            _mc_tree("tree_proxy_accept_residual", _ev_ladder)
-
-        # Preserve the chain Policy-B score scale: remove already-drafted
-        # children, keep top-k per context, renormalize that retained set,
-        # and only then rank contexts on the common wire.  Ranking the full
-        # vocabulary here changes roots even for a C=1 chain-shaped tree.
-        _ev_rank = (_mr_tree("tree_proxy_rank_candidates")
-                    if _detail_profile else None)
-        correction = resid.clone()
-        if valid:
-            par_t = torch.tensor(par, dtype=torch.int64,
-                                 device=p_E.device)
-            correction[par_t + 1, tokens] = 0.0
-        ctx_k = min(int(config.duet_proxy_top_k), V)
-        correction_prob, correction_id = correction.topk(ctx_k, dim=-1)
-        correction_prob = correction_prob / correction_prob.sum(
-            -1, keepdim=True).clamp(min=1e-10)
-        piv = correction_prob * term.unsqueeze(1)
-        wire_N = config.duet_proxy_wire_N
-        flat = piv.flatten()
-        k = min(wire_N, flat.numel())
-        top_v, top_i = flat.topk(k)
-        chosen_pos = (top_i // ctx_k).to(torch.int64)
-        chosen_tok = correction_id.flatten().gather(0, top_i).to(torch.int64)
-        if k < wire_N:                       # pad (드묾)
-            pad = wire_N - k
-            chosen_pos = torch.cat([chosen_pos, chosen_pos.new_zeros(pad)])
-            chosen_tok = torch.cat([chosen_tok, chosen_tok.new_zeros(pad)])
-            top_v = torch.cat([top_v, top_v.new_zeros(pad)])
-        if getattr(config, "duet_tree_enabled", False):
-            chosen_tok = pack_piv(chosen_tok, top_v)
-        if _detail_profile:
-            _mc_tree("tree_proxy_rank_candidates", _ev_rank)
+        from ssd.engine.helpers.p2_tree import (
+            pack_tree_proxy_topology, tree_proxy_candidates_fixed)
+        topo = pack_tree_proxy_topology(par, sib, valid,
+            c_max=config.duet_tree_c_tensor, device=exit_logits.device)
+        chosen_pos, chosen_tok, top_v = tree_proxy_candidates_fixed(
+            exit_logits[0], logits_q[0, :valid], draft_tokens[0, :valid], topo,
+            config.duet_proxy_wire_N, max(config.duet_phase1_k, config.duet_phase2_k),
+            config.duet_proxy_top_k, target_temps=temp_p, draft_temps=temp_d,
+            policy=root_options(config))
         dev = self.device
         _ev_send = (_mr_tree("tree_proxy_send")
                     if _detail_profile else None)
@@ -904,7 +869,7 @@ class Verifier(VerifierBase):
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,
-                                 valid_k=None):
+                                 valid_k=None, target_temps=1.0, draft_temps=1.0):
         """Compute DUET proxy from early-exit logits and send to draft.
 
         Args:
@@ -1021,10 +986,10 @@ class Verifier(VerifierBase):
                 "chain_proxy_graph_replay", parent="exit_proxy_side")
             if B == 1:
                 chosen_pos, chosen_tok, _ = _chain_graph.replay(
-                    exit_logits[0], logits_q[0], draft_tokens[0, :K])
+                    exit_logits[0], logits_q[0], draft_tokens[0, :K], target_temps, draft_temps)
             else:
                 chosen_pos, chosen_tok, _ = _chain_graph.replay(
-                    exit_logits, logits_q, draft_tokens[:, :K], valid_k)
+                    exit_logits, logits_q, draft_tokens[:, :K], valid_k, target_temps, draft_temps)
             _mc_chain("chain_proxy_graph_replay", _ev_graph)
             _ev_send = _mr_chain(
                 "proxy_send_enqueue", parent="exit_proxy_side")
@@ -1032,6 +997,18 @@ class Verifier(VerifierBase):
                 self, config, async_pg, draft_rank,
                 chosen_pos.reshape(-1), chosen_tok.reshape(-1))
             _mc_chain("proxy_send_enqueue", _ev_send)
+            return
+
+        if getattr(self, 'jit_speculate', getattr(config, 'jit_speculate', False)):
+            from ssd.engine.helpers.root_policy import chain_candidates
+            lengths = (draft_tokens.new_full((B,), K) if valid_k is None else valid_k)
+            chosen_pos, chosen_tok, _ = chain_candidates(
+                exit_logits, logits_q, draft_tokens[:, :K], lengths,
+                config.duet_proxy_top_k, config.duet_proxy_wire_N,
+                getattr(config, 'duet_tree_enabled', False), target_temps, draft_temps,
+                **root_options(config))
+            Verifier._send_proxy_wire(self, config, async_pg, draft_rank,
+                                     chosen_pos.reshape(-1), chosen_tok.reshape(-1))
             return
 
         _ev_compute = _mr_d("proxy_compute") if _detail_profile else None

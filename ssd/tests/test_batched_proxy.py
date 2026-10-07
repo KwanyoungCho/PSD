@@ -36,7 +36,7 @@ class TestBatchedProxy(unittest.TestCase):
                 y = torch.randint(257, (b, 4))
                 vk = torch.tensor([4 if i % 2 else 2 for i in range(b)])
                 ref = eager_wire(e, q, y, vk, pack)
-                out = batched_chain_candidates(e, q, y, vk, 8, 18, pack)
+                out = batched_chain_candidates(e, q, y, vk, 8, 18, pack, policy={})
                 self.assertTrue(torch.equal(ref[0], out[0]))
                 self.assertTrue(torch.equal(ref[1], out[1]))
 

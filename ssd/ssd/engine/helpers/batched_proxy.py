@@ -4,7 +4,11 @@ import torch
 
 
 def batched_chain_candidates(exit_logits, q_logits, tokens, valid_k,
-                             top_k, wire_n, pack_scores=False):
+                             top_k, wire_n, pack_scores=False, target_temps=1.0, draft_temps=1.0, policy=None):
+    if policy is not None:
+        from ssd.engine.helpers.root_policy import chain_candidates
+        return chain_candidates(exit_logits,q_logits,tokens,valid_k,top_k,wire_n,
+                                pack_scores,target_temps,draft_temps,**policy)
     b, k, _ = q_logits.shape
     e = exit_logits[:, :k].float().softmax(-1)
     q = q_logits.float().softmax(-1)
@@ -48,14 +52,15 @@ def batched_chain_candidates(exit_logits, q_logits, tokens, valid_k,
 class BatchedChainProxyCUDAGraph:
     @torch.inference_mode()
     def __init__(self, batch_size, k, vocab_size, top_k, wire_n,
-                 pack_scores, dtype, device):
+                 pack_scores, dtype, device, policy=None):
         self.batch_size, self.k = int(batch_size), int(k)
         self.in_exit = torch.zeros(batch_size, k+1, vocab_size, dtype=dtype, device=device)
         self.in_q = torch.zeros(batch_size, k, vocab_size, dtype=dtype, device=device)
         self.in_tokens = torch.zeros(batch_size, k, dtype=torch.long, device=device)
         self.in_valid_k = torch.full((batch_size,), k, dtype=torch.long, device=device)
+        self.tt=torch.ones(batch_size,device=device); self.dt=torch.ones_like(self.tt)
         args = (self.in_exit, self.in_q, self.in_tokens, self.in_valid_k,
-                top_k, wire_n, pack_scores)
+                top_k, wire_n, pack_scores, self.tt, self.dt, policy or {})
         stream = torch.cuda.Stream(device=device)
         stream.wait_stream(torch.cuda.current_stream(device))
         with torch.cuda.stream(stream):
@@ -67,10 +72,12 @@ class BatchedChainProxyCUDAGraph:
             self.out = batched_chain_candidates(*args)
 
     @torch.inference_mode()
-    def replay(self, exit_logits, q_logits, tokens, valid_k=None):
+    def replay(self, exit_logits, q_logits, tokens, valid_k=None, target_temps=1.0, draft_temps=1.0):
         b = int(exit_logits.shape[0])
         if not 0 < b <= self.batch_size or exit_logits.shape[1:] != self.in_exit.shape[1:]:
             raise ValueError("Batched proxy input does not match captured shape")
+        self.tt[:b].copy_(torch.as_tensor(target_temps,device=self.tt.device))
+        self.dt[:b].copy_(torch.as_tensor(draft_temps,device=self.dt.device))
         self.in_exit[:b].copy_(exit_logits)
         self.in_q[:b].copy_(q_logits)
         self.in_tokens[:b].copy_(tokens[:, :self.k])

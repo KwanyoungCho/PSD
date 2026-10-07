@@ -8,7 +8,7 @@ def pack_topologies(parents, siblings, n, device,c_max=3):
     return {k:torch.stack([e[k] for e in entries]).to(device) for k in entries[0]}
 
 
-def ladder(tokens,p,q,topology,depth,exact=False):
+def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0):
     """All contexts in parallel; siblings remain sequential within context.
 
     q[b,j] is the ORIGINAL parent proposal law for node j. Later siblings
@@ -29,6 +29,7 @@ def ladder(tokens,p,q,topology,depth,exact=False):
     all_reject=p.new_ones(B,R,1)
     alphas=[]
     pre=[]
+    avg_alphas=[]; avg_pre=[]; avg_reject=all_reject.clone()
     for s in range(child.shape[-1]):
         tj=tok_ext.gather(1,child[:,:,s]).unsqueeze(-1)
         valid=cv[:,:,s:s+1]
@@ -43,6 +44,10 @@ def ladder(tokens,p,q,topology,depth,exact=False):
         alphas.append(alpha.squeeze(-1))
         pre.append(all_reject.squeeze(-1))
         all_reject=all_reject*(1-alpha)
+        if overlap_mix:
+            avg=torch.minimum(residual,draft).sum(-1,keepdim=True).clamp(0,1)*valid
+            avg_alphas.append(avg.squeeze(-1)); avg_pre.append(avg_reject.squeeze(-1))
+            avg_reject=avg_reject*(1-avg)
         newer=(residual-draft).clamp_min(0)
         z=newer.sum(-1,keepdim=True)
         newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
@@ -67,43 +72,46 @@ def ladder(tokens,p,q,topology,depth,exact=False):
         reach=base*torch.cat([one,reach],1).gather(1,par)
     valid_ctx=torch.cat([torch.ones(B,1,dtype=torch.bool,device=dev),topology['node_valid']],1)
     term=torch.cat([one,reach],1)*all_reject.squeeze(-1)*valid_ctx
+    if overlap_mix:
+        avg_alpha=torch.stack(avg_alphas,-1)
+        avg_presib=torch.stack(avg_pre,-1)
+        avg_base=avg_alpha[bi,par,sib]*avg_presib[bi,par,sib]*topology['node_valid']
+        avg_reach=avg_base
+        for _ in range(max(0,depth-1)):
+            avg_reach=avg_base*torch.cat([one,avg_reach],1).gather(1,par)
+        avg_term=torch.cat([one,avg_reach],1)*avg_reject.squeeze(-1)*valid_ctx
+        term=(1-overlap_mix)*term+overlap_mix*avg_term
     return alpha,term,residual
 
 
-def candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k):
-    p=exit_logits.float().softmax(-1)
-    q=q_logits.float().softmax(-1)
-    _,term,residual=ladder(tokens,p,q,topology,depth)
-    B,R,V=residual.shape
-    flat=torch.cat([residual.reshape(B,-1),residual.new_zeros(B,1)],1)
-    exclude=(topology['par']+1).clamp(0,R-1)*V+tokens
-    exclude=torch.where(topology['node_valid'],exclude,torch.full_like(exclude,R*V))
-    flat.scatter_(1,exclude,0)
-    prob,ids=flat[:,:-1].reshape(B,R,V).topk(min(top_k,V),-1)
-    prob=prob/prob.sum(-1,keepdim=True).clamp_min(1e-10)
-    scores=(prob*term[:,:,None]).flatten(1)
-    score,index=scores.topk(min(wire_n,scores.shape[1]),1)
-    positions=index//prob.shape[-1]
-    token=ids.flatten(1).gather(1,index)
-    return positions,pack_piv(token,score)
+def candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k,
+               target_temps=1.0,draft_temps=1.0,**policy):
+    from ssd.engine.helpers.root_policy import tree_candidates
+    return tree_candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k,
+                           target_temps,draft_temps,**policy)[:2]
 
 
 class BatchedTreeProxy:
     @torch.inference_mode()
-    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None,q_dtype=None,c_max=3):
+    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None,q_dtype=None,c_max=3,policy=None):
         self.exit=torch.zeros(b,n+1,v,dtype=dtype,device=device)
         self.q=torch.zeros(b,n,v,dtype=q_dtype or dtype,device=device)
         self.tokens=torch.zeros(b,n,dtype=torch.int64,device=device)
         self.c_max=c_max
         self.topology=pack_topologies([[]]*b,[[]]*b,n,device,c_max)
-        def run(): return candidates(self.exit,self.q,self.tokens,self.topology,wire_n,depth,top_k)
+        self.tt=torch.ones(b,device=device); self.dt=torch.ones(b,device=device)
+        def run(): return candidates(self.exit,self.q,self.tokens,self.topology,wire_n,depth,top_k,
+                                     self.tt,self.dt,**(policy or {}))
         for _ in range(2): run()
         torch.cuda.synchronize(device)
         self.graph=torch.cuda.CUDAGraph()
         with torch.cuda.graph(self.graph,pool=pool): self.positions,self.packed=run()
 
-    def prepare(self,parents,siblings,tokens,q):
+    @torch.inference_mode()
+    def prepare(self,parents,siblings,tokens,q,target_temps=1.0,draft_temps=1.0):
         B=len(parents)
+        self.tt[:B].copy_(torch.as_tensor(target_temps,device=self.tt.device))
+        self.dt[:B].copy_(torch.as_tensor(draft_temps,device=self.dt.device))
         N=self.tokens.shape[1]
         pad=self.tokens.shape[0]-B
         topo=pack_topologies(parents+[[]]*pad,siblings+[[]]*pad,N,self.tokens.device,self.c_max)
@@ -112,6 +120,7 @@ class BatchedTreeProxy:
         self.tokens[:B,:tokens.shape[1]].copy_(tokens)
         self.q[:B,:q.shape[1]].copy_(q)
 
+    @torch.inference_mode()
     def replay(self,logits):
         self.exit.zero_()
         self.exit[:logits.shape[0]].copy_(logits)

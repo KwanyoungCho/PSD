@@ -110,6 +110,10 @@ class Config:
     duet_only_proxy: bool = False
     duet_exit_layer: int | None = None      # None=auto: 2*L//3
     duet_proxy_top_k: int = 3              # proxy correction token count
+    # Cache ranking only; verifier retains the actual proposal/target laws.
+    duet_root_source: str = "residual"       # residual | proxy | complement
+    duet_root_normalization: str = "topm"    # topm | full
+    duet_root_overlap_mix: float = 0.0       # mix terminal masses, not alphas
     duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
     duet_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (only option;
                                             # Policy "a" was removed 2026-07 — see git history).
@@ -482,6 +486,14 @@ class Config:
         return max(1, round(self.duet_p2_budget * (K + 1) / (K_max + 1)))
 
     def __post_init__(self):
+        if self.duet_root_source not in ("residual", "proxy", "complement"):
+            raise ValueError("Unknown duet_root_source")
+        if self.duet_root_normalization not in ("topm", "full"):
+            raise ValueError("Unknown duet_root_normalization")
+        if not 0 <= self.duet_root_overlap_mix <= 1:
+            raise ValueError("duet_root_overlap_mix must be in [0,1]")
+        if self.duet_enabled and (self.duet_root_source != "residual" or self.duet_root_normalization != "topm" or self.duet_root_overlap_mix) and (self.duet_proxy_on_draft or self.duet_exit_topm_gather):
+            raise NotImplementedError("Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates")
         # Normalize the public phase-specific on/off controls before any
         # derived DUET property or legacy implementation branch reads them.
         # Old scripts remain reproducible, but ``eagle`` is never a public

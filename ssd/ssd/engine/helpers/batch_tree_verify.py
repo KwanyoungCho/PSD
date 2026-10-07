@@ -1,4 +1,5 @@
 """Batched target tree verification and request-specific KV commits."""
+from ssd.engine.helpers.root_policy import options as root_options
 from time import perf_counter
 import os
 import torch
@@ -52,9 +53,9 @@ def verify(verifier,seqs,result):
     proxy_key=cap,N
     if proxy_key not in r._batch_tree_proxies:
         p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
-                           cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
+                           cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k, int(os.getenv("SSD_DUET_MISS_K", "0"))),
                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
-                           q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor)
+                           q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor,policy=root_options(cfg))
         r._batch_tree_proxies[proxy_key]=p
         if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
     proxy=r._batch_tree_proxies[proxy_key]
@@ -62,7 +63,7 @@ def verify(verifier,seqs,result):
     tokens[:,:step_width].copy_(result.speculations[:,1:])
     q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
     q[:,:result.logits_q.shape[1]].copy_(result.logits_q)
-    proxy.prepare(parents,siblings,tokens,q)
+    proxy.prepare(parents,siblings,tokens,q,tt,dt)
     def callback(logits,b):
         pos,packed=proxy.replay(logits)
         verifier._send_proxy_wire(cfg,r.async_pg,r.draft_rank,pos[:B],packed[:B])

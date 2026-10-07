@@ -5747,19 +5747,25 @@ class DraftRunner(ModelRunner):
                         _d2 = _d3 = time.perf_counter()
                 else:
                     # Standard SSD: single-pass tree decode
+                    _ssd_build_ev=_mr_c("ssd_build_tree")
                     tree_decode_args = self._build_tree_batch(partial_tree_decode_args, glue_decode_input_ids)
 
+                    _mc_c("ssd_build_tree",_ssd_build_ev)
                     if _prof or PROFILE_DRAFT:
                         torch.cuda.synchronize()
                         _d2 = time.perf_counter()
 
+                    _ssd_decode_ev=_mr_c("ssd_decode_tree")
                     tokens, logits, activations = self._decode_tree(tree_decode_args)
+                    _mc_c("ssd_decode_tree",_ssd_decode_ev)
 
                     if _prof or PROFILE_DRAFT:
                         torch.cuda.synchronize()
                         _d3 = time.perf_counter()
 
+                    _ssd_pop_ev=_mr_c("ssd_populate_cache")
                     self._populate_tree_cache(tree_decode_args, tokens, logits, tree_decode_args["cache_hits"], activations)
+                    _mc_c("ssd_populate_cache",_ssd_pop_ev)
                 self._draft_step_times.append(time.perf_counter() - _ds0)
 
                 if _prof or PROFILE_DRAFT:

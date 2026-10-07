@@ -1,0 +1,91 @@
+import os
+os.environ.setdefault('SSD_HF_CACHE','/tmp')
+os.environ.setdefault('SSD_DATASET_DIR','/tmp')
+import unittest
+import torch
+from ssd.engine.helpers.root_policy import chain_candidates, tree_candidates
+from ssd.engine.helpers.batch_tree_sampling import pack_topologies, ladder, BatchedTreeProxy
+from ssd.engine.helpers.batched_proxy import BatchedChainProxyCUDAGraph
+from ssd.engine.helpers.p2_tree import unpack_piv
+
+
+POLICY=dict(source='complement',normalization='full',overlap_mix=.25)
+
+
+class RootPolicyTests(unittest.TestCase):
+    def test_against_scalar_reference_and_actual_temperature(self):
+        e=torch.tensor([[[.8,.1,.06,.04],[.1,.6,.2,.1],[.3,.4,.2,.1]]]).log()
+        q=torch.tensor([[[.5,.3,.1,.1],[.3,.4,.2,.1]]]).log()
+        tok=torch.tensor([[0,1]])
+        previous=None
+        for temp in (.7,1.,.5):
+            pe=(e.double()/temp).softmax(-1)[0].tolist()
+            pq=(q.double()/temp).softmax(-1)[0].tolist()
+            obs=[]; avg=[]
+            for i,t in enumerate(tok[0]):
+                obs.append(min(1,pe[i][t]/pq[i][t]))
+                avg.append(sum(min(x,y) for x,y in zip(pe[i],pq[i])))
+            def mass(a):return [1-a[0],a[0]*(1-a[1]),a[0]*a[1]]
+            h=[.75*x+.25*y for x,y in zip(mass(obs),mass(avg))]
+            expected=[]
+            for i in range(3):
+                score=[p*(1-pq[i][v]) if i<2 else p for v,p in enumerate(pe[i])]
+                if i<2:score[tok[0,i]]=0
+                total=sum(score)
+                expected.extend((h[i]*s/total,i,v) for v,s in enumerate(score))
+            expected=sorted(expected,reverse=True)[:5]
+            pos,ids,values=chain_candidates(e,q,tok,torch.tensor([2]),4,5,
+                False,temp,temp,**POLICY)
+            self.assertEqual(list(zip(pos[0].tolist(),ids[0].tolist())),[(i,v) for _,i,v in expected])
+            torch.testing.assert_close(values[0],torch.tensor([x for x,_,_ in expected]),rtol=2e-6,atol=1e-7)
+            if previous is not None:self.assertFalse(torch.allclose(previous,values))
+            previous=values
+
+    def test_ragged_bonus_uses_actual_end_and_keeps_padded_token(self):
+        e=torch.tensor([[[.5,.3,.2],[.8,.15,.05],[.1,.2,.7]]]).log()
+        q=torch.tensor([[[.5,.3,.2],[.05,.15,.8]]]).log()
+        tok=torch.tensor([[0,0]])
+        pos,ids,values=chain_candidates(e,q,tok,torch.tensor([1]),3,3,False,**POLICY)
+        self.assertEqual(pos.tolist(),[[1,1,1]])
+        self.assertEqual(ids.tolist(),[[0,1,2]])
+        torch.testing.assert_close(values,torch.tensor([[.8,.15,.05]]))
+
+    def test_chain_reduction_mixed_temperatures(self):
+        torch.manual_seed(5)
+        e=torch.randn(2,5,37); q=torch.randn(2,4,37); tok=torch.randint(37,(2,4))
+        topo=pack_topologies([[-1,0,1,2],[-1,0]],[[0]*4,[0]*2],4,'cpu')
+        for source in ('complement','proxy'):
+            policy=dict(POLICY,source=source)
+            a=chain_candidates(e,q,tok,torch.tensor([4,2]),10,10,True,
+                torch.tensor([.7,.5]),torch.tensor([.9,.6]),**policy)
+            b=tree_candidates(e,q,tok,topo,10,4,10,
+                torch.tensor([.7,.5]),torch.tensor([.9,.6]),**policy)
+            torch.testing.assert_close(a[0],b[0]);torch.testing.assert_close(a[1],b[1])
+            torch.testing.assert_close(a[2],b[2])
+
+    def test_ordered_sibling_overlap_terminal_mass(self):
+        p=torch.tensor([[[.4,.3,.3],[.2,.5,.3],[.6,.1,.3]]])
+        q=torch.tensor([[[.8,.1,.1],[.8,.1,.1]]])
+        topo=pack_topologies([[-1,-1]],[[0,1]],2,'cpu')
+        _,term,_=ladder(torch.tensor([[0,1]]),p,q,topo,1,overlap_mix=.25)
+        torch.testing.assert_close(term,torch.tensor([[0,.525,.475]]))
+        torch.testing.assert_close(term.sum(1),torch.ones(1))
+
+    @unittest.skipUnless(torch.cuda.is_available(),'CUDA graph contract')
+    def test_graph_reads_live_temperatures_chain_and_tree(self):
+        device='cuda';torch.manual_seed(71)
+        e=torch.randn(2,5,257,device=device);q=torch.randn(2,4,257,device=device)
+        tok=torch.randint(257,(2,4),device=device);vk=torch.tensor([4,2],device=device)
+        graph=BatchedChainProxyCUDAGraph(2,4,257,10,10,True,torch.float32,device,policy=POLICY)
+        tree=BatchedTreeProxy(2,4,257,torch.float32,device,10,4,10,policy=POLICY)
+        for temps in ([.7,.5],[1.,.7],[0.,.3]):
+            t=torch.tensor(temps,device=device)
+            a=chain_candidates(e,q,tok,vk,10,10,True,t,t,**POLICY)
+            b=graph.replay(e,q,tok,vk,t,t)
+            for x,y in zip(a,b):torch.testing.assert_close(x,y)
+            tree.prepare([[-1,0,1,2],[-1,0]],[[0]*4,[0]*2],tok,q,temps,temps)
+            c=tree.replay(e)
+            for x,y in zip(a[:2],c):torch.testing.assert_close(x,y)
+
+
+if __name__=='__main__':unittest.main()

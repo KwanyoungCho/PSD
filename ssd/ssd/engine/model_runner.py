@@ -1132,6 +1132,7 @@ class ModelRunner:
                 or not getattr(cfg, "duet_enabled", False)):
             return
 
+        from ssd.engine.helpers.root_policy import options as root_options
         from ssd.engine.helpers.p2_tree import (
             ChainProxyCUDAGraph, TreeProxyCUDAGraph)
         if (os.environ.get("SSD_CHAIN_PROXY_GRAPH", "1") != "0"
@@ -1152,7 +1153,7 @@ class ModelRunner:
                     wire_n=cfg.duet_proxy_wire_N,
                     pack_scores=pack_scores,
                     dtype=cfg.hf_config.torch_dtype,
-                    device=self.device)
+                    device=self.device, policy=root_options(cfg))
             from ssd.layers.fi_attn import graph_batch_sizes
             from ssd.engine.helpers.batched_proxy import BatchedChainProxyCUDAGraph
             batched_buckets = (graph_batch_sizes(cfg.max_num_seqs)
@@ -1166,7 +1167,7 @@ class ModelRunner:
                         batch_size=b, k=k, vocab_size=cfg.hf_config.vocab_size,
                         top_k=cfg.duet_proxy_top_k, wire_n=cfg.duet_proxy_wire_N,
                         pack_scores=pack_scores, dtype=cfg.hf_config.torch_dtype,
-                        device=self.device)
+                        device=self.device, policy=root_options(cfg))
             print("[DUET] captured target chain proxy graphs "
                   f"(K={widths})", flush=True)
 
@@ -1187,7 +1188,7 @@ class ModelRunner:
                 depth_steps=tree_depth_steps,
                 top_k=cfg.duet_proxy_top_k,
                 dtype=cfg.hf_config.torch_dtype,
-                device=self.device)
+                device=self.device, policy=root_options(cfg))
             # Compile and initialize the GPU topology packer for this exact
             # proxy bucket.  Live requests overwrite these representative
             # chain values before replay.

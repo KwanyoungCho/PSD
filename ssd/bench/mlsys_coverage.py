@@ -42,6 +42,18 @@ def parse_args():
     p.add_argument("--p1-verify-nodes", type=int)
     p.add_argument("--p2-verify-nodes", type=int)
     p.add_argument("--exit-layer", type=int, default=21)
+    p.add_argument("--p1-nodes", type=int)
+    p.add_argument("--p2-nodes", type=int)
+    p.add_argument("--tree-width", type=int, default=3)
+    p.add_argument("--p1-roots", type=int, default=2)
+    p.add_argument("--p2-budget", type=int)
+    p.add_argument("--tree-root-count", type=int)
+    p.add_argument("--tree-beta", type=float, default=.5)
+    p.add_argument("--tree-proxy-threshold", type=float, default=.01)
+    p.add_argument("--tree-conf-threshold", type=float, default=.03)
+    p.add_argument("--root-source", choices=("residual","proxy","complement"), default="residual")
+    p.add_argument("--root-normalization", choices=("topm","full"), default="topm")
+    p.add_argument("--root-overlap-mix", type=float, default=0.)
     p.add_argument("--memory-fraction", type=float, default=.45)
     p.add_argument("--ignore-eos", action="store_true")
     p.add_argument("--greedy-only", action="store_true", help="Specialize all captured samplers for T=0")
@@ -175,10 +187,20 @@ def main():
             duet_draft_fan_out=args.draft_fan_out,
             duet_p1_tree_policy="on" if args.p1_tree else "off",
             duet_p2_tree_policy="on" if args.mode == "duet-tree" else "off",
-            duet_p2_tree_max_nodes=args.k2 * 2,
-            duet_p2_tree_verify_nodes=args.p2_verify_nodes or args.k2 * 2,
-            duet_p1_tree_max_nodes=args.k1 * 2,
-            duet_p1_tree_verify_nodes=args.p1_verify_nodes or args.k1 * 2,
+            duet_p2_tree_max_nodes=args.p2_nodes or args.k2 * 2,
+            duet_p2_tree_verify_nodes=args.p2_verify_nodes or args.p2_nodes or args.k2 * 2,
+            duet_p1_tree_max_nodes=args.p1_nodes or args.k1 * 2,
+            duet_p1_tree_verify_nodes=args.p1_verify_nodes or args.p1_nodes or args.k1 * 2,
+            duet_tree_c_tensor=args.tree_width,
+            duet_p1_roots_per_position=args.p1_roots,
+            duet_p2_budget=args.p2_budget,
+            duet_tree_root_count=args.tree_root_count,
+            duet_tree_beta=args.tree_beta,
+            duet_tree_proxy_threshold=args.tree_proxy_threshold,
+            duet_tree_conf_threshold=args.tree_conf_threshold,
+            duet_root_source=args.root_source,
+            duet_root_normalization=args.root_normalization,
+            duet_root_overlap_mix=args.root_overlap_mix,
         )
     env = {k: v for k, v in os.environ.items()
            if k.startswith("SSD_") or k in ("CUDA_VISIBLE_DEVICES", "OMP_NUM_THREADS")}
