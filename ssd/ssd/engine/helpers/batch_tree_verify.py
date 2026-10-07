@@ -115,6 +115,14 @@ def verify(verifier,seqs,result):
             physical_batch_queries=physical_queries,
             step_id=result.step_id,source=phases[b],cache_hit=int(hits[b]),
             accepted_len=length,accepted_spec_len=length-1,valid_k=valid[b]))
+        if os.getenv('SSD_TREE_SHAPE_METRICS','0')=='1':
+            depths=[]
+            for parent in parents[b]:depths.append(1 if parent<0 else depths[parent]+1)
+            maximum=max(depths,default=0)
+            m['phase_events'][-1].update(tree_max_depth=maximum,
+                tree_sibling_width=max(siblings[b],default=-1)+1,
+                reached_depth_ceiling=(length-1==maximum),
+                node_utilization=(length-1)/valid[b] if valid[b] else 0.)
         m['accepted_suffix_lens_on_hit' if hits[b] else 'accepted_suffix_lens_on_miss'].append(length)
         if hits[b] and phases[b] in (1,2):
             m[f'accepted_lens_phase{phases[b]}_hit'].append(length-1)
