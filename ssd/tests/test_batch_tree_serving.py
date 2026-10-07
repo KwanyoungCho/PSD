@@ -203,3 +203,44 @@ class RootRanking(unittest.TestCase):
                 torch.testing.assert_close(tok[b,:n*U],ref['tokens'])
                 torch.testing.assert_close(score[b,:n*U],ref['scores'],atol=1e-7,rtol=2e-6)
                 self.assertFalse(score[b,n*U:].any())
+
+@unittest.skipUnless(torch.cuda.is_available(),'CUDA required')
+class ArenaInputs(unittest.TestCase):
+    @torch.inference_mode()
+    def test_captured_inputs_equal_eager_including_padding_and_limit(self):
+        from types import SimpleNamespace as NS
+        from ssd.engine.helpers.batch_tree_draft import BatchedDuetDraft
+        from ssd.engine.helpers.batch_tree_inputs import BatchedArenaInputs
+        dev=torch.device('cuda:0');R,G,M=3,5,4
+        def arena():
+            def z(*s,dtype=torch.int64):return torch.zeros(*s,device=dev,dtype=dtype)
+            return NS(dev=dev,bs=8,R=R,max_blocks=M,canvas_extra_pages=1,total_cells=5,
+                round_widths=[3,2],round_offsets=[0,3],in_root_tok=z(R),in_root_piv=z(R,dtype=torch.float32),
+                in_glue=z(R,G,dtype=torch.uint8),in_rope_base=z(R),in_glue_w=z(1),in_prefix_len=z(1),
+                in_temps=z(3,dtype=torch.float32),in_slot=[z(3,dtype=torch.int32),z(3,dtype=torch.int32)],
+                in_ctx_len=[z(1,dtype=torch.int32),z(1,dtype=torch.int32)],
+                in_block_tables=z(1,M,dtype=torch.int32),wrappers={2:[NS(_paged_kv_indices_buf=z(3,dtype=torch.int32)) for _ in range(2)]})
+        arenas=[arena() for _ in range(4)]
+        runner=NS(device=dev,block_size=8,config=NS(max_model_len=32))
+        draft=object.__new__(BatchedDuetDraft);draft.r=runner
+        executor=NS(first=arenas[0],executors=arenas)
+        graph=BatchedArenaInputs(executor,2,32)
+        rows=[dict(tokens=[1,2,3,4,5],parents=[-1,-1,0,1],prefix=3,blocks=[5,2,7,-1]),
+              dict(tokens=[8,9],parents=[-1],prefix=12,blocks=[4,6,3,-1]),
+              dict(tokens=[3,4],parents=[-1],prefix=26,blocks=[8,10,1,11])]
+        params=[(torch.tensor([3,4,7],device=dev),torch.tensor([.8,.1,.05],device=dev),torch.tensor(ci,device=dev)) for ci in ([0,2,4],[0,1,4],[0,1,0])]
+        names=['in_root_tok','in_root_piv','in_glue','in_rope_base','in_glue_w','in_prefix_len','in_temps','in_block_tables']
+        expected=[];safety=[]
+        for b,ar in enumerate(arenas):
+            i=min(b,2);t,s,c=params[i]
+            safety.append(draft._prepare_arena(ar,rows[i],2,t,s,c,.7,active=b<3))
+            expected.append({n:getattr(ar,n).clone() for n in names})
+            expected[-1].update(slots=[x.clone() for x in ar.in_slot],pages=[x._paged_kv_indices_buf.clone() for x in ar.wrappers[2]])
+        safe=graph.replay(rows,params,[.7]*3)
+        self.assertEqual(safe,safety[:3]);self.assertFalse(safe[-1])
+        for b,ar in enumerate(arenas[:3]):
+            for n in names:torch.testing.assert_close(getattr(ar,n),expected[b][n])
+            for x,y in zip(ar.in_slot,expected[b]['slots']):torch.testing.assert_close(x,y)
+            for x,y in zip(ar.wrappers[2],expected[b]['pages']):torch.testing.assert_close(x._paged_kv_indices_buf,y)
+        for x in arenas[3].in_slot:self.assertTrue((x==-1).all())
+        self.assertFalse(arenas[3].in_root_piv.any())

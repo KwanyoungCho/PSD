@@ -27,6 +27,8 @@ class BatchedDuetDraft:
         self.executors={}
         self.root_graphs={}
         self.root_graph_pool=None
+        self.input_graphs={}
+        self.input_graph_pool=None
         self.graph_pool=None
         self.glue=BatchedTreeForward(runner,split=False)
         self.stats=dict(steps=0,tree_hits=0,phase1_replays=0,phase2_replays=0,captures=0)
@@ -148,6 +150,15 @@ class BatchedDuetDraft:
                 tokens=toks,parents=par,siblings=sib,cells=cells,
                 logits=arena.cell_logits,phase=phase,tree=is_tree))
 
+    def _prepare_batch(self,executor,pages,rows,params,temps):
+        from ssd.engine.helpers.batch_tree_inputs import BatchedArenaInputs
+        key=id(executor),pages
+        if key not in self.input_graphs:
+            g=BatchedArenaInputs(executor,pages,self.cfg.max_model_len,self.input_graph_pool)
+            self.input_graphs[key]=g
+            if self.input_graph_pool is None:self.input_graph_pool=g.graph.pool()
+        return self.input_graphs[key].replay(rows,params,temps)
+
     @torch.inference_mode()
     def serve(self):
         r,cfg=self.r,self.cfg
@@ -264,6 +275,8 @@ class BatchedDuetDraft:
                 roots_graph=self.root_graphs[key]
                 batched_roots=roots_graph.replay(rows,glue,temps)
             params=[]
+            inputs=[]
+            capture_inputs=os.getenv('SSD_BATCH_TREE_INPUT_GRAPH','1')=='1'
             for b in range(bc):
                 row=rows[min(b,B-1)]
                 n=len(row['tokens']); pfo=arenas[b].roots_per_position
@@ -280,11 +293,17 @@ class BatchedDuetDraft:
                         context_glue_rows=torch.as_tensor(visible,device=r.device),root_width=arenas[b].R)
                     rt=roots['tokens'][:nr]; sc=roots['scores'][:nr]; ci=roots['context_ids'][:nr]
                 if b>=B: sc=torch.zeros_like(sc)
-                safe=self._prepare_arena(arenas[b],row,pages,rt,sc,ci,temps[min(b,B-1)],active=b<B)
+                safe=True
+                if not capture_inputs:
+                    safe=self._prepare_arena(arenas[b],row,pages,rt,sc,ci,temps[min(b,B-1)],active=b<B)
                 if b<B:
                     p=torch.full((cb,pfo),-1,dtype=torch.int64,device=r.device)
                     p[:n]=rt.view(n,pfo); padded.append(p)
                 params.append((rt,ci,safe))
+                inputs.append((rt,sc,ci))
+            if capture_inputs:
+                safe=self._prepare_batch(exs,pages,rows,inputs[:B],temps)
+                params=[(rt,ci,safe[b] if b<B else False) for b,(rt,ci,_) in enumerate(params)]
             self._execute(exs,pages,1)
             for b in range(B):
                 rt,ci,safe=params[b]
@@ -308,10 +327,13 @@ class BatchedDuetDraft:
         pages=capacity(max((row['prefix']+len(row['tokens'])+sample.round_ends[0]+r.block_size-1)//r.block_size for row in rows))
         exs,arenas=self._forest(2,cb,bc,pages)
         safe=[]
-        for b in range(bc):
-            i=min(b,B-1)
-            scores=sc[i] if b<B else torch.zeros_like(sc[i])
-            safe.append(self._prepare_arena(arenas[b],rows[i],pages,rt[i],scores,ci[i],temps[i],active=b<B))
+        if os.getenv('SSD_BATCH_TREE_INPUT_GRAPH','1')=='1':
+            safe=self._prepare_batch(exs,pages,rows,[(rt[b],sc[b],ci[b]) for b in range(B)],temps)
+        else:
+            for b in range(bc):
+                i=min(b,B-1)
+                scores=sc[i] if b<B else torch.zeros_like(sc[i])
+                safe.append(self._prepare_arena(arenas[b],rows[i],pages,rt[i],scores,ci[i],temps[i],active=b<B))
         self._execute(exs,pages,2)
         for b in range(B): self._save_entries(arenas[b],keys[b][0],ci[b],rt[b],2,safe[b])
 
