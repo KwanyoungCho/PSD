@@ -1,0 +1,55 @@
+{
+  "dtype": "torch.bfloat16",
+  "reference_path": "results/mlsys_coverage/round2/llama3_tree_greedy/llama3_ar_p10_t0.json",
+  "reference_mode": "ar",
+  "reference_batch": null,
+  "candidate_path": "results/mlsys_coverage/round2/llama3_tree_greedy/llama3_duet-tree_p10_t0.json",
+  "divergences": [
+    {
+      "batch": 1,
+      "question": 0,
+      "position": 18,
+      "ar_token": 29722,
+      "duet_token": 66343,
+      "hf_top_ids": [
+        66343,
+        29722,
+        16195,
+        11944,
+        3477
+      ],
+      "hf_top_logits": [
+        16.375,
+        16.25,
+        16.125,
+        15.75,
+        15.4375
+      ],
+      "ar_logit": 16.25,
+      "duet_logit": 16.375
+    },
+    {
+      "batch": 1,
+      "question": 1,
+      "position": 1,
+      "ar_token": 28597,
+      "duet_token": 32,
+      "hf_top_ids": [
+        32,
+        28597,
+        10464,
+        16,
+        17
+      ],
+      "hf_top_logits": [
+        14.125,
+        14.125,
+        13.8125,
+        13.75,
+        13.4375
+      ],
+      "ar_logit": 14.125,
+      "duet_logit": 14.125
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "model": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+  "dtype": "torch.float16",
+  "synthetic_prefix_tokens": 128,
+  "width_per_request": 5,
+  "forwards": 2,
+  "repeats": 20,
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "cuda_visible_devices": "0",
+  "torch_version": "2.8.0+cu128",
+  "real_prefix": true,
+  "diverse_prefix": true,
+  "plausible_roots": true,
+  "strict_matmul": false,
+  "pad_linear_rows": 0,
+  "cells": [
+    {
+      "batch": 8,
+      "serial_ms": 13.585101318359374,
+      "batched_ms": 6.138777542114258,
+      "speedup": 2.212997820031857,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 4.4765625,
+      "first_round_max_difference": 0.0625,
+      "first_round_top3_exact": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "first_round_top1_agreement": 1.0,
+      "first_round_probability_tv_mean": 0.0009455973631702363,
+      "first_round_probability_tv_max": 0.0033005676232278347,
+      "worst_first_round_logit": {
+        "row": 37,
+        "token": 16068,
+        "serial_logit": -7.26171875,
+        "batched_logit": -7.19921875,
+        "serial_probability": 1.4622962840604714e-09
+      },
+      "serial_eager_diff": 0.0,
+      "batched_eager_first_diff": 0.0625,
+      "hf_float32_reference": {
+        "serial": {
+          "tv_mean": 0.03906438872218132,
+          "tv_max": 0.1310502588748932,
+          "argmax_agreement": 0.9750000238418579,
+          "chosen_token_reference_logit_deficit_max": 0.01909923553466797
+        },
+        "batched": {
+          "tv_mean": 0.03906548023223877,
+          "tv_max": 0.13024559617042542,
+          "argmax_agreement": 0.9750000238418579,
+          "chosen_token_reference_logit_deficit_max": 0.01909923553466797
+        }
+      }
+    }
+  ]
+}

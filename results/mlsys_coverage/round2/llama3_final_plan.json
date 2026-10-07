@@ -1,0 +1,188 @@
+[
+  {
+    "name": "llama3_candidate_s2026",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2026"
+    ],
+    "env": {
+      "SSD_SEED": "2026",
+      "SSD_PACKED_VERIFY": "1",
+      "SSD_MIXED_MISS_AR": "1"
+    }
+  },
+  {
+    "name": "llama3_ssd_s2026",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "ssd",
+      "--seeds",
+      "2026",
+      "--k1",
+      "3",
+      "--draft-fan-out",
+      "1",
+      "--proxy-fan-out",
+      "1"
+    ],
+    "env": {
+      "SSD_SEED": "2026",
+      "SSD_PACKED_VERIFY": "0",
+      "SSD_MIXED_MISS_AR": "0"
+    }
+  },
+  {
+    "name": "llama3_candidate_s2027",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2027"
+    ],
+    "env": {
+      "SSD_SEED": "2027",
+      "SSD_PACKED_VERIFY": "1",
+      "SSD_MIXED_MISS_AR": "1"
+    }
+  },
+  {
+    "name": "llama3_ssd_s2027",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "ssd",
+      "--seeds",
+      "2027",
+      "--k1",
+      "3",
+      "--draft-fan-out",
+      "1",
+      "--proxy-fan-out",
+      "1"
+    ],
+    "env": {
+      "SSD_SEED": "2027",
+      "SSD_PACKED_VERIFY": "0",
+      "SSD_MIXED_MISS_AR": "0"
+    }
+  },
+  {
+    "name": "llama3_candidate_s2028",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2028"
+    ],
+    "env": {
+      "SSD_SEED": "2028",
+      "SSD_PACKED_VERIFY": "1",
+      "SSD_MIXED_MISS_AR": "1"
+    }
+  },
+  {
+    "name": "llama3_ssd_s2028",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "ssd",
+      "--seeds",
+      "2028",
+      "--k1",
+      "3",
+      "--draft-fan-out",
+      "1",
+      "--proxy-fan-out",
+      "1"
+    ],
+    "env": {
+      "SSD_SEED": "2028",
+      "SSD_PACKED_VERIFY": "0",
+      "SSD_MIXED_MISS_AR": "0"
+    }
+  }
+]

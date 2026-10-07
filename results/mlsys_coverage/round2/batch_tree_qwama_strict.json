@@ -1,0 +1,33 @@
+{
+  "model": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+  "dtype": "torch.bfloat16",
+  "synthetic_prefix_tokens": 128,
+  "width_per_request": 5,
+  "forwards": 2,
+  "repeats": 50,
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "cuda_visible_devices": "0",
+  "torch_version": "2.8.0+cu128",
+  "real_prefix": true,
+  "plausible_roots": false,
+  "strict_matmul": true,
+  "cells": [
+    {
+      "batch": 4,
+      "serial_ms": 18.636717529296874,
+      "batched_ms": 7.284285278320312,
+      "speedup": 2.5584826537153864,
+      "same_topology_and_tokens": false,
+      "max_logit_difference": 188.0,
+      "first_round_max_difference": 12.0,
+      "first_round_top3_exact": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "serial_eager_diff": 0.0,
+      "batched_eager_first_diff": 12.0
+    }
+  ]
+}

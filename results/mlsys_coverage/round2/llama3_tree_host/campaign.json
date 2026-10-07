@@ -1,0 +1,40 @@
+[
+  {
+    "name": "llama3_duet-tree_p11_t0_full_host",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "1",
+      "--temperatures",
+      "0",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-tree",
+      "--greedy-only",
+      "--p1-tree",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round2/llama3_tree_host/llama3_duet-tree_p11_t0_full_host.json"
+    ],
+    "started": 1791337666.3920522,
+    "gpu_uuids": [
+      "GPU-701c7c85-2f36-8ce2-590e-6bf428a4988c",
+      "GPU-947d0308-a472-c345-d704-020de749b375"
+    ],
+    "external_pids": [],
+    "samples": 118,
+    "ended": 1791337935.6477525,
+    "returncode": 0,
+    "status": "complete"
+  }
+]

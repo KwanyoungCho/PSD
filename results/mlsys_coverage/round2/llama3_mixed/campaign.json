@@ -1,0 +1,75 @@
+[
+  {
+    "name": "llama3_mixed_ar_greedy",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--greedy-only",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round2/llama3_mixed/llama3_mixed_ar_greedy.json"
+    ],
+    "started": 1791336428.9982271,
+    "gpu_uuids": [
+      "GPU-211c89c3-d6d1-dfa7-b816-e6ee65c35c82",
+      "GPU-98b22d7c-597c-b851-af6b-1f0c7b4c6904"
+    ],
+    "external_pids": [],
+    "samples": 16,
+    "ended": 1791336465.1254084,
+    "returncode": 0,
+    "status": "complete"
+  },
+  {
+    "name": "llama3_mixed_ar_sample",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round2/llama3_mixed/llama3_mixed_ar_sample.json"
+    ],
+    "started": 1791336465.444915,
+    "gpu_uuids": [
+      "GPU-211c89c3-d6d1-dfa7-b816-e6ee65c35c82",
+      "GPU-98b22d7c-597c-b851-af6b-1f0c7b4c6904"
+    ],
+    "external_pids": [],
+    "samples": 17,
+    "ended": 1791336503.736446,
+    "returncode": 0,
+    "status": "complete"
+  }
+]

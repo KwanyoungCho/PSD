@@ -1,0 +1,42 @@
+{
+  "model": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+  "dtype": "torch.bfloat16",
+  "synthetic_prefix_tokens": 128,
+  "width_per_request": 5,
+  "forwards": 2,
+  "repeats": 50,
+  "cells": [
+    {
+      "batch": 1,
+      "serial_ms": 4.664094848632812,
+      "batched_ms": 4.5684326171875,
+      "speedup": 1.0209398363643165,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 0.0
+    },
+    {
+      "batch": 2,
+      "serial_ms": 9.215078125,
+      "batched_ms": 5.269176025390625,
+      "speedup": 1.7488651129882968,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 0.0
+    },
+    {
+      "batch": 4,
+      "serial_ms": 18.21765625,
+      "batched_ms": 7.281787109375,
+      "speedup": 2.501811159316306,
+      "same_topology_and_tokens": false,
+      "max_logit_difference": 297.0
+    },
+    {
+      "batch": 8,
+      "serial_ms": 36.43091064453125,
+      "batched_ms": 10.194452514648438,
+      "speedup": 3.5736014849432642,
+      "same_topology_and_tokens": false,
+      "max_logit_difference": 287.0
+    }
+  ]
+}

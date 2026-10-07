@@ -1,5 +1,7 @@
 # Full-model MLSys systems 실험 인수인계
 
+**2026-10-07 후속 작업:** [round2/REPORT.md](round2/REPORT.md)와 [round2/HANDOVER.md](round2/HANDOVER.md)를 먼저 읽는다. 아래 기록은 1차 실험이다.
+
 ## 먼저 읽을 파일
 
 1. [REPORT.md](REPORT.md): 결론, 실제 성능, B>1 병목, 정확성 한계.
@@ -13,7 +15,7 @@
 - 작업 branch: `feat/duet-mlsys-coverage`, `/home/chokwans99/PSD-mlsys-coverage`.
 - 원래 `/home/chokwans99/PSD`의 `feat/duet-proxy-source-ablation`과 미추적 root 연구 보고서는 건드리지 않았다.
 - Root 후보 선정 수식, 위치 분배 수식, tree score의 새 연구 변경을 합치지 않았다.
-- 이번 B>1/T=0 최적화 대상은 paper guide의 throughput 기준 chain 설정이다. Dynamic P2 tree는 B=1/T>0만 실행 검증했다.
+- 1차 검증은 chain 중심이었다. 실제 논문은 dynamic tree를 포함하므로 이것만으로 사용자 요청을 완료했다고 볼 수 없다. 2차 작업에서 greedy tree와 batch 실행기를 추가했으며, end-to-end B>1 tree 완료 여부는 후속 보고서에 명시한다.
 - 실험 결과를 핑계로 원래 논문의 throughput 우위를 주장하지 않는다. 새 GPU 구성, 자체 harness, 짧은 출력 조건의 측정이다.
 
 ## 코드 작업 기록

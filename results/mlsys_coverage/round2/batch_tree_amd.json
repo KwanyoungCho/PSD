@@ -1,0 +1,42 @@
+{
+  "model": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+  "dtype": "torch.float16",
+  "synthetic_prefix_tokens": 128,
+  "width_per_request": 5,
+  "forwards": 2,
+  "repeats": 50,
+  "cells": [
+    {
+      "batch": 1,
+      "serial_ms": 1.7391001892089843,
+      "batched_ms": 1.6852787780761718,
+      "speedup": 1.0319362065392246,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 0.0
+    },
+    {
+      "batch": 2,
+      "serial_ms": 3.3881906127929686,
+      "batched_ms": 2.309713897705078,
+      "speedup": 1.4669308680003443,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 0.0
+    },
+    {
+      "batch": 4,
+      "serial_ms": 6.6453094482421875,
+      "batched_ms": 3.6945919799804687,
+      "speedup": 1.7986585485624633,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 0.0
+    },
+    {
+      "batch": 8,
+      "serial_ms": 13.358961181640625,
+      "batched_ms": 6.173737182617187,
+      "speedup": 2.163837038488486,
+      "same_topology_and_tokens": false,
+      "max_logit_difference": 19.55859375
+    }
+  ]
+}

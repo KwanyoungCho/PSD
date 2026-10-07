@@ -1,0 +1,40 @@
+[
+  {
+    "name": "llama2_duet-tree_p11_t0_full_host",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "1",
+      "--temperatures",
+      "0",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-tree",
+      "--greedy-only",
+      "--p1-tree",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round2/llama2_tree_host/llama2_duet-tree_p11_t0_full_host.json"
+    ],
+    "started": 1791337787.099245,
+    "gpu_uuids": [
+      "GPU-00cbad2d-7e9b-7c4f-8166-23a834ddc689",
+      "GPU-97d3e0bb-517b-9732-5c1d-6d1f471a7b6f"
+    ],
+    "external_pids": [],
+    "samples": 147,
+    "ended": 1791338118.1836276,
+    "returncode": 0,
+    "status": "complete"
+  }
+]

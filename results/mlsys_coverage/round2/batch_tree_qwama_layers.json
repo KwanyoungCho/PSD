@@ -1,0 +1,3776 @@
+{
+  "model": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+  "dtype": "torch.bfloat16",
+  "synthetic_prefix_tokens": 128,
+  "width_per_request": 5,
+  "forwards": 2,
+  "repeats": 5,
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "cuda_visible_devices": "0",
+  "torch_version": "2.8.0+cu128",
+  "real_prefix": true,
+  "plausible_roots": false,
+  "strict_matmul": false,
+  "pad_linear_rows": 0,
+  "cells": [
+    {
+      "batch": 4,
+      "serial_ms": 19.128729248046874,
+      "batched_ms": 7.399628448486328,
+      "speedup": 2.5850932085596616,
+      "same_topology_and_tokens": false,
+      "max_logit_difference": 8.0,
+      "first_round_max_difference": 8.0,
+      "first_round_top3_exact": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "serial_eager_diff": 0.0,
+      "batched_eager_first_diff": 8.0,
+      "layer_differences": [
+        {
+          "module": "model.embed_tokens",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0,
+          "rms_difference": 0.0,
+          "reference_absmax": 0.0625
+        },
+        {
+          "module": "model.layers.0.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0,
+          "rms_difference": 0.0,
+          "reference_absmax": 2.40625
+        },
+        {
+          "module": "model.layers.0.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.005115387495607138,
+          "reference_absmax": 152.0
+        },
+        {
+          "module": "model.layers.0.self_attn.rotary_emb",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.00492028659209609,
+          "reference_absmax": 130.0
+        },
+        {
+          "module": "model.layers.0.self_attn.rotary_emb",
+          "output": 1,
+          "shape": [
+            5,
+            128
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.006657084450125694,
+          "reference_absmax": 152.0
+        },
+        {
+          "module": "model.layers.0.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.000732421875,
+          "rms_difference": 4.602228000294417e-05,
+          "reference_absmax": 0.1123046875
+        },
+        {
+          "module": "model.layers.0.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.000335693359375,
+          "rms_difference": 2.5941646526916884e-05,
+          "reference_absmax": 0.328125
+        },
+        {
+          "module": "model.layers.0.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.000335693359375,
+          "rms_difference": 2.5941646526916884e-05,
+          "reference_absmax": 0.328125
+        },
+        {
+          "module": "model.layers.0.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.001582742785103619,
+          "reference_absmax": 11.1875
+        },
+        {
+          "module": "model.layers.0.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.00048828125,
+          "rms_difference": 3.5920398659072816e-05,
+          "reference_absmax": 0.310546875
+        },
+        {
+          "module": "model.layers.0.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.001471430528908968,
+          "reference_absmax": 5.0
+        },
+        {
+          "module": "model.layers.0.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.00040937153971754014,
+          "reference_absmax": 1.7109375
+        },
+        {
+          "module": "model.layers.0.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.00390625,
+          "rms_difference": 0.0006540058529935777,
+          "reference_absmax": 1.2578125
+        },
+        {
+          "module": "model.layers.0.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.00390625,
+          "rms_difference": 0.0006540058529935777,
+          "reference_absmax": 1.2578125
+        },
+        {
+          "module": "model.layers.0",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.00390625,
+          "rms_difference": 0.0006540058529935777,
+          "reference_absmax": 1.2578125
+        },
+        {
+          "module": "model.layers.0",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.00048828125,
+          "rms_difference": 3.5920398659072816e-05,
+          "reference_absmax": 0.310546875
+        },
+        {
+          "module": "model.layers.1.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.004083608277142048,
+          "reference_absmax": 7.3125
+        },
+        {
+          "module": "model.layers.1.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.00390625,
+          "rms_difference": 0.0006729367305524647,
+          "reference_absmax": 1.2734375
+        },
+        {
+          "module": "model.layers.1.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 1.0,
+          "rms_difference": 0.017225872725248337,
+          "reference_absmax": 177.0
+        },
+        {
+          "module": "model.layers.1.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.0011910601751878858,
+          "reference_absmax": 2.375
+        },
+        {
+          "module": "model.layers.1.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.000625568616669625,
+          "reference_absmax": 2.890625
+        },
+        {
+          "module": "model.layers.1.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.000625568616669625,
+          "reference_absmax": 2.890625
+        },
+        {
+          "module": "model.layers.1.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.004943685606122017,
+          "reference_absmax": 7.34375
+        },
+        {
+          "module": "model.layers.1.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.001080451300367713,
+          "reference_absmax": 4.15625
+        },
+        {
+          "module": "model.layers.1.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.03515625,
+          "rms_difference": 0.0033689714036881924,
+          "reference_absmax": 5.75
+        },
+        {
+          "module": "model.layers.1.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.0007441642810590565,
+          "reference_absmax": 1.5234375
+        },
+        {
+          "module": "model.layers.1.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.013671875,
+          "rms_difference": 0.0009277234203182161,
+          "reference_absmax": 0.5390625
+        },
+        {
+          "module": "model.layers.1.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.013671875,
+          "rms_difference": 0.0009277234203182161,
+          "reference_absmax": 0.5390625
+        },
+        {
+          "module": "model.layers.1",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.013671875,
+          "rms_difference": 0.0009277234203182161,
+          "reference_absmax": 0.5390625
+        },
+        {
+          "module": "model.layers.1",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.001080451300367713,
+          "reference_absmax": 4.15625
+        },
+        {
+          "module": "model.layers.2.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.005589556880295277,
+          "reference_absmax": 5.71875
+        },
+        {
+          "module": "model.layers.2.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0013442296767607331,
+          "reference_absmax": 4.09375
+        },
+        {
+          "module": "model.layers.2.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.007179789710789919,
+          "reference_absmax": 48.0
+        },
+        {
+          "module": "model.layers.2.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0166015625,
+          "rms_difference": 0.0019728976767510176,
+          "reference_absmax": 0.546875
+        },
+        {
+          "module": "model.layers.2.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0086669921875,
+          "rms_difference": 0.0009476984851062298,
+          "reference_absmax": 0.306640625
+        },
+        {
+          "module": "model.layers.2.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0086669921875,
+          "rms_difference": 0.0009476984851062298,
+          "reference_absmax": 0.306640625
+        },
+        {
+          "module": "model.layers.2.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.008573338389396667,
+          "reference_absmax": 6.75
+        },
+        {
+          "module": "model.layers.2.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0017106849700212479,
+          "reference_absmax": 4.21875
+        },
+        {
+          "module": "model.layers.2.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005393745843321085,
+          "reference_absmax": 12.5625
+        },
+        {
+          "module": "model.layers.2.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.001325409160926938,
+          "reference_absmax": 2.234375
+        },
+        {
+          "module": "model.layers.2.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0078125,
+          "rms_difference": 0.0015933513641357422,
+          "reference_absmax": 0.5234375
+        },
+        {
+          "module": "model.layers.2.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0078125,
+          "rms_difference": 0.0015933513641357422,
+          "reference_absmax": 0.5234375
+        },
+        {
+          "module": "model.layers.2",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0078125,
+          "rms_difference": 0.0015933513641357422,
+          "reference_absmax": 0.5234375
+        },
+        {
+          "module": "model.layers.2",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0017106849700212479,
+          "reference_absmax": 4.21875
+        },
+        {
+          "module": "model.layers.3.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.009596733376383781,
+          "reference_absmax": 8.9375
+        },
+        {
+          "module": "model.layers.3.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.002145122503861785,
+          "reference_absmax": 4.375
+        },
+        {
+          "module": "model.layers.3.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.009004750289022923,
+          "reference_absmax": 44.25
+        },
+        {
+          "module": "model.layers.3.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.0012934780679643154,
+          "reference_absmax": 0.6484375
+        },
+        {
+          "module": "model.layers.3.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.009765625,
+          "rms_difference": 0.0006628090050071478,
+          "reference_absmax": 0.328125
+        },
+        {
+          "module": "model.layers.3.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.009765625,
+          "rms_difference": 0.0006628090050071478,
+          "reference_absmax": 0.328125
+        },
+        {
+          "module": "model.layers.3.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.011502925306558609,
+          "reference_absmax": 11.25
+        },
+        {
+          "module": "model.layers.3.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.002343249972909689,
+          "reference_absmax": 4.6875
+        },
+        {
+          "module": "model.layers.3.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.007150573190301657,
+          "reference_absmax": 4.71875
+        },
+        {
+          "module": "model.layers.3.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.0501708984375,
+          "rms_difference": 0.0017898583319038153,
+          "reference_absmax": 4.21875
+        },
+        {
+          "module": "model.layers.3.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.0022040437906980515,
+          "reference_absmax": 0.8671875
+        },
+        {
+          "module": "model.layers.3.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.0022040437906980515,
+          "reference_absmax": 0.8671875
+        },
+        {
+          "module": "model.layers.3",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.0022040437906980515,
+          "reference_absmax": 0.8671875
+        },
+        {
+          "module": "model.layers.3",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.002343249972909689,
+          "reference_absmax": 4.6875
+        },
+        {
+          "module": "model.layers.4.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.009062979370355606,
+          "reference_absmax": 8.5625
+        },
+        {
+          "module": "model.layers.4.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.0025894823484122753,
+          "reference_absmax": 4.03125
+        },
+        {
+          "module": "model.layers.4.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.008430574089288712,
+          "reference_absmax": 23.25
+        },
+        {
+          "module": "model.layers.4.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.02734375,
+          "rms_difference": 0.002183719538152218,
+          "reference_absmax": 0.9609375
+        },
+        {
+          "module": "model.layers.4.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.013671875,
+          "rms_difference": 0.00114160287193954,
+          "reference_absmax": 0.373046875
+        },
+        {
+          "module": "model.layers.4.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.013671875,
+          "rms_difference": 0.00114160287193954,
+          "reference_absmax": 0.373046875
+        },
+        {
+          "module": "model.layers.4.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.01144212856888771,
+          "reference_absmax": 9.6875
+        },
+        {
+          "module": "model.layers.4.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0027010308112949133,
+          "reference_absmax": 4.21875
+        },
+        {
+          "module": "model.layers.4.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0859375,
+          "rms_difference": 0.006935007870197296,
+          "reference_absmax": 4.78125
+        },
+        {
+          "module": "model.layers.4.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.0390625,
+          "rms_difference": 0.002377438824623823,
+          "reference_absmax": 2.4375
+        },
+        {
+          "module": "model.layers.4.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.002888135612010956,
+          "reference_absmax": 1.390625
+        },
+        {
+          "module": "model.layers.4.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.002888135612010956,
+          "reference_absmax": 1.390625
+        },
+        {
+          "module": "model.layers.4",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.002888135612010956,
+          "reference_absmax": 1.390625
+        },
+        {
+          "module": "model.layers.4",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0027010308112949133,
+          "reference_absmax": 4.21875
+        },
+        {
+          "module": "model.layers.5.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.15625,
+          "rms_difference": 0.013018747791647911,
+          "reference_absmax": 16.125
+        },
+        {
+          "module": "model.layers.5.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.003942930139601231,
+          "reference_absmax": 3.5
+        },
+        {
+          "module": "model.layers.5.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.012333018705248833,
+          "reference_absmax": 21.125
+        },
+        {
+          "module": "model.layers.5.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.13818359375,
+          "rms_difference": 0.00516086770221591,
+          "reference_absmax": 2.4375
+        },
+        {
+          "module": "model.layers.5.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.017578125,
+          "rms_difference": 0.002347617642953992,
+          "reference_absmax": 0.46484375
+        },
+        {
+          "module": "model.layers.5.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.017578125,
+          "rms_difference": 0.002347617642953992,
+          "reference_absmax": 0.46484375
+        },
+        {
+          "module": "model.layers.5.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.015452598221600056,
+          "reference_absmax": 8.625
+        },
+        {
+          "module": "model.layers.5.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.004673264920711517,
+          "reference_absmax": 3.796875
+        },
+        {
+          "module": "model.layers.5.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.009023677557706833,
+          "reference_absmax": 4.09375
+        },
+        {
+          "module": "model.layers.5.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.060546875,
+          "rms_difference": 0.002621294464915991,
+          "reference_absmax": 1.3984375
+        },
+        {
+          "module": "model.layers.5.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.025634765625,
+          "rms_difference": 0.003426032140851021,
+          "reference_absmax": 0.5703125
+        },
+        {
+          "module": "model.layers.5.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.025634765625,
+          "rms_difference": 0.003426032140851021,
+          "reference_absmax": 0.5703125
+        },
+        {
+          "module": "model.layers.5",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.025634765625,
+          "rms_difference": 0.003426032140851021,
+          "reference_absmax": 0.5703125
+        },
+        {
+          "module": "model.layers.5",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.004673264920711517,
+          "reference_absmax": 3.796875
+        },
+        {
+          "module": "model.layers.6.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.140625,
+          "rms_difference": 0.015474347397685051,
+          "reference_absmax": 8.875
+        },
+        {
+          "module": "model.layers.6.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005140789784491062,
+          "reference_absmax": 4.0
+        },
+        {
+          "module": "model.layers.6.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.011837358586490154,
+          "reference_absmax": 17.125
+        },
+        {
+          "module": "model.layers.6.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.05859375,
+          "rms_difference": 0.004313625395298004,
+          "reference_absmax": 1.0703125
+        },
+        {
+          "module": "model.layers.6.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.00158745760563761,
+          "reference_absmax": 0.796875
+        },
+        {
+          "module": "model.layers.6.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.00158745760563761,
+          "reference_absmax": 0.796875
+        },
+        {
+          "module": "model.layers.6.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.015703633427619934,
+          "reference_absmax": 11.6875
+        },
+        {
+          "module": "model.layers.6.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.00522632384672761,
+          "reference_absmax": 4.6875
+        },
+        {
+          "module": "model.layers.6.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.099609375,
+          "rms_difference": 0.00917221698909998,
+          "reference_absmax": 4.6875
+        },
+        {
+          "module": "model.layers.6.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.0546875,
+          "rms_difference": 0.002647300949320197,
+          "reference_absmax": 1.5
+        },
+        {
+          "module": "model.layers.6.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.025390625,
+          "rms_difference": 0.003384900279343128,
+          "reference_absmax": 1.0703125
+        },
+        {
+          "module": "model.layers.6.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.025390625,
+          "rms_difference": 0.003384900279343128,
+          "reference_absmax": 1.0703125
+        },
+        {
+          "module": "model.layers.6",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.025390625,
+          "rms_difference": 0.003384900279343128,
+          "reference_absmax": 1.0703125
+        },
+        {
+          "module": "model.layers.6",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.00522632384672761,
+          "reference_absmax": 4.6875
+        },
+        {
+          "module": "model.layers.7.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.15625,
+          "rms_difference": 0.017588764429092407,
+          "reference_absmax": 10.1875
+        },
+        {
+          "module": "model.layers.7.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.005528386682271957,
+          "reference_absmax": 5.6875
+        },
+        {
+          "module": "model.layers.7.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.014538963325321674,
+          "reference_absmax": 19.5
+        },
+        {
+          "module": "model.layers.7.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.004216517321765423,
+          "reference_absmax": 1.5
+        },
+        {
+          "module": "model.layers.7.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01953125,
+          "rms_difference": 0.001615719753317535,
+          "reference_absmax": 0.734375
+        },
+        {
+          "module": "model.layers.7.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01953125,
+          "rms_difference": 0.001615719753317535,
+          "reference_absmax": 0.734375
+        },
+        {
+          "module": "model.layers.7.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.018192823976278305,
+          "reference_absmax": 16.5
+        },
+        {
+          "module": "model.layers.7.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.005653048399835825,
+          "reference_absmax": 5.03125
+        },
+        {
+          "module": "model.layers.7.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0859375,
+          "rms_difference": 0.010671135038137436,
+          "reference_absmax": 5.15625
+        },
+        {
+          "module": "model.layers.7.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.0791015625,
+          "rms_difference": 0.0027292673476040363,
+          "reference_absmax": 2.09375
+        },
+        {
+          "module": "model.layers.7.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.029296875,
+          "rms_difference": 0.003471478819847107,
+          "reference_absmax": 0.79296875
+        },
+        {
+          "module": "model.layers.7.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.029296875,
+          "rms_difference": 0.003471478819847107,
+          "reference_absmax": 0.79296875
+        },
+        {
+          "module": "model.layers.7",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.029296875,
+          "rms_difference": 0.003471478819847107,
+          "reference_absmax": 0.79296875
+        },
+        {
+          "module": "model.layers.7",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.005653048399835825,
+          "reference_absmax": 5.03125
+        },
+        {
+          "module": "model.layers.8.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.140625,
+          "rms_difference": 0.014354907907545567,
+          "reference_absmax": 10.125
+        },
+        {
+          "module": "model.layers.8.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.005614963825792074,
+          "reference_absmax": 5.125
+        },
+        {
+          "module": "model.layers.8.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.011217138729989529,
+          "reference_absmax": 23.375
+        },
+        {
+          "module": "model.layers.8.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0390625,
+          "rms_difference": 0.003765142522752285,
+          "reference_absmax": 1.4296875
+        },
+        {
+          "module": "model.layers.8.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.017578125,
+          "rms_difference": 0.0017818098422139883,
+          "reference_absmax": 0.9453125
+        },
+        {
+          "module": "model.layers.8.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.017578125,
+          "rms_difference": 0.0017818098422139883,
+          "reference_absmax": 0.9453125
+        },
+        {
+          "module": "model.layers.8.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.014696826227009296,
+          "reference_absmax": 10.9375
+        },
+        {
+          "module": "model.layers.8.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005781560204923153,
+          "reference_absmax": 5.4375
+        },
+        {
+          "module": "model.layers.8.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.008340613916516304,
+          "reference_absmax": 6.09375
+        },
+        {
+          "module": "model.layers.8.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.041015625,
+          "rms_difference": 0.002355662640184164,
+          "reference_absmax": 1.3359375
+        },
+        {
+          "module": "model.layers.8.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0031600783113390207,
+          "reference_absmax": 1.078125
+        },
+        {
+          "module": "model.layers.8.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0031600783113390207,
+          "reference_absmax": 1.078125
+        },
+        {
+          "module": "model.layers.8",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0031600783113390207,
+          "reference_absmax": 1.078125
+        },
+        {
+          "module": "model.layers.8",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005781560204923153,
+          "reference_absmax": 5.4375
+        },
+        {
+          "module": "model.layers.9.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5625,
+          "rms_difference": 0.02413872629404068,
+          "reference_absmax": 17.125
+        },
+        {
+          "module": "model.layers.9.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.0060592228546738625,
+          "reference_absmax": 6.0625
+        },
+        {
+          "module": "model.layers.9.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.14453125,
+          "rms_difference": 0.017400771379470825,
+          "reference_absmax": 22.875
+        },
+        {
+          "module": "model.layers.9.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.002670119982212782,
+          "reference_absmax": 2.484375
+        },
+        {
+          "module": "model.layers.9.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.0010769115760922432,
+          "reference_absmax": 0.6953125
+        },
+        {
+          "module": "model.layers.9.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.0010769115760922432,
+          "reference_absmax": 0.6953125
+        },
+        {
+          "module": "model.layers.9.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.093505859375,
+          "rms_difference": 0.01650475710630417,
+          "reference_absmax": 11.25
+        },
+        {
+          "module": "model.layers.9.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006202662829309702,
+          "reference_absmax": 5.53125
+        },
+        {
+          "module": "model.layers.9.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.08203125,
+          "rms_difference": 0.008933127857744694,
+          "reference_absmax": 5.34375
+        },
+        {
+          "module": "model.layers.9.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.0027620040345937014,
+          "reference_absmax": 2.28125
+        },
+        {
+          "module": "model.layers.9.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0166015625,
+          "rms_difference": 0.0034250286407768726,
+          "reference_absmax": 1.4375
+        },
+        {
+          "module": "model.layers.9.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0166015625,
+          "rms_difference": 0.0034250286407768726,
+          "reference_absmax": 1.4375
+        },
+        {
+          "module": "model.layers.9",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0166015625,
+          "rms_difference": 0.0034250286407768726,
+          "reference_absmax": 1.4375
+        },
+        {
+          "module": "model.layers.9",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006202662829309702,
+          "reference_absmax": 5.53125
+        },
+        {
+          "module": "model.layers.10.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.109375,
+          "rms_difference": 0.016524171456694603,
+          "reference_absmax": 9.8125
+        },
+        {
+          "module": "model.layers.10.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.00623368751257658,
+          "reference_absmax": 6.6875
+        },
+        {
+          "module": "model.layers.10.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.013233662582933903,
+          "reference_absmax": 54.0
+        },
+        {
+          "module": "model.layers.10.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0390625,
+          "rms_difference": 0.0050300611183047295,
+          "reference_absmax": 2.109375
+        },
+        {
+          "module": "model.layers.10.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.0021728838328272104,
+          "reference_absmax": 0.81640625
+        },
+        {
+          "module": "model.layers.10.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.0021728838328272104,
+          "reference_absmax": 0.81640625
+        },
+        {
+          "module": "model.layers.10.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.013607018627226353,
+          "reference_absmax": 11.5625
+        },
+        {
+          "module": "model.layers.10.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006271174177527428,
+          "reference_absmax": 6.6875
+        },
+        {
+          "module": "model.layers.10.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.007874480448663235,
+          "reference_absmax": 5.625
+        },
+        {
+          "module": "model.layers.10.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.0023375204764306545,
+          "reference_absmax": 2.0625
+        },
+        {
+          "module": "model.layers.10.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.021484375,
+          "rms_difference": 0.002986164065077901,
+          "reference_absmax": 0.72265625
+        },
+        {
+          "module": "model.layers.10.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.021484375,
+          "rms_difference": 0.002986164065077901,
+          "reference_absmax": 0.72265625
+        },
+        {
+          "module": "model.layers.10",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.021484375,
+          "rms_difference": 0.002986164065077901,
+          "reference_absmax": 0.72265625
+        },
+        {
+          "module": "model.layers.10",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006271174177527428,
+          "reference_absmax": 6.6875
+        },
+        {
+          "module": "model.layers.11.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.02059047482907772,
+          "reference_absmax": 13.125
+        },
+        {
+          "module": "model.layers.11.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.0062213377095758915,
+          "reference_absmax": 6.84375
+        },
+        {
+          "module": "model.layers.11.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.01396850310266018,
+          "reference_absmax": 16.125
+        },
+        {
+          "module": "model.layers.11.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.015625,
+          "rms_difference": 0.0015110502718016505,
+          "reference_absmax": 1.140625
+        },
+        {
+          "module": "model.layers.11.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.0006980604375712574,
+          "reference_absmax": 1.0859375
+        },
+        {
+          "module": "model.layers.11.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01171875,
+          "rms_difference": 0.0006980604375712574,
+          "reference_absmax": 1.0859375
+        },
+        {
+          "module": "model.layers.11.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.014374764636158943,
+          "reference_absmax": 15.875
+        },
+        {
+          "module": "model.layers.11.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006398498080670834,
+          "reference_absmax": 5.9375
+        },
+        {
+          "module": "model.layers.11.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.008291440084576607,
+          "reference_absmax": 5.03125
+        },
+        {
+          "module": "model.layers.11.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.07421875,
+          "rms_difference": 0.0027137347497045994,
+          "reference_absmax": 3.09375
+        },
+        {
+          "module": "model.layers.11.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.021484375,
+          "rms_difference": 0.0033740990329533815,
+          "reference_absmax": 1.046875
+        },
+        {
+          "module": "model.layers.11.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.021484375,
+          "rms_difference": 0.0033740990329533815,
+          "reference_absmax": 1.046875
+        },
+        {
+          "module": "model.layers.11",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.021484375,
+          "rms_difference": 0.0033740990329533815,
+          "reference_absmax": 1.046875
+        },
+        {
+          "module": "model.layers.11",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006398498080670834,
+          "reference_absmax": 5.9375
+        },
+        {
+          "module": "model.layers.12.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.017505092546343803,
+          "reference_absmax": 14.3125
+        },
+        {
+          "module": "model.layers.12.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.0070010642521083355,
+          "reference_absmax": 5.5625
+        },
+        {
+          "module": "model.layers.12.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.012562626041471958,
+          "reference_absmax": 28.0
+        },
+        {
+          "module": "model.layers.12.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.072265625,
+          "rms_difference": 0.0046726311556994915,
+          "reference_absmax": 2.0625
+        },
+        {
+          "module": "model.layers.12.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01953125,
+          "rms_difference": 0.0022697607055306435,
+          "reference_absmax": 0.4375
+        },
+        {
+          "module": "model.layers.12.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.01953125,
+          "rms_difference": 0.0022697607055306435,
+          "reference_absmax": 0.4375
+        },
+        {
+          "module": "model.layers.12.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.015691841021180153,
+          "reference_absmax": 15.25
+        },
+        {
+          "module": "model.layers.12.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.0074096182361245155,
+          "reference_absmax": 5.375
+        },
+        {
+          "module": "model.layers.12.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.08203125,
+          "rms_difference": 0.008893350139260292,
+          "reference_absmax": 6.15625
+        },
+        {
+          "module": "model.layers.12.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.07421875,
+          "rms_difference": 0.0026881236117333174,
+          "reference_absmax": 1.671875
+        },
+        {
+          "module": "model.layers.12.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.003420099848881364,
+          "reference_absmax": 1.28125
+        },
+        {
+          "module": "model.layers.12.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.003420099848881364,
+          "reference_absmax": 1.28125
+        },
+        {
+          "module": "model.layers.12",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.003420099848881364,
+          "reference_absmax": 1.28125
+        },
+        {
+          "module": "model.layers.12",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.0074096182361245155,
+          "reference_absmax": 5.375
+        },
+        {
+          "module": "model.layers.13.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.016034875065088272,
+          "reference_absmax": 13.0
+        },
+        {
+          "module": "model.layers.13.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.0072161476127803326,
+          "reference_absmax": 6.3125
+        },
+        {
+          "module": "model.layers.13.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.012075740844011307,
+          "reference_absmax": 20.875
+        },
+        {
+          "module": "model.layers.13.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.003358519170433283,
+          "reference_absmax": 1.2265625
+        },
+        {
+          "module": "model.layers.13.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.029296875,
+          "rms_difference": 0.0016082292422652245,
+          "reference_absmax": 0.5078125
+        },
+        {
+          "module": "model.layers.13.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.029296875,
+          "rms_difference": 0.0016082292422652245,
+          "reference_absmax": 0.5078125
+        },
+        {
+          "module": "model.layers.13.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.014518492855131626,
+          "reference_absmax": 14.3125
+        },
+        {
+          "module": "model.layers.13.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.007418997120112181,
+          "reference_absmax": 6.78125
+        },
+        {
+          "module": "model.layers.13.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.06640625,
+          "rms_difference": 0.008208195678889751,
+          "reference_absmax": 4.1875
+        },
+        {
+          "module": "model.layers.13.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.0025598860811442137,
+          "reference_absmax": 3.5
+        },
+        {
+          "module": "model.layers.13.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.003282178658992052,
+          "reference_absmax": 1.75
+        },
+        {
+          "module": "model.layers.13.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.003282178658992052,
+          "reference_absmax": 1.75
+        },
+        {
+          "module": "model.layers.13",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.003282178658992052,
+          "reference_absmax": 1.75
+        },
+        {
+          "module": "model.layers.13",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.007418997120112181,
+          "reference_absmax": 6.78125
+        },
+        {
+          "module": "model.layers.14.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.15625,
+          "rms_difference": 0.017661696299910545,
+          "reference_absmax": 11.75
+        },
+        {
+          "module": "model.layers.14.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.007502270396798849,
+          "reference_absmax": 8.25
+        },
+        {
+          "module": "model.layers.14.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.0703125,
+          "rms_difference": 0.012693831697106361,
+          "reference_absmax": 15.1875
+        },
+        {
+          "module": "model.layers.14.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.003309036372229457,
+          "reference_absmax": 1.2421875
+        },
+        {
+          "module": "model.layers.14.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.0014911368489265442,
+          "reference_absmax": 0.70703125
+        },
+        {
+          "module": "model.layers.14.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.0014911368489265442,
+          "reference_absmax": 0.70703125
+        },
+        {
+          "module": "model.layers.14.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.014391429722309113,
+          "reference_absmax": 16.5
+        },
+        {
+          "module": "model.layers.14.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.00772777758538723,
+          "reference_absmax": 8.9375
+        },
+        {
+          "module": "model.layers.14.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0859375,
+          "rms_difference": 0.008217706345021725,
+          "reference_absmax": 4.3125
+        },
+        {
+          "module": "model.layers.14.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.002775085624307394,
+          "reference_absmax": 6.1875
+        },
+        {
+          "module": "model.layers.14.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0035659000277519226,
+          "reference_absmax": 0.91015625
+        },
+        {
+          "module": "model.layers.14.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0035659000277519226,
+          "reference_absmax": 0.91015625
+        },
+        {
+          "module": "model.layers.14",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0035659000277519226,
+          "reference_absmax": 0.91015625
+        },
+        {
+          "module": "model.layers.14",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.00772777758538723,
+          "reference_absmax": 8.9375
+        },
+        {
+          "module": "model.layers.15.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.016463859006762505,
+          "reference_absmax": 11.6875
+        },
+        {
+          "module": "model.layers.15.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.00846086721867323,
+          "reference_absmax": 9.125
+        },
+        {
+          "module": "model.layers.15.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.012383590452373028,
+          "reference_absmax": 18.625
+        },
+        {
+          "module": "model.layers.15.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.005895070265978575,
+          "reference_absmax": 1.515625
+        },
+        {
+          "module": "model.layers.15.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.02734375,
+          "rms_difference": 0.002808451419696212,
+          "reference_absmax": 0.89453125
+        },
+        {
+          "module": "model.layers.15.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.02734375,
+          "rms_difference": 0.002808451419696212,
+          "reference_absmax": 0.89453125
+        },
+        {
+          "module": "model.layers.15.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.016931284219026566,
+          "reference_absmax": 17.625
+        },
+        {
+          "module": "model.layers.15.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.009072023443877697,
+          "reference_absmax": 10.0
+        },
+        {
+          "module": "model.layers.15.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.009815894067287445,
+          "reference_absmax": 5.3125
+        },
+        {
+          "module": "model.layers.15.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.00390180223621428,
+          "reference_absmax": 4.25
+        },
+        {
+          "module": "model.layers.15.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.005173820536583662,
+          "reference_absmax": 1.78125
+        },
+        {
+          "module": "model.layers.15.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.005173820536583662,
+          "reference_absmax": 1.78125
+        },
+        {
+          "module": "model.layers.15",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.005173820536583662,
+          "reference_absmax": 1.78125
+        },
+        {
+          "module": "model.layers.15",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.009072023443877697,
+          "reference_absmax": 10.0
+        },
+        {
+          "module": "model.layers.16.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1328125,
+          "rms_difference": 0.021561967208981514,
+          "reference_absmax": 14.0625
+        },
+        {
+          "module": "model.layers.16.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.010169994086027145,
+          "reference_absmax": 11.375
+        },
+        {
+          "module": "model.layers.16.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.0965576171875,
+          "rms_difference": 0.01597091183066368,
+          "reference_absmax": 15.4375
+        },
+        {
+          "module": "model.layers.16.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005580186378210783,
+          "reference_absmax": 2.046875
+        },
+        {
+          "module": "model.layers.16.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.072265625,
+          "rms_difference": 0.0031367670744657516,
+          "reference_absmax": 0.90234375
+        },
+        {
+          "module": "model.layers.16.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.072265625,
+          "rms_difference": 0.0031367670744657516,
+          "reference_absmax": 0.90234375
+        },
+        {
+          "module": "model.layers.16.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.019094854593276978,
+          "reference_absmax": 19.5
+        },
+        {
+          "module": "model.layers.16.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.010054423473775387,
+          "reference_absmax": 11.75
+        },
+        {
+          "module": "model.layers.16.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.01114120613783598,
+          "reference_absmax": 7.9375
+        },
+        {
+          "module": "model.layers.16.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.1171875,
+          "rms_difference": 0.0049548400565981865,
+          "reference_absmax": 7.75
+        },
+        {
+          "module": "model.layers.16.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.006292435806244612,
+          "reference_absmax": 3.78125
+        },
+        {
+          "module": "model.layers.16.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.006292435806244612,
+          "reference_absmax": 3.78125
+        },
+        {
+          "module": "model.layers.16",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.006292435806244612,
+          "reference_absmax": 3.78125
+        },
+        {
+          "module": "model.layers.16",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.010054423473775387,
+          "reference_absmax": 11.75
+        },
+        {
+          "module": "model.layers.17.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.21875,
+          "rms_difference": 0.01939404383301735,
+          "reference_absmax": 11.6875
+        },
+        {
+          "module": "model.layers.17.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.011319862678647041,
+          "reference_absmax": 14.3125
+        },
+        {
+          "module": "model.layers.17.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.1044921875,
+          "rms_difference": 0.01425605546683073,
+          "reference_absmax": 16.875
+        },
+        {
+          "module": "model.layers.17.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.05078125,
+          "rms_difference": 0.005242546088993549,
+          "reference_absmax": 3.25
+        },
+        {
+          "module": "model.layers.17.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.0027525736950337887,
+          "reference_absmax": 6.15625
+        },
+        {
+          "module": "model.layers.17.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.0027525736950337887,
+          "reference_absmax": 6.15625
+        },
+        {
+          "module": "model.layers.17.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.140625,
+          "rms_difference": 0.018285343423485756,
+          "reference_absmax": 17.75
+        },
+        {
+          "module": "model.layers.17.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.012820323929190636,
+          "reference_absmax": 20.25
+        },
+        {
+          "module": "model.layers.17.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.010763389058411121,
+          "reference_absmax": 5.4375
+        },
+        {
+          "module": "model.layers.17.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.003915779292583466,
+          "reference_absmax": 4.28125
+        },
+        {
+          "module": "model.layers.17.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0703125,
+          "rms_difference": 0.004829090554267168,
+          "reference_absmax": 2.78125
+        },
+        {
+          "module": "model.layers.17.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0703125,
+          "rms_difference": 0.004829090554267168,
+          "reference_absmax": 2.78125
+        },
+        {
+          "module": "model.layers.17",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0703125,
+          "rms_difference": 0.004829090554267168,
+          "reference_absmax": 2.78125
+        },
+        {
+          "module": "model.layers.17",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.012820323929190636,
+          "reference_absmax": 20.25
+        },
+        {
+          "module": "model.layers.18.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.018763506785035133,
+          "reference_absmax": 10.0625
+        },
+        {
+          "module": "model.layers.18.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.013076474890112877,
+          "reference_absmax": 22.25
+        },
+        {
+          "module": "model.layers.18.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.014017889276146889,
+          "reference_absmax": 19.25
+        },
+        {
+          "module": "model.layers.18.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.0028899027965962887,
+          "reference_absmax": 0.84765625
+        },
+        {
+          "module": "model.layers.18.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.0015891038347035646,
+          "reference_absmax": 0.88671875
+        },
+        {
+          "module": "model.layers.18.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.046875,
+          "rms_difference": 0.0015891038347035646,
+          "reference_absmax": 0.88671875
+        },
+        {
+          "module": "model.layers.18.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.140625,
+          "rms_difference": 0.018248513340950012,
+          "reference_absmax": 13.3125
+        },
+        {
+          "module": "model.layers.18.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.013279128819704056,
+          "reference_absmax": 23.125
+        },
+        {
+          "module": "model.layers.18.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.010384532622992992,
+          "reference_absmax": 4.875
+        },
+        {
+          "module": "model.layers.18.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.004139583557844162,
+          "reference_absmax": 6.65625
+        },
+        {
+          "module": "model.layers.18.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005219041835516691,
+          "reference_absmax": 3.375
+        },
+        {
+          "module": "model.layers.18.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005219041835516691,
+          "reference_absmax": 3.375
+        },
+        {
+          "module": "model.layers.18",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005219041835516691,
+          "reference_absmax": 3.375
+        },
+        {
+          "module": "model.layers.18",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.013279128819704056,
+          "reference_absmax": 23.125
+        },
+        {
+          "module": "model.layers.19.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.15625,
+          "rms_difference": 0.017223550006747246,
+          "reference_absmax": 11.75
+        },
+        {
+          "module": "model.layers.19.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.014286543242633343,
+          "reference_absmax": 25.875
+        },
+        {
+          "module": "model.layers.19.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.012901431880891323,
+          "reference_absmax": 21.0
+        },
+        {
+          "module": "model.layers.19.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.056640625,
+          "rms_difference": 0.005732184741646051,
+          "reference_absmax": 1.4609375
+        },
+        {
+          "module": "model.layers.19.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.0025260010734200478,
+          "reference_absmax": 1.6640625
+        },
+        {
+          "module": "model.layers.19.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0234375,
+          "rms_difference": 0.0025260010734200478,
+          "reference_absmax": 1.6640625
+        },
+        {
+          "module": "model.layers.19.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.15625,
+          "rms_difference": 0.02085544355213642,
+          "reference_absmax": 15.0625
+        },
+        {
+          "module": "model.layers.19.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.014995090663433075,
+          "reference_absmax": 27.5
+        },
+        {
+          "module": "model.layers.19.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.01192913856357336,
+          "reference_absmax": 6.90625
+        },
+        {
+          "module": "model.layers.19.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.078125,
+          "rms_difference": 0.004730864427983761,
+          "reference_absmax": 4.46875
+        },
+        {
+          "module": "model.layers.19.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005905970931053162,
+          "reference_absmax": 6.9375
+        },
+        {
+          "module": "model.layers.19.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005905970931053162,
+          "reference_absmax": 6.9375
+        },
+        {
+          "module": "model.layers.19",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.005905970931053162,
+          "reference_absmax": 6.9375
+        },
+        {
+          "module": "model.layers.19",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.014995090663433075,
+          "reference_absmax": 27.5
+        },
+        {
+          "module": "model.layers.20.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.21875,
+          "rms_difference": 0.0218758936971426,
+          "reference_absmax": 11.0625
+        },
+        {
+          "module": "model.layers.20.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.01605449989438057,
+          "reference_absmax": 32.0
+        },
+        {
+          "module": "model.layers.20.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.09765625,
+          "rms_difference": 0.014414463192224503,
+          "reference_absmax": 15.9375
+        },
+        {
+          "module": "model.layers.20.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0546875,
+          "rms_difference": 0.006076440680772066,
+          "reference_absmax": 6.125
+        },
+        {
+          "module": "model.layers.20.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0036818147636950016,
+          "reference_absmax": 3.859375
+        },
+        {
+          "module": "model.layers.20.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.0036818147636950016,
+          "reference_absmax": 3.859375
+        },
+        {
+          "module": "model.layers.20.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.140625,
+          "rms_difference": 0.02090744487941265,
+          "reference_absmax": 14.4375
+        },
+        {
+          "module": "model.layers.20.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.01811489835381508,
+          "reference_absmax": 35.75
+        },
+        {
+          "module": "model.layers.20.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.012239065021276474,
+          "reference_absmax": 8.8125
+        },
+        {
+          "module": "model.layers.20.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.005442776717245579,
+          "reference_absmax": 4.84375
+        },
+        {
+          "module": "model.layers.20.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006962951272726059,
+          "reference_absmax": 6.46875
+        },
+        {
+          "module": "model.layers.20.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006962951272726059,
+          "reference_absmax": 6.46875
+        },
+        {
+          "module": "model.layers.20",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.006962951272726059,
+          "reference_absmax": 6.46875
+        },
+        {
+          "module": "model.layers.20",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.01811489835381508,
+          "reference_absmax": 35.75
+        },
+        {
+          "module": "model.layers.21.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.02643788792192936,
+          "reference_absmax": 15.8125
+        },
+        {
+          "module": "model.layers.21.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.019870897755026817,
+          "reference_absmax": 41.5
+        },
+        {
+          "module": "model.layers.21.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.01934438943862915,
+          "reference_absmax": 9.8125
+        },
+        {
+          "module": "model.layers.21.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0546875,
+          "rms_difference": 0.00643607834354043,
+          "reference_absmax": 2.59375
+        },
+        {
+          "module": "model.layers.21.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.004473091568797827,
+          "reference_absmax": 3.109375
+        },
+        {
+          "module": "model.layers.21.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.03125,
+          "rms_difference": 0.004473091568797827,
+          "reference_absmax": 3.109375
+        },
+        {
+          "module": "model.layers.21.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.02152080647647381,
+          "reference_absmax": 14.875
+        },
+        {
+          "module": "model.layers.21.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.02048845775425434,
+          "reference_absmax": 44.5
+        },
+        {
+          "module": "model.layers.21.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.012666657567024231,
+          "reference_absmax": 8.125
+        },
+        {
+          "module": "model.layers.21.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.15625,
+          "rms_difference": 0.005873129237443209,
+          "reference_absmax": 6.3125
+        },
+        {
+          "module": "model.layers.21.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.007299108896404505,
+          "reference_absmax": 3.15625
+        },
+        {
+          "module": "model.layers.21.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.007299108896404505,
+          "reference_absmax": 3.15625
+        },
+        {
+          "module": "model.layers.21",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.007299108896404505,
+          "reference_absmax": 3.15625
+        },
+        {
+          "module": "model.layers.21",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.02048845775425434,
+          "reference_absmax": 44.5
+        },
+        {
+          "module": "model.layers.22.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.3125,
+          "rms_difference": 0.02547352761030197,
+          "reference_absmax": 11.875
+        },
+        {
+          "module": "model.layers.22.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.0217902734875679,
+          "reference_absmax": 47.5
+        },
+        {
+          "module": "model.layers.22.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.109375,
+          "rms_difference": 0.018201353028416634,
+          "reference_absmax": 11.6875
+        },
+        {
+          "module": "model.layers.22.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.109375,
+          "rms_difference": 0.009465615265071392,
+          "reference_absmax": 6.96875
+        },
+        {
+          "module": "model.layers.22.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.006510676816105843,
+          "reference_absmax": 8.6875
+        },
+        {
+          "module": "model.layers.22.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.0625,
+          "rms_difference": 0.006510676816105843,
+          "reference_absmax": 8.6875
+        },
+        {
+          "module": "model.layers.22.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.02244604378938675,
+          "reference_absmax": 14.0
+        },
+        {
+          "module": "model.layers.22.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.023031216114759445,
+          "reference_absmax": 56.25
+        },
+        {
+          "module": "model.layers.22.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.125,
+          "rms_difference": 0.013260817155241966,
+          "reference_absmax": 29.0
+        },
+        {
+          "module": "model.layers.22.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.28125,
+          "rms_difference": 0.009107531048357487,
+          "reference_absmax": 13.25
+        },
+        {
+          "module": "model.layers.22.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.171875,
+          "rms_difference": 0.011826083064079285,
+          "reference_absmax": 6.25
+        },
+        {
+          "module": "model.layers.22.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.171875,
+          "rms_difference": 0.011826083064079285,
+          "reference_absmax": 6.25
+        },
+        {
+          "module": "model.layers.22",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.171875,
+          "rms_difference": 0.011826083064079285,
+          "reference_absmax": 6.25
+        },
+        {
+          "module": "model.layers.22",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.023031216114759445,
+          "reference_absmax": 56.25
+        },
+        {
+          "module": "model.layers.23.input_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.029578346759080887,
+          "reference_absmax": 67.5
+        },
+        {
+          "module": "model.layers.23.input_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.02534538321197033,
+          "reference_absmax": 51.75
+        },
+        {
+          "module": "model.layers.23.self_attn.qkv_proj",
+          "output": 0,
+          "shape": [
+            5,
+            1152
+          ],
+          "max_difference": 0.25,
+          "rms_difference": 0.018796976655721664,
+          "reference_absmax": 109.0
+        },
+        {
+          "module": "model.layers.23.self_attn.attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.1875,
+          "rms_difference": 0.020871862769126892,
+          "reference_absmax": 5.375
+        },
+        {
+          "module": "model.layers.23.self_attn.o_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.008789143525063992,
+          "reference_absmax": 8.5
+        },
+        {
+          "module": "model.layers.23.self_attn",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.09375,
+          "rms_difference": 0.008789143525063992,
+          "reference_absmax": 8.5
+        },
+        {
+          "module": "model.layers.23.post_attention_layernorm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.3125,
+          "rms_difference": 0.02884156070649624,
+          "reference_absmax": 11.625
+        },
+        {
+          "module": "model.layers.23.post_attention_layernorm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.02632739394903183,
+          "reference_absmax": 59.0
+        },
+        {
+          "module": "model.layers.23.mlp.gate_up_proj",
+          "output": 0,
+          "shape": [
+            5,
+            9728
+          ],
+          "max_difference": 0.15625,
+          "rms_difference": 0.016707254573702812,
+          "reference_absmax": 13.6875
+        },
+        {
+          "module": "model.layers.23.mlp.act_fn",
+          "output": 0,
+          "shape": [
+            5,
+            4864
+          ],
+          "max_difference": 0.4375,
+          "rms_difference": 0.015950091183185577,
+          "reference_absmax": 22.875
+        },
+        {
+          "module": "model.layers.23.mlp.down_proj",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.3984375,
+          "rms_difference": 0.017827477306127548,
+          "reference_absmax": 8.125
+        },
+        {
+          "module": "model.layers.23.mlp",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.3984375,
+          "rms_difference": 0.017827477306127548,
+          "reference_absmax": 8.125
+        },
+        {
+          "module": "model.layers.23",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.3984375,
+          "rms_difference": 0.017827477306127548,
+          "reference_absmax": 8.125
+        },
+        {
+          "module": "model.layers.23",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.5,
+          "rms_difference": 0.02632739394903183,
+          "reference_absmax": 59.0
+        },
+        {
+          "module": "model.norm",
+          "output": 0,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 1.625,
+          "rms_difference": 0.11230289191007614,
+          "reference_absmax": 50.0
+        },
+        {
+          "module": "model.norm",
+          "output": 1,
+          "shape": [
+            5,
+            896
+          ],
+          "max_difference": 0.75,
+          "rms_difference": 0.03493892401456833,
+          "reference_absmax": 63.75
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "model": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+  "dtype": "torch.float16",
+  "synthetic_prefix_tokens": 128,
+  "width_per_request": 5,
+  "forwards": 2,
+  "repeats": 50,
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "cuda_visible_devices": "4",
+  "torch_version": "2.8.0+cu128",
+  "cells": [
+    {
+      "batch": 8,
+      "serial_ms": 13.36494140625,
+      "batched_ms": 6.172876586914063,
+      "speedup": 2.1651075018383588,
+      "same_topology_and_tokens": false,
+      "max_logit_difference": 19.55859375,
+      "first_round_max_difference": 0.1171875,
+      "first_round_top3_exact": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "serial_eager_diff": 0.0,
+      "batched_eager_first_diff": 0.1171875
+    }
+  ]
+}

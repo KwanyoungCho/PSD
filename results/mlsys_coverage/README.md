@@ -9,7 +9,7 @@ Start with the Korean [REPORT.md](REPORT.md) for conclusions and [HANDOVER.md](H
 - Worktree: `/home/chokwans99/PSD-mlsys-coverage`; branch: `feat/duet-mlsys-coverage`.
 - Original `/home/chokwans99/PSD` research checkout and its untracked root-candidate reports remain untouched.
 - No later root-selection formulas or tree-scoring research changes are included in this branch.
-- Paper setup guide says the throughput champion is **P1/P2 tree off (chain)**. That is the primary comparison here. B>1/T=0 dynamic-tree execution is still a separate unsupported feature, not silently counted as a successful tree experiment.
+- Scope correction: the user's actual paper §4.3 / Eq. (4) / Table 2 includes dynamic branching. The original report below is chain-focused round 1, not completion of the entire paper extension. See [round2/REPORT.md](round2/REPORT.md) for greedy tree support, new batch optimizations, and the remaining batched tree serving integration.
 
 ## Machine and models
 

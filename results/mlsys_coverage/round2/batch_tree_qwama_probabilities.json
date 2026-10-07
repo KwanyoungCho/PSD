@@ -1,0 +1,75 @@
+{
+  "model": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+  "dtype": "torch.bfloat16",
+  "synthetic_prefix_tokens": 128,
+  "width_per_request": 5,
+  "forwards": 2,
+  "repeats": 20,
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "cuda_visible_devices": "0",
+  "torch_version": "2.8.0+cu128",
+  "real_prefix": true,
+  "plausible_roots": true,
+  "strict_matmul": false,
+  "pad_linear_rows": 0,
+  "cells": [
+    {
+      "batch": 4,
+      "serial_ms": 18.623333740234376,
+      "batched_ms": 7.4131935119628904,
+      "speedup": 2.512187724518637,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 8.0,
+      "first_round_max_difference": 8.0,
+      "first_round_top3_exact": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "first_round_top1_agreement": 1.0,
+      "first_round_probability_tv_mean": 0.006422266364097595,
+      "first_round_probability_tv_max": 0.008681192062795162,
+      "worst_first_round_logit": {
+        "row": 2,
+        "token": 128008,
+        "serial_logit": -524.0,
+        "batched_logit": -516.0,
+        "serial_probability": 0.0
+      },
+      "serial_eager_diff": 0.0,
+      "batched_eager_first_diff": 8.0
+    },
+    {
+      "batch": 8,
+      "serial_ms": 36.97085266113281,
+      "batched_ms": 10.377728271484376,
+      "speedup": 3.562518857110593,
+      "same_topology_and_tokens": true,
+      "max_logit_difference": 8.0,
+      "first_round_max_difference": 8.0,
+      "first_round_top3_exact": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "first_round_top1_agreement": 0.800000011920929,
+      "first_round_probability_tv_mean": 0.010904972441494465,
+      "first_round_probability_tv_max": 0.017660098150372505,
+      "worst_first_round_logit": {
+        "row": 2,
+        "token": 128008,
+        "serial_logit": -524.0,
+        "batched_logit": -516.0,
+        "serial_probability": 0.0
+      },
+      "serial_eager_diff": 0.0,
+      "batched_eager_first_diff": 8.0
+    }
+  ]
+}
