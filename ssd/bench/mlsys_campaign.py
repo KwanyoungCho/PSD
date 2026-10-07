@@ -100,7 +100,14 @@ def main():
             proc.wait()
         row.update(ended=time.time(), returncode=proc.returncode)
         result = json.loads(output.read_text()) if output.exists() else {}
-        row["status"] = result.get("status", "missing")
+        # A worker can die during initialization, leaving its last flushed
+        # result at "running". The campaign process has already exited here;
+        # retain that raw status separately instead of advertising a live job.
+        row["result_status"] = result.get("status", "missing")
+        row["status"] = ("timeout" if row.get("timeout") else
+                         "failed" if proc.returncode != 0 else
+                         "complete" if row["result_status"] == "complete" else
+                         "incomplete")
         manifest.append(row)
         manifest_path.write_text(json.dumps(manifest, indent=2))
         print("END", name, row["status"], "external", row["external_pids"], flush=True)
