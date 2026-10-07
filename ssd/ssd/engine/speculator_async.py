@@ -68,6 +68,8 @@ class SpeculatorAsync(SpeculatorBase):
     ):
         super().__init__(lookahead, device)
         self.config = config          # T3.4-b2: tree wire 게이트/크기 참조
+        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
+        self.batched_tree_enabled = config is not None and batch_tree_enabled(config)
         self.async_fan_out = async_fan_out
         self.max_blocks = max_blocks
         self.vocab_size = vocab_size
@@ -159,6 +161,13 @@ class SpeculatorAsync(SpeculatorBase):
         dist.send(metadata, dst=self.draft_runner_rank, group=self.async_pg)
         send_int64(self.async_pg, self.draft_runner_rank,
                    input_ids, num_tokens, draft_block_table.to(torch.int64))
+        if self.batched_tree_enabled:
+            # Re-prefill starts a new KV generation for only these requests.
+            # Other live sequences may still need their staged tree paths.
+            dist.send(torch.tensor([s.seq_id for s in seqs], dtype=torch.int64,
+                                   device=self.device),dst=self.draft_runner_rank,group=self.async_pg)
+            for seq in seqs:
+                seq.tree_terminal_node = None
         if eagle_acts is not None:
             dist.send(eagle_acts, dst=self.draft_runner_rank, group=self.async_pg)
         return SpeculateResult([], [])
@@ -351,6 +360,15 @@ class SpeculatorAsync(SpeculatorBase):
         # 읽도록 self에 스태시 (recv 헬퍼와 함수 스코프가 다름)
         self._tree_ints_step = (self._fused_response[_spec_end:].view(B, -1)
                                 if self._tree_wire_extra else None)
+        if self.batched_tree_enabled:
+            # One node-aligned q payload handles mixed chain/tree rows. Its
+            # width comes from the preceding metadata on both peers.
+            width = int(valid_k.max())
+            self._logits_q = torch.empty(B,width,self.vocab_size,
+                                         dtype=self.draft_dtype,device=self.device)
+            dist.recv(self._logits_q,src=self.draft_runner_rank,group=self.async_pg)
+            _mc('target_recv_response_wait',_mev_recv)
+            return speculations,self._logits_q,cache_hits,phase_source,valid_k
         # The fused block tells us whether the mutually exclusive next
         # payload is ordinary chain q or dynamic-tree parent q.  Reading two
         # tiny metadata scalars here replaces transferring unused ordinary q

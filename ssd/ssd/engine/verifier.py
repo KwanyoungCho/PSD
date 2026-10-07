@@ -222,6 +222,9 @@ class Verifier(VerifierBase):
 
     def verify(self, seqs: list[Sequence], speculate_result: SpeculateResult, eagle: bool = False) -> VerifyResult:
         """Verify speculative tokens using the target model."""
+        if getattr(self.target_model_runner, 'batched_tree_enabled', False):
+            from ssd.engine.helpers.batch_tree_verify import verify as verify_batched_tree
+            return verify_batched_tree(self, seqs, speculate_result)
         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
         batch_size = len(seqs)
         config = self.target_model_runner.config

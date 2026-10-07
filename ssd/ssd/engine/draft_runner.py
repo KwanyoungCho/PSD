@@ -102,6 +102,10 @@ class DraftRunner(ModelRunner):
         draft_memory_utilization = (
             0.75 if (not cfg.draft_async or both_dynamic_trees) else 0.8
         )
+        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
+        if batch_tree_enabled(cfg):
+            # Batch forests retain separate arenas and captured page plans.
+            draft_memory_utilization = 0.55
         draft_cfg = dataclasses.replace(
             cfg,
             model=cfg.draft,
@@ -152,11 +156,12 @@ class DraftRunner(ModelRunner):
             # The target ranks are still loading/capturing their own graphs at
             # this point, so most of this one-time work overlaps engine start
             # instead of extending the first generation.
-            self._warmup_p2_tree_executor()
-            self._warmup_p1_tree_executors()
+            if not self.batched_tree_enabled:
+                self._warmup_p2_tree_executor()
+                self._warmup_p1_tree_executors()
             # DUET: capture split-K1/K2 layout CudaGraphs
             # (split_k1_{long,short} + split_k2).
-            if self.config.duet_enabled and not self.enforce_eager:
+            if self.config.duet_enabled and not self.enforce_eager and not self.batched_tree_enabled:
                 from ssd.engine.helpers.cudagraph_helpers import (
                     capture_fi_tree_decode_cudagraph,
                 )
@@ -192,6 +197,9 @@ class DraftRunner(ModelRunner):
                 "capture cache before service",
                 flush=True,
             )
+            if self.batched_tree_enabled:
+                from ssd.engine.helpers.batch_tree_draft import BatchedDuetDraft
+                self.batch_tree = BatchedDuetDraft(self)
             if init_q is not None:
                 # The parent must not expose the engine until every draft
                 # graph (including the P2 warmup buckets) is ready.  The first
@@ -390,6 +398,11 @@ class DraftRunner(ModelRunner):
         num_tokens = fused[off:off + batch_size]; off += batch_size
         draft_block_table = fused[off:off + batch_size * max_blocks].view(batch_size, max_blocks).to(torch.int32); off += batch_size * max_blocks
         assert off == fused_total
+
+        if self.batched_tree_enabled:
+            seq_ids = torch.empty(batch_size,dtype=torch.int64,device=self.device)
+            dist.recv(seq_ids,src=0,group=self.async_pg)
+            self.batch_tree.invalidate(seq_ids.cpu().tolist())
 
         eagle_acts = None
         if use_eagle:
@@ -5771,6 +5784,10 @@ class DraftRunner(ModelRunner):
             # SPECULATE request: serve out-of-cache or random speculations
             elif cmd == 0:
                 _ds0 = time.perf_counter()
+                if self.batched_tree_enabled:
+                    self.batch_tree.serve()
+                    self._draft_step_times.append(time.perf_counter()-_ds0)
+                    continue
                 _prof = os.environ.get("SSD_PROFILE", "0") == "1"
                 if _prof or PROFILE_DRAFT:
                     torch.cuda.synchronize()
@@ -5820,6 +5837,8 @@ class DraftRunner(ModelRunner):
 
             # EXIT: clean up and break out of the loop
             elif cmd == 2:
+                if self.batched_tree_enabled:
+                    print(f'[metrics] batched tree: {self.batch_tree.stats}',flush=True)
                 if self._draft_step_times:
                     avg_ms = sum(self._draft_step_times) * 1000 / len(self._draft_step_times)
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)

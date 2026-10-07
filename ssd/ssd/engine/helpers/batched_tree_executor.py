@@ -10,7 +10,7 @@ from ssd.utils.context import set_context, reset_context
 
 
 class BatchedTreeExecutor:
-    def __init__(self, executors):
+    def __init__(self, executors, staging_only=False):
         if not executors:
             raise ValueError("empty tree batch")
         self.executors = tuple(executors)
@@ -27,6 +27,7 @@ class BatchedTreeExecutor:
         self.wrappers = {}
         self.graphs = {}
         self.workspaces = {}
+        self.staging_only = staging_only
 
     def prepare(self, page_bucket):
         if page_bucket in self.wrappers:
@@ -34,7 +35,20 @@ class BatchedTreeExecutor:
         a, B = self.first, len(self.executors)
         for ex in self.executors:
             if page_bucket not in ex.wrappers:
-                ex.prepare_bucket(page_bucket)
+                if self.staging_only:
+                    # Only the combined wrapper performs attention. Per-arena
+                    # generators need mask/page buffers, not B private FA2
+                    # workspaces and plans for each shape.
+                    from types import SimpleNamespace
+                    cols=(page_bucket+ex.canvas_extra_pages)*ex.bs
+                    ex.wrappers[page_bucket]=[SimpleNamespace(
+                        _canvas_cols=cols,
+                        _paged_kv_indices_buf=torch.zeros(page_bucket+ex.canvas_extra_pages,
+                            device=ex.dev,dtype=torch.int32),
+                        _custom_mask_buf=torch.zeros(w*cols//8,device=ex.dev,dtype=torch.uint8))
+                        for w in ex.round_widths]
+                else:
+                    ex.prepare_bucket(page_bucket)
             if page_bucket not in ex._local_idx_by_bucket:
                 ex._local_idx_by_bucket[page_bucket] = torch.full_like(ex._local_idx, -1)
             ex._local_idx = ex._local_idx_by_bucket[page_bucket]

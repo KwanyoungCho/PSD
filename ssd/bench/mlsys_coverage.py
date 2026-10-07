@@ -136,8 +136,6 @@ def main():
             duet_p1_tree_max_nodes=args.k1 * 2,
             duet_p1_tree_verify_nodes=args.k1 * 2,
         )
-    if args.mode == "duet-tree" and args.batches != [1]:
-        raise ValueError("Dynamic tree validation currently requires B=1; batched tree serving is not implemented")
     env = {k: v for k, v in os.environ.items()
            if k.startswith("SSD_") or k in ("CUDA_VISIBLE_DEVICES", "OMP_NUM_THREADS")}
     report = dict(
