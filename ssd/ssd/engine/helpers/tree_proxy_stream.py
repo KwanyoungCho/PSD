@@ -1,4 +1,4 @@
-"""Optional tree proxy scoring overlap with the target's remaining layers."""
+"""Optional tree proxy head/scoring overlap with remaining target layers."""
 import torch
 from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
 
@@ -10,7 +10,8 @@ class TreeProxySideStream:
         self.pending=False
 
     def launch(self, logits, batch, callback):
-        # Exit logits and topology/q preparation belong to the calling stream.
+        # Fresh normalized hidden/logits and topology/q preparation belong to
+        # the calling stream. Never pass residual storage mutated by graph-post.
         self.stream.wait_stream(torch.cuda.current_stream(logits.device))
         logits.record_stream(self.stream)
         with torch.cuda.stream(self.stream):

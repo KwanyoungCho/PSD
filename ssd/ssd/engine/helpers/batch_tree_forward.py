@@ -107,8 +107,7 @@ class BatchedTreeForward:
             if self.proxy_side is None:
                 from ssd.engine.helpers.tree_proxy_stream import TreeProxySideStream
                 self.proxy_side=TreeProxySideStream(r.device)
-            callback=proxy
-            proxy=lambda logits,batch:self.proxy_side.launch(logits,batch,callback)
+        side=self.proxy_side if os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1' else None
         pages = capacity(max((row['prefix']+len(row['tokens'])+r.block_size-1)//r.block_size
                              for row in rows))
         pages = min(pages,r.config.max_blocks)
@@ -129,12 +128,25 @@ class BatchedTreeForward:
                     replica = getattr(r,'_duet_lm_head_replica',None)
                     if proxy is not None and replica is not None:
                         normed = r.model.model.norm(hs+res,None)
-                        proxy(torch.nn.functional.linear(normed,replica).view(b,width,-1),b)
+                        def project(x,batch):
+                            proxy(torch.nn.functional.linear(x,replica).view(batch,width,-1),batch)
+                        if side is not None:side.launch(normed,b,project)
+                        else:project(normed,b)
                 else:
                     normed = r.model.model.norm(hs+res,None)
-                    exit_logits = r.model.compute_logits(normed,False)
-                    if proxy is not None:
-                        proxy(exit_logits.view(b,width,-1),b)
+                    if side is not None and r.num_tp_gpus==1:
+                        # normed owns fresh storage. Do not move hs+res/norm
+                        # itself: graph-post may mutate its residual inputs.
+                        def project(x,batch):
+                            proxy(r.model.compute_logits(x,False).view(batch,width,-1),batch)
+                        side.launch(normed,b,project)
+                    else:
+                        # TP gather stays on the collective stream on every
+                        # rank; only rank0's scoring may run independently.
+                        exit_logits = r.model.compute_logits(normed,False)
+                        if proxy is not None:
+                            if side is not None:side.launch(exit_logits.view(b,width,-1),b,proxy)
+                            else:proxy(exit_logits.view(b,width,-1),b)
                 duet_close('batch_target_proxy',_proxy)
                 _post=duet_record('batch_target_post')
                 g['post'].replay()
