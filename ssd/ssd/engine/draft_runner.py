@@ -557,7 +557,7 @@ class DraftRunner(ModelRunner):
             K1 = self.config.duet_phase1_k
             K2 = self.config.duet_phase2_k
             # Hard check (assert is stripped under python -O).
-            if K2 > K1:
+            if K2 > K1 and not getattr(self, 'batched_tree_enabled', False):
                 raise ValueError(
                     f"split-K1K2 mode requires K2 <= K1, got K1={K1}, K2={K2}. "
                     f"K2>K1 is not supported (proxy_horizon tail source undefined). "
@@ -630,7 +630,9 @@ class DraftRunner(ModelRunner):
                 f'split_k1_short MQ={self.split_k1_short_layout.MQ_LEN} '
                 f'(K=K1={K1}, pos={K2+1}), '
                 if self.split_k1_short_layout is not None else
-                'split_k1_short SKIPPED (K1==K2, long bucket reused), '
+                ('split_k1_short SKIPPED (unified tree owns context buckets), '
+                 if getattr(self, 'batched_tree_enabled', False) else
+                 'split_k1_short SKIPPED (K1==K2, long bucket reused), ')
             )
             print(f'[DUET split-K1K2] layouts: '
                   f'split_k1_long MQ={self.split_k1_long_layout.MQ_LEN} (K=K1={K1}, pos={K1+1}), '

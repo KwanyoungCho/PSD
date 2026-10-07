@@ -186,7 +186,8 @@ class Config:
     duet_p1_tree_conf_threshold: float = 0.0
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
-    # Constraint: K1 + K2 == speculate_k, K2 <= K1.
+    # K1 + K2 == speculate_k. Legacy split-chain graphs require K2 <= K1;
+    # the unified tree service has independent phase/verification capacities.
     # REQUIRED when duet_enabled (the hybrid / legacy two-pass paths that
     # allowed None were removed 2026-07; __post_init__ hard-errors on None).
     duet_phase1_k: int | None = None
@@ -689,7 +690,9 @@ class Config:
                         "bench.py derives it, or set --k to K1+K2.")
                 # Tier-3: early fail (moved up from DraftRunner init; the
                 # runner check stays as defense). -O 생존형 raise.
-                if self.duet_phase2_k > self.duet_phase1_k:
+                from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
+                if (self.duet_phase2_k > self.duet_phase1_k
+                        and not batch_tree_enabled(self)):
                     raise ValueError(
                         f"DUET split requires K2 <= K1 (short/long CG bucket "
                         f"invariant); got K1={self.duet_phase1_k}, "
