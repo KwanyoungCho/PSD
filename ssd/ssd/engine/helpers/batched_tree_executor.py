@@ -1,8 +1,8 @@
 """Batch independent dynamic-tree arenas into one draft forward per round.
 
 This primitive preserves each request's top-W budget and node namespace.
-Serving must still bind each arena to its own cache, wire, and accepted KV
-path. It is deliberately not advertised as end-to-end B>1 tree support.
+``batch_tree_draft`` binds these arenas to request-owned cache, wire, and
+accepted KV state. Timings of this primitive alone are not serving TPS.
 """
 import torch
 import flashinfer

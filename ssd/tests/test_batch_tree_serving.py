@@ -93,7 +93,6 @@ class Sampling(unittest.TestCase):
         empirical=torch.bincount(emitted,minlength=V)/B
         self.assertLess((empirical-p).abs().max().item(),.009)
 
-if __name__=='__main__':unittest.main()
 
 @unittest.skipUnless(torch.cuda.is_available(), 'CUDA required')
 class ForwardAttention(unittest.TestCase):
@@ -272,3 +271,7 @@ class StochasticWalk(unittest.TestCase):
                 path.append(choice);ctx=choice
             self.assertEqual(actual[b].tolist(),path+[-1]*(N-len(path)))
             self.assertEqual(terminal[b,0].item(),ctx+1)
+
+
+if __name__ == '__main__':
+    unittest.main()
