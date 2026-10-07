@@ -9,7 +9,7 @@ from ssd.engine.helpers.tree_host_topology import context_topology
 from ssd.engine.helpers.batched_tree_executor import BatchedTreeExecutor
 from ssd.engine.helpers.p1_tree import P1TreeExecutor, build_uniform_p1_roots
 from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
-from ssd.engine.helpers.p2_tree import tree_wire_ints_len, rerank_tree_indices
+from ssd.engine.helpers.p2_tree import tree_wire_ints_len
 from ssd.utils.async_helpers.nccl_pack import recv_int64
 
 
@@ -140,12 +140,11 @@ class BatchedDuetDraft:
             toks=a[1:1+N][:n]; par=a[1+N:1+2*N][:n]
             sib=a[1+2*N:1+3*N][:n]; cells=a[1+3*N:1+4*N][:n]
             if n>cap:
-                q=arena.view_rawq[root,:n].cpu().tolist()
-                keep=rerank_tree_indices(par,sib,q,cap)
-                remap={old:new for new,old in enumerate(keep)}
-                par=[-1 if par[j]<0 else remap[par[j]] for j in keep]
-                toks=[toks[j] for j in keep]; sib=[sib[j] for j in keep]
-                cells=[cells[j] for j in keep]
+                # A generation-order prefix preserves ancestry and ordered
+                # WOR prefixes without selecting a child by its sampled
+                # value. Post-sampling score re-ranking would require the
+                # conditional proposal law, not the original parent q.
+                toks=toks[:cap];par=par[:cap];sib=sib[:cap];cells=cells[:cap]
             self.entries.setdefault((seq,int(ctx),int(token)),dict(
                 tokens=toks,parents=par,siblings=sib,cells=cells,
                 logits=arena.cell_logits,phase=phase,tree=is_tree))
