@@ -149,8 +149,8 @@ def verify_batch(logits_p,logits_q,tokens,topology,target_temps,draft_temps,
         accepted=(child_tokens==argmax[:,:,None])&topology['child_valid']
         residual=None
     else:
-        tt=torch.as_tensor(target_temps,dtype=torch.float32,device=dev,dtype=torch.float32)
-        dt=torch.as_tensor(draft_temps,dtype=torch.float32,device=dev,dtype=torch.float32)
+        tt=torch.as_tensor(target_temps,dtype=torch.float32,device=dev)
+        dt=torch.as_tensor(draft_temps,dtype=torch.float32,device=dev)
         p=(logits_p.float()/tt.clamp_min(1e-10)[:,None,None]).softmax(-1)
         # Mixed batches may include T=0 requests. Dividing by a tiny
         # temperature gives a uniform distribution over tied maxima;
