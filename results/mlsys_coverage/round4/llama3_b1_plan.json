@@ -1,0 +1,193 @@
+[
+  {
+    "name": "legacy_q_path",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "0",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path"
+    }
+  },
+  {
+    "name": "legacy_reach_gain_frontier",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "0",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "reach_gain_frontier"
+    }
+  },
+  {
+    "name": "q_path",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path"
+    }
+  },
+  {
+    "name": "miss_chain2",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_DUET_MISS_K": "2"
+    }
+  },
+  {
+    "name": "miss_star3",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_DUET_MISS_K": "1",
+      "SSD_DUET_MISS_WIDTH": "3"
+    }
+  },
+  {
+    "name": "miss_tree2x2",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_DUET_MISS_K": "2",
+      "SSD_DUET_MISS_WIDTH": "2"
+    }
+  }
+]

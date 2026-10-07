@@ -1,0 +1,74 @@
+[
+  {
+    "name": "llama2_baseline",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "3030",
+      "3031",
+      "--batches",
+      "8"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_SEED": "1",
+      "SSD_TREE_FUSED_MATH": "0",
+      "SSD_BATCH_TREE_BULK_EXPORT": "0",
+      "SSD_TREE_PARALLEL_INSERT": "0"
+    }
+  },
+  {
+    "name": "llama2_fused_bulk",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "3030",
+      "3031",
+      "--batches",
+      "8"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_TREE_FUSED_MATH": "1",
+      "SSD_BATCH_TREE_BULK_EXPORT": "1",
+      "SSD_SEED": "1",
+      "SSD_TREE_PARALLEL_INSERT": "0"
+    }
+  }
+]

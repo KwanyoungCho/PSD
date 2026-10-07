@@ -1,0 +1,47 @@
+[
+  {
+    "name": "llama2_short_k2_1_miss2_fused_bulk",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "2027",
+      "--batches",
+      "8",
+      "--k1",
+      "2",
+      "--k2",
+      "1",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/llama2_budget_control/llama2_short_k2_1_miss2_fused_bulk.json"
+    ],
+    "started": 1791388739.0977585,
+    "gpu_uuids": [
+      "GPU-211c89c3-d6d1-dfa7-b816-e6ee65c35c82",
+      "GPU-98b22d7c-597c-b851-af6b-1f0c7b4c6904"
+    ],
+    "external_pids": [],
+    "samples": 78,
+    "ended": 1791388914.2209039,
+    "returncode": 0,
+    "result_status": "complete",
+    "status": "complete"
+  }
+]

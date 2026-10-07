@@ -1,6 +1,8 @@
 **DUET MLSys 확장 — 통합 변경 기록, 질문 답변, 다른 서버 merge 검토표**
 
-작성일: 2026-10-07. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 현재 상태는 이 문서와 round3 결과로 판단한다. 이번 문서 작업에서는 source/history와 저장된 실험을 재검토했고, 새로운 GPU 성능 실험이나 runtime 변경은 하지 않았다.
+**최신 상태 (2026-10-08): Round4 완료.** 먼저 **19절**을 읽으면 이번 구현,94개 실행 결과, 사용자 질문5개 답변, 다른 서버 merge 지침을 한 번에 확인할 수 있다. 0–18절과 기존 부록은 round3까지의 역사적 기록이며 “이전 selector 미적용/G>M 미해결/새 runtime 변경 없음”은 당시 상태다. 최종 runtime/bench/test commit은 `c0600ea`; 전체 원시 JSON은 round4의 검증된 gzip archive로 보존했다.
+
+작성일: 2026-10-07. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 아래0–18절은 당시 source/history와 저장된 실험을 재검토한 내용이다. 당시 문서 감사에는 새 GPU 실험/runtime 변경이 없었으며, 이후 추가 작업과 현재 상태는19절을 따른다.
 
 **0. 정확한 기준과 먼저 바로잡을 설명**
 
@@ -344,7 +346,7 @@ Greedy 검증은 전체 token 완전 일치와 분포/규칙 검증을 분리했
 9. AR 비교는 target1개 latency 외에 같은 총 GPU 예산의 AR replica throughput도 포함한다.
 10. 정밀도/shape별 greedy 차이, stochastic proposal 법칙, G>M 정책을 validation과 분리하지 않는다. Invalid 설정의 빠른 TPS는 결과에서 제외한다.
 
-**15. 남은 작업과 우선순위 — 현재 시점의 완료/미완료 구분**
+**15. 남은 작업과 우선순위 — round3 당시 상태 (최신은19절)**
 
 | 우선순위 | 작업 | 완료 조건 |
 |---|---|---|
@@ -393,7 +395,7 @@ Greedy 검증은 전체 token 완전 일치와 분포/규칙 검증을 분리했
 - [ ] 논문 원 driver/chat template/length 프로토콜과 repo harness를 구분하여 새 결과 디렉터리를 만든다.
 - [ ] 마지막으로 correctness를 유지한 공통 baseline → 동일 설정 최적화 A/B → root/tree 정책 ablation → 각 방법 best throughput 순서로 평가한다.
 
-**17. 현재 기본값·지원 범위·재현 진입점**
+**17. 기본값·지원 범위·재현 진입점 — round3 기준**
 
 | 옵션 | 현재 선택/의미 |
 |---|---|
@@ -440,6 +442,176 @@ python results/mlsys_coverage/review_audit.py --upstream /path/to/pinned-ssd
 | 결과 그래프 | [round3/throughput_comparison.png](round3/throughput_comparison.png) |
 
 이 문서 아래 부록에는 이번 branch의 commit 전체와 code/bench/test/dependency 변경 파일 전체를 적는다. 다른 서버에서 누락 여부를 파일 단위로 확인할 수 있다. Runtime source 기준은 위 `68d0a26`이며, 문서·감사 script를 추가하는 후속 commit은 해당 runtime 실험 revision을 바꾸지 않는다.
+
+
+
+**19. Round4: 이 서버의 추가 구현·실험 (2026-10-07~08)**
+
+이 절이 0–18절의 시점별 미완료 항목을 갱신한다. 시작 commit은 `696e92c`, 최종 runtime/bench/test commit은 `c0600ea`, 논문 기준은 `a82f7d2`다. 다른 서버의 branch를 가져오지 않았다. 모든 변경은 `/home/chokwans99/PSD-mlsys-coverage`, `feat/duet-mlsys-coverage`에 있다. Round4 상세 근거는 [REPORT](round4/REPORT.md), [수치표](round4/TABLES.md), [수식](round4/THEORY.md), [작업 로그](round4/NOTES.md)에 보존한다. 이 절에도 merge 판단에 필요한 구현·결과·제약을 함께 남긴다.
+
+**19.1 사용자 요청 다섯 가지와 처리 범위**
+
+| 요청 | 적용/검증 |
+|---|---|
+| Cap/EOS 경계 집계 제외 | 마지막 cap/clip sequence event를 AL에서 제외. TPS는 해당 batch-step의 token과 시간을 함께 제외. 전체 반환 TPS/원시 기록도 보존 |
+| 논문 breakdown으로 P1/P2 숨김 확인 | 원본 Fig5 확인. 실제 proxy NCCL 완료·P1/P2 완료·target final model/accept-ready 시점을 계측. B1/B8, K4/2·8/4·2/1 비교 |
+| 이전 tree 개선 적용 | Reach, gain allocation, frontier를 실제 공통 실행기에 연결. 기존 table transfer와 dense 모델8질문 calibration을 분리하여 full480 및 held-out472 평가 |
+| 짧은/분기형 miss | 기본 chain2를 확인하고 chain1/chain4/star3/tree2x2를 독립 구현. B1/B8 full480, node 수를 맞춘 tree2x2–chain4 대조 |
+| B1 G>M 직접 검토 | 사후 confidence pruning을 고정 generation prefix로 교체. P1 precompute/on-demand와 P2 모두 수정. 유한 분포 전수 감사·unit test·dense model smoke |
+
+경계 제외 단위에 대한 선택 질문에는 응답이 없었으므로, 전체 요청 삭제 대신 마지막 event/영향 batch-step 제외를 가정한다고 안내한 뒤 진행했다. 이전 논문에서 긴 **입력**을 사전 제외한 것과, 상한에 도달한 **출력 결과**의 요청 전체를 지우는 것은 다르다. 원시 결과는 삭제하지 않는다.
+
+**19.2 실험 범위와 GPU 배치**
+
+- Full dense Llama2-7B/AMD135m(FP16), Llama3-8B/Qwama0.5B(BF16), RTX4090 8개. 첫 점검 시 모든 GPU가 비어 있었다.
+- B8 Llama2는2,3 PIX, Llama3는4,5 PIX. B1 Llama2는0,1 NODE(같은 NUMA), Llama3는6,7 PIX. 같은 모델/조건의 상대 비교는 동일 pair를 유지했다. 다른 topology의 두 모델 절대 TPS 비교는 통제 실험이 아니다.
+- 저장된 dataset의 전체480 question **첫 turn**. 여섯 task group각80개. 입력 cap512(잘린 입력 Llama2 141개/Llama3 136개), 출력 cap64, EOS 적용. 전체 question 목록과 전체 원문 token 사용을 구분한다. B8 주요 policy/miss는 T=.7, target seed3개. B1은 T=.7,1seed. 작은8/32/48질문 실행은 smoke/profile로 표시한다.
+- 기본 exit21, K1/K2=4/2, P1/P2 G=M=8/4. Root의 `e(1-q)` 개선이나 새 위치 점수는 포함하지 않았다. 독립 tree continuation policy 비교다.
+- Pass 사이 target RNG는 재설정하지만 draft RNG는 process 시작 seed0에서 이어진다. 동일 engine의3pass는 독립 process replicate가 아니다. 질문 단위 paired bootstrap2,000회, nominal95% CI를 사용하며 다중비교 보정은 하지 않았다.
+- Detailed profile OFF인 full 성능 실행과 profile ON 진단을 구분했다. Full batch timing은 activeB==configuredB만 집계하고 capture/초기20step을 제외했다.
+
+**19.3 실제 변경 파일과 merge 시 보존할 계약**
+
+| 파일 | Round4 변경 | Merge 시 확인 |
+|---|---|---|
+| `engine/draft_runner.py` | miss JIT의 독립 깊이/폭; legacy B1 G>M prefix selection | 이미 sampling한 자식의 점수를 보고 그 자식을 버리는 cache를 되살리지 않기. 모든 sibling의 원 parent q 유지 |
+| `helpers/batch_tree_draft.py` | source0 shallow tree wire/KV restore, config 기반 기본 miss, bulk metadata export, phase timing | Miss도 tree일 수 있음. Source0=chain이라고 가정하지 않기. P1/P2 arena는 별도이며 duplicate root는 P1 우선. 전체 build 후 응답하는 현재 barrier 계약 필요 |
+| `helpers/p2_tree_executor.py` | `iter_rounds`에 정책 연결, mask/fanout fusion, parallel insertion 옵션 | 이전 `run_once` monkeypatch를 중복 적용하지 않기. Graph 내부 입력 버퍼가 replay마다 바뀌는 계약 유지 |
+| `helpers/p2_tree.py` | all-frontier 선택 지원; diagnostic rerank 설명 정정 | q/proposal 및 sibling-order 보존. old rerank utility를 production에 다시 연결하지 않기 |
+| `helpers/tree_expansion_policy.py` (신규) | q/reach, gain, frontier dispatch 및 frozen table 로딩 | G=M, global expansion 지원 범위 검사. q 자체를 추정 alpha로 치환하지 않기 |
+| `helpers/tree_gain_allocation.py` (신규) | root별 작은 정수 partition 최적화 | 요청/root 간 budget을 섞지 않기. 기존 future-round reserve 유지 |
+| `helpers/tree_fused_math.py` (신규) | exact mask packing, round-robin closed form | stable priority tie, 63bit ancestor word, invalid lane, mutable capture input 검사 |
+| `helpers/tree_rerank_gpu.py` | 기존 utility의 lossless-safe 주장 제거 | GPU helper 자체를 새 lossless production selector로 오해하지 않기 |
+| `helpers/batch_tree_forward.py` | target pre/post/final logits CUDA timing | Profile OFF에서 기존 실행 경로 유지 |
+| `engine/step.py`, `llm_engine.py` | emitted/cap/clip/event ID, batch step별 time/token | Verifier의 진단 AL과 실제 반환 TPS를 구분. 토큰만 제외하고 시간을 남기는 불공정 비교 방지 |
+| `bench/mlsys_coverage.py` | 경계 지표, G>M smoke 인자, frozen calibration 관측, GPU preflight, resolved env/source hash | Shared venv여도 이 checkout import. Preflight는 RNG 복구/메모리 해제 후 engine 초기화. 초기 compile cache와 후속 pass 구분 |
+| `bench/mlsys_tree_observer.py` (신규) | Legacy B1의 full p/q passive snapshots | Diagnostic only. T>0, 평가 시만 켜고 throughput 결과에 사용하지 않기 |
+| `tests/test_tree_round4.py`, `test_tree_fused_math.py` (신규), `test_output_accounting.py` | 수학/serving/graph/경계 계약 검사 | 새 서버 CUDA/Triton/backend에서 재실행 |
+
+Tree reach는 `rho_parent × Π(앞 sibling 거절률) × alpha_hat`다. Gain은 `Σ rho_i gamma(c_i)`의 **현재 round 추정 이득**을 root별 예산에서 최대화한다. 전체 실제 AL의 전역 최적성은 주장하지 않는다. Calibration은 신경망 학습은 없지만 경험적 보정이다.
+
+**19.4 핵심 correctness 판정**
+
+- Legacy G>M의 옛 confidence pruning은 실제 proposal 법칙을 바꿀 수 있다.18개 유한 sampling 결과와 모든 accept/reject coin branch를 전수 계산한 예에서 target `(0.4,0.3,0.3)`가 `(0.4,0.31875,0.28125)`로 바뀌었고 TV=.01875였다. 고정 generation prefix는 정확히 target과 일치했다. 실제 LLM bias 빈도/크기 추정은 아니다.
+- P1 precompute cache를 비활성화/무효화했고 on-demand P1/P2 모두 같은 prefix 규칙이다. G=M zero-copy는 유지한다. 양 phase/stale cache/qref remapping test와 두 dense model G>M smoke를 수행했다. 옛 논문 전체 G/M 설정은 원 로그로 확인해야 한다.
+- 기본 miss는 **chain2**였다. `duet_jit_short=True`가 config 생성 중 env에 반영된다. Baseline source0의 실제 `valid_k=2`를 전수 확인했다. 명시적 chain2는 재현 반복이고 개선 실험으로 세지 않는다. 독립 chain4 대조군을 추가했고 초기 잘못된 추론/수정 기록도 남겼다.
+- 새 shallow miss는 모든 ordered-WOR sibling을 유지하고 첫 sibling만 다음 깊이로 확장한다. 원 parent logits와 target tree mask, 수락 경로 KV를 함께 전달한다. SpecInfer-inspired 설계 검토이며 전체 SpecInfer 재현이 아니다.
+- Fused mask/fanout과 bulk export는 tree 점수/예산을 바꾸지 않는다. Byte/정수 수준 parity, capture replay, 실제 full model output 대조를 수행한다. T0 miss smoke 최초 차이 하나는 독립 HF FP16 logit tie였으며 모든 shape의 bitwise 동일성을 보장한 것은 아니다.
+
+**19.5 논문 timing과 이번 측정이 말하는 것**
+
+원 Fig5는 dense70B/TinyLlama, Blackwell targetTP2+draft1GPU, B1, K8/4, exit56이다. 정규화된 hit timeline에서 P1 42%, proxy wait22%, P2 27%, target pre/post61%/24%, sync9%, sampling6%다. 현재7/8B + RTX4090의 비율이 같지 않다.
+
+측정 마감은 `C1=a+D1`, `C2=max(C1,P)+D2`, `C1<=P`, `C2<=F_ready`다. `P`는 P1 뒤 wait 호출 시각이 아닌 독립 stream의 실제 recv 완료다. Model 완료 `F_model`도 별도 기록한다. All-hit만으로 P1/P2의 완료를 보장할 수 없다.
+
+| 측정 조건 | P1→proxy 여유 중앙값 | P2→target ready 여유 중앙값 | 의미 |
+|---|---:|---:|---|
+| Llama2 B1 K4/2 | +6.13ms | +2.82ms | 두 phase 모두 충분히 들어옴 |
+| Llama2 B1 K8/4 | +1.70ms | +0.65ms | 대체로 들어오지만 여유가 작아짐 |
+| Llama3 B1 K4/2 | -0.30ms | +0.93ms | P1은 자주 proxy보다 늦음, P2 ready는 대부분 충족 |
+| Llama3 B1 K8/4 | -11.09ms | -15.14ms | 이 pair에는 forward 예산이 과함 |
+| Llama2 B8 K4/2 baseline | -5.43ms | -7.53ms | Draft가 숨지 않음 |
+| Llama2 B8 K4/2 fused | -0.81ms | -0.71ms | 같은 AL 정책의 kernel overhead 감소 |
+| Llama3 B8 K4/2 baseline | -11.67ms | -14.49ms | 더 작은 target/draft 시간 간격 + tree overhead |
+| Llama3 B8 K4/2 fused | -7.16ms | -7.92ms | 개선됐지만 여전히 마감 초과 |
+| Llama2/Llama3 B8 K2/1+bulk | +4.87/+0.95ms | +1.66/+1.79ms | Profile에서 ready 정시율100%; AL tradeoff는 full 데이터로 별도 평가 |
+
+이 timing의 B1도 `SSD_BATCHED_TREE=1`인 unified 경로이며 legacy B1과 구분한다. B1은16질문/cap32, B8 주요 profile은48질문/cap64다. 표의 margin은 각 step에서 먼저 차이를 계산한 후 중앙값을 취했다. 서로 다른 step latency 중앙값을 합쳐 가상의 timeline을 만든 것이 아니다. [실제 step 그림](round4/figs/04_actual_step_timeline.png)과 [전체 timing 통계](round4/timeline.json)를 보존한다. 작은 시계 anchor 오차가 있어0근처 margin의 엄격한 보장을 주장하지 않는다.
+
+**19.6 결과·채택 설정**
+
+<!-- ROUND4_FINAL_RESULTS_BEGIN -->
+**검증 완료 범위:** full dense 두 모델 pair에서 GPU job94개를 모두 완료했다. 그중62개 job은 전체480질문을 사용했고, target-seed pass는132회다. 전체178개 cell의 실제 반환3,614,764token을 event/step/counter와 대조한1,958개 집계 검사에서 불일치가 없었다. 할당 GPU에 외부 process가 겹친 기록도 없었다. 기본 경로와 fused+bulk+parallel 경로 각각288/288 회귀 검사가 통과했다.
+
+**AL을 우선한 최종 검증 조합:** K1/K2=4/2, 기존 reach+gain+frontier table, miss chain4, fused mask/fanout + bulk export. Root 후보 수식은 그대로다. 아래 비교는 두 arm 모두 같은480질문/target seed2026·2027/draft startup seed0다. AL*는 cap/clip terminal event 제외, TPS*는 경계 batch-step의 token과 시간을 함께 제외했다. TPS는 후속 pass 값을 사용하며 괄호에는 제외 전 실제 반환 TPS를 함께 썼다.
+
+| 모델/B8 | 기존 AL* → 조합 AL* | AL* 개선 | ΔAL* 95% CI | 기존 TPS* → 조합 TPS* (전체 TPS) |
+|---|---:|---:|---|---|
+| llama2 | 1.9808 → 2.0476 | +3.37% | [+0.0367, +0.0989] | 480.1 → 498.4 (484.5 → 513.3) |
+| llama3 | 2.3736 → 2.5376 | +6.91% | [+0.1233, +0.2031] | 381.8 → 422.0 (382.2 → 411.3) |
+
+이 조합의 AL 개선에는 **miss node2→4 확대 효과가 포함**된다. 이를 모두 tree 점수 개선으로 주장하지 않는다. 같은 corpus에서 구성 요소를 본 뒤 확인한 조합이며, 새로운 미관측 test set의 확증도 아니다. 검증한 후보 중 AL 우선 선택지이지 모든 parameter 조합의 최적성 증명은 아니다.
+
+**구성 요소별 결론:**
+
+1. **기존 tree 점수 개선은 Llama3에서 유효했다.** Miss2/G=M8·4를 고정한3pass 비교에서 historical reach+gain+frontier의 AL*는 Llama3 +1.91%(ΔCI [+.0172,+.0746]), Llama2 +0.63%(ΔCI [-.0096,+.0350])다. Llama2의 우위는 확정하지 않는다. Legacy B1에서도 Llama3 +2.72%, Llama2 +1.49%이며 후자는 CI가0을 포함한다.
+2. **8질문 dense calibration은 필수가 아니었다.** Dense reach+gain+frontier는 q-path 대비 Llama3 +2.10%, held-out472에서 +2.12%였으나, historical table 자체와 비교한 추가 ΔAL* CI는 Llama3 [-.0277,+.0335], Llama2 [-.0128,+.0305]다. 보정 표본이 작고 수집B1/평가B8의 context 이동도 있어 새 보정이 더 좋다고 확정하지 않는다.
+3. **Miss를 무조건 짧게 하거나 넓히는 것은 AL 목표에 맞지 않았다.** 기본 miss는 이미 chain2다. B8에서 chain4의 AL*는 Llama2 1.991→2.030, Llama3 2.382→2.469로 증가했다. 같은4-node의 tree2x2는 각각2.010/2.409로 chain4보다 낮았다. 이는 첫 sibling만 다음 깊이로 확장하는 이번 얕은 설계의 결과이며, 모든 token tree/SpecInfer의 열등성을 뜻하지 않는다. Star는 구조상 AL<=2라 Llama3 chain4 miss 조건부 AL≈2.31을 따라갈 수 없다.
+4. **Llama3에서는 miss4에서도 tree 점수의 추가 AL 이득이 남았다.** Target seeds2026·2027로 맞춘 AL-only 분석에서 chain4 조건의 score 개선 ΔAL*는 Llama3 +.0888(CI [+.0499,+.1272]), Llama2 +.0120(CI [-.0182,+.0430])다. 조합 arm의 kernel 구현도 달라 TPS의 완전 factorial 비교는 아니며, 별도로 확인한 구현 동등성 범위에서 AL을 해석한다. 두 요소의 interaction CI는 양 모델 모두0을 포함하므로 양의 synergy를 확정하지 않는다. Llama2의2seed 결과만 골라3seed 주 분석보다 강한 결론을 내리지 않는다.
+
+**알고리즘을 바꾸지 않은 실행 최적화:** K4/2·q-path·miss2의 전체480개 출력이 매 pass 모두 동일했다. Fused/bulk/parallel의 main 비교3개×2모델×2pass, 그리고 독립 draft seed1의 보조 pair 비교에서도 출력 동등성을 확인했다. B1 두 모델의 fused+bulk 비교도 전체480출력과 AL이 동일하다.
+
+| 모델/B8 | 같은 AL을 유지한 관측 최고 설정 | 후속 pass 전체 TPS | 경계 제외 TPS* |
+|---|---|---:|---:|
+| llama2 | fused | 484.5 → 556.2 (+14.8%) | 480.1 → 551.2 |
+| llama3 | fused_bulk_parallel | 382.2 → 456.0 (+19.3%) | 381.8 → 455.0 |
+
+별도 GPU pair·draft seed1/target3030·3031의 fresh-engine 확인에서 fused+bulk 후속 pass TPS는 Llama2 470.0→532.3(+13.3%), Llama3 344.9→398.5(+15.6%)였다. Pair별 절대 TPS는 합치지 않는다. Llama2에서는 bulk/parallel을 더 켜도 fusion 단독보다 빠르지 않았고, Llama3의 parallel 추가 약2% 이득은 별도 process 반복으로 더 확인할 여지가 있다. B1 Llama2에서 같은 최적화의 TPS 이득이 거의 없었던 것은 이미 draft가 숨는 조건과 일관된다. Tree CUDA graph를 매번 다시 만들던 문제를 고친 것이 아니라 graph 안의 작은 kernel/metadata 비용을 줄였다.
+
+**Phase 예산 축소의 원인 분리:** K2/1을 그대로 쓰면 default miss도1로 줄어든다. 따라서 miss2를 고정한 추가 full480 대조를 완료했다. 아래는 같은 fused+bulk, 같은 miss2이며 phase/node 예산만 K4/2·G8/4에서 K2/1·G4/2로 바뀐다.
+
+| 모델/B8 | K4/2 AL* → K2/1 AL* | AL* 변화 | 후속 pass 전체 TPS |
+|---|---:|---:|---:|
+| llama2 | 1.9808 → 1.7501 | -11.64% | 549.9 → 545.3 |
+| llama3 | 2.3736 → 2.0497 | -13.65% | 446.0 → 508.0 |
+
+Llama3에서는 짧은 phase가 TPS를 더 높일 수 있지만 AL을 희생한다. **사용자가 정한 AL 우선 목적에는 K4/2 조합을 유지하는 쪽이 맞다.** Profile에서 두 phase가 시간 안에 들어온다는 조건만으로 최적 parameter가 정해지지 않는다. K를 바꾸면 depth/node/query shape와 target latency도 바뀌므로 이들을 포함한 AL/시간 비교가 필요하다. 여기서는 node budget도 함께 바뀌는 실제 설정을 비교했으며, 모든 K/N 조합을 sweep한 것은 아니다.
+
+**적용 지침:** G>M proposal-law 수정과 실제 반환/경계 집계는 공통으로 채택한다. AL 우선 실행은 `*_budget_plan.json`의 `*_combined_chain4` job을 사용한다. 동일 AL에서 TPS를 우선하는 K4/2 실행은 Llama2의 `*_fused`, Llama3의 `*_fused_bulk_parallel` job이 이번 관측 최고다. 새 성능 옵션의 기본값은0으로 남겨 원 설정 재현/새 하드웨어 대조가 가능하게 했고, 검증한 plan은 필요한 옵션을 명시한다. 이 옵션들은 새 확률 threshold가 아니라 구현 ablation용이다. 다른 서버에서는 위 preset으로 시작하고 backend/hardware 변경 후 parity와 performance를 재확인한다.
+
+**남은 범위:** 이 서버의 위94개 실행과 correctness/집계 검증은 완료했다. Dense70B·Blackwell targetTP2, 긴 출력1024/장문 전체 입력, 새 root 수식과의 결합, 다른 workload·독립 seed에서 작은 AL 이득의 재현은 후속이다. 이번 결과는 신규 SSD/Mirror-SD baseline 비교가 아니므로 그 대비 우위를 이 수치만으로 주장하지 않는다.
+<!-- ROUND4_FINAL_RESULTS_END -->
+
+**19.7 다른 서버 재현과 누락 방지**
+
+1. 이 문서0절의 논문 기준, 다른 서버 HEAD/working diff, 이 branch 최종 commit을 먼저 기록한다. 다른 서버의 미push 수정은 이번 검증에 포함되지 않았다.
+2. Round3의 공통 scheduler/attention/verifier/wire 수정과 Round4의 실행기·tree policy·sampling/KV 계약을 함께 merge한다. 특히 `draft_runner.py`, `p2_tree{,_executor}.py`, batch tree helpers가 충돌 가능성이 높다.
+3. `G>M`에서 옛 confidence precompute/CPU/GPU rerank가 serving에 다시 연결되지 않게 한다. 다른 tree selector를 추가해도 이미 sampled token의 사후 생존 규칙은 별도 losslessness 검토가 필요하다. 다른 서버에서 P1 cache를 P2 완료 전에 독립 제공하도록 바꿨다면 bulk export의 지연이 availability를 바꿀 수 있으므로 그대로 합치지 않는다.
+4. K1/K2, 실제 miss 깊이/폭, root fanout, G/M, calibration file hash, dtype, tokenizer-ID mapping, targetTP, GPU topology를 기록한다. 초기 env만 보지 않고 config 완료 후 값을 본다. 후반 report는 새 파일까지 포함한 runtime Python SHA를 기록한다. 초기 report에는 이 필드가 없고 당시 commit/working-diff SHA만 있으므로, 모두 동일한 완전 source snapshot을 저장했다고 주장하지 않는다. 최종 재현 기준은 `c0600ea`와 `round4/SOURCE_MANIFEST.json`이다. `round4/MODEL_MANIFEST.json`에는4개 full checkpoint의 config/tokenizer 및 모든 safetensors shard SHA256을 남겼다. AMD checkpoint는float32지만 실제 실행은FP16으로 정렬했다.
+5. `archive_results.py --restore`로 gzip을 풀면 원시 JSON과 profile을 복구할 수 있다. SHA256 manifest로 대조한다. NPZ full-vocab calibration snapshot은 `round4/local_calibration_snapshots.tar`(약238MiB)로 별도 보관했다. 이 tar는 Git에 포함되지 않으므로 정확한 재보정이 필요하면 따로 복사한다. Compact audit/table/각 NPZ 및 tar SHA는 Git에 남긴다.
+6. Plan의 옛 absolute model path를 그대로 실행하지 않는다. 아래 script는 새 경로를 넣고 historical optimization 기본값을 명시한다. RTX4090용 `SSD_CUDA_ARCH=8.9`도 새 GPU에 맞춰 변경한다.
+7. GPU가 비었을 때 correctness gate→T0/.7 smoke→full corpus AL→latency/throughput 순서로 검사한다. Dataset/full output/seed/repetition을 바꾼 새 결과를 기존 숫자와 혼합하지 않는다.
+8. 새로운 SSD/Mirror-SD 비교에는 공통 정확성 수정·실제 emission 집계·같은 resident batch 의미를 공통 적용한다. DUET tree 구현 최적화와 SSD 자체의 최적 파라미터는 각각 적절히 튜닝한다. 이번 tree ablation만으로 Mirror-SD 대비 새 end-to-end 우위를 주장하지 않는다.
+
+```bash
+# 이 checkout의 venv 사용. 아래 model/GPU 경로는 새 서버에 맞춘다.
+python results/mlsys_coverage/round4/archive_results.py --restore
+python results/mlsys_coverage/round4/analyze_results.py
+python results/mlsys_coverage/round4/analyze_timeline.py
+python results/mlsys_coverage/round4/make_tables.py
+python results/mlsys_coverage/round4/make_figs.py
+
+python results/mlsys_coverage/round4/relocate_plan.py \
+  results/mlsys_coverage/round4/llama2_full_plan.json \
+  --target /models/layerskip-llama2-7b --draft /models/AMD-Llama-135m \
+  --output /new-results/llama2-plan.json
+SSD_CUDA_ARCH=8.9 python ssd/bench/mlsys_campaign.py \
+  --plan /new-results/llama2-plan.json --directory /new-results/llama2-full \
+  --gpus 0,1 --port 33000
+
+# AL 우선 조합만 재현하려면 이미 검증한 job 하나를 선택한다.
+python results/mlsys_coverage/round4/relocate_plan.py \
+  results/mlsys_coverage/round4/llama2_budget_plan.json \
+  --job llama2_combined_chain4 \
+  --target /models/layerskip-llama2-7b --draft /models/AMD-Llama-135m \
+  --output /new-results/llama2-al-plan.json
+# Llama3는 llama3_budget_plan.json / llama3_combined_chain4 사용.
+
+CUDA_VISIBLE_DEVICES=0 MLSYS_PYTHON=/새환경/bin/python \
+  bash results/mlsys_coverage/run_regressions.sh
+# 추가 round4 tests는 ssd/에서 checkout을 import하도록 PYTHONPATH=. 사용
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=ssd python -m unittest \
+  tests.test_tree_round4 tests.test_tree_fused_math
+python results/mlsys_coverage/round4/audit_proposal.py
+```
+
+Local shared venv의 editable install이 `/home/chokwans99/PSD`를 가리키므로 PYTHONPATH/bench의 checkout 우선 import를 제거하지 않는다.
+
+**19.8 이번 서버에서 끝난 범위와 후속 연구의 경계**
+
+- 이번 목표는 correctness 수정과 두 dense pair의1차 full-corpus 판단이다. 모든 모델/정밀도/길이/하드웨어에서 TPS 전역 최적점을 찾은 것은 아니다.
+- Dense70B+Blackwell targetTP2의 논문 환경 재현, 긴 출력1024, T0 전체 확장 matrix, 독립 process repetitions, exit/K/새 root 수식/새 tree 점수의 공동 최적화는 별도 후속 축이다.
+- Full480 밖의 일반화,8질문 calibration의 안정성, nominal CI의 다중비교 한계, BF16/FP16 tie에 의한 greedy output 차이를 남긴다. 미실행 항목을 성능 검증 완료라고 표시하지 않는다.
 
 
 **부록 A. Systems branch commit 전체 — 논문 기준 이후**

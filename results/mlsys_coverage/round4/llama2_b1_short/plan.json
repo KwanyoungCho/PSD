@@ -1,0 +1,101 @@
+[
+  {
+    "name": "llama2_miss_chain4",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_DUET_MISS_K": "4"
+    }
+  },
+  {
+    "name": "llama2_miss_chain1",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_DUET_MISS_K": "1"
+    }
+  },
+  {
+    "name": "llama2_optimized_q_path",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "1",
+      "--preflight-test",
+      "tests.test_tree_fused_math,tests.test_p2_executor_parity,tests.test_executor_premises,tests.test_batched_tree_executor,tests.test_tree_round4"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_TREE_FUSED_MATH": "1",
+      "SSD_BATCH_TREE_BULK_EXPORT": "1"
+    }
+  }
+]

@@ -1,0 +1,119 @@
+{
+  "scope": "AL-only 2x2 analysis, aligning all four arms to target seeds2026/2027.\n\nThe combined arm also enables exact implementation optimizations. Thus this\nis NOT a factorial TPS experiment. AL interpretation uses their separately\nvalidated proposal/topology equivalence, and is explicitly scoped as such.\n",
+  "results": [
+    {
+      "model": "llama2",
+      "seeds": [
+        2026,
+        2027
+      ],
+      "questions": 480,
+      "arm_order": [
+        "q_path_chain2",
+        "reach_gain_frontier_chain2",
+        "q_path_chain4",
+        "reach_gain_frontier_chain4_optimized"
+      ],
+      "arm_clean_al": [
+        1.9807699130743304,
+        2.011148794919902,
+        2.035528723015002,
+        2.047559125060143
+      ],
+      "effects": {
+        "tree_score_at_chain2": {
+          "delta_clean_al": 0.03037888184557147,
+          "ci95": [
+            0.0032559628406104383,
+            0.057089162505807034
+          ]
+        },
+        "tree_score_at_chain4": {
+          "delta_clean_al": 0.012030402045140942,
+          "ci95": [
+            -0.018187287415529895,
+            0.043025042754306686
+          ]
+        },
+        "miss_depth_at_q_path": {
+          "delta_clean_al": 0.054758809940671505,
+          "ci95": [
+            0.023841797083806616,
+            0.0852384301287591
+          ]
+        },
+        "miss_depth_at_reach_gain_frontier": {
+          "delta_clean_al": 0.036410330140240976,
+          "ci95": [
+            0.006785736385013597,
+            0.06623835597253352
+          ]
+        },
+        "interaction": {
+          "delta_clean_al": -0.01834847980043053,
+          "ci95": [
+            -0.058444318656042674,
+            0.02329594783399672
+          ]
+        }
+      }
+    },
+    {
+      "model": "llama3",
+      "seeds": [
+        2026,
+        2027
+      ],
+      "questions": 480,
+      "arm_order": [
+        "q_path_chain2",
+        "reach_gain_frontier_chain2",
+        "q_path_chain4",
+        "reach_gain_frontier_chain4_optimized"
+      ],
+      "arm_clean_al": [
+        2.3735632183908044,
+        2.4184672933996163,
+        2.4487712097702587,
+        2.537593790426908
+      ],
+      "effects": {
+        "tree_score_at_chain2": {
+          "delta_clean_al": 0.04490407500881188,
+          "ci95": [
+            0.008995425015285385,
+            0.0818077572452177
+          ]
+        },
+        "tree_score_at_chain4": {
+          "delta_clean_al": 0.08882258065664939,
+          "ci95": [
+            0.04990002544348533,
+            0.12718219203237094
+          ]
+        },
+        "miss_depth_at_q_path": {
+          "delta_clean_al": 0.07520799137945433,
+          "ci95": [
+            0.03927751835643223,
+            0.11166519428547857
+          ]
+        },
+        "miss_depth_at_reach_gain_frontier": {
+          "delta_clean_al": 0.11912649702729183,
+          "ci95": [
+            0.07877406187206946,
+            0.15890709888134044
+          ]
+        },
+        "interaction": {
+          "delta_clean_al": 0.0439185056478375,
+          "ci95": [
+            -0.01189026303034919,
+            0.09643555428986988
+          ]
+        }
+      }
+    }
+  ]
+}

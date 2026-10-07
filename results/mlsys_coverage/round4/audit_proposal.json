@@ -1,0 +1,323 @@
+{
+  "target": [
+    0.4,
+    0.3,
+    0.3
+  ],
+  "draft": [
+    0.6,
+    0.25,
+    0.15
+  ],
+  "next_draft": [
+    0.3,
+    0.3,
+    0.4
+  ],
+  "states": 18,
+  "first_output": {
+    "full": [
+      0.4,
+      0.3,
+      0.3
+    ],
+    "production_rerank": [
+      0.4,
+      0.31875,
+      0.28125
+    ],
+    "fixed_prefix": [
+      0.4,
+      0.3,
+      0.3
+    ],
+    "target_match": [
+      0.4,
+      0.3,
+      0.3
+    ]
+  },
+  "first_output_exact": {
+    "full": [
+      "2/5",
+      "3/10",
+      "3/10"
+    ],
+    "production_rerank": [
+      "2/5",
+      "51/160",
+      "9/32"
+    ],
+    "fixed_prefix": [
+      "2/5",
+      "3/10",
+      "3/10"
+    ],
+    "target_match": [
+      "2/5",
+      "3/10",
+      "3/10"
+    ]
+  },
+  "changed_tree_probability": 0.225,
+  "enumeration": [
+    {
+      "tokens": [
+        0,
+        1,
+        0
+      ],
+      "parent": 0,
+      "probability": 0.1125,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        0,
+        1,
+        1
+      ],
+      "parent": 0,
+      "probability": 0.1125,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        0,
+        1,
+        2
+      ],
+      "parent": 0,
+      "probability": 0.15,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        0,
+        2,
+        0
+      ],
+      "parent": 0,
+      "probability": 0.0675,
+      "keep": [
+        0,
+        2
+      ]
+    },
+    {
+      "tokens": [
+        0,
+        2,
+        1
+      ],
+      "parent": 0,
+      "probability": 0.0675,
+      "keep": [
+        0,
+        2
+      ]
+    },
+    {
+      "tokens": [
+        0,
+        2,
+        2
+      ],
+      "parent": 0,
+      "probability": 0.09,
+      "keep": [
+        0,
+        2
+      ]
+    },
+    {
+      "tokens": [
+        1,
+        0,
+        0
+      ],
+      "parent": 1,
+      "probability": 0.06,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        1,
+        0,
+        1
+      ],
+      "parent": 1,
+      "probability": 0.06,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        1,
+        0,
+        2
+      ],
+      "parent": 1,
+      "probability": 0.08,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        1,
+        2,
+        0
+      ],
+      "parent": 0,
+      "probability": 0.015,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        1,
+        2,
+        1
+      ],
+      "parent": 0,
+      "probability": 0.015,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        1,
+        2,
+        2
+      ],
+      "parent": 0,
+      "probability": 0.02,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        2,
+        0,
+        0
+      ],
+      "parent": 1,
+      "probability": 0.03176470588235294,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        2,
+        0,
+        1
+      ],
+      "parent": 1,
+      "probability": 0.03176470588235294,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        2,
+        0,
+        2
+      ],
+      "parent": 1,
+      "probability": 0.042352941176470586,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        2,
+        1,
+        0
+      ],
+      "parent": 1,
+      "probability": 0.013235294117647059,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        2,
+        1,
+        1
+      ],
+      "parent": 1,
+      "probability": 0.013235294117647059,
+      "keep": [
+        0,
+        1
+      ]
+    },
+    {
+      "tokens": [
+        2,
+        1,
+        2
+      ],
+      "parent": 1,
+      "probability": 0.01764705882352941,
+      "keep": [
+        0,
+        1
+      ]
+    }
+  ],
+  "production_tensor_walk_first_output": {
+    "full": [
+      0.3999999900658929,
+      0.3000000084439916,
+      0.3000000014901156
+    ],
+    "production_rerank": [
+      0.3999999900658929,
+      0.31875001161048844,
+      0.2812499960884445
+    ],
+    "fixed_prefix": [
+      0.3999999900658929,
+      0.3000000084439916,
+      0.3000000014901156
+    ]
+  },
+  "scope": "Actual production rerank AND tensor walk bodies; exhaustive states/coin branches, plus exact rational reference. Algorithmic counterexample, not measured LLM output bias.",
+  "old_negative_control_tv": 0.01875,
+  "generation_order_prefix_tv": 0.0,
+  "production_files": {
+    "ssd/ssd/engine/draft_runner.py": "86c07c5b03384fe344d3ce77ff2c2ff096f3054b61d9cd6655a41df211dbde6a",
+    "ssd/ssd/engine/helpers/p2_tree.py": "d169870572fc8fc3a5740c2c93d9fdfc98d5b5a8afdfced26b36c9a630545fac"
+  }
+}

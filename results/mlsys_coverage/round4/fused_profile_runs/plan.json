@@ -1,0 +1,82 @@
+[
+  {
+    "name": "llama2_b8_k4_2_fused",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "8",
+      "--k1",
+      "4",
+      "--k2",
+      "2"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_BATCH_TREE_BULK_EXPORT": "0",
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_MAX_EVENTS": "6000",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/profiles/llama2_b8_k4_2_fused",
+      "SSD_BATCH_TREE_KERNEL_TRACE": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/kernels/llama2_fused",
+      "SSD_TREE_FUSED_MATH": "1"
+    }
+  },
+  {
+    "name": "llama3_b8_k4_2_fused",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "--batches",
+      "8",
+      "--k1",
+      "4",
+      "--k2",
+      "2"
+    ],
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_BATCH_TREE_BULK_EXPORT": "0",
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_MAX_EVENTS": "6000",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/profiles/llama3_b8_k4_2_fused",
+      "SSD_BATCH_TREE_KERNEL_TRACE": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/kernels/llama3_fused",
+      "SSD_TREE_FUSED_MATH": "1"
+    }
+  }
+]

@@ -1,0 +1,248 @@
+[Config] duet_proxy_top_k raised 3 → 13 (K_max=4 K_min=2 p1_sum_full=18 p1_sum_short=6 p1_max=2 per_pos=9 total=13 wire_N=25)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+Draft runner created on rank 1 (async)!
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[model_runner about to wrapper.init()] graph_bs_list=[1, 2, 4, 8]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 10.78it/s]
+Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.47it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.29it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.28it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.30it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 12, 1290, 256, 12, 64])
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 36, 256, 32, 128])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+[DUET split-K1K2] layouts: split_k1_long MQ=10 (K=K1=4, pos=5), split_k1_short MQ=6 (K=K1=4, pos=3), split_k2 MQ=5 (K=K2=2, pos=3)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[2, 4])
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=ed335e874bcf2d16c3631a9326af5231bfa8b250a818b2e129180b5e0a716d1f
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=ff5576e8f4948fcbaa6db26a3b4d077f0ae0e7cf95b4281eb799285edec8ef45
+Final Prefill Throughput: 536.14tok/s
+Final Decode Throughput: 11.34tok/s
+[metrics] Prefill tokens/time: 332 / 0.619239s
+[metrics] Decode tokens/time: 128 / 11.283547s
+[metrics] Avg Tokens per step (incl recovery): 1.55
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.14 (denom=4)
+[metrics] Avg target time per full step (ms): 793.53
+[metrics] Avg target verify time (ms): 330.65
+[metrics] Avg Cache Hits: 0.72
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.181
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.541
+[metrics] Avg Phase 1 Accepted Len: 0.65
+[metrics] Avg Phase 1 Acceptance Ratio: 0.162
+[metrics] Avg Phase 2 Accepted Len: 0.48
+[metrics] Avg Phase 2 Acceptance Ratio: 0.239
+[metrics] Avg Tokens per step on Cache Hit: 1.52
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.556
+  1: 0.365
+  2: 0.079
+  3: 0.000
+  4: 0.000
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.62
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 7542.67tok/s
+Final Decode Throughput: 411.14tok/s
+[metrics] Prefill tokens/time: 96008 / 12.728650s
+[metrics] Decode tokens/time: 29339 / 71.359863s
+[metrics] Avg Tokens per step (incl recovery): 2.07
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.27 (denom=4)
+[metrics] Avg target time per full step (ms): 37.45
+[metrics] Avg target verify time (ms): 25.86
+[metrics] Avg Cache Hits: 0.77
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.330
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.437
+[metrics] Avg Phase 1 Accepted Len: 1.75
+[metrics] Avg Phase 1 Acceptance Ratio: 0.438
+[metrics] Avg Phase 2 Accepted Len: 0.77
+[metrics] Avg Phase 2 Acceptance Ratio: 0.384
+[metrics] Avg Tokens per step on Cache Hit: 2.19
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.359
+  1: 0.302
+  2: 0.215
+  3: 0.042
+  4: 0.083
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.69
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 2026, "summary": {"boundary_excluded_al": 2.045261872260938, "emitted_al": 2.0423947093630352, "boundary_excluded_step_tps": 392.9096094123988, "boundary_excluded_events": 446, "boundary_excluded_steps": 415, "output_tokens": 29339, "wall_s": 84.12927223206498, "end_to_end_tps": 348.73711874114787, "decode_output_tokens": 29339, "decode_tps": 411.14148447626894, "al_including_recovery": 2.0736512356421857, "accepted_draft_tokens": 1.073651235642186, "cache_hit": 0.7677688827010094, "phase1_hit": 0.3282283327532196, "phase2_hit": 0.4395405499477898, "observed_miss_valid_k": {"2": 3336}, "tree_verify_events": 11029, "verify_events": 14365}}
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 7560.46tok/s
+Final Decode Throughput: 475.58tok/s
+[metrics] Prefill tokens/time: 96008 / 12.698703s
+[metrics] Decode tokens/time: 28862 / 60.687815s
+[metrics] Avg Tokens per step (incl recovery): 2.01
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.25 (denom=4)
+[metrics] Avg target time per full step (ms): 32.54
+[metrics] Avg target verify time (ms): 24.21
+[metrics] Avg Cache Hits: 0.77
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.310
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.458
+[metrics] Avg Phase 1 Accepted Len: 1.69
+[metrics] Avg Phase 1 Acceptance Ratio: 0.422
+[metrics] Avg Phase 2 Accepted Len: 0.72
+[metrics] Avg Phase 2 Acceptance Ratio: 0.360
+[metrics] Avg Tokens per step on Cache Hit: 2.11
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.385
+  1: 0.303
+  2: 0.204
+  3: 0.032
+  4: 0.076
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.67
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 2027, "summary": {"boundary_excluded_al": 1.981193438914027, "emitted_al": 1.9801042810098792, "boundary_excluded_step_tps": 475.7294556294927, "boundary_excluded_events": 432, "boundary_excluded_steps": 389, "output_tokens": 28862, "wall_s": 73.42907773796469, "end_to_end_tps": 393.0595465599538, "decode_output_tokens": 28862, "decode_tps": 475.5814670081923, "al_including_recovery": 2.006654774972558, "accepted_draft_tokens": 1.0066547749725576, "cache_hit": 0.7684549945115258, "phase1_hit": 0.3099615806805708, "phase2_hit": 0.458493413830955, "observed_miss_valid_k": {"2": 3375}, "tree_verify_events": 11201, "verify_events": 14576}}
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 7633.30tok/s
+Final Decode Throughput: 500.19tok/s
+[metrics] Prefill tokens/time: 96008 / 12.577519s
+[metrics] Decode tokens/time: 29350 / 58.678101s
+[metrics] Avg Tokens per step (incl recovery): 2.03
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.26 (denom=4)
+[metrics] Avg target time per full step (ms): 31.48
+[metrics] Avg target verify time (ms): 23.63
+[metrics] Avg Cache Hits: 0.78
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.321
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.459
+[metrics] Avg Phase 1 Accepted Len: 1.72
+[metrics] Avg Phase 1 Acceptance Ratio: 0.431
+[metrics] Avg Phase 2 Accepted Len: 0.73
+[metrics] Avg Phase 2 Acceptance Ratio: 0.367
+[metrics] Avg Tokens per step on Cache Hit: 2.14
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.374
+  1: 0.303
+  2: 0.210
+  3: 0.036
+  4: 0.077
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.66
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 2028, "summary": {"boundary_excluded_al": 2.0045748873873874, "emitted_al": 2.004781420765027, "boundary_excluded_step_tps": 494.12283300639433, "boundary_excluded_events": 432, "boundary_excluded_steps": 389, "output_tokens": 29350, "wall_s": 71.29907735693268, "end_to_end_tps": 411.6462805411911, "decode_output_tokens": 29350, "decode_tps": 500.18660249639595, "al_including_recovery": 2.033606557377049, "accepted_draft_tokens": 1.0336065573770492, "cache_hit": 0.7810109289617486, "phase1_hit": 0.3198087431693989, "phase2_hit": 0.46120218579234973, "observed_miss_valid_k": {"2": 3206}, "tree_verify_events": 11434, "verify_events": 14640}}
+[LLMEngine] Exiting (hard=False)
+[metrics] batched tree: {'steps': 5500, 'tree_hits': 33727, 'phase1_replays': 5500, 'phase2_replays': 5500, 'captures': 36}
+[metrics] Avg draft step time (ms): 37.67
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1008 00:33:59.143119395 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

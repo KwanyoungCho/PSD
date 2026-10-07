@@ -1,0 +1,94 @@
+[Config] duet_proxy_top_k raised 3 → 13 (K_max=4 K_min=2 p1_sum_full=18 p1_sum_short=6 p1_max=2 per_pos=9 total=13 wire_N=25)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 1 (async)!
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=6
+Finishing Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.76it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.75it/s]
+Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.26it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.24it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.21it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.73it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.51it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 3958, 256, 2, 64])
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 109, 256, 8, 128])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+[DUET split-K1K2] layouts: split_k1_long MQ=10 (K=K1=4, pos=5), split_k1_short MQ=6 (K=K1=4, pos=3), split_k2 MQ=5 (K=K2=2, pos=3)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 46.36tok/s
+Final Decode Throughput: 2.21tok/s
+[metrics] Prefill tokens/time: 22 / 0.474587s
+[metrics] Decode tokens/time: 16 / 7.256232s
+[metrics] Avg Tokens per step (incl recovery): 2.29
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.32 (denom=4)
+[metrics] Avg target time per full step (ms): 966.36
+[metrics] Avg target verify time (ms): 354.58
+[metrics] Avg Cache Hits: 0.43
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.143
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.286
+[metrics] Avg Phase 1 Accepted Len: 3.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.750
+[metrics] Avg Phase 2 Accepted Len: 1.50
+[metrics] Avg Phase 2 Acceptance Ratio: 0.750
+[metrics] Avg Tokens per step on Cache Hit: 3.00
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 0.333
+  2: 0.333
+  3: 0.333
+  4: 0.000
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.75
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 6515.16tok/s
+Final Decode Throughput: 101.49tok/s
+[metrics] Prefill tokens/time: 92477 / 14.194128s
+[metrics] Decode tokens/time: 25567 / 251.922226s
+[metrics] Avg Tokens per step (incl recovery): 2.30
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.32 (denom=4)
+[metrics] Avg target time per full step (ms): 22.51
+[metrics] Avg target verify time (ms): 20.13
+[metrics] Avg Cache Hits: 0.73
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.450
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.284
+[metrics] Avg Phase 1 Accepted Len: 1.83
+[metrics] Avg Phase 1 Acceptance Ratio: 0.459
+[metrics] Avg Phase 2 Accepted Len: 1.11
+[metrics] Avg Phase 2 Acceptance Ratio: 0.553
+[metrics] Avg Tokens per step on Cache Hit: 2.55
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.195
+  1: 0.366
+  2: 0.266
+  3: 0.036
+  4: 0.137
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.58
+COVERAGE_CELL {"batch": 1, "temperature": 0.7, "seed": 2026, "summary": {"boundary_excluded_al": 2.266856512952416, "emitted_al": 2.253790550070522, "boundary_excluded_step_tps": 102.09665798234344, "boundary_excluded_events": 458, "boundary_excluded_steps": 458, "output_tokens": 25567, "wall_s": 266.220163336955, "end_to_end_tps": 96.03705324017788, "decode_output_tokens": 25567, "decode_tps": 101.48767118083832, "al_including_recovery": 2.295574753173484, "accepted_draft_tokens": 1.2955747531734838, "cache_hit": 0.7344851904090268, "phase1_hit": 0.4502820874471086, "phase2_hit": 0.2842031029619182, "observed_miss_valid_k": {"1": 3012}, "tree_verify_events": 8332, "verify_events": 11344}}
+[LLMEngine] Exiting (hard=False)
+[metrics] batched tree: {'steps': 11351, 'tree_hits': 8335, 'phase1_replays': 11351, 'phase2_replays': 11351, 'captures': 18}
+[metrics] Avg draft step time (ms): 21.62
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1008 00:37:15.453251532 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

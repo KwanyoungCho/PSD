@@ -1,0 +1,47 @@
+[
+  {
+    "name": "llama3_short_k2_1_miss2_fused_bulk",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--temperatures",
+      "0.7",
+      "--seeds",
+      "2026",
+      "2027",
+      "--batches",
+      "8",
+      "--k1",
+      "2",
+      "--k2",
+      "1",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/llama3_budget_control/llama3_short_k2_1_miss2_fused_bulk.json"
+    ],
+    "started": 1791388740.4956064,
+    "gpu_uuids": [
+      "GPU-00cbad2d-7e9b-7c4f-8166-23a834ddc689",
+      "GPU-97d3e0bb-517b-9732-5c1d-6d1f471a7b6f"
+    ],
+    "external_pids": [],
+    "samples": 76,
+    "ended": 1791388911.9171152,
+    "returncode": 0,
+    "result_status": "complete",
+    "status": "complete"
+  }
+]

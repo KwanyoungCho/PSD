@@ -1,0 +1,27 @@
+# Lossless gzip copies live in archives/; restore with archive_results.py --restore.
+/*_full/*.json
+/*_b1/*.json
+/*_follow/*.json
+/*_b1_short/*.json
+/*_smoke/*.json
+/*_runs/*.json
+!/*/campaign.json
+!/*/plan.json
+/profiles/**/*.json
+/kernels/**/*.trace.json
+/dense_calibration/**/*.npz
+/local_calibration_snapshots.tar
+__pycache__/
+*.pyc
+
+/*_budget/*.json
+!/*/campaign.json
+!/*/plan.json
+
+/*_replica/*.json
+!/*/campaign.json
+!/*/plan.json
+
+/*_budget_control/*.json
+!/*/campaign.json
+!/*/plan.json

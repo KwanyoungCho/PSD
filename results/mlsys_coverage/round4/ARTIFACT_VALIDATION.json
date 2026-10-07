@@ -1,0 +1,1255 @@
+{
+  "cells": 178,
+  "tokens": 3614764,
+  "checks": 1958,
+  "issues": [],
+  "details": [
+    {
+      "cell": "bulk_smoke/llama2_baseline:T0.0/seed2026/B8",
+      "tokens": 751,
+      "events": 398,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "bulk_smoke/llama2_baseline:T0.7/seed2026/B8",
+      "tokens": 736,
+      "events": 398,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "bulk_smoke/llama2_bulk:T0.0/seed2026/B8",
+      "tokens": 751,
+      "events": 398,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "bulk_smoke/llama2_bulk:T0.7/seed2026/B8",
+      "tokens": 736,
+      "events": 398,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "bulk_smoke/llama3_baseline:T0.0/seed2026/B8",
+      "tokens": 515,
+      "events": 217,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "bulk_smoke/llama3_baseline:T0.7/seed2026/B8",
+      "tokens": 607,
+      "events": 274,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "bulk_smoke/llama3_bulk:T0.0/seed2026/B8",
+      "tokens": 515,
+      "events": 217,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "bulk_smoke/llama3_bulk:T0.7/seed2026/B8",
+      "tokens": 607,
+      "events": 274,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "dense_calibration_runs/llama2_calibration:T0.7/seed2026/B1",
+      "tokens": 1024,
+      "events": 484,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "dense_calibration_runs/llama3_calibration:T0.7/seed2026/B1",
+      "tokens": 639,
+      "events": 271,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "fused_profile_runs/llama2_b8_k4_2_fused:T0.7/seed2026/B8",
+      "tokens": 2860,
+      "events": 1408,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "fused_profile_runs/llama3_b8_k4_2_fused:T0.7/seed2026/B8",
+      "tokens": 2379,
+      "events": 983,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "fused_smoke/llama2_fused:T0.0/seed2026/B8",
+      "tokens": 751,
+      "events": 398,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "fused_smoke/llama2_fused:T0.7/seed2026/B8",
+      "tokens": 736,
+      "events": 398,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "fused_smoke/llama3_fused:T0.0/seed2026/B8",
+      "tokens": 515,
+      "events": 217,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "fused_smoke/llama3_fused:T0.7/seed2026/B8",
+      "tokens": 607,
+      "events": 274,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1/legacy_q_path:T0.7/seed2026/B1",
+      "tokens": 28844,
+      "events": 14712,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1/legacy_reach_gain_frontier:T0.7/seed2026/B1",
+      "tokens": 29024,
+      "events": 14589,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1/q_path:T0.7/seed2026/B1",
+      "tokens": 28840,
+      "events": 14785,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1/miss_chain2:T0.7/seed2026/B1",
+      "tokens": 28840,
+      "events": 14785,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1/miss_star3:T0.7/seed2026/B1",
+      "tokens": 28950,
+      "events": 14703,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1/miss_tree2x2:T0.7/seed2026/B1",
+      "tokens": 28994,
+      "events": 14597,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1_short/llama2_miss_chain4:T0.7/seed2026/B1",
+      "tokens": 28682,
+      "events": 14239,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1_short/llama2_miss_chain1:T0.7/seed2026/B1",
+      "tokens": 28997,
+      "events": 15094,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_b1_short/llama2_optimized_q_path:T0.7/seed2026/B1",
+      "tokens": 28840,
+      "events": 14785,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_budget/llama2_short_k2_1_fused_bulk:T0.7/seed2026/B8",
+      "tokens": 28531,
+      "events": 16715,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_budget/llama2_short_k2_1_fused_bulk:T0.7/seed2027/B8",
+      "tokens": 28526,
+      "events": 16803,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_budget/llama2_combined_chain4:T0.7/seed2026/B8",
+      "tokens": 28618,
+      "events": 14008,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_budget/llama2_combined_chain4:T0.7/seed2027/B8",
+      "tokens": 28421,
+      "events": 13866,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_budget_control/llama2_short_k2_1_miss2_fused_bulk:T0.7/seed2026/B8",
+      "tokens": 28874,
+      "events": 16523,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_budget_control/llama2_short_k2_1_miss2_fused_bulk:T0.7/seed2027/B8",
+      "tokens": 28457,
+      "events": 16304,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_miss_chain4:T0.7/seed2026/B8",
+      "tokens": 28500,
+      "events": 14018,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_miss_chain4:T0.7/seed2027/B8",
+      "tokens": 28824,
+      "events": 14163,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_miss_chain4:T0.7/seed2028/B8",
+      "tokens": 28751,
+      "events": 14240,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_dense_reach:T0.7/seed2026/B8",
+      "tokens": 28570,
+      "events": 14246,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_dense_reach:T0.7/seed2027/B8",
+      "tokens": 29018,
+      "events": 14714,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_dense_reach:T0.7/seed2028/B8",
+      "tokens": 28805,
+      "events": 14488,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_dense_reach_gain_frontier:T0.7/seed2026/B8",
+      "tokens": 29339,
+      "events": 14365,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_dense_reach_gain_frontier:T0.7/seed2027/B8",
+      "tokens": 28862,
+      "events": 14576,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_dense_reach_gain_frontier:T0.7/seed2028/B8",
+      "tokens": 29350,
+      "events": 14640,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_baseline:T0.7/seed2026/B8",
+      "tokens": 28836,
+      "events": 14566,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_baseline:T0.7/seed2027/B8",
+      "tokens": 28628,
+      "events": 14478,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_fused:T0.7/seed2026/B8",
+      "tokens": 28836,
+      "events": 14566,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_fused:T0.7/seed2027/B8",
+      "tokens": 28628,
+      "events": 14478,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_fused_bulk:T0.7/seed2026/B8",
+      "tokens": 28836,
+      "events": 14566,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_fused_bulk:T0.7/seed2027/B8",
+      "tokens": 28628,
+      "events": 14478,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_fused_bulk_parallel:T0.7/seed2026/B8",
+      "tokens": 28836,
+      "events": 14566,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_follow/llama2_fused_bulk_parallel:T0.7/seed2027/B8",
+      "tokens": 28628,
+      "events": 14478,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/q_path:T0.7/seed2026/B8",
+      "tokens": 28836,
+      "events": 14566,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/q_path:T0.7/seed2027/B8",
+      "tokens": 28628,
+      "events": 14478,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/q_path:T0.7/seed2028/B8",
+      "tokens": 29107,
+      "events": 14470,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach:T0.7/seed2026/B8",
+      "tokens": 28802,
+      "events": 14567,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach:T0.7/seed2027/B8",
+      "tokens": 28633,
+      "events": 14323,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach:T0.7/seed2028/B8",
+      "tokens": 29061,
+      "events": 14586,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/q_gain:T0.7/seed2026/B8",
+      "tokens": 29079,
+      "events": 14538,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/q_gain:T0.7/seed2027/B8",
+      "tokens": 28505,
+      "events": 14377,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/q_gain:T0.7/seed2028/B8",
+      "tokens": 28771,
+      "events": 14491,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_gain:T0.7/seed2026/B8",
+      "tokens": 28877,
+      "events": 14382,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_gain:T0.7/seed2027/B8",
+      "tokens": 28902,
+      "events": 14474,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_gain:T0.7/seed2028/B8",
+      "tokens": 28931,
+      "events": 14501,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_frontier:T0.7/seed2026/B8",
+      "tokens": 29606,
+      "events": 14806,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_frontier:T0.7/seed2027/B8",
+      "tokens": 28309,
+      "events": 14155,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_frontier:T0.7/seed2028/B8",
+      "tokens": 28538,
+      "events": 14220,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_gain_frontier:T0.7/seed2026/B8",
+      "tokens": 28816,
+      "events": 14275,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_gain_frontier:T0.7/seed2027/B8",
+      "tokens": 28530,
+      "events": 14290,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/reach_gain_frontier:T0.7/seed2028/B8",
+      "tokens": 29233,
+      "events": 14717,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_chain1:T0.7/seed2026/B8",
+      "tokens": 28667,
+      "events": 14866,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_chain1:T0.7/seed2027/B8",
+      "tokens": 28688,
+      "events": 14725,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_chain1:T0.7/seed2028/B8",
+      "tokens": 28608,
+      "events": 14756,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_chain2:T0.7/seed2026/B8",
+      "tokens": 28836,
+      "events": 14566,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_chain2:T0.7/seed2027/B8",
+      "tokens": 28628,
+      "events": 14478,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_chain2:T0.7/seed2028/B8",
+      "tokens": 29107,
+      "events": 14470,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_star3:T0.7/seed2026/B8",
+      "tokens": 29111,
+      "events": 14607,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_star3:T0.7/seed2027/B8",
+      "tokens": 29118,
+      "events": 14785,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_star3:T0.7/seed2028/B8",
+      "tokens": 28146,
+      "events": 14255,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_tree2x2:T0.7/seed2026/B8",
+      "tokens": 28746,
+      "events": 14394,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_tree2x2:T0.7/seed2027/B8",
+      "tokens": 28142,
+      "events": 13960,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_full/miss_tree2x2:T0.7/seed2028/B8",
+      "tokens": 29000,
+      "events": 14445,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_replica/llama2_baseline:T0.7/seed3030/B8",
+      "tokens": 28848,
+      "events": 14328,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_replica/llama2_baseline:T0.7/seed3031/B8",
+      "tokens": 29000,
+      "events": 14590,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_replica/llama2_fused_bulk:T0.7/seed3030/B8",
+      "tokens": 28848,
+      "events": 14328,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_replica/llama2_fused_bulk:T0.7/seed3031/B8",
+      "tokens": 29000,
+      "events": 14590,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/baseline:T0.0/seed2026/B8",
+      "tokens": 192,
+      "events": 101,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/baseline:T0.7/seed2026/B8",
+      "tokens": 192,
+      "events": 112,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/reach_gain_frontier:T0.0/seed2026/B8",
+      "tokens": 192,
+      "events": 100,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/reach_gain_frontier:T0.7/seed2026/B8",
+      "tokens": 192,
+      "events": 110,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/miss_branch:T0.0/seed2026/B8",
+      "tokens": 192,
+      "events": 98,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/miss_branch:T0.7/seed2026/B8",
+      "tokens": 192,
+      "events": 104,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/legacy_gm:T0.0/seed2026/B1",
+      "tokens": 192,
+      "events": 113,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama2_smoke/legacy_gm:T0.7/seed2026/B1",
+      "tokens": 188,
+      "events": 103,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1/legacy_q_path:T0.7/seed2026/B1",
+      "tokens": 26051,
+      "events": 11053,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1/legacy_reach_gain_frontier:T0.7/seed2026/B1",
+      "tokens": 25331,
+      "events": 10441,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1/q_path:T0.7/seed2026/B1",
+      "tokens": 25044,
+      "events": 10854,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1/miss_chain2:T0.7/seed2026/B1",
+      "tokens": 25044,
+      "events": 10854,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1/miss_star3:T0.7/seed2026/B1",
+      "tokens": 25618,
+      "events": 11192,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1/miss_tree2x2:T0.7/seed2026/B1",
+      "tokens": 25873,
+      "events": 10991,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1_short/llama3_miss_chain4:T0.7/seed2026/B1",
+      "tokens": 26261,
+      "events": 10789,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1_short/llama3_miss_chain1:T0.7/seed2026/B1",
+      "tokens": 25567,
+      "events": 11344,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_b1_short/llama3_optimized_q_path:T0.7/seed2026/B1",
+      "tokens": 25044,
+      "events": 10854,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_budget/llama3_short_k2_1_fused_bulk:T0.7/seed2026/B8",
+      "tokens": 25158,
+      "events": 12920,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_budget/llama3_short_k2_1_fused_bulk:T0.7/seed2027/B8",
+      "tokens": 24987,
+      "events": 12929,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_budget/llama3_combined_chain4:T0.7/seed2026/B8",
+      "tokens": 25670,
+      "events": 10146,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_budget/llama3_combined_chain4:T0.7/seed2027/B8",
+      "tokens": 25268,
+      "events": 10091,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_budget_control/llama3_short_k2_1_miss2_fused_bulk:T0.7/seed2026/B8",
+      "tokens": 25491,
+      "events": 12547,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_budget_control/llama3_short_k2_1_miss2_fused_bulk:T0.7/seed2027/B8",
+      "tokens": 24869,
+      "events": 12230,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_miss_chain4:T0.7/seed2026/B8",
+      "tokens": 24968,
+      "events": 10268,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_miss_chain4:T0.7/seed2027/B8",
+      "tokens": 25740,
+      "events": 10617,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_miss_chain4:T0.7/seed2028/B8",
+      "tokens": 25531,
+      "events": 10255,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_dense_reach:T0.7/seed2026/B8",
+      "tokens": 25464,
+      "events": 10711,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_dense_reach:T0.7/seed2027/B8",
+      "tokens": 24683,
+      "events": 10383,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_dense_reach:T0.7/seed2028/B8",
+      "tokens": 25339,
+      "events": 10642,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_dense_reach_gain_frontier:T0.7/seed2026/B8",
+      "tokens": 25908,
+      "events": 10803,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_dense_reach_gain_frontier:T0.7/seed2027/B8",
+      "tokens": 26154,
+      "events": 10798,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_dense_reach_gain_frontier:T0.7/seed2028/B8",
+      "tokens": 25636,
+      "events": 10626,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_baseline:T0.7/seed2026/B8",
+      "tokens": 24941,
+      "events": 10551,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_baseline:T0.7/seed2027/B8",
+      "tokens": 25541,
+      "events": 10880,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_fused:T0.7/seed2026/B8",
+      "tokens": 24941,
+      "events": 10551,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_fused:T0.7/seed2027/B8",
+      "tokens": 25541,
+      "events": 10880,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_fused_bulk:T0.7/seed2026/B8",
+      "tokens": 24941,
+      "events": 10551,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_fused_bulk:T0.7/seed2027/B8",
+      "tokens": 25541,
+      "events": 10880,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_fused_bulk_parallel:T0.7/seed2026/B8",
+      "tokens": 24941,
+      "events": 10551,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_follow/llama3_fused_bulk_parallel:T0.7/seed2027/B8",
+      "tokens": 25541,
+      "events": 10880,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/q_path:T0.7/seed2026/B8",
+      "tokens": 24941,
+      "events": 10551,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/q_path:T0.7/seed2027/B8",
+      "tokens": 25541,
+      "events": 10880,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/q_path:T0.7/seed2028/B8",
+      "tokens": 25206,
+      "events": 10592,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach:T0.7/seed2026/B8",
+      "tokens": 25717,
+      "events": 10744,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach:T0.7/seed2027/B8",
+      "tokens": 25223,
+      "events": 10624,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach:T0.7/seed2028/B8",
+      "tokens": 25843,
+      "events": 10755,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/q_gain:T0.7/seed2026/B8",
+      "tokens": 25997,
+      "events": 11086,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/q_gain:T0.7/seed2027/B8",
+      "tokens": 26463,
+      "events": 11349,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/q_gain:T0.7/seed2028/B8",
+      "tokens": 25010,
+      "events": 10647,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_gain:T0.7/seed2026/B8",
+      "tokens": 25299,
+      "events": 10537,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_gain:T0.7/seed2027/B8",
+      "tokens": 24985,
+      "events": 10456,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_gain:T0.7/seed2028/B8",
+      "tokens": 25610,
+      "events": 10717,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_frontier:T0.7/seed2026/B8",
+      "tokens": 24586,
+      "events": 10329,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_frontier:T0.7/seed2027/B8",
+      "tokens": 25718,
+      "events": 10718,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_frontier:T0.7/seed2028/B8",
+      "tokens": 24623,
+      "events": 10216,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_gain_frontier:T0.7/seed2026/B8",
+      "tokens": 25537,
+      "events": 10717,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_gain_frontier:T0.7/seed2027/B8",
+      "tokens": 25324,
+      "events": 10500,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/reach_gain_frontier:T0.7/seed2028/B8",
+      "tokens": 25372,
+      "events": 10459,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_chain1:T0.7/seed2026/B8",
+      "tokens": 25229,
+      "events": 11318,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_chain1:T0.7/seed2027/B8",
+      "tokens": 24618,
+      "events": 10893,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_chain1:T0.7/seed2028/B8",
+      "tokens": 25535,
+      "events": 11319,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_chain2:T0.7/seed2026/B8",
+      "tokens": 24941,
+      "events": 10551,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_chain2:T0.7/seed2027/B8",
+      "tokens": 25541,
+      "events": 10880,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_chain2:T0.7/seed2028/B8",
+      "tokens": 25206,
+      "events": 10592,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_star3:T0.7/seed2026/B8",
+      "tokens": 24785,
+      "events": 10894,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_star3:T0.7/seed2027/B8",
+      "tokens": 26304,
+      "events": 11607,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_star3:T0.7/seed2028/B8",
+      "tokens": 24874,
+      "events": 10784,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_tree2x2:T0.7/seed2026/B8",
+      "tokens": 25249,
+      "events": 10649,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_tree2x2:T0.7/seed2027/B8",
+      "tokens": 25711,
+      "events": 10575,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_full/miss_tree2x2:T0.7/seed2028/B8",
+      "tokens": 25744,
+      "events": 10890,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_replica/llama3_baseline:T0.7/seed3030/B8",
+      "tokens": 25900,
+      "events": 11015,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_replica/llama3_baseline:T0.7/seed3031/B8",
+      "tokens": 25864,
+      "events": 11033,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_replica/llama3_fused_bulk:T0.7/seed3030/B8",
+      "tokens": 25900,
+      "events": 11015,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_replica/llama3_fused_bulk:T0.7/seed3031/B8",
+      "tokens": 25864,
+      "events": 11033,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/baseline:T0.0/seed2026/B8",
+      "tokens": 146,
+      "events": 63,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/baseline:T0.7/seed2026/B8",
+      "tokens": 126,
+      "events": 62,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/reach_gain_frontier:T0.0/seed2026/B8",
+      "tokens": 146,
+      "events": 62,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/reach_gain_frontier:T0.7/seed2026/B8",
+      "tokens": 125,
+      "events": 54,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/miss_branch:T0.0/seed2026/B8",
+      "tokens": 146,
+      "events": 62,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/miss_branch:T0.7/seed2026/B8",
+      "tokens": 125,
+      "events": 59,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/legacy_gm:T0.0/seed2026/B1",
+      "tokens": 146,
+      "events": 71,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "llama3_smoke/legacy_gm:T0.7/seed2026/B1",
+      "tokens": 169,
+      "events": 87,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "optimization_profile_runs/llama2_b8_k4_2_bulk0:T0.7/seed2026/B8",
+      "tokens": 2860,
+      "events": 1408,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "optimization_profile_runs/llama2_b8_k4_2_bulk1:T0.7/seed2026/B8",
+      "tokens": 2860,
+      "events": 1408,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "optimization_profile_runs/llama2_b8_k2_1_bulk1:T0.7/seed2026/B8",
+      "tokens": 2990,
+      "events": 1676,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "optimization_profile_runs/llama3_b8_k4_2_bulk0:T0.7/seed2026/B8",
+      "tokens": 2379,
+      "events": 983,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "optimization_profile_runs/llama3_b8_k4_2_bulk1:T0.7/seed2026/B8",
+      "tokens": 2379,
+      "events": 983,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "optimization_profile_runs/llama3_b8_k2_1_bulk1:T0.7/seed2026/B8",
+      "tokens": 2365,
+      "events": 1191,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama2_b1_k4_2:T0.7/seed2026/B1",
+      "tokens": 509,
+      "events": 243,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama2_b1_k8_4:T0.7/seed2026/B1",
+      "tokens": 481,
+      "events": 230,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama2_b8_k4_2:T0.7/seed2026/B8",
+      "tokens": 493,
+      "events": 253,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama2_b8_k8_4:T0.7/seed2026/B8",
+      "tokens": 507,
+      "events": 234,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama3_b1_k4_2:T0.7/seed2026/B1",
+      "tokens": 481,
+      "events": 206,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama3_b1_k8_4:T0.7/seed2026/B1",
+      "tokens": 450,
+      "events": 176,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama3_b8_k4_2:T0.7/seed2026/B8",
+      "tokens": 388,
+      "events": 172,
+      "checks": 11,
+      "passed": true
+    },
+    {
+      "cell": "profile_runs/llama3_b8_k8_4:T0.7/seed2026/B8",
+      "tokens": 375,
+      "events": 144,
+      "checks": 11,
+      "passed": true
+    }
+  ],
+  "output_parity_cells": 18
+}

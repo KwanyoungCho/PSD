@@ -1,0 +1,32 @@
+{
+  "dtype": "torch.float16",
+  "reference_path": "results/mlsys_coverage/round4/llama2_smoke/baseline.json",
+  "reference_mode": "duet-tree",
+  "reference_batch": 8,
+  "candidate_path": "results/mlsys_coverage/round4/llama2_smoke/miss_branch.json",
+  "divergences": [
+    {
+      "batch": 8,
+      "question": 2,
+      "position": 2,
+      "ar_token": 383,
+      "duet_token": 16855,
+      "hf_top_ids": [
+        383,
+        16855,
+        29871,
+        16313,
+        323
+      ],
+      "hf_top_logits": [
+        6.12109375,
+        6.12109375,
+        5.90234375,
+        5.68359375,
+        5.5
+      ],
+      "ar_logit": 6.12109375,
+      "duet_logit": 6.12109375
+    }
+  ]
+}
