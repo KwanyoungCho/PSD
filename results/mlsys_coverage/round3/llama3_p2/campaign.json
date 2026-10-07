@@ -1,0 +1,46 @@
+[
+  {
+    "name": "llama3_p2tree_full",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "16",
+      "--temperatures",
+      "0",
+      "0.7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-tree",
+      "--seeds",
+      "2026",
+      "2027",
+      "--memory-fraction",
+      ".45",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/llama3_p2/llama3_p2tree_full.json"
+    ],
+    "started": 1791354219.5519683,
+    "gpu_uuids": [
+      "GPU-00cbad2d-7e9b-7c4f-8166-23a834ddc689",
+      "GPU-97d3e0bb-517b-9732-5c1d-6d1f471a7b6f"
+    ],
+    "external_pids": [],
+    "samples": 265,
+    "ended": 1791354821.7490165,
+    "returncode": 0,
+    "result_status": "complete",
+    "status": "complete"
+  }
+]

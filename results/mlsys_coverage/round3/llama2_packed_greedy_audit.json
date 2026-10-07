@@ -1,0 +1,32 @@
+{
+  "dtype": "torch.float16",
+  "reference_path": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/llama2_ar/llama2_ar_reference.json",
+  "reference_mode": "ar",
+  "reference_batch": null,
+  "candidate_path": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/llama2_packed_greedy_subset.json",
+  "divergences": [
+    {
+      "batch": 8,
+      "question": 29,
+      "position": 45,
+      "ar_token": 11644,
+      "duet_token": 13,
+      "hf_top_ids": [
+        11644,
+        13,
+        22110,
+        450,
+        1724
+      ],
+      "hf_top_logits": [
+        11.828125,
+        11.8125,
+        9.9765625,
+        9.9375,
+        9.828125
+      ],
+      "ar_logit": 11.828125,
+      "duet_logit": 11.8125
+    }
+  ]
+}

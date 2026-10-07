@@ -1,0 +1,44 @@
+[
+  {
+    "name": "llama2_tree_screen",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "1",
+      "2",
+      "4",
+      "8",
+      "--temperatures",
+      "0",
+      "0.7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/llama2_screen2/llama2_tree_screen.json"
+    ],
+    "started": 1791352941.8528495,
+    "gpu_uuids": [
+      "GPU-13825050-f567-b638-9467-d4b135c4fad2",
+      "GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10"
+    ],
+    "external_pids": [],
+    "samples": 97,
+    "ended": 1791353161.4048972,
+    "returncode": 0,
+    "result_status": "complete",
+    "status": "complete"
+  }
+]

@@ -1,5 +1,7 @@
 # Full-model MLSys systems 실험 인수인계
 
+**최신 인수인계:** [round3/REPORT.md](round3/REPORT.md) / [round3/HANDOVER.md](round3/HANDOVER.md). B>1 tree end-to-end 통합과 두 full-model pair 검증을 추가했다.
+
 **2026-10-07 후속 작업:** [round2/REPORT.md](round2/REPORT.md)와 [round2/HANDOVER.md](round2/HANDOVER.md)를 먼저 읽는다. 아래 기록은 1차 실험이다.
 
 ## 먼저 읽을 파일

@@ -1,0 +1,36 @@
+[
+  {
+    "name": "llama3_tree_preempt",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--ragged-limits",
+      "--audit-preemption",
+      "--greedy-only",
+      "--memory-fraction",
+      ".03"
+    ],
+    "env": {
+      "SSD_PACKED_VERIFY": "0",
+      "SSD_MIXED_MISS_AR": "0",
+      "SSD_SEED": "2026",
+      "SSD_P1_TREE_EXEC_WORKSPACE_MB": "64",
+      "SSD_BATCHED_TREE": "1"
+    }
+  }
+]

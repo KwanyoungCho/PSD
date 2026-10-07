@@ -1,0 +1,35 @@
+[
+  {
+    "name": "llama2_tree_preempt",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "48",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--ragged-limits",
+      "--audit-preemption",
+      "--greedy-only",
+      "--memory-fraction",
+      ".10"
+    ],
+    "env": {
+      "SSD_PACKED_VERIFY": "0",
+      "SSD_MIXED_MISS_AR": "0",
+      "SSD_SEED": "2026",
+      "SSD_BATCHED_TREE": "1"
+    }
+  }
+]

@@ -1,0 +1,83 @@
+[
+  {
+    "name": "llama3_tree_optimized",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0.7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--seeds",
+      "2026",
+      "2027",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/placement_pix/llama3_tree_optimized.json"
+    ],
+    "started": 1791357788.9195476,
+    "gpu_uuids": [
+      "GPU-00cbad2d-7e9b-7c4f-8166-23a834ddc689",
+      "GPU-97d3e0bb-517b-9732-5c1d-6d1f471a7b6f"
+    ],
+    "external_pids": [],
+    "samples": 168,
+    "ended": 1791358173.4651306,
+    "returncode": 0,
+    "result_status": "complete",
+    "status": "complete"
+  },
+  {
+    "name": "llama3_chain",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0.7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2026",
+      "2027",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/placement_pix/llama3_chain.json"
+    ],
+    "started": 1791358173.9955816,
+    "gpu_uuids": [
+      "GPU-00cbad2d-7e9b-7c4f-8166-23a834ddc689",
+      "GPU-97d3e0bb-517b-9732-5c1d-6d1f471a7b6f"
+    ],
+    "external_pids": [],
+    "samples": 135,
+    "ended": 1791358480.51391,
+    "returncode": 0,
+    "result_status": "complete",
+    "status": "complete"
+  }
+]

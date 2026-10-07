@@ -1,0 +1,112 @@
+[
+  {
+    "model": "llama2",
+    "mode": "tree",
+    "cell": 5,
+    "temperature": 0.7,
+    "batch": 8,
+    "verify_median_ms": 25.12142900377512,
+    "step_median_ms": 35.40684201288968,
+    "verify_mean_ms": 25.70108649657169,
+    "step_mean_ms": 36.40925059285992,
+    "nonverify_median_ms": null,
+    "counts": [
+      2258,
+      1839
+    ],
+    "mean_live_queries_per_request": 5.564839526449052,
+    "al_by_source": {
+      "0": 1.6764882742032472,
+      "1": 2.6218688738836855,
+      "2": 1.7244623655913978
+    },
+    "hit_by_source": {
+      "0": 0.22760555669609253,
+      "1": 0.31417231232464243,
+      "2": 0.45822213097926506
+    },
+    "dense_queries_per_request": 9
+  },
+  {
+    "model": "llama2",
+    "mode": "chain",
+    "cell": 5,
+    "temperature": 0.7,
+    "batch": 8,
+    "verify_median_ms": 20.585563499480486,
+    "step_median_ms": 28.769958880729973,
+    "verify_mean_ms": 21.807595323111514,
+    "step_mean_ms": 32.858524113442535,
+    "nonverify_median_ms": null,
+    "counts": [
+      2346,
+      1934
+    ],
+    "mean_live_queries_per_request": 3.6990468729599164,
+    "al_by_source": {
+      "0": 1.6630468507601612,
+      "1": 2.434815091520359,
+      "2": 1.5749888740542946
+    },
+    "hit_by_source": {
+      "0": 0.2104060582321452,
+      "1": 0.3495234364799582,
+      "2": 0.4400705052878966
+    }
+  },
+  {
+    "model": "llama3",
+    "mode": "tree",
+    "cell": 5,
+    "temperature": 0.7,
+    "batch": 8,
+    "verify_median_ms": 31.724733067676425,
+    "step_median_ms": 52.04805941320956,
+    "verify_mean_ms": 32.99826555812511,
+    "step_mean_ms": 53.35624082779902,
+    "nonverify_median_ms": null,
+    "counts": [
+      1802,
+      1406
+    ],
+    "mean_live_queries_per_request": 5.823249551166966,
+    "al_by_source": {
+      "0": 1.9432739059967585,
+      "1": 2.8453222453222455,
+      "2": 2.0915254237288137
+    },
+    "hit_by_source": {
+      "0": 0.2769299820466786,
+      "1": 0.43177737881508077,
+      "2": 0.29129263913824055
+    },
+    "dense_queries_per_request": 8.869658886894076
+  },
+  {
+    "model": "llama3",
+    "mode": "chain",
+    "cell": 5,
+    "temperature": 0.7,
+    "batch": 8,
+    "verify_median_ms": 22.455903002992272,
+    "step_median_ms": 35.14518402516842,
+    "verify_mean_ms": 23.509890746624016,
+    "step_mean_ms": 39.09985338081313,
+    "nonverify_median_ms": null,
+    "counts": [
+      1827,
+      1409
+    ],
+    "mean_live_queries_per_request": 3.9073659715385305,
+    "al_by_source": {
+      "0": 1.9547945205479451,
+      "1": 2.835667784572894,
+      "2": 1.9535175879396984
+    },
+    "hit_by_source": {
+      "0": 0.261344312181151,
+      "1": 0.4536829857692652,
+      "2": 0.2849727020495838
+    }
+  }
+]

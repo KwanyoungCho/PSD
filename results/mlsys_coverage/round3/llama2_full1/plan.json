@@ -1,0 +1,69 @@
+[
+  {
+    "name": "llama2_tree_full",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0",
+      "0.7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--seeds",
+      "2026",
+      "2027",
+      "2028"
+    ],
+    "env": {
+      "SSD_PACKED_VERIFY": "0",
+      "SSD_MIXED_MISS_AR": "0",
+      "SSD_SEED": "2026",
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1"
+    }
+  },
+  {
+    "name": "llama2_chain_full",
+    "args": [
+      "--target",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "--draft",
+      "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0",
+      "0.7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-chain",
+      "--seeds",
+      "2026",
+      "2027",
+      "2028"
+    ],
+    "env": {
+      "SSD_PACKED_VERIFY": "1",
+      "SSD_MIXED_MISS_AR": "0",
+      "SSD_SEED": "2026",
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1"
+    }
+  }
+]

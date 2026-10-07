@@ -1,0 +1,38 @@
+[
+  {
+    "name": "llama3_p2tree_full",
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "16",
+      "--temperatures",
+      "0",
+      "0.7",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "64",
+      "--mode",
+      "duet-tree",
+      "--seeds",
+      "2026",
+      "2027",
+      "--memory-fraction",
+      ".45"
+    ],
+    "env": {
+      "SSD_PACKED_VERIFY": "0",
+      "SSD_MIXED_MISS_AR": "0",
+      "SSD_SEED": "2026",
+      "SSD_P1_TREE_EXEC_WORKSPACE_MB": "64",
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_PROFILE": "1"
+    }
+  }
+]

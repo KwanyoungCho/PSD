@@ -1,0 +1,26 @@
+{'qo': [0, 3, 8, 17, 26, 48], 'plan_equal': False, 'maxdiff': 0.0, 'base_plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1), 'plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1)}
+{'qo': [0, 5, 10, 15, 16, 48], 'plan_equal': False, 'maxdiff': 0.0, 'base_plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1), 'plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1)}
+{'qo': [0, 9, 9, 9, 9, 48], 'plan_equal': False, 'maxdiff': 0.0, 'base_plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1), 'plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1)}
+{'qo': [0, 9, 22, 31, 44, 48], 'plan_equal': False, 'maxdiff': 0.0, 'base_plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1), 'plan': (8, 48, 128, 64, 0, 32, 64, 144, 96, 120, 0, 8388608, 352, 1, 1)}
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/probe_packed_plan.py", line 22, in <module>
+    open('results/mlsys_coverage/round3/packed_plan_probe.json','w').write(json.dumps(records,indent=2))
+                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/lib/python3.12/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/lib/python3.12/json/encoder.py", line 202, in encode
+    chunks = list(chunks)
+             ^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/lib/python3.12/json/encoder.py", line 430, in _iterencode
+    yield from _iterencode_list(o, _current_indent_level)
+  File "/home/chokwans99/anaconda3/lib/python3.12/json/encoder.py", line 326, in _iterencode_list
+    yield from chunks
+  File "/home/chokwans99/anaconda3/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/home/chokwans99/anaconda3/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type Array is not JSON serializable

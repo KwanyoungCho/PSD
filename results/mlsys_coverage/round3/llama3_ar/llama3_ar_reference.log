@@ -1,0 +1,50 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=4
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files:  25%|██▌       | 1/4 [00:02<00:08,  2.87s/it]Loading model files:  50%|█████     | 2/4 [00:04<00:04,  2.08s/it]Loading model files:  75%|███████▌  | 3/4 [00:06<00:01,  1.92s/it]Loading model files: 100%|██████████| 4/4 [00:06<00:00,  1.35s/it]Loading model files: 100%|██████████| 4/4 [00:06<00:00,  1.65s/it]
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 116, 256, 8, 128])
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 34.08tok/s
+Final Decode Throughput: 57.96tok/s
+[metrics] Prefill tokens/time: 23 / 0.674888s
+[metrics] Decode tokens/time: 15 / 0.258816s
+Final Prefill Throughput: 5041.23tok/s
+Final Decode Throughput: 56.75tok/s
+[metrics] Prefill tokens/time: 8839 / 1.753342s
+[metrics] Decode tokens/time: 2199 / 38.745675s
+COVERAGE_CELL {"batch": 1, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2247, "wall_s": 40.52442288398743, "end_to_end_tps": 55.448044415898785, "decode_output_tokens": 2199, "decode_tps": 56.75472194368741, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 2627.50tok/s
+Final Decode Throughput: 110.26tok/s
+[metrics] Prefill tokens/time: 56 / 0.021313s
+[metrics] Decode tokens/time: 30 / 0.272074s
+Final Prefill Throughput: 5879.13tok/s
+Final Decode Throughput: 109.18tok/s
+[metrics] Prefill tokens/time: 8839 / 1.503454s
+[metrics] Decode tokens/time: 2199 / 20.140942s
+COVERAGE_CELL {"batch": 2, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2247, "wall_s": 21.654964840970933, "end_to_end_tps": 103.76373346719562, "decode_output_tokens": 2199, "decode_tps": 109.18059088242033, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 3999.06tok/s
+Final Decode Throughput: 224.69tok/s
+[metrics] Prefill tokens/time: 131 / 0.032758s
+[metrics] Decode tokens/time: 60 / 0.267034s
+Final Prefill Throughput: 10748.81tok/s
+Final Decode Throughput: 215.45tok/s
+[metrics] Prefill tokens/time: 8839 / 0.822323s
+[metrics] Decode tokens/time: 2199 / 10.206726s
+COVERAGE_CELL {"batch": 4, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2247, "wall_s": 11.036341436905786, "end_to_end_tps": 203.60008004880848, "decode_output_tokens": 2199, "decode_tps": 215.44617580940968, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+Final Prefill Throughput: 9567.99tok/s
+Final Decode Throughput: 445.02tok/s
+[metrics] Prefill tokens/time: 380 / 0.039716s
+[metrics] Decode tokens/time: 120 / 0.269653s
+Final Prefill Throughput: 19686.30tok/s
+Final Decode Throughput: 379.15tok/s
+[metrics] Prefill tokens/time: 8839 / 0.448993s
+[metrics] Decode tokens/time: 2205 / 5.815629s
+COVERAGE_CELL {"batch": 8, "temperature": 0.0, "seed": 0, "summary": {"output_tokens": 2253, "wall_s": 6.270025362959132, "end_to_end_tps": 359.3286900097481, "decode_output_tokens": 2205, "decode_tps": 379.1507123862, "al_including_recovery": null, "accepted_draft_tokens": null, "cache_hit": null, "phase1_hit": null, "phase2_hit": null, "tree_verify_events": 0, "verify_events": 0}}
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

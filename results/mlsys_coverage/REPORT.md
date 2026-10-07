@@ -1,5 +1,7 @@
 # 논문 branch 기반 full-model / batching / greedy 검증
 
+**최신 상태:** B>1 dynamic tree 통합·full-model 검증은 [round3/REPORT.md](round3/REPORT.md), 재현은 [round3/HANDOVER.md](round3/HANDOVER.md). 아래는 1차 실험의 역사적 기록이다.
+
 실험일: 2026-10-06~07. 기준: `feat/duet-p2tree-g0@a82f7d2`.
 작업 branch: `feat/duet-mlsys-coverage`, worktree: `/home/chokwans99/PSD-mlsys-coverage`.
 

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "llama3_tree_boundary",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_coverage.py",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--batches",
+      "8",
+      "--temperatures",
+      "0",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/boundary_prompts.json",
+      "--limit",
+      "0",
+      "--max-new-tokens",
+      "96",
+      "--mode",
+      "duet-tree",
+      "--p1-tree",
+      "--audit-preemption",
+      "--greedy-only",
+      "--memory-fraction",
+      ".04",
+      "--input-cap",
+      "240",
+      "--ignore-eos",
+      "--output",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round3/llama3_boundary1/llama3_tree_boundary.json"
+    ],
+    "started": 1791353632.1660225,
+    "gpu_uuids": [
+      "GPU-701c7c85-2f36-8ce2-590e-6bf428a4988c",
+      "GPU-947d0308-a472-c345-d704-020de749b375"
+    ],
+    "external_pids": [],
+    "samples": 23,
+    "ended": 1791353684.7151146,
+    "returncode": 0,
+    "result_status": "complete",
+    "status": "complete"
+  }
+]

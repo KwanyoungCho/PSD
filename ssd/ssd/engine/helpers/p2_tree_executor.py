@@ -12,8 +12,10 @@ compute_logits → WOR 샘플(전용 generator) → 자식 삽입 + [R,Nv] 직�
 - RNG: 전용 generator + register_generator_state (기본 RNG 무오염
   참증명 통과 패턴).
 - set_context는 라운드당 capture 시 1회 (replay 중 파이썬 0).
-- 미지원 조건(비-Llama draft/EAGLE/B>1/temp0/페이지 초과)은 호출측
-  arena fallback.
+- 이 실행기는 한 요청의 arena를 유지한다. BatchedTreeExecutor는
+  iter_rounds 프로토콜로 여러 요청의 model forward를 합친다.
+- T=0은 greedy WOR 경로를 사용한다. 비-Llama draft/EAGLE 및
+  페이지 용량 초과 처리는 호출측 지원 범위를 확인한다.
 
 최종 범위: [W,Nv] tok/par/sib/raw_q/parent_cell/valid, parent-q
 uniq(U-slot) 매핑, chain 호환 backbone token/logits까지 graph가 직접

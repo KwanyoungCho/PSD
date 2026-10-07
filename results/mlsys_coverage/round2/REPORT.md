@@ -1,5 +1,7 @@
 # DUET 최적화 2차 기록 — 논문 tree 범위 정정 포함
 
+**후속 완료 기록:** 이 문서에 남아 있던 B>1 tree serving 작업은 [../round3/REPORT.md](../round3/REPORT.md)와 [../round3/HANDOVER.md](../round3/HANDOVER.md)에 이어서 기록했다. 아래는 2차 종료 시점의 상태다.
+
 기준 branch: `feat/duet-p2tree-g0@a82f7d2`; 작업 branch: `feat/duet-mlsys-coverage`.
 날짜: 2026-10-07. 재생성 수치: [NUMBERS.md](NUMBERS.md), 원본 집계: [NUMBERS.json](NUMBERS.json).
 
