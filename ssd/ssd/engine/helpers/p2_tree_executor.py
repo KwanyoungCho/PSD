@@ -886,7 +886,7 @@ class P2TreeExecutor:
             1, dtype=torch.int64).to(torch.uint8)
         wr._custom_mask_buf[:packed.numel()].copy_(packed)
 
-    def run_once(self, n_pages0, finalize=True):
+    def iter_rounds(self, n_pages0, finalize=True):
         """Execute the fixed-shape P2 body once.
 
         ``finalize=False`` is used for CUDA graph capture.  The four draft
@@ -1013,7 +1013,7 @@ class P2TreeExecutor:
                 self.dbg_fan[f, :wf].copy_(fan)
             self._pack_row_mask(wrappers[f], f)
             # ── raw draft forward (capture-시 context 1회 bake)
-            set_context(
+            logits = yield ids, rope, dict(
                 is_prefill=False,
                 slot_mapping=self.in_slot[f][:wf],
                 context_lens=self.in_ctx_len[f],
@@ -1021,15 +1021,12 @@ class P2TreeExecutor:
                 active_mq_len=wf,
                 active_wrappers={1: wrappers[f]},
             )
-            try:
-                hidden = self.model(ids, rope)
-                logits = self.compute_logits(hidden, False)[:wf].float()
-            finally:
-                reset_context()
             cell_base = self.round_offsets[f]
             self.cell_logits[cell_base:cell_base + wf] = logits
             toks, raws = PT.tree_sample_wor(
                 logits, self.in_temps[:wf], C, assume_pos_temps=True,
+                allow_greedy=True,
+                greedy_only=getattr(self.cfg, "greedy_only", False),
                 sampler_x=getattr(self.cfg, "sampler_x", None),
                 F=getattr(self.cfg, "async_fan_out", None),
                 generator=self.gen,
@@ -1086,6 +1083,23 @@ class P2TreeExecutor:
             self.out_u_valid.zero_()
         else:
             self._finalize_outputs()
+
+    def run_once(self, n_pages0, finalize=True):
+        """Drive one arena, sharing the round protocol with batched execution."""
+        rounds = self.iter_rounds(n_pages0, finalize=finalize)
+        request = next(rounds)
+        while True:
+            ids, rope, context = request
+            set_context(**context)
+            try:
+                hidden = self.model(ids, rope)
+                logits = self.compute_logits(hidden, False).reshape(-1, self.V).float()
+            finally:
+                reset_context()
+            try:
+                request = rounds.send(logits)
+            except StopIteration:
+                break
 
     def _finalize_outputs(self):
         """Build parent-q and backbone outputs using fixed-shape GPU ops.

@@ -357,7 +357,7 @@ class TestP1ShapeBuckets(unittest.TestCase):
         _Cfg.duet_p2_tree_policy = "on"
         self.assertTrue(_should_run_p2_tree(_Cfg(), 1, temps))
         self.assertFalse(_should_run_p2_tree(_Cfg(), 2, temps))
-        self.assertFalse(_should_run_p2_tree(
+        self.assertTrue(_should_run_p2_tree(
             _Cfg(), 1, torch.tensor([0.0])))
 
     def test_wide_p1_canvas_reservation_crosses_page_safely(self):

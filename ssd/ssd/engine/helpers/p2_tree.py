@@ -1308,8 +1308,12 @@ def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
     전제: 같은 logits → 같은 q). op 시퀀스는 기존 tree_sample_wor
     인라인과 bit-identical (c=1 RNG-parity 테스트가 고정).
     """
-    logits_cpy = logits.to(torch.float)
-    logits_cpy.div_(temperatures.unsqueeze(dim=1))
+    # At T=0 this is a ranking score only. Greedy verification never uses
+    # this soft distribution for an acceptance ratio. Keep multiple distinct
+    # children meaningful by ranking with the untempered draft distribution.
+    logits_cpy = logits.float() / torch.where(
+        temperatures > 0, temperatures, torch.ones_like(temperatures)
+    ).unsqueeze(dim=1)
     probs = torch.softmax(logits_cpy, dim=-1, dtype=torch.float)
     if sampler_x is not None:
         probs = apply_sampler_x_rescaling(probs, sampler_x, F)
@@ -1347,8 +1351,9 @@ def selected_q_probs_from_logits(logits: torch.Tensor,
     # the caller's glue logits in place.
     if scaled is logits:
         scaled = scaled.clone()
-    scaled.div_(temperatures.to(
-        device=logits.device, dtype=torch.float32).reshape(-1, 1))
+    rank_temps = temperatures.to(device=logits.device, dtype=torch.float32)
+    scaled.div_(torch.where(rank_temps > 0, rank_temps,
+                           torch.ones_like(rank_temps)).reshape(-1, 1))
     log_z = torch.logsumexp(scaled, dim=-1, keepdim=True)
     if source_rows is None:
         selected_logits = scaled.gather(1, token_ids)
@@ -1386,7 +1391,7 @@ def selected_q_probs_from_logits(logits: torch.Tensor,
 def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
                     c_tensor: int, sampler_x=None, F=None,
                     assume_pos_temps: bool = False, generator=None,
-                    noise=None):
+                    noise=None, allow_greedy=False, greedy_only=False):
     """비복원(WOR) C_tensor개 샘플 — 순서 보존 (T1.3; D8/D11).
 
     구현: exponential-race top-k — race 점수 내림차순 = 순차 비복원
@@ -1405,13 +1410,16 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
     """
     # gap-prof: GPU temps의 .any()→bool()은 forward 완료 대기 동기점
     # (2.4ms/forward). rollout은 진입 전 temp>0 확인 — 가드 생략 허용.
-    if not assume_pos_temps and bool((temperatures <= 0).any()):
+    if not allow_greedy and not assume_pos_temps and bool((temperatures <= 0).any()):
         raise ValueError(
             "tree_sample_wor: temperature==0 is gated (v6 §7.2 — "
             "support-exhaustion fallback intentionally not implemented; "
             "caller must fall back to the chain path)")
     probs = q_probs_from_logits(logits, temperatures, sampler_x, F)
     raw_q = probs.clone()                      # 원본 보존 (c_raw)
+    if greedy_only:
+        tokens = raw_q.topk(c_tensor, dim=-1).indices
+        return tokens, raw_q.gather(1, tokens)
     epsilon = 1e-10
     # generator: P2 전용 CUDA graph-safe 제너레이터 (리뷰11-1 — 기본
     # 제너레이터는 P1/eager 전용으로 격리; None이면 종전 동작 그대로).
@@ -1423,6 +1431,8 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
         scores = probs.div_(
             torch.empty_like(probs).exponential_(1, generator=generator)
             + epsilon)
+    if allow_greedy:
+        scores = torch.where((temperatures == 0).unsqueeze(1), raw_q, scores)
     if c_tensor == 1:
         tokens = scores.argmax(dim=-1, keepdim=True)   # Sampler와 동일 op
     else:
@@ -1945,7 +1955,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
         cell_logits[f * W:(f + 1) * W] = logits[:W]
         toks, raws = tree_sample_wor(logits, temps.to(logits.device),
                                      c_tensor, sampler_x=sampler_x, F=F_x,
-                                     assume_pos_temps=True)
+                                     assume_pos_temps=True, allow_greedy=True)
         if _gp:
             _t3 = _t.perf_counter()
         toks, raws = toks.cpu(), raws.cpu()   # pool 장부는 CPU (소량 1회)
@@ -2347,6 +2357,35 @@ def build_verify_mask_packed(valid: int, ancestors, kv_len: int):
         m[j, prefix + j] = 1
     packed = np.packbits(m.ravel(), bitorder="little")
     return torch.from_numpy(packed)
+
+
+def tree_verify_walk_greedy(tree_ints, p_logits):
+    """Follow target argmax through any matching child, including siblings.
+
+    Candidates can be selected by any ranking heuristic. No proposal ratio
+    is involved: every emitted edge is exactly the target's next argmax at
+    that prefix. All row argmax IDs cross to CPU in one bounded transfer.
+    """
+    valid = int(tree_ints["valid"])
+    validate_tree_ints(tree_ints, len(tree_ints["tok"]))
+    if p_logits.shape[0] < valid + 1:
+        raise ValueError("greedy tree logits do not cover all node contexts")
+    argmax_ids = p_logits[:valid + 1].argmax(-1).tolist()
+    children = {}
+    for j in range(valid):
+        key = (int(tree_ints["parent_local"][j]), int(tree_ints["tok"][j]))
+        if key in children:
+            raise ValueError("greedy tree contains duplicate sibling tokens")
+        children[key] = j
+    path, ctx = [], -1
+    for _ in range(valid + 1):
+        token = int(argmax_ids[ctx + 1])
+        child = children.get((ctx, token))
+        if child is None:
+            return path, token
+        path.append(child)
+        ctx = child
+    raise RuntimeError("greedy tree walk exceeded its node bound")
 
 
 def tree_verify_walk_tensor(tree_ints, p_logits, q_parent_probs, temp_p,
@@ -2998,7 +3037,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                                       device=logits.device)
         cell_logits[f * W:(f + 1) * W] = logits[:W]
         sample_kwargs = dict(
-            sampler_x=sampler_x, F=F_x, assume_pos_temps=True)
+            sampler_x=sampler_x, F=F_x, assume_pos_temps=True,
+            allow_greedy=True)
         if p2_gen is not None:
             sample_kwargs["generator"] = p2_gen
         if noise_list is not None:

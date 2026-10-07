@@ -375,12 +375,10 @@ class Verifier(VerifierBase):
             _td0 = (seqs[0].draft_temperature
                     if seqs[0].draft_temperature is not None
                     else seqs[0].temperature)
-            if _tree_meta_arg is not None and _tp0 <= 0:
-                # 리뷰3-10: target temp=0 + 트리 미정의 — draft측 WOR
-                # 게이트와 동일하게 명시 차단 (조용한 오분포 금지).
+            if _tree_meta_arg is not None and _tp0 > 0 and _td0 <= 0:
                 raise NotImplementedError(
-                    "DUET dynamic tree requires target temperature > 0 "
-                    "(temp-0 tree verify is gated; use chain policy)")
+                    "Stochastic target with deterministic branching draft "
+                    "needs a different proposal law; use positive draft T")
 
             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead,
                           _tm=_tree_meta_for_proxy, _tp=_tp0, _td=_td0):
@@ -618,17 +616,14 @@ class Verifier(VerifierBase):
         append — 트리 경로가 그대로 실린다).
         """
         from ssd.engine.helpers.p2_tree import (
-            parse_tree_ints, tree_verify_walk_tensor, q_probs_from_logits)
+            parse_tree_ints, tree_verify_walk_tensor, tree_verify_walk_greedy,
+            q_probs_from_logits)
         cfg = self.target_model_runner.config
         nv = int(cfg.duet_tree_wire_nodes)
         ti = parse_tree_ints(speculate_result.tree_ints[0].cpu(), nv)
         pq = speculate_result.parent_q_logits[0].float()         # [nv, V] GPU
         td = float(temperatures_draft[0])
         tt = float(temperatures_target[0])
-        q_probs = q_probs_from_logits(
-            pq, torch.full((pq.shape[0],), max(td, 1e-8),
-                           device=pq.device),
-            self.sampler_x, self.async_fan_out)
         p_rows = logits_p[0].float()             # [valid+1, V] GPU 상주 —
         # 사다리 벡터 연산([V])을 GPU에서 수행 (CPU 복사 2.3MB/step 제거;
         # walk_tensor는 device-agnostic, 스칼라 sync는 형제당 소수)
@@ -639,9 +634,17 @@ class Verifier(VerifierBase):
         def _mult(probs):
             return int(torch.multinomial(probs, 1).item())
 
-        path, terminal = tree_verify_walk_tensor(
-            ti, p_rows, q_probs, tt, _coin, _mult)
         _calib = os.environ.get("SSD_TREE_CALIB_TRACE", "")
+        if tt == 0:
+            path, terminal = tree_verify_walk_greedy(ti, p_rows)
+            if _calib:
+                raise ValueError("Stochastic tree calibration trace is not a greedy label")
+        else:
+            q_probs = q_probs_from_logits(
+                pq, torch.full((pq.shape[0],), td, device=pq.device),
+                self.sampler_x, self.async_fan_out)
+            path, terminal = tree_verify_walk_tensor(
+                ti, p_rows, q_probs, tt, _coin, _mult)
         if _calib:
             # Diagnostic-only post-hoc calibration.  Keep three labels
             # separate: an unattempted later sibling is not a rejection.

@@ -61,8 +61,7 @@ def _should_run_p2_tree(config, batch_size, temperatures):
     switch as the single source of truth.
     """
     return (getattr(config, "duet_p2_tree_policy", "off") == "on"
-            and int(batch_size) == 1
-            and bool((temperatures > 0).all()))
+            and int(batch_size) == 1)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -3115,8 +3114,7 @@ class DraftRunner(ModelRunner):
             self._p1_tree_fallback_reason = "policy_off"
             return None
         B, contexts, _ = glue_logits.shape
-        if B != 1 or not bool((partial_tree_decode_args["temperatures"] > 0)
-                              .all()):
+        if B != 1:
             self._p1exec_count("chain_fallback_batch_or_temperature")
             self._p1_tree_fallback_reason = (
                 f"batch_or_temperature:B={B}")

@@ -2307,7 +2307,7 @@ class TestArenaParityHardening(unittest.TestCase):
         orig = PT.tree_sample_wor
 
         def det_wor(logits, temps, c, sampler_x=None, F=None,
-                    assume_pos_temps=False):
+                    assume_pos_temps=False, allow_greedy=False):
             gg = torch.Generator().manual_seed(1000 + det_state["calls"])
             det_state["calls"] += 1
             Wl, Vl = logits.shape

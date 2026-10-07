@@ -43,7 +43,7 @@ class TestGreedyRecovery(unittest.TestCase):
             tokens = torch.cat((torch.zeros(8, 1, dtype=torch.long, device=device),
                                 p[:, :-1].argmax(-1)), dim=1)
             temps = torch.zeros(8, device=device)
-            vk = torch.tensor([1, 2, 3, 4, 4, 3, 2, 1], device=device)
+            vk = torch.tensor([0, 1, 2, 3, 4, 3, 2, 1], device=device)
             expected = verify(p, q, tokens, temps, temps, valid_k=vk)
             actual = verify(p, q, tokens, temps, temps, valid_k=vk, all_greedy=True)
             self.assertEqual(expected, actual)
