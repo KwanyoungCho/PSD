@@ -1399,9 +1399,10 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
     Sampler.forward와 op 시퀀스·RNG 소비·결과가 bit-identical**
     (fast-path 게이트의 근거; 테스트로 고정).
 
-    temp==0 금지 (v6 게이트: 트리 OFF 폴백은 호출자 책임) — one-hot
-    support에서 2번째 비복원 추출이 미정의이기 때문 (fallback 미구현
-    을 의도적으로 게이트).
+    기본 호출은 temp==0을 거부한다. allow_greedy=True이면 T0 행은
+    untempered draft score의 상위 C개를 고른다. 이는 one-hot WOR가
+    아니며 target greedy walk에서만 사용한다. greedy_only=True는
+    모든 행이 T0라는 호출자 계약으로 RNG 작업도 생략한다.
 
     Returns:
         tokens [B, C] int64 — WOR 순서 (형제 순서 기록 그 자체).

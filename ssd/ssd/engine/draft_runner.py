@@ -1916,8 +1916,19 @@ class DraftRunner(ModelRunner):
 
         _root = self._tree_hit_root
         _views = self._tree_hit_views
-        par = _views["parent_local"][_root]
-        n_valid = int(_views["valid"][_root])
+        host_topology = os.environ.get("SSD_TREE_HOST_TOPOLOGY", "0") == "1"
+        if host_topology:
+            # hit_cache_and_respond already validated/copied this wire before
+            # sending it. Reading every GPU parent scalar again costs one
+            # stream synchronization per node and cannot add information.
+            from ssd.engine.helpers.p2_tree import parse_tree_ints
+            served = parse_tree_ints(self._tree_served_ints,
+                                     self.config.duet_tree_wire_nodes)
+            n_valid = int(served["valid"])
+            par = served["parent_local"][:n_valid].tolist()
+        else:
+            par = _views["parent_local"][_root]
+            n_valid = int(_views["valid"][_root])
         n_rows = n_valid + 1
         if glue_decode_input_ids.numel() != n_rows:
             raise RuntimeError(
@@ -1926,37 +1937,48 @@ class DraftRunner(ModelRunner):
         if n_rows > W:
             raise RuntimeError(f"tree glue rows {n_rows} > W {W}")
 
-        # 노드별 depth/조상 (parent_local은 항상 자기보다 앞 — 뷰 invariant)
-        depth = [0] * n_valid
-        anc = [[] for _ in range(n_valid)]
-        for j in range(n_valid):
-            p = int(par[j])
-            if p >= 0:
-                depth[j] = depth[p] + 1
-                anc[j] = anc[p] + [p]
+        if host_topology:
+            from ssd.engine.helpers.tree_host_topology import context_topology
+            depth, anc, rows_cpu = context_topology(par)
+            context_rows = torch.from_numpy(rows_cpu).to(self.device)
+            context_depth = torch.tensor([0] + [d+1 for d in depth],
+                                         dtype=torch.int64, device=self.device)
+        else:
+            # 노드별 depth/조상 (parent_local은 항상 자기보다 앞 — 뷰 invariant)
+            depth = [0] * n_valid
+            anc = [[] for _ in range(n_valid)]
+            for j in range(n_valid):
+                p = int(par[j])
+                if p >= 0:
+                    depth[j] = depth[p] + 1
+                    anc[j] = anc[p] + [p]
 
-        # Reuse this exact context description for P1 root construction.
-        # ctx 0 is recovery; ctx 1+j is tree node j after its ancestors.
-        context_rows = torch.zeros(
-            n_rows, n_rows, dtype=torch.uint8, device=self.device)
-        context_rows[0, 0] = 1
-        context_depth = torch.zeros(
-            n_rows, dtype=torch.int64, device=self.device)
-        for j in range(n_valid):
-            context_rows[1 + j, 0] = 1
-            if anc[j]:
-                context_rows[1 + j, 1 + torch.tensor(
-                    anc[j], dtype=torch.int64, device=self.device)] = 1
-            context_rows[1 + j, 1 + j] = 1
-            context_depth[1 + j] = 1 + depth[j]
+            # Reuse this exact context description for P1 root construction.
+            # ctx 0 is recovery; ctx 1+j is tree node j after its ancestors.
+            context_rows = torch.zeros(
+                n_rows, n_rows, dtype=torch.uint8, device=self.device)
+            context_rows[0, 0] = 1
+            context_depth = torch.zeros(
+                n_rows, dtype=torch.int64, device=self.device)
+            for j in range(n_valid):
+                context_rows[1 + j, 0] = 1
+                if anc[j]:
+                    context_rows[1 + j, 1 + torch.tensor(
+                        anc[j], dtype=torch.int64, device=self.device)] = 1
+                context_rows[1 + j, 1 + j] = 1
+                context_depth[1 + j] = 1 + depth[j]
         self._p1_context_glue_rows = context_rows
         self._p1_context_depth = context_depth
 
         ctxt = self.prepare_glue_decode_ctxt(
             num_tokens=num_tokens, input_ids=glue_decode_input_ids,
             dbt=dbt, B=1, valid_k=n_valid)
-        pos0 = int(ctxt["positions"][0])
-        cols = int(ctxt["context_lens"][0])
+        if host_topology:
+            pos0 = self._tree_served_numtok - 1
+            cols = pos0 + n_rows
+        else:
+            pos0 = int(ctxt["positions"][0])
+            cols = int(ctxt["context_lens"][0])
 
         # W-폭 패딩: pad 행은 slot -1 (KV 미기록), rope pos0, prefix-only mask
         input_w = torch.zeros(W, dtype=torch.int64, device=self.device)
@@ -3106,7 +3128,7 @@ class DraftRunner(ModelRunner):
         entirely inside :class:`P1TreeExecutor`; host work here occurs once
         before replay and never between the K1 draft forwards.
 
-        Returns ``None`` for the explicitly unsupported B>1/temp=0/near-end
+        Returns ``None`` for the explicitly unsupported B>1/near-end
         cases so the caller can retain the established chain path.
         """
         self._p1_tree_fallback_reason = None
