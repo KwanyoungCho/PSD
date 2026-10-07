@@ -14,8 +14,11 @@ def verify(verifier,seqs,result):
     r=verifier.target_model_runner
     cfg=r.config
     B=len(seqs)
-    N=cfg.duet_response_token_width
     step_width=result.speculations.shape[1]-1
+    N=cfg.duet_response_token_width
+    if os.getenv('SSD_BATCH_TREE_FIXED_VERIFY','0')!='1':
+        widths={cfg.duet_phase1_k,cfg.duet_phase2_k,N}
+        N=next(n for n in sorted(widths) if n>=step_width)
     valid=[s.verify_valid_k for s in seqs]
     wire=result.tree_ints.cpu()
     spec=result.speculations.cpu().tolist()
@@ -45,14 +48,15 @@ def verify(verifier,seqs,result):
     if not hasattr(r,'_batch_tree_proxies'):
         r._batch_tree_proxies={}; r._batch_tree_proxy_pool=None
     cap=capacity(B)
-    if cap not in r._batch_tree_proxies:
+    proxy_key=cap,N
+    if proxy_key not in r._batch_tree_proxies:
         p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
                            cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
                            q_dtype=result.logits_q.dtype)
-        r._batch_tree_proxies[cap]=p
+        r._batch_tree_proxies[proxy_key]=p
         if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
-    proxy=r._batch_tree_proxies[cap]
+    proxy=r._batch_tree_proxies[proxy_key]
     tokens=torch.zeros(B,N,dtype=torch.int64,device=r.device)
     tokens[:,:step_width].copy_(result.speculations[:,1:])
     q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
@@ -71,7 +75,7 @@ def verify(verifier,seqs,result):
     if os.getenv('SSD_BATCH_TREE_ACCEPT_GRAPH','1')=='1':
         if not hasattr(r,'_batch_tree_accept'):
             r._batch_tree_accept={};r._batch_tree_accept_pool=None
-        key=cap,greedy
+        key=cap,N,greedy
         if key not in r._batch_tree_accept:
             graph=BatchedTreeAccept(proxy,verifier.sampler_x,verifier.async_fan_out,
                                     greedy,pool=r._batch_tree_accept_pool)
@@ -102,6 +106,7 @@ def verify(verifier,seqs,result):
     for b,suffix in enumerate(suffixes):
         length=len(suffix)
         m['phase_events'].append(dict(tree=is_tree[b],batch_size=B,verify_width=step_width,
+            physical_verify_width=N,
             step_id=result.step_id,source=phases[b],cache_hit=int(hits[b]),
             accepted_len=length,accepted_spec_len=length-1,valid_k=valid[b]))
         m['accepted_suffix_lens_on_hit' if hits[b] else 'accepted_suffix_lens_on_miss'].append(length)
