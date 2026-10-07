@@ -106,8 +106,12 @@ def verify(verifier,seqs,result):
     m['phase2_hits'].append(sum(p==2 for p in phases)/B)
     for b,suffix in enumerate(suffixes):
         length=len(suffix)
+        physical_queries=(((sum(v+1 for v in valid)+7)//8)*8
+                          if os.getenv('SSD_PACKED_TREE_VERIFY','0')=='1'
+                          else cap*(N+1))
         m['phase_events'].append(dict(tree=is_tree[b],batch_size=B,verify_width=step_width,
             physical_verify_width=N,
+            physical_batch_queries=physical_queries,
             step_id=result.step_id,source=phases[b],cache_hit=int(hits[b]),
             accepted_len=length,accepted_spec_len=length-1,valid_k=valid[b]))
         m['accepted_suffix_lens_on_hit' if hits[b] else 'accepted_suffix_lens_on_miss'].append(length)

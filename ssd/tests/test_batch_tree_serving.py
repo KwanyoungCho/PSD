@@ -144,6 +144,12 @@ class ForwardAttention(unittest.TestCase):
         expected=reference();out2=forward.run(rows,5)
         for b,y in enumerate(expected):torch.testing.assert_close(out2[b,:len(y)].float(),y,atol=.001,rtol=.005)
         torch.testing.assert_close(out[0],out2[0],atol=0,rtol=0)
+        # Keep the total query count constant while changing the per-request
+        # boundaries. Replaying a packed graph must re-plan these boundaries.
+        rows[0].update(tokens=[1,2,3],parents=[-1,-1])
+        rows[1].update(tokens=[6,7,8,10,11],parents=[-1,0,0,2])
+        expected=reference();out3=forward.run(rows,5)
+        for b,y in enumerate(expected):torch.testing.assert_close(out3[b,:len(y)].float(),y,atol=.001,rtol=.005)
 
 @unittest.skipUnless(torch.cuda.is_available(),'CUDA required')
 class CapturedAcceptance(unittest.TestCase):
@@ -297,6 +303,15 @@ class MixedTemperatures(unittest.TestCase):
         path,recovery,_=verify_batch(p,q,tokens,topo,[0.]*64+[.7]*64,[0.]*64+[.7]*64)
         self.assertTrue((path[:64,0]==1).all())
         self.assertTrue((recovery[:64]==1).all())
+
+
+@unittest.skipUnless(torch.cuda.is_available(),'CUDA required')
+class PackedForwardAttention(ForwardAttention):
+    def test_captured_ancestor_attention_matches_independent_dense(self):
+        from unittest.mock import patch
+        from ssd.engine.helpers.packed_tree_forward import PackedTreeForward
+        with patch('ssd.engine.helpers.batch_tree_forward.BatchedTreeForward',PackedTreeForward):
+            super().test_captured_ancestor_attention_matches_independent_dense()
 
 
 if __name__ == '__main__':

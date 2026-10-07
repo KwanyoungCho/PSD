@@ -1561,6 +1561,11 @@ class ModelRunner:
 
     @torch.inference_mode()
     def run_batched_tree(self, rows, width):
+        if os.environ.get('SSD_PACKED_TREE_VERIFY','0')=='1':
+            if not hasattr(self,'_packed_tree_forward'):
+                from ssd.engine.helpers.packed_tree_forward import PackedTreeForward
+                self._packed_tree_forward=PackedTreeForward(self,split=True)
+            return self._packed_tree_forward.run(rows,width,self._duet_proxy_fn)
         from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
         if not hasattr(self, '_batched_tree_forward'):
             self._batched_tree_forward = BatchedTreeForward(self, split=True)
