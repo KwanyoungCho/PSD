@@ -1,4 +1,4 @@
-"""Full draft weights, synthetic prefixes: batched tree execution only.
+"""Full draft weights, synthetic or real prefixes: tree execution only.
 
 This is not end-to-end DUET throughput and does not test the cache protocol.
 """
@@ -21,11 +21,17 @@ def main():
     ap.add_argument('--batches', nargs='+', type=int, default=[1, 2, 4, 8])
     ap.add_argument('--repeats', type=int, default=50)
     ap.add_argument('--real-prefix', action='store_true', help='Prefill natural-text prefixes instead of zero KV')
+    ap.add_argument('--diverse-prefix', action='store_true',
+                    help='Use different natural-text prefixes for different requests')
     ap.add_argument('--dtype',choices=['auto','fp16','bf16'],default='auto')
     ap.add_argument('--strict-matmul',action='store_true')
     ap.add_argument('--plausible-roots',action='store_true')
     ap.add_argument('--pad-linear-rows',type=int,default=0,
                     help='Diagnostic: hold GEMM row shape fixed in serial and batched execution')
+    ap.add_argument('--trace-layers',action='store_true',
+                    help='Compare serial/batch first-round intermediates in eager mode')
+    ap.add_argument('--hf-reference',action='store_true',
+                    help='Compare root distributions to independent float32 HF eager attention')
     ap.add_argument('--output', type=Path, required=True)
     a = ap.parse_args()
     if a.output.exists():
@@ -74,9 +80,22 @@ def main():
         from ssd.utils.context import set_context,reset_context
         tok=AutoTokenizer.from_pretrained(a.model)
         prefix=tok.encode('The following example explains how to reason about a computer system. '*40)[:128]
+        prefix_texts = [
+            'The following example explains how to reason about a computer system. ',
+            'In Python, a dictionary maps keys to values. A function can return multiple values. ',
+            'To solve the equation, subtract the constant and divide both sides by the coefficient. ',
+            'A city library keeps books organized by author and subject for visitors to find. ',
+            'The experimental measurements depend on the temperature and pressure of the gas. ',
+            'The chef chopped the vegetables and prepared a warm soup for the evening meal. ',
+            'A fictional traveler arrived at the village and asked for directions to the river. ',
+            'For each item in the sorted list, compare the current value with the previous value. ',
+        ]
+        prefixes = [tok.encode(prefix_texts[b % len(prefix_texts)]*40)[:128]
+                    if a.diverse_prefix else prefix for b in range(max(a.batches))]
+        assert all(len(p)==128 for p in prefixes)
         with torch.inference_mode():
             Bmax=max(a.batches)
-            ids=torch.tensor(prefix*Bmax,dtype=torch.int64,device=device)
+            ids=torch.tensor(prefixes,dtype=torch.int64,device=device).flatten()
             positions=torch.arange(128,device=device).repeat(Bmax)
             slots=(torch.arange(Bmax,device=device)[:,None]*blocks*page+
                    torch.arange(128,device=device)[None,:]).reshape(-1).int()
@@ -104,6 +123,7 @@ def main():
                width_per_request=5, forwards=2, repeats=a.repeats,
                gpu=torch.cuda.get_device_name(0),cuda_visible_devices=os.getenv('CUDA_VISIBLE_DEVICES'),
                torch_version=torch.__version__,real_prefix=a.real_prefix,
+               diverse_prefix=a.diverse_prefix,
                plausible_roots=a.plausible_roots,strict_matmul=a.strict_matmul,
                pad_linear_rows=a.pad_linear_rows,cells=[])
     with torch.inference_mode():
@@ -146,6 +166,15 @@ def main():
             first_round_top3 = [torch.equal(ex.cell_logits[:ex.W].topk(3,-1).indices,
                                            ref[0][:ex.W].topk(3,-1).indices)
                                 for ex,ref in zip(arenas,refs)]
+            first_logit_a = torch.cat([ref[0][:ex.W] for ex, ref in zip(arenas, refs)])
+            first_logit_b = torch.cat([ex.cell_logits[:ex.W] for ex in arenas])
+            probability_tv = (first_logit_a.softmax(-1)-first_logit_b.softmax(-1)).abs().sum(-1)/2
+            first_top1 = first_logit_a.argmax(-1)==first_logit_b.argmax(-1)
+            worst_row, worst_token = divmod(int((first_logit_a-first_logit_b).abs().argmax()), cfg.vocab_size)
+            worst_logit = dict(row=worst_row,token=worst_token,
+                serial_logit=float(first_logit_a[worst_row,worst_token]),
+                batched_logit=float(first_logit_b[worst_row,worst_token]),
+                serial_probability=float(first_logit_a[worst_row].softmax(-1)[worst_token]))
             same = all(torch.equal(ex.view_tok,ref[1]) and torch.equal(ex.view_par,ref[2])
                        for ex,ref in zip(arenas,refs))
             serial_ms = measure(serial)
@@ -154,10 +183,77 @@ def main():
                        speedup=serial_ms/batched_ms, same_topology_and_tokens=same,
                        max_logit_difference=max_diff, first_round_max_difference=first_round_diff,
                        first_round_top3_exact=first_round_top3,
+                       first_round_top1_agreement=float(first_top1.float().mean()),
+                       first_round_probability_tv_mean=float(probability_tv.mean()),
+                       first_round_probability_tv_max=float(probability_tv.max()),
+                       worst_first_round_logit=worst_logit,
                        serial_eager_diff=serial_eager_diff,
                        batched_eager_first_diff=batched_eager_first_diff)
+            if a.hf_reference:
+                if not a.real_prefix:
+                    raise ValueError('--hf-reference requires --real-prefix')
+                from transformers import AutoModelForCausalLM
+                # Load after timings. Process roots in small chunks, avoiding
+                # a full [batch,prefix,vocabulary] logits allocation.
+                hf = AutoModelForCausalLM.from_pretrained(
+                    a.model, torch_dtype=torch.float32,
+                    attn_implementation='eager').to(device).eval()
+                root_ids = torch.cat([ex.in_root_tok for ex in arenas])
+                hf_rows = []
+                for start in range(0, root_ids.numel(), 5):
+                    roots = root_ids[start:start+5]
+                    prompt = torch.tensor([prefixes[j//5]
+                        for j in range(start,start+roots.numel())],device=device)
+                    ids = torch.cat((prompt, roots[:,None]),dim=1)
+                    h = hf.model(input_ids=ids,use_cache=False).last_hidden_state[:,-1]
+                    hf_rows.append(hf.lm_head(h).float())
+                hf_logits = torch.cat(hf_rows)
+                hf_probs = hf_logits.softmax(-1)
+                hf_summary = {}
+                for label, values in [('serial',first_logit_a),('batched',first_logit_b)]:
+                    tv = (values.softmax(-1)-hf_probs).abs().sum(-1)/2
+                    chosen = values.argmax(-1)
+                    gap = hf_logits.max(-1).values-hf_logits.gather(1,chosen[:,None]).squeeze(1)
+                    hf_summary[label] = dict(tv_mean=float(tv.mean()),tv_max=float(tv.max()),
+                        argmax_agreement=float((chosen==hf_logits.argmax(-1)).float().mean()),
+                        chosen_token_reference_logit_deficit_max=float(gap.max()))
+                row['hf_float32_reference'] = hf_summary
+                del hf, hf_rows, hf_logits, hf_probs
+                gc.collect()
+                torch.cuda.empty_cache()
+            if a.trace_layers:
+                traces = {}
+                handles = []
+                def trace_hook(name):
+                    def hook(module, args, value):
+                        # Only the first forward (tree roots), before differing
+                        # token choices can propagate into later rounds.
+                        if name not in traces:
+                            values = value if isinstance(value, tuple) else (value,)
+                            traces[name] = [t.detach().float().cpu().clone()
+                                            for t in values if torch.is_tensor(t)]
+                    return hook
+                for name, module in model.named_modules():
+                    if name.startswith('model.'):
+                        handles.append(module.register_forward_hook(trace_hook(name)))
+                arenas[0].run_once(1)
+                serial_trace = traces
+                traces = {}
+                batch.run_once(1)
+                for handle in handles:
+                    handle.remove()
+                differences = []
+                for name, tensors in serial_trace.items():
+                    for ti, t in enumerate(tensors):
+                        other = traces[name][ti][:t.shape[0]]
+                        diff = (t-other).abs()
+                        differences.append(dict(module=name,output=ti,
+                            shape=list(t.shape),max_difference=float(diff.max()),
+                            rms_difference=float(diff.square().mean().sqrt()),
+                            reference_absmax=float(t.abs().max())))
+                row['layer_differences'] = differences
             out['cells'].append(row)
-            print(row, flush=True)
+            print({k:v for k,v in row.items() if k!='layer_differences'}, flush=True)
             a.output.parent.mkdir(parents=True,exist_ok=True)
             a.output.write_text(json.dumps(out,indent=2)+'\n')
             del batch, arenas, refs, ex
