@@ -6,6 +6,7 @@ from ssd.utils.context import set_context, reset_context
 from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
 from ssd.engine.helpers.batch_tree_common import capacity, build_forward_inputs
 
+DETAIL_TREE = os.getenv('SSD_PROFILE_DUET_DETAIL','0') == '1'
 
 class BatchedTreeForward:
     def __init__(self, runner, split):
@@ -40,6 +41,8 @@ class BatchedTreeForward:
         key = batch,width,pages
         if key in self.graphs:
             return self.graphs[key]
+        capture_label='batch_target_forward_capture' if self.split else 'batch_glue_forward_capture'
+        capture_event=duet_record(capture_label) if DETAIL_TREE else None
         r = self.r
         dev,dtype,hf = r.device,r.hf_config.torch_dtype,r.hf_config
         cols = pages*r.block_size
@@ -97,6 +100,7 @@ class BatchedTreeForward:
             if self.pool is None: self.pool = g['full'].pool()
         reset_context()
         self.graphs[key] = g
+        if DETAIL_TREE:duet_close(capture_label,capture_event)
         return g
 
     @torch.inference_mode()
