@@ -4,6 +4,7 @@ Run with python -O. Save complete token IDs for greedy AR comparisons. This
 is an infrastructure validation harness, not a tuned paper performance claim.
 """
 import argparse
+from collections import Counter
 import hashlib
 import json
 import os
@@ -38,6 +39,8 @@ def parse_args():
     p.add_argument("--draft-fan-out", type=int, default=2)
     p.add_argument("--proxy-fan-out", type=int, default=1)
     p.add_argument("--p1-tree", action="store_true")
+    p.add_argument("--p1-verify-nodes", type=int)
+    p.add_argument("--p2-verify-nodes", type=int)
     p.add_argument("--exit-layer", type=int, default=21)
     p.add_argument("--memory-fraction", type=float, default=.45)
     p.add_argument("--ignore-eos", action="store_true")
@@ -45,6 +48,8 @@ def parse_args():
     p.add_argument("--audit-preemption", action="store_true", help="Save CPU prefix snapshots for independent HF audit (diagnostic runs only)")
     p.add_argument("--ragged-limits", action="store_true",
                    help="Vary output caps to exercise batch shrink/refill")
+    p.add_argument("--tree-calibration-dir", type=Path, help="Diagnostic B1 legacy tree snapshots")
+    p.add_argument("--preflight-test", help="Optional unittest module before model allocation")
     p.add_argument("--output", type=Path, required=True)
     return p.parse_args()
 
@@ -60,7 +65,16 @@ def summarize(metrics, outputs, wall, speculative=False):
     # Thus all returned output tokens belong to decode. AR emits its first
     # token during prefill and has a correct per-step decode counter.
     decode_tokens = total if speculative else metrics["decode_total_tokens"]
+    clean = [e for e in events if not e.get("output_cap_reached", False) and not e.get("clipped", False)]
+    steps = metrics.get("decode_steps", [])
+    clean_steps = [s for s in steps if not s['output_cap_reached'] and not s['clipped']]
+    clean_time = sum(s['seconds'] for s in clean_steps)
     return dict(
+        boundary_excluded_al=mean([e['accepted_len'] for e in clean]),
+        emitted_al=mean([e.get('emitted_len', e['accepted_len']) for e in events]),
+        boundary_excluded_step_tps=(sum(s['emitted_tokens'] for s in clean_steps)/clean_time if clean_time else None),
+        boundary_excluded_events=len(events)-len(clean),
+        boundary_excluded_steps=len(steps)-len(clean_steps),
         output_tokens=total, wall_s=wall, end_to_end_tps=total / wall,
         decode_output_tokens=decode_tokens,
         decode_tps=(decode_tokens / metrics["decode_total_time"]
@@ -71,6 +85,7 @@ def summarize(metrics, outputs, wall, speculative=False):
         cache_hit=mean([e["cache_hit"] for e in events]),
         phase1_hit=mean([int(e["source"] == 1) for e in events]),
         phase2_hit=mean([int(e["source"] == 2) for e in events]),
+        observed_miss_valid_k=dict(Counter(e["valid_k"] for e in events if not e["cache_hit"])),
         tree_verify_events=sum(bool(e.get("tree")) for e in events),
         verify_events=len(events))
 
@@ -87,6 +102,9 @@ def main():
         raise ValueError("--greedy-only requires all --temperatures to be 0")
     if args.p1_tree and args.mode != "duet-tree":
         raise ValueError("--p1-tree requires --mode duet-tree to label execution correctly")
+    if ('SSD_DUET_MISS_K' in os.environ or int(os.getenv('SSD_DUET_MISS_WIDTH','1'))!=1):
+        if args.mode!='duet-tree' or (max(args.batches)==1 and os.getenv('SSD_BATCHED_TREE','0')!='1'):
+            raise ValueError('Independent miss depth/width requires the unified duet-tree service; use SSD_BATCHED_TREE=1 for B1')
     if args.mode != "ar" and not args.draft:
         raise ValueError("--draft is required for speculative modes")
     os.environ.setdefault("SSD_HF_CACHE", str(Path(args.target).parent))
@@ -95,6 +113,32 @@ def main():
     import torch
     from transformers import AutoTokenizer
     from ssd import LLM, SamplingParams
+
+    if args.preflight_test:
+        import unittest
+        cpu_rng = torch.get_rng_state()
+        cuda_rng = torch.cuda.get_rng_state()
+        suite=unittest.defaultTestLoader.loadTestsFromNames(args.preflight_test.split(","))
+        if not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful():
+            raise RuntimeError('Preflight tests failed')
+        torch.set_rng_state(cpu_rng)
+        torch.cuda.set_rng_state(cuda_rng)
+        # Do not retain test graphs/tensors when measuring the engine's KV
+        # capacity. First-pass compile caches may still be warm; later passes
+        # are reported separately by the experiment analysis.
+        import gc
+        del suite
+        gc.collect()
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+
+    observer=None
+    if args.tree_calibration_dir:
+        if args.batches != [1] or args.mode!='duet-tree' or os.getenv('SSD_BATCHED_TREE','0')!='0':
+            raise ValueError('Tree calibration observer requires legacy B1 tree')
+        from mlsys_tree_observer import TreeObserver
+        observer=TreeObserver(args.tree_calibration_dir)
 
     tok = AutoTokenizer.from_pretrained(args.target)
     source = json.loads(args.prompts.read_text())
@@ -132,18 +176,23 @@ def main():
             duet_p1_tree_policy="on" if args.p1_tree else "off",
             duet_p2_tree_policy="on" if args.mode == "duet-tree" else "off",
             duet_p2_tree_max_nodes=args.k2 * 2,
-            duet_p2_tree_verify_nodes=args.k2 * 2,  # G=M, no pruning
+            duet_p2_tree_verify_nodes=args.p2_verify_nodes or args.k2 * 2,
             duet_p1_tree_max_nodes=args.k1 * 2,
-            duet_p1_tree_verify_nodes=args.k1 * 2,
+            duet_p1_tree_verify_nodes=args.p1_verify_nodes or args.k1 * 2,
         )
     env = {k: v for k, v in os.environ.items()
            if k.startswith("SSD_") or k in ("CUDA_VISIBLE_DEVICES", "OMP_NUM_THREADS")}
+    checkout = Path(__file__).resolve().parents[2]
+    runtime_sources = sorted((checkout / "ssd/ssd").rglob("*.py")) + sorted(
+        (checkout / "ssd/bench").glob("mlsys*.py"))
     report = dict(
         status="running", args={k: str(v) if isinstance(v, Path) else v
                                 for k, v in vars(args).items()},
         engine_kwargs=kwargs, env=env, torch=torch.__version__,
         git_commit=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
         git_diff_sha256=hashlib.sha256(subprocess.check_output(["git", "diff"])).hexdigest(),
+        runtime_source_sha256={str(p.relative_to(checkout)): hashlib.sha256(p.read_bytes()).hexdigest()
+                               for p in runtime_sources},
         ssd_module_path=str(Path(sys.modules["ssd"].__file__).resolve()),
         source_sha256=hashlib.sha256(args.prompts.read_bytes()).hexdigest(),
         prompt_sha256=hashlib.sha256(json.dumps(prompts).encode()).hexdigest(),
@@ -169,6 +218,15 @@ def main():
             batched_proxy_graph=os.environ.get("SSD_BATCHED_PROXY_GRAPH", "1") == "1",
             exit_replica=llm.config.duet_exit_replica,
             jit_speculate=llm.config.jit_speculate)
+        report['resolved_env']={k:v for k,v in os.environ.items() if k.startswith('SSD_')}
+        if duet:
+            report['effective_features'].update(
+                duet_jit_short=llm.config.duet_jit_short,
+                miss_depth=int(os.getenv('SSD_DUET_MISS_K',str(args.k2 if llm.config.duet_jit_short else max(args.k1,args.k2)))),
+                miss_width=int(os.getenv('SSD_DUET_MISS_WIDTH','1')),
+                tree_fused_math=os.getenv('SSD_TREE_FUSED_MATH','0')=='1',
+                tree_parallel_insert=os.getenv('SSD_TREE_PARALLEL_INSERT','0')=='1',
+                bulk_export=os.getenv('SSD_BATCH_TREE_BULK_EXPORT','0')=='1')
         preemption_events = []
         if args.audit_preemption:
             lookup = {tuple(ids): i for i, ids in enumerate(prompts)}
@@ -188,6 +246,7 @@ def main():
                 llm.scheduler.max_num_seqs = batch
                 warm = SamplingParams(temperature=temperature, max_new_tokens=16,
                                       ignore_eos=args.ignore_eos)
+                if observer:observer.active=False
                 llm.generate(prompts[:batch], warm, use_tqdm=False)
                 for seed in args.seeds:
                     preemption_events.clear()
@@ -200,6 +259,7 @@ def main():
                     torch.cuda.synchronize()
                     torch.cuda.reset_peak_memory_stats()
                     start = time.perf_counter()
+                    if observer:observer.active=True
                     outputs, metrics = llm.generate(prompts, params, use_tqdm=False)
                     torch.cuda.synchronize()
                     wall = time.perf_counter() - start

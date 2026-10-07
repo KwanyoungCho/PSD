@@ -565,6 +565,8 @@ class P2TreeExecutor:
         # reproduction tests.
         self.policy = ("dynamic" if phase == "p1" else
                        getattr(config, "duet_tree_policy", "eagle"))
+        from ssd.engine.helpers.tree_expansion_policy import TreeExpansionPolicy
+        self.expansion_policy = TreeExpansionPolicy(self)
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
         if R > W:
             raise ValueError(
@@ -827,6 +829,10 @@ class P2TreeExecutor:
         """행별 [prefix 1s | glue | 조상셀 | self] canvas — 열 배치가
         prefix 길이(요청별 상이)에 의존하므로 전부 버퍼-구동 텐서
         연산 (python int 슬라이싱은 캡처에 박힘 — 금지)."""
+        if os.getenv('SSD_TREE_FUSED_MATH','0')=='1':
+            from ssd.engine.helpers.tree_fused_math import pack_mask
+            pack_mask(self,wr,f)
+            return
         W = self.round_widths[f]
         canvas = wr._canvas_cols
         ar = self.arena
@@ -974,12 +980,18 @@ class P2TreeExecutor:
                     # extending.  Treating P1 as threshold-free made roots
                     # with vanishing start probability grow almost to NV.
                     proxy_threshold=start_threshold,
-                    conf_threshold=conf_threshold)
+                    conf_threshold=conf_threshold,
+                    all_frontier=self.expansion_policy.frontier)
             else:
                 sel, sel_valid = PT._arena_select(
                     ar, "level", wf, f, F, tip_idx, remaining)
             self._sel[f] = (sel, sel_valid)
-            if _global:
+            if _global and self.expansion_policy.gain is not None:
+                fan = self.expansion_policy.fanout(ar, sel, sel_valid, remaining, F-f-1)
+            elif _global and os.getenv('SSD_TREE_FUSED_MATH','0')=='1':
+                from ssd.engine.helpers.tree_fused_math import fanout
+                fan = fanout(ar,sel,sel_valid,remaining,C,F-f-1)
+            elif _global:
                 fan = PT._arena_fanout_global(
                     ar, sel, sel_valid, remaining, C, R,
                     future_rounds=F - f - 1)
@@ -1042,8 +1054,9 @@ class P2TreeExecutor:
             # selector; the integer bookkeeping itself is one tiny kernel.
             par = sel.unsqueeze(1).expand(wf, C).reshape(-1)
             rq = raws.double().reshape(-1)
-            lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
-            if wf > 10 or ar.anc_words > 1:
+            lp = self.expansion_policy.priority(ar.logpri, par, raws)
+            if (wf > 10 or ar.anc_words > 1
+                    or os.getenv("SSD_TREE_PARALLEL_INSERT", "0") == "1"):
                 _mark_selected_parents_kernel[(triton.cdiv(wf, 32),)](
                     sel, sel_valid, ar.cell, ar.state,
                     CELL_BASE=cell_base, W=wf, BLOCK=32)

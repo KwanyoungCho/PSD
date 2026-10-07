@@ -76,12 +76,21 @@ class TestOutputAccounting(unittest.TestCase):
             proposal = SimpleNamespace(speculations=torch.tensor([[20, 21, 22, 23]]),
                                        step_id=0, profile_cache_status=None)
             speculator = SimpleNamespace(speculate=lambda *a: proposal)
-            verifier = SimpleNamespace(verify=lambda *a, **k: VerifyResult([[20, 21, 22, 23]], [24], None))
+            metrics = {"phase_events": []}
+            def verify(*args, **kwargs):
+                metrics['phase_events'].append(dict(accepted_len=4))
+                return VerifyResult([[20, 21, 22, 23]], [24], None)
+            verifier = SimpleNamespace(verify=verify, metrics=metrics)
             step = SpecDecodeStep(scheduler, speculator, verifier, False, None, True)
             with patch("ssd.engine.step.decode_tokens", side_effect=lambda ids,t: str(ids)):
                 count = step.decode([seq])
             self.assertEqual(count, expected)
             self.assertEqual(count, len(seq.completion_token_ids))
+            event = metrics['phase_events'][0]
+            self.assertEqual(event['emitted_len'], expected)
+            self.assertTrue(event['clipped'])
+            self.assertEqual(event['output_cap_reached'], cap==2)
+            self.assertEqual(event['seq_id'], seq.seq_id)
 
 
 if __name__ == "__main__":

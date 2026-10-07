@@ -37,6 +37,7 @@ METRICS = {
     # lets offline analysis map each source decision to the realized output
     # prefix without adding file I/O to the engine hot path.
     "phase_events": [],
+    "decode_steps": [],
     "prefill_total_time": 0,
     "decode_total_time": 0,
     "prefill_total_tokens": 0,
@@ -272,6 +273,7 @@ class LLMEngine:
 
     def step(self, step: InferenceStep):
         t = perf_counter()
+        event_start = len(METRICS["phase_events"])
         seqs, is_prefill = self.scheduler.schedule()
         if is_prefill is None:
             # Scheduler-side context termination: the completed prefix is
@@ -291,6 +293,13 @@ class LLMEngine:
         else:
             METRICS["decode_total_time"] += time_taken
             METRICS["decode_total_tokens"] += ttl_tokens
+            events = METRICS["phase_events"][event_start:]
+            METRICS["decode_steps"].append(dict(
+                seconds=time_taken, emitted_tokens=ttl_tokens,
+                event_start=event_start, event_end=len(METRICS["phase_events"]),
+                output_cap_reached=any(e.get("output_cap_reached", False) for e in events),
+                clipped=any(e.get("clipped", False) for e in events)))
+
 
         outputs = [(seq.seq_id, seq.completion_token_ids)
                    for seq in seqs if seq.is_finished]

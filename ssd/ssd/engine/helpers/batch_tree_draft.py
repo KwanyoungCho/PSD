@@ -11,6 +11,7 @@ from ssd.engine.helpers.p1_tree import P1TreeExecutor, build_uniform_p1_roots
 from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
 from ssd.engine.helpers.p2_tree import tree_wire_ints_len
 from ssd.utils.async_helpers.nccl_pack import recv_int64
+from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close, PROFILE_DUET
 
 
 class BatchedDuetDraft:
@@ -158,6 +159,36 @@ class BatchedDuetDraft:
             if self.input_graph_pool is None:self.input_graph_pool=g.graph.pool()
         return self.input_graphs[key].replay(rows,params,temps)
 
+    def _save_entries_bulk(self, records):
+        """Export all request/phase metadata with one D2H synchronization.
+
+        P1 and P2 arenas have separate storage. Keeping the P1 views until
+        P2 finishes is safe and avoids serializing P2 behind P1 CPU export.
+        Preserve P1-first insertion order for duplicate cache roots.
+        """
+        pieces=[]; shapes=[]
+        for arena,seq,contexts,tokens,phase,safe in records:
+            if not safe: continue
+            R=len(tokens); N=arena.NV
+            value=torch.cat([contexts[:,None],tokens[:,None],arena.out_valid[:R,None],
+                arena.view_tok[:R],arena.view_par[:R],arena.view_sib[:R],arena.view_pcell[:R]],1)
+            pieces.append(value.reshape(-1)); shapes.append((arena,seq,phase,R,N))
+        if not pieces: return
+        host=torch.cat(pieces).cpu().tolist()
+        offset=0
+        for arena,seq,phase,R,N in shapes:
+            is_tree=getattr(self.cfg,f'duet_p{phase}_tree_policy')=='on'
+            cap=(getattr(self.cfg,f'duet_p{phase}_tree_verify_nodes') if is_tree else
+                 getattr(self.cfg,f'duet_phase{phase}_k'))
+            for root in range(R):
+                a=host[offset:offset+3+4*N]; offset+=3+4*N
+                ctx,token,n=a[:3]; n=min(n,cap)
+                if n<=0: continue
+                self.entries.setdefault((seq,int(ctx),int(token)),dict(
+                    tokens=a[3:3+N][:n],parents=a[3+N:3+2*N][:n],
+                    siblings=a[3+2*N:3+3*N][:n],cells=a[3+3*N:3+4*N][:n],
+                    logits=arena.cell_logits,phase=phase,tree=is_tree))
+
     @torch.inference_mode()
     def serve(self):
         r,cfg=self.r,self.cfg
@@ -187,12 +218,20 @@ class BatchedDuetDraft:
         self.staged={}
         hits=[self.entries.get(tuple(k)) for k in key_cpu]
         miss=[b for b,e in enumerate(hits) if e is None]
-        miss_q=torch.zeros(len(miss),K,r.hf_config.vocab_size,dtype=r.hf_config.torch_dtype,device=r.device)
+        _miss_event=duet_record("batch_miss_draft")
+        default_k=cfg.duet_phase2_k if cfg.duet_jit_short else max(cfg.duet_phase1_k,cfg.duet_phase2_k)
+        miss_depth=int(os.getenv('SSD_DUET_MISS_K',str(default_k)))
+        miss_width=int(os.getenv('SSD_DUET_MISS_WIDTH','1'))
+        miss_k=miss_depth*miss_width
+        if not (1<=miss_width<=cfg.duet_tree_c_tensor and 1<=miss_k<=cfg.duet_response_token_width):
+            raise ValueError('Miss tree/chain exceeds node or sibling capacity')
+        miss_q=torch.zeros(len(miss),cfg.duet_response_token_width,r.hf_config.vocab_size,dtype=r.hf_config.torch_dtype,device=r.device)
         miss_t=torch.zeros(len(miss),cfg.duet_response_token_width,dtype=torch.int64,device=r.device)
         if miss:
             idx=torch.tensor(miss,dtype=torch.int64,device=r.device)
-            r.jit_speculate(keys[idx],lengths[idx],miss_q,miss_t,temps[idx],bt[idx],None)
-        miss_k=cfg.duet_phase2_k if os.getenv('SSD_DUET_JIT_SHORT','0')=='1' else max(cfg.duet_phase1_k,cfg.duet_phase2_k)
+            r.jit_speculate(keys[idx],lengths[idx],miss_q,miss_t,temps[idx],bt[idx],None,
+                            k_override=miss_depth,branch_width=miss_width)
+        duet_close("batch_miss_draft",_miss_event)
         width=cfg.duet_response_token_width
         nv=cfg.duet_tree_wire_nodes
         tokens=torch.zeros(B,width,dtype=torch.int64,device=r.device)
@@ -202,8 +241,9 @@ class BatchedDuetDraft:
         for b,entry in enumerate(hits):
             if entry is None:
                 ts=miss_t[mi,:miss_k].cpu().tolist()
-                parent=list(range(-1,miss_k-1)); sibling=[0]*miss_k
-                q=miss_q[mi,:miss_k]; phase=0; tree=False; mi+=1
+                parent=[(j//miss_width-1)*miss_width if j>=miss_width else -1 for j in range(miss_k)]
+                sibling=[j%miss_width for j in range(miss_k)]
+                q=miss_q[mi,:miss_k]; phase=0; tree=miss_width>1; mi+=1
             else:
                 ts=entry['tokens']; parent=entry['parents']; sibling=entry['siblings']
                 q=entry['logits'].index_select(0,torch.tensor(entry['cells'],device=r.device)).to(r.hf_config.torch_dtype)
@@ -221,7 +261,7 @@ class BatchedDuetDraft:
                 topology[b,3+3*nv:3+3*nv+n]=torch.tensor(refs)
                 self.stats['tree_hits']+=1
             rows.append(dict(tokens=[key_cpu[b][2]]+ts,parents=parent,siblings=sibling,
-                             prefix=length_cpu[b]-1,blocks=block_cpu[b]))
+                             prefix=length_cpu[b]-1,blocks=block_cpu[b],tree=tree))
         max_valid=max(valid)
         q=torch.zeros(B,max_valid,r.hf_config.vocab_size,dtype=r.hf_config.torch_dtype,device=r.device)
         for b,qr in enumerate(qrows): q[b,:valid[b]].copy_(qr)
@@ -231,12 +271,22 @@ class BatchedDuetDraft:
         dist.send(fused,dst=0,group=r.async_pg)
         dist.send(q,dst=0,group=r.async_pg)
         work,proxy_buf=r._irecv_duet_proxy(B,K)
+        if PROFILE_DUET:
+            # Observe recv completion without serializing the draft compute
+            # stream behind it. Work.wait installs a CUDA stream dependency.
+            if not hasattr(self,'profile_proxy_stream'):
+                self.profile_proxy_stream=torch.cuda.Stream(device=r.device)
+            with torch.cuda.stream(self.profile_proxy_stream):
+                _ready=duet_record('batch_proxy_receive')
+                work.wait()
+                duet_close('batch_proxy_receive',_ready)
+        _glue=duet_record('batch_glue')
         # One ancestor-masked draft forward covers both tree and chain rows.
         glue_width=next(x for x in sorted({cfg.duet_phase1_k+1,cfg.duet_phase2_k+1,
                                            cfg.duet_response_token_width+1}) if x>=max_valid+1)
         glue=self.glue.run(rows,glue_width)
         for b,entry in enumerate(hits):
-            if entry is None or not entry['tree']: continue
+            if not rows[b]['tree']: continue
             row=rows[b]; start=row['prefix']; n=len(row['tokens'])
             slots=[row['blocks'][j//r.block_size]*r.block_size+j%r.block_size for j in range(start,start+n)]
             self.staged[key_cpu[b][0]]=dict(parents=row['parents'],length=length_cpu[b],
@@ -244,16 +294,20 @@ class BatchedDuetDraft:
         # No view from the previous generation is retained after q and KV
         # have been copied, so arena reuse cannot mutate a served snapshot.
         self.entries={}
+        duet_close("batch_glue",_glue)
         self._build(rows,glue,key_cpu,temp_cpu,work,proxy_buf,B,K)
         self.stats['steps']+=1
 
     def _build(self,rows,glue,keys,temps,proxy_work,proxy_buf,B,K):
         cfg,r=self.cfg,self.r
+        bulk_export=os.getenv('SSD_BATCH_TREE_BULK_EXPORT','0')=='1'
+        export_records=[]
         contexts=max(len(row['tokens']) for row in rows)
         cb=next(x for x in sorted({cfg.duet_phase2_k+1,cfg.duet_phase1_k+1,
                                  cfg.duet_response_token_width+1}) if x>=contexts)
         bc=capacity(B)
         padded=[]
+        _p1=duet_record("batch_p1_total")
         if not cfg.duet_only_proxy:
             # Discover round-zero width before selecting the shared page
             # canvas. All arenas use the same context bucket and top-W budget.
@@ -306,8 +360,14 @@ class BatchedDuetDraft:
             self._execute(exs,pages,1)
             for b in range(B):
                 rt,ci,safe=params[b]
-                self._save_entries(arenas[b],keys[b][0],ci,rt,1,safe)
+                record=(arenas[b],keys[b][0],ci,rt,1,safe)
+                if bulk_export: export_records.append(record)
+                else: self._save_entries(*record)
+        duet_close("batch_p1_total",_p1)
+        _wait=duet_record("batch_proxy_wait")
         proxy_work.wait()
+        duet_close("batch_proxy_wait",_wait)
+        _p2=duet_record("batch_p2_total")
         proxy=r._unpack_duet_proxy(proxy_buf,B,K)
         pos,tok,score=proxy['chosen_pos'],proxy['chosen_tok'],proxy['chosen_piv']
         valid=(pos>=0)&(pos<torch.tensor([len(row['tokens']) for row in rows],device=r.device)[:,None])
@@ -334,12 +394,41 @@ class BatchedDuetDraft:
                 scores=sc[i] if b<B else torch.zeros_like(sc[i])
                 safe.append(self._prepare_arena(arenas[b],rows[i],pages,rt[i],scores,ci[i],temps[i],active=b<B))
         self._execute(exs,pages,2)
-        for b in range(B): self._save_entries(arenas[b],keys[b][0],ci[b],rt[b],2,safe[b])
+        for b in range(B):
+            record=(arenas[b],keys[b][0],ci[b],rt[b],2,safe[b])
+            if bulk_export: export_records.append(record)
+            else: self._save_entries(*record)
+        if bulk_export:
+            _export=duet_record('batch_bulk_export')
+            self._save_entries_bulk(export_records)
+            duet_close('batch_bulk_export',_export)
+        duet_close("batch_p2_total",_p2)
 
     def _execute(self,executor,pages,phase):
         if pages not in executor.graphs:
+            _capture=duet_record(f"batch_p{phase}_capture")
             executor.capture(pages,graph_pool=self.graph_pool)
+            duet_close(f"batch_p{phase}_capture",_capture)
             if self.graph_pool is None: self.graph_pool=executor.graphs[pages].pool()
             self.stats['captures']+=1
-        executor.replay(pages)
+        _replay=duet_record(f"batch_p{phase}_replay")
+        trace_dir=os.getenv('SSD_BATCH_TREE_KERNEL_TRACE','')
+        if trace_dir and self.stats['steps']>=20 and not getattr(self,f'_traced_{phase}',False):
+            from pathlib import Path
+            import json
+            path=Path(trace_dir);path.mkdir(parents=True,exist_ok=True)
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU,
+                                                    torch.profiler.ProfilerActivity.CUDA]) as prof:
+                executor.replay(pages)
+            prof.export_chrome_trace(str(path/f'p{phase}.trace.json'))
+            kernels={}
+            for event in prof.events():
+                if event.device_type==torch.autograd.DeviceType.CUDA:
+                    row=kernels.setdefault(event.name,dict(count=0,microseconds=0.))
+                    row['count']+=1;row['microseconds']+=event.time_range.elapsed_us()
+            (path/f'p{phase}.kernels.json').write_text(json.dumps(kernels,indent=2))
+            setattr(self,f'_traced_{phase}',True)
+        else:
+            executor.replay(pages)
+        duet_close(f"batch_p{phase}_replay",_replay)
         self.stats[f'phase{phase}_replays']+=1

@@ -18,7 +18,12 @@ from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
 
 def rerank_tree_indices(parent_local, sibling_order, raw_q,
                         max_nodes: int) -> list[int]:
-    """Select a confidence-ranked, lossless-safe subtree.
+    """Diagnostic confidence-ranked subtree; NOT a lossless serving policy.
+
+    Ancestor/sibling closure is necessary but insufficient: conditioning
+    retention on realized token scores changes the proposal law. Production
+    G>M serving uses a fixed generation-order prefix instead. This helper is
+    retained for hindsight analysis and the exact selection-bias regression.
 
     EAGLE-2 ranks final draft nodes by cumulative draft confidence.  DUET's
     temperature>0 verifier has one extra constraint: siblings are ordered
@@ -118,7 +123,10 @@ def precompute_reranked_tree_views_cpu(
     wire_cap: int,
     vocab_size: int | None = None,
 ) -> dict[str, object]:
-    """Precompute the exact hit-time rerank result for every P1 root.
+    """Historical/diagnostic rerank staging; not used by production serving.
+
+    See rerank_tree_indices for the post-sampling selection-bias limitation.
+    The following layout describes the former staging protocol.
 
     All inputs are CPU tensors with a common ``[roots, generated_cap]``
     envelope (``valid``/``u_valid`` are ``[roots]``).  The selection policy is
@@ -2786,13 +2794,14 @@ def _arena_fanout_adaptive(ar: TreeArena, sel, sel_valid, tip_idx,
 
 def _arena_select_global(ar: TreeArena, W, f, depth_cap, remaining,
                          future_rounds, R, proxy_threshold=0.0,
-                         conf_threshold=0.0):
+                         conf_threshold=0.0, all_frontier=False):
     """Fixed-shape GPU mirror of :func:`select_nodes_global`."""
     cap = ar.capacity
     dev = ar.device
     idxs = torch.arange(cap, device=dev)
     elig = ((idxs < ar.n) & (ar.state == 0) & ar.valid
-            & (ar.depth == f) & (ar.depth < depth_cap))
+            & ((ar.depth <= f) if all_frontier else (ar.depth == f))
+            & (ar.depth < depth_cap))
     if f > 0:
         if proxy_threshold > 0.0:
             root_logp = ar.logpri.gather(0, ar.root.clamp(min=0))
@@ -2828,8 +2837,9 @@ def _arena_fanout_global(ar: TreeArena, sel, sel_valid, remaining,
     """GPU mirror of :func:`alloc_fanouts` for global expansion.
 
     Selected parents are processed by cumulative path confidence.  Each may
-    retain up to ``c_tensor`` already-sampled children, but parents belonging
-    to the same root share that root's remaining response capacity.  This is
+    receive up to ``c_tensor`` children. The budget is chosen before their
+    samples are drawn; only that ordered sample prefix is retained. Parents
+    belonging to the same root share its remaining response capacity.  This is
     fixed-shape and contains no host readback, so it is safe inside the P2
     CUDA graph.
     """

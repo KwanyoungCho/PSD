@@ -181,7 +181,10 @@ def precompute_reranked_tree_views_fused_gpu(
     wire_cap: int,
     output_buffers: dict[str, torch.Tensor],
 ) -> dict[str, torch.Tensor]:
-    """Launch the exact fused rerank into persistent output buffers."""
+    """Historical diagnostic kernel; not a lossless serving selection rule.
+
+    Production no longer calls this probability-conditioned retention path.
+    """
     if token.ndim != 2 or token.device.type != "cuda":
         raise ValueError("fused P1 rerank token must be a CUDA [R,N] tensor")
     roots, generated_cap = token.shape

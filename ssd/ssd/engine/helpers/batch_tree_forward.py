@@ -3,6 +3,7 @@ import os
 import torch
 import flashinfer
 from ssd.utils.context import set_context, reset_context
+from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
 from ssd.engine.helpers.batch_tree_common import capacity, build_forward_inputs
 
 
@@ -111,7 +112,10 @@ class BatchedTreeForward:
         self._context(g)
         try:
             if self.split:
+                _pre=duet_record('batch_target_pre')
                 g['pre'].replay()
+                duet_close('batch_target_pre',_pre)
+                _proxy=duet_record('batch_target_proxy')
                 hs = g['hidden'][:b*width]
                 res = g['residual'][:b*width]
                 if r.config.duet_exit_replica:
@@ -124,10 +128,15 @@ class BatchedTreeForward:
                     exit_logits = r.model.compute_logits(normed,False)
                     if proxy is not None:
                         proxy(exit_logits.view(b,width,-1),b)
+                duet_close('batch_target_proxy',_proxy)
+                _post=duet_record('batch_target_post')
                 g['post'].replay()
+                duet_close('batch_target_post',_post)
             else:
                 g['full'].replay()
+            _logits=duet_record('batch_target_final_logits' if self.split else 'batch_glue_logits')
             logits = r.model.compute_logits(g['output'][:b*width],False)
+            duet_close('batch_target_final_logits' if self.split else 'batch_glue_logits',_logits)
             return None if logits is None else logits.reshape(b,width,-1)
         finally:
             reset_context()

@@ -156,6 +156,7 @@ class SpecDecodeStep(InferenceStep):
                 print(f"[SpecDecodeStep] speculation {i}: {decoded_tokens}", flush=True)
 
         #### STEP 2: VERIFY ####
+        event_start = len(getattr(self.verifier, "metrics", {}).get("phase_events", []))
         out_verify_result = self.verifier.verify(seqs, speculate_result, eagle=self.eagle)
 
         if _prof:
@@ -186,6 +187,15 @@ class SpecDecodeStep(InferenceStep):
             eagle_acts=out_verify_result.eagle_acts if self.eagle else None,
         )
         _mc("target_postprocess", _mev_pp)
+        events = getattr(self.verifier, "metrics", {}).get("phase_events", [])[event_start:]
+        if len(events) == len(seqs):
+            for event, seq, before, suffix in zip(events, seqs, saved, out_verify_result.new_suffixes):
+                emitted = seq.num_tokens-before[1]
+                cap = seq.num_completion_tokens >= seq.max_new_tokens
+                event.update(seq_id=seq.seq_id, emitted_len=emitted,
+                             clipped=len(suffix)>emitted, output_cap_reached=cap,
+                             finished=seq.is_finished)
+
 
         if _prof:
             torch.cuda.synchronize()
