@@ -18,6 +18,47 @@ POLICY=dict(source='complement',normalization='full',overlap_mix=.25)
 
 
 class RootPolicyTests(unittest.TestCase):
+    def test_trim_preserves_root_ranking_and_exact_correction(self):
+        from ssd.engine.helpers.batch_tree_sampling import verify_batch
+        torch.manual_seed(207)
+        e=torch.randn(2,5,127);q=torch.randn(2,4,127);q[:,1]=q[:,0]
+        tokens=torch.tensor([[5,7,1,2],[9,8,0,0]])
+        topo=pack_topologies([[-1,-1,0,1],[-1,0]],[[0,1,0,0],[0,0]],4,'cpu')
+        for source in ('proxy','complement','residual'):
+            outputs=[]
+            for trim in ('0','1'):
+                with patch.dict(os.environ,SSD_TREE_LADDER_TRIM=trim):
+                    outputs.append(tree_candidates(e,q,tokens,topo,8,4,8,.7,.7,
+                        source=source,normalization='full',overlap_mix=.25))
+            for a,b in zip(*outputs):torch.testing.assert_close(a,b,rtol=0,atol=0)
+        outputs=[]
+        for trim in ('0','1'):
+            with patch.dict(os.environ,SSD_TREE_LADDER_TRIM=trim):
+                torch.manual_seed(841)
+                outputs.append(verify_batch(e,q,tokens,topo,[.7,.7],[.7,.7]))
+        for a,b in zip(*outputs):torch.testing.assert_close(a,b,rtol=0,atol=0)
+        with self.assertRaisesRegex(ValueError,'requires the final residual'):
+            ladder(tokens,e.softmax(-1),q.softmax(-1),topo,4,exact=True,need_residual=False,trim=True)
+
+    @unittest.skipUnless(torch.cuda.is_available(),'CUDA graph trim parity')
+    @torch.inference_mode()
+    def test_trim_captured_proxy_and_exact_walk_are_bit_identical(self):
+        from ssd.engine.helpers.batch_tree_sampling import BatchedTreeAccept
+        torch.manual_seed(291)
+        e=torch.randn(2,5,257,device='cuda');q=torch.randn(2,4,257,device='cuda');q[:,1]=q[:,0]
+        tokens=torch.tensor([[5,7,1,2],[9,8,0,0]],device='cuda')
+        outputs=[]
+        for trim in ('0','1'):
+            with patch.dict(os.environ,SSD_TREE_LADDER_TRIM=trim):
+                proxy=BatchedTreeProxy(2,4,257,torch.float32,'cuda',8,4,8,policy=POLICY)
+                proxy.prepare([[-1,-1,0,1],[-1,0]],[[0,1,0,0],[0,0]],tokens,q,[.7,.7],[.7,.7])
+                root=tuple(x.clone() for x in proxy.replay(e))
+                graph=BatchedTreeAccept(proxy,None,1,False)
+                torch.manual_seed(431)
+                exact=tuple(x.clone() for x in graph.replay(e,[.7,.7],[.7,.7]))
+                outputs.append(root+exact)
+        for a,b in zip(*outputs):torch.testing.assert_close(a,b,rtol=0,atol=0)
+
     def test_gain_curve_prefix_for_narrower_sibling_width(self):
         from ssd.engine.helpers.tree_expansion_policy import TreeExpansionPolicy
         with tempfile.TemporaryDirectory() as directory:

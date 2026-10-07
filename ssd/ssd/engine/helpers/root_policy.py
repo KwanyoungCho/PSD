@@ -79,7 +79,7 @@ def tree_candidates(exit_logits, q_logits, tokens, topology, wire_n, depth,
     e = probabilities(exit_logits, target_temps)
     q = probabilities(q_logits, draft_temps, sampler_x, fan_out)
     _, term, residual = ladder(tokens, e, q, topology, depth,
-                               overlap_mix=overlap_mix)
+                               overlap_mix=overlap_mix,need_residual=(source=='residual'))
     b, r, v = e.shape
     if source == 'residual':
         scores = residual

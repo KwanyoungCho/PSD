@@ -1,4 +1,5 @@
 """Exact ordered-sibling residual ladders for independent batched trees."""
+import os
 import torch
 from ssd.engine.helpers.p2_tree import pack_piv, pack_tree_proxy_topology, q_probs_from_logits
 
@@ -8,13 +9,20 @@ def pack_topologies(parents, siblings, n, device,c_max=3):
     return {k:torch.stack([e[k] for e in entries]).to(device) for k in entries[0]}
 
 
-def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0):
+def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0,
+           need_residual=True,trim=None):
     """All contexts in parallel; siblings remain sequential within context.
 
     q[b,j] is the ORIGINAL parent proposal law for node j. Later siblings
     require conditioning that law on previous sibling tokens being removed.
     Returned residual is the target law after all children were rejected.
+    Proxy/complement ranking may request only acceptance/terminal masses.
+    The optional trim removes unused copies and final normalizations; exact
+    verification always retains its final correction distribution.
     """
+    if trim is None:trim=os.getenv('SSD_TREE_LADDER_TRIM','0')=='1'
+    if exact and not need_residual:
+        raise ValueError('Exact verification requires the final residual')
     B,N=tokens.shape
     R=N+1
     dev=p.device
@@ -23,8 +31,9 @@ def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0):
     cv=topology['child_valid']
     tok_ext=torch.cat([tokens,tokens.new_zeros(B,1)],1)
     q_ext=torch.cat([q,q.new_zeros(B,1,q.shape[-1])],1)
-    residual=p.clone()
-    draft=q_ext[bi,child[:,:,0]].clone()
+    residual=p if trim else p.clone()
+    draft=q_ext[bi,child[:,:,0]]
+    if not trim:draft=draft.clone()
     draft=torch.where(cv[:,:,:1],draft,torch.zeros_like(draft))
     all_reject=p.new_ones(B,R,1)
     alphas=[]
@@ -48,16 +57,19 @@ def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0):
             avg=torch.minimum(residual,draft).sum(-1,keepdim=True).clamp(0,1)*valid
             avg_alphas.append(avg.squeeze(-1)); avg_pre.append(avg_reject.squeeze(-1))
             avg_reject=avg_reject*(1-avg)
-        newer=(residual-draft).clamp_min(0)
-        z=newer.sum(-1,keepdim=True)
-        newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
-        residual=torch.where(valid,newer,residual)
-        newer=draft.scatter(2,tj,0)
-        z=newer.sum(-1,keepdim=True)
-        newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
-        draft=torch.where(valid,newer,draft)
+        if not trim or s < child.shape[-1]-1 or need_residual:
+            newer=(residual-draft).clamp_min(0)
+            z=newer.sum(-1,keepdim=True)
+            newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
+            residual=torch.where(valid,newer,residual)
+        if not trim or s < child.shape[-1]-1:
+            newer=draft.scatter(2,tj,0)
+            z=newer.sum(-1,keepdim=True)
+            newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
+            draft=torch.where(valid,newer,draft)
     alpha=torch.stack(alphas,-1)
-    residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
+    if need_residual or not trim:
+        residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
     if exact:
         # Verification consumes conditional accept probabilities and the
         # terminal residual; proxy reach scores would be discarded.
@@ -81,7 +93,7 @@ def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0):
             avg_reach=avg_base*torch.cat([one,avg_reach],1).gather(1,par)
         avg_term=torch.cat([one,avg_reach],1)*avg_reject.squeeze(-1)*valid_ctx
         term=(1-overlap_mix)*term+overlap_mix*avg_term
-    return alpha,term,residual
+    return alpha,term,residual if need_residual or not trim else None
 
 
 def candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k,
