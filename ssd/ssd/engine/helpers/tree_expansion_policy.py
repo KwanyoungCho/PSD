@@ -54,9 +54,9 @@ class TreeExpansionPolicy:
         if 'gain' in self.mode:
             model = read('SSD_TREE_GAIN_CALIBRATION')
             curve = model['curves'][phase]
-            if len(curve) != ex.C+1 or ex.NV > 16:
-                raise ValueError('Gain curve must match C; supported node budget <=16')
-            self.gain = make_constants(ex.NV, curve, ex.dev)
+            if len(curve) < ex.C+1 or ex.NV > 16:
+                raise ValueError('Gain curve must cover C; supported node budget <=16')
+            self.gain = make_constants(ex.NV, curve[:ex.C+1], ex.dev)
 
     def priority(self, parent_logpri, parents, raw_q):
         if self.alpha is None:
