@@ -13,6 +13,7 @@ class BatchedTreeForward:
         self.split = split
         self.graphs = {}
         self.pool = None
+        self.proxy_side = None
 
     def workspace(self):
         # All ancestor forwards and forest rounds run on this runner's
@@ -102,6 +103,12 @@ class BatchedTreeForward:
     def run(self, rows, width, proxy=None):
         r = self.r
         b = len(rows)
+        if proxy is not None and os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1':
+            if self.proxy_side is None:
+                from ssd.engine.helpers.tree_proxy_stream import TreeProxySideStream
+                self.proxy_side=TreeProxySideStream(r.device)
+            callback=proxy
+            proxy=lambda logits,batch:self.proxy_side.launch(logits,batch,callback)
         pages = capacity(max((row['prefix']+len(row['tokens'])+r.block_size-1)//r.block_size
                              for row in rows))
         pages = min(pages,r.config.max_blocks)
@@ -139,4 +146,5 @@ class BatchedTreeForward:
             duet_close('batch_target_final_logits' if self.split else 'batch_glue_logits',_logits)
             return None if logits is None else logits.reshape(b,width,-1)
         finally:
+            if self.proxy_side is not None:self.proxy_side.finish()
             reset_context()

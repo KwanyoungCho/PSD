@@ -18,6 +18,30 @@ POLICY=dict(source='complement',normalization='full',overlap_mix=.25)
 
 
 class RootPolicyTests(unittest.TestCase):
+    @unittest.skipUnless(torch.cuda.is_available(),'CUDA proxy side-stream ordering')
+    @torch.inference_mode()
+    def test_proxy_side_stream_preserves_graph_outputs_and_reuse(self):
+        from ssd.engine.helpers.tree_proxy_stream import TreeProxySideStream
+        graph=BatchedTreeProxy(2,4,257,torch.float32,'cuda',8,4,8,policy=POLICY)
+        torch.manual_seed(942)
+        e=torch.randn(2,5,257,device='cuda');q=torch.randn(2,4,257,device='cuda');q[:,1]=q[:,0]
+        tok=torch.tensor([[5,7,1,2],[9,8,0,0]],device='cuda')
+        side=TreeProxySideStream('cuda')
+        for temp in (.7,.4,1.):
+            graph.prepare([[-1,-1,0,1],[-1,0]],[[0,1,0,0],[0,0]],tok,q,[temp,temp],[temp,temp])
+            expected=tuple(x.clone() for x in graph.replay(e))
+            actual=[]
+            def callback(logits,batch):
+                torch.cuda._sleep(100000)
+                actual.extend(x.clone() for x in graph.replay(logits))
+            side.launch(e,2,callback)
+            unrelated=(e.square()+q.sum()).sum()
+            side.finish()
+            # The caller may immediately reuse inputs on its own stream.
+            e.add_(.2);q.mul_(.99)
+            for a,b in zip(actual,expected):torch.testing.assert_close(a,b,rtol=0,atol=0)
+            self.assertTrue(torch.isfinite(unrelated).item())
+
     def test_trim_preserves_root_ranking_and_exact_correction(self):
         from ssd.engine.helpers.batch_tree_sampling import verify_batch
         torch.manual_seed(207)
