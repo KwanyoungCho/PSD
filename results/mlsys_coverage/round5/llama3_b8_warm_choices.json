@@ -1,0 +1,182 @@
+[
+  {
+    "name": "llama3_b8_warm_ssd_1",
+    "screen": "llama3_b8_ssd_k4_f1",
+    "params": {
+      "k1": 4,
+      "draft_fan_out": 1
+    },
+    "profile_tps": 671.7394917201445,
+    "screen_al": 2.6566222845129643
+  },
+  {
+    "name": "llama3_b8_warm_ssd_2",
+    "screen": "llama3_b8_ssd_k2_f5",
+    "params": {
+      "k1": 2,
+      "draft_fan_out": 5
+    },
+    "profile_tps": 658.4785238363329,
+    "screen_al": 2.1699751861042182
+  },
+  {
+    "name": "llama3_b8_warm_ssd_3",
+    "screen": "llama3_b8_ssd_refine_k4_f2",
+    "params": {
+      "k1": 4,
+      "draft_fan_out": 2
+    },
+    "profile_tps": 654.966462018665,
+    "screen_al": 2.622890682318415
+  },
+  {
+    "name": "llama3_b8_warm_ssd_4",
+    "screen": "llama3_b8_ssd_k8_f3",
+    "params": {
+      "k1": 8,
+      "draft_fan_out": 3
+    },
+    "profile_tps": 398.5512966222948,
+    "screen_al": 3.1171548117154813
+  },
+  {
+    "name": "llama3_b8_warm_ssd_5",
+    "screen": "llama3_b8_ssd_refine_k6_f2",
+    "params": {
+      "k1": 6,
+      "draft_fan_out": 2
+    },
+    "profile_tps": 638.6774477754548,
+    "screen_al": 3.0823327615780447
+  },
+  {
+    "name": "llama3_b8_warm_duet_tree_1",
+    "screen": "llama3_b8_tree_width1",
+    "params": {
+      "k1": 3,
+      "k2": 1,
+      "exit_layer": 26,
+      "draft_fan_out": 2,
+      "proxy_fan_out": 1,
+      "p1_nodes": 3,
+      "p2_nodes": 1,
+      "p1_roots": 2,
+      "p2_budget": null,
+      "tree_root_count": null,
+      "tree_width": 1,
+      "tree_beta": 0.5,
+      "tree_proxy_threshold": 0.01,
+      "tree_conf_threshold": 0.03
+    },
+    "profile_tps": 549.7289797744609,
+    "screen_al": 2.358418367346939
+  },
+  {
+    "name": "llama3_b8_warm_duet_tree_2",
+    "screen": "llama3_b8_combo_e24",
+    "params": {
+      "k1": 3,
+      "k2": 1,
+      "exit_layer": 24,
+      "draft_fan_out": 2,
+      "proxy_fan_out": 1,
+      "p1_nodes": 3,
+      "p2_nodes": 1,
+      "p1_roots": 2,
+      "p2_budget": null,
+      "tree_root_count": null,
+      "tree_width": 1,
+      "tree_beta": 0.5,
+      "tree_proxy_threshold": 0.01,
+      "tree_conf_threshold": 0.03
+    },
+    "profile_tps": 541.7751505942235,
+    "screen_al": 2.3180409175449475
+  },
+  {
+    "name": "llama3_b8_warm_duet_tree_3",
+    "screen": "llama3_b8_tree_al_compute3",
+    "params": {
+      "k1": 6,
+      "k2": 2,
+      "exit_layer": 30,
+      "draft_fan_out": 3,
+      "proxy_fan_out": 1,
+      "p1_nodes": 12,
+      "p2_nodes": 4,
+      "p1_roots": 2,
+      "p2_budget": null,
+      "tree_root_count": null,
+      "tree_width": 3,
+      "tree_beta": 0.5,
+      "tree_proxy_threshold": 0.01,
+      "tree_conf_threshold": 0.03
+    },
+    "profile_tps": 380.3672089904994,
+    "screen_al": 2.961845607808341
+  },
+  {
+    "name": "llama3_b8_warm_duet_tree_4",
+    "screen": "llama3_b8_combo_al_k2_3",
+    "params": {
+      "k1": 6,
+      "k2": 3,
+      "exit_layer": 30,
+      "draft_fan_out": 3,
+      "proxy_fan_out": 1,
+      "p1_nodes": 12,
+      "p2_nodes": 4,
+      "p1_roots": 2,
+      "p2_budget": null,
+      "tree_root_count": null,
+      "tree_width": 3,
+      "tree_beta": 0.5,
+      "tree_proxy_threshold": 0.01,
+      "tree_conf_threshold": 0.03
+    },
+    "profile_tps": 330.22589770195896,
+    "screen_al": 2.9601990049751246
+  },
+  {
+    "name": "llama3_b8_warm_confirm_grow_k1",
+    "screen": "llama3_b8_warm_diagnostic_grow_k1",
+    "params": {
+      "k1": 4,
+      "k2": 1,
+      "exit_layer": 26,
+      "draft_fan_out": 2,
+      "proxy_fan_out": 1,
+      "p1_nodes": 4,
+      "p2_nodes": 1,
+      "p1_roots": 2,
+      "p2_budget": null,
+      "tree_root_count": null,
+      "tree_width": 1,
+      "tree_beta": 0.5,
+      "tree_proxy_threshold": 0.01,
+      "tree_conf_threshold": 0.03
+    },
+    "reason": "New local neighbor; paired diagnostic and warm confirmation are both required"
+  },
+  {
+    "name": "llama3_b8_warm_confirm_grow_k2",
+    "screen": "llama3_b8_warm_diagnostic_grow_k2",
+    "params": {
+      "k1": 3,
+      "k2": 2,
+      "exit_layer": 26,
+      "draft_fan_out": 2,
+      "proxy_fan_out": 1,
+      "p1_nodes": 3,
+      "p2_nodes": 2,
+      "p1_roots": 2,
+      "p2_budget": null,
+      "tree_root_count": null,
+      "tree_width": 1,
+      "tree_beta": 0.5,
+      "tree_proxy_threshold": 0.01,
+      "tree_conf_threshold": 0.03
+    },
+    "reason": "New local neighbor; paired diagnostic and warm confirmation are both required"
+  }
+]

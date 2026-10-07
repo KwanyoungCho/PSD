@@ -1,0 +1,15 @@
+..E..
+======================================================================
+ERROR: test_graph_reads_live_temperatures_chain_and_tree (tests.test_root_policy.RootPolicyTests.test_graph_reads_live_temperatures_chain_and_tree)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_root_policy.py", line 86, in test_graph_reads_live_temperatures_chain_and_tree
+    tree.prepare([[-1,0,1,2],[-1,0]],[[0]*4,[0]*2],tok,q,temps,temps)
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/batch_tree_sampling.py", line 112, in prepare
+    self.tt[:B].copy_(torch.as_tensor(target_temps,device=self.tt.device))
+RuntimeError: Inplace update to inference tensor outside InferenceMode is not allowed.You can make a clone to get a normal tensor before doing inplace update.See https://github.com/pytorch/rfcs/pull/17 for more details.
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.604s
+
+FAILED (errors=1)

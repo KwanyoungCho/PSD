@@ -1,0 +1,97 @@
+Draft runner created on rank 1 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=6
+Finishing Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  6.14it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  6.13it/s]
+Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.23it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.22it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.20it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.72it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.49it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 5820, 256, 2, 64])
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 109, 256, 8, 128])
+F=7, fan_out_list=[7, 7, 7, 7, 7, 7, 7], fan_out_list_miss=[7, 7, 7, 7, 7, 7, 7], MQ_LEN=49
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=49
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=7, fan_out_list=[7, 7, 7, 7, 7, 7, 7], fan_out_list_miss=[7, 7, 7, 7, 7, 7, 7], MQ_LEN=49
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 49.25tok/s
+Final Decode Throughput: 25.71tok/s
+[metrics] Prefill tokens/time: 22 / 0.446736s
+[metrics] Decode tokens/time: 16 / 0.622390s
+[metrics] Avg Tokens per step (incl recovery): 2.00
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.17 (denom=6)
+[metrics] Avg target time per full step (ms): 118.80
+[metrics] Avg target verify time (ms): 29.03
+[metrics] Avg Cache Hits: 0.38
+[metrics] Avg Tokens per step on Cache Hit: 1.33
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.667
+  1: 0.333
+  2: 0.000
+  3: 0.000
+  4: 0.000
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.40
+Final Prefill Throughput: 6254.50tok/s
+Final Decode Throughput: 118.92tok/s
+[metrics] Prefill tokens/time: 8791 / 1.405547s
+[metrics] Decode tokens/time: 3874 / 32.576792s
+[metrics] Avg Tokens per step (incl recovery): 2.96
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.33 (denom=6)
+[metrics] Avg target time per full step (ms): 24.54
+[metrics] Avg target verify time (ms): 18.13
+[metrics] Avg Cache Hits: 0.60
+[metrics] Avg Tokens per step on Cache Hit: 3.26
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.318
+  1: 0.172
+  2: 0.140
+  3: 0.085
+  4: 0.060
+  5: 0.030
+  6: 0.194
+[metrics] Avg Tokens per step on Cache Miss: 2.52
+COVERAGE_CELL {"batch": 1, "temperature": 0.7, "seed": 5200, "summary": {"boundary_excluded_al": 2.9195046439628483, "emitted_al": 2.8975317875841435, "boundary_excluded_step_tps": 119.6022983189551, "boundary_excluded_events": 45, "boundary_excluded_steps": 45, "output_tokens": 3874, "wall_s": 33.995203082216904, "end_to_end_tps": 113.95725422292044, "decode_output_tokens": 3874, "decode_tps": 118.91901449826301, "al_including_recovery": 2.9648466716529542, "accepted_draft_tokens": 1.9648466716529545, "cache_hit": 0.5968586387434555, "phase1_hit": 0.0, "phase2_hit": 0.0, "observed_miss_valid_k": {"6": 539}, "tree_verify_events": 0, "verify_events": 1337}}
+Final Prefill Throughput: 6980.72tok/s
+Final Decode Throughput: 120.33tok/s
+[metrics] Prefill tokens/time: 8791 / 1.259326s
+[metrics] Decode tokens/time: 3300 / 27.424248s
+[metrics] Avg Tokens per step (incl recovery): 2.94
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.32 (denom=6)
+[metrics] Avg target time per full step (ms): 24.01
+[metrics] Avg target verify time (ms): 18.13
+[metrics] Avg Cache Hits: 0.63
+[metrics] Avg Tokens per step on Cache Hit: 3.24
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.337
+  1: 0.186
+  2: 0.122
+  3: 0.065
+  4: 0.048
+  5: 0.023
+  6: 0.218
+[metrics] Avg Tokens per step on Cache Miss: 2.42
+COVERAGE_CELL {"batch": 1, "temperature": 0.7, "seed": 5201, "summary": {"boundary_excluded_al": 2.8740942028985508, "emitted_al": 2.877070619006103, "boundary_excluded_step_tps": 120.26667819289924, "boundary_excluded_events": 43, "boundary_excluded_steps": 43, "output_tokens": 3300, "wall_s": 28.695500320987776, "end_to_end_tps": 115.00060856532245, "decode_output_tokens": 3300, "decode_tps": 120.33146735928216, "al_including_recovery": 2.940714908456844, "accepted_draft_tokens": 1.940714908456844, "cache_hit": 0.6312118570183086, "phase1_hit": 0.0, "phase2_hit": 0.0, "observed_miss_valid_k": {"6": 423}, "tree_verify_events": 0, "verify_events": 1147}}
+[LLMEngine] Exiting (hard=False)
+[metrics] Avg draft step time (ms): 21.79
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1008 03:09:59.526454641 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

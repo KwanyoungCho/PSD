@@ -1,0 +1,112 @@
+Draft runner created on rank 1 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1, 2, 4, 8]
+wrapper backend is auto
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=8
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=8
+Finishing Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=8
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=8
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.75it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.74it/s]
+Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.29it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.27it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.24it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.78it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.55it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 5638, 256, 2, 64])
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 109, 256, 8, 128])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=27
+About to capture FI cudagraphs for bs=[1, 2, 4, 8] key=fi_tree_decode MQ_LEN=27
+  [FI capture] bs=8 key=fi_tree_decode starting...
+  [FI capture] bs=8 key=fi_tree_decode warmup...
+  [FI capture] bs=8 key=fi_tree_decode warmup done, capturing...
+  [FI capture] bs=4 key=fi_tree_decode starting...
+  [FI capture] bs=4 key=fi_tree_decode warmup...
+  [FI capture] bs=4 key=fi_tree_decode warmup done, capturing...
+  [FI capture] bs=2 key=fi_tree_decode starting...
+  [FI capture] bs=2 key=fi_tree_decode warmup...
+  [FI capture] bs=2 key=fi_tree_decode warmup done, capturing...
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=27
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 571.16tok/s
+Final Decode Throughput: 108.35tok/s
+[metrics] Prefill tokens/time: 276 / 0.483226s
+[metrics] Decode tokens/time: 105 / 0.969063s
+[metrics] Avg Tokens per step (incl recovery): 2.02
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.13 (denom=8)
+[metrics] Avg target time per full step (ms): 121.03
+[metrics] Avg target verify time (ms): 43.80
+[metrics] Avg Cache Hits: 0.41
+[metrics] Avg Tokens per step on Cache Hit: 2.43
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.476
+  1: 0.095
+  2: 0.190
+  3: 0.095
+  4: 0.048
+  5: 0.095
+  6: 0.000
+  7: 0.000
+  8: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.76
+Final Prefill Throughput: 6859.00tok/s
+Final Decode Throughput: 393.32tok/s
+[metrics] Prefill tokens/time: 92477 / 13.482578s
+[metrics] Decode tokens/time: 48298 / 122.797183s
+[metrics] Avg Tokens per step (incl recovery): 3.08
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.26 (denom=8)
+[metrics] Avg target time per full step (ms): 55.68
+[metrics] Avg target verify time (ms): 21.34
+[metrics] Avg Cache Hits: 0.47
+[metrics] Avg Tokens per step on Cache Hit: 3.50
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.316
+  1: 0.193
+  2: 0.130
+  3: 0.081
+  4: 0.057
+  5: 0.041
+  6: 0.029
+  7: 0.020
+  8: 0.132
+[metrics] Avg Tokens per step on Cache Miss: 2.71
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 6200, "summary": {"boundary_excluded_al": 3.033746289843851, "emitted_al": 3.028087774294671, "boundary_excluded_step_tps": 393.7639145407892, "boundary_excluded_events": 452, "boundary_excluded_steps": 421, "output_tokens": 48298, "wall_s": 136.32122983084992, "end_to_end_tps": 354.29551259131915, "decode_output_tokens": 48298, "decode_tps": 393.31521191273174, "al_including_recovery": 3.0843260188087775, "accepted_draft_tokens": 2.0843260188087775, "cache_hit": 0.4724137931034483, "phase1_hit": 0.0, "phase2_hit": 0.0, "observed_miss_valid_k": {"8": 8415}, "tree_verify_events": 0, "verify_events": 15950}}
+Final Prefill Throughput: 6763.36tok/s
+Final Decode Throughput: 393.12tok/s
+[metrics] Prefill tokens/time: 92477 / 13.673230s
+[metrics] Decode tokens/time: 49990 / 127.160796s
+[metrics] Avg Tokens per step (incl recovery): 3.09
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.26 (denom=8)
+[metrics] Avg target time per full step (ms): 56.16
+[metrics] Avg target verify time (ms): 21.47
+[metrics] Avg Cache Hits: 0.48
+[metrics] Avg Tokens per step on Cache Hit: 3.47
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.323
+  1: 0.190
+  2: 0.126
+  3: 0.088
+  4: 0.055
+  5: 0.039
+  6: 0.029
+  7: 0.023
+  8: 0.127
+[metrics] Avg Tokens per step on Cache Miss: 2.74
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 6201, "summary": {"boundary_excluded_al": 3.0295453131803196, "emitted_al": 3.0262122404503904, "boundary_excluded_step_tps": 392.3162440101591, "boundary_excluded_events": 442, "boundary_excluded_steps": 405, "output_tokens": 49990, "wall_s": 140.8818934080191, "end_to_end_tps": 354.83623048151435, "decode_output_tokens": 49990, "decode_tps": 393.1243092378819, "al_including_recovery": 3.0886252194442765, "accepted_draft_tokens": 2.0886252194442765, "cache_hit": 0.47841879048368546, "phase1_hit": 0.0, "phase2_hit": 0.0, "observed_miss_valid_k": {"8": 8616}, "tree_verify_events": 0, "verify_events": 16519}}
+[LLMEngine] Exiting (hard=False)
+[metrics] Avg draft step time (ms): 58.86
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1008 04:38:12.475549114 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

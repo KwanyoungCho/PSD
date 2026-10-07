@@ -1,0 +1,5605 @@
+{
+  "definition": "Descriptive slow step = duration > 5 times median clean step duration within a pass. Does not identify the cause. No step deleted from TPS*.",
+  "runs": [
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_ssd_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 7,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_ssd_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1942,
+          "median_ms": 18.111095996573567,
+          "max_ms": 20.967242075130343,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 112.82225888988935
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1926,
+          "median_ms": 18.074506893754005,
+          "max_ms": 21.756808971986175,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 116.46048624374805
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_ssd_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 2,
+        "draft_fan_out": 7,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_ssd_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1771,
+          "median_ms": 20.642113871872425,
+          "max_ms": 22.282673977315426,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 110.82853108286734
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1986,
+          "median_ms": 20.72008792310953,
+          "max_ms": 22.28951989673078,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 104.89348097257374
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_ssd_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 5,
+        "k2": 2,
+        "draft_fan_out": 5,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_ssd_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1940,
+          "median_ms": 20.007796003483236,
+          "max_ms": 21.569871110841632,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 113.26788748515222
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 2045,
+          "median_ms": 20.057372050359845,
+          "max_ms": 21.914921002462506,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 110.10239488200372
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_ssd_4.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 8,
+        "k2": 2,
+        "draft_fan_out": 1,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_ssd_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1896,
+          "median_ms": 22.146280971355736,
+          "max_ms": 28.033571084961295,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 102.08444163257096
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1972,
+          "median_ms": 22.041940945200622,
+          "max_ms": 24.03490897268057,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 98.17046996863594
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_ssd_5.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 2,
+        "draft_fan_out": 5,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_ssd_5.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1886,
+          "median_ms": 20.69122705142945,
+          "max_ms": 22.797056939452887,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 112.45577180726856
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1940,
+          "median_ms": 20.748551469296217,
+          "max_ms": 22.634095046669245,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 113.42911289695172
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_duet_tree_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 4,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 12,
+        "p2_nodes": 8,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.0,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_duet_tree_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1741,
+          "median_ms": 18.249868880957365,
+          "max_ms": 1335.5559480842203,
+          "over_5median_steps": 13,
+          "over_5median_time_fraction": 0.20034435929227487,
+          "tps": 96.54928515016398
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1822,
+          "median_ms": 18.267834559082985,
+          "max_ms": 21.128461929038167,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 123.06896518019342
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_duet_tree_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 4,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 12,
+        "p2_nodes": 8,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 1.0,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_duet_tree_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1741,
+          "median_ms": 18.25067214667797,
+          "max_ms": 1359.278691932559,
+          "over_5median_steps": 13,
+          "over_5median_time_fraction": 0.20362431953563875,
+          "tps": 96.16112725223623
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1822,
+          "median_ms": 18.176980898715556,
+          "max_ms": 20.870886044576764,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 123.663024003609
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_duet_tree_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 4,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 12,
+        "p2_nodes": 8,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_duet_tree_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1741,
+          "median_ms": 18.18562881089747,
+          "max_ms": 1327.8565141372383,
+          "over_5median_steps": 13,
+          "over_5median_time_fraction": 0.19926235320405586,
+          "tps": 96.95074441210305
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1822,
+          "median_ms": 18.178330967202783,
+          "max_ms": 21.03245398029685,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 123.66571944582851
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_duet_tree_4.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 12,
+        "k2": 4,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 16,
+        "p2_nodes": 8,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_duet_tree_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1778,
+          "median_ms": 19.745392608456314,
+          "max_ms": 1458.0636490136385,
+          "over_5median_steps": 15,
+          "over_5median_time_fraction": 0.2102484679559942,
+          "tps": 93.91671548817428
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1728,
+          "median_ms": 19.77093261666596,
+          "max_ms": 22.315860027447343,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 120.94511575727552
+        }
+      ]
+    },
+    {
+      "path": "llama2_b1_warm/llama2_b1_warm_duet_tree_5.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 12,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 16,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b1_warm/llama2_b1_warm_duet_tree_5.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1812,
+          "median_ms": 18.289465457201004,
+          "max_ms": 1154.5695581007749,
+          "over_5median_steps": 13,
+          "over_5median_time_fraction": 0.18737335077262837,
+          "tps": 103.33397411551981
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1750,
+          "median_ms": 18.315920955501497,
+          "max_ms": 21.20649302378297,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 127.40871085937839
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_ssd_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 5,
+        "k2": 2,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_ssd_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 234,
+          "median_ms": 25.630926014855504,
+          "max_ms": 28.405716875568032,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 604.2084802538488
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 227,
+          "median_ms": 25.755115086212754,
+          "max_ms": 28.15417107194662,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 587.7564075177079
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_ssd_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 7,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_ssd_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 229,
+          "median_ms": 24.858576944097877,
+          "max_ms": 27.799504809081554,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 606.4194292811115
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 239,
+          "median_ms": 24.565770057961345,
+          "max_ms": 27.53490093164146,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 650.6111649598578
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_ssd_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_ssd_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 228,
+          "median_ms": 24.403778952546418,
+          "max_ms": 26.897227158769965,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 662.4720032031147
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 233,
+          "median_ms": 24.6379638556391,
+          "max_ms": 26.9887859467417,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 621.2563508461913
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_ssd_4.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 8,
+        "k2": 2,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_ssd_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 227,
+          "median_ms": 28.852220159024,
+          "max_ms": 32.74012985639274,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 551.2685641521284
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 234,
+          "median_ms": 27.94361358974129,
+          "max_ms": 32.19706588424742,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 552.9595563740327
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_ssd_5.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 8,
+        "k2": 2,
+        "draft_fan_out": 5,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_ssd_5.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 228,
+          "median_ms": 28.562808060087264,
+          "max_ms": 31.475513940677047,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 561.2408367373447
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 227,
+          "median_ms": 28.400016017258167,
+          "max_ms": 31.06673201546073,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 584.9150143084274
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_duet_tree_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_duet_tree_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 235,
+          "median_ms": 27.760379016399384,
+          "max_ms": 1122.7981830015779,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.5448924937189176,
+          "tps": 272.319303429644
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 239,
+          "median_ms": 27.41618501022458,
+          "max_ms": 31.36980114504695,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 575.1902182940487
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_duet_tree_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_duet_tree_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 235,
+          "median_ms": 28.017883887514472,
+          "max_ms": 1223.8474970217794,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.5580122012924821,
+          "tps": 264.0164795178053
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 239,
+          "median_ms": 27.483534067869186,
+          "max_ms": 31.599736073985696,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 573.1395398339004
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_duet_tree_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 1.0,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_duet_tree_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 235,
+          "median_ms": 27.51962305046618,
+          "max_ms": 1095.1181428972632,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.5326359783905217,
+          "tps": 282.6410210910188
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 239,
+          "median_ms": 27.73716999217868,
+          "max_ms": 31.362032052129507,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 573.7170123980959
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_duet_tree_4.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 3,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 12,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_duet_tree_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 218,
+          "median_ms": 42.51465946435928,
+          "max_ms": 1482.739606173709,
+          "over_5median_steps": 16,
+          "over_5median_time_fraction": 0.5979202813624961,
+          "tps": 175.37759688742042
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 219,
+          "median_ms": 41.59757914021611,
+          "max_ms": 1166.09522793442,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.17692993843109495,
+          "tps": 350.5066136610528
+        }
+      ]
+    },
+    {
+      "path": "llama2_b8_warm/llama2_b8_warm_duet_tree_5.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 2,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 12,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_warm/llama2_b8_warm_duet_tree_5.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 206,
+          "median_ms": 40.18931498285383,
+          "max_ms": 1892.2320927958935,
+          "over_5median_steps": 13,
+          "over_5median_time_fraction": 0.578339961111665,
+          "tps": 201.6489642916656
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 223,
+          "median_ms": 39.04514806345105,
+          "max_ms": 921.3012140244246,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.16842678602109923,
+          "tps": 372.75916372954396
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b1_postopt_warm_0.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 11,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 16,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b1_postopt_warm_0.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 2350,
+          "median_ms": 18.006171565502882,
+          "max_ms": 1091.9331181794405,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.11896207713588305,
+          "tps": 112.18862690644906
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 2192,
+          "median_ms": 18.033116008155048,
+          "max_ms": 21.045539993792772,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 133.36856446519
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b1_postopt_warm_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 12,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 23,
+        "p1_nodes": 16,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b1_postopt_warm_1.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 2314,
+          "median_ms": 18.09252903331071,
+          "max_ms": 1160.325031960383,
+          "over_5median_steps": 10,
+          "over_5median_time_fraction": 0.12314935884998825,
+          "tps": 113.65444333151846
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 2278,
+          "median_ms": 18.108778982423246,
+          "max_ms": 21.18650102056563,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 129.25240807412186
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b1_postopt_warm_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 12,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 16,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b1_postopt_warm_2.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 2332,
+          "median_ms": 18.011621083132923,
+          "max_ms": 1151.4336969703436,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.11841893467124805,
+          "tps": 108.50398222148542
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 2286,
+          "median_ms": 18.027430516667664,
+          "max_ms": 21.14900015294552,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 127.20530570473083
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b1_postopt_warm_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 12,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 16,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b1_postopt_warm_3.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 2332,
+          "median_ms": 18.18215590901673,
+          "max_ms": 1149.96352000162,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.11887314223755473,
+          "tps": 107.44054985557585
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 2286,
+          "median_ms": 18.21701298467815,
+          "max_ms": 21.53687202371657,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 125.72330055107909
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b8_postopt_warm_0.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b8_postopt_warm_0.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 303,
+          "median_ms": 28.98509707301855,
+          "max_ms": 1069.2872249055654,
+          "over_5median_steps": 9,
+          "over_5median_time_fraction": 0.40955282278747,
+          "tps": 339.1372891358009
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 306,
+          "median_ms": 28.941427124664187,
+          "max_ms": 317.76047917082906,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.05471308803090057,
+          "tps": 539.9589744385505
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b8_postopt_warm_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b8_postopt_warm_1.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 309,
+          "median_ms": 27.773201931267977,
+          "max_ms": 1353.1617550179362,
+          "over_5median_steps": 15,
+          "over_5median_time_fraction": 0.5708749644572574,
+          "tps": 261.306223647478
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 356,
+          "median_ms": 26.82722802273929,
+          "max_ms": 970.1178991235793,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.12329583529040929,
+          "tps": 489.1378787708088
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b8_postopt_warm_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b8_postopt_warm_2.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 318,
+          "median_ms": 29.719881946220994,
+          "max_ms": 1273.406317923218,
+          "over_5median_steps": 7,
+          "over_5median_time_fraction": 0.3437804271937822,
+          "tps": 366.72496981002723
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 329,
+          "median_ms": 29.49883695691824,
+          "max_ms": 744.6966979186982,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.134837190404441,
+          "tps": 477.7783633522951
+        }
+      ]
+    },
+    {
+      "path": "llama2_postopt_l0_warm/llama2_b8_postopt_warm_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_postopt_l0_warm/llama2_b8_postopt_warm_3.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 318,
+          "median_ms": 28.124643955379725,
+          "max_ms": 1217.208777088672,
+          "over_5median_steps": 7,
+          "over_5median_time_fraction": 0.3684872724287293,
+          "tps": 374.6634541578444
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 329,
+          "median_ms": 28.235882055014372,
+          "max_ms": 1068.779535125941,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.19671541975743145,
+          "tps": 467.1342841127989
+        }
+      ]
+    },
+    {
+      "path": "llama2_stability_l0_warm/llama2_b8_stability_warm_0.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_0.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 302,
+          "median_ms": 29.04264396056533,
+          "max_ms": 1404.762343969196,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.41814292836532674,
+          "tps": 333.87017603153276
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 305,
+          "median_ms": 28.434107080101967,
+          "max_ms": 976.2010311242193,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.13951458604899744,
+          "tps": 491.7670930826342
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 324,
+          "median_ms": 28.469080454669893,
+          "max_ms": 31.278262846171856,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 569.7834324596142
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 327,
+          "median_ms": 28.284197906032205,
+          "max_ms": 31.854324974119663,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 556.9020637766499
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 296,
+          "median_ms": 28.489368851296604,
+          "max_ms": 31.721675070002675,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 570.7797770527492
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 326,
+          "median_ms": 28.530479525215924,
+          "max_ms": 31.294471118599176,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 552.9257808292964
+        }
+      ]
+    },
+    {
+      "path": "llama2_stability_l0_warm/llama2_b8_stability_warm_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_1.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 339,
+          "median_ms": 27.91103580966592,
+          "max_ms": 1183.5226290859282,
+          "over_5median_steps": 16,
+          "over_5median_time_fraction": 0.5713805894496511,
+          "tps": 251.55187215545405
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 341,
+          "median_ms": 27.500238036736846,
+          "max_ms": 975.192713085562,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.12910403495231626,
+          "tps": 483.29248277937313
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 319,
+          "median_ms": 28.02658104337752,
+          "max_ms": 1075.7854378316551,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.14171681241093864,
+          "tps": 479.5673633645992
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 326,
+          "median_ms": 27.895536040887237,
+          "max_ms": 31.02921904064715,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 562.428298520686
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 320,
+          "median_ms": 26.981421979144216,
+          "max_ms": 926.2250419706106,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.13360440970172055,
+          "tps": 500.1232411678888
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 315,
+          "median_ms": 27.624865993857384,
+          "max_ms": 30.45326890423894,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 546.6297081291741
+        }
+      ]
+    },
+    {
+      "path": "llama2_stability_l0_warm/llama2_b8_stability_warm_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_2.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 304,
+          "median_ms": 29.887999058701098,
+          "max_ms": 1178.3492881804705,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.4685699069144849,
+          "tps": 309.3112319967186
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 301,
+          "median_ms": 30.266776913776994,
+          "max_ms": 32.97599102370441,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 551.5751824281978
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 306,
+          "median_ms": 29.84132955316454,
+          "max_ms": 32.54850301891565,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 559.8897496196992
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 308,
+          "median_ms": 30.01929901074618,
+          "max_ms": 33.213917165994644,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 530.1015761082965
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 283,
+          "median_ms": 29.605475952848792,
+          "max_ms": 32.51921711489558,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 549.027045355062
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 300,
+          "median_ms": 29.910832876339555,
+          "max_ms": 32.94860012829304,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 545.5782584947528
+        }
+      ]
+    },
+    {
+      "path": "llama2_stability_l0_warm/llama2_b8_stability_warm_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_3.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 304,
+          "median_ms": 28.492537909187376,
+          "max_ms": 1160.5374258942902,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.4831531280724928,
+          "tps": 315.16676095935503
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 301,
+          "median_ms": 28.184704016894102,
+          "max_ms": 31.012553023174405,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 590.4907173337266
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 306,
+          "median_ms": 28.23381801135838,
+          "max_ms": 30.5000941734761,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 596.595473828148
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 308,
+          "median_ms": 28.13720505218953,
+          "max_ms": 31.00053407251835,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 565.8752643856831
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 283,
+          "median_ms": 28.34060392342508,
+          "max_ms": 44.76985288783908,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 575.2190397902868
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 300,
+          "median_ms": 28.29904155805707,
+          "max_ms": 31.531978864222765,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 576.6138586029074
+        }
+      ]
+    },
+    {
+      "path": "llama2_stability_l0_warm/llama2_b8_stability_ssd_control.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 7,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_ssd_control.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 280,
+          "median_ms": 24.66545009519905,
+          "max_ms": 26.64933609776199,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 655.4040702219406
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 307,
+          "median_ms": 24.598774034529924,
+          "max_ms": 26.666185120120645,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 638.1264845413622
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 300,
+          "median_ms": 24.171987548470497,
+          "max_ms": 26.69146587140858,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 686.9370746302469
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 294,
+          "median_ms": 24.54206009861082,
+          "max_ms": 27.751839952543378,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 649.6722898959048
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 316,
+          "median_ms": 24.5364794973284,
+          "max_ms": 29.307503020390868,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 640.2913712029404
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 293,
+          "median_ms": 24.77565105073154,
+          "max_ms": 27.30913204140961,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 668.367923466189
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_ssd_1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 9,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_ssd_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1312,
+          "median_ms": 19.382374128326774,
+          "max_ms": 26.64291183464229,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 127.57329819488812
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1365,
+          "median_ms": 19.408802967518568,
+          "max_ms": 38.74513297341764,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 116.85498113942248
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_ssd_2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 2,
+        "draft_fan_out": 7,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_ssd_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1292,
+          "median_ms": 20.64712007995695,
+          "max_ms": 31.84027993120253,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 119.6022983189551
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1104,
+          "median_ms": 20.537582458928227,
+          "max_ms": 31.32389090023935,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 120.26667819289924
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_ssd_3.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 7,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_ssd_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1409,
+          "median_ms": 19.38705611974001,
+          "max_ms": 26.77483088336885,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 122.43819805205477
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1391,
+          "median_ms": 19.43096797913313,
+          "max_ms": 27.438950026407838,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 123.72539018600493
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_ssd_4.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 8,
+        "k2": 2,
+        "draft_fan_out": 1,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_ssd_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1137,
+          "median_ms": 34.72170396707952,
+          "max_ms": 36.52279102243483,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 95.33561019029078
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1257,
+          "median_ms": 34.03625497594476,
+          "max_ms": 36.38811712153256,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 95.32591887851217
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_duet_tree_1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 8,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.0,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_duet_tree_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1342,
+          "median_ms": 21.708846907131374,
+          "max_ms": 1187.5365190207958,
+          "over_5median_steps": 10,
+          "over_5median_time_fraction": 0.19675128959355093,
+          "tps": 90.46866946788364
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1426,
+          "median_ms": 21.664591040462255,
+          "max_ms": 28.678257018327713,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 113.10391060514826
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_duet_tree_2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 8,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_duet_tree_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1342,
+          "median_ms": 21.674610441550612,
+          "max_ms": 1123.066667933017,
+          "over_5median_steps": 10,
+          "over_5median_time_fraction": 0.19216401379158268,
+          "tps": 91.03551071145647
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1426,
+          "median_ms": 21.63249347358942,
+          "max_ms": 28.710820013657212,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 113.27301659374609
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_duet_tree_3.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 4,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_duet_tree_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1426,
+          "median_ms": 20.790736540220678,
+          "max_ms": 1065.3789171483368,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.14477637122353218,
+          "tps": 95.81446397935616
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1363,
+          "median_ms": 20.7893920596689,
+          "max_ms": 28.15284812822938,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 109.82595073799273
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_duet_tree_4.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 12,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_duet_tree_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1311,
+          "median_ms": 25.535225169733167,
+          "max_ms": 1152.5761121883988,
+          "over_5median_steps": 13,
+          "over_5median_time_fraction": 0.16627659843144385,
+          "tps": 88.15200158277916
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1197,
+          "median_ms": 25.510582141578197,
+          "max_ms": 32.094521913677454,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 104.20028532087052
+        }
+      ]
+    },
+    {
+      "path": "llama3_b1_warm/llama3_b1_warm_duet_tree_5.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 4,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 12,
+        "p2_nodes": 8,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b1_warm/llama3_b1_warm_duet_tree_5.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 1154,
+          "median_ms": 30.37599741946906,
+          "max_ms": 1331.8374750670046,
+          "over_5median_steps": 14,
+          "over_5median_time_fraction": 0.24523327007255352,
+          "tps": 69.84945598624843
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 1112,
+          "median_ms": 30.383207486011088,
+          "max_ms": 37.04762482084334,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 94.78791645486052
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_ssd_1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 1,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_ssd_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 148,
+          "median_ms": 30.62754508573562,
+          "max_ms": 31.3434861600399,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 664.7426067650597
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 158,
+          "median_ms": 30.676531489007175,
+          "max_ms": 31.88750916160643,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 649.0477370473633
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_ssd_2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 2,
+        "k2": 2,
+        "draft_fan_out": 5,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_ssd_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 195,
+          "median_ms": 26.284212013706565,
+          "max_ms": 27.940143132582307,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 639.3939136591996
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 169,
+          "median_ms": 26.38218505308032,
+          "max_ms": 27.633541030809283,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 617.3221277488794
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_ssd_3.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_ssd_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 146,
+          "median_ms": 30.52021737676114,
+          "max_ms": 31.547296093776822,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 639.5873002184421
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 171,
+          "median_ms": 30.69142298772931,
+          "max_ms": 31.51542297564447,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 611.7436810408858
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_ssd_4.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 8,
+        "k2": 2,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_ssd_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 130,
+          "median_ms": 63.447144464589655,
+          "max_ms": 65.14191208407283,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 402.8606989326058
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 122,
+          "median_ms": 63.560533919371665,
+          "max_ms": 65.57520711794496,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 386.6140185950535
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_ssd_5.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_ssd_5.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 156,
+          "median_ms": 37.8837218740955,
+          "max_ms": 39.59490288980305,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 551.4384354945272
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 132,
+          "median_ms": 38.56821800582111,
+          "max_ms": 39.473088923841715,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 562.5244556272986
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_duet_tree_1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 1,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_duet_tree_1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 187,
+          "median_ms": 34.82199599966407,
+          "max_ms": 1101.518081035465,
+          "over_5median_steps": 14,
+          "over_5median_time_fraction": 0.6615010240667123,
+          "tps": 185.30604797822892
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 215,
+          "median_ms": 34.56860315054655,
+          "max_ms": 1077.414290048182,
+          "over_5median_steps": 7,
+          "over_5median_time_fraction": 0.4192150389217454,
+          "tps": 310.6241825463294
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_duet_tree_2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 24,
+        "p1_nodes": 3,
+        "p2_nodes": 1,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_duet_tree_2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 179,
+          "median_ms": 34.499513916671276,
+          "max_ms": 1690.5213899444789,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.6359674733298935,
+          "tps": 200.6952127200515
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 183,
+          "median_ms": 34.56328506581485,
+          "max_ms": 916.6231451090425,
+          "over_5median_steps": 5,
+          "over_5median_time_fraction": 0.3558836916726703,
+          "tps": 337.87398196193817
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_duet_tree_3.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 2,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 30,
+        "p1_nodes": 12,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_duet_tree_3.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 128,
+          "median_ms": 61.307445052079856,
+          "max_ms": 2031.036478932947,
+          "over_5median_steps": 12,
+          "over_5median_time_fraction": 0.6735409307208761,
+          "tps": 120.00277657586383
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 159,
+          "median_ms": 61.27936998382211,
+          "max_ms": 1546.7764518689364,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.1755837424238805,
+          "tps": 285.79007723433006
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_duet_tree_4.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 6,
+        "k2": 3,
+        "draft_fan_out": 3,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 30,
+        "p1_nodes": 12,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_duet_tree_4.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 136,
+          "median_ms": 70.28326147701591,
+          "max_ms": 1665.9165560267866,
+          "over_5median_steps": 9,
+          "over_5median_time_fraction": 0.5389070303145035,
+          "tps": 163.85212607709784
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 143,
+          "median_ms": 69.45068296045065,
+          "max_ms": 1301.7899750266224,
+          "over_5median_steps": 4,
+          "over_5median_time_fraction": 0.281830666989647,
+          "tps": 223.06704509766823
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_confirm_grow_k1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 4,
+        "p2_nodes": 1,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_confirm_grow_k1.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 178,
+          "median_ms": 39.31235603522509,
+          "max_ms": 1308.299939148128,
+          "over_5median_steps": 13,
+          "over_5median_time_fraction": 0.6288369959504416,
+          "tps": 189.72773599013874
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 182,
+          "median_ms": 38.827484007924795,
+          "max_ms": 1157.7033060602844,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.3114315215863789,
+          "tps": 335.4779890981145
+        }
+      ]
+    },
+    {
+      "path": "llama3_b8_warm/llama3_b8_warm_confirm_grow_k2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          5200,
+          5201
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 96,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_b8_warm/llama3_b8_warm_confirm_grow_k2.json"
+      },
+      "passes": [
+        {
+          "seed": 5200,
+          "clean_steps": 173,
+          "median_ms": 39.279141929000616,
+          "max_ms": 1515.8529358450323,
+          "over_5median_steps": 18,
+          "over_5median_time_fraction": 0.7299350158001273,
+          "tps": 136.21097392126987
+        },
+        {
+          "seed": 5201,
+          "clean_steps": 170,
+          "median_ms": 39.287009509280324,
+          "max_ms": 590.6591741368175,
+          "over_5median_steps": 1,
+          "over_5median_time_fraction": 0.08679791240538505,
+          "tps": 451.58019463854833
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b1_postopt_warm_0.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 8,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b1_postopt_warm_0.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 1843,
+          "median_ms": 21.183220902457833,
+          "max_ms": 1016.6022521443665,
+          "over_5median_steps": 9,
+          "over_5median_time_fraction": 0.11499734829635555,
+          "tps": 100.89658721046659
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 1886,
+          "median_ms": 21.18335396517068,
+          "max_ms": 28.15104089677334,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 113.01098804742158
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b1_postopt_warm_1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 18,
+        "p1_nodes": 8,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b1_postopt_warm_1.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 1589,
+          "median_ms": 21.143635036423802,
+          "max_ms": 1027.2375270724297,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.13195634598116923,
+          "tps": 104.70616190453153
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 1783,
+          "median_ms": 21.148903062567115,
+          "max_ms": 28.21222087368369,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 119.1518186549031
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b1_postopt_warm_2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 8,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b1_postopt_warm_2.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 1936,
+          "median_ms": 21.16833650507033,
+          "max_ms": 1037.809032946825,
+          "over_5median_steps": 9,
+          "over_5median_time_fraction": 0.10945363234220419,
+          "tps": 102.23754189486378
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 1684,
+          "median_ms": 21.164247998967767,
+          "max_ms": 28.116469038650393,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 121.80854898806615
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b1_postopt_warm_3.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          1
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 16,
+        "p1_nodes": 8,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b1_postopt_warm_3.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 1936,
+          "median_ms": 21.495206048712134,
+          "max_ms": 1035.1462098769844,
+          "over_5median_steps": 9,
+          "over_5median_time_fraction": 0.11044027274691769,
+          "tps": 100.60269841864833
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 1684,
+          "median_ms": 21.50654897559434,
+          "max_ms": 28.73181807808578,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 119.94702647273307
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b8_postopt_warm_0.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b8_postopt_warm_0.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 228,
+          "median_ms": 35.6913604773581,
+          "max_ms": 1129.986047046259,
+          "over_5median_steps": 9,
+          "over_5median_time_fraction": 0.4999652886827578,
+          "tps": 267.37808791194476
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 236,
+          "median_ms": 34.93949701078236,
+          "max_ms": 921.9447770155966,
+          "over_5median_steps": 5,
+          "over_5median_time_fraction": 0.2981125149069877,
+          "tps": 373.82849241860134
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b8_postopt_warm_1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 28,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b8_postopt_warm_1.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 235,
+          "median_ms": 42.52783488482237,
+          "max_ms": 1582.7384579461068,
+          "over_5median_steps": 17,
+          "over_5median_time_fraction": 0.6491911982168106,
+          "tps": 168.43985174531775
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 231,
+          "median_ms": 42.52310004085302,
+          "max_ms": 45.27838807553053,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 439.4261644552895
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b8_postopt_warm_2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b8_postopt_warm_2.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 223,
+          "median_ms": 40.502813179045916,
+          "max_ms": 1388.8853089883924,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.5513321275581708,
+          "tps": 219.10658514314957
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 227,
+          "median_ms": 39.714583894237876,
+          "max_ms": 1018.6308159027249,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.17725147741358172,
+          "tps": 387.4516684374175
+        }
+      ]
+    },
+    {
+      "path": "llama3_postopt_l0_warm/llama3_b8_postopt_warm_3.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          6900,
+          6901
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_postopt_l0_warm/llama3_b8_postopt_warm_3.json"
+      },
+      "passes": [
+        {
+          "seed": 6900,
+          "clean_steps": 223,
+          "median_ms": 38.40346308425069,
+          "max_ms": 1239.790977910161,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.5538310007355576,
+          "tps": 229.06890740943842
+        },
+        {
+          "seed": 6901,
+          "clean_steps": 227,
+          "median_ms": 37.68213698640466,
+          "max_ms": 995.3534679953009,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.17619739812486057,
+          "tps": 408.7207639949509
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_0.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_0.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 234,
+          "median_ms": 36.23637999407947,
+          "max_ms": 1665.9376020543277,
+          "over_5median_steps": 20,
+          "over_5median_time_fraction": 0.6775515975085921,
+          "tps": 181.68578717536252
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 245,
+          "median_ms": 35.879665054380894,
+          "max_ms": 1834.0327360201627,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.3302907111264891,
+          "tps": 362.3606465876371
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 225,
+          "median_ms": 36.01187700405717,
+          "max_ms": 667.6274719648063,
+          "over_5median_steps": 1,
+          "over_5median_time_fraction": 0.0798481306715148,
+          "tps": 468.83132491713576
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 224,
+          "median_ms": 36.035867873579264,
+          "max_ms": 991.204418009147,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.15243901256447526,
+          "tps": 436.822040903475
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 200,
+          "median_ms": 35.945698036812246,
+          "max_ms": 38.77163608558476,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 557.8375957401978
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 222,
+          "median_ms": 35.31084151472896,
+          "max_ms": 37.71811700426042,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 529.4311416531307
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_1.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 28,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_1.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 207,
+          "median_ms": 42.89905191399157,
+          "max_ms": 1788.4845021180809,
+          "over_5median_steps": 14,
+          "over_5median_time_fraction": 0.638905438533367,
+          "tps": 175.78556549772134
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 240,
+          "median_ms": 42.56212792824954,
+          "max_ms": 684.2565399128944,
+          "over_5median_steps": 6,
+          "over_5median_time_fraction": 0.2631659839478624,
+          "tps": 359.76201667636406
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 247,
+          "median_ms": 42.48948488384485,
+          "max_ms": 47.27296414785087,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 457.5691598744063
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 219,
+          "median_ms": 42.220942210406065,
+          "max_ms": 1068.424265133217,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.18062708831218877,
+          "tps": 379.6567122920453
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 210,
+          "median_ms": 42.572015430778265,
+          "max_ms": 44.57700508646667,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 449.21396897374694
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 212,
+          "median_ms": 40.82991858012974,
+          "max_ms": 46.512224012985826,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 467.6062220504685
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_2.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_2.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 221,
+          "median_ms": 40.79983802512288,
+          "max_ms": 1750.1118842046708,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.604327767410168,
+          "tps": 199.61992708339062
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 241,
+          "median_ms": 40.92056001536548,
+          "max_ms": 1083.9527370408177,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.37916082558204367,
+          "tps": 294.51369973594376
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 213,
+          "median_ms": 41.11599689349532,
+          "max_ms": 598.8088569138199,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.142397146525125,
+          "tps": 427.3847962873373
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 209,
+          "median_ms": 40.628258138895035,
+          "max_ms": 42.99349198117852,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 474.3800236762524
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 224,
+          "median_ms": 40.38989846594632,
+          "max_ms": 42.150942143052816,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 474.7948251214654
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 225,
+          "median_ms": 40.46835610643029,
+          "max_ms": 68.67118505761027,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 477.03447840921626
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_3.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 2,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_3.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 221,
+          "median_ms": 38.6255590710789,
+          "max_ms": 1660.1907589938492,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.6099324174337637,
+          "tps": 206.20777735908678
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 241,
+          "median_ms": 38.76760904677212,
+          "max_ms": 959.3156138435006,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.3814547776913533,
+          "tps": 308.99147815800984
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 213,
+          "median_ms": 38.847284158691764,
+          "max_ms": 626.3827029615641,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.15039200753960952,
+          "tps": 447.17659198708054
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 209,
+          "median_ms": 38.7340800371021,
+          "max_ms": 40.504856035113335,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 496.2465885618841
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 224,
+          "median_ms": 38.30154857132584,
+          "max_ms": 40.557100204750896,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 495.7681695444251
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 225,
+          "median_ms": 38.43874391168356,
+          "max_ms": 40.452803019434214,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 500.4433815902878
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_4.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 1,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_4.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 234,
+          "median_ms": 34.38164689578116,
+          "max_ms": 1528.4957389812917,
+          "over_5median_steps": 20,
+          "over_5median_time_fraction": 0.6736302597108015,
+          "tps": 193.72548003879004
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 245,
+          "median_ms": 34.1629849281162,
+          "max_ms": 1175.8384611457586,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.25588876053362436,
+          "tps": 423.56974622926936
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 225,
+          "median_ms": 34.10719311796129,
+          "max_ms": 612.1913329698145,
+          "over_5median_steps": 1,
+          "over_5median_time_fraction": 0.0781336016283961,
+          "tps": 500.30717830893354
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 224,
+          "median_ms": 34.0309931198135,
+          "max_ms": 935.1510629057884,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.1539778883971716,
+          "tps": 470.6446248082074
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 200,
+          "median_ms": 33.843414508737624,
+          "max_ms": 35.46848311088979,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 591.5759262146441
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 222,
+          "median_ms": 33.731508534401655,
+          "max_ms": 35.2766290307045,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 556.3950675153096
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_5.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 26,
+        "p1_nodes": 3,
+        "p2_nodes": 1,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_5.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 234,
+          "median_ms": 36.11511550843716,
+          "max_ms": 1669.9229760561138,
+          "over_5median_steps": 20,
+          "over_5median_time_fraction": 0.6744255729987247,
+          "tps": 184.49353516077028
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 245,
+          "median_ms": 35.65294202417135,
+          "max_ms": 1265.5408477876335,
+          "over_5median_steps": 3,
+          "over_5median_time_fraction": 0.2597177113417089,
+          "tps": 403.4508146468172
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 225,
+          "median_ms": 35.431174794211984,
+          "max_ms": 642.7124058827758,
+          "over_5median_steps": 1,
+          "over_5median_time_fraction": 0.07850251786533852,
+          "tps": 478.79870874665176
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 224,
+          "median_ms": 35.65094247460365,
+          "max_ms": 978.3544568344951,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.15564703853087494,
+          "tps": 448.7525099967332
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 200,
+          "median_ms": 35.78023286536336,
+          "max_ms": 38.15178479999304,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 561.0690118806488
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 222,
+          "median_ms": 34.80588144157082,
+          "max_ms": 37.249858025461435,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 532.0058146448276
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_6.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 24,
+        "p1_nodes": 3,
+        "p2_nodes": 1,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_6.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 254,
+          "median_ms": 33.44924654811621,
+          "max_ms": 1530.9506640769541,
+          "over_5median_steps": 20,
+          "over_5median_time_fraction": 0.6808541284032035,
+          "tps": 185.75169253832985
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 242,
+          "median_ms": 33.13723544124514,
+          "max_ms": 880.9368261136115,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.16966644853398186,
+          "tps": 460.6581970474084
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 230,
+          "median_ms": 33.3064254373312,
+          "max_ms": 963.74073298648,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.1791388203601621,
+          "tps": 469.5718744840146
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 260,
+          "median_ms": 33.47574593499303,
+          "max_ms": 34.70309800468385,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 550.3144615638749
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 223,
+          "median_ms": 33.481372985988855,
+          "max_ms": 35.054916981607676,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 564.7269632878081
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 243,
+          "median_ms": 33.34795217961073,
+          "max_ms": 34.61120999418199,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 547.8469973468721
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_warm_7.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 24,
+        "p1_nodes": 3,
+        "p2_nodes": 1,
+        "tree_width": 1,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_warm_7.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 254,
+          "median_ms": 34.44945509545505,
+          "max_ms": 1503.876349888742,
+          "over_5median_steps": 20,
+          "over_5median_time_fraction": 0.6741988542805235,
+          "tps": 184.06371048739302
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 242,
+          "median_ms": 34.140441566705704,
+          "max_ms": 892.2871809918433,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.1643634457070487,
+          "tps": 449.7328582765376
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 230,
+          "median_ms": 34.161658957600594,
+          "max_ms": 929.6534790191799,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.17019387246914364,
+          "tps": 460.79600183765837
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 260,
+          "median_ms": 34.41032790578902,
+          "max_ms": 36.013204138725996,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 535.0861567528643
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 223,
+          "median_ms": 34.25657795742154,
+          "max_ms": 35.98163020797074,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 549.2361176955865
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 243,
+          "median_ms": 34.41115585155785,
+          "max_ms": 36.13837109878659,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 532.0835338607892
+        }
+      ]
+    },
+    {
+      "path": "llama3_stability_l0_warm/llama3_b8_stability_ssd_control.json",
+      "args": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 1,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stability_l0_warm/llama3_b8_stability_ssd_control.json"
+      },
+      "passes": [
+        {
+          "seed": 7000,
+          "clean_steps": 212,
+          "median_ms": 30.47586663160473,
+          "max_ms": 31.78233583457768,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 633.2948004663584
+        },
+        {
+          "seed": 7001,
+          "clean_steps": 188,
+          "median_ms": 30.452286009676754,
+          "max_ms": 31.424790853634477,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 641.3136970506912
+        },
+        {
+          "seed": 7002,
+          "clean_steps": 215,
+          "median_ms": 30.33168683759868,
+          "max_ms": 31.380158150568604,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 696.0600059505532
+        },
+        {
+          "seed": 7003,
+          "clean_steps": 187,
+          "median_ms": 30.46386200003326,
+          "max_ms": 31.99485712684691,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 700.0303382886941
+        },
+        {
+          "seed": 7004,
+          "clean_steps": 179,
+          "median_ms": 30.530578223988414,
+          "max_ms": 31.31873602978885,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 753.6096296019758
+        },
+        {
+          "seed": 7005,
+          "clean_steps": 203,
+          "median_ms": 30.46600380912423,
+          "max_ms": 31.29897080361843,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 639.439869221004
+        }
+      ]
+    }
+  ]
+}

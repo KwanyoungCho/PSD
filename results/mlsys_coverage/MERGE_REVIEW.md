@@ -1,8 +1,8 @@
 **DUET MLSys 확장 — 통합 변경 기록, 질문 답변, 다른 서버 merge 검토표**
 
-**최신 상태 (2026-10-08): Round4 완료.** 먼저 **19절**을 읽으면 이번 구현,94개 실행 결과, 사용자 질문5개 답변, 다른 서버 merge 지침을 한 번에 확인할 수 있다. 0–18절과 기존 부록은 round3까지의 역사적 기록이며 “이전 selector 미적용/G>M 미해결/새 runtime 변경 없음”은 당시 상태다. 최종 runtime/bench/test commit은 `c0600ea`; 전체 원시 JSON은 round4의 검증된 gzip archive로 보존했다.
+**최신 상태 (2026-10-08): Round5 실험·추가 최적화·검증 완료.** 이번 실제 온도 root 수식 통합·독립 SSD 튜닝·B1/B8 공동 파라미터 탐색과 결론은 **20절**, 최종 수치와 다른 서버의 재현 절차는 **20.4–20.7절**을 따른다. 완료487실행/691cell, 그중 full480실행70개이며 실패4시도도 보존했다. **19절은 완료된 Round4의94개 실행 기록**이다. 0–18절은 round3까지의 역사적 기록이다. 부록의 commit/file 목록은 Round5 runtime 기준으로 갱신했다.
 
-작성일: 2026-10-07. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 아래0–18절은 당시 source/history와 저장된 실험을 재검토한 내용이다. 당시 문서 감사에는 새 GPU 실험/runtime 변경이 없었으며, 이후 추가 작업과 현재 상태는19절을 따른다.
+작성일: 2026-10-07, 최종 실험 갱신: 2026-10-08. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 아래0–18절은 당시 source/history와 저장된 실험을 재검토한 내용이다. 당시 문서 감사에는 새 GPU 실험/runtime 변경이 없었으며, 이후 추가 작업은19절, 최신 상태는20절을 따른다.
 
 **0. 정확한 기준과 먼저 바로잡을 설명**
 
@@ -22,7 +22,7 @@
 - TPS에서 버린 토큰까지 세면 **과대평가**한다. 과소평가가 아니다.
 - Tree에도 이미 CUDA graph를 적용했다. 구조가 바뀔 때마다 graph를 다시 만드는 구현이 아니다.
 - 앞서 “완료”는 두 dense pair의 지원·검증 범위를 뜻한다. TPS 전역 최적화, 논문 70B 장비 재현, 이전 reach/gain 연구의 통합, 모든 부동소수점 경로의 bitwise 동일성까지 완료한 것은 아니다.
-- 이번 branch는 논문 기존 root/continuation 점수를 유지했다. `e(1-q)`, 새로운 위치 점수, calibrated reach/gain selector를 이번 성능 수치에 포함하지 않았다.
+- **Round3 시점**에는 논문 기존 root/continuation 점수를 유지했다. 당시 성능 수치에는 `e(1-q)`, 새로운 위치 점수, calibrated reach/gain selector가 없었다. 이후 통합·검증은19–20절에 별도로 기록했다.
 
 **1. 오류 여섯 가지의 의미·발생 조건·출처 — 사용자 질문 1**
 
@@ -346,7 +346,7 @@ Greedy 검증은 전체 token 완전 일치와 분포/규칙 검증을 분리했
 9. AR 비교는 target1개 latency 외에 같은 총 GPU 예산의 AR replica throughput도 포함한다.
 10. 정밀도/shape별 greedy 차이, stochastic proposal 법칙, G>M 정책을 validation과 분리하지 않는다. Invalid 설정의 빠른 TPS는 결과에서 제외한다.
 
-**15. 남은 작업과 우선순위 — round3 당시 상태 (최신은19절)**
+**15. 남은 작업과 우선순위 — round3 당시 상태 (최신은20절)**
 
 | 우선순위 | 작업 | 완료 조건 |
 |---|---|---|
@@ -614,7 +614,144 @@ Local shared venv의 editable install이 `/home/chokwans99/PSD`를 가리키므�
 - Full480 밖의 일반화,8질문 calibration의 안정성, nominal CI의 다중비교 한계, BF16/FP16 tie에 의한 greedy output 차이를 남긴다. 미실행 항목을 성능 검증 완료라고 표시하지 않는다.
 
 
+**20. Round5 — 실제 온도와 개선 root 수식을 적용한 DUET/SSD 비교 (완료)**
+
+최종 비교·추가 최적화 대조·안정성 재검증·회귀 검사·원본 복원 검증을 완료했다. 종합 결과는 [round5/REPORT.md](round5/REPORT.md), 실행 계획은 [round5/PLAN.md](round5/PLAN.md), 수식은 [round5/THEORY.md](round5/THEORY.md), 예외와 결정 근거는 [round5/NOTES.md](round5/NOTES.md)에 있다. 이 문서20.4–20.7절만 읽어도 결론·선택값·merge 및 재실행 범위를 확인할 수 있다.
+
+- **구현 완료:** 실제 request의 target/draft T로 early-exit root 점수를 계산한다. 기존 T=1 고정은 cache 순위의 heuristic 설정이었으며, 최종 target verification의 확률은 기존에도 실제 T였다. 이번 변경을 과거 lossless 검증 오류의 수정이라고 해석하지 않는다. T=0은 생성/검증 argmax와 soft budget ranking을 분리한다.
+- **이전 개선 통합:** 내부 context에서 `e(1-q)`, leaf에서 `e`, 제안된 sibling 제외 후 전체 허용 vocabulary 정규화, observed/overlap terminal mass의 `.75/.25` 혼합을 적용한다. Chain 혼합을 branching tree의 ordered-sibling ladder로 확장했다. 이는 proxy 추정 규칙이며 실제 target 확률이라는 주장이 아니다.
+- **Tree selector:** Round4의 `reach_gain_frontier`와 고정 historical table을 사용한다. C=1/2에서도 기존 C=3 gain table의 prefix를 사용하도록 수정했다. 새 평가 결과로 table을 다시 fit하지 않았다.
+- **실험 조건:** full32layer FP16 LayerSkip-Llama2-7B+AMD135m, full32layer BF16 LayerSkip-Llama3-8B+Qwama0.5B; T=.7, B1/B8. GPU2,3/4,5/6,7은PIX,0,1은NODE다. 비교쌍은 같은GPU에서 실행하며 topology별 절대TPS를 무조건 합치지 않는다.
+- **선택/평가 분리:** 기존480first-turn corpus의6group별8개=48개로 선택한다. Full480과 이번 선택에서 제외한432개를 모두 보고한다. 432개는 과거 모든 연구에서 미관측이었다는 뜻이 아니다. Full은 보유480첫turn 전부이며 원 데이터셋 전체·560turn·무제한context가 아니다.
+- **진행 순서:** SSD K/F 독립 탐색 → DUET exit anchor → phase depth → tree root/forward/node budget → 결합/인접 설정과 phase 재배분 → warm 비계측48 최종 후보 → 파라미터 동결 → 새 draft process 반복의full480 → 고정 알고리즘 구현 최적화 대조. AL 우선점과 처리량 우선점을 별도로 보존한다.
+- **최종 정확성 근거:** trim0/stream0, trim1/stream0, trim1/stream1에서 각각300검사 통과, skip0. Actual T, ragged bonus, C1 chain 환원, sibling mass, live CUDA graph T 변경, BF16 기본 dtype에서도 T buffer float32를 검사했다. Full480 고정 알고리즘 대조의 두 pass 출력/수락 기록도 동일했고, 안정성 재검증의 stream ON/OFF4쌍도 각각6pass 동일했다.
+- **예외 보존:** 자체 회귀 launcher의 empty CUDA_VISIBLE_DEVICES 처리 때문에 GPU0에서 SSD 한 조건과 겹친 결과를 timing 제외하고 깨끗한 반복으로 대체했다. Dtype 수정 중 duplicate keyword가 들어간 네 신규 worker는 실패 기록을 유지하고 수정 후 재시작했다. 실패는 알고리즘 성능 결과로 사용하지 않는다.
+- **Merge 주의:** root 연구 branch의 `duet_proxy_source`와 여기의 `duet_root_source`는 수동으로 대응시켜야 한다. `root_policy.py`, `batch_tree_sampling.py`, `p2_tree.py`, `batched_proxy.py`, `batch_tree_verify.py`, `model_runner.py`, `verifier.py`, Config와 bench CLI를 함께 검토한다. 온도 buffer dtype, 실제 bonus 위치, ordered-WOR q 보존, terminal recursion depth>=miss depth를 떨어뜨리지 않는다.
+- **최적성 범위:** 유한한 측정 영역과 이웃 탐색에서의 선택이다. 모든 수식/예산/하드웨어/요청분포에 대한 전역 최적성을 주장하지 않는다. Profiling TPS는 최종 성능 수치가 아니다.
+
+**20.1 구현·merge 계약**
+
+Round5 시작점은 `c4f05a6`, 현재 runtime 기준은 `641f5ce`다. 19절의 correctness 수정과 실행 최적화를 포함하는 branch 위에 작업했으며 다른 서버의 branch를 merge하지 않았다.
+
+| 파일/영역 | 변경과 merge 시 확인할 내용 |
+|---|---|
+| `root_policy.py`, Config, benchmark CLI | `duet_root_source=complement`, `duet_root_normalization=full`, `duet_root_overlap_mix=.25`. 연구 branch의 `duet_proxy_source`와 이름을 수동 대응한다. P1은 draft 기반 root 점수, 새 `e(1-q)`는 proxy phase에 적용한다. |
+| `verifier.py`, `batched_proxy.py`, `p2_tree.py` | 실제 target/draft 온도로 점수를 계산한다. T0 생성·검증은 greedy, 예산 순위만 soft score다. FP16/BF16 기본 dtype에서 graph를 만들어도 live temperature buffer는 FP32를 유지한다. |
+| `batch_tree_sampling.py` | 이미 생성된 ordered-WOR sibling들을 반영한 두 개의 terminal-mass recursion 후 `.75/.25`로 혼합한다. Target acceptance에 후보 점수를 넣지 않는다. 이미 뽑힌 token의 proxy 비율을 사용한다는 뜻이며 실제 target 수락을 미리 관측한 값은 아니다. |
+| `batch_tree_verify.py`, `root_policy.py` | Terminal recursion은 최소 `max(K1,K2,miss_depth)`를 포함한다. Ragged chain의 실제 bonus context에는 leaf 점수를 쓴다. Padding token/q를 실제 proposal처럼 빼거나 제외하지 않는다. |
+| `tree_expansion_policy.py` | C1/2에서 C3 calibration의 prefix를 재사용한다. `reach_gain_frontier`와 historical table SHA를 고정한다. 이 정책의 `tree_beta`는 비활성임을 beta0/1 출력 동일성으로도 확인했다. |
+| Config, `draft_runner.py` | Independent capacity를 가진 unified tree 경로만 K2>K1을 허용한다. Legacy split chain/B1 tree의 K2≤K1 guard를 무조건 제거하지 않는다. |
+| `batch_tree_sampling.py` | `SSD_TREE_LADDER_TRIM=1`: 중복 clone, 쓰지 않는 마지막 draft 정규화와 proxy/complement의 마지막 residual 갱신을 제거한다. Exact verifier/residual-root의 correction 분포는 보존한다. 기본0. |
+| `tree_proxy_stream.py`, `batch_tree_forward.py` | `SSD_BATCH_TREE_PROXY_STREAM=1`: TP1 proxy LM head·점수 계산과 target post를 겹친다. Default stream에서 fresh normalized hidden을 먼저 만든다. Graph-post가 바꿀 수 있는 원본 residual을 side stream에 넘기지 않는다. 기본0. |
+| Proxy stream 완료/메모리 | Persistent completion event, `record_stream`, 분리된 graph pool, final logits 이후 acceptance/graph-input 재사용 이전의 완료 대기를 함께 보존한다. TP>1 collective head는 기존 stream에 남긴다. 이번 dense 성능 실험은 TP1이다. |
+| `batch_tree_inputs.py`, `batch_tree_verify.py`, forward helpers | 선택적 prepare/accept/commit/tree shape/capture 진단. `SSD_PROFILE_DUET_DETAIL=1`은 진단용이며 비계측 최종 결과와 구분한다. 초기 screening에는 나중에 추가한 target/glue capture label이 없어 모든 capture가 제거됐다고 주장하지 않는다. |
+| `tests/test_root_policy.py`, `tests/test_phase_budget.py`, `run_regressions.sh` | 수식 reference, chain 환원, sibling mass, 온도 buffer/graph 갱신, trim/stream 동등성, independent phase capacity 검사. 명시적으로 빈 `CUDA_VISIBLE_DEVICES`를 CPU-only로 보존한다. |
+
+**20.2 선택·평가 절차와 파라미터의 실제 의미**
+
+- 기본 온도는 `.7`, full32layer 모델 2쌍, B1/B8이다. 입력512/출력96에서 선택을 시작하고 warm48 후보 비교로 최초 설정을 동결했다. 전체480 확인은 입력512/출력128이다. B2/B4와 입력1024/출력256은 B8 처리량 설정의 **이전 실험**이며 각각 별도 최적점을 찾았다는 뜻이 아니다.
+- SSD는 K={2,4,6,8}, fanout={1,3,5}와 경계·인접 설정을 독립 탐색했다. 공유 correctness/fast verifier/CUDA graph는 유지한다. DUET tree를 SSD에 강제하거나 mixed-miss AR 정책을 SSD에 몰래 추가하지 않았다. 이번 baseline은 benchmark의 `mode=ssd`; Mirror-SD proxy-only ablation을 새로 수행한 결과가 아니다.
+- K는 직렬 forward 횟수, NV는 root별 continuation node 상한, C는 sibling 폭이다. P1 초기 root 수 U와 이후 forward 폭은 별개다. W의 기본값은 `proxy_fan_out*(max(K1,K2)+1)`이고 이후 draft 폭은 `draft_fan_out*(K1+1)`에 연결되므로 K를 바꾸면 파생 예산도 변할 수 있다. 이를 단일 forward 비용의 인과효과로 부르지 않는다.
+- CLI exit는 0-based다. Exit21은 22개 layer 실행 후를 뜻한다. Common step origin에서 `C1=a+D1`, `C2=max(C1,P)+J+D2`. J는 두 준비 조건이 끝난 뒤 P2의 측정 시작까지의 전환·dispatch gap이다. J를 생략한 간단한 식은 D2가 이 비용까지 포함한다는 의미로 쓴다. P1-before-proxy와 P2-before-final-logits/ready를 모두 측정한다. P1이 proxy보다 늦다는 이유만으로 전체 예산을 실패 설정이라고 단정하지 않는다.
+- Dynamic/eagle expansion에서는 beta allocator를 쓰지 않는다. Beta0/1 차이를 최적화 성과로 해석하지 않는다. Floor, root 수, forward 폭, 노드 상한, P2 예산, phase depth/exit는 실제 출력·비용 변화와 함께 기록한다.
+- 구현 최적화의 동일 설정 대조 후, 바뀐 시간 창을 확인하기 위해 **튜닝48에서만** K1−1/K2−1/exit±2를 진단한다. 상위 두 후보와 stream/trim 기본점을 warm 비교하고, stream 기본점보다 최소2% 빠를 때만 변경하는 사전 규칙을 쓴다. 이2%는 유의성 검정이나 새 serving threshold가 아니다. 새 설정은 다시 full480 두 반복, 유지된 설정은 이미 측정한 대응 반복을 사용한다.
+- 두 최종 process 반복은 target6100/6101·draft41 및 target6200/6201·draft42다. 각 process에서 첫 전체 pass는 warmup, 마지막 pass가 측정값이다. 반복마다 GPU쌍이 달라도 각 DUET/SSD 쌍은 같은 GPU·입력·온도·상한·seed를 사용한다. GPU0,1은NODE, 나머지 실험 쌍은PIX다. CPU affinity는 고정하지 않았으므로 작은 시간 차이를 강한 유의성 주장으로 확대하지 않는다.
+- AL 우선점과 TPS 우선점을 별도로 보존한다. AL*은 cap/clip terminal event 제외, TPS*은 그런 event가 포함된 **batch step 전체**의 반환 token과 시간을 함께 제외한다. 질문 전체를 삭제한 통계는 아니다. 실제 반환 TPS도 보존한다. Token/step 비율과 step-time 비율로 TPS를 분해할 때는 동일한 timing 포함 step 집합을 사용한다.
+- **B8 선택 안정성 재검증:** 짧은 warm48 실행 중 드문 장시간 step이 순위를 좌우한 사례를 발견했다. 기존 SSD/B1 후보에서는 같은 tail이 없었으나 L3B8의 최초 K3/1 후보까지 영향을 받았다. 기존 결정은 보존하고, B8만3회 예열+3회 측정의 pass별 전체TPS* 중앙값으로 재선택한다. L2는4개, L3는8개 DUET 후보와 각각 기존 SSDfast 대조를 사용한다. Slow step을 제거한 TPS를 최종값으로 쓰지 않는다. 후보·규칙·시드를 실행 전에 [PLAN.md](round5/PLAN.md)에 기록했다. `*_STABILITY_FROZEN.json`이 B8 잠정 postopt 선택을 대체하며, B1/AL 우선점은 유지한다. 새 설정만 full480 두 반복을 추가한다. 이 수정은 tuning 기록의 문제를 해결하기 위한 것이며 full480 성적을 보고 설정을 고르는 절차가 아니다.
+
+**20.3 정확성·재현·실패 기록의 확인 방법**
+
+- 최적화 full parity는 두 pass의 모든 출력 token과 step별 `(seq_id, step_id, accepted_len, emitted_len, valid_k, source, cache_hit, cap, clipped)` 기록을 대조한다. 매 full run의 모든 후보 확률 tensor를 저장한 검사는 아니며 kernel 단위 tensor 동등성 검사는 별도다.
+- 전체 event, decode step, 실제 반환 token, cap, AL/TPS 요약값을 재집계해 불일치를 검사한다. AL 구간은 질문 단위 paired bootstrap4000회, 같은 질문의 process 반복은 같은 cluster다. TPS 두 반복 범위는 confidence interval이 아니다.
+- 유효한 최종 비교에 외부 GPU process가 섞인 경우 자동 중단한다. 초기 GPU 회귀가 SSD 한 tuning 조건과 겹친 기록은 제외하고 재측정했다. Dtype 편집 도중의4개 import 실패, standalone proxy microbench의 scalar-temperature capture 실패도 삭제하지 않는다. 생산 경로는 persistent GPU FP32 temperature buffer를 사용한다.
+- 원시 benchmark/profile JSON은 `round5/archives`에 gzip으로 보존하고 SHA256과 원래 modification time을 manifest에 기록한다. Restore 시 mtime도 복원하므로 retry profile을 최신 mtime으로 선택하는 분석이 달라지지 않는다. 완료 전 active 결과를 final archive로 취급하지 않는다.
+- 다른 서버의 checkout 경로가 달라도 offline 분석은 복원된 **현재 checkout의 profiles**를 우선한다. Raw report의 원래 절대 경로는 provenance로 보존하며, 실행 계획을 옮길 때만 `relocate_plan.py`로 새 파일을 생성한다.
+- 재현할 때 `make_plans.py`를 기존 결과 위에 다시 실행하지 않는다. 최종 `FINAL_PRESETS.json`과 `*_RECOMMENDED_PLAN.json`을 복사하고 `relocate_plan.py`로 model/GPU/저장 경로를 바꾼다. 원본 plan·실패 기록·동결 결정 파일을 덮어쓰지 않는다.
+- 연구 서버 merge 시 19절의 proposal-law/KV/scheduler/wire 수정과 이 절의 root 온도·분포·stream 계약을 함께 검토한다. `SSD_TREE_LADDER_TRIM`, `SSD_BATCH_TREE_PROXY_STREAM`의 기본값은0이며 최종 검증 preset이 필요한 값을 명시한다. 사용되지 않는 legacy fallback까지 새 수식이 적용됐다고 추정하지 않는다. 측정 경로는 JIT/unified tree다.
+
+**20.4 최종 처리량 설정과 SSD 비교**
+
+**결론:** Llama2 B1의 AL/TPS 개선을 확인했다. Llama3 B1의 AL 차이는 명확하지 않고 SSD가 더 빨랐다. B8은 두 모델 모두 추가 최적화 후에도 SSD가 우세했다. 이 결과로 DUET가 모든 B/모델에서 SSD보다 빠르다고 주장할 수 없다. 새 수식·tree·예산·구현이 결합된 시스템 비교이므로 특정 root 수식 하나의 인과효과로 해석하지 않는다.
+
+| 모델 | B | DUET K1/K2·exit index | SSD K/F | DUET/SSD AL* | ΔAL*95% 구간 | DUET/SSD TPS* 두 반복 |
+|---|---:|---|---|---|---|---|
+| Llama2+AMD | 1 | 11/2·21 | 4/7 | 2.3460 / 2.1425 | [+0.1629,+0.2465] | 1.088x / 1.133x |
+| Llama2+AMD | 8 | 3/2·21 | 4/7 | 2.1073 / 2.1508 | [−0.0794,−0.0094] | 0.885x / 0.876x |
+| Llama3+Qwama | 1 | 4/2·16 | 4/7 | 2.6900 / 2.6611 | [−0.0119,+0.0714] | 0.939x / 0.966x |
+| Llama3+Qwama | 8 | 3/1·26 | 4/1 | 2.2843 / 2.6873 | [−0.4414,−0.3647] | 0.786x / 0.781x |
+
+Exit는0-based이며 exit21은22개 layer 실행 후다. 모든 선택값은 tuning48에서 정했다. 최종480에 이48개가 포함되므로, 선택 제외432개 결과도 [POSTOPT_TABLES.md](round5/POSTOPT_TABLES.md)에 따로 제시했다. 432개에서도 위 판단이 유지된다. TPS 범위는 두 process/GPU쌍 반복 결과이며 confidence interval이 아니다.
+
+| 모델/B | C | P1/P2 node 상한 | P1 roots | draft fanout | 실제 P2 W | trim/stream |
+|---|---:|---|---:|---:|---:|---|
+| L2/B1 | 3 | 16/4 | 2 | 2 | 12 | 1/1 |
+| L2/B8 | 3 | 6/4 | 1 | 2 | 4 | 1/0 |
+| L3/B1 | 3 | 8/4 | 2 | 2 | 5 | 1/1 |
+| L3/B8 | 1 | 3/1 | 2 | 2 | 4 | 1/0 |
+
+공통은 e(1−q), full-vocabulary 정규화, terminal-mass overlap mix .25, reach_gain_frontier, miss chain4, fused/bulk ON, parallel-insert OFF다. P2 proxy/confidence floor .01/.03, P1 start/confidence floor0/0이다. Beta .5는 이 selector에서 비활성이다. C1은 각 cache root의 continuation이 chain 형태라는 뜻이다. 최종 전체 CLI/env/engine 설정은 [FINAL_PRESETS.json](round5/FINAL_PRESETS.json), 즉시 재실행할 두 방법은 `round5/*_RECOMMENDED_PLAN.json`에 저장했다.
+
+**20.5 AL 우선 비교와 추가 workload**
+
+AL이 목표라면 위 TPS 우선 설정을 유일한 추천으로 읽지 않는다. 다음은 튜닝에서 별도로 선택하고 두 process full480으로 확인한 AL 우선점이다. 추가 구현 옵션 이전의 동일 목적 비교이며, 그중 B8 trim 대조도 별도 보존했다.
+
+| 모델/B | DUET K1/K2·exit·C | SSD K/F | DUET/SSD AL* | ΔAL*95% 구간 | TPS* 비율 |
+|---|---|---|---|---|---|
+| L2/B1 | 12/2·21·3 | 6/5 | 2.3651 / 2.2594 | [+0.0583,+0.1519] | 1.088x / 1.088x |
+| L2/B8 | 6/2·21·3 | 8/5 | 2.3191 / 2.3102 | [−0.0361,+0.0524] | 0.758x / 0.769x |
+| L3/B1 | 6/4·16·3 | 8/1 | 2.9768 / 3.0114 | [−0.1012,+0.0318] | 0.985x / 0.963x |
+| L3/B8 | 6/3·30·3 | 8/3 | 2.9003 / 3.0640 | [−0.2280,−0.0995] | 0.832x / 0.852x |
+
+최초 B8 처리량 설정을 이전한 full480 B2/B4 비교도 했다. L2의 TPS* 비율은1.012x/0.954x, L3는0.941x/0.849x다. 입력1024/출력256의 B8 이전 실험은 L2 0.880x, L3 0.696x다. **B2/B4·긴 길이마다 별도 최적점을 찾았거나 마지막 B8 재선택을 다시 적용한 결과가 아니다.** [FOLLOWUP_TABLES.md](round5/FOLLOWUP_TABLES.md)에 정확한 AL/TPS·계획 경로가 있다.
+
+**20.6 Breakdown·추가 최적화로 무엇을 확인했는가**
+
+1. **70B의 시간 비율을 그대로 쓸 수 없었다.** K4/2 anchor의 B1 P1은 L2약4.1ms, L3약11.2ms였다. B8 proxy 경로도 약1.0ms와5.2ms로 달랐다. L2B1은 남는 P1 창에 K1을 늘릴 수 있었다. L3B8은 exit만 옮겨도 P1/P2가 숨겨지지 않아 phase/width/node 예산을 함께 줄여야 했다. 이는 모델·vocabulary·kernel 조건이 함께 바뀐 관측이다.
+2. **P1이 proxy보다 늦어도 전체 build는 숨겨질 수 있다.** 최종 L2B1의 P1 slack은−0.51ms지만 P2-before-final은+1.15ms다. L3B1도−1.58ms/+0.82ms다. B8의 최종 P2-before-next-request는 L2약+0.42ms, L3약−0.50ms다. 별도 median을 합쳐 하나의 timeline으로 해석하지 않으며, 작은 cross-process slack은 anchor 오차까지 감안해야 한다.
+3. **높은 hit만으로 AL/처리량을 설명할 수 없다.** L3B8은 DUET hit82.7% 대 SSD35.5%지만 DUET P2의 clean-event 비중30.7%, 해당AL1.611이다. 전체AL*=source 비중×조건부AL의 합이다. 조건부 차이는 도달 문맥과 tree 깊이도 달라 단일 원인의 인과효과가 아니다. 완전한 batch hit는 DUET조차21–22% 정도다.
+4. **B8 열세를 출력량과 시간으로 분해했다.** L2B8은 timing 포함 step당 반환량이1.6–2.8% 적고 step 시간이약11% 길다. L3B8은 반환량14–15% 감소와 step 시간약9% 증가가 겹쳤다. Query utilization은 각각약79%/74%지만 이 비율을 같은 비율의 TPS 손실로 바꿔 해석하지 않는다.
+5. **Ladder trim은 작은 개선이었다.** 54개 reference CPU/GPU 사례와8개 full-vocabulary graph shape에서 tensor 동일성을 확인했다. Kernel-only1.128–1.697x와 달리 full480 TPS 효과는약0.3–1.3%였다. 최종 preset에서ON이며 기능 기본값은OFF다.
+6. **Proxy stream은 B1/B8 결과가 달랐다.** 동일 출력·설정 대조에서 B1은0.3–1.5% 개선, B8은2.6–7.3% 악화했다. B8에는 proxy 도착/P2 완료 지연이 동반됐고 자원 경쟁과 일치하지만 hardware counter로 분리한 원인 증명은 아니다. 최종 B1만ON, B8은OFF다.
+7. **재튜닝의 이득을 과장하지 않았다.** L2B1 K11은 warm48에서 선택됐지만 이미 trim+stream을 켠 K12 대비 full480 TPS가+0.30%/−0.43%여서 추가 우위를 확정하지 못했다. AL 우선점은K12다. L3B8은 K3/2·nodes3/2→K3/1·nodes3/1로 TPS7.4–9.1% 증가, AL5.1% 감소였다. SSD를 넘지는 못했다. Exit24/26 warm median 차이도약1.1%여서 유일한 최적 layer를 증명한 것은 아니다.
+8. **짧은 튜닝의 timing tail 문제를 보정했다.** B8 최초/잠정 선택에 드문 긴 step이 영향을 주어3warm+3measured pass의 중앙값으로 재검증했다. 원래결정/모든느린step/잠정full 결과도 보존했다. 별도 계측에서는5×median 초과682step 중675개가 동일/직전 capture와 겹쳤다. 비계측의 개별 tail까지 모두 capture라고 단정하지 않는다. 실행 전 protocol은 commit `474eabb`와 PLAN.md에 남겼다.
+
+상세 진단은 [BREAKDOWN_TABLES.md](round5/BREAKDOWN_TABLES.md), SSD 독립 탐색70조건은 [SSD_BREAKDOWN.md](round5/SSD_BREAKDOWN.md), 최종 그림은 [07_final_selected_comparison.png](round5/figs/07_final_selected_comparison.png), stream 비교 실제 timeline은 [06_proxy_overlap_timeline.png](round5/figs/06_proxy_overlap_timeline.png)다. 그림별 PDF도 같이 보존했다.
+
+**20.7 검증 완료 범위·재현·merge 이후의 판단**
+
+- 완료487실행, 총691cell, full480실행70개를 원본 counter와 대조했다. 실패한4개 import 시도는 성공으로 세지 않았다. 초기 GPU overlap1건은 별도 timing 제외 후 재실행했다. [INVENTORY.json](round5/INVENTORY.json), [EXCLUSIONS.json](round5/EXCLUSIONS.json), [ANALYSIS_COMPLETE.json](round5/ANALYSIS_COMPLETE.json)에서 확인한다.
+- 최종 GPU 회귀는3구성×300개 전부 통과/skip0. 고정 알고리즘의 fused/bulk 대조2쌍, trim10쌍, stream8쌍에서 full480의 두 pass 출력/수락 기록을 대조했다. 추가 안정성 stream4쌍은 각각6pass 동일하다. [STABILITY_PARITY.json](round5/STABILITY_PARITY.json), [FOLLOWUP_RESULTS.json](round5/FOLLOWUP_RESULTS.json)에 검사 범위를 저장했다.
+- Benchmark/profile 원본1169개, 원본합계6440.9MiB를613.8MiB gzip으로 보존했다. **빈 임시 checkout에 실제 복원**하여 전체 SHA256·크기·mtime 검사를 통과했다. 다른 경로에서 retry/최종 선택 profile의 분석값도 동일했다. [ARCHIVE_RESTORE_AUDIT.json](round5/ARCHIVE_RESTORE_AUDIT.json). 실패/prototype 기록도 보존하며 gzip만 Git에 넣고 재생성 가능한 큰 raw JSON은 ignore한다.
+- Runtime 최종 변경은 `641f5ce`, 새 B8 안정성 protocol commit은 `474eabb`다. Source hash와 패키지 버전은 [SOURCE_MANIFEST.json](round5/SOURCE_MANIFEST.json), [ANALYSIS_ENV.json](round5/ANALYSIS_ENV.json)에 있다. 10/08 재조회한 원격 논문 branch 및 merge-base는 여전히 `a82f7d2`다. 결과 commit은 이 문서를 포함한 branch HEAD에서 확인한다.
+
+다른 서버에서 **수치만 재생성**하려면 checkout 후 archive를 복원하고 분석 coordinator를 실행한다. 완료 marker도 보존되어 있어 새 GPU 실험을 시작하지 않는다.
+
+```bash
+python results/mlsys_coverage/round5/archive_results.py --restore
+python results/mlsys_coverage/round5/finish_analysis.py
+```
+
+**새 서버에서 측정**할 때는 원본 plan을 덮어쓰지 않고 실제 model 경로를 넣어 새로운 plan·결과 폴더를 만든다. 아래는 L3/B8 SSD+DUET 재실행 예다. GPU쌍과 port는 해당 서버의 idle topology에 맞춘다.
+
+```bash
+python results/mlsys_coverage/round5/relocate_plan.py \
+  results/mlsys_coverage/round5/llama3_b8_RECOMMENDED_PLAN.json \
+  --root "$PWD" --target /path/to/layerskip-llama3-8B \
+  --draft /path/to/Qwama-0.5B-Instruct \
+  --output /tmp/duet-llama3-b8-replay.json
+python ssd/bench/mlsys_campaign.py \
+  --plan /tmp/duet-llama3-b8-replay.json \
+  --directory results/mlsys_coverage/new_server/llama3_b8 \
+  --gpus 0,1 --port 35000
+```
+
+반대 process seed/GPU 반복까지 재현하려면 `POSTOPT_RESULTS.json`의각replicate path에 대응하는 원본 `plan.json`을 `--job`으로 골라 같은 방식으로 복사한다. Recommended plan은 각조건rep0의 두 방법을 담는다. 새로운 서버·길이·모델에서는 이 preset을 시작점으로 두고 breakdown을 다시 측정해야 한다. 현재 탐색 script의 exit 상한31은32layer 새모델용이므로70B에 그대로 적용하지 않는다.
+
+**이번 계획의 미실행 필수 job은 없다.** 다음은 이번 결과 밖의 연구/최적화 후보이며 성능이 입증됐다고 쓰면 안 된다: target query bucket/padding 개선, C1 continuation을 위한 chain 전용 실행 경로, hit/miss 분리 스케줄, AL을 보존하면서 P2 노출을 줄이는 구성, 모델별 새 tree calibration, dense70B/Blackwell TP2 재현, 출력1024·더 넓은 독립 workload/온도, B2/B4 개별 재튜닝. 기존 packed-tree 실험은 더 느렸으므로 무조건ON하지 않는다. 다른 서버 merge에서는20.1의 q-law·실제 온도·wire·KV·stream memory/event 계약과19절의 correctness 변경을 함께 보존한다.
+
 **부록 A. Systems branch commit 전체 — 논문 기준 이후**
+
+`a82f7d2..641f5ce`의 전체 commit이다. 결과 문서의 후속 commit은 branch log에서 확인한다. `94676ae`의 일시적 import 오류는 `a329823`에서 수정했으므로 앞 commit만 따로 가져오지 않는다.
 
 | Commit | 작업 |
 |---|---|
@@ -646,47 +783,71 @@ Local shared venv의 editable install이 `/home/chokwans99/PSD`를 가리키므�
 | `30d8851` | Add opt-in ragged tree target queries with re-planned captured attention |
 | `b90f118` | Preserve generation prefixes when capping batched verification trees |
 | `68d0a26` | Record completed batched tree serving, full-model comparisons and handover |
+| `696e92c` | Document merge provenance, baseline fairness, and remaining DUET work |
+| `c0600ea` | Preserve tree proposal law and evaluate budget-aware DUET execution |
+| `c4f05a6` | Record full-corpus DUET tree, miss, timing, and optimization evidence |
+| `f041ebd` | Use actual temperatures and improved token/position cache-root scores |
+| `8ddfe62` | Record optional tree depth and utilization for parameter diagnosis |
+| `baa1c2c` | Reuse measured ordered-sibling gain prefixes for narrower trees |
+| `94676ae` | Keep live temperature buffers in float32 during model-dtype graph capture |
+| `a329823` | Correct duplicate dtype keyword in mixed-temperature verification |
+| `58326e9` | Cover model-dtype temperature capture and preserve CPU-only regression selection |
+| `81ea777` | Allow independent phase depths in the unified DUET tree service |
+| `c02acee` | Expose optional tree preparation, acceptance, and commit timing spans |
+| `69192a5` | Add opt-in elimination of unused tree ladder copies and terminal work |
+| `cbdc41f` | Add opt-in overlap of batched tree proxy scoring and target post layers |
+| `709c95b` | Reuse the proxy completion event across batched tree steps |
+| `1db69b5` | Overlap the TP1 proxy head from independent normalized hidden storage |
+| `641f5ce` | Label optional target and glue graph captures in detailed tree profiles |
 
 **부록 B. Code·bench·test·dependency 변경 파일 전체**
 
-`a82f7d2..68d0a26 -- ssd`의 numstat다. 결과 artifact 전체 목록은 각 round inventory에 보존한다. Add/delete 줄 수는 기여 규모나 성능 지표가 아니다.
+`a82f7d2..641f5ce -- ssd results/mlsys_coverage/run_regressions.sh`의 numstat다. 결과·분석 script·artifact 목록은 각 round inventory/manifest와 Git에 보존한다. Add/delete 줄 수는 기여 규모나 성능 지표가 아니다.
 
 | 파일 | 추가 | 삭제 |
 |---|---:|---:|
+| `results/mlsys_coverage/run_regressions.sh` | 25 | 0 |
 | `ssd/bench/batched_tree_microbench.py` | 265 | 0 |
 | `ssd/bench/mlsys_campaign.py` | 124 | 0 |
-| `ssd/bench/mlsys_coverage.py` | 237 | 0 |
+| `ssd/bench/mlsys_coverage.py` | 319 | 0 |
 | `ssd/bench/mlsys_greedy_audit.py` | 57 | 0 |
 | `ssd/bench/mlsys_preemption_audit.py` | 50 | 0 |
 | `ssd/bench/mlsys_summarize.py` | 84 | 0 |
+| `ssd/bench/mlsys_tree_observer.py` | 38 | 0 |
 | `ssd/bench/mlsys_verify_bench.py` | 55 | 0 |
 | `ssd/pyproject.toml` | 1 | 0 |
-| `ssd/ssd/config.py` | 11 | 9 |
+| `ssd/ssd/config.py` | 28 | 11 |
 | `ssd/ssd/engine/block_manager.py` | 10 | 1 |
-| `ssd/ssd/engine/draft_runner.py` | 93 | 36 |
+| `ssd/ssd/engine/draft_runner.py` | 135 | 133 |
 | `ssd/ssd/engine/helpers/batch_tree_common.py` | 86 | 0 |
-| `ssd/ssd/engine/helpers/batch_tree_draft.py` | 345 | 0 |
-| `ssd/ssd/engine/helpers/batch_tree_forward.py` | 133 | 0 |
+| `ssd/ssd/engine/helpers/batch_tree_draft.py` | 434 | 0 |
+| `ssd/ssd/engine/helpers/batch_tree_forward.py` | 166 | 0 |
 | `ssd/ssd/engine/helpers/batch_tree_inputs.py` | 68 | 0 |
 | `ssd/ssd/engine/helpers/batch_tree_roots.py` | 61 | 0 |
-| `ssd/ssd/engine/helpers/batch_tree_sampling.py` | 203 | 0 |
-| `ssd/ssd/engine/helpers/batch_tree_verify.py` | 120 | 0 |
-| `ssd/ssd/engine/helpers/batched_proxy.py` | 83 | 0 |
+| `ssd/ssd/engine/helpers/batch_tree_sampling.py` | 224 | 0 |
+| `ssd/ssd/engine/helpers/batch_tree_verify.py` | 142 | 0 |
+| `ssd/ssd/engine/helpers/batched_proxy.py` | 90 | 0 |
 | `ssd/ssd/engine/helpers/batched_tree_executor.py` | 154 | 0 |
 | `ssd/ssd/engine/helpers/cudagraph_helpers.py` | 65 | 30 |
 | `ssd/ssd/engine/helpers/p1_tree.py` | 5 | 7 |
-| `ssd/ssd/engine/helpers/p2_tree.py` | 58 | 14 |
-| `ssd/ssd/engine/helpers/p2_tree_executor.py` | 25 | 9 |
+| `ssd/ssd/engine/helpers/p2_tree.py` | 111 | 35 |
+| `ssd/ssd/engine/helpers/p2_tree_executor.py` | 42 | 13 |
 | `ssd/ssd/engine/helpers/packed_tree_forward.py` | 139 | 0 |
 | `ssd/ssd/engine/helpers/packed_verify.py` | 110 | 0 |
+| `ssd/ssd/engine/helpers/root_policy.py` | 99 | 0 |
+| `ssd/ssd/engine/helpers/tree_expansion_policy.py` | 74 | 0 |
+| `ssd/ssd/engine/helpers/tree_fused_math.py` | 66 | 0 |
+| `ssd/ssd/engine/helpers/tree_gain_allocation.py` | 71 | 0 |
 | `ssd/ssd/engine/helpers/tree_host_topology.py` | 20 | 0 |
-| `ssd/ssd/engine/llm_engine.py` | 23 | 46 |
-| `ssd/ssd/engine/model_runner.py` | 59 | 9 |
+| `ssd/ssd/engine/helpers/tree_proxy_stream.py` | 29 | 0 |
+| `ssd/ssd/engine/helpers/tree_rerank_gpu.py` | 4 | 1 |
+| `ssd/ssd/engine/llm_engine.py` | 32 | 46 |
+| `ssd/ssd/engine/model_runner.py` | 62 | 11 |
 | `ssd/ssd/engine/scheduler.py` | 10 | 5 |
 | `ssd/ssd/engine/sequence.py` | 9 | 3 |
 | `ssd/ssd/engine/speculator_async.py` | 19 | 0 |
-| `ssd/ssd/engine/step.py` | 3 | 1 |
-| `ssd/ssd/engine/verifier.py` | 60 | 24 |
+| `ssd/ssd/engine/step.py` | 13 | 1 |
+| `ssd/ssd/engine/verifier.py` | 93 | 80 |
 | `ssd/ssd/layers/attention.py` | 24 | 14 |
 | `ssd/ssd/layers/layernorm.py` | 9 | 0 |
 | `ssd/ssd/layers/sampler.py` | 8 | 2 |
@@ -706,12 +867,16 @@ Local shared venv의 editable install이 `/home/chokwans99/PSD`를 가리키므�
 | `ssd/tests/test_greedy_tree.py` | 42 | 0 |
 | `ssd/tests/test_greedy_verify.py` | 61 | 0 |
 | `ssd/tests/test_model_pair_contract.py` | 50 | 0 |
-| `ssd/tests/test_output_accounting.py` | 88 | 0 |
+| `ssd/tests/test_output_accounting.py` | 97 | 0 |
 | `ssd/tests/test_p1_dynamic_tree.py` | 1 | 1 |
 | `ssd/tests/test_p2_tree_alloc.py` | 19 | 3 |
 | `ssd/tests/test_packed_verify.py` | 90 | 0 |
+| `ssd/tests/test_phase_budget.py` | 54 | 0 |
+| `ssd/tests/test_root_policy.py` | 189 | 0 |
 | `ssd/tests/test_stochastic_verify.py` | 65 | 0 |
+| `ssd/tests/test_tree_fused_math.py` | 98 | 0 |
 | `ssd/tests/test_tree_host_topology.py` | 22 | 0 |
+| `ssd/tests/test_tree_round4.py` | 109 | 0 |
 | `ssd/uv.lock` | 26 | 0 |
 
 **부록 C. 주석별 답변 위치**
@@ -723,12 +888,12 @@ Local shared venv의 editable install이 `/home/chokwans99/PSD`를 가리키므�
 | 3 | 3절: 과대평가 방향과 재집계 |
 | 4 | 4절: 같은 batch의 query 차이와 packed 표현 |
 | 5 | 5절: mixed miss, AR fallback, 추가 threshold 여부 |
-| 6 | 6절: timing ratio와 phase slack, 기존 profile 재분석 |
+| 6 | 6·19·20절: 기존 논문 profile과 새 full 모델의 phase deadline/SSD 튜닝 |
 | 7 | 7절: soft score와 deterministic proposal 분리 |
-| 8 | 8·9절: 이전 tree 연구와 실행기 재사용 계약 |
+| 8 | 8·9·19·20절: 이전 tree 연구와 실행기 재사용, full 모델 결합 검증 |
 | 9 | 10절: serving 전체 연결의 의미 |
 | 10 | 10절: miss JIT chain과 K2/Kmax |
 | 11 | 0·10절: 기존 B1 tree attention/최신 원격 기준 확인 |
 | 12 | 11절: 기존 ladder 보존과 새 경로 수정 범위 |
-| 13 | 12·15절: 실제 graph 재사용, 계측·최적화 미완료 |
+| 13 | 12·15·19·20절: graph 재사용, 실제 실행 최적화 대조, 남는 구조적 비용 |
 | 14 | 8절: 이전 selector 연구의 online/offline/미실행 구분 |

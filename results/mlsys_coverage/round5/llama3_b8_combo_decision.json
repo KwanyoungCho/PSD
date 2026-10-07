@@ -1,0 +1,33 @@
+{
+  "efficient": "llama3_b8_tree_width1",
+  "quality": "llama3_b8_tree_al_compute3",
+  "independent_changes": [
+    {
+      "family": "shape",
+      "source": "llama3_b8_tree_width1",
+      "changes": {
+        "tree_width": 1,
+        "p1_nodes": 3,
+        "p2_nodes": 1
+      }
+    }
+  ],
+  "combined": {
+    "k1": 3,
+    "k2": 1,
+    "exit_layer": 26,
+    "draft_fan_out": 2,
+    "proxy_fan_out": 1,
+    "p1_nodes": 3,
+    "p2_nodes": 1,
+    "p1_roots": 2,
+    "p2_budget": null,
+    "tree_root_count": null,
+    "tree_width": 1,
+    "tree_beta": 0.5,
+    "tree_proxy_threshold": 0.01,
+    "tree_conf_threshold": 0.03
+  },
+  "jobs": 12,
+  "limitation": "Finite coordinate neighborhood; global optimum over all combinations is not established"
+}

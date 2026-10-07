@@ -1,0 +1,43 @@
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/bench_proxy_tail.py", line 12, in capture
+    with torch.cuda.graph(graph):out=run()
+                                     ^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/bench_proxy_tail.py", line 35, in run
+    def run():return root_policy.tree_candidates(e,q,tok,topo,16,n,16,.7,.7,
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/root_policy.py", line 79, in tree_candidates
+    e = probabilities(exit_logits, target_temps)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/root_policy.py", line 17, in probabilities
+    t = torch.as_tensor(temperatures, dtype=torch.float32, device=logits.device)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: CUDA error: operation not permitted when stream is capturing
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/bench_proxy_tail.py", line 55, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/bench_proxy_tail.py", line 37, in main
+    base,bo=capture(run)
+            ^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/bench_proxy_tail.py", line 12, in capture
+    with torch.cuda.graph(graph):out=run()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/cuda/graphs.py", line 222, in __exit__
+    self.cuda_graph.capture_end()
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/cuda/graphs.py", line 104, in capture_end
+    super().capture_end()
+torch.AcceleratorError: CUDA error: operation failed due to a previous error during capture
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+

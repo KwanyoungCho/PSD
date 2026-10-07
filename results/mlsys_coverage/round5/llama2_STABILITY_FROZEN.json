@@ -1,0 +1,865 @@
+{
+  "model": "llama2",
+  "batch": 8,
+  "selection": "Tuning48-only stability amendment; original decisions retained",
+  "candidates": [
+    {
+      "name": "llama2_b8_stability_warm_0",
+      "origin": "llama2_stability_l0_warm/llama2_b8_stability_warm_0.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_0.json"
+      },
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "SSD_CUDA_ARCH": "8.9",
+        "SSD_ATTN_BACKEND": "auto",
+        "SSD_DIST_PORT": "33800",
+        "OMP_NUM_THREADS": "4",
+        "SSD_SEED": "29",
+        "SSD_CHAIN_PROXY_GRAPH": "1",
+        "SSD_FAST_VERIFY": "1",
+        "SSD_BATCHED_PROXY_GRAPH": "1",
+        "SSD_DUET_EXIT_REPLICA": "0",
+        "SSD_ASYNC_PROXY_SEND": "1",
+        "SSD_PROXY_STREAM": "0",
+        "SSD_BATCHED_TREE": "1",
+        "SSD_TREE_EXPANSION_POLICY": "reach_gain_frontier",
+        "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+        "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+        "SSD_DUET_MISS_K": "4",
+        "SSD_TREE_FUSED_MATH": "1",
+        "SSD_BATCH_TREE_BULK_EXPORT": "1",
+        "SSD_TREE_PARALLEL_INSERT": "0",
+        "SSD_HF_CACHE": "/home/chokwans99/models_mlsys",
+        "SSD_DATASET_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5",
+        "SSD_TREE_LADDER_TRIM": "1",
+        "SSD_BATCH_TREE_PROXY_STREAM": "1",
+        "SSD_PROFILE_DUET_DETAIL": "1",
+        "SSD_PROFILE_DUET": "0",
+        "SSD_TREE_SHAPE_METRICS": "0"
+      },
+      "baseline": false,
+      "diagnostic_origin": "llama2_stability_l1_profile/llama2_b8_stability_profile_0.json",
+      "passes": [
+        {
+          "clean_steps": 302,
+          "median_ms": 29.04264396056533,
+          "max_ms": 1404.762343969196,
+          "over_5median_steps": 8,
+          "over_5median_time_fraction": 0.41814292836532674,
+          "tps": 333.87017603153276
+        },
+        {
+          "clean_steps": 305,
+          "median_ms": 28.434107080101967,
+          "max_ms": 976.2010311242193,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.13951458604899744,
+          "tps": 491.7670930826342
+        },
+        {
+          "clean_steps": 324,
+          "median_ms": 28.469080454669893,
+          "max_ms": 31.278262846171856,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 569.7834324596142
+        },
+        {
+          "clean_steps": 327,
+          "median_ms": 28.284197906032205,
+          "max_ms": 31.854324974119663,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 556.9020637766499
+        },
+        {
+          "clean_steps": 296,
+          "median_ms": 28.489368851296604,
+          "max_ms": 31.721675070002675,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 570.7797770527492
+        },
+        {
+          "clean_steps": 326,
+          "median_ms": 28.530479525215924,
+          "max_ms": 31.294471118599176,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 552.9257808292964
+        }
+      ],
+      "median_tps": 556.9020637766499,
+      "measured_tps_range": [
+        552.9257808292964,
+        570.7797770527492
+      ],
+      "median_al": 2.13020030816641
+    },
+    {
+      "name": "llama2_b8_stability_warm_1",
+      "origin": "llama2_stability_l0_warm/llama2_b8_stability_warm_1.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 1,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_1.json"
+      },
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "SSD_CUDA_ARCH": "8.9",
+        "SSD_ATTN_BACKEND": "auto",
+        "SSD_DIST_PORT": "33801",
+        "OMP_NUM_THREADS": "4",
+        "SSD_SEED": "29",
+        "SSD_CHAIN_PROXY_GRAPH": "1",
+        "SSD_FAST_VERIFY": "1",
+        "SSD_BATCHED_PROXY_GRAPH": "1",
+        "SSD_DUET_EXIT_REPLICA": "0",
+        "SSD_ASYNC_PROXY_SEND": "1",
+        "SSD_PROXY_STREAM": "0",
+        "SSD_BATCHED_TREE": "1",
+        "SSD_TREE_EXPANSION_POLICY": "reach_gain_frontier",
+        "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+        "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+        "SSD_DUET_MISS_K": "4",
+        "SSD_TREE_FUSED_MATH": "1",
+        "SSD_BATCH_TREE_BULK_EXPORT": "1",
+        "SSD_TREE_PARALLEL_INSERT": "0",
+        "SSD_HF_CACHE": "/home/chokwans99/models_mlsys",
+        "SSD_DATASET_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5",
+        "SSD_TREE_LADDER_TRIM": "1",
+        "SSD_BATCH_TREE_PROXY_STREAM": "1",
+        "SSD_PROFILE_DUET_DETAIL": "1",
+        "SSD_PROFILE_DUET": "0",
+        "SSD_TREE_SHAPE_METRICS": "0"
+      },
+      "baseline": false,
+      "diagnostic_origin": "llama2_stability_l1_profile/llama2_b8_stability_profile_1.json",
+      "passes": [
+        {
+          "clean_steps": 339,
+          "median_ms": 27.91103580966592,
+          "max_ms": 1183.5226290859282,
+          "over_5median_steps": 16,
+          "over_5median_time_fraction": 0.5713805894496511,
+          "tps": 251.55187215545405
+        },
+        {
+          "clean_steps": 341,
+          "median_ms": 27.500238036736846,
+          "max_ms": 975.192713085562,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.12910403495231626,
+          "tps": 483.29248277937313
+        },
+        {
+          "clean_steps": 319,
+          "median_ms": 28.02658104337752,
+          "max_ms": 1075.7854378316551,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.14171681241093864,
+          "tps": 479.5673633645992
+        },
+        {
+          "clean_steps": 326,
+          "median_ms": 27.895536040887237,
+          "max_ms": 31.02921904064715,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 562.428298520686
+        },
+        {
+          "clean_steps": 320,
+          "median_ms": 26.981421979144216,
+          "max_ms": 926.2250419706106,
+          "over_5median_steps": 2,
+          "over_5median_time_fraction": 0.13360440970172055,
+          "tps": 500.1232411678888
+        },
+        {
+          "clean_steps": 315,
+          "median_ms": 27.624865993857384,
+          "max_ms": 30.45326890423894,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 546.6297081291741
+        }
+      ],
+      "median_tps": 546.6297081291741,
+      "measured_tps_range": [
+        500.1232411678888,
+        562.428298520686
+      ],
+      "median_al": 2.0422114307060144
+    },
+    {
+      "name": "llama2_b8_stability_warm_2",
+      "origin": "llama2_stability_l0_warm/llama2_b8_stability_warm_2.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_2.json"
+      },
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "SSD_CUDA_ARCH": "8.9",
+        "SSD_ATTN_BACKEND": "auto",
+        "SSD_DIST_PORT": "33802",
+        "OMP_NUM_THREADS": "4",
+        "SSD_SEED": "29",
+        "SSD_CHAIN_PROXY_GRAPH": "1",
+        "SSD_FAST_VERIFY": "1",
+        "SSD_BATCHED_PROXY_GRAPH": "1",
+        "SSD_DUET_EXIT_REPLICA": "0",
+        "SSD_ASYNC_PROXY_SEND": "1",
+        "SSD_PROXY_STREAM": "0",
+        "SSD_BATCHED_TREE": "1",
+        "SSD_TREE_EXPANSION_POLICY": "reach_gain_frontier",
+        "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+        "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+        "SSD_DUET_MISS_K": "4",
+        "SSD_TREE_FUSED_MATH": "1",
+        "SSD_BATCH_TREE_BULK_EXPORT": "1",
+        "SSD_TREE_PARALLEL_INSERT": "0",
+        "SSD_HF_CACHE": "/home/chokwans99/models_mlsys",
+        "SSD_DATASET_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5",
+        "SSD_TREE_LADDER_TRIM": "1",
+        "SSD_BATCH_TREE_PROXY_STREAM": "1",
+        "SSD_PROFILE_DUET_DETAIL": "1",
+        "SSD_PROFILE_DUET": "0",
+        "SSD_TREE_SHAPE_METRICS": "0"
+      },
+      "baseline": false,
+      "diagnostic_origin": "llama2_stability_l1_profile/llama2_b8_stability_profile_2.json",
+      "passes": [
+        {
+          "clean_steps": 304,
+          "median_ms": 29.887999058701098,
+          "max_ms": 1178.3492881804705,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.4685699069144849,
+          "tps": 309.3112319967186
+        },
+        {
+          "clean_steps": 301,
+          "median_ms": 30.266776913776994,
+          "max_ms": 32.97599102370441,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 551.5751824281978
+        },
+        {
+          "clean_steps": 306,
+          "median_ms": 29.84132955316454,
+          "max_ms": 32.54850301891565,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 559.8897496196992
+        },
+        {
+          "clean_steps": 308,
+          "median_ms": 30.01929901074618,
+          "max_ms": 33.213917165994644,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 530.1015761082965
+        },
+        {
+          "clean_steps": 283,
+          "median_ms": 29.605475952848792,
+          "max_ms": 32.51921711489558,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 549.027045355062
+        },
+        {
+          "clean_steps": 300,
+          "median_ms": 29.910832876339555,
+          "max_ms": 32.94860012829304,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 545.5782584947528
+        }
+      ],
+      "median_tps": 545.5782584947528,
+      "measured_tps_range": [
+        530.1015761082965,
+        549.027045355062
+      ],
+      "median_al": 2.1101214574898783
+    },
+    {
+      "name": "llama2_b8_stability_warm_3",
+      "origin": "llama2_stability_l0_warm/llama2_b8_stability_warm_3.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "duet-tree",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 3,
+        "k2": 2,
+        "draft_fan_out": 2,
+        "proxy_fan_out": 1,
+        "p1_tree": true,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "tree_width": 3,
+        "p1_roots": 1,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "complement",
+        "root_normalization": "full",
+        "root_overlap_mix": 0.25,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_3.json"
+      },
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "SSD_CUDA_ARCH": "8.9",
+        "SSD_ATTN_BACKEND": "auto",
+        "SSD_DIST_PORT": "33803",
+        "OMP_NUM_THREADS": "4",
+        "SSD_SEED": "29",
+        "SSD_CHAIN_PROXY_GRAPH": "1",
+        "SSD_FAST_VERIFY": "1",
+        "SSD_BATCHED_PROXY_GRAPH": "1",
+        "SSD_DUET_EXIT_REPLICA": "0",
+        "SSD_ASYNC_PROXY_SEND": "1",
+        "SSD_PROXY_STREAM": "0",
+        "SSD_BATCHED_TREE": "1",
+        "SSD_TREE_EXPANSION_POLICY": "reach_gain_frontier",
+        "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+        "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+        "SSD_DUET_MISS_K": "4",
+        "SSD_TREE_FUSED_MATH": "1",
+        "SSD_BATCH_TREE_BULK_EXPORT": "1",
+        "SSD_TREE_PARALLEL_INSERT": "0",
+        "SSD_HF_CACHE": "/home/chokwans99/models_mlsys",
+        "SSD_DATASET_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5",
+        "SSD_TREE_LADDER_TRIM": "1",
+        "SSD_BATCH_TREE_PROXY_STREAM": "0",
+        "SSD_PROFILE_DUET_DETAIL": "1",
+        "SSD_PROFILE_DUET": "0",
+        "SSD_TREE_SHAPE_METRICS": "0"
+      },
+      "baseline": true,
+      "diagnostic_origin": "llama2_stability_l1_profile/llama2_b8_stability_profile_3.json",
+      "passes": [
+        {
+          "clean_steps": 304,
+          "median_ms": 28.492537909187376,
+          "max_ms": 1160.5374258942902,
+          "over_5median_steps": 11,
+          "over_5median_time_fraction": 0.4831531280724928,
+          "tps": 315.16676095935503
+        },
+        {
+          "clean_steps": 301,
+          "median_ms": 28.184704016894102,
+          "max_ms": 31.012553023174405,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 590.4907173337266
+        },
+        {
+          "clean_steps": 306,
+          "median_ms": 28.23381801135838,
+          "max_ms": 30.5000941734761,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 596.595473828148
+        },
+        {
+          "clean_steps": 308,
+          "median_ms": 28.13720505218953,
+          "max_ms": 31.00053407251835,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 565.8752643856831
+        },
+        {
+          "clean_steps": 283,
+          "median_ms": 28.34060392342508,
+          "max_ms": 44.76985288783908,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 575.2190397902868
+        },
+        {
+          "clean_steps": 300,
+          "median_ms": 28.29904155805707,
+          "max_ms": 31.531978864222765,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 576.6138586029074
+        }
+      ],
+      "median_tps": 575.2190397902868,
+      "measured_tps_range": [
+        565.8752643856831,
+        576.6138586029074
+      ],
+      "median_al": 2.1101214574898783
+    },
+    {
+      "name": "llama2_b8_stability_ssd_control",
+      "origin": "llama2_stability_l0_warm/llama2_b8_stability_ssd_control.json",
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "ssd",
+        "batches": [
+          8
+        ],
+        "temperatures": [
+          0.7
+        ],
+        "seeds": [
+          7000,
+          7001,
+          7002,
+          7003,
+          7004,
+          7005
+        ],
+        "target_tp": 1,
+        "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+        "limit": 0,
+        "max_new_tokens": 128,
+        "max_model_len": 2048,
+        "input_cap": 512,
+        "k1": 4,
+        "k2": 2,
+        "draft_fan_out": 7,
+        "proxy_fan_out": 0,
+        "p1_tree": false,
+        "p1_verify_nodes": null,
+        "p2_verify_nodes": null,
+        "exit_layer": 21,
+        "p1_nodes": null,
+        "p2_nodes": null,
+        "tree_width": 3,
+        "p1_roots": 2,
+        "p2_budget": null,
+        "tree_root_count": null,
+        "tree_beta": 0.5,
+        "tree_proxy_threshold": 0.01,
+        "tree_conf_threshold": 0.03,
+        "root_source": "residual",
+        "root_normalization": "topm",
+        "root_overlap_mix": 0.0,
+        "memory_fraction": 0.45,
+        "ignore_eos": false,
+        "greedy_only": false,
+        "audit_preemption": false,
+        "ragged_limits": false,
+        "tree_calibration_dir": null,
+        "preflight_test": null,
+        "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_ssd_control.json"
+      },
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "SSD_CUDA_ARCH": "8.9",
+        "SSD_ATTN_BACKEND": "auto",
+        "SSD_DIST_PORT": "33804",
+        "OMP_NUM_THREADS": "4",
+        "SSD_SEED": "29",
+        "SSD_CHAIN_PROXY_GRAPH": "1",
+        "SSD_FAST_VERIFY": "1",
+        "SSD_BATCHED_PROXY_GRAPH": "1",
+        "SSD_DUET_EXIT_REPLICA": "0",
+        "SSD_ASYNC_PROXY_SEND": "1",
+        "SSD_PROXY_STREAM": "0",
+        "SSD_HF_CACHE": "/home/chokwans99/models_mlsys",
+        "SSD_DATASET_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5",
+        "SSD_PROFILE_DUET": "0",
+        "SSD_TREE_SHAPE_METRICS": "0"
+      },
+      "baseline": false,
+      "diagnostic_origin": null,
+      "passes": [
+        {
+          "clean_steps": 280,
+          "median_ms": 24.66545009519905,
+          "max_ms": 26.64933609776199,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 655.4040702219406
+        },
+        {
+          "clean_steps": 307,
+          "median_ms": 24.598774034529924,
+          "max_ms": 26.666185120120645,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 638.1264845413622
+        },
+        {
+          "clean_steps": 300,
+          "median_ms": 24.171987548470497,
+          "max_ms": 26.69146587140858,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 686.9370746302469
+        },
+        {
+          "clean_steps": 294,
+          "median_ms": 24.54206009861082,
+          "max_ms": 27.751839952543378,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 649.6722898959048
+        },
+        {
+          "clean_steps": 316,
+          "median_ms": 24.5364794973284,
+          "max_ms": 29.307503020390868,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 640.2913712029404
+        },
+        {
+          "clean_steps": 293,
+          "median_ms": 24.77565105073154,
+          "max_ms": 27.30913204140961,
+          "over_5median_steps": 0,
+          "over_5median_time_fraction": 0.0,
+          "tps": 668.367923466189
+        }
+      ],
+      "median_tps": 649.6722898959048,
+      "measured_tps_range": [
+        640.2913712029404,
+        668.367923466189
+      ],
+      "median_al": 2.12984496124031
+    }
+  ],
+  "preset": {
+    "name": "llama2_b8_stability_warm_3",
+    "origin": "llama2_stability_l0_warm/llama2_b8_stability_warm_3.json",
+    "args": {
+      "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+      "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+      "mode": "duet-tree",
+      "batches": [
+        8
+      ],
+      "temperatures": [
+        0.7
+      ],
+      "seeds": [
+        7000,
+        7001,
+        7002,
+        7003,
+        7004,
+        7005
+      ],
+      "target_tp": 1,
+      "prompts": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "limit": 0,
+      "max_new_tokens": 128,
+      "max_model_len": 2048,
+      "input_cap": 512,
+      "k1": 3,
+      "k2": 2,
+      "draft_fan_out": 2,
+      "proxy_fan_out": 1,
+      "p1_tree": true,
+      "p1_verify_nodes": null,
+      "p2_verify_nodes": null,
+      "exit_layer": 21,
+      "p1_nodes": 6,
+      "p2_nodes": 4,
+      "tree_width": 3,
+      "p1_roots": 1,
+      "p2_budget": null,
+      "tree_root_count": null,
+      "tree_beta": 0.5,
+      "tree_proxy_threshold": 0.01,
+      "tree_conf_threshold": 0.03,
+      "root_source": "complement",
+      "root_normalization": "full",
+      "root_overlap_mix": 0.25,
+      "memory_fraction": 0.45,
+      "ignore_eos": false,
+      "greedy_only": false,
+      "audit_preemption": false,
+      "ragged_limits": false,
+      "tree_calibration_dir": null,
+      "preflight_test": null,
+      "output": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_stability_l0_warm/llama2_b8_stability_warm_3.json"
+    },
+    "env": {
+      "CUDA_VISIBLE_DEVICES": "2,3",
+      "SSD_CUDA_ARCH": "8.9",
+      "SSD_ATTN_BACKEND": "auto",
+      "SSD_DIST_PORT": "33803",
+      "OMP_NUM_THREADS": "4",
+      "SSD_SEED": "29",
+      "SSD_CHAIN_PROXY_GRAPH": "1",
+      "SSD_FAST_VERIFY": "1",
+      "SSD_BATCHED_PROXY_GRAPH": "1",
+      "SSD_DUET_EXIT_REPLICA": "0",
+      "SSD_ASYNC_PROXY_SEND": "1",
+      "SSD_PROXY_STREAM": "0",
+      "SSD_BATCHED_TREE": "1",
+      "SSD_TREE_EXPANSION_POLICY": "reach_gain_frontier",
+      "SSD_TREE_REACH_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json",
+      "SSD_TREE_GAIN_CALIBRATION": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json",
+      "SSD_DUET_MISS_K": "4",
+      "SSD_TREE_FUSED_MATH": "1",
+      "SSD_BATCH_TREE_BULK_EXPORT": "1",
+      "SSD_TREE_PARALLEL_INSERT": "0",
+      "SSD_HF_CACHE": "/home/chokwans99/models_mlsys",
+      "SSD_DATASET_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5",
+      "SSD_TREE_LADDER_TRIM": "1",
+      "SSD_BATCH_TREE_PROXY_STREAM": "0",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DUET": "0",
+      "SSD_TREE_SHAPE_METRICS": "0"
+    },
+    "baseline": true,
+    "diagnostic_origin": "llama2_stability_l1_profile/llama2_b8_stability_profile_3.json",
+    "passes": [
+      {
+        "clean_steps": 304,
+        "median_ms": 28.492537909187376,
+        "max_ms": 1160.5374258942902,
+        "over_5median_steps": 11,
+        "over_5median_time_fraction": 0.4831531280724928,
+        "tps": 315.16676095935503
+      },
+      {
+        "clean_steps": 301,
+        "median_ms": 28.184704016894102,
+        "max_ms": 31.012553023174405,
+        "over_5median_steps": 0,
+        "over_5median_time_fraction": 0.0,
+        "tps": 590.4907173337266
+      },
+      {
+        "clean_steps": 306,
+        "median_ms": 28.23381801135838,
+        "max_ms": 30.5000941734761,
+        "over_5median_steps": 0,
+        "over_5median_time_fraction": 0.0,
+        "tps": 596.595473828148
+      },
+      {
+        "clean_steps": 308,
+        "median_ms": 28.13720505218953,
+        "max_ms": 31.00053407251835,
+        "over_5median_steps": 0,
+        "over_5median_time_fraction": 0.0,
+        "tps": 565.8752643856831
+      },
+      {
+        "clean_steps": 283,
+        "median_ms": 28.34060392342508,
+        "max_ms": 44.76985288783908,
+        "over_5median_steps": 0,
+        "over_5median_time_fraction": 0.0,
+        "tps": 575.2190397902868
+      },
+      {
+        "clean_steps": 300,
+        "median_ms": 28.29904155805707,
+        "max_ms": 31.531978864222765,
+        "over_5median_steps": 0,
+        "over_5median_time_fraction": 0.0,
+        "tps": 576.6138586029074
+      }
+    ],
+    "median_tps": 575.2190397902868,
+    "measured_tps_range": [
+      565.8752643856831,
+      576.6138586029074
+    ],
+    "median_al": 2.1101214574898783,
+    "tuning_tps": 575.2190397902868,
+    "tuning_al": 2.1101214574898783,
+    "observed_best_ratio": 1.0,
+    "rule": "Three warm + three measured tuning48 passes; median whole-pass TPS*, >=2% over original trim control to change; no step-tail deletion.",
+    "selected_existing": "trim"
+  }
+}

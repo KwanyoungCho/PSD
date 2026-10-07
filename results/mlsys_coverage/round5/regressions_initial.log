@@ -1,0 +1,115 @@
+..................................EE[Config] duet_proxy_top_k raised 3 → 14 (K_max=9 K_min=4 p1_sum_full=16 p1_sum_short=10 p1_max=2 per_pos=14 total=6 wire_N=28)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=14, draft_fan_out=2, proxy_fan_out=1, K1=9, K2=4, P2_W=10, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+.E[Config] duet_proxy_top_k raised 3 → 14 (K_max=9 K_min=4 p1_sum_full=16 p1_sum_short=10 p1_max=2 per_pos=14 total=6 wire_N=28)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=14, draft_fan_out=2, proxy_fan_out=1, K1=9, K2=4, P2_W=10, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+E[Config] duet_proxy_top_k raised 3 → 14 (K_max=9 K_min=4 p1_sum_full=16 p1_sum_short=10 p1_max=2 per_pos=14 total=6 wire_N=28)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=14, draft_fan_out=2, proxy_fan_out=1, K1=9, K2=4, P2_W=10, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+.[Config] duet_proxy_top_k raised 3 → 14 (K_max=9 K_min=4 p1_sum_full=16 p1_sum_short=10 p1_max=2 per_pos=14 total=6 wire_N=28)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=14, draft_fan_out=2, proxy_fan_out=1, K1=9, K2=4, P2_W=10, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+.[Config] duet_proxy_top_k raised 3 → 14 (K_max=9 K_min=4 p1_sum_full=16 p1_sum_short=10 p1_max=2 per_pos=14 total=6 wire_N=28)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=14, draft_fan_out=2, proxy_fan_out=1, K1=9, K2=4, P2_W=10, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+..[Config] duet_proxy_top_k raised 3 → 14 (K_max=9 K_min=4 p1_sum_full=16 p1_sum_short=10 p1_max=2 per_pos=14 total=6 wire_N=28)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=14, draft_fan_out=2, proxy_fan_out=1, K1=9, K2=4, P2_W=10, P1_tree=off, P1_alloc=dynamic, P2_tree=off, tree_selector=off, tree_R=None, P1_tree_nodes=18/18(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+.........F..[scheduler] returning 1 sequences for prefill
+...[Config] Extending draft RoPE cache: 2048 -> 4096 positions (draft quality beyond its trained window is not guaranteed)
+.[Config] Extending draft RoPE cache: 2048 -> 4096 positions (draft quality beyond its trained window is not guaranteed)
+...[scheduler] context limit reached; finishing seq_id=7, num_tokens=2041, max_model_len=2048: target needs position 2049 (lookahead=9)
+..`torch_dtype` is deprecated! Use `dtype` instead!
+.................................[DUET tree] warmed P2 executor buckets=[1, 2, 3, 4, 5, 6, 7, 8] in 0.00s (reserved delta=0.0 MiB)
+.....................F..............................................................[SpecDecodeStep] speculations: tensor([[20, 21, 22, 23]])
+[SpecDecodeStep] speculation 0: [20, 21, 22, 23]
+[SpecDecodeStep] verification 0: [20, 21, 22, 23, 24]
+[SpecDecodeStep] speculations: tensor([[20, 21, 22, 23]])
+[SpecDecodeStep] speculation 0: [20, 21, 22, 23]
+[SpecDecodeStep] verification 0: [20, 21, 22, 23, 24]
+.............................................................................................................
+======================================================================
+ERROR: test_each_gate_rejected_at_b2 (tests.test_b_gt1_m4.TestM4B1OnlyGateGuard.test_each_gate_rejected_at_b2) (gate='SSD_DUET_EXIT_TOPM_GATHER')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 114, in test_each_gate_rejected_at_b2
+    _champion_config(2)
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 44, in _champion_config
+    return _config_for_path(path, max_num_seqs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 48, in _config_for_path
+    return Config(
+           ^^^^^^^
+  File "<string>", line 82, in __init__
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/config.py", line 496, in __post_init__
+    raise NotImplementedError("Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates")
+NotImplementedError: Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates
+
+======================================================================
+ERROR: test_each_gate_rejected_at_b2 (tests.test_b_gt1_m4.TestM4B1OnlyGateGuard.test_each_gate_rejected_at_b2) (gate='SSD_DUET_PROXY_ON_DRAFT')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 114, in test_each_gate_rejected_at_b2
+    _champion_config(2)
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 44, in _champion_config
+    return _config_for_path(path, max_num_seqs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 48, in _config_for_path
+    return Config(
+           ^^^^^^^
+  File "<string>", line 82, in __init__
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/config.py", line 496, in __post_init__
+    raise NotImplementedError("Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates")
+NotImplementedError: Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates
+
+======================================================================
+ERROR: test_gates_still_allowed_at_b1 (tests.test_b_gt1_m4.TestM4B1OnlyGateGuard.test_gates_still_allowed_at_b1) (gate='SSD_DUET_EXIT_TOPM_GATHER')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 128, in test_gates_still_allowed_at_b1
+    cfg = _champion_config(1)
+          ^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 44, in _champion_config
+    return _config_for_path(path, max_num_seqs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 48, in _config_for_path
+    return Config(
+           ^^^^^^^
+  File "<string>", line 82, in __init__
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/config.py", line 496, in __post_init__
+    raise NotImplementedError("Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates")
+NotImplementedError: Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates
+
+======================================================================
+ERROR: test_gates_still_allowed_at_b1 (tests.test_b_gt1_m4.TestM4B1OnlyGateGuard.test_gates_still_allowed_at_b1) (gate='SSD_DUET_PROXY_ON_DRAFT')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 128, in test_gates_still_allowed_at_b1
+    cfg = _champion_config(1)
+          ^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 44, in _champion_config
+    return _config_for_path(path, max_num_seqs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_b_gt1_m4.py", line 48, in _config_for_path
+    return Config(
+           ^^^^^^^
+  File "<string>", line 82, in __init__
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/config.py", line 496, in __post_init__
+    raise NotImplementedError("Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates")
+NotImplementedError: Temperature-aware root policy requires full-vocabulary proxy; disable raw/top-M proxy gates
+
+======================================================================
+FAIL: test_cpu_ragged_matches_production_eager_policy (tests.test_batched_proxy.TestBatchedProxy.test_cpu_ragged_matches_production_eager_policy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_batched_proxy.py", line 41, in test_cpu_ragged_matches_production_eager_policy
+    self.assertTrue(torch.equal(ref[1], out[1]))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_proxy_cudagraph_matches_dynamic_all_valid_widths (tests.test_p2_tree_alloc.TestReview2Fixes.test_proxy_cudagraph_matches_dynamic_all_valid_widths)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_p2_tree_alloc.py", line 1833, in test_proxy_cudagraph_matches_dynamic_all_valid_widths
+    self.assertTrue(torch.equal(expected[1], got[1]),
+AssertionError: False is not true : tok nv=1 seed=2
+
+----------------------------------------------------------------------
+Ran 288 tests in 59.029s
+
+FAILED (failures=2, errors=4)

@@ -1,0 +1,23 @@
+{
+  "profile_efficient_anchor": "llama3_b8_refine_e26_k3_1_r2",
+  "al_anchor": "llama3_b8_refine_e30_k6_2_r2",
+  "parameters": {
+    "k1": 3,
+    "k2": 1,
+    "exit_layer": 26,
+    "draft_fan_out": 2,
+    "proxy_fan_out": 1,
+    "p1_nodes": 6,
+    "p2_nodes": 2,
+    "p1_roots": 2,
+    "p2_budget": null,
+    "tree_root_count": null,
+    "tree_width": 3,
+    "tree_beta": 0.5,
+    "tree_proxy_threshold": 0.01,
+    "tree_conf_threshold": 0.03
+  },
+  "predicted_exit": 23,
+  "jobs": 20,
+  "warning": "Profile-based screen only; warm uninstrumented confirmation must follow"
+}

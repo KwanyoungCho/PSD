@@ -1,0 +1,19 @@
+START_DEPENDENT ['/home/chokwans99/PSD/ssd/.venv/bin/python', 'ssd/bench/mlsys_campaign.py', '--plan', 'results/mlsys_coverage/round5/llama2_b8_ssd_screen_plan.json', '--directory', 'results/mlsys_coverage/round5/llama2_b8_ssd_screen', '--gpus', '0,1', '--port', '27400']
+START llama2_b8_ssd_k2_f1
+END llama2_b8_ssd_k2_f1 complete external []
+START llama2_b8_ssd_k2_f3
+END llama2_b8_ssd_k2_f3 complete external []
+START llama2_b8_ssd_k2_f5
+END llama2_b8_ssd_k2_f5 complete external [2333365]
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_campaign.py", line 124, in <module>
+    main()
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_campaign.py", line 55, in main
+    raise RuntimeError(f"Selected GPUs already busy; no job started: {busy}")
+RuntimeError: Selected GPUs already busy; no job started: ['GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10, 2333365, /home/chokwans99/PSD/ssd/.venv/bin/python, 508']
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/after_campaign.py", line 21, in <module>
+    subprocess.run(cmd,check=True)
+  File "/home/chokwans99/anaconda3/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/chokwans99/PSD/ssd/.venv/bin/python', 'ssd/bench/mlsys_campaign.py', '--plan', 'results/mlsys_coverage/round5/llama2_b8_ssd_screen_plan.json', '--directory', 'results/mlsys_coverage/round5/llama2_b8_ssd_screen', '--gpus', '0,1', '--port', '27400']' returned non-zero exit status 1.

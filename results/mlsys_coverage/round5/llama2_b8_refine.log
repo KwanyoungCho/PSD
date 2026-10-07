@@ -1,0 +1,30 @@
+llama2 8 llama2_b8_duet_e21_k4_2 -1.4609379768371582 -1.7351255416870117 13
+START_DEPENDENT ['/home/chokwans99/PSD/ssd/.venv/bin/python', 'ssd/bench/mlsys_campaign.py', '--plan', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_refine_plan.json', '--directory', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_refine', '--gpus', '0,1', '--port', '28800']
+START llama2_b8_refine_e21_k4_2_r1
+END llama2_b8_refine_e21_k4_2_r1 complete external []
+START llama2_b8_refine_e21_k3_2_r1
+END llama2_b8_refine_e21_k3_2_r1 complete external []
+START llama2_b8_refine_e21_k2_1_r2
+END llama2_b8_refine_e21_k2_1_r2 complete external []
+START llama2_b8_refine_e21_k2_2_r2
+END llama2_b8_refine_e21_k2_2_r2 complete external []
+START llama2_b8_refine_e21_k3_1_r2
+END llama2_b8_refine_e21_k3_1_r2 failed external []
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_campaign.py", line 124, in <module>
+    main()
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_campaign.py", line 115, in main
+    raise RuntimeError(f"Failed job: {name}; inspect its log")
+RuntimeError: Failed job: llama2_b8_refine_e21_k3_1_r2; inspect its log
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/after_campaign.py", line 21, in <module>
+    subprocess.run(cmd,check=True)
+  File "/home/chokwans99/anaconda3/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/chokwans99/PSD/ssd/.venv/bin/python', 'ssd/bench/mlsys_campaign.py', '--plan', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_refine_plan.json', '--directory', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_refine', '--gpus', '0,1', '--port', '28800']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/continue_refine.py", line 15, in <module>
+    subprocess.run([sys.executable,str(HERE.parent/'round4/after_campaign.py'),
+  File "/home/chokwans99/anaconda3/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/chokwans99/PSD/ssd/.venv/bin/python', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/after_campaign.py', '--after', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_duet_anchor/campaign.json', '--count', '4', '--plan', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_refine_plan.json', '--directory', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_refine', '--gpus', '0,1', '--port', '28800']' returned non-zero exit status 1.

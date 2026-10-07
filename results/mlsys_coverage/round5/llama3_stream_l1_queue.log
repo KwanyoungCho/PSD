@@ -1,0 +1,17 @@
+START_DEPENDENT ['/home/chokwans99/PSD/ssd/.venv/bin/python', 'ssd/bench/mlsys_campaign.py', '--plan', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stream_l1_profile_plan.json', '--directory', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stream_l1_profile', '--gpus', '6,7', '--port', '33300']
+START llama3_b1_stream_l1_profile_s0
+END llama3_b1_stream_l1_profile_s0 complete external []
+START llama3_b1_stream_l1_profile_s1
+END llama3_b1_stream_l1_profile_s1 complete external []
+START llama3_b8_stream_l1_profile_s0
+END llama3_b8_stream_l1_profile_s0 complete external []
+START llama3_b8_stream_l1_profile_s1
+END llama3_b8_stream_l1_profile_s1 complete external []
+START llama3_b8_stream_l1_greedy_smoke
+END llama3_b8_stream_l1_greedy_smoke complete external []
+START_DEPENDENT ['/home/chokwans99/PSD/ssd/.venv/bin/python', 'ssd/bench/mlsys_campaign.py', '--plan', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stream_l1_full_plan.json', '--directory', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama3_stream_l1_full', '--gpus', '6,7', '--port', '33300']
+START llama3_b1_stream_fast_r1
+END llama3_b1_stream_fast_r1 complete external []
+START llama3_b8_stream_fast_r0
+END llama3_b8_stream_fast_r0 complete external []
+STREAM_COMPLETE llama3_stream_l1

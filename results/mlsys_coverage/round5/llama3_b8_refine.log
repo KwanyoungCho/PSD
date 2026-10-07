@@ -1,0 +1,22 @@
+START llama3_b8_refine_e21_k4_2_r1
+END llama3_b8_refine_e21_k4_2_r1 complete external []
+START llama3_b8_refine_e21_k3_2_r1
+END llama3_b8_refine_e21_k3_2_r1 complete external []
+START llama3_b8_refine_e30_k4_2_r1
+END llama3_b8_refine_e30_k4_2_r1 complete external []
+START llama3_b8_refine_e30_k3_2_r1
+END llama3_b8_refine_e30_k3_2_r1 complete external []
+START llama3_b8_refine_e30_k2_1_r2
+END llama3_b8_refine_e30_k2_1_r2 complete external []
+START llama3_b8_refine_e30_k2_2_r2
+END llama3_b8_refine_e30_k2_2_r2 complete external []
+START llama3_b8_refine_e30_k3_1_r2
+END llama3_b8_refine_e30_k3_1_r2 complete external []
+START llama3_b8_refine_e30_k3_2_r2
+END llama3_b8_refine_e30_k3_2_r2 failed external []
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_campaign.py", line 124, in <module>
+    main()
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_campaign.py", line 115, in main
+    raise RuntimeError(f"Failed job: {name}; inspect its log")
+RuntimeError: Failed job: llama3_b8_refine_e30_k3_2_r2; inspect its log

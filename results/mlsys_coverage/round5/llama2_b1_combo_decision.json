@@ -1,0 +1,23 @@
+{
+  "efficient": "llama2_b1_tree_beta0",
+  "quality": "llama2_b1_refine_e21_k12_4_r2",
+  "independent_changes": [],
+  "combined": {
+    "k1": 6,
+    "k2": 4,
+    "exit_layer": 21,
+    "draft_fan_out": 2,
+    "proxy_fan_out": 1,
+    "p1_nodes": 12,
+    "p2_nodes": 8,
+    "p1_roots": 2,
+    "p2_budget": null,
+    "tree_root_count": null,
+    "tree_width": 3,
+    "tree_beta": 0.5,
+    "tree_proxy_threshold": 0.01,
+    "tree_conf_threshold": 0.03
+  },
+  "jobs": 15,
+  "limitation": "Finite coordinate neighborhood; global optimum over all combinations is not established"
+}

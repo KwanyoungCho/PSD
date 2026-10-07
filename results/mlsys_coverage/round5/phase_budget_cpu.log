@@ -1,0 +1,15 @@
+test_legacy_chain_and_b1_tree_keep_order_guard (tests.test_phase_budget.PhaseBudgetTests.test_legacy_chain_and_b1_tree_keep_order_guard) ... ok
+test_unified_b1_and_b8_accept_longer_phase2_with_envelope (tests.test_phase_budget.PhaseBudgetTests.test_unified_b1_and_b8_accept_longer_phase2_with_envelope) ... [Config] duet_proxy_top_k raised 3 → 10 (K_max=3 K_min=1 p1_sum_full=14 p1_sum_short=4 p1_max=2 per_pos=7 total=10 wire_N=19)
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[DUET split-K1K2] layouts: split_k1_long MQ=2 (K=K1=1, pos=2), split_k1_short SKIPPED (K1==K2, long bucket reused), split_k2 MQ=3 (K=K2=3, pos=4)
+[Config] duet_proxy_top_k raised 3 → 10 (K_max=3 K_min=1 p1_sum_full=14 p1_sum_short=4 p1_max=2 per_pos=7 total=10 wire_N=19)
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[DUET split-K1K2] layouts: split_k1_long MQ=2 (K=K1=1, pos=2), split_k1_short SKIPPED (K1==K2, long bucket reused), split_k2 MQ=3 (K=K2=3, pos=4)
+ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.005s
+
+OK

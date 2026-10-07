@@ -1,0 +1,258 @@
+[Config] duet_proxy_top_k raised 3 → 8 (K_max=3 K_min=2 p1_sum_full=8 p1_sum_short=6 p1_max=2 per_pos=8 total=7 wire_N=14)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=8, draft_fan_out=2, proxy_fan_out=1, K1=3, K2=2, P2_W=4, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=6/6(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+Draft runner created on rank 1 (async)!
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=8, draft_fan_out=2, proxy_fan_out=1, K1=3, K2=2, P2_W=4, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=6/6(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[model_runner about to wrapper.init()] graph_bs_list=[1, 2, 4, 8]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=5
+[load_model] loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 11.63it/s]
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.73it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.45it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.40it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.43it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 12, 1293, 256, 12, 64])
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 36, 256, 32, 128])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3], MQ_LEN=18
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3], MQ_LEN=18
+[DUET split-K1K2] layouts: split_k1_long MQ=8 (K=K1=3, pos=4), split_k1_short MQ=6 (K=K1=3, pos=3), split_k2 MQ=4 (K=K2=2, pos=3)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=8, draft_fan_out=2, proxy_fan_out=1, K1=3, K2=2, P2_W=4, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=6/6(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[2, 3])
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+Final Prefill Throughput: 693.85tok/s
+Final Decode Throughput: 22.20tok/s
+[metrics] Prefill tokens/time: 429 / 0.618285s
+[metrics] Decode tokens/time: 128 / 5.765033s
+[metrics] Avg Tokens per step (incl recovery): 2.14
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.38 (denom=3)
+[metrics] Avg target time per full step (ms): 531.95
+[metrics] Avg target verify time (ms): 206.42
+[metrics] Avg Cache Hits: 0.67
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.237
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.432
+[metrics] Avg Phase 1 Accepted Len: 2.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.667
+[metrics] Avg Phase 2 Accepted Len: 0.78
+[metrics] Avg Phase 2 Acceptance Ratio: 0.389
+[metrics] Avg Tokens per step on Cache Hit: 2.21
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.381
+  1: 0.214
+  2: 0.214
+  3: 0.190
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.00
+[DUET] warmed acceptance kernels (K=[2, 3])
+Final Prefill Throughput: 7557.53tok/s
+Final Decode Throughput: 332.48tok/s
+[metrics] Prefill tokens/time: 9152 / 1.210978s
+[metrics] Decode tokens/time: 5598 / 16.836893s
+[metrics] Avg Tokens per step (incl recovery): 2.22
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.41 (denom=3)
+[metrics] Avg target time per full step (ms): 46.88
+[metrics] Avg target verify time (ms): 27.97
+[metrics] Avg Cache Hits: 0.79
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.317
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.474
+[metrics] Avg Phase 1 Accepted Len: 1.84
+[metrics] Avg Phase 1 Acceptance Ratio: 0.614
+[metrics] Avg Phase 2 Accepted Len: 0.89
+[metrics] Avg Phase 2 Acceptance Ratio: 0.447
+[metrics] Avg Tokens per step on Cache Hit: 2.26
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.302
+  1: 0.291
+  2: 0.246
+  3: 0.161
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.06
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 7000, "summary": {"boundary_excluded_al": 2.2053642914331464, "emitted_al": 2.2056737588652484, "boundary_excluded_step_tps": 315.16676095935503, "boundary_excluded_events": 40, "boundary_excluded_steps": 40, "output_tokens": 5598, "wall_s": 18.059435672825202, "end_to_end_tps": 309.9764633522601, "decode_output_tokens": 5598, "decode_tps": 332.48413854368727, "al_including_recovery": 2.2214342001576046, "accepted_draft_tokens": 1.2214342001576044, "cache_hit": 0.7868400315208826, "phase1_hit": 0.3069345941686367, "phase2_hit": 0.4799054373522459, "observed_miss_valid_k": {"4": 541}, "tree_verify_events": 1997, "verify_events": 2538}}
+[DUET] warmed acceptance kernels (K=[2, 3])
+Final Prefill Throughput: 7793.72tok/s
+Final Decode Throughput: 589.76tok/s
+[metrics] Prefill tokens/time: 9152 / 1.174279s
+[metrics] Decode tokens/time: 5452 / 9.244478s
+[metrics] Avg Tokens per step (incl recovery): 2.18
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.39 (denom=3)
+[metrics] Avg target time per full step (ms): 27.72
+[metrics] Avg target verify time (ms): 22.44
+[metrics] Avg Cache Hits: 0.79
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.306
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.484
+[metrics] Avg Phase 1 Accepted Len: 1.82
+[metrics] Avg Phase 1 Acceptance Ratio: 0.605
+[metrics] Avg Phase 2 Accepted Len: 0.85
+[metrics] Avg Phase 2 Acceptance Ratio: 0.426
+[metrics] Avg Tokens per step on Cache Hit: 2.21
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.315
+  1: 0.312
+  2: 0.219
+  3: 0.154
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.07
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 7001, "summary": {"boundary_excluded_al": 2.166733952361728, "emitted_al": 2.1660707191100514, "boundary_excluded_step_tps": 590.4907173337266, "boundary_excluded_events": 40, "boundary_excluded_steps": 37, "output_tokens": 5452, "wall_s": 10.431643159128726, "end_to_end_tps": 522.6405770244314, "decode_output_tokens": 5452, "decode_tps": 589.7574806137623, "al_including_recovery": 2.1807707588398886, "accepted_draft_tokens": 1.1807707588398888, "cache_hit": 0.788637266587207, "phase1_hit": 0.29400079459674217, "phase2_hit": 0.49463647199046484, "observed_miss_valid_k": {"4": 532}, "tree_verify_events": 1985, "verify_events": 2517}}
+[DUET] warmed acceptance kernels (K=[2, 3])
+Final Prefill Throughput: 7837.11tok/s
+Final Decode Throughput: 597.11tok/s
+[metrics] Prefill tokens/time: 9152 / 1.167777s
+[metrics] Decode tokens/time: 5719 / 9.577755s
+[metrics] Avg Tokens per step (incl recovery): 2.17
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.39 (denom=3)
+[metrics] Avg target time per full step (ms): 27.99
+[metrics] Avg target verify time (ms): 22.60
+[metrics] Avg Cache Hits: 0.77
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.312
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.462
+[metrics] Avg Phase 1 Accepted Len: 1.93
+[metrics] Avg Phase 1 Acceptance Ratio: 0.643
+[metrics] Avg Phase 2 Accepted Len: 0.76
+[metrics] Avg Phase 2 Acceptance Ratio: 0.382
+[metrics] Avg Tokens per step on Cache Hit: 2.22
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.345
+  1: 0.274
+  2: 0.202
+  3: 0.179
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.03
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 7002, "summary": {"boundary_excluded_al": 2.1573292402148887, "emitted_al": 2.158927897319743, "boundary_excluded_step_tps": 596.595473828148, "boundary_excluded_events": 43, "boundary_excluded_steps": 40, "output_tokens": 5719, "wall_s": 10.768698544008657, "end_to_end_tps": 531.0762462732193, "decode_output_tokens": 5719, "decode_tps": 597.1127857653714, "al_including_recovery": 2.17440543601359, "accepted_draft_tokens": 1.17440543601359, "cache_hit": 0.7727444318610797, "phase1_hit": 0.299358248395621, "phase2_hit": 0.4733861834654587, "observed_miss_valid_k": {"4": 602}, "tree_verify_events": 2047, "verify_events": 2649}}
+[DUET] warmed acceptance kernels (K=[2, 3])
+Final Prefill Throughput: 7810.89tok/s
+Final Decode Throughput: 565.17tok/s
+[metrics] Prefill tokens/time: 9152 / 1.171697s
+[metrics] Decode tokens/time: 5269 / 9.322817s
+[metrics] Avg Tokens per step (incl recovery): 2.08
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.36 (denom=3)
+[metrics] Avg target time per full step (ms): 27.70
+[metrics] Avg target verify time (ms): 22.38
+[metrics] Avg Cache Hits: 0.77
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.281
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.491
+[metrics] Avg Phase 1 Accepted Len: 1.81
+[metrics] Avg Phase 1 Acceptance Ratio: 0.604
+[metrics] Avg Phase 2 Accepted Len: 0.75
+[metrics] Avg Phase 2 Acceptance Ratio: 0.376
+[metrics] Avg Tokens per step on Cache Hit: 2.12
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.369
+  1: 0.280
+  2: 0.216
+  3: 0.135
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.96
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 7003, "summary": {"boundary_excluded_al": 2.0725388601036268, "emitted_al": 2.0695208169677928, "boundary_excluded_step_tps": 565.8752643856831, "boundary_excluded_events": 37, "boundary_excluded_steps": 34, "output_tokens": 5269, "wall_s": 10.509717701002955, "end_to_end_tps": 501.34553086018406, "decode_output_tokens": 5269, "decode_tps": 565.1725455537303, "al_including_recovery": 2.0805184603299294, "accepted_draft_tokens": 1.0805184603299294, "cache_hit": 0.769835035349568, "phase1_hit": 0.2659073055773763, "phase2_hit": 0.5039277297721917, "observed_miss_valid_k": {"4": 586}, "tree_verify_events": 1960, "verify_events": 2546}}
+[DUET] warmed acceptance kernels (K=[2, 3])
+Final Prefill Throughput: 7745.52tok/s
+Final Decode Throughput: 572.46tok/s
+[metrics] Prefill tokens/time: 9152 / 1.181586s
+[metrics] Decode tokens/time: 4958 / 8.660793s
+[metrics] Avg Tokens per step (incl recovery): 2.16
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.39 (denom=3)
+[metrics] Avg target time per full step (ms): 27.65
+[metrics] Avg target verify time (ms): 22.27
+[metrics] Avg Cache Hits: 0.80
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.308
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.496
+[metrics] Avg Phase 1 Accepted Len: 1.98
+[metrics] Avg Phase 1 Acceptance Ratio: 0.660
+[metrics] Avg Phase 2 Accepted Len: 0.74
+[metrics] Avg Phase 2 Acceptance Ratio: 0.368
+[metrics] Avg Tokens per step on Cache Hit: 2.19
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.349
+  1: 0.283
+  2: 0.201
+  3: 0.167
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.04
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 7004, "summary": {"boundary_excluded_al": 2.144234984655853, "emitted_al": 2.141684665226782, "boundary_excluded_step_tps": 575.2190397902868, "boundary_excluded_events": 34, "boundary_excluded_steps": 34, "output_tokens": 4958, "wall_s": 9.858419082127512, "end_to_end_tps": 502.9203930870051, "decode_output_tokens": 4958, "decode_tps": 572.4648707969874, "al_including_recovery": 2.1572354211663067, "accepted_draft_tokens": 1.1572354211663067, "cache_hit": 0.7978401727861771, "phase1_hit": 0.28855291576673864, "phase2_hit": 0.5092872570194384, "observed_miss_valid_k": {"4": 468}, "tree_verify_events": 1847, "verify_events": 2315}}
+[DUET] warmed acceptance kernels (K=[2, 3])
+Final Prefill Throughput: 7785.46tok/s
+Final Decode Throughput: 574.77tok/s
+[metrics] Prefill tokens/time: 9152 / 1.175525s
+[metrics] Decode tokens/time: 5294 / 9.210653s
+[metrics] Avg Tokens per step (incl recovery): 2.12
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.37 (denom=3)
+[metrics] Avg target time per full step (ms): 27.85
+[metrics] Avg target verify time (ms): 22.50
+[metrics] Avg Cache Hits: 0.76
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.298
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.465
+[metrics] Avg Phase 1 Accepted Len: 1.69
+[metrics] Avg Phase 1 Acceptance Ratio: 0.563
+[metrics] Avg Phase 2 Accepted Len: 0.88
+[metrics] Avg Phase 2 Acceptance Ratio: 0.438
+[metrics] Avg Tokens per step on Cache Hit: 2.18
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.319
+  1: 0.312
+  2: 0.235
+  3: 0.134
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.94
+COVERAGE_CELL {"batch": 8, "temperature": 0.7, "seed": 7005, "summary": {"boundary_excluded_al": 2.1101214574898783, "emitted_al": 2.1125299281723864, "boundary_excluded_step_tps": 576.6138586029074, "boundary_excluded_events": 36, "boundary_excluded_steps": 35, "output_tokens": 5294, "wall_s": 10.405444010859355, "end_to_end_tps": 508.7721383609448, "decode_output_tokens": 5294, "decode_tps": 574.7692622025979, "al_including_recovery": 2.124102154828412, "accepted_draft_tokens": 1.1241021548284118, "cache_hit": 0.762170790103751, "phase1_hit": 0.2869114126097366, "phase2_hit": 0.47525937749401437, "observed_miss_valid_k": {"4": 596}, "tree_verify_events": 1910, "verify_events": 2506}}
+[LLMEngine] Exiting (hard=False)
+[metrics] batched tree: {'steps': 2033, 'tree_hits': 11788, 'phase1_replays': 2033, 'phase2_replays': 2033, 'captures': 16}
+[metrics] Avg draft step time (ms): 33.05
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1008 06:09:42.436219191 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

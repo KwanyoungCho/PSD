@@ -1,0 +1,7 @@
+llama3 8 frozen [(0, 12), (1, 4)]
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/continue_final.py", line 34, in <module>
+    subprocess.run([sys.executable,str(HERE/'bench_proxy_tail.py'),'--output',str(HERE/'PROXY_TAIL_GPU.json')],
+  File "/home/chokwans99/anaconda3/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/chokwans99/PSD/ssd/.venv/bin/python', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/bench_proxy_tail.py', '--output', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/PROXY_TAIL_GPU.json']' returned non-zero exit status 1.

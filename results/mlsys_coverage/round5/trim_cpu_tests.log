@@ -1,0 +1,27 @@
+test_against_scalar_reference_and_actual_temperature (tests.test_root_policy.RootPolicyTests.test_against_scalar_reference_and_actual_temperature) ... ok
+test_chain_reduction_mixed_temperatures (tests.test_root_policy.RootPolicyTests.test_chain_reduction_mixed_temperatures) ... ok
+test_gain_curve_prefix_for_narrower_sibling_width (tests.test_root_policy.RootPolicyTests.test_gain_curve_prefix_for_narrower_sibling_width) ... [tree expansion] q_gain p1 SSD_TREE_GAIN_CALIBRATION SHA256=9d51d353b7c894e301822f8ecf5db34eec05bcf7ecbdf1f42a384a6e9daf3d8f
+[tree expansion] q_gain p1 SSD_TREE_GAIN_CALIBRATION SHA256=9d51d353b7c894e301822f8ecf5db34eec05bcf7ecbdf1f42a384a6e9daf3d8f
+[tree expansion] q_gain p1 SSD_TREE_GAIN_CALIBRATION SHA256=9d51d353b7c894e301822f8ecf5db34eec05bcf7ecbdf1f42a384a6e9daf3d8f
+ok
+test_graph_reads_live_temperatures_chain_and_tree (tests.test_root_policy.RootPolicyTests.test_graph_reads_live_temperatures_chain_and_tree) ... skipped 'CUDA graph contract'
+test_model_default_dtype_does_not_round_live_temperature (tests.test_root_policy.RootPolicyTests.test_model_default_dtype_does_not_round_live_temperature) ... skipped 'CUDA graph contract'
+test_ordered_sibling_overlap_terminal_mass (tests.test_root_policy.RootPolicyTests.test_ordered_sibling_overlap_terminal_mass) ... ok
+test_ragged_bonus_uses_actual_end_and_keeps_padded_token (tests.test_root_policy.RootPolicyTests.test_ragged_bonus_uses_actual_end_and_keeps_padded_token) ... ok
+test_trim_captured_proxy_and_exact_walk_are_bit_identical (tests.test_root_policy.RootPolicyTests.test_trim_captured_proxy_and_exact_walk_are_bit_identical) ... skipped 'CUDA graph trim parity'
+test_trim_preserves_root_ranking_and_exact_correction (tests.test_root_policy.RootPolicyTests.test_trim_preserves_root_ranking_and_exact_correction) ... ok
+test_legacy_chain_and_b1_tree_keep_order_guard (tests.test_phase_budget.PhaseBudgetTests.test_legacy_chain_and_b1_tree_keep_order_guard) ... ok
+test_unified_b1_and_b8_accept_longer_phase2_with_envelope (tests.test_phase_budget.PhaseBudgetTests.test_unified_b1_and_b8_accept_longer_phase2_with_envelope) ... [Config] duet_proxy_top_k raised 3 → 10 (K_max=3 K_min=1 p1_sum_full=14 p1_sum_short=4 p1_max=2 per_pos=7 total=10 wire_N=19)
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[DUET split-K1K2] layouts: split_k1_long MQ=2 (K=K1=1, pos=2), split_k1_short SKIPPED (unified tree owns context buckets), split_k2 MQ=3 (K=K2=3, pos=4)
+[Config] duet_proxy_top_k raised 3 → 10 (K_max=3 K_min=1 p1_sum_full=14 p1_sum_short=4 p1_max=2 per_pos=7 total=10 wire_N=19)
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=1, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=2/2(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[DUET split-K1K2] layouts: split_k1_long MQ=2 (K=K1=1, pos=2), split_k1_short SKIPPED (unified tree owns context buckets), split_k2 MQ=3 (K=K2=3, pos=4)
+ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.031s
+
+OK (skipped=3)

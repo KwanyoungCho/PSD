@@ -1,0 +1,103 @@
+[Config] duet_proxy_top_k raised 3 → 10 (K_max=3 K_min=2 p1_sum_full=14 p1_sum_short=4 p1_max=2 per_pos=7 total=10 wire_N=19)
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=2, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=4/4(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 1 (async)!
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=2, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=4/4(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=5
+Finishing Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=5
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=5
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  6.23it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  6.22it/s]
+Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.26it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.25it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.22it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.75it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.52it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 3976, 256, 2, 64])
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 109, 256, 8, 128])
+F=2, fan_out_list=[2, 2, 2, 2, 2, 2], fan_out_list_miss=[2, 2, 2, 2, 2, 2], MQ_LEN=12
+F=2, fan_out_list=[2, 2, 2, 2, 2, 2], fan_out_list_miss=[2, 2, 2, 2, 2, 2], MQ_LEN=12
+[DUET split-K1K2] layouts: split_k1_long MQ=3 (K=K1=2, pos=3), split_k1_short SKIPPED (unified tree owns context buckets), split_k2 MQ=3 (K=K2=3, pos=4)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=12, only_proxy=False, proxy_top_k=10, draft_fan_out=1, proxy_fan_out=1, K1=2, K2=3, P2_W=3, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=4/4(gen/verify), P2_tree_nodes=6/6(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[2, 3])
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+Final Prefill Throughput: 35.53tok/s
+Final Decode Throughput: 4.18tok/s
+[metrics] Prefill tokens/time: 22 / 0.619169s
+[metrics] Decode tokens/time: 16 / 3.826749s
+[metrics] Avg Tokens per step (incl recovery): 2.00
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.33 (denom=3)
+[metrics] Avg target time per full step (ms): 494.00
+[metrics] Avg target verify time (ms): 151.12
+[metrics] Avg Cache Hits: 0.50
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.375
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.125
+[metrics] Avg Phase 1 Accepted Len: 1.33
+[metrics] Avg Phase 1 Acceptance Ratio: 0.667
+[metrics] Avg Phase 2 Accepted Len: 1.00
+[metrics] Avg Phase 2 Acceptance Ratio: 0.333
+[metrics] Avg Tokens per step on Cache Hit: 2.25
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.250
+  1: 0.250
+  2: 0.500
+  3: 0.000
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.75
+[DUET] warmed acceptance kernels (K=[2, 3])
+[verifier] proxy_send_ring dump_stats failed: [Errno 2] No such file or directory: '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/profiles/llama3_b1_combo_transfer_2_3_e12/proxy_send_ring_stats.json'
+[tree expansion] reach_gain_frontier p1 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p1 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+[tree expansion] reach_gain_frontier p2 SSD_TREE_REACH_CALIBRATION SHA256=afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39
+[tree expansion] reach_gain_frontier p2 SSD_TREE_GAIN_CALIBRATION SHA256=e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6
+Final Prefill Throughput: 6234.71tok/s
+Final Decode Throughput: 77.50tok/s
+[metrics] Prefill tokens/time: 8791 / 1.410009s
+[metrics] Decode tokens/time: 3274 / 42.245007s
+[metrics] Avg Tokens per step (incl recovery): 2.32
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.44 (denom=3)
+[metrics] Avg target time per full step (ms): 29.66
+[metrics] Avg target verify time (ms): 21.72
+[metrics] Avg Cache Hits: 0.63
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.470
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.162
+[metrics] Avg Phase 1 Accepted Len: 1.33
+[metrics] Avg Phase 1 Acceptance Ratio: 0.663
+[metrics] Avg Phase 2 Accepted Len: 1.23
+[metrics] Avg Phase 2 Acceptance Ratio: 0.410
+[metrics] Avg Tokens per step on Cache Hit: 2.30
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.187
+  1: 0.376
+  2: 0.386
+  3: 0.051
+  4: 0.000
+  5: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.36
+COVERAGE_CELL {"batch": 1, "temperature": 0.7, "seed": 5100, "summary": {"boundary_excluded_al": 2.3135409123823316, "emitted_al": 2.2991573033707864, "boundary_excluded_step_tps": 77.5179076780211, "boundary_excluded_events": 43, "boundary_excluded_steps": 43, "output_tokens": 3274, "wall_s": 43.674520351924, "end_to_end_tps": 74.96361662631905, "decode_output_tokens": 3274, "decode_tps": 77.50028339303637, "al_including_recovery": 2.321629213483146, "accepted_draft_tokens": 1.321629213483146, "cache_hit": 0.6313202247191011, "phase1_hit": 0.46980337078651685, "phase2_hit": 0.16151685393258428, "observed_miss_valid_k": {"4": 525}, "tree_verify_events": 899, "verify_events": 1424}}
+[LLMEngine] Exiting (hard=False)
+[duet_profile] 12888 events -> /home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/profiles/llama3_b1_combo_transfer_2_3_e12/duet_profile_target_rank0_030022.json
+[metrics] batched tree: {'steps': 1432, 'tree_hits': 903, 'phase1_replays': 1432, 'phase2_replays': 1432, 'captures': 12}
+[metrics] Avg draft step time (ms): 28.10
+[duet_profile] 15814 events -> /home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/profiles/llama3_b1_combo_transfer_2_3_e12/duet_profile_draft_030022.json
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1008 03:00:24.605452926 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
