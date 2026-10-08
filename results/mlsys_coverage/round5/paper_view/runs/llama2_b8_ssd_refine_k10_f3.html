@@ -1,0 +1,1059 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>llama2_b8_ssd_refine_k10_f3</title><style>
+body{font-family:system-ui,sans-serif;color:#26364c;margin:24px auto;max-width:1500px;padding:0 22px;line-height:1.55;background:#f7f9fc}
+h1{font-size:25px}h2{font-size:20px;margin-top:28px}a{color:#155c94}table{border-collapse:collapse;width:100%;background:white;font-size:13px}
+td,th{border-bottom:1px solid #dce3ea;padding:7px 10px;text-align:left}th{background:#26364c;color:white;position:sticky;top:0}
+tr.duet{background:#eff6fb}.box{background:white;border:1px solid #dce3ea;padding:16px;margin:16px 0;border-radius:8px}
+.muted{color:#5e6a79;font-size:13px}.bad{color:#a32424;font-weight:bold}img{width:100%;height:auto;background:white}
+input,select{padding:8px;margin:5px;border:1px solid #a5b3c3;border-radius:4px}input{min-width:320px}
+code{font-size:12px;word-break:break-all}pre{white-space:pre-wrap;font-size:12px;max-height:500px;overflow:auto}
+.scroll{overflow:auto}.toolbar{position:sticky;top:0;background:#f7f9fc;z-index:2;padding:8px}.tag{background:#e4ebf3;border-radius:4px;padding:2px 6px}
+</style><body><a href='../index.html'>← 전체 실험</a><h1>llama2_b8_ssd_refine_k10_f3</h1><p>SSD: K=10, F=3</p><div class="box"><b>모든 저장 pass</b><table><tr><th>Pass</th><th>용도</th><th>N</th><th>B</th><th>T</th><th>Seed</th><th>AL*</th><th>Cache hit</th><th>TPS*</th><th>Raw TPS</th></tr><tr><td>0</td><td>profile-diagnostic</td><td>48</td><td>8</td><td>0.7</td><td>5100</td><td>2.249</td><td>36.99%</td><td>539.79</td><td>546.46</td></tr></table></div><p>Input/output cap: 512/96 · GPUs: 0,1 · draft seed: 0 · source: <code>a3298235676eb40edcdc2f6805b99485ac33e126</code></p><p><a href='../figs/llama2_b8_ssd_refine_k10_f3.png'>PNG</a> · <a href='../figs/llama2_b8_ssd_refine_k10_f3.pdf'>벡터 PDF</a> · <a href='../../llama2_b8_ssd_refine/llama2_b8_ssd_refine_k10_f3.json'>원본 결과 JSON</a></p><p>세부 trace: 182 eligible steps. <a href='../../profiles/llama2_b8_ssd_refine_k10_f3/duet_profile_target_rank0_020815.json'>Target 원본</a> · <a href='../../profiles/llama2_b8_ssd_refine_k10_f3/duet_profile_draft_020815.json'>Draft 원본</a></p><p class="muted">제외 수: {&quot;initial&quot;: 19, &quot;output_boundary&quot;: 32, &quot;partial_batch&quot;: 36}</p><p class="muted">왼쪽 아래는 상태별 평균 정렬 schematic, 오른쪽 아래는 실제 대표 step입니다. %의 분모는 각 상태의 평균 target request→ready 시간이며 phase overlap은 별도 lane에 표시합니다.</p><img src='../figs/llama2_b8_ssd_refine_k10_f3.png' alt='Breakdown for llama2_b8_ssd_refine_k10_f3'><details class="box"><summary>전체 파라미터·환경·source 정보</summary><pre>{
+  &quot;args&quot;: {
+    &quot;target&quot;: &quot;/home/chokwans99/models_mlsys/layerskip-llama2-7b&quot;,
+    &quot;draft&quot;: &quot;/home/chokwans99/models_mlsys/AMD-Llama-135m&quot;,
+    &quot;mode&quot;: &quot;ssd&quot;,
+    &quot;batches&quot;: [
+      8
+    ],
+    &quot;temperatures&quot;: [
+      0.7
+    ],
+    &quot;seeds&quot;: [
+      5100
+    ],
+    &quot;target_tp&quot;: 1,
+    &quot;prompts&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json&quot;,
+    &quot;limit&quot;: 0,
+    &quot;max_new_tokens&quot;: 96,
+    &quot;max_model_len&quot;: 2048,
+    &quot;input_cap&quot;: 512,
+    &quot;k1&quot;: 10,
+    &quot;k2&quot;: 2,
+    &quot;draft_fan_out&quot;: 3,
+    &quot;proxy_fan_out&quot;: 0,
+    &quot;p1_tree&quot;: false,
+    &quot;p1_verify_nodes&quot;: null,
+    &quot;p2_verify_nodes&quot;: null,
+    &quot;exit_layer&quot;: 21,
+    &quot;p1_nodes&quot;: null,
+    &quot;p2_nodes&quot;: null,
+    &quot;tree_width&quot;: 3,
+    &quot;p1_roots&quot;: 2,
+    &quot;p2_budget&quot;: null,
+    &quot;tree_root_count&quot;: null,
+    &quot;tree_beta&quot;: 0.5,
+    &quot;tree_proxy_threshold&quot;: 0.01,
+    &quot;tree_conf_threshold&quot;: 0.03,
+    &quot;root_source&quot;: &quot;residual&quot;,
+    &quot;root_normalization&quot;: &quot;topm&quot;,
+    &quot;root_overlap_mix&quot;: 0.0,
+    &quot;memory_fraction&quot;: 0.45,
+    &quot;ignore_eos&quot;: false,
+    &quot;greedy_only&quot;: false,
+    &quot;audit_preemption&quot;: false,
+    &quot;ragged_limits&quot;: false,
+    &quot;tree_calibration_dir&quot;: null,
+    &quot;preflight_test&quot;: null,
+    &quot;output&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_ssd_refine/llama2_b8_ssd_refine_k10_f3.json&quot;
+  },
+  &quot;engine_kwargs&quot;: {
+    &quot;num_gpus&quot;: 2,
+    &quot;max_num_seqs&quot;: 8,
+    &quot;max_model_len&quot;: 2048,
+    &quot;max_num_batched_tokens&quot;: 16384,
+    &quot;gpu_memory_utilization&quot;: 0.45,
+    &quot;speculate&quot;: true,
+    &quot;draft_async&quot;: true,
+    &quot;greedy_only&quot;: false,
+    &quot;jit_speculate&quot;: true,
+    &quot;speculate_k&quot;: 10,
+    &quot;async_fan_out&quot;: 3,
+    &quot;duet_p1_tree_policy&quot;: &quot;off&quot;,
+    &quot;duet_p2_tree_policy&quot;: &quot;off&quot;,
+    &quot;draft&quot;: &quot;/home/chokwans99/models_mlsys/AMD-Llama-135m&quot;
+  },
+  &quot;env&quot;: {
+    &quot;CUDA_VISIBLE_DEVICES&quot;: &quot;0,1&quot;,
+    &quot;SSD_CUDA_ARCH&quot;: &quot;8.9&quot;,
+    &quot;SSD_ATTN_BACKEND&quot;: &quot;auto&quot;,
+    &quot;SSD_DIST_PORT&quot;: &quot;30305&quot;,
+    &quot;OMP_NUM_THREADS&quot;: &quot;4&quot;,
+    &quot;SSD_SEED&quot;: &quot;0&quot;,
+    &quot;SSD_CHAIN_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_FAST_VERIFY&quot;: &quot;1&quot;,
+    &quot;SSD_BATCHED_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_DUET_EXIT_REPLICA&quot;: &quot;0&quot;,
+    &quot;SSD_ASYNC_PROXY_SEND&quot;: &quot;1&quot;,
+    &quot;SSD_PROXY_STREAM&quot;: &quot;0&quot;,
+    &quot;SSD_PROFILE_DUET&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DUET_MAX_EVENTS&quot;: &quot;100000&quot;,
+    &quot;SSD_TREE_SHAPE_METRICS&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/profiles/llama2_b8_ssd_refine_k10_f3&quot;,
+    &quot;SSD_HF_CACHE&quot;: &quot;/home/chokwans99/models_mlsys&quot;,
+    &quot;SSD_DATASET_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5&quot;
+  },
+  &quot;effective_features&quot;: {
+    &quot;fast_verify&quot;: true,
+    &quot;batched_proxy_graph&quot;: true,
+    &quot;exit_replica&quot;: false,
+    &quot;jit_speculate&quot;: true
+  },
+  &quot;resolved_env&quot;: {
+    &quot;SSD_CUDA_ARCH&quot;: &quot;8.9&quot;,
+    &quot;SSD_ATTN_BACKEND&quot;: &quot;auto&quot;,
+    &quot;SSD_DIST_PORT&quot;: &quot;30305&quot;,
+    &quot;SSD_SEED&quot;: &quot;0&quot;,
+    &quot;SSD_CHAIN_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_FAST_VERIFY&quot;: &quot;1&quot;,
+    &quot;SSD_BATCHED_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_DUET_EXIT_REPLICA&quot;: &quot;0&quot;,
+    &quot;SSD_ASYNC_PROXY_SEND&quot;: &quot;1&quot;,
+    &quot;SSD_PROXY_STREAM&quot;: &quot;0&quot;,
+    &quot;SSD_PROFILE_DUET&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DUET_MAX_EVENTS&quot;: &quot;100000&quot;,
+    &quot;SSD_TREE_SHAPE_METRICS&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/profiles/llama2_b8_ssd_refine_k10_f3&quot;,
+    &quot;SSD_HF_CACHE&quot;: &quot;/home/chokwans99/models_mlsys&quot;,
+    &quot;SSD_DATASET_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5&quot;,
+    &quot;SSD_SHM_NAME&quot;: &quot;ssd_2474082&quot;
+  },
+  &quot;runtime_source_sha256&quot;: {
+    &quot;ssd/ssd/__init__.py&quot;: &quot;f1a221b38f55b42ef0619cba48a411acbbd1965c4845b4643f77443b7ce77950&quot;,
+    &quot;ssd/ssd/config.py&quot;: &quot;ec9ffe1c84257a2e2ec10c39995340f8941f9f3c400c48c18cfa7c3e4db3b220&quot;,
+    &quot;ssd/ssd/engine/block_manager.py&quot;: &quot;05d873619b419d31f47b4be4025bc7c9f11759f5f0bc3f65fbff3a1e8f94660a&quot;,
+    &quot;ssd/ssd/engine/draft_runner.py&quot;: &quot;cdf793b4718e576bcc10a638fcff577eef9cf21cc1f38a9fc27c333c3cfe5cee&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_common.py&quot;: &quot;739feeb975c20d0adbdae51735b8983aa6cae8b59d6237b285db0c766d558f27&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_draft.py&quot;: &quot;f361030685350183884cc55b9058945515bb00da53fc86541f7902bfd2138528&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_forward.py&quot;: &quot;0c6079d2bdbf7ecc000b2a98b94b49b1942939d34ada80b15f57510de8a20940&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_inputs.py&quot;: &quot;c0a05d13ba0e63ecbc920425ddd6a98dc60001d93d73085e75d2d4a9b110a066&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_roots.py&quot;: &quot;ad3c4e772392c1043284ac4912d606543f3fd76167135b73e4f72a700e6820c7&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_sampling.py&quot;: &quot;46f36658cb189bc080ae0d4b8561f84662290facacccf6600f129eb6e93ee66b&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_verify.py&quot;: &quot;2da945efe3ba4b2673377a2f5c497528ab0c6cf4d7fd7edfbdb23b6c9c619ede&quot;,
+    &quot;ssd/ssd/engine/helpers/batched_proxy.py&quot;: &quot;6ed4f9b85ff8cf9c24b7ad43a1b7377d08123eeef5307366a373dacda184da86&quot;,
+    &quot;ssd/ssd/engine/helpers/batched_tree_executor.py&quot;: &quot;098d64cad2d20d96091631f6bc91da73b1e893ec400c3431a4ed68d007a9ef45&quot;,
+    &quot;ssd/ssd/engine/helpers/cudagraph_helpers.py&quot;: &quot;0436aec61d05d0b79696a48665042e364f3f4c50d853b68dc424e435b54be0c9&quot;,
+    &quot;ssd/ssd/engine/helpers/e0_trace.py&quot;: &quot;23ecd9bce2587cbef3f99c8894964c0d9642d33d372bd7be4954a5a2840a142e&quot;,
+    &quot;ssd/ssd/engine/helpers/mask_helpers.py&quot;: &quot;8ada4e709a6ab310ee920a7176b3684f89860022fc659442f6cb02ed5fb87d88&quot;,
+    &quot;ssd/ssd/engine/helpers/p1_tree.py&quot;: &quot;f48ae6b01e593d2598262b34007a6b58dde9e57e94138dde62f81d5526637398&quot;,
+    &quot;ssd/ssd/engine/helpers/p2_tree.py&quot;: &quot;73b0a512d834ab3a4608d9cd898b13b32630dd3b914b49e753c1116ac0640b41&quot;,
+    &quot;ssd/ssd/engine/helpers/p2_tree_executor.py&quot;: &quot;cfb04f959fd08baf3819a688a907cac4e3071a2727085ea08ca089b50a21e82e&quot;,
+    &quot;ssd/ssd/engine/helpers/packed_tree_forward.py&quot;: &quot;b903d6fe4d1fe18f95f6540f488acf40d469154100239429256eace61b1d7e76&quot;,
+    &quot;ssd/ssd/engine/helpers/packed_verify.py&quot;: &quot;a50ff24e93324840783b60102bfaeb3786711f05f64bd897708c779535c1820f&quot;,
+    &quot;ssd/ssd/engine/helpers/root_policy.py&quot;: &quot;5e3a8e2f9b2fe43fec52eb9e80fe59cb0d28177122f7e75c823c5ffd20aee718&quot;,
+    &quot;ssd/ssd/engine/helpers/runner_helpers.py&quot;: &quot;bfb570d8e018ee296a6c2a8c3c9e75919fd0eb1beb288ceb80121ad116419bf2&quot;,
+    &quot;ssd/ssd/engine/helpers/speculate_types.py&quot;: &quot;2929b5f3a176d04b6a4b01f092b224ad733dfda10a647bb73801cd346441ae91&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_expansion_policy.py&quot;: &quot;47f818d1b8f284e56813af294723f6a934c3da0502b9ae4e611b54ba6fb85dac&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_fused_math.py&quot;: &quot;930a1215363a3b6f878cbc4a71c3f59293f46aa2eab3c4938e5bb51e95868d2e&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_gain_allocation.py&quot;: &quot;6f32c6a7b69272c1b42992d95c546bfd3980ccd71af3b3346e9df61977907b6a&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_host_topology.py&quot;: &quot;86d0deab4da2932540a108c4c2b3560b8634837e71ba23783375c2001e4cf81c&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_layout.py&quot;: &quot;4e5e47c54a4efd5a30ae8c528e1d2d9493d12aa5605c0e65c2f86ba874805be1&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_rerank_gpu.py&quot;: &quot;e4a8bff8828f983d6eb407504f87f2a9edf08a1750449fe46565e661f892b734&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_topology_gpu.py&quot;: &quot;3a6cf8796faabbe8adef56deedf8956c1cf252a31e0491f3b71a8544bdcf89af&quot;,
+    &quot;ssd/ssd/engine/llm_engine.py&quot;: &quot;b0081876ef6470f91fa562acc0317074a85afa9aec8322182bda7749153db00f&quot;,
+    &quot;ssd/ssd/engine/model_runner.py&quot;: &quot;5fa9e910f38538c276a151113fc490be9c75ae9af2bf35ba6eaa5513b237a421&quot;,
+    &quot;ssd/ssd/engine/scheduler.py&quot;: &quot;52a36e8bb2abc26f775562a39bd95ea6cc8c70650e6193ddaa0fad762afb8ae4&quot;,
+    &quot;ssd/ssd/engine/sequence.py&quot;: &quot;6894715ef142074b118bfa3018b10826d2748518e9c8b71291064eb99fae9bd9&quot;,
+    &quot;ssd/ssd/engine/speculator_async.py&quot;: &quot;cd16395d5e5d7380d29f5a27e1495b6a40758c0452ce2cb40d996e2c3271c114&quot;,
+    &quot;ssd/ssd/engine/speculator_sync.py&quot;: &quot;30487afa7f5027735ebd752ca1a53003f1d56350f503ea91931ef64e7aab115e&quot;,
+    &quot;ssd/ssd/engine/step.py&quot;: &quot;525d3022561c9eee96ec076032bb27e281af744feb739ddc17e52344a9cafe8f&quot;,
+    &quot;ssd/ssd/engine/verifier.py&quot;: &quot;f6795547f278628312d2dd5ab0a28e9f34489b8e6d02038566a65fa3190a0928&quot;,
+    &quot;ssd/ssd/layers/activation.py&quot;: &quot;13d88b460e7610df28c6a7c719dd8bf21c5c59ae0f85c94d505d499215618a82&quot;,
+    &quot;ssd/ssd/layers/attention.py&quot;: &quot;bbafa69d9b52dedf81542f2c3227b7f061de11c679a6681a16b0c137ccfc672b&quot;,
+    &quot;ssd/ssd/layers/embed_head.py&quot;: &quot;b896a56b908d75c8f30462b0b1a4ce634276ddb41165fdaa0220c55a2ddf7257&quot;,
+    &quot;ssd/ssd/layers/fi_attn.py&quot;: &quot;4b0a275d020c1c3ce37f4e2a6c04bff12577d6f11feec7d79959652300fc9a0c&quot;,
+    &quot;ssd/ssd/layers/layernorm.py&quot;: &quot;a076c8d2e31d2597119d8504a69afd8711b41a29b5ccb7e1bf111a6c7277400e&quot;,
+    &quot;ssd/ssd/layers/linear.py&quot;: &quot;82c096262013516c5f0a43f7c28f23aa6db6b14f52cbe1ce1dacc5f9d5c4b0b6&quot;,
+    &quot;ssd/ssd/layers/rotary_embedding.py&quot;: &quot;1bcca21cf5e4d81c11a5c55d59a6033874c4e6a0003cc4ae8e1aa6165976a723&quot;,
+    &quot;ssd/ssd/layers/sampler.py&quot;: &quot;df22591a229ae5c2f62d4797707470ebccb8e55f7064577bc24a656ed797f213&quot;,
+    &quot;ssd/ssd/llm.py&quot;: &quot;496950f31428f674b70e8e137e029aa16dd82fdc8d8b8cc76f9ebdce86f7f653&quot;,
+    &quot;ssd/ssd/models/eagle3_draft_llama3.py&quot;: &quot;0d6e713a419cf884fc85984f9a2a6de520119032075a7c99158e0df7e2faca84&quot;,
+    &quot;ssd/ssd/models/llama3.py&quot;: &quot;ac801bd73e999f04a6fc862ca1d49bc94c88315456cfb6cb1215a503bcc5e07d&quot;,
+    &quot;ssd/ssd/models/qwen2.py&quot;: &quot;6804e3662a173368632e5f05b9893cc0cd28a61ac9bd25dbe8cd6f387ca0d1ca&quot;,
+    &quot;ssd/ssd/models/qwen3.py&quot;: &quot;535495bf69933fd9c677275453b801189e2c3c78a94fcc5133fc65b88c9f69c7&quot;,
+    &quot;ssd/ssd/paths.py&quot;: &quot;72c52420daaf6d457c60235617efc3f8b1e3ae208a35f3bc45438adc9d7e01ac&quot;,
+    &quot;ssd/ssd/quant/__init__.py&quot;: &quot;a69f0de0a516ba2bf9e13680b75b8f5d538c2eb281b095662ed1515f8b0f8698&quot;,
+    &quot;ssd/ssd/quant/adapter.py&quot;: &quot;fbb1ce4a198a585c31b0102555d1f84d18b09b0de1b90a5808d93ec8ff7ac271&quot;,
+    &quot;ssd/ssd/quant/awq_calibrate.py&quot;: &quot;116807eca0a3e4e001aa24a3344031416e4060a6c1b2e39f59829fba09484126&quot;,
+    &quot;ssd/ssd/quant/build.py&quot;: &quot;37f9c72ac69af213f2720c86faf380b8a46baaad0b98bf5f2e3c7fa9b3fbc43c&quot;,
+    &quot;ssd/ssd/quant/config.py&quot;: &quot;080c327b2297d0905f8fddc8d994aa7b9dc1086d7703d951471d48cea8723a1d&quot;,
+    &quot;ssd/ssd/quant/importer.py&quot;: &quot;c8990b69bc9e4e152e7e80b7f08f273c6a4652c1f7e95a8247f85e50030f4f92&quot;,
+    &quot;ssd/ssd/quant/init_context.py&quot;: &quot;6aa3dc3f6e95d8902fa7244d0010110b6fcf1ffdccedd6eaa389204339fc214f&quot;,
+    &quot;ssd/ssd/quant/io.py&quot;: &quot;f44f98a57351ff1063b7423d2f8390a565a30796fd6c3beaeaa8825f906e66b5&quot;,
+    &quot;ssd/ssd/quant/loader.py&quot;: &quot;14f901b1f53a3650be7eff497f626469e2b1fbc487202c639d33c8dd4c9047fb&quot;,
+    &quot;ssd/ssd/quant/marlin.py&quot;: &quot;4f1996e9f63d7109e92a3a7ec5350069ba67d7659f2149e99b84ca3c6626b241&quot;,
+    &quot;ssd/ssd/quant/marlin_utils.py&quot;: &quot;f64ec8d7ec8260556abd21e229567971a928882f14b93d288a6732d55c12fc90&quot;,
+    &quot;ssd/ssd/quant/naming.py&quot;: &quot;7ba73900af5e6d6fa2d1907bd2611625fc72f28a1fb9ea4834cd9a45901632d6&quot;,
+    &quot;ssd/ssd/quant/pack.py&quot;: &quot;b7dd683b7cdbfbb6f4ce1e13a51a72240a8dc3a35b7ed652dc664d26bb384711&quot;,
+    &quot;ssd/ssd/quant/state.py&quot;: &quot;82cb1050a3b1776765df7ad8f6c59c23a86ac8d1d4cc3c974cded7f8e762f806&quot;,
+    &quot;ssd/ssd/sampling_params.py&quot;: &quot;7f79868c4ca115bb18e017411a6c5545f354aa858aa0b8076aafb756d0785032&quot;,
+    &quot;ssd/ssd/utils/async_helpers/async_spec_helpers.py&quot;: &quot;0d70779098c5051fcba5d3add5ff0b7896139f1b7789babe701a8df6eaa40f24&quot;,
+    &quot;ssd/ssd/utils/async_helpers/duet_policy.py&quot;: &quot;1fb3e1ec1c41a9cda5f531f8c732b09145c7d87ea79d74c331b8176f11f22aaf&quot;,
+    &quot;ssd/ssd/utils/async_helpers/nccl_pack.py&quot;: &quot;6330e785f3e81acffe25a82061d3098f7834ad3c2d07bb071d79ed9923b18dc1&quot;,
+    &quot;ssd/ssd/utils/async_helpers/tests.py&quot;: &quot;6491ced36a2a6f06d8cf411204b1190d2ca0bc700cd0becf79c3f4cd8abcd87e&quot;,
+    &quot;ssd/ssd/utils/context.py&quot;: &quot;ce55eb45f00c91412946dd1c96f5c8f972372dd4c8069770c48e120773f301fc&quot;,
+    &quot;ssd/ssd/utils/int8_debug.py&quot;: &quot;9a71dbf2b997a9c8d9b776cc3659c8dbf32ce5411eb5cedb4a73368cee60d3d7&quot;,
+    &quot;ssd/ssd/utils/loader.py&quot;: &quot;c008eac34810772e8d9f51da896c00867481f3e1a0e6f725e0d06599c0aab59e&quot;,
+    &quot;ssd/ssd/utils/misc.py&quot;: &quot;1084b630f174d651b78b01c4ba2dff147f18d3cf52a200704b4b9eab2b72b66c&quot;,
+    &quot;ssd/ssd/utils/quantize.py&quot;: &quot;c0ee73d55f3781eba88007325d5e9e53e66ad952e0e8f19143aa8c50bc39f406&quot;,
+    &quot;ssd/ssd/utils/verify.py&quot;: &quot;0cf11b9ba19a73e9c39087fccde43071464c6f3b964e00081ebadc747ef142a4&quot;,
+    &quot;ssd/ssd/utils/verify_fast.py&quot;: &quot;23b05b7e5032fe72c8f2ef5bd7a69aa874818b08b52ea7fc0344a54c76ea28d9&quot;,
+    &quot;ssd/bench/mlsys_campaign.py&quot;: &quot;059b6316ba33e867e1fcf099a8180c186fa70b916692eca386d2a4a347b0f26f&quot;,
+    &quot;ssd/bench/mlsys_coverage.py&quot;: &quot;70b2afaf05bbbd5760c2a4f96f801976479209ca1d7a8f9eb8598139e686bdbc&quot;,
+    &quot;ssd/bench/mlsys_greedy_audit.py&quot;: &quot;b9815fd03ded7f30f7c0408629782156e73f5ceaab9f0b3b720956f5c00da141&quot;,
+    &quot;ssd/bench/mlsys_preemption_audit.py&quot;: &quot;f891ff5a69a59fb8c93e7952f9d48ac16adb7fef074763089f14d4505ecad80d&quot;,
+    &quot;ssd/bench/mlsys_summarize.py&quot;: &quot;0235aa2b56eb59c41c429351d77e90e16c52ccdf58c43e3578dd03df0f6095bd&quot;,
+    &quot;ssd/bench/mlsys_tree_observer.py&quot;: &quot;8c18248c9ef1953e2e821613099f14d155978540536939288d4fb2aa897c6263&quot;,
+    &quot;ssd/bench/mlsys_verify_bench.py&quot;: &quot;3ddc36197874d239f41a1c135570d4d7a0940d615d3d396299bae46e377bce2e&quot;
+  }
+}</pre></details><details class="box"><summary>그림 수치·step IDs·대표 step 원본</summary><pre>{
+  &quot;groups&quot;: [
+    {
+      &quot;status&quot;: &quot;Mixed hit/miss&quot;,
+      &quot;n&quot;: 179,
+      &quot;mean_target_ms&quot;: 31.118067917211096,
+      &quot;mean_decode_ms&quot;: 31.193734699464795,
+      &quot;mean_intervals&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Cache insert&quot;,
+          &quot;start&quot;: 32.116085801044655,
+          &quot;end&quot;: 32.12405376061381
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;start&quot;: 10.637207368232685,
+          &quot;end&quot;: 11.561589217052779
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Mixed response&quot;,
+          &quot;start&quot;: 1.4022745353549553,
+          &quot;end&quot;: 9.707816506231298
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Request&quot;,
+          &quot;start&quot;: 1.1981176983710773,
+          &quot;end&quot;: 1.3899167609614367
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD build&quot;,
+          &quot;start&quot;: 10.152397901652245,
+          &quot;end&quot;: 11.842591738567672
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD decode&quot;,
+          &quot;start&quot;: 11.855561833141902,
+          &quot;end&quot;: 32.1141892571689
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Send response&quot;,
+          &quot;start&quot;: 9.791427840067687,
+          &quot;end&quot;: 10.150540963231519
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept&quot;,
+          &quot;start&quot;: 29.909655076831413,
+          &quot;end&quot;: 30.78053944470496
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept prepare&quot;,
+          &quot;start&quot;: 29.854155331350572,
+          &quot;end&quot;: 29.89848529027161
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;start&quot;: 31.079072928295457,
+          &quot;end&quot;: 31.118067917211096
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target verify&quot;,
+          &quot;start&quot;: 10.773522724652423,
+          &quot;end&quot;: 29.530713330434022
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;start&quot;: 0.0,
+          &quot;end&quot;: 10.245495680324192
+        }
+      ],
+      &quot;components&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Cache insert&quot;,
+          &quot;mean_ms&quot;: 0.007967959569153173,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;mean_ms&quot;: 0.924381848820095,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Mixed response&quot;,
+          &quot;mean_ms&quot;: 8.305541970876343,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Request&quot;,
+          &quot;mean_ms&quot;: 0.1917990625903593,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD build&quot;,
+          &quot;mean_ms&quot;: 1.6901938369154264,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD decode&quot;,
+          &quot;mean_ms&quot;: 20.258627424027,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Send response&quot;,
+          &quot;mean_ms&quot;: 0.35911312316383065,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept&quot;,
+          &quot;mean_ms&quot;: 0.8708843678735488,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept prepare&quot;,
+          &quot;mean_ms&quot;: 0.04432995892103824,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;mean_ms&quot;: 0.03899498891564055,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target verify&quot;,
+          &quot;mean_ms&quot;: 18.7571906057816,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Unlabelled gap&quot;,
+          &quot;mean_ms&quot;: 1.1611723153950781,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;mean_ms&quot;: 10.245495680324192,
+          &quot;present_steps&quot;: 179,
+          &quot;population&quot;: 179
+        }
+      ],
+      &quot;mean_markers&quot;: {
+        &quot;Target ready&quot;: 31.118067917211096
+      },
+      &quot;representative&quot;: {
+        &quot;step_id&quot;: 144,
+        &quot;status&quot;: &quot;Mixed hit/miss&quot;,
+        &quot;target_ms&quot;: 30.871093034744263,
+        &quot;decode_ms&quot;: 30.93717689625919,
+        &quot;source_counts&quot;: {
+          &quot;0&quot;: 7,
+          &quot;hit&quot;: 1
+        },
+        &quot;physical_queries&quot;: null,
+        &quot;max_valid_nodes&quot;: 10,
+        &quot;unlabelled_target_ms&quot;: 1.097168207168579,
+        &quot;intervals&quot;: [
+          {
+            &quot;label&quot;: &quot;Wait / sync&quot;,
+            &quot;start&quot;: 0.0,
+            &quot;end&quot;: 10.114256858825684,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_spec_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target verify&quot;,
+            &quot;start&quot;: 10.604979991912842,
+            &quot;end&quot;: 29.367674827575684,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;verify_replay&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Accept&quot;,
+            &quot;start&quot;: 29.740233898162842,
+            &quot;end&quot;: 30.56787085533142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;verify_sample_accept&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Accept prepare&quot;,
+            &quot;start&quot;: 29.692381858825684,
+            &quot;end&quot;: 29.729979991912842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;verify_accept_prep&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Postprocess&quot;,
+            &quot;start&quot;: 30.839354991912842,
+            &quot;end&quot;: 30.871093034744263,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_postprocess&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 10.114256858825684,
+            &quot;end&quot;: 10.604979991912842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 29.367674827575684,
+            &quot;end&quot;: 29.692381858825684,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 29.729979991912842,
+            &quot;end&quot;: 29.740233898162842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 30.56787085533142,
+            &quot;end&quot;: 30.839354991912842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Request&quot;,
+            &quot;start&quot;: 1.1056249141693115,
+            &quot;end&quot;: 1.2828710079193115,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;draft_recv_request&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Mixed response&quot;,
+            &quot;start&quot;: 1.2941009998321533,
+            &quot;end&quot;: 9.600741863250732,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;hit_cache_respond_mixed&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Send response&quot;,
+            &quot;start&quot;: 9.677402019500732,
+            &quot;end&quot;: 10.029940843582153,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;draft_send_response&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Context&quot;,
+            &quot;start&quot;: 10.499667882919312,
+            &quot;end&quot;: 11.42642593383789,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;glue&quot;
+          },
+          {
+            &quot;label&quot;: &quot;SSD build&quot;,
+            &quot;start&quot;: 10.031893968582153,
+            &quot;end&quot;: 11.69888687133789,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;ssd_build_tree&quot;
+          },
+          {
+            &quot;label&quot;: &quot;SSD decode&quot;,
+            &quot;start&quot;: 11.71109390258789,
+            &quot;end&quot;: 32.28775405883789,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;ssd_decode_tree&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Cache insert&quot;,
+            &quot;start&quot;: 32.28970694541931,
+            &quot;end&quot;: 32.29751896858215,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;ssd_populate_cache&quot;
+          }
+        ],
+        &quot;previous&quot;: [
+          {
+            &quot;label&quot;: &quot;Previous SSD decode&quot;,
+            &quot;start&quot;: -19.309903144836426,
+            &quot;end&quot;: 1.0450780391693115,
+            &quot;lane&quot;: &quot;Draft previous&quot;,
+            &quot;original_label&quot;: &quot;ssd_decode_tree&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Previous cache insert&quot;,
+            &quot;start&quot;: 1.0475189685821533,
+            &quot;end&quot;: 1.0553319454193115,
+            &quot;lane&quot;: &quot;Draft previous&quot;,
+            &quot;original_label&quot;: &quot;ssd_populate_cache&quot;
+          }
+        ],
+        &quot;markers&quot;: {
+          &quot;Target ready&quot;: 30.871093034744263
+        }
+      },
+      &quot;step_ids&quot;: [
+        20,
+        21,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        34,
+        35,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        50,
+        51,
+        52,
+        54,
+        55,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        84,
+        86,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        96,
+        98,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        128,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        162,
+        164,
+        167,
+        168,
+        169,
+        170,
+        171,
+        174,
+        175,
+        176,
+        177,
+        178,
+        179,
+        180,
+        182,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        191,
+        192,
+        193,
+        194,
+        195,
+        196,
+        198,
+        200,
+        201,
+        203,
+        204,
+        205,
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        216,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        228,
+        229,
+        230,
+        231
+      ],
+      &quot;query_shapes&quot;: {
+        &quot;None&quot;: 179
+      }
+    },
+    {
+      &quot;status&quot;: &quot;Miss&quot;,
+      &quot;n&quot;: 3,
+      &quot;mean_target_ms&quot;: 30.667887290318806,
+      &quot;mean_decode_ms&quot;: 30.739085283130407,
+      &quot;mean_intervals&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Cache insert&quot;,
+          &quot;start&quot;: 31.83381525675456,
+          &quot;end&quot;: 31.84138361612956
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;start&quot;: 10.300367911656698,
+          &quot;end&quot;: 11.217604319254557
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss response&quot;,
+          &quot;start&quot;: 1.3598566850026448,
+          &quot;end&quot;: 9.336256583531698
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Request&quot;,
+          &quot;start&quot;: 1.168613354365031,
+          &quot;end&quot;: 1.348544994990031
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD build&quot;,
+          &quot;start&quot;: 9.793206612269083,
+          &quot;end&quot;: 11.512526273727417
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD decode&quot;,
+          &quot;start&quot;: 11.525709946950277,
+          &quot;end&quot;: 31.83210627237956
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Send response&quot;,
+          &quot;start&quot;: 9.42691437403361,
+          &quot;end&quot;: 9.791090647379557
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept&quot;,
+          &quot;start&quot;: 29.38745093345642,
+          &quot;end&quot;: 30.32275398572286
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept prepare&quot;,
+          &quot;start&quot;: 29.328694343566895,
+          &quot;end&quot;: 29.375569581985474
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;start&quot;: 30.628011385599773,
+          &quot;end&quot;: 30.667887290318806
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target verify&quot;,
+          &quot;start&quot;: 10.406493902206421,
+          &quot;end&quot;: 29.005208333333332
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;start&quot;: 0.0,
+          &quot;end&quot;: 9.877278645833334
+        }
+      ],
+      &quot;components&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Cache insert&quot;,
+          &quot;mean_ms&quot;: 0.007568359375,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;mean_ms&quot;: 0.9172364075978597,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss response&quot;,
+          &quot;mean_ms&quot;: 7.976399898529053,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Request&quot;,
+          &quot;mean_ms&quot;: 0.179931640625,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD build&quot;,
+          &quot;mean_ms&quot;: 1.7193196614583333,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;SSD decode&quot;,
+          &quot;mean_ms&quot;: 20.30639632542928,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Send response&quot;,
+          &quot;mean_ms&quot;: 0.36417627334594727,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept&quot;,
+          &quot;mean_ms&quot;: 0.9353030522664388,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Accept prepare&quot;,
+          &quot;mean_ms&quot;: 0.0468752384185791,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;mean_ms&quot;: 0.03987590471903483,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target verify&quot;,
+          &quot;mean_ms&quot;: 18.59871443112691,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Unlabelled gap&quot;,
+          &quot;mean_ms&quot;: 1.1698400179545085,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;mean_ms&quot;: 9.877278645833334,
+          &quot;present_steps&quot;: 3,
+          &quot;population&quot;: 3
+        }
+      ],
+      &quot;mean_markers&quot;: {
+        &quot;Target ready&quot;: 30.667887290318806
+      },
+      &quot;representative&quot;: {
+        &quot;step_id&quot;: 145,
+        &quot;status&quot;: &quot;Miss&quot;,
+        &quot;target_ms&quot;: 31.107421875,
+        &quot;decode_ms&quot;: 31.171906040981412,
+        &quot;source_counts&quot;: {
+          &quot;0&quot;: 8
+        },
+        &quot;physical_queries&quot;: null,
+        &quot;max_valid_nodes&quot;: 10,
+        &quot;unlabelled_target_ms&quot;: 1.1386711597442627,
+        &quot;intervals&quot;: [
+          {
+            &quot;label&quot;: &quot;Wait / sync&quot;,
+            &quot;start&quot;: 0.0,
+            &quot;end&quot;: 10.238770008087158,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_spec_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target verify&quot;,
+            &quot;start&quot;: 10.746093988418579,
+            &quot;end&quot;: 29.516113996505737,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;verify_replay&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Accept&quot;,
+            &quot;start&quot;: 29.89794898033142,
+            &quot;end&quot;: 30.7744140625,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;verify_sample_accept&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Accept prepare&quot;,
+            &quot;start&quot;: 29.84033203125,
+            &quot;end&quot;: 29.88476586341858,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;verify_accept_prep&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Postprocess&quot;,
+            &quot;start&quot;: 31.068360090255737,
+            &quot;end&quot;: 31.107421875,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_postprocess&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 10.238770008087158,
+            &quot;end&quot;: 10.746093988418579,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 29.516113996505737,
+            &quot;end&quot;: 29.84033203125,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 29.88476586341858,
+            &quot;end&quot;: 29.89794898033142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 30.7744140625,
+            &quot;end&quot;: 31.068360090255737,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Request&quot;,
+            &quot;start&quot;: 1.4093360900878906,
+            &quot;end&quot;: 1.5826759338378906,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;draft_recv_request&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Miss response&quot;,
+            &quot;start&quot;: 1.5929300785064697,
+            &quot;end&quot;: 9.750156879425049,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;hit_cache_respond_miss&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Send response&quot;,
+            &quot;start&quot;: 9.83072304725647,
+            &quot;end&quot;: 10.17789101600647,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;draft_send_response&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Context&quot;,
+            &quot;start&quot;: 10.65005898475647,
+            &quot;end&quot;: 11.572911024093628,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;glue&quot;
+          },
+          {
+            &quot;label&quot;: &quot;SSD build&quot;,
+            &quot;start&quot;: 10.180332899093628,
+            &quot;end&quot;: 11.85123085975647,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;ssd_build_tree&quot;
+          },
+          {
+            &quot;label&quot;: &quot;SSD decode&quot;,
+            &quot;start&quot;: 11.864414930343628,
+            &quot;end&quot;: 32.46451187133789,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;ssd_decode_tree&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Cache insert&quot;,
+            &quot;start&quot;: 32.46548891067505,
+            &quot;end&quot;: 32.47378993034363,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;ssd_populate_cache&quot;
+          }
+        ],
+        &quot;previous&quot;: [
+          {
+            &quot;label&quot;: &quot;Previous SSD decode&quot;,
+            &quot;start&quot;: -19.229335069656372,
+            &quot;end&quot;: 1.347325086593628,
+            &quot;lane&quot;: &quot;Draft previous&quot;,
+            &quot;original_label&quot;: &quot;ssd_decode_tree&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Previous cache insert&quot;,
+            &quot;start&quot;: 1.3492779731750488,
+            &quot;end&quot;: 1.3570899963378906,
+            &quot;lane&quot;: &quot;Draft previous&quot;,
+            &quot;original_label&quot;: &quot;ssd_populate_cache&quot;
+          }
+        ],
+        &quot;markers&quot;: {
+          &quot;Target ready&quot;: 31.107421875
+        }
+      },
+      &quot;step_ids&quot;: [
+        56,
+        145,
+        165
+      ],
+      &quot;query_shapes&quot;: {
+        &quot;None&quot;: 3
+      }
+    }
+  ],
+  &quot;excluded&quot;: {
+    &quot;initial&quot;: 19,
+    &quot;output_boundary&quot;: 32,
+    &quot;partial_batch&quot;: 36
+  },
+  &quot;eligible_steps&quot;: 182,
+  &quot;trace_paths&quot;: [
+    &quot;profiles/llama2_b8_ssd_refine_k10_f3/duet_profile_target_rank0_020815.json&quot;,
+    &quot;profiles/llama2_b8_ssd_refine_k10_f3/duet_profile_draft_020815.json&quot;
+  ],
+  &quot;labelled_capture_count&quot;: 0,
+  &quot;max_target_stage_overlap_ms&quot;: 0.0,
+  &quot;detail_labels_present&quot;: false
+}</pre></details></body></html>

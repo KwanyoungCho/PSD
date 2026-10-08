@@ -2,6 +2,8 @@
 
 통합 인수인계: [MERGE_REVIEW.md](../MERGE_REVIEW.md) 20절. 원시 결과, 실패 기록, 실행 계획과 재현 script를 함께 보존한다.
 
+**2026-10-09 표시 자료 추가:** [논문 형식의 Batch·AL·cache hit·TPS 표](paper_view/REPORT.md), [사용 파라미터](paper_view/PARAMETERS.md), [전체 실험 그림 index](paper_view/index.html), [최종 설정 breakdown PDF](paper_view/FINAL_BREAKDOWNS.pdf). 기존 완료487실험/691pass를 CPU에서 재분석했다. GPU 실험을 추가 실행하지 않았으며, 세부 trace가 있는337개와 wall/source 분해만 가능한150개를 구분했다.
+
 ## 최종 판단에 먼저 볼 결과
 
 **Llama2 B1에서는 DUET의 AL과 처리량 개선을 확인했다. Llama3 B1은 AL 차이가 통계적으로 뚜렷하지 않았고 SSD가 더 빨랐다. B8은 두 모델 모두 최적화 후에도 SSD가 우세했다.** 이번 선택에서 제외한432개에서도 이 판단이 유지된다. 이는 측정한 workload/장비/설정의 결과이며 B8의 모든 가능한 DUET 변형이 열세라는 증명은 아니다.

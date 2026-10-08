@@ -1,0 +1,1368 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>llama2_b8_combo_e23</title><style>
+body{font-family:system-ui,sans-serif;color:#26364c;margin:24px auto;max-width:1500px;padding:0 22px;line-height:1.55;background:#f7f9fc}
+h1{font-size:25px}h2{font-size:20px;margin-top:28px}a{color:#155c94}table{border-collapse:collapse;width:100%;background:white;font-size:13px}
+td,th{border-bottom:1px solid #dce3ea;padding:7px 10px;text-align:left}th{background:#26364c;color:white;position:sticky;top:0}
+tr.duet{background:#eff6fb}.box{background:white;border:1px solid #dce3ea;padding:16px;margin:16px 0;border-radius:8px}
+.muted{color:#5e6a79;font-size:13px}.bad{color:#a32424;font-weight:bold}img{width:100%;height:auto;background:white}
+input,select{padding:8px;margin:5px;border:1px solid #a5b3c3;border-radius:4px}input{min-width:320px}
+code{font-size:12px;word-break:break-all}pre{white-space:pre-wrap;font-size:12px;max-height:500px;overflow:auto}
+.scroll{overflow:auto}.toolbar{position:sticky;top:0;background:#f7f9fc;z-index:2;padding:8px}.tag{background:#e4ebf3;border-radius:4px;padding:2px 6px}
+</style><body><a href='../index.html'>← 전체 실험</a><h1>llama2_b8_combo_e23</h1><p>DUET: K1/K2=3/2, exit=23 (0-based), C=3, N1/N2=6/4, U=1, W=4, trim/stream=0/0</p><div class="box"><b>모든 저장 pass</b><table><tr><th>Pass</th><th>용도</th><th>N</th><th>B</th><th>T</th><th>Seed</th><th>AL*</th><th>Cache hit</th><th>TPS*</th><th>Raw TPS</th></tr><tr><td>0</td><td>profile-diagnostic</td><td>48</td><td>8</td><td>0.7</td><td>5100</td><td>2.076</td><td>81.49%</td><td>348.76</td><td>323.02</td></tr></table></div><p>Input/output cap: 512/96 · GPUs: 0,1 · draft seed: 0 · source: <code>81ea7775bbda8fed1e0edc00a612ee3d8bb3f3ae</code></p><p><a href='../figs/llama2_b8_combo_e23.png'>PNG</a> · <a href='../figs/llama2_b8_combo_e23.pdf'>벡터 PDF</a> · <a href='../../llama2_b8_combo/llama2_b8_combo_e23.json'>원본 결과 JSON</a></p><p>세부 trace: 175 eligible steps. <a href='../../profiles/llama2_b8_combo_e23/duet_profile_target_rank0_022811.json'>Target 원본</a> · <a href='../../profiles/llama2_b8_combo_e23/duet_profile_draft_022812.json'>Draft 원본</a></p><p class="muted">제외 수: {&quot;initial&quot;: 19, &quot;output_boundary&quot;: 30, &quot;capture_or_next&quot;: 7, &quot;partial_batch&quot;: 21}</p><p class="muted">왼쪽 아래는 상태별 평균 정렬 schematic, 오른쪽 아래는 실제 대표 step입니다. %의 분모는 각 상태의 평균 target request→ready 시간이며 phase overlap은 별도 lane에 표시합니다.</p><img src='../figs/llama2_b8_combo_e23.png' alt='Breakdown for llama2_b8_combo_e23'><details class="box"><summary>전체 파라미터·환경·source 정보</summary><pre>{
+  &quot;args&quot;: {
+    &quot;target&quot;: &quot;/home/chokwans99/models_mlsys/layerskip-llama2-7b&quot;,
+    &quot;draft&quot;: &quot;/home/chokwans99/models_mlsys/AMD-Llama-135m&quot;,
+    &quot;mode&quot;: &quot;duet-tree&quot;,
+    &quot;batches&quot;: [
+      8
+    ],
+    &quot;temperatures&quot;: [
+      0.7
+    ],
+    &quot;seeds&quot;: [
+      5100
+    ],
+    &quot;target_tp&quot;: 1,
+    &quot;prompts&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json&quot;,
+    &quot;limit&quot;: 0,
+    &quot;max_new_tokens&quot;: 96,
+    &quot;max_model_len&quot;: 2048,
+    &quot;input_cap&quot;: 512,
+    &quot;k1&quot;: 3,
+    &quot;k2&quot;: 2,
+    &quot;draft_fan_out&quot;: 2,
+    &quot;proxy_fan_out&quot;: 1,
+    &quot;p1_tree&quot;: true,
+    &quot;p1_verify_nodes&quot;: null,
+    &quot;p2_verify_nodes&quot;: null,
+    &quot;exit_layer&quot;: 23,
+    &quot;p1_nodes&quot;: 6,
+    &quot;p2_nodes&quot;: 4,
+    &quot;tree_width&quot;: 3,
+    &quot;p1_roots&quot;: 1,
+    &quot;p2_budget&quot;: null,
+    &quot;tree_root_count&quot;: null,
+    &quot;tree_beta&quot;: 0.5,
+    &quot;tree_proxy_threshold&quot;: 0.01,
+    &quot;tree_conf_threshold&quot;: 0.03,
+    &quot;root_source&quot;: &quot;complement&quot;,
+    &quot;root_normalization&quot;: &quot;full&quot;,
+    &quot;root_overlap_mix&quot;: 0.25,
+    &quot;memory_fraction&quot;: 0.45,
+    &quot;ignore_eos&quot;: false,
+    &quot;greedy_only&quot;: false,
+    &quot;audit_preemption&quot;: false,
+    &quot;ragged_limits&quot;: false,
+    &quot;tree_calibration_dir&quot;: null,
+    &quot;preflight_test&quot;: null,
+    &quot;output&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/llama2_b8_combo/llama2_b8_combo_e23.json&quot;
+  },
+  &quot;engine_kwargs&quot;: {
+    &quot;num_gpus&quot;: 2,
+    &quot;max_num_seqs&quot;: 8,
+    &quot;max_model_len&quot;: 2048,
+    &quot;max_num_batched_tokens&quot;: 16384,
+    &quot;gpu_memory_utilization&quot;: 0.45,
+    &quot;speculate&quot;: true,
+    &quot;draft_async&quot;: true,
+    &quot;greedy_only&quot;: false,
+    &quot;jit_speculate&quot;: true,
+    &quot;speculate_k&quot;: 5,
+    &quot;async_fan_out&quot;: 3,
+    &quot;duet_p1_tree_policy&quot;: &quot;on&quot;,
+    &quot;duet_p2_tree_policy&quot;: &quot;on&quot;,
+    &quot;draft&quot;: &quot;/home/chokwans99/models_mlsys/AMD-Llama-135m&quot;,
+    &quot;duet_enabled&quot;: true,
+    &quot;duet_exit_layer&quot;: 23,
+    &quot;duet_phase1_k&quot;: 3,
+    &quot;duet_phase2_k&quot;: 2,
+    &quot;duet_draft_fan_out&quot;: 2,
+    &quot;duet_p2_tree_max_nodes&quot;: 4,
+    &quot;duet_p2_tree_verify_nodes&quot;: 4,
+    &quot;duet_p1_tree_max_nodes&quot;: 6,
+    &quot;duet_p1_tree_verify_nodes&quot;: 6,
+    &quot;duet_tree_c_tensor&quot;: 3,
+    &quot;duet_p1_roots_per_position&quot;: 1,
+    &quot;duet_p2_budget&quot;: null,
+    &quot;duet_tree_root_count&quot;: null,
+    &quot;duet_tree_beta&quot;: 0.5,
+    &quot;duet_tree_proxy_threshold&quot;: 0.01,
+    &quot;duet_tree_conf_threshold&quot;: 0.03,
+    &quot;duet_root_source&quot;: &quot;complement&quot;,
+    &quot;duet_root_normalization&quot;: &quot;full&quot;,
+    &quot;duet_root_overlap_mix&quot;: 0.25
+  },
+  &quot;env&quot;: {
+    &quot;CUDA_VISIBLE_DEVICES&quot;: &quot;0,1&quot;,
+    &quot;SSD_CUDA_ARCH&quot;: &quot;8.9&quot;,
+    &quot;SSD_ATTN_BACKEND&quot;: &quot;auto&quot;,
+    &quot;SSD_DIST_PORT&quot;: &quot;31102&quot;,
+    &quot;OMP_NUM_THREADS&quot;: &quot;4&quot;,
+    &quot;SSD_SEED&quot;: &quot;0&quot;,
+    &quot;SSD_CHAIN_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_FAST_VERIFY&quot;: &quot;1&quot;,
+    &quot;SSD_BATCHED_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_DUET_EXIT_REPLICA&quot;: &quot;0&quot;,
+    &quot;SSD_ASYNC_PROXY_SEND&quot;: &quot;1&quot;,
+    &quot;SSD_PROXY_STREAM&quot;: &quot;0&quot;,
+    &quot;SSD_BATCHED_TREE&quot;: &quot;1&quot;,
+    &quot;SSD_TREE_EXPANSION_POLICY&quot;: &quot;reach_gain_frontier&quot;,
+    &quot;SSD_TREE_REACH_CALIBRATION&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json&quot;,
+    &quot;SSD_TREE_GAIN_CALIBRATION&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json&quot;,
+    &quot;SSD_DUET_MISS_K&quot;: &quot;4&quot;,
+    &quot;SSD_TREE_FUSED_MATH&quot;: &quot;1&quot;,
+    &quot;SSD_BATCH_TREE_BULK_EXPORT&quot;: &quot;1&quot;,
+    &quot;SSD_TREE_PARALLEL_INSERT&quot;: &quot;0&quot;,
+    &quot;SSD_PROFILE_DUET&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DUET_MAX_EVENTS&quot;: &quot;100000&quot;,
+    &quot;SSD_TREE_SHAPE_METRICS&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/profiles/llama2_b8_combo_e23&quot;,
+    &quot;SSD_HF_CACHE&quot;: &quot;/home/chokwans99/models_mlsys&quot;,
+    &quot;SSD_DATASET_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5&quot;
+  },
+  &quot;effective_features&quot;: {
+    &quot;fast_verify&quot;: true,
+    &quot;batched_proxy_graph&quot;: true,
+    &quot;exit_replica&quot;: false,
+    &quot;jit_speculate&quot;: true,
+    &quot;duet_jit_short&quot;: true,
+    &quot;miss_depth&quot;: 4,
+    &quot;miss_width&quot;: 1,
+    &quot;tree_fused_math&quot;: true,
+    &quot;tree_parallel_insert&quot;: false,
+    &quot;bulk_export&quot;: true
+  },
+  &quot;resolved_env&quot;: {
+    &quot;SSD_CUDA_ARCH&quot;: &quot;8.9&quot;,
+    &quot;SSD_ATTN_BACKEND&quot;: &quot;auto&quot;,
+    &quot;SSD_DIST_PORT&quot;: &quot;31102&quot;,
+    &quot;SSD_SEED&quot;: &quot;0&quot;,
+    &quot;SSD_CHAIN_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_FAST_VERIFY&quot;: &quot;1&quot;,
+    &quot;SSD_BATCHED_PROXY_GRAPH&quot;: &quot;1&quot;,
+    &quot;SSD_DUET_EXIT_REPLICA&quot;: &quot;0&quot;,
+    &quot;SSD_ASYNC_PROXY_SEND&quot;: &quot;1&quot;,
+    &quot;SSD_PROXY_STREAM&quot;: &quot;0&quot;,
+    &quot;SSD_BATCHED_TREE&quot;: &quot;1&quot;,
+    &quot;SSD_TREE_EXPANSION_POLICY&quot;: &quot;reach_gain_frontier&quot;,
+    &quot;SSD_TREE_REACH_CALIBRATION&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/reach.json&quot;,
+    &quot;SSD_TREE_GAIN_CALIBRATION&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round4/calibration/gain.json&quot;,
+    &quot;SSD_DUET_MISS_K&quot;: &quot;4&quot;,
+    &quot;SSD_TREE_FUSED_MATH&quot;: &quot;1&quot;,
+    &quot;SSD_BATCH_TREE_BULK_EXPORT&quot;: &quot;1&quot;,
+    &quot;SSD_TREE_PARALLEL_INSERT&quot;: &quot;0&quot;,
+    &quot;SSD_PROFILE_DUET&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DUET_MAX_EVENTS&quot;: &quot;100000&quot;,
+    &quot;SSD_TREE_SHAPE_METRICS&quot;: &quot;1&quot;,
+    &quot;SSD_PROFILE_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/profiles/llama2_b8_combo_e23&quot;,
+    &quot;SSD_HF_CACHE&quot;: &quot;/home/chokwans99/models_mlsys&quot;,
+    &quot;SSD_DATASET_DIR&quot;: &quot;/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5&quot;,
+    &quot;SSD_FORCE_SPLIT_K1K2&quot;: &quot;1&quot;,
+    &quot;SSD_DUET_JIT_SHORT&quot;: &quot;1&quot;,
+    &quot;SSD_SHM_NAME&quot;: &quot;ssd_2567855&quot;
+  },
+  &quot;runtime_source_sha256&quot;: {
+    &quot;ssd/ssd/__init__.py&quot;: &quot;f1a221b38f55b42ef0619cba48a411acbbd1965c4845b4643f77443b7ce77950&quot;,
+    &quot;ssd/ssd/config.py&quot;: &quot;865ddb5e09ec11f4bc8511dad3f5abad39a6ab412cf0bbcd6213179b5245fa31&quot;,
+    &quot;ssd/ssd/engine/block_manager.py&quot;: &quot;05d873619b419d31f47b4be4025bc7c9f11759f5f0bc3f65fbff3a1e8f94660a&quot;,
+    &quot;ssd/ssd/engine/draft_runner.py&quot;: &quot;8cb7e22f725de2c0d9c85912ae04f88f1674f34c0cee4b5beccc9a3b5be1c174&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_common.py&quot;: &quot;739feeb975c20d0adbdae51735b8983aa6cae8b59d6237b285db0c766d558f27&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_draft.py&quot;: &quot;f361030685350183884cc55b9058945515bb00da53fc86541f7902bfd2138528&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_forward.py&quot;: &quot;0c6079d2bdbf7ecc000b2a98b94b49b1942939d34ada80b15f57510de8a20940&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_inputs.py&quot;: &quot;c0a05d13ba0e63ecbc920425ddd6a98dc60001d93d73085e75d2d4a9b110a066&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_roots.py&quot;: &quot;ad3c4e772392c1043284ac4912d606543f3fd76167135b73e4f72a700e6820c7&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_sampling.py&quot;: &quot;46f36658cb189bc080ae0d4b8561f84662290facacccf6600f129eb6e93ee66b&quot;,
+    &quot;ssd/ssd/engine/helpers/batch_tree_verify.py&quot;: &quot;2da945efe3ba4b2673377a2f5c497528ab0c6cf4d7fd7edfbdb23b6c9c619ede&quot;,
+    &quot;ssd/ssd/engine/helpers/batched_proxy.py&quot;: &quot;6ed4f9b85ff8cf9c24b7ad43a1b7377d08123eeef5307366a373dacda184da86&quot;,
+    &quot;ssd/ssd/engine/helpers/batched_tree_executor.py&quot;: &quot;098d64cad2d20d96091631f6bc91da73b1e893ec400c3431a4ed68d007a9ef45&quot;,
+    &quot;ssd/ssd/engine/helpers/cudagraph_helpers.py&quot;: &quot;0436aec61d05d0b79696a48665042e364f3f4c50d853b68dc424e435b54be0c9&quot;,
+    &quot;ssd/ssd/engine/helpers/e0_trace.py&quot;: &quot;23ecd9bce2587cbef3f99c8894964c0d9642d33d372bd7be4954a5a2840a142e&quot;,
+    &quot;ssd/ssd/engine/helpers/mask_helpers.py&quot;: &quot;8ada4e709a6ab310ee920a7176b3684f89860022fc659442f6cb02ed5fb87d88&quot;,
+    &quot;ssd/ssd/engine/helpers/p1_tree.py&quot;: &quot;f48ae6b01e593d2598262b34007a6b58dde9e57e94138dde62f81d5526637398&quot;,
+    &quot;ssd/ssd/engine/helpers/p2_tree.py&quot;: &quot;73b0a512d834ab3a4608d9cd898b13b32630dd3b914b49e753c1116ac0640b41&quot;,
+    &quot;ssd/ssd/engine/helpers/p2_tree_executor.py&quot;: &quot;cfb04f959fd08baf3819a688a907cac4e3071a2727085ea08ca089b50a21e82e&quot;,
+    &quot;ssd/ssd/engine/helpers/packed_tree_forward.py&quot;: &quot;b903d6fe4d1fe18f95f6540f488acf40d469154100239429256eace61b1d7e76&quot;,
+    &quot;ssd/ssd/engine/helpers/packed_verify.py&quot;: &quot;a50ff24e93324840783b60102bfaeb3786711f05f64bd897708c779535c1820f&quot;,
+    &quot;ssd/ssd/engine/helpers/root_policy.py&quot;: &quot;5e3a8e2f9b2fe43fec52eb9e80fe59cb0d28177122f7e75c823c5ffd20aee718&quot;,
+    &quot;ssd/ssd/engine/helpers/runner_helpers.py&quot;: &quot;bfb570d8e018ee296a6c2a8c3c9e75919fd0eb1beb288ceb80121ad116419bf2&quot;,
+    &quot;ssd/ssd/engine/helpers/speculate_types.py&quot;: &quot;2929b5f3a176d04b6a4b01f092b224ad733dfda10a647bb73801cd346441ae91&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_expansion_policy.py&quot;: &quot;47f818d1b8f284e56813af294723f6a934c3da0502b9ae4e611b54ba6fb85dac&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_fused_math.py&quot;: &quot;930a1215363a3b6f878cbc4a71c3f59293f46aa2eab3c4938e5bb51e95868d2e&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_gain_allocation.py&quot;: &quot;6f32c6a7b69272c1b42992d95c546bfd3980ccd71af3b3346e9df61977907b6a&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_host_topology.py&quot;: &quot;86d0deab4da2932540a108c4c2b3560b8634837e71ba23783375c2001e4cf81c&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_layout.py&quot;: &quot;4e5e47c54a4efd5a30ae8c528e1d2d9493d12aa5605c0e65c2f86ba874805be1&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_rerank_gpu.py&quot;: &quot;e4a8bff8828f983d6eb407504f87f2a9edf08a1750449fe46565e661f892b734&quot;,
+    &quot;ssd/ssd/engine/helpers/tree_topology_gpu.py&quot;: &quot;3a6cf8796faabbe8adef56deedf8956c1cf252a31e0491f3b71a8544bdcf89af&quot;,
+    &quot;ssd/ssd/engine/llm_engine.py&quot;: &quot;b0081876ef6470f91fa562acc0317074a85afa9aec8322182bda7749153db00f&quot;,
+    &quot;ssd/ssd/engine/model_runner.py&quot;: &quot;5fa9e910f38538c276a151113fc490be9c75ae9af2bf35ba6eaa5513b237a421&quot;,
+    &quot;ssd/ssd/engine/scheduler.py&quot;: &quot;52a36e8bb2abc26f775562a39bd95ea6cc8c70650e6193ddaa0fad762afb8ae4&quot;,
+    &quot;ssd/ssd/engine/sequence.py&quot;: &quot;6894715ef142074b118bfa3018b10826d2748518e9c8b71291064eb99fae9bd9&quot;,
+    &quot;ssd/ssd/engine/speculator_async.py&quot;: &quot;cd16395d5e5d7380d29f5a27e1495b6a40758c0452ce2cb40d996e2c3271c114&quot;,
+    &quot;ssd/ssd/engine/speculator_sync.py&quot;: &quot;30487afa7f5027735ebd752ca1a53003f1d56350f503ea91931ef64e7aab115e&quot;,
+    &quot;ssd/ssd/engine/step.py&quot;: &quot;525d3022561c9eee96ec076032bb27e281af744feb739ddc17e52344a9cafe8f&quot;,
+    &quot;ssd/ssd/engine/verifier.py&quot;: &quot;f6795547f278628312d2dd5ab0a28e9f34489b8e6d02038566a65fa3190a0928&quot;,
+    &quot;ssd/ssd/layers/activation.py&quot;: &quot;13d88b460e7610df28c6a7c719dd8bf21c5c59ae0f85c94d505d499215618a82&quot;,
+    &quot;ssd/ssd/layers/attention.py&quot;: &quot;bbafa69d9b52dedf81542f2c3227b7f061de11c679a6681a16b0c137ccfc672b&quot;,
+    &quot;ssd/ssd/layers/embed_head.py&quot;: &quot;b896a56b908d75c8f30462b0b1a4ce634276ddb41165fdaa0220c55a2ddf7257&quot;,
+    &quot;ssd/ssd/layers/fi_attn.py&quot;: &quot;4b0a275d020c1c3ce37f4e2a6c04bff12577d6f11feec7d79959652300fc9a0c&quot;,
+    &quot;ssd/ssd/layers/layernorm.py&quot;: &quot;a076c8d2e31d2597119d8504a69afd8711b41a29b5ccb7e1bf111a6c7277400e&quot;,
+    &quot;ssd/ssd/layers/linear.py&quot;: &quot;82c096262013516c5f0a43f7c28f23aa6db6b14f52cbe1ce1dacc5f9d5c4b0b6&quot;,
+    &quot;ssd/ssd/layers/rotary_embedding.py&quot;: &quot;1bcca21cf5e4d81c11a5c55d59a6033874c4e6a0003cc4ae8e1aa6165976a723&quot;,
+    &quot;ssd/ssd/layers/sampler.py&quot;: &quot;df22591a229ae5c2f62d4797707470ebccb8e55f7064577bc24a656ed797f213&quot;,
+    &quot;ssd/ssd/llm.py&quot;: &quot;496950f31428f674b70e8e137e029aa16dd82fdc8d8b8cc76f9ebdce86f7f653&quot;,
+    &quot;ssd/ssd/models/eagle3_draft_llama3.py&quot;: &quot;0d6e713a419cf884fc85984f9a2a6de520119032075a7c99158e0df7e2faca84&quot;,
+    &quot;ssd/ssd/models/llama3.py&quot;: &quot;ac801bd73e999f04a6fc862ca1d49bc94c88315456cfb6cb1215a503bcc5e07d&quot;,
+    &quot;ssd/ssd/models/qwen2.py&quot;: &quot;6804e3662a173368632e5f05b9893cc0cd28a61ac9bd25dbe8cd6f387ca0d1ca&quot;,
+    &quot;ssd/ssd/models/qwen3.py&quot;: &quot;535495bf69933fd9c677275453b801189e2c3c78a94fcc5133fc65b88c9f69c7&quot;,
+    &quot;ssd/ssd/paths.py&quot;: &quot;72c52420daaf6d457c60235617efc3f8b1e3ae208a35f3bc45438adc9d7e01ac&quot;,
+    &quot;ssd/ssd/quant/__init__.py&quot;: &quot;a69f0de0a516ba2bf9e13680b75b8f5d538c2eb281b095662ed1515f8b0f8698&quot;,
+    &quot;ssd/ssd/quant/adapter.py&quot;: &quot;fbb1ce4a198a585c31b0102555d1f84d18b09b0de1b90a5808d93ec8ff7ac271&quot;,
+    &quot;ssd/ssd/quant/awq_calibrate.py&quot;: &quot;116807eca0a3e4e001aa24a3344031416e4060a6c1b2e39f59829fba09484126&quot;,
+    &quot;ssd/ssd/quant/build.py&quot;: &quot;37f9c72ac69af213f2720c86faf380b8a46baaad0b98bf5f2e3c7fa9b3fbc43c&quot;,
+    &quot;ssd/ssd/quant/config.py&quot;: &quot;080c327b2297d0905f8fddc8d994aa7b9dc1086d7703d951471d48cea8723a1d&quot;,
+    &quot;ssd/ssd/quant/importer.py&quot;: &quot;c8990b69bc9e4e152e7e80b7f08f273c6a4652c1f7e95a8247f85e50030f4f92&quot;,
+    &quot;ssd/ssd/quant/init_context.py&quot;: &quot;6aa3dc3f6e95d8902fa7244d0010110b6fcf1ffdccedd6eaa389204339fc214f&quot;,
+    &quot;ssd/ssd/quant/io.py&quot;: &quot;f44f98a57351ff1063b7423d2f8390a565a30796fd6c3beaeaa8825f906e66b5&quot;,
+    &quot;ssd/ssd/quant/loader.py&quot;: &quot;14f901b1f53a3650be7eff497f626469e2b1fbc487202c639d33c8dd4c9047fb&quot;,
+    &quot;ssd/ssd/quant/marlin.py&quot;: &quot;4f1996e9f63d7109e92a3a7ec5350069ba67d7659f2149e99b84ca3c6626b241&quot;,
+    &quot;ssd/ssd/quant/marlin_utils.py&quot;: &quot;f64ec8d7ec8260556abd21e229567971a928882f14b93d288a6732d55c12fc90&quot;,
+    &quot;ssd/ssd/quant/naming.py&quot;: &quot;7ba73900af5e6d6fa2d1907bd2611625fc72f28a1fb9ea4834cd9a45901632d6&quot;,
+    &quot;ssd/ssd/quant/pack.py&quot;: &quot;b7dd683b7cdbfbb6f4ce1e13a51a72240a8dc3a35b7ed652dc664d26bb384711&quot;,
+    &quot;ssd/ssd/quant/state.py&quot;: &quot;82cb1050a3b1776765df7ad8f6c59c23a86ac8d1d4cc3c974cded7f8e762f806&quot;,
+    &quot;ssd/ssd/sampling_params.py&quot;: &quot;7f79868c4ca115bb18e017411a6c5545f354aa858aa0b8076aafb756d0785032&quot;,
+    &quot;ssd/ssd/utils/async_helpers/async_spec_helpers.py&quot;: &quot;0d70779098c5051fcba5d3add5ff0b7896139f1b7789babe701a8df6eaa40f24&quot;,
+    &quot;ssd/ssd/utils/async_helpers/duet_policy.py&quot;: &quot;1fb3e1ec1c41a9cda5f531f8c732b09145c7d87ea79d74c331b8176f11f22aaf&quot;,
+    &quot;ssd/ssd/utils/async_helpers/nccl_pack.py&quot;: &quot;6330e785f3e81acffe25a82061d3098f7834ad3c2d07bb071d79ed9923b18dc1&quot;,
+    &quot;ssd/ssd/utils/async_helpers/tests.py&quot;: &quot;6491ced36a2a6f06d8cf411204b1190d2ca0bc700cd0becf79c3f4cd8abcd87e&quot;,
+    &quot;ssd/ssd/utils/context.py&quot;: &quot;ce55eb45f00c91412946dd1c96f5c8f972372dd4c8069770c48e120773f301fc&quot;,
+    &quot;ssd/ssd/utils/int8_debug.py&quot;: &quot;9a71dbf2b997a9c8d9b776cc3659c8dbf32ce5411eb5cedb4a73368cee60d3d7&quot;,
+    &quot;ssd/ssd/utils/loader.py&quot;: &quot;c008eac34810772e8d9f51da896c00867481f3e1a0e6f725e0d06599c0aab59e&quot;,
+    &quot;ssd/ssd/utils/misc.py&quot;: &quot;1084b630f174d651b78b01c4ba2dff147f18d3cf52a200704b4b9eab2b72b66c&quot;,
+    &quot;ssd/ssd/utils/quantize.py&quot;: &quot;c0ee73d55f3781eba88007325d5e9e53e66ad952e0e8f19143aa8c50bc39f406&quot;,
+    &quot;ssd/ssd/utils/verify.py&quot;: &quot;0cf11b9ba19a73e9c39087fccde43071464c6f3b964e00081ebadc747ef142a4&quot;,
+    &quot;ssd/ssd/utils/verify_fast.py&quot;: &quot;23b05b7e5032fe72c8f2ef5bd7a69aa874818b08b52ea7fc0344a54c76ea28d9&quot;,
+    &quot;ssd/bench/mlsys_campaign.py&quot;: &quot;059b6316ba33e867e1fcf099a8180c186fa70b916692eca386d2a4a347b0f26f&quot;,
+    &quot;ssd/bench/mlsys_coverage.py&quot;: &quot;70b2afaf05bbbd5760c2a4f96f801976479209ca1d7a8f9eb8598139e686bdbc&quot;,
+    &quot;ssd/bench/mlsys_greedy_audit.py&quot;: &quot;b9815fd03ded7f30f7c0408629782156e73f5ceaab9f0b3b720956f5c00da141&quot;,
+    &quot;ssd/bench/mlsys_preemption_audit.py&quot;: &quot;f891ff5a69a59fb8c93e7952f9d48ac16adb7fef074763089f14d4505ecad80d&quot;,
+    &quot;ssd/bench/mlsys_summarize.py&quot;: &quot;0235aa2b56eb59c41c429351d77e90e16c52ccdf58c43e3578dd03df0f6095bd&quot;,
+    &quot;ssd/bench/mlsys_tree_observer.py&quot;: &quot;8c18248c9ef1953e2e821613099f14d155978540536939288d4fb2aa897c6263&quot;,
+    &quot;ssd/bench/mlsys_verify_bench.py&quot;: &quot;3ddc36197874d239f41a1c135570d4d7a0940d615d3d396299bae46e377bce2e&quot;
+  }
+}</pre></details><details class="box"><summary>그림 수치·step IDs·대표 step 원본</summary><pre>{
+  &quot;groups&quot;: [
+    {
+      &quot;status&quot;: &quot;P2 hit&quot;,
+      &quot;n&quot;: 1,
+      &quot;mean_target_ms&quot;: 27.41210913658142,
+      &quot;mean_decode_ms&quot;: 27.469818014651537,
+      &quot;mean_intervals&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;start&quot;: 3.250370979309082,
+          &quot;end&quot;: 4.94080114364624
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss draft&quot;,
+          &quot;start&quot;: 2.1195120811462402,
+          &quot;end&quot;: 2.163457155227661
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P1&quot;,
+          &quot;start&quot;: 4.964238166809082,
+          &quot;end&quot;: 15.70252013206482
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P2&quot;,
+          &quot;start&quot;: 21.38904309272766,
+          &quot;end&quot;: 28.88904309272766
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Proxy wait&quot;,
+          &quot;start&quot;: 15.705449104309082,
+          &quot;end&quot;: 21.38708996772766
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Final logits&quot;,
+          &quot;start&quot;: 26.22558617591858,
+          &quot;end&quot;: 26.547851085662842
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;start&quot;: 27.379882097244263,
+          &quot;end&quot;: 27.41210913658142
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Proxy / launch&quot;,
+          &quot;start&quot;: 20.331053972244263,
+          &quot;end&quot;: 21.221678972244263
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target post&quot;,
+          &quot;start&quot;: 21.223632097244263,
+          &quot;end&quot;: 26.223632097244263
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target pre&quot;,
+          &quot;start&quot;: 5.412109136581421,
+          &quot;end&quot;: 20.329101085662842
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;start&quot;: 0.0,
+          &quot;end&quot;: 3.2919921875
+        }
+      ],
+      &quot;components&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;mean_ms&quot;: 1.6904301643371582,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss draft&quot;,
+          &quot;mean_ms&quot;: 0.0439450740814209,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P1&quot;,
+          &quot;mean_ms&quot;: 10.738281965255737,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P2&quot;,
+          &quot;mean_ms&quot;: 7.5,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Proxy wait&quot;,
+          &quot;mean_ms&quot;: 5.681640863418579,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Final logits&quot;,
+          &quot;mean_ms&quot;: 0.3222649097442627,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;mean_ms&quot;: 0.0322270393371582,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Proxy / launch&quot;,
+          &quot;mean_ms&quot;: 0.890625,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target post&quot;,
+          &quot;mean_ms&quot;: 5.0,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target pre&quot;,
+          &quot;mean_ms&quot;: 14.916991949081421,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Unlabelled gap&quot;,
+          &quot;mean_ms&quot;: 2.958008050918579,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;mean_ms&quot;: 3.2919921875,
+          &quot;present_steps&quot;: 1,
+          &quot;population&quot;: 1
+        }
+      ],
+      &quot;mean_markers&quot;: {
+        &quot;Final logits&quot;: 26.547851085662842,
+        &quot;Target ready&quot;: 27.41210913658142,
+        &quot;Proxy received&quot;: 21.390995979309082
+      },
+      &quot;representative&quot;: {
+        &quot;step_id&quot;: 114,
+        &quot;status&quot;: &quot;P2 hit&quot;,
+        &quot;target_ms&quot;: 27.41210913658142,
+        &quot;decode_ms&quot;: 27.469818014651537,
+        &quot;source_counts&quot;: {
+          &quot;2&quot;: 8
+        },
+        &quot;physical_queries&quot;: 56,
+        &quot;max_valid_nodes&quot;: 4,
+        &quot;unlabelled_target_ms&quot;: 2.958008050918579,
+        &quot;intervals&quot;: [
+          {
+            &quot;label&quot;: &quot;Wait / sync&quot;,
+            &quot;start&quot;: 0.0,
+            &quot;end&quot;: 3.2919921875,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_spec_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target pre&quot;,
+            &quot;start&quot;: 5.412109136581421,
+            &quot;end&quot;: 20.329101085662842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_pre&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Proxy / launch&quot;,
+            &quot;start&quot;: 20.331053972244263,
+            &quot;end&quot;: 21.221678972244263,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_proxy&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target post&quot;,
+            &quot;start&quot;: 21.223632097244263,
+            &quot;end&quot;: 26.223632097244263,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_post&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Final logits&quot;,
+            &quot;start&quot;: 26.22558617591858,
+            &quot;end&quot;: 26.547851085662842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_final_logits&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Postprocess&quot;,
+            &quot;start&quot;: 27.379882097244263,
+            &quot;end&quot;: 27.41210913658142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_postprocess&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 3.2919921875,
+            &quot;end&quot;: 5.412109136581421,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 20.329101085662842,
+            &quot;end&quot;: 20.331053972244263,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 21.221678972244263,
+            &quot;end&quot;: 21.223632097244263,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 26.223632097244263,
+            &quot;end&quot;: 26.22558617591858,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 26.547851085662842,
+            &quot;end&quot;: 27.379882097244263,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Miss draft&quot;,
+            &quot;start&quot;: 2.1195120811462402,
+            &quot;end&quot;: 2.163457155227661,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_miss_draft&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Context&quot;,
+            &quot;start&quot;: 3.250370979309082,
+            &quot;end&quot;: 4.94080114364624,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_glue&quot;
+          },
+          {
+            &quot;label&quot;: &quot;P1&quot;,
+            &quot;start&quot;: 4.964238166809082,
+            &quot;end&quot;: 15.70252013206482,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_p1_total&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Proxy wait&quot;,
+            &quot;start&quot;: 15.705449104309082,
+            &quot;end&quot;: 21.38708996772766,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_proxy_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;P2&quot;,
+            &quot;start&quot;: 21.38904309272766,
+            &quot;end&quot;: 28.88904309272766,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_p2_total&quot;
+          }
+        ],
+        &quot;previous&quot;: [
+          {
+            &quot;label&quot;: &quot;Previous P2&quot;,
+            &quot;start&quot;: -5.908808946609497,
+            &quot;end&quot;: 1.547245979309082,
+            &quot;lane&quot;: &quot;Draft previous&quot;,
+            &quot;original_label&quot;: &quot;batch_p2_total&quot;
+          }
+        ],
+        &quot;markers&quot;: {
+          &quot;Target ready&quot;: 27.41210913658142,
+          &quot;Final logits&quot;: 26.547851085662842,
+          &quot;Proxy received&quot;: 21.390995979309082
+        }
+      },
+      &quot;step_ids&quot;: [
+        114
+      ],
+      &quot;query_shapes&quot;: {
+        &quot;56&quot;: 1
+      }
+    },
+    {
+      &quot;status&quot;: &quot;Mixed hits&quot;,
+      &quot;n&quot;: 40,
+      &quot;mean_target_ms&quot;: 26.45900869369507,
+      &quot;mean_decode_ms&quot;: 26.51398841990158,
+      &quot;mean_intervals&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;start&quot;: 3.4194388687610626,
+          &quot;end&quot;: 4.963896799087524
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss draft&quot;,
+          &quot;start&quot;: 2.2099173724651338,
+          &quot;end&quot;: 2.2512503147125242
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P1&quot;,
+          &quot;start&quot;: 4.988579457998275,
+          &quot;end&quot;: 15.388799226284027
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P2&quot;,
+          &quot;start&quot;: 20.7835745036602,
+          &quot;end&quot;: 27.979448544979096
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Proxy wait&quot;,
+          &quot;start&quot;: 15.39180205464363,
+          &quot;end&quot;: 20.781596940755843
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Final logits&quot;,
+          &quot;start&quot;: 25.2956298828125,
+          &quot;end&quot;: 25.61845703125
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;start&quot;: 26.429711937904358,
+          &quot;end&quot;: 26.45900869369507
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Proxy / launch&quot;,
+          &quot;start&quot;: 19.717773431539534,
+          &quot;end&quot;: 20.60861817598343
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target post&quot;,
+          &quot;start&quot;: 20.610644441843032,
+          &quot;end&quot;: 25.29355462193489
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target pre&quot;,
+          &quot;start&quot;: 5.736059522628784,
+          &quot;end&quot;: 19.715722638368607
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;start&quot;: 0.0,
+          &quot;end&quot;: 3.4140624165534974
+        }
+      ],
+      &quot;components&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;mean_ms&quot;: 1.5444579303264618,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss draft&quot;,
+          &quot;mean_ms&quot;: 0.041332942247390744,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P1&quot;,
+          &quot;mean_ms&quot;: 10.400219768285751,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P2&quot;,
+          &quot;mean_ms&quot;: 7.195874041318893,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Proxy wait&quot;,
+          &quot;mean_ms&quot;: 5.389794886112213,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Final logits&quot;,
+          &quot;mean_ms&quot;: 0.3228271484375,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;mean_ms&quot;: 0.02929675579071045,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Proxy / launch&quot;,
+          &quot;mean_ms&quot;: 0.8908447444438934,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target post&quot;,
+          &quot;mean_ms&quot;: 4.6829101800918576,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target pre&quot;,
+          &quot;mean_ms&quot;: 13.979663115739822,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Unlabelled gap&quot;,
+          &quot;mean_ms&quot;: 3.139404332637787,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;mean_ms&quot;: 3.4140624165534974,
+          &quot;present_steps&quot;: 40,
+          &quot;population&quot;: 40
+        }
+      ],
+      &quot;mean_markers&quot;: {
+        &quot;Final logits&quot;: 25.61845703125,
+        &quot;Target ready&quot;: 26.45900869369507,
+        &quot;Proxy received&quot;: 20.779888010025026
+      },
+      &quot;representative&quot;: {
+        &quot;step_id&quot;: 64,
+        &quot;status&quot;: &quot;Mixed hits&quot;,
+        &quot;target_ms&quot;: 26.90136694908142,
+        &quot;decode_ms&quot;: 26.9647310487926,
+        &quot;source_counts&quot;: {
+          &quot;2&quot;: 7,
+          &quot;1&quot;: 1
+        },
+        &quot;physical_queries&quot;: 56,
+        &quot;max_valid_nodes&quot;: 6,
+        &quot;unlabelled_target_ms&quot;: 3.0996100902557373,
+        &quot;intervals&quot;: [
+          {
+            &quot;label&quot;: &quot;Wait / sync&quot;,
+            &quot;start&quot;: 0.0,
+            &quot;end&quot;: 3.465820074081421,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_spec_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target pre&quot;,
+            &quot;start&quot;: 5.686522960662842,
+            &quot;end&quot;: 19.990233898162842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_pre&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Proxy / launch&quot;,
+            &quot;start&quot;: 19.9931640625,
+            &quot;end&quot;: 20.8818359375,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_proxy&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target post&quot;,
+            &quot;start&quot;: 20.8837890625,
+            &quot;end&quot;: 25.671875,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_post&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Final logits&quot;,
+            &quot;start&quot;: 25.67382788658142,
+            &quot;end&quot;: 25.99707007408142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_final_logits&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Postprocess&quot;,
+            &quot;start&quot;: 26.869141101837158,
+            &quot;end&quot;: 26.90136694908142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_postprocess&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 3.465820074081421,
+            &quot;end&quot;: 5.686522960662842,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 19.990233898162842,
+            &quot;end&quot;: 19.9931640625,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 20.8818359375,
+            &quot;end&quot;: 20.8837890625,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 25.671875,
+            &quot;end&quot;: 25.67382788658142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 25.99707007408142,
+            &quot;end&quot;: 26.869141101837158,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Miss draft&quot;,
+            &quot;start&quot;: 2.206425905227661,
+            &quot;end&quot;: 2.2474420070648193,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_miss_draft&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Context&quot;,
+            &quot;start&quot;: 3.4349420070648193,
+            &quot;end&quot;: 5.036504030227661,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_glue&quot;
+          },
+          {
+            &quot;label&quot;: &quot;P1&quot;,
+            &quot;start&quot;: 5.059942007064819,
+            &quot;end&quot;: 15.815800905227661,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_p1_total&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Proxy wait&quot;,
+            &quot;start&quot;: 15.819706916809082,
+            &quot;end&quot;: 21.02673888206482,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_proxy_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;P2&quot;,
+            &quot;start&quot;: 21.02966809272766,
+            &quot;end&quot;: 28.477910041809082,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_p2_total&quot;
+          }
+        ],
+        &quot;previous&quot;: [
+          {
+            &quot;label&quot;: &quot;Previous P2&quot;,
+            &quot;start&quot;: -5.924432992935181,
+            &quot;end&quot;: 1.4661920070648193,
+            &quot;lane&quot;: &quot;Draft previous&quot;,
+            &quot;original_label&quot;: &quot;batch_p2_total&quot;
+          }
+        ],
+        &quot;markers&quot;: {
+          &quot;Target ready&quot;: 26.90136694908142,
+          &quot;Final logits&quot;: 25.99707007408142,
+          &quot;Proxy received&quot;: 21.024785041809082
+        }
+      },
+      &quot;step_ids&quot;: [
+        28,
+        29,
+        31,
+        47,
+        55,
+        57,
+        64,
+        65,
+        67,
+        77,
+        86,
+        89,
+        90,
+        100,
+        109,
+        111,
+        112,
+        115,
+        132,
+        133,
+        141,
+        143,
+        146,
+        158,
+        167,
+        169,
+        171,
+        172,
+        173,
+        174,
+        186,
+        187,
+        189,
+        190,
+        192,
+        199,
+        210,
+        214,
+        222,
+        225
+      ],
+      &quot;query_shapes&quot;: {
+        &quot;56&quot;: 40
+      }
+    },
+    {
+      &quot;status&quot;: &quot;Mixed hit/miss&quot;,
+      &quot;n&quot;: 134,
+      &quot;mean_target_ms&quot;: 29.130392898374527,
+      &quot;mean_decode_ms&quot;: 29.19244038552713,
+      &quot;mean_intervals&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;start&quot;: 6.027999363728424,
+          &quot;end&quot;: 7.489796814633839
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss draft&quot;,
+          &quot;start&quot;: 2.096817863521291,
+          &quot;end&quot;: 4.960900751512442
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P1&quot;,
+          &quot;start&quot;: 7.5140141177533275,
+          &quot;end&quot;: 17.99490555898467
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P2&quot;,
+          &quot;start&quot;: 23.39302967377563,
+          &quot;end&quot;: 30.655440748627505
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Proxy wait&quot;,
+          &quot;start&quot;: 17.99795912450819,
+          &quot;end&quot;: 23.391185897499767
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Final logits&quot;,
+          &quot;start&quot;: 27.969741116708786,
+          &quot;end&quot;: 28.292720862288974
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;start&quot;: 29.100236045780466,
+          &quot;end&quot;: 29.130392898374527
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Proxy / launch&quot;,
+          &quot;start&quot;: 22.330850586962345,
+          &quot;end&quot;: 23.22380039941019
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target post&quot;,
+          &quot;start&quot;: 23.225884659966425,
+          &quot;end&quot;: 27.967649479410543
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target pre&quot;,
+          &quot;start&quot;: 8.144064823193336,
+          &quot;end&quot;: 22.32869340234728
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;start&quot;: 0.0,
+          &quot;end&quot;: 6.03240871251519
+        }
+      ],
+      &quot;components&quot;: [
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Context&quot;,
+          &quot;mean_ms&quot;: 1.4617974509054155,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Miss draft&quot;,
+          &quot;mean_ms&quot;: 2.8640828879911506,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P1&quot;,
+          &quot;mean_ms&quot;: 10.480891441231343,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;P2&quot;,
+          &quot;mean_ms&quot;: 7.262411074851876,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Draft current&quot;,
+          &quot;label&quot;: &quot;Proxy wait&quot;,
+          &quot;mean_ms&quot;: 5.393226772991579,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Final logits&quot;,
+          &quot;mean_ms&quot;: 0.32297974558018927,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Postprocess&quot;,
+          &quot;mean_ms&quot;: 0.030156852594062464,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Proxy / launch&quot;,
+          &quot;mean_ms&quot;: 0.8929498124478469,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target post&quot;,
+          &quot;mean_ms&quot;: 4.741764819444115,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Target pre&quot;,
+          &quot;mean_ms&quot;: 14.184628579153943,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Unlabelled gap&quot;,
+          &quot;mean_ms&quot;: 2.9255043766391813,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        },
+        {
+          &quot;lane&quot;: &quot;Target&quot;,
+          &quot;label&quot;: &quot;Wait / sync&quot;,
+          &quot;mean_ms&quot;: 6.03240871251519,
+          &quot;present_steps&quot;: 134,
+          &quot;population&quot;: 134
+        }
+      ],
+      &quot;mean_markers&quot;: {
+        &quot;Final logits&quot;: 28.292720862288974,
+        &quot;Target ready&quot;: 29.130392898374527,
+        &quot;Proxy received&quot;: 23.38933480141768
+      },
+      &quot;representative&quot;: {
+        &quot;step_id&quot;: 76,
+        &quot;status&quot;: &quot;Mixed hit/miss&quot;,
+        &quot;target_ms&quot;: 29.49023413658142,
+        &quot;decode_ms&quot;: 29.579698108136654,
+        &quot;source_counts&quot;: {
+          &quot;2&quot;: 5,
+          &quot;1&quot;: 1,
+          &quot;0&quot;: 2
+        },
+        &quot;physical_queries&quot;: 56,
+        &quot;max_valid_nodes&quot;: 6,
+        &quot;unlabelled_target_ms&quot;: 2.9394516944885254,
+        &quot;intervals&quot;: [
+          {
+            &quot;label&quot;: &quot;Wait / sync&quot;,
+            &quot;start&quot;: 0.0,
+            &quot;end&quot;: 5.717774152755737,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_spec_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target pre&quot;,
+            &quot;start&quot;: 7.833984136581421,
+            &quot;end&quot;: 22.511719226837158,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_pre&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Proxy / launch&quot;,
+            &quot;start&quot;: 22.51367211341858,
+            &quot;end&quot;: 23.445313215255737,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_proxy&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Target post&quot;,
+            &quot;start&quot;: 23.447266101837158,
+            &quot;end&quot;: 28.314453125,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_post&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Final logits&quot;,
+            &quot;start&quot;: 28.31640601158142,
+            &quot;end&quot;: 28.642578125,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;batch_target_final_logits&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Postprocess&quot;,
+            &quot;start&quot;: 29.45996117591858,
+            &quot;end&quot;: 29.49023413658142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;target_postprocess&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 5.717774152755737,
+            &quot;end&quot;: 7.833984136581421,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 22.511719226837158,
+            &quot;end&quot;: 22.51367211341858,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 23.445313215255737,
+            &quot;end&quot;: 23.447266101837158,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 28.314453125,
+            &quot;end&quot;: 28.31640601158142,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Unlabelled gap&quot;,
+            &quot;start&quot;: 28.642578125,
+            &quot;end&quot;: 29.45996117591858,
+            &quot;lane&quot;: &quot;Target&quot;,
+            &quot;original_label&quot;: &quot;derived_gap&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Miss draft&quot;,
+            &quot;start&quot;: 1.6380670070648193,
+            &quot;end&quot;: 4.606817007064819,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_miss_draft&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Context&quot;,
+            &quot;start&quot;: 5.707403182983398,
+            &quot;end&quot;: 7.208379030227661,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_glue&quot;
+          },
+          {
+            &quot;label&quot;: &quot;P1&quot;,
+            &quot;start&quot;: 7.233770132064819,
+            &quot;end&quot;: 17.98279309272766,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_p1_total&quot;
+          },
+          {
+            &quot;label&quot;: &quot;Proxy wait&quot;,
+            &quot;start&quot;: 17.98572301864624,
+            &quot;end&quot;: 23.59705114364624,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_proxy_wait&quot;
+          },
+          {
+            &quot;label&quot;: &quot;P2&quot;,
+            &quot;start&quot;: 23.5980281829834,
+            &quot;end&quot;: 31.09216809272766,
+            &quot;lane&quot;: &quot;Draft current&quot;,
+            &quot;original_label&quot;: &quot;batch_p2_total&quot;
+          }
+        ],
+        &quot;previous&quot;: [],
+        &quot;markers&quot;: {
+          &quot;Target ready&quot;: 29.49023413658142,
+          &quot;Final logits&quot;: 28.642578125,
+          &quot;Proxy received&quot;: 23.59509801864624
+        }
+      },
+      &quot;step_ids&quot;: [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        30,
+        32,
+        33,
+        34,
+        35,
+        36,
+        38,
+        39,
+        40,
+        43,
+        44,
+        45,
+        46,
+        49,
+        50,
+        51,
+        53,
+        54,
+        56,
+        61,
+        63,
+        66,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        76,
+        79,
+        80,
+        81,
+        82,
+        84,
+        85,
+        87,
+        88,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        101,
+        102,
+        103,
+        104,
+        106,
+        107,
+        108,
+        110,
+        113,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        123,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        134,
+        135,
+        136,
+        137,
+        139,
+        140,
+        142,
+        144,
+        145,
+        149,
+        150,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        159,
+        163,
+        165,
+        166,
+        168,
+        170,
+        177,
+        178,
+        179,
+        180,
+        181,
+        182,
+        183,
+        184,
+        185,
+        188,
+        191,
+        195,
+        196,
+        197,
+        198,
+        200,
+        201,
+        203,
+        204,
+        205,
+        207,
+        208,
+        209,
+        211,
+        212,
+        213,
+        215,
+        216,
+        217,
+        218,
+        219,
+        220,
+        221,
+        224
+      ],
+      &quot;query_shapes&quot;: {
+        &quot;56&quot;: 134
+      }
+    }
+  ],
+  &quot;excluded&quot;: {
+    &quot;initial&quot;: 19,
+    &quot;output_boundary&quot;: 30,
+    &quot;capture_or_next&quot;: 7,
+    &quot;partial_batch&quot;: 21
+  },
+  &quot;eligible_steps&quot;: 175,
+  &quot;trace_paths&quot;: [
+    &quot;profiles/llama2_b8_combo_e23/duet_profile_target_rank0_022811.json&quot;,
+    &quot;profiles/llama2_b8_combo_e23/duet_profile_draft_022812.json&quot;
+  ],
+  &quot;labelled_capture_count&quot;: 4,
+  &quot;max_target_stage_overlap_ms&quot;: 0.0,
+  &quot;detail_labels_present&quot;: false
+}</pre></details></body></html>

@@ -2,6 +2,8 @@
 
 **최신 상태 (2026-10-08): Round5 실험·추가 최적화·검증 완료.** 이번 실제 온도 root 수식 통합·독립 SSD 튜닝·B1/B8 공동 파라미터 탐색과 결론은 **20절**, 최종 수치와 다른 서버의 재현 절차는 **20.4–20.7절**을 따른다. 완료487실행/691cell, 그중 full480실행70개이며 실패4시도도 보존했다. **19절은 완료된 Round4의94개 실행 기록**이다. 0–18절은 round3까지의 역사적 기록이다. 부록의 commit/file 목록은 Round5 runtime 기준으로 갱신했다.
 
+**2026-10-09 추가:** 기존 논문 표시 방법을 적용한 전체 성능표·파라미터·breakdown 그림은 **20.8절**과 [paper_view/REPORT.md](round5/paper_view/REPORT.md)에 정리했다. 실험 결과의 재표시이며 새 GPU 실행이나 runtime 수정은 없다.
+
 작성일: 2026-10-07, 최종 실험 갱신: 2026-10-08. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 아래0–18절은 당시 source/history와 저장된 실험을 재검토한 내용이다. 당시 문서 감사에는 새 GPU 실험/runtime 변경이 없었으며, 이후 추가 작업은19절, 최신 상태는20절을 따른다.
 
 **0. 정확한 기준과 먼저 바로잡을 설명**
@@ -748,6 +750,18 @@ python ssd/bench/mlsys_campaign.py \
 반대 process seed/GPU 반복까지 재현하려면 `POSTOPT_RESULTS.json`의각replicate path에 대응하는 원본 `plan.json`을 `--job`으로 골라 같은 방식으로 복사한다. Recommended plan은 각조건rep0의 두 방법을 담는다. 새로운 서버·길이·모델에서는 이 preset을 시작점으로 두고 breakdown을 다시 측정해야 한다. 현재 탐색 script의 exit 상한31은32layer 새모델용이므로70B에 그대로 적용하지 않는다.
 
 **이번 계획의 미실행 필수 job은 없다.** 다음은 이번 결과 밖의 연구/최적화 후보이며 성능이 입증됐다고 쓰면 안 된다: target query bucket/padding 개선, C1 continuation을 위한 chain 전용 실행 경로, hit/miss 분리 스케줄, AL을 보존하면서 P2 노출을 줄이는 구성, 모델별 새 tree calibration, dense70B/Blackwell TP2 재현, 출력1024·더 넓은 독립 workload/온도, B2/B4 개별 재튜닝. 기존 packed-tree 실험은 더 느렸으므로 무조건ON하지 않는다. 다른 서버 merge에서는20.1의 q-law·실제 온도·wire·KV·stream memory/event 계약과19절의 correctness 변경을 함께 보존한다.
+
+**20.8 논문 형식의 전체 실험 표·breakdown 그림 (2026-10-09)**
+
+- 사용자 요청에 따라 Batch, AL*, cache hit, 절대 TPS*를 방법별 행으로 정리했다. 최종 처리량 우선8행, AL 우선8행, B2/B4·길이 이전12행을 분리했다. 두 반복의 TPS는 개별 값으로 보존하고 AL/cache hit만 event 수를 합쳐 집계했다. Raw returned TPS도 병기한다.
+- [보고서](round5/paper_view/REPORT.md), [파라미터 표](round5/paper_view/PARAMETERS.md), [전체 검색 index](round5/paper_view/index.html), [전체487실험 CSV](round5/paper_view/ALL_EXPERIMENTS.csv), [691pass CSV](round5/paper_view/ALL_PASSES.csv), [전체 파라미터 CSV](round5/paper_view/ALL_PARAMETERS.csv).
+- [최종 처리량/AL 설정 breakdown PDF](round5/paper_view/FINAL_BREAKDOWNS.pdf), [모든 완료 실험의 그림 PDF](round5/paper_view/ALL_BREAKDOWNS.pdf). 각 실험에는 PNG·벡터PDF·HTML과 원본 result/profile 링크가 있다. 실패4시도는 index에 보존한다.
+- 기존 `plot_paper_fig4_schematic_pct.py`의 색상을 직접 사용하고, `plot_breakdown_by_status.py`의 상태별 평균 및 `plot_duet_aligned_timeline.py`의 관측 timeline 원칙을 적용했다. 고정 퍼센트나 공통 hit/miss verification 비용 가정은 옮기지 않았다.
+- Phase trace337개는 같은 eligible step 집합의 stage 평균, 평균 정렬 schematic, 실제 대표 step을 함께 그렸다. Target ready를100%로 두되 뒤늦게 끝나는 P2도 축 밖으로 자르지 않는다. Proxy side stream과 직전 P2는 별도 lane에 표시한다. Parent total과 child replay를 더하지 않는다.
+- 비계측150개는 원래 phase trace가 없으므로 실제 step wall time의 cache 상태별 비중·평균, source별 AL, 모든 pass의 TPS를 표시한다. 최종8개 비교 조건 모두 같은 알고리즘·B·T·옵션의 별도 phase 진단과 연결했다. 진단48개 입력과 최종480개 입력을 동일 실행으로 취급하지 않는다. B2/B4에는 같은 설정의 phase trace가 없다는 사실을 명시했다.
+- B>1의 mixed hits / mixed hit-miss를 별도로 분류한다. Cache hit은 요청 event 비율이고, 그림 상태는 batch 단위다. AL* 경계 제외와 TPS* batch-step 경계 제외도 구분한다. 알려진 오염 timing은 EXCLUDED로 표시한다.
+- 생성 코드: `round5/paper_view_data.py`, `paper_view_figures.py`, `make_paper_view.py`. `make_paper_view.py --rebuild-data`로 기존 raw를 다시 검증·생성한다. numpy/matplotlib/pypdf만 사용하며 model/GPU inference를 시작하지 않는다. 이번 PDF 병합 dependency는 pypdf6.19.0이다.
+- [AUDIT.json](round5/paper_view/AUDIT.json): 487개 TPS 재집계, 874개 상태별 target 구간 합, 전체487/최종17 PDF 페이지, 488개 HTML 및 상대 링크를 검증했다. `audit_paper_view.py`로 재검사한다. 최종 표, SSD/DUET의 B1/B8 phase 그림, 비계측 wall 그림을 시각적으로도 확인했다.
 
 **부록 A. Systems branch commit 전체 — 논문 기준 이후**
 
