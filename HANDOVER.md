@@ -1,5 +1,13 @@
 # DUET 연구 브랜치 인수인계 — 2026-09-27
 
+**2026-10-09 전체 작업 이관 보완:** 이 branch는 논문 기준 `a82f7d2` 이후의 root·위치 수식, calibration, tree AL·사후 분석 연구를 보존한다. 후속 시스템 구현과 Round1–5 실험은 별도 **`feat/duet-mlsys-coverage`** branch에 있다. 두 branch는 공통 논문 기준에서 갈라졌으므로 어느 하나만 받으면 전체 작업이 아니다.
+
+- 전체 이관의 시작 문서: systems branch의 `results/mlsys_coverage/MERGE_REVIEW.md` **23절**. 다른 서버에 전달할 branch, 코드 겹침, 원시 데이터 복원, 검토 순서를 정리한다.
+- 이번에 추가 보존한 자료: [10/01 root 보고서](results/residial_dist/root_progress_20261001/REPORT.md), [증거·증명](results/residial_dist/root_progress_20261001/EVIDENCE.md), [거리별 분석](results/residial_dist/root_progress_20261001/DISTANCE.md), 그림 6쌍 및 재생성 스크립트·집계표. 기존 결과의 후속 분석이며 새 GPU 실험이 아니다.
+- 아래의 9/27 완료/미완료는 **당시 AWQ70B 연구 조건**이다. 후속 dense7B/8B·B>1·greedy·root/tree 통합 결과는 systems branch의 최신 Round5 보고서에서 확인한다. 다른 조건의 후속 실험을 기존 AWQ70B 미실행 job의 완료로 대체하지 않는다.
+- 원시 데이터 약23.48GB의 `handoff_artifacts/duet_research_raw_20260927.tar`는 여전히 **Git 외 별도 전송** 대상이다. 복원·checksum은 [ARTIFACTS](results/handover_20260927/ARTIFACTS.md)를 따른다. 새 root 보고서의 작은 산출물은 Git에 직접 포함하여 frozen 9/27 raw archive를 변경하지 않았다.
+- 이전 담당자가 서버 점검을 위해 GPU 실험을 중단했다. Branch를 checkout하거나 문서를 읽는 것만으로 queue/실험을 자동 재개하지 않는다.
+
 이 문서는 `feat/duet-proxy-source-ablation`에서 진행한 9월 연구를 실제 실험 서버로
 이관하기 위한 시작점이다. 기반 commit은
 `a82f7d24fb36827a9a81a3567f344dccb71f193e`이다. 그 이후의 코드 변경, 연구 스크립트,
