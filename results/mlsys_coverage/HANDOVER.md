@@ -2,7 +2,9 @@
 
 **다른 서버 merge의 기준 문서:** [MERGE_REVIEW.md](MERGE_REVIEW.md). 전체 commit/변경 파일 목록, 충돌 검토, SSD 공정 비교, 질문 답변과 미완료 작업을 한곳에 정리했다.
 
-**최신 인수인계:** [round3/REPORT.md](round3/REPORT.md) / [round3/HANDOVER.md](round3/HANDOVER.md). B>1 tree end-to-end 통합과 두 full-model pair 검증을 추가했다.
+**최신 인수인계 (2026-10-09):** [MERGE_REVIEW.md](MERGE_REVIEW.md) **23절**에서 두 branch와 raw archive의 전체 이관 범위를 확인한다. 최신 실험은 **20절 및 [round5/REPORT.md](round5/REPORT.md)**, 전체 성능표·파라미터·breakdown은 [paper_view/REPORT.md](round5/paper_view/REPORT.md)다. Root/tree 이전 연구 원본은 별도 `feat/duet-proxy-source-ablation@539f763`도 받아야 한다.
+
+**아래는 1차 실험 당시의 기록이다.** 당시의 “수식 미통합”, “B>1 tree 미완료”는 후속 Round3–5에서 갱신됐다. 현재 완료/미완료 상태는 통합 문서 20–23절을 우선한다. 서버 점검을 위한 GPU 중단 상태를 checkout만으로 해제하지 않는다.
 
 **2026-10-07 후속 작업:** [round2/REPORT.md](round2/REPORT.md)와 [round2/HANDOVER.md](round2/HANDOVER.md)를 먼저 읽는다. 아래 기록은 1차 실험이다.
 

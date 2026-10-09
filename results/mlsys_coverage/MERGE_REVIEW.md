@@ -1,8 +1,12 @@
 **DUET MLSys 확장 — 통합 변경 기록, 질문 답변, 다른 서버 merge 검토표**
 
+**다른 서버에서 전체 작업을 검토하려면 23절부터 읽는다 (2026-10-09).** 논문 기준에서 갈라진 systems/research 두 branch, 이전 연구의 별도 raw archive, 최근 미커밋 분석의 보존, 코드 중복 수정 6곳과 검토 순서를 한곳에 정리했다. 하나의 branch만으로 이전 root/tree 연구 원본까지 모두 포함되지는 않는다.
+
 **최신 상태 (2026-10-08): Round5 실험·추가 최적화·검증 완료.** 이번 실제 온도 root 수식 통합·독립 SSD 튜닝·B1/B8 공동 파라미터 탐색과 결론은 **20절**, 최종 수치와 다른 서버의 재현 절차는 **20.4–20.7절**을 따른다. 완료487실행/691cell, 그중 full480실행70개이며 실패4시도도 보존했다. **19절은 완료된 Round4의94개 실행 기록**이다. 0–18절은 round3까지의 역사적 기록이다. 부록의 commit/file 목록은 Round5 runtime 기준으로 갱신했다.
 
 **2026-10-09 추가:** 기존 논문 표시 방법을 적용한 전체 성능표·파라미터·breakdown 그림은 **20.8절**과 [paper_view/REPORT.md](round5/paper_view/REPORT.md)에 정리했다. 실험 결과의 재표시이며 새 GPU 실행이나 runtime 수정은 없다.
+
+**2026-10-09 contribution 검토:** **21절**에 B>1의 cache 보존/Mixed-miss AR 구분, 실제 구현 시점, 기존 효과와 SSD·SPECTRE 등 선행연구 대조를 추가했다. M2는 paper branch에 이미 포함됐으며 mixed-miss AR은 현재 chain 옵션이다. 이 아이디어만으로 새로운 핵심 contribution을 주장하지 않는다.
 
 작성일: 2026-10-07, 최종 실험 갱신: 2026-10-08. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 아래0–18절은 당시 source/history와 저장된 실험을 재검토한 내용이다. 당시 문서 감사에는 새 GPU 실험/runtime 변경이 없었으며, 이후 추가 작업은19절, 최신 상태는20절을 따른다.
 
@@ -11,9 +15,9 @@
 | 구분 | 고정 revision / 상태 |
 |---|---|
 | 논문 기준 | `a82f7d24fb36827a9a81a3567f344dccb71f193e` |
-| 이번 systems 작업 | `feat/duet-mlsys-coverage`, 코드·실험 기준 `68d0a26d17303a416ad3f27009454ba3ced814be` |
+| 이번 systems 작업 | `feat/duet-mlsys-coverage`; 최종 runtime `641f5ce`, 결과·전체 그림 `1672deb`, 최신 인계는 이 문서를 포함한 branch HEAD. `68d0a26`은 초기 Round3 시점 |
 | 작업 checkout | `/home/chokwans99/PSD-mlsys-coverage` |
-| 기존 root/tree 연구 | `feat/duet-proxy-source-ablation@cc4a3ba11475aeaf6c20069c9a65315f78b0cf1e`, `/home/chokwans99/PSD` |
+| 기존 root/tree 연구 | `feat/duet-proxy-source-ablation@539f763886a3261aa40beab9fa0183a57be9df3b`, `/home/chokwans99/PSD`. `cc4a3ba` 원본에 10/01 보고서·그림 및 인계 보완을 추가 |
 | 원격 논문 branch 확인 | 10/07 `git ls-remote origin refs/heads/feat/duet-p2tree-g0 refs/heads/main` 결과 두 ref 모두 `a82f7d2` |
 | 공개 SSD 대조 | `https://github.com/tanishqkumar/ssd`, 조회 시 HEAD `d7eb8fa0edb77a6d0876af1903367b9bb82f54e7` |
 
@@ -762,6 +766,272 @@ python ssd/bench/mlsys_campaign.py \
 - B>1의 mixed hits / mixed hit-miss를 별도로 분류한다. Cache hit은 요청 event 비율이고, 그림 상태는 batch 단위다. AL* 경계 제외와 TPS* batch-step 경계 제외도 구분한다. 알려진 오염 timing은 EXCLUDED로 표시한다.
 - 생성 코드: `round5/paper_view_data.py`, `paper_view_figures.py`, `make_paper_view.py`. `make_paper_view.py --rebuild-data`로 기존 raw를 다시 검증·생성한다. numpy/matplotlib/pypdf만 사용하며 model/GPU inference를 시작하지 않는다. 이번 PDF 병합 dependency는 pypdf6.19.0이다.
 - [AUDIT.json](round5/paper_view/AUDIT.json): 487개 TPS 재집계, 874개 상태별 target 구간 합, 전체487/최종17 PDF 페이지, 488개 HTML 및 상대 링크를 검증했다. `audit_paper_view.py`로 재검사한다. 최종 표, SSD/DUET의 B1/B8 phase 그림, 비계측 wall 그림을 시각적으로도 확인했다.
+
+**21. B>1 mixed miss의 contribution·선행연구 재검토 (2026-10-09)**
+
+사용자 질문: “하나라도 miss면 batch 전체가 fallback하던 것을 막은 부분을 핵심 contribution으로 쓸 수 있는가?”
+검토 기준은 paper branch `a82f7d2`, 현재 runtime을 포함한 `1672deb`, 최초 local import `f46aecd`, 공개 SSD `d7eb8fa0edb77a6d0876af1903367b9bb82f54e7`이다. 이번에는 GPU 실험을 재개하지 않고 코드 이력, 기존 raw 집계, 논문 원문을 대조했다.
+
+**결론: 유용한 구현 개선이지만, “miss 요청 때문에 hit 요청을 버리거나 기다리지 않게 한다”는 일반 아이디어를 새 핵심 contribution으로 주장하기는 어렵다.** SSD/Saguaro에 직접적인 문제 분석과 fast fallback이 있고, SPECTRE에는 준비된 speculative 요청과 draft 없는 요청을 한 verification batch로 합치는 동작까지 명시되어 있다. 아래 두 변경의 시점·효과도 구분해야 한다.
+
+**21.1 Hit 보존과 JIT 대기 제거는 서로 다른 변경이다**
+
+| 경로 | Hit 요청 | Miss 요청 | Miss JIT 때문에 batch가 기다리는가? | 시점 |
+|---|---|---|---|---|
+| 최초 SSD import의 `jit_speculate=True`, mixed batch | Cache가 있어도 JIT 결과로 대체 | JIT draft | 예 | `f46aecd`; 고정 공개 snapshot도 같은 분기 |
+| M2 수정 | Cached token과 그 token의 q/logits 유지 | JIT draft | 예 | `39d4e8e`, 2026-07-18; paper branch에 이미 포함 |
+| `SSD_DUET_JIT_SUBSET=1` | Cache 유지 | Miss 행만 JIT draft | 예 | paper branch에 이미 포함, 기본 OFF |
+| `SSD_MIXED_MISS_AR=1` | Cache 유지 | `valid_k=0`, target 직접 생성 | 해당 miss JIT 대기는 생략 | Round2 `721df75`; chain opt-in |
+
+최초 import에서는 `cache_hits.all()`이어야 JIT 모드에서 cache를 채웠다. 하나라도 miss면 batch 전체에 `jit_speculate()`를 실행하고 cache 값을 다시 넣지 않았다. 따라서 사용자가 말한 “하나의 miss 때문에 hit도 fallback”은 **그 옛 구현에는 실제로 있었다.** 단, 이를 SSD 논문 알고리즘 전체의 필수 제약으로 확대하면 안 된다. 같은 코드의 `jit_speculate=False`는 이미 hit 행에 cache를 채우고 miss 행에는 빠른 random proposal을 남긴다.
+
+M2는 JIT 실행 후 hit 행의 token/q를 cache 값으로 덮어써서 이를 고쳤다. DUET의 서로 다른 `valid_k`, phase metadata와 실제 proposal이 어긋나는 것도 막는다. 이 수정은 DUET 전용 조건문 안에 있지 않으므로 같은 저장소의 SSD baseline에도 적용된다. **현재 SSD와 비교한 성능 차이를 M2만의 기여로 계산할 수 없다.** 원본 SSD의 동일 K 경로에서 cache 폐기가 반드시 출력 분포를 왜곡했다는 주장도 하지 않는다.
+
+M2는 **cache의 내용 보존**이며 **batch의 대기 제거**가 아니다. `ssd/docs/duet/13-b-gt-1-design.md`의 “miss난 row만 대가를 치른다”는 과거 설명은 cache 재사용에 한정해서 읽어야 한다. 그 수정 후에도 miss JIT 완료 전에는 hit 행도 target verification으로 넘어가지 못한다.
+
+근거: 현재 `ssd/ssd/engine/draft_runner.py`의 `hit_cache_and_respond`, `git show a82f7d2:ssd/ssd/engine/draft_runner.py`, [공개 SSD 고정 snapshot](https://github.com/tanishqkumar/ssd/blob/d7eb8fa0edb77a6d0876af1903367b9bb82f54e7/ssd/engine/draft_runner.py).
+
+**21.2 이번 mixed-miss AR 옵션은 어떻게 실행되는가**
+
+예를 들어 cache 상태가 `[hit, hit, miss, hit]`이면 hit 세 요청은 준비된 proposal을 그대로 검증한다. Miss 한 요청만 proposal 길이를 0으로 만들어, 현재 확정 prefix의 마지막 recovery/bonus token을 target에 입력하고 다음 token을 target 분포에서 뽑는다. Target batch를 따로 쪼개서 hit만 실행하는 구현은 아니다.
+
+- 조건: `jit_speculate=True`, DUET chain, B>1, 하나 이상의 hit, 하나 이상의 miss, EAGLE 아님, tree 경로 아님.
+- Miss에서 생성하는 token은 `p_T`에서 직접 sampling한다. Draft proposal이 없으므로 그 요청에는 `p/q` 검사나 `[p-q]_+` correction을 적용하지 않는다. T=0이면 target argmax다.
+- Hit에서는 기존 proposal 법칙 q와 exact target verification을 유지한다. 이 두 동작을 요청별로 합치는 것 자체가 target 분포를 바꾸지는 않는다.
+- Miss의 다음 cache 후보도 zero-proposal/bonus 상황의 proxy 분포로 계산한다. 임의 padding token을 실제 draft token처럼 제외하지 않는다.
+- All-miss와 startup은 기존 JIT를 유지한다. 새로운 연속 threshold는 없고 ON/OFF 옵션이다.
+- 이후 draft KV/glue 갱신과 다음 P1/P2 cache 준비는 여전히 필요하다. 기존 cache 준비, 통신, target 계산 등 모든 대기가 사라졌다는 뜻은 아니다.
+- Packed chain과 함께 켜면 요청별 실제 `valid_k+1` query만 모아 계산하며, 정렬 padding은 별도 dummy sequence가 소유한다. CUDA graph는 총 query capacity bucket을 재사용한다.
+- **현재 unified B>1 tree에는 이 AR 옵션을 적용하지 않았다. Round5 최종 tree 경로의 성과가 이 옵션의 성과인 것은 아니다.**
+
+고정된 종료 경계 이외의 miss 요청은 이 step에서 새 token 하나를 얻으므로, JIT draft의 추가 수락 기회를 포기한다. 따라서 AL 증가가 아니라 **AL과 추가 대기시간 사이의 선택**이다. 준비된 cache를 보존하는 M2와 달리 동일 proposal의 순수 실행 최적화가 아니다.
+
+요청의 hit 확률이 모두 h이고 서로 독립이라는 단순 예에서 all-hit 확률은 h^B다. h=.8, B=8이면 약16.8%만 all-hit다. 이 수치는 왜 문제를 조사해야 하는지 보여주는 예시이며 실제 요청 간 독립성이나 측정된 all-hit 비율을 대신하지 않는다.
+
+**21.3 기존 실험이 실제로 보인 효과**
+
+Round2의 같은 packed chain에서 옵션만 추가한 비교다. Full dense Llama2-7B/AMD135M 및 Llama3-8B/Qwama0.5B, RTX4090 target1+draft1, B=8, T=.7, K1/K2=4/2, exit21, repository 첫-turn 480개 전부, output cap64, seed2026/2027/2028 각 별도 process. 아래 AL/TPS는 **Round2 집계 정의**이며 Round5의 boundary-excluded AL*/TPS*와 섞지 않는다.
+
+| Model | 정책 | AL | Cache hit | TPS, 평균 ± 표본 SD |
+|---|---|---:|---:|---:|
+| Llama2 | Packed + miss JIT | 1.9197 | 79.05% | 651.70 ± 4.91 |
+| Llama2 | Packed + mixed-miss AR | 1.7959 | 80.57% | 651.04 ± 4.08 |
+| Llama3 | Packed + miss JIT | 2.3572 | 73.53% | 647.58 ± 2.82 |
+| Llama3 | Packed + mixed-miss AR | 2.1185 | 75.70% | 672.26 ± 4.02 |
+
+평균 TPS 비율은 Llama2 -0.10%, Llama3 +3.81%다. AL은 각각 약 -6.45%, -10.13%다. 이 표의 +3.81%는 packed를 기준으로 하며, 과거 보고서의 base 대비 mixed +3.94%와 비교 대상이 다르다.
+
+Cache hit 변화에는 정책 변경 후의 문맥·상태 전이도 포함되므로, 같은 요청 상태에서 root predictor 자체가 개선됐다는 증거는 아니다. Llama3 결과는 이 chain 조건에서의 throughput 개선이며, 모든 모델·tree·AL에서 우위를 보인 것이 아니다. 원본 집계: [Round2 NUMBERS.md](round2/NUMBERS.md), [Round2 REPORT.md](round2/REPORT.md).
+
+2026-10-09 CPU 재확인: GPU를 비활성화하고 기존 zero-proposal target sampling(20,000표본)과 packed layout 4건을 검사해 **5/5 통과**했다. 이는 연산 분기와 layout의 소규모 확인이며 full-model GPU 재실험은 아니다. 첫 pytest 호출은 패키지가 없어 시작되지 않았고, 표준 unittest로 같은 기존 테스트를 실행했다.
+
+**21.4 가장 가까운 선행연구 — 원문에서 확인한 범위**
+
+| 선행연구 | 확인한 내용 | 우리 주장에 대한 의미 |
+|---|---|---|
+| [SSD / Saguaro §4.3, Fig.6](https://arxiv.org/html/2603.03251v1#S4.SS3) | 큰 batch에서 miss로 전체가 backup draft를 기다리는 문제를 분석. 작은 batch는 neural JIT, 큰 batch는 빠른 backup을 사용하는 전략과 이론·실험을 제시. 구현 예시는 random proposal | “큰 batch의 miss 대기 제거” 자체는 기존 연구의 중심 최적화와 겹침. Zero-proposal은 random backup과 구현·검증 비용이 다르지만 그 차이만으로 새 문제/원리라고 주장하기 어려움 |
+| [SPECTRE §3.1 식(11)–(15), Appendix A.1](https://arxiv.org/html/2605.08151v2#S3.SS1) | Parallel 모드에서 준비된 continuation은 재사용하고 rollback 요청은 bonus+padding으로 같은 verification batch에 넣어 즉시 진행. Draft 없는 요청의 one-token decode도 명시. §2는 throughput 기반 모드 선택 | **가장 직접적인 중복.** DUET의 multi-outcome cache와 SPECTRE의 rollout 재사용 조건은 다르지만 “준비된 draft와 zero-draft 요청의 혼합 실행”은 이미 명시됨 |
+| [Mirror-SD §3.1, Appendix D.1](https://arxiv.org/html/2510.13161v2#S3.SS1) | Early-exit 후보에 해당하는 continuation 재사용, miss 시 corrected prefix에서 재생성. B가 커지면 top-k와 SS stream 수를 줄이는 평가 | 읽은 원문에서는 우리 mixed-AR 규칙을 명시적으로 확인하지 못함. 그러나 Mirror-SD는 B>1을 전혀 연구하지 않았다고 쓰면 안 되며, Mirror-SD에 없다는 사실만으로 다른 선행연구보다 새롭지도 않음 |
+| [BASS, ACL Findings 2024](https://aclanthology.org/2024.findings-acl.489/) | Batch 내 서로 다른 수락 길이·KV 길이를 처리하고 draft 길이를 조절 | Ragged 처리와 batch 지원의 넓은 선행연구. Multi-outcome cache miss 정책과 동일하다고 보지는 않음 |
+| [ASPIRE, 2026-09](https://arxiv.org/html/2609.17943v1) | 같은 target forward에서 요청별 sparse-context drafting/full-context verification 역할을 혼합하고 단계별 스케줄링 | 별도 draft GPU의 cache-miss 정책과는 다른 self-SD 구조. “요청별 독립 speculation 상태를 한 batch에서 처리”라는 포괄적 최초 주장은 피해야 함 |
+
+검토일은 2026-10-09이다. SPECTRE는 RFC만 인용한 것이 아니라 논문 v2의 위 수식을 대조했다. 문헌에서의 의미적 중복 판단과 두 코드가 동일하다는 주장은 다르다. 모든 논문의 실제 구현을 이 서버에서 실행해 본 것은 아니다.
+
+**21.5 다른 contribution 후보의 현재 평가**
+
+1. **Root cache 예산을 correction 위치와 token의 결합확률로 배분하는 분석·정책이 상대적으로 강한 후보다.** 핵심 목적은 `C(S)=sum_(i,v in S) h_i R_i(v)`이다. Residual 오차 증폭과 candidate 교환의 정확한 오차를 분석하고, 위치별 top-M 내부 재정규화가 전역 점수를 `1/rho_i`만큼 부풀리는 문제를 확인했다. T=.7 독립 actual-wire replay에서 기존 proxy 점수 82.020%→개선 조합84.431% coverage였다. 하지만 동일한 개선 위치 배분의 proxy는84.363%로, **e(1-q) 자체의 추가 이득 +.068%p, 95% CI [-.110,+.274]%p는 불확실**하다. “e(1-q)가 Mirror-SD를 이긴다” 대신 위치 배분·정규화까지 분리한 주장으로 제한한다. 이 연구의 exact top-budget 원리만으로 최초성을 주장하지 않고, SSD의 기존 위치 fanout 최적화와도 비교해야 한다. 근거: [training_free/REPORT](/home/chokwans99/PSD/results/residial_dist/training_free/REPORT.md), [THEORY](/home/chokwans99/PSD/results/residial_dist/training_free/THEORY.md).
+2. **P1/P2 cache 재사용과 연결한 AL 기반 continuation 예산 배분은 후보지만 증거를 보강해야 한다.** 이미 뽑힌 sibling의 실제 rejection ladder에 맞는 reach를 계산하고, 부모별 `rho_hat(u) × gamma_phase(c_u)`로 자식 수를 배분했다. 37,869개 hit tree의 사후 분석에서 오차 구조와 국소 이득을 확인했지만 국소 gain을 online AL 이득으로 바꾸어 쓰지 않는다. [Sequoia](https://arxiv.org/html/2402.12374v3)와 [OPT-Tree](https://aclanthology.org/2025.tacl-1.8/)는 이미 tree 형태/기대 수락 길이를 최적화한다. 새로운 주장은 ordered-WOR/phase별 재사용/준비시간 제약 등 구체적인 차이에 두어야 한다. 근거: [tree FINDINGS](/home/chokwans99/PSD/results/duet_tree_posthoc/FINDINGS.md), [Round4/5 비교](round5/REPORT.md).
+3. **두 phase의 실제 준비시간을 고려한 calibration은 연구 방향으로 의미가 있다.** `C=max(P1 완료, proxy 도착)+P2 비용`, `T=max(target 준비,C)+후속 비용`으로 overlap을 모델링하고 후보를 줄였다. 다만 시간 모델만으로 품질이나 전역 최적 파라미터를 결정하지 못한다. Hardware-aware 최적화와 throughput 기반 선택 자체는 Sequoia/SSD/SPECTRE에도 있으므로 “자동 tuning을 처음 제시”라고 쓰지 않는다. 탐색 비용 절감과 held-out 설정에서의 regret를 같은 sweep 비용 기준으로 더 평가해야 한다. 근거: [calibration REPORT](/home/chokwans99/PSD/results/duet_calibration/REPORT.md).
+4. **요청별 tree 예산을 유지하는 batched 실행, CUDA graph 재사용, fused 계산·bulk export는 시스템 기여를 뒷받침한다.** 다양한 모델/T=0/KV·wire 정합성 수정도 재현 가능한 엔진을 만드는 작업이다. 하지만 각각을 새로운 알고리즘으로 세지는 않는다. 최종 Round5 B8은 SSD보다 느리므로 “B>1 scaling을 해결했다”는 주장은 아직 근거가 없다. 같은 설정의 실행 최적화 효과와 정책 변경의 AL/TPS 효과를 나눠 보고한다.
+
+기존 DUET의 P1 draft-source / P2 early-exit-source 구성은 위 개선을 묶는 기반이다. Early-exit 비동기 speculation 자체는 Mirror-SD와 겹치므로, **proxy 도착 전후 예산 활용·서로 보완하는 cache 후보·hit 이후 AL을 함께 설계한 구체적 차이**를 실험으로 입증하는 구성이 더 적절하다. 이번 리뷰는 그 결합의 새로운 전역 최적성을 증명한 것이 아니다.
+
+위 연구 보고서는 현재 별도 `/home/chokwans99/PSD` checkout에 있다. 다른 서버에서 merge할 때 해당 연구 산출물을 함께 가져오고 링크 경로를 맞춘다. 이 문서에 판단에 필요한 주요 수치와 한계는 직접 남겼다.
+
+**21.6 논문 비교와 남은 검증의 우선순위**
+
+- M2 cache 보존은 SSD/DUET 공통 기준선으로 둔다. 일부러 옛 cache 폐기 코드를 SSD 성능 대표로 쓰지 않는다.
+- 동일 chain에서 SSD와 DUET 각각 `miss JIT`, `zero-proposal AR`, 원문 fast fallback을 비교한다. Stochastic fast fallback은 실제 proposal 법칙과 verifier 분모가 일치해야 하며 random token을 임의 q와 조합하지 않는다.
+- 그다음 unified tree에 AR 혼합 정책을 연결하고 actual-temperature/root/tree 설정을 고정해 A/B한다. 아직 완료한 것으로 기록하지 않는다.
+- Batch1/2/4/8/16에서 AL, request hit, 실제 cache 재사용률, all-hit batch 비율, JIT 대기, target query 수와 시간, 실제 반환 TPS를 함께 본다. 전체 성능뿐 아니라 어느 구성요소의 개선인지 분리한다.
+- 자동 선택은 `추가 기대 token > 현재 처리율 × 추가 시간` 같은 국소 비용식에서 시작할 수 있으나, SPECTRE의 threshold와 차이를 설명해야 한다. P1/P2 source별 길이·준비시간·tree query 비용·다음 cache 상태를 반영하는 것이 새 설계의 후보이며 **아직 구현·검증된 결과는 아니다.**
+
+논문에 현재 쓸 수 있는 범위의 문장: “DUET의 요청별 cache 재사용을 보존하는 batch 실행을 구현하고, mixed hit/miss에서 zero-proposal fallback의 AL–latency 절충을 평가하였다. 기존 fast-fallback 및 mixed-verification 연구를 바탕으로 DUET의 두-phase cache에 통합하였다.” 통합 범위는 현재 chain이며 tree까지 완료했다고 쓰지 않는다.
+
+**22. 교수님 보고용 요약과 miss 임계값 설계 (2026-10-09)**
+
+**i. Parallel SD의 다중 batch 병목**
+
+- Verification과 다음 draft 준비를 병렬 실행하여 draft 시간을 숨김.
+- 미리 준비한 후보가 실제 verification outcome과 일치하면 cache 재사용.
+- Neural JIT fallback을 사용하는 batch 동기화 구현에서는 하나의 cache miss만 있어도 추가 draft가 끝날 때까지 hit 요청도 대기.
+- 따라서 request별 cache hit가 높아도 batch 전체의 대기 감소로 이어지지 않을 수 있음.
+
+**ii. 개선 방안: request별 AR/SD 혼합 처리**
+
+- Hit 요청은 cached draft를 그대로 검증하고, miss 요청은 draft 없이 target에서 한 token 생성.
+- Miss의 추가 draft 대기를 생략해 hit 요청의 진행을 유지.
+- AL 감소보다 step 시간 감소가 크면 전체 TPS 향상 가능.
+- 새로운 알고리즘으로 확정하기보다 기존 fast fallback/mixed verification을 DUET에 적용하는 정책으로 기술. [SSD §4.3](https://arxiv.org/html/2603.03251v1#S4.SS3), [SPECTRE §2–3](https://arxiv.org/html/2605.08151v2#S2)에 관련 전략과 선택 기준이 있음.
+
+**iii. 언제 AR로 진행하고 언제 JIT를 기다릴 것인가**
+
+- 결정 기준은 miss 개수 자체보다 **JIT로 추가되는 기대 token 수와 추가 대기시간의 비교**.
+- AR 혼합의 기대 출력/시간을 \(N_0,t_0\), JIT를 기다릴 때 추가되는 값을 \(\Delta N,\Delta t\)라 두면, \(\Delta t>0\)에서
+
+\[
+\mathrm{JIT\ 선택}
+\iff
+\frac{N_0+\Delta N}{t_0+\Delta t}>\frac{N_0}{t_0}
+\iff
+\Delta N>\frac{N_0}{t_0}\Delta t.
+\]
+
+- \(\Delta t\)는 draft 대기뿐 아니라 target query 수·graph bucket·후처리 변화도 포함. 두 정책의 시간 차이를 draft forward 시간 하나로 대체하지 않음.
+- 다음 cache 상태까지 포함한 장기 TPS 최적성은 보장하지 않는 한-step 기대 token/기대 시간의 비교 기준임.
+
+**Miss 비율의 임계값으로 표현하는 단순 모델**
+
+- Batch \(B\), miss 수 \(m\), miss 비율 \(r=m/B\).
+- Hit 요청의 평균 출력 \(L_H\), JIT를 기다린 miss 요청의 평균 출력 \(L_M\). 둘 다 마지막 target recovery/bonus를 포함.
+- AR 혼합 실행 시간 \(t_0\), JIT 선택 시 추가 시간 \(\Delta t>0\).
+- \(L_H,L_M,t_0,\Delta t\)를 해당 조건에서 상수로 근사하고 \(L_H,L_M>1\)이라 두면:
+
+\[
+N_{\rm AR}=(B-m)L_H+m,\qquad
+N_{\rm JIT}=(B-m)L_H+mL_M.
+\]
+
+\[
+\boxed{
+\mathrm{AR\ 혼합\ 선택}
+\iff
+r<
+r^*=
+\frac{L_H\Delta t}
+{(L_M-1)t_0+(L_H-1)\Delta t}
+}
+\]
+
+동률이면 두 정책의 모델상 TPS가 같다. \(r^*>1\)이면 모델상 가능한 모든 miss 비율에서 AR 쪽이 유리할 수도 있으며, “all-miss면 항상 JIT가 최적”이라는 결론은 아니다. 실제 구현의 all-miss JIT는 현재 실험 규칙이다.
+
+보고서에는 \(L_H=L_M=L\)인 더 단순한 예로 다음 식만 제시할 수 있다.
+
+\[
+r^*=\frac{L\Delta t}{(L-1)(t_0+\Delta t)}.
+\]
+
+**출처 명확화:** 이 단순 임계값은 [SPECTRE §2 식(3)](https://arxiv.org/html/2605.08151v2#S2)에 \(t_0=T_T\), \(\Delta t=(\gamma-1)T_D\)를 대입한 것과 같은 형태다. 본 문서의 표기로 다시 유도한 비용 비교이며, DUET의 새로운 독창적 임계값으로 주장하지 않는다. 같은 논문의 §3.1 식(11)–(14)에는 재사용 가능한 draft와 bonus+padding 요청을 함께 검증하는 실행도 명시되어 있다.
+
+- Draft 대기가 클수록 AR을 선택할 수 있는 miss 비율이 커짐.
+- 추가 draft의 수락 이득이 클수록 JIT를 기다릴 가치가 커짐.
+- 실제 DUET은 P1/P2 hit의 AL이 다르고 query shape도 변하므로, 전 모델 공통 “miss 3개부터 JIT”처럼 고정할 근거는 없음.
+- 각 값이 miss 수와 batch 구성에 따라 변하면 단일 threshold로 단조롭게 나뉜다는 보장도 없음. 이때 위 일반 비용 비교식을 상태별로 사용.
+- Calibration에서 source별 기대 token과 비용을 추정하여 선택하고, 별도 입력에서 판단 정확도와 실제 TPS를 검증하는 것이 후속 설계임. 자동 선택기는 아직 구현·검증 전.
+
+**iv. 현재 완료된 간단한 실험**
+
+- B=8, T=.7, K1/K2=4/2, exit21, draft/proxy fanout2/1, packed chain.
+- 양자화 없는 7B/8B 모델, target/draft 각각 RTX4090 한 장.
+- Repository 첫-turn 480개, output cap64, 독립 process 3회.
+- **최적 threshold 실험은 아님:** 현재 정책은 \(1\le m<B\)이면 AR 혼합, \(m=B\) 또는 startup이면 JIT.
+
+| 모델 | Miss JIT TPS → AR 혼합 TPS | 변화 | AL 변화 |
+|---|---|---:|---|
+| Llama2-7B + AMD135M | 651.70 → 651.04 | -0.10% | 1.9197 → 1.7959 |
+| Llama3-8B + Qwama0.5B | 647.58 → 672.26 | +3.81% | 2.3572 → 2.1185 |
+
+- Llama3에서는 AL 약10.1% 감소에도 TPS 약3.8% 향상. Llama2에서는 추가 이득 없음.
+- 모든 mixed batch에 같은 규칙을 적용하기보다 비용을 고려한 선택이 필요하다는 근거. 특정 miss 개수의 최적성을 검증한 결과는 아님.
+- 기존 [Round2 집계](round2/NUMBERS.md)를 인용한 값. Round5의 boundary-excluded AL*/TPS* 및 SSD 직접 비교와 구분.
+- Unified tree에 mixed-miss AR을 적용한 결과는 아직 없음.
+
+**v. 추가로 필요한 검증**
+
+1. 동일 prefix·hit/miss 구성의 재생 측정에서 miss 수별로 AR/JIT의 기대 출력, JIT 대기, target 계산, 총 step 시간을 비교. 서로 다른 정책으로 생성된 로그를 miss 수로 묶기만 한 비교는 인과효과로 단정하지 않음.
+2. Calibration에서 threshold/비용식을 고정한 뒤 별도 입력에 평가. “항상 miss JIT / 현재 mixed이면 AR / 비용 기반 선택” 세 정책을 대조.
+3. B=4/8/16과 두 모델에서 확인하고 tree 경로까지 확장. SSD에도 같은 선택 정책을 허용하여 scheduler 효과와 DUET 효과를 분리.
+4. 그림은 “x=miss 수, y=AR 선택 대비 JIT 선택의 TPS 차이”와 “JIT 대기·target 계산의 step breakdown”을 우선 작성. 선택 경계·표본 수·불확실성을 함께 표시하고 최종 실제 반환 TPS로 확인.
+
+위는 기존 실험을 이용한 보고 초안과 후속 설계이며 새 GPU 실험을 수행하지 않았다.
+
+**23. 다른 서버에 전달할 전체 작업과 검토 시작점 (2026-10-09)**
+
+**23.1 전달할 저장소·branch — 둘 다 필요**
+
+- Repository: https://github.com/KwanyoungCho/PSD.git
+- 공통 논문 기준: feat/duet-p2tree-g0, a82f7d24fb36827a9a81a3567f344dccb71f193e. 이번 조회에서 원격 main도 같은 commit이었다.
+- Systems branch: **feat/duet-mlsys-coverage**. 최종 runtime 641f5ce, 실험·그림까지의 고정 snapshot 1672debfff773f2d73fc97f42b2a0c4ea8f42929. 이 문서·이관 inventory를 추가한 후속 HEAD까지 받아야 한다.
+- Research branch: **feat/duet-proxy-source-ablation**, **539f763886a3261aa40beab9fa0183a57be9df3b**. 기존 cc4a3ba의 연구 전체와 10/01 후속 보고서·그림·집계·스크립트 21개를 포함한다.
+- 두 branch는 paper 기준에서 독립적으로 갈라졌다. Systems가 research의 일부 수식·tree 정책을 runtime에 통합했다고 해서 그 branch의 연구 원본·분석 코드까지 모두 포함한 것은 아니다.
+- 이번 인계는 두 branch의 보존과 검토 자료 준비다. 두 runtime의 merge 완료·다른 서버의 미push 수정 확인·그 서버 full-model 재검증을 뜻하지 않는다.
+
+**23.2 빠짐없이 검토할 작업 범위**
+
+| 묶음 | 보존한 작업 | 우선 읽을 문서/경로 |
+|---|---|---|
+| 논문 원본 구현 | P1/P2, split K1/K2, 원래 B1 tree/attention/verification, 기존 B>1 chain 등 | 공통 paper revision의 ssd/docs/duet와 논문 PDF. 후속에 새로 만든 기능으로 중복 주장하지 않음 |
+| Root 분포·위치 연구 | Proxy entropy, residual 오차 상한·교환 분석, proxy/residual 비교, e(1-q), full 정규화, 위치 보정, P1 집합 보완 분석 | Research: results/residial_dist/{REPORT.md,entropy,shared_review,direct_comparison,training_free,root_progress_20261001} |
+| Calibration | 두 phase의 완료 시각/overlap 비용 모델, calibration/검증 분리, 추천과 한계 | Research: results/duet_calibration |
+| Tree AL·사후 연구 | q-path/reach 비교, full480/560turn, 37,869개 tree 분석, gain 기반 fanout, C=3 후속·실패·미완료 기록 | Research: results/duet_tree_{analysis,al_full,posthoc,followup} |
+| Systems Round1–3 | Full 7B/8B 모델 조합, greedy, B>1, KV/길이/accounting 정합성, packed chain/mixed AR, batched tree 전체 실행 경로와 CUDA graph | 이 문서 0–18절, results/mlsys_coverage의 REPORT 및 round2/round3 |
+| Systems Round4 | 이전 reach/gain tree 통합, proposal 법칙/사후 pruning 검토, miss 길이, phase deadline과 budget 실험 | 이 문서 19절, round4/REPORT.md |
+| Systems Round5 | 실제 온도 root·위치 수식, SSD 별도 튜닝, exit/K1/K2/tree 공동 탐색, B1/B8/추가 길이, fused/bulk/trim/stream 최적화, 반복 및 출력 동일성 검사 | 이 문서 20절, round5/REPORT.md |
+| 전체 표·그림 | Batch/AL/cache hit/TPS, 별도 parameter 표, 487개 실험 breakdown과 최종 PDF | round5/paper_view/{REPORT.md,PARAMETERS.md,index.html,FINAL_BREAKDOWNS.pdf,ALL_BREAKDOWNS.pdf} |
+| 최근 논의 | M2 cache 보존 vs mixed-miss AR의 차이, SSD/SPECTRE 선행연구, 임계값 출처·추가 실험 계획 | 이 문서 21–22절 |
+
+전체 경로별 변경 목록과 commit 이력은 [TRANSFER_INVENTORY.json](TRANSFER_INVENTORY.json)에 있다. Paper→1672deb의 systems 변경 5,894경로/47commit, paper→539f763의 research 변경 1,119경로/2commit을 기록했다. Runtime 변경뿐 아니라 실험·그림·로그도 포함한 개수다. 이 inventory와 인계 문서 자체의 후속 변경은 전달받은 systems HEAD의 git log/diff로 확인한다. 이전 부록 A/B는 runtime 시점 목록이므로 전체 인계 범위는 이 inventory와 branch HEAD를 우선한다.
+
+**23.3 두 branch에서 함께 수정한 runtime 6곳**
+
+| 파일 | 다른 서버에서 확인할 것 |
+|---|---|
+| ssd/ssd/config.py | 기존 연구 CLI/hook과 새 root/tree 옵션, 온도·모델·batch 제약 |
+| ssd/ssd/engine/helpers/cudagraph_helpers.py | 계측 hook, graph buffer·shape, live temperature와 stream event 계약 |
+| ssd/ssd/engine/helpers/p2_tree.py | 연구 selector/reach/gain과 새 batched 실행, ordered-WOR proposal 법칙, pruning/G=M |
+| ssd/ssd/engine/llm_engine.py | 연구 trace와 serving lifecycle·출력 계수의 상호작용 |
+| ssd/ssd/engine/model_runner.py | Early-exit/분포 수집 hook, batched forward·KV·graph 경로 |
+| ssd/ssd/engine/verifier.py | 실제 온도, root/위치 수식, exact verification, tree terminal mass, proxy 통신 |
+
+이 6개는 양쪽에서 수정한 파일이라는 뜻이며 textual conflict가 모두 발생한다는 뜻은 아니다. 새로운 서버의 paper branch 변경이 더 있으면 교집합을 다시 계산한다. 파일 전체를 한쪽 버전으로 덮어쓰거나 ours/theirs로 일괄 해결하면 연구 hook 또는 최신 correctness 수정이 사라질 수 있다.
+
+**23.4 Git만 받아도 되는 것과 별도 전송할 것**
+
+- Systems Round4/5 큰 원본은 Git에 gzip으로 포함했다. Manifest 대조로 Round4 **134개 / 65,250,792 bytes**, Round5 **1,169개 / 643,627,954 bytes**의 compressed 파일이 모두 추적되고 있음을 확인했다. 복원 도구는 각 round의 archive_results.py --restore다. Round5 원본의 checksum 복원 감사는 20.7절에 있다.
+- Research의 큰 NPZ/JSONL 등 **2,362개**는 별도 tar에 있다. 다음 archive를 기존 서버에서 새 서버로 가져와야 전체 raw가 된다. 약23.48GB(decimal), Git에 포함되지 않았다.
+
+    /home/chokwans99/PSD/handoff_artifacts/duet_research_raw_20260927.tar
+
+    SHA256: e22f04404c488d9187e2dc387069f0237d432f9b4bdf9945ada1c2682f0b4438
+
+- 2026-10-09에 위 tar 전체 23,482,593,280 bytes의 SHA256을 다시 계산해 기존 checksum과 일치함을 확인했다.
+- Research branch의 results/handover_20260927/ARTIFACTS.md, archive_SHA256SUMS, artifact_manifest.json을 이용해 전송·복원·검사한다. 기존 archive와 frozen 결과를 새 분석으로 덮어쓰지 않는다.
+- 이번에 보존한 root_progress_20261001의 21개 산출물은 Git에 직접 들어 있다. 기존 9/27 archive와 checksum은 변경하지 않았다.
+- Model weights/tokenizer, Python/CUDA 환경, 저장소 밖 논문 benchmark runner와 일부 초기 dataset은 별도 의존성이다. Research ARTIFACTS.md와 systems README·SOURCE_MANIFEST·실행 plan에서 원래 위치를 확인하고 새 장비에 맞춰 준비한다.
+- 다른 서버 주소가 제공되지 않았으므로 tar의 서버 간 전송은 수행하지 않았다. 모델 가중치도 전송하지 않았다.
+
+**23.5 수신 서버에서 검토하는 순서**
+
+1. 새 서버의 현재 branch/HEAD와 working diff를 먼저 기록한다. 기존 작업을 reset하거나 덮어쓰지 않는다.
+2. 두 remote branch를 fetch하고 별도 worktree에서 검토한다. 예:
+
+    git fetch origin
+    git worktree add --detach ../duet-systems-review origin/feat/duet-mlsys-coverage
+    git worktree add --detach ../duet-research-review origin/feat/duet-proxy-source-ablation
+
+3. Systems worktree의 이 문서 23절→20절→21–22절, 그다음 research worktree의 HANDOVER.md→results/handover_20260927/{EXPERIMENTS,CODE_MAP,FULL_MODEL_VALIDATION,ARTIFACTS}.md 순으로 읽는다.
+4. 두 branch를 paper base와 비교한다. Systems 20절의 q-law/temperature/wire/KV/stream 계약과 위 6개 중복 파일을 먼저 검토한다.
+5. 검토용 integration branch에서 필요한 변경을 합친 후 correctness→model smoke→같은 parameter 성능 대조→새 장비 재튜닝 순으로 검증한다. 원본 branch의 성공 결과를 merge한 코드의 성공으로 간주하지 않는다.
+6. 수치 재분석만 필요하면 systems archive를 복원하고 paper_view를 읽는다. 실제 GPU 캠페인은 별도 명령이며 이번 서버 점검 중단을 자동 해제하는 queue/wait script를 실행하지 않는다.
+
+**23.6 전달할 때 반드시 함께 말할 한계**
+
+- 최신 7B/8B full-model 비교의 B8 TPS는 추가 최적화 후에도 SSD가 높다. 모든 batch/model에서 DUET 우위를 입증한 인계가 아니다.
+- Mixed-miss AR은 현재 chain opt-in이다. Round5 tree 기본 경로에 적용됐거나 자동 threshold가 완성됐다고 해석하지 않는다.
+- Root token 점수 e(1-q) 단독의 proxy 대비 우위는 미확정이다. 위치·정규화 개선과 분리한다.
+- 이전 AWQ70B/560turn 연구, 새 dense7B/8B 첫-turn480 실험, 원 논문70B/Blackwell 조건은 서로 다른 실험이다. 새 dense70B/논문 출력길이 재현과 모델별 calibration은 후속 검증 대상이다.
+- “Round5 계획 완료”는 이전 9/27 AWQ70B 여섯 정책의 미실행 matrix까지 완료했다는 뜻이 아니다. Old 실패·미완료 기록은 그대로 남겨 검토한다.
+- 현재 서버에서 확인할 수 없는 다른 서버의 미push 작업은 이 inventory에 없다.
 
 **부록 A. Systems branch commit 전체 — 논문 기준 이후**
 
