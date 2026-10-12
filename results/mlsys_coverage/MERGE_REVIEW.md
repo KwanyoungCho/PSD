@@ -2,6 +2,8 @@
 
 **다른 서버에서 전체 작업을 검토하려면 23절부터 읽는다 (2026-10-09).** 논문 기준에서 갈라진 systems/research 두 branch, 이전 연구의 별도 raw archive, 최근 미커밋 분석의 보존, 코드 중복 수정 6곳과 검토 순서를 한곳에 정리했다. 하나의 branch만으로 이전 root/tree 연구 원본까지 모두 포함되지는 않는다.
 
+**변경을 두 종류로 나눠 검토하려면 24절부터 읽는다 (2026-10-12).** 기존 논문 경로에 영향을 주는 수정·최적화와 기능 확장을 구분하고, 정확성·측정·정책 변경을 섞지 않는 검토 순서를 정리했다. 기존 기록과 코드 대조에 따른 문서 보완이며 GPU 실험 재개나 runtime 변경은 없다.
+
 **최신 상태 (2026-10-08): Round5 실험·추가 최적화·검증 완료.** 이번 실제 온도 root 수식 통합·독립 SSD 튜닝·B1/B8 공동 파라미터 탐색과 결론은 **20절**, 최종 수치와 다른 서버의 재현 절차는 **20.4–20.7절**을 따른다. 완료487실행/691cell, 그중 full480실행70개이며 실패4시도도 보존했다. **19절은 완료된 Round4의94개 실행 기록**이다. 0–18절은 round3까지의 역사적 기록이다. 부록의 commit/file 목록은 Round5 runtime 기준으로 갱신했다.
 
 **2026-10-09 추가:** 기존 논문 표시 방법을 적용한 전체 성능표·파라미터·breakdown 그림은 **20.8절**과 [paper_view/REPORT.md](round5/paper_view/REPORT.md)에 정리했다. 실험 결과의 재표시이며 새 GPU 실행이나 runtime 수정은 없다.
@@ -1032,6 +1034,57 @@ r^*=\frac{L\Delta t}{(L-1)(t_0+\Delta t)}.
 - 이전 AWQ70B/560turn 연구, 새 dense7B/8B 첫-turn480 실험, 원 논문70B/Blackwell 조건은 서로 다른 실험이다. 새 dense70B/논문 출력길이 재현과 모델별 calibration은 후속 검증 대상이다.
 - “Round5 계획 완료”는 이전 9/27 AWQ70B 여섯 정책의 미실행 matrix까지 완료했다는 뜻이 아니다. Old 실패·미완료 기록은 그대로 남겨 검토한다.
 - 현재 서버에서 확인할 수 없는 다른 서버의 미push 작업은 이 inventory에 없다.
+
+**24. 기존 논문 영향과 기능 확장을 나누는 검토표 (2026-10-12)**
+
+두 범주는 작업의 주목적을 나누는 기준이다. 기능 확장도 공통 verifier/config/KV 코드를 바꾸므로 기존 경로의 회귀 검사가 필요하다. 또한 B1이라는 이유만으로 모두 기존 논문 경로는 아니다. Legacy B1과 `SSD_BATCHED_TREE=1`의 unified B1을 구분한다. 기존 논문 기준은 `a82f7d2`이며 이번 systems branch의 runtime은 `641f5ce`까지다.
+
+**24.1 기존 논문에도 적용하거나 영향을 확인해야 하는 변경**
+
+| 구분 | 변경 내용 | 기존 논문 영향과 검토 방법 | 근거 |
+|---|---|---|---|
+| 정확성: tree 선택 | G개를 sampling한 뒤 점수로 M개를 재선택하는 legacy B1 G>M 경로를 generation-order prefix로 교체. P1 precompute/on-demand와 P2 모두 수정 | 실제 proposal 법칙을 보존하기 위한 수정. 기존 실험이 G>M을 사용했는지 먼저 확인. G=M에 같은 오류가 있었다고 확대하지 않는다. 후보 점수 변경이나 단순 속도 최적화와 구분 | 19.3–19.4절, `draft_runner.py`, `p2_tree.py`, `tree_rerank_gpu.py`; 대표 commit `c0600ea` |
+| 정확성: KV·요청 상태 | Paged prefix prefill, fully cached prompt의 마지막 query, preemption 후 출력 경계/예산, completed-block hash 수정 | Backend와 prefix 재사용/preemption 등 발생 조건별 영향. 논문 FlashInfer와 수정한 SGL 경로를 구별한다. SSD/SD/AR에도 해당하는 수정은 공통 반영 | 1절, `attention.py`, `block_manager.py`, `sequence.py`, `scheduler.py`, `step.py` |
+| 실행 조건: B 정의 | Prefill resident 요청 수도 최대 B로 제한 | 출력 분포 수정과 별개로 scheduler/workload 조건이 달라진다. 한 요청씩 제출하는 B1과 corpus 일괄 제출을 구분하고 비교 방법 전체의 B 정의를 통일 | 1절; 대표 commit `317741d` |
+| 측정: 출력·경계 집계 | 실제 반환 token만 TPS 분자로 계산. AL*은 cap/clip terminal event 제외, TPS*은 해당 batch-step의 token과 시간을 함께 제외. Raw TPS도 보존 | 실제 실행 속도 개선이 아니다. 과거 논문 runner가 내부 counter를 사용했는지 확인 후 재집계 여부 결정. 모든 과거 TPS가 잘못됐다고 단정하지 않음 | 3절, 19.1절, 20.2절; 대표 commit `7260f28` 및 bench 집계 |
+| 같은 알고리즘의 실행 최적화 | Stochastic verification의 CPU 동기화·불필요한 분기 축소, fused/bulk 처리, tree ladder의 불필요한 복사·정규화 제거 | Fast verifier와 unified-tree 전용 최적화의 적용 경로를 구분. 동일 설정에서 출력/accepted path/AL 동등성을 먼저 확인하고 비계측 TPS를 비교 | 19.6절, 20.1/20.3/20.6절; `verify_fast.py`, `batch_tree_draft.py`, `batch_tree_sampling.py` |
+| 조건부 실행 최적화 | TP1 proxy head/점수 계산을 target post와 겹치는 별도 stream | Unified tree의 선택 옵션. 원본 hidden mutation 방지·event·graph pool 계약이 함께 필요. TP>1 collective head에는 그대로 적용하지 않음. 새 모델 B8에서는 느려져 최종 OFF | 20.1/20.6절, `tree_proxy_stream.py`, `batch_tree_forward.py` |
+| 후보 점수의 의미 수정 | 고정 T=1 대신 실제 target/draft 온도로 root 점수 계산. T0는 별도 greedy 규칙 | T>0 B1에서도 후보 순위/cache hit가 달라질 수 있음. Exact verifier와 후보 예측 점수는 구분하며, 예전 root의 T 불일치 자체로 최종 출력 losslessness 위반을 단정하지 않음. 측정된 JIT/unified 경로 범위 확인 | 20.1절, `verifier.py`, `batched_proxy.py`, `p2_tree.py`; 대표 commit `f041ebd` |
+| 연구 정책 변경 | Proxy phase `e(1-q)`, full-vocabulary 정규화, 위치 terminal mass 혼합, reach/gain/frontier tree 선택, miss 깊이/폭 실험 | B1에도 적용 가능한 알고리즘 변경. 구현 최적화와 분리하여 token 점수→위치 점수→tree selector 순으로 ablation. Root는 cache hit, continuation은 AL, 최종 시스템은 TPS를 각각 평가 | 19–20절, research의 `training_free`/`duet_tree_*`, `root_policy.py`, `tree_expansion_policy.py` |
+
+우선 채택할 정확성 수정도 기존 논문에서 실제로 문제가 발생했음을 뜻하지는 않는다. 과거 run의 backend, G/M, preemption, cap/EOS 및 runner 집계를 확인해야 영향 범위를 판정할 수 있다. 정확성 수정 때문에 잘못된 후보가 제거되면 AL/TPS가 달라질 수 있으므로 이를 성능 회귀와 동일시하지 않는다.
+
+**24.2 기능 지원을 위해 추가·확장한 구현**
+
+| 기능 | 추가한 내용 | 검토 조건·범위 |
+|---|---|---|
+| B>1 dynamic tree 전체 경로 | 요청별 tree/root/예산·KV·cache key 분리, batched draft forward, parent-q 통신, tree attention, ordered-sibling 검증, accepted-path KV commit, shrink/refill/preemption 연결 | 기존 B1 tree를 새로 만든 것이 아니다. 요청 ID와 batch row를 혼동하지 않는지, 요청 간 mask/KV 분리와 q-law를 점검. B>1→1 tail과 강제 unified B1도 별도 확인. 8–12절 및 `round3/HANDOVER.md` |
+| B>1 실행 최적화 | Batched graph capture/input 준비/acceptance, 요청 간 attention scratch 공유, 짧은 query bucket, packed chain, 선택적 packed tree/topology reuse | 기능의 정합성과 실제 속도 이득을 따로 확인. Packed chain과 packed tree는 다른 구현이며 tree packing/topology reuse는 성능상 기본 채택하지 않음. 4절, 12절, 19–20절 |
+| Mixed-miss AR 선택 정책 | Chain의 mixed batch에서 hit 행은 cache proposal, miss 행은 proposal 0개로 target AR 진행. All-miss/startup은 JIT 유지 | B>1 chain opt-in이며 AL/대기를 바꾸는 정책. 기존 paper의 M2 hit-cache 보존과 다르다. Unified tree 적용·자동 threshold 구현은 미완료. 5절, 21–22절 |
+| T=0 greedy | Chain/tree의 target argmax 검증, greedy sampler/graph, ragged recovery·mixed-temperature tie 처리. 예산용 soft score와 실제 proposal 법칙 분리 | T>0의 p/q 검증을 greedy에 그대로 적용하지 않음. Draft chain argmax와 branching의 ranked sibling 후보도 구별. 기존 B1 T>0 오류로 묶지 않음. 1절, 7절 |
+| 새 full-model 조합 | LayerSkip-Llama2-7B+AMD135M, LayerSkip-Llama3-8B+Qwama0.5B. Dtype 정렬, token-ID mapping 검사, DUET wire의 token 32bit화, workspace 확대 | Target/draft wire를 함께 업데이트. 같은 모델 pair의 SSD baseline에도 공통 호환성 수정 적용. 2절. 기존 TinyLlama 실험에도 용량 문제가 있었다는 뜻은 아님 |
+| 독립 phase capacity | Unified tree에서 K1/K2의 독립 capacity 및 K2>K1 지원 | Legacy split chain/B1의 K2≤K1 guard까지 일괄 제거하지 않음. Config dispatch와 `test_phase_budget.py` 확인. 20.1절, `81ea777` |
+| 검증·실험 도구 | Model/workload matrix, breakdown, boundary 지표, plan/preset, archive, parameter 탐색·선택/평가 분리 | 실험 재현 도구와 새로운 decoding 기법을 구분. 공통 correctness·측정 조건을 적용한 SSD baseline 유지. 20.2–20.8절 |
+
+Colocated target/draft의 RMSNorm 상수 capture 수정(`13f42d8`)도 공통 실행 지원에 포함된다. 별도 GPU의 원 논문 DUET에 그대로 같은 성능 효과가 생긴다고 가정하지 않는다. 모델·실행 모드에 따른 dispatch는 두 범주 모두에서 확인한다.
+
+**24.3 사용자가 검토·결정하는 순서**
+
+1. **기존 논문 조건을 고정한다.** 수신 서버 paper HEAD와 원 설정을 보존하고, model/dtype/backend/TP/B/T/G/M/K1/K2/exit/root/tree/miss 설정 및 입력·출력 상한을 기록한다. 같은 B1이어도 legacy/unified 경로를 구분한다.
+2. **정확성·집계부터 검토한다.** 24.1의 첫 네 항목과 기능별 q-law/KV 수정이 대상이다. 어떤 과거 run에 발생 조건이 있었는지 확인한다. SSD/AR에도 해당하는 수정은 같은 비교 코드에 넣는다. 수정 전 오류가 있는 실행을 성능 기준으로 승인하지 않는다.
+3. **동일 알고리즘 실행 최적화만 켠다.** Root/위치/tree/miss/예산을 고정하고 fast verifier, fused/bulk, trim, stream을 가능한 적용 경로별로 비교한다. 출력·수락 기록 동등성 후 비계측 TPS와 breakdown을 확인한다. 일치 검사가 losslessness의 모든 경우에 대한 증명인 것은 아니다.
+4. **기능을 한 축씩 확장한다.** 원 모델 B1/T>0 기준에서 새 모델, T0, B>1 chain, B>1 tree를 분리해 확인한다. 새 모델의 T0/B>1 교차 조건도 검사하고 EOS·길이 차이·batch shrink/refill·preemption을 포함한다.
+5. **연구 정책을 마지막에 비교한다.** 실제 온도 기준을 고정한 다음 기존 root→token 점수→위치 점수→tree selector를 순차 대조한다. Miss AR/깊이와 예산 확대는 별도 축이다. 먼저 같은 예산 대조로 원인을 분리한 뒤 각 방법의 파라미터를 다시 튜닝한다.
+
+검토 승인 단위는 위 작업 묶음이며 commit 한 개와 일대일이 아니다. 예를 들어 `c0600ea`에는 correctness·정책·실행 최적화가, `f041ebd`에는 온도와 root/위치 점수가 함께 들어 있다. Commit 제목만 보고 부분 cherry-pick하거나 공통 파일을 통째로 덮어쓰지 않는다. 양 branch 중복 runtime 6곳은 23.3절을 따른다.
+
+**24.4 현재 증거와 아직 다른 서버에서 확인할 부분**
+
+- 완료 근거: 새 dense 7B/8B의 full480 비교와 고정 알고리즘 최적화 대조, trim/stream 세 구성 각각300검사 통과(skip0). Full 출력/수락 기록 동일성의 범위는 20.3절, 최종 수치는 20.4절을 따른다.
+- 원 논문 dense70B/Blackwell/target TP2의 최신 변경 재실험은 별도다. 새 7B/8B TP1의 개선율을 그대로 옮길 수 없다. TP1 proxy stream은 특히 이 구분이 필요하다.
+- B8 최종 TPS는 이번 두 모델 모두 SSD가 더 높았다. B>1 기능·최적화를 구현했다는 말이 SSD 대비 우위를 입증했다는 뜻은 아니다.
+- Mixed-miss AR의 unified-tree 이식 및 자동 선택 기준의 구현/검증은 남아 있다. 이는 실제 후속 작업이며 이미 완료한 옵션으로 켤 수 없다.
+- 이번 문서 갱신은 분류·검토 안내만 추가했다. 서버 점검으로 중단한 GPU 캠페인을 재개하지 않았다.
 
 **부록 A. Systems branch commit 전체 — 논문 기준 이후**
 
