@@ -1,0 +1,102 @@
+[
+  {
+    "name": "llama3_chain_b1_base_profile_r0",
+    "arm": "base",
+    "draft_seed": 91,
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--exit-layer",
+      "16",
+      "--mode",
+      "chain",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9101"
+    ]
+  },
+  {
+    "name": "llama3_chain_b1_chain_profile_r0",
+    "arm": "chain",
+    "draft_seed": 91,
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--exit-layer",
+      "16",
+      "--mode",
+      "chain",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9101"
+    ]
+  },
+  {
+    "name": "llama3_chain_b1_chain_profile_r1",
+    "arm": "chain",
+    "draft_seed": 92,
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--exit-layer",
+      "16",
+      "--mode",
+      "chain",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9111"
+    ]
+  },
+  {
+    "name": "llama3_chain_b1_base_profile_r1",
+    "arm": "base",
+    "draft_seed": 92,
+    "args": [
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--exit-layer",
+      "16",
+      "--mode",
+      "chain",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9111"
+    ]
+  }
+]

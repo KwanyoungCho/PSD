@@ -1,0 +1,192 @@
+[
+  {
+    "name": "kv_b1_base_full_r0",
+    "arm": "base",
+    "draft_seed": 101,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9201"
+    ]
+  },
+  {
+    "name": "kv_b1_kv_full_r0",
+    "arm": "kv",
+    "draft_seed": 101,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9201"
+    ]
+  },
+  {
+    "name": "kv_b1_kv_full_r1",
+    "arm": "kv",
+    "draft_seed": 102,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9211"
+    ]
+  },
+  {
+    "name": "kv_b1_base_full_r1",
+    "arm": "base",
+    "draft_seed": 102,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9211"
+    ]
+  },
+  {
+    "name": "chain_b8_base_full_r0",
+    "arm": "base",
+    "draft_seed": 111,
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "8",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9301"
+    ]
+  },
+  {
+    "name": "chain_b8_chain_full_r0",
+    "arm": "chain",
+    "draft_seed": 111,
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "8",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9301"
+    ]
+  },
+  {
+    "name": "chain_b8_chain_full_r1",
+    "arm": "chain",
+    "draft_seed": 112,
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "8",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9311"
+    ]
+  },
+  {
+    "name": "chain_b8_base_full_r1",
+    "arm": "base",
+    "draft_seed": 112,
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "8",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9311"
+    ]
+  },
+  {
+    "name": "chain_b8_base_full_r2",
+    "arm": "base",
+    "draft_seed": 113,
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "8",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9321"
+    ]
+  },
+  {
+    "name": "chain_b8_chain_full_r2",
+    "arm": "chain",
+    "draft_seed": 113,
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "8",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9321"
+    ]
+  }
+]

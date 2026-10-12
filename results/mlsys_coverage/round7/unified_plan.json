@@ -1,0 +1,172 @@
+[
+  {
+    "name": "unified_b1_base_smoke_r0",
+    "arm": "base",
+    "draft_seed": 121,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--limit",
+      "2",
+      "--output-tokens",
+      "16",
+      "--warm-prompts",
+      "1",
+      "--seed",
+      "9401"
+    ]
+  },
+  {
+    "name": "unified_b1_unified_smoke_r0",
+    "arm": "unified",
+    "draft_seed": 121,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--limit",
+      "2",
+      "--output-tokens",
+      "16",
+      "--warm-prompts",
+      "1",
+      "--seed",
+      "9401"
+    ],
+    "bench": "mlsys_paper_current.py",
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_ACCEPT_GRAPH": "1",
+      "SSD_TREE_LADDER_TRIM": "1",
+      "SSD_TREE_FUSED_MATH": "0",
+      "SSD_BATCH_TREE_BULK_EXPORT": "0",
+      "SSD_TREE_PARALLEL_INSERT": "0",
+      "SSD_BATCH_TREE_PROXY_STREAM": "0",
+      "SSD_PACKED_TREE_VERIFY": "0",
+      "SSD_TREE_EXPANSION_POLICY": "q_path"
+    }
+  },
+  {
+    "name": "unified_b1_base_full_r0",
+    "arm": "base",
+    "draft_seed": 121,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9401"
+    ]
+  },
+  {
+    "name": "unified_b1_unified_full_r0",
+    "arm": "unified",
+    "draft_seed": 121,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9401"
+    ],
+    "bench": "mlsys_paper_current.py",
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_ACCEPT_GRAPH": "1",
+      "SSD_TREE_LADDER_TRIM": "1",
+      "SSD_TREE_FUSED_MATH": "0",
+      "SSD_BATCH_TREE_BULK_EXPORT": "0",
+      "SSD_TREE_PARALLEL_INSERT": "0",
+      "SSD_BATCH_TREE_PROXY_STREAM": "0",
+      "SSD_PACKED_TREE_VERIFY": "0",
+      "SSD_TREE_EXPANSION_POLICY": "q_path"
+    }
+  },
+  {
+    "name": "unified_b1_base_diagnostic_r0",
+    "arm": "base",
+    "draft_seed": 121,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "16",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "4",
+      "--seed",
+      "9401"
+    ],
+    "env": {
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/profiles/base"
+    }
+  },
+  {
+    "name": "unified_b1_unified_diagnostic_r0",
+    "arm": "unified",
+    "draft_seed": 121,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "16",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "4",
+      "--seed",
+      "9401"
+    ],
+    "bench": "mlsys_paper_current.py",
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_ACCEPT_GRAPH": "1",
+      "SSD_TREE_LADDER_TRIM": "1",
+      "SSD_TREE_FUSED_MATH": "0",
+      "SSD_BATCH_TREE_BULK_EXPORT": "0",
+      "SSD_TREE_PARALLEL_INSERT": "0",
+      "SSD_BATCH_TREE_PROXY_STREAM": "0",
+      "SSD_PACKED_TREE_VERIFY": "0",
+      "SSD_TREE_EXPANSION_POLICY": "q_path",
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/profiles/unified"
+    }
+  }
+]

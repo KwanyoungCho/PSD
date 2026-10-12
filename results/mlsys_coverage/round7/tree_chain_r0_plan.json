@@ -1,0 +1,29 @@
+[
+  {
+    "name": "tree_chain_b1_chain_full_r0",
+    "arm": "chain",
+    "draft_seed": 121,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9401"
+    ],
+    "control": "unified_b1_base_full_r0",
+    "env": {
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-paper-chain-review",
+      "PAPER_ARM": "base"
+    },
+    "implementation": "physical_patch_01_only"
+  }
+]

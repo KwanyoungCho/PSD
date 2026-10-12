@@ -1,0 +1,133 @@
+diff --git a/ssd/ssd/engine/block_manager.py b/ssd/ssd/engine/block_manager.py
+--- a/ssd/ssd/engine/block_manager.py
++++ b/ssd/ssd/engine/block_manager.py
+@@ -126,6 +126,16 @@
+                 self.hash_to_block_id[h] = block_id
+             block_table.append(block_id)
+ 
++        # A fully cached, block-aligned prompt still needs one forward to
++        # produce next-token logits. KV alone does not contain the lm_head
++        # result; an empty query either indexes the preceding row or crashes.
++        if self.is_draft:
++            seq.num_draft_cached_tokens = min(seq.num_draft_cached_tokens,
++                                              seq.num_tokens - 1)
++        else:
++            seq.num_cached_tokens = min(seq.num_cached_tokens,
++                                       seq.num_tokens - 1)
++
+ 
+     def deallocate(self, seq: Sequence):
+         block_table = seq.draft_block_table if self.is_draft else seq.block_table
+@@ -174,4 +184,3 @@
+             new_blocks = self._allocate_n_blocks(needed)
+             for block in new_blocks:
+                 block_table.append(block.block_id)
+-
+diff --git a/ssd/ssd/engine/sequence.py b/ssd/ssd/engine/sequence.py
+--- a/ssd/ssd/engine/sequence.py
++++ b/ssd/ssd/engine/sequence.py
+@@ -17,7 +17,7 @@
+ 
+     _ATTRIBUTES = [
+         'seq_id', 'status', 'token_ids', 'last_token', 'num_tokens',
+-        'num_prompt_tokens', 'num_cached_tokens', 'block_table',
++        'num_prompt_tokens', 'initial_num_prompt_tokens', 'num_cached_tokens', 'block_table',
+         'last_spec_step_accepted_len', 'draft_block_table',
+         'num_draft_cached_tokens', 'temperature', 'draft_temperature', 'max_new_tokens',
+         'ignore_eos', 'recovery_token_id', 'last_target_hidden_state',
+@@ -32,6 +32,10 @@
+         self.last_token = token_ids[-1]
+         self.num_tokens = len(self.token_ids)
+         self.num_prompt_tokens = len(token_ids)
++        # Re-prefill moves num_prompt_tokens forward to include the already
++        # generated prefix. Output slicing and the generation budget must
++        # retain the immutable boundary of the original request.
++        self.initial_num_prompt_tokens = len(token_ids)
+         self.num_cached_tokens = 0
+         self.block_table = []
+         self.last_spec_step_accepted_len = -1 # -1 on first req to force cache miss
+@@ -66,7 +70,7 @@
+ 
+     @property
+     def num_completion_tokens(self):
+-        return self.num_tokens - self.num_prompt_tokens
++        return self.num_tokens - self.initial_num_prompt_tokens
+ 
+     @property
+     def prompt_token_ids(self):
+@@ -74,7 +78,7 @@
+ 
+     @property
+     def completion_token_ids(self):
+-        return self.token_ids[self.num_prompt_tokens:]
++        return self.token_ids[self.initial_num_prompt_tokens:]
+ 
+     @property
+     def num_cached_blocks(self):
+@@ -122,3 +126,5 @@
+     def __setstate__(self, state):
+         for attr in self._ATTRIBUTES:
+             setattr(self, attr, state.get(attr))
++        if self.initial_num_prompt_tokens is None:
++            self.initial_num_prompt_tokens = self.num_prompt_tokens
+diff --git a/ssd/ssd/layers/attention.py b/ssd/ssd/layers/attention.py
+--- a/ssd/ssd/layers/attention.py
++++ b/ssd/ssd/layers/attention.py
+@@ -112,19 +112,29 @@
+                     o = fi_backend.run_ragged(q, k, v)
+             else:
+                 if context.block_tables is not None:
+-                    k, v = k_cache, v_cache
+-
+-                k = k.view(-1, self.num_kv_heads, self.head_dim)
+-                v = v.view(-1, self.num_kv_heads, self.head_dim)
+-                o = flash_attn_varlen_func(
+-                    q, k, v,
+-                    max_seqlen_q=context.max_seqlen_q,
+-                    cu_seqlens_q=context.cu_seqlens_q,
+-                    max_seqlen_k=context.max_seqlen_k,
+-                    cu_seqlens_k=context.cu_seqlens_k,
+-                    softmax_scale=self.scale,
+-                    causal=True,
+-                )
++                    # Prefix-cache blocks are noncontiguous physical pages.
++                    # Flattening them as packed K/V ignores block_tables and
++                    # reads another request's context, including uncached
++                    # rows in a mixed cached/uncached prefill batch.
++                    o = flash_attn_with_kvcache(
++                        q, k_cache, v_cache,
++                        cache_seqlens=(context.cu_seqlens_k[1:]
++                                       - context.cu_seqlens_k[:-1]),
++                        page_table=context.block_tables,
++                        cu_seqlens_q=context.cu_seqlens_q,
++                        max_seqlen_q=context.max_seqlen_q,
++                        softmax_scale=self.scale, causal=True,
++                    )
++                else:
++                    o = flash_attn_varlen_func(
++                        q, k, v,
++                        max_seqlen_q=context.max_seqlen_q,
++                        cu_seqlens_q=context.cu_seqlens_q,
++                        max_seqlen_k=context.max_seqlen_k,
++                        cu_seqlens_k=context.cu_seqlens_k,
++                        softmax_scale=self.scale,
++                        causal=True,
++                    )
+         else:
+             # P2-tree TREE_VERIFY (T3.1b, docs/duet/internal/20): 명시 mode — 현행
+             # 암묵 dispatch(cu_seqlens 유무)로는 트리 mask를 표현할 수
+diff --git a/ssd/ssd/engine/scheduler.py b/ssd/ssd/engine/scheduler.py
+--- a/ssd/ssd/engine/scheduler.py
++++ b/ssd/ssd/engine/scheduler.py
+@@ -387,9 +387,9 @@
+     def _finalize_block(self, block_manager, seq: Sequence, block_table: list[int], block_index: int):
+         """Finalize a block by computing its hash and updating the cache."""
+         token_ids = seq.block(block_index)
+-        prefix = block_manager.blocks[block_table[-2]].hash if len(block_table) > 1 else -1
++        prefix = block_manager.blocks[block_table[block_index - 1]].hash if block_index > 0 else -1
+         h = block_manager.compute_hash(token_ids, prefix)
+-        last_block = block_manager.blocks[block_table[-1]]
++        last_block = block_manager.blocks[block_table[block_index]]
+         last_block.update(h, token_ids)
+         block_manager.hash_to_block_id[h] = last_block.block_id
+ 

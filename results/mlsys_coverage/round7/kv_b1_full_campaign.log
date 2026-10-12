@@ -1,0 +1,19 @@
+START kv_b1_base_full_r0
+END kv_b1_base_full_r0 complete 0
+START kv_b1_kv_full_r0
+END kv_b1_kv_full_r0 complete 0
+START kv_b1_kv_full_r1
+END kv_b1_kv_full_r1 running 1
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/run_pair.py", line 53, in <module>
+    
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/run_pair.py", line 50, in main
+    print('END',job['name'],row['status'],proc.returncode,flush=True)
+                                                    ^^^^^^^^^^^^^^^^^^
+RuntimeError: Job failed; preserve and diagnose kv_b1_kv_full_r1
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/after_profile.py", line 15, in <module>
+    subprocess.run([sys.executable,str(Path(__file__).with_name('run_pair.py')),'--plan',str(a.plan),
+  File "/home/chokwans99/anaconda3/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/chokwans99/PSD/ssd/.venv/bin/python', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/run_pair.py', '--plan', 'results/mlsys_coverage/round7/kv_b1_full_plan.json', '--gpus', '6,7', '--port', '28000', '--directory', 'results/mlsys_coverage/round7/kv_b1_full']' returned non-zero exit status 1.

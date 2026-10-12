@@ -1,0 +1,254 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=1
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=1
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.50it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.28it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.22it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.25it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 37, 256, 32, 128])
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 1134.78tok/s
+Final Decode Throughput: 64.31tok/s
+[metrics] Prefill tokens/time: 513 / 0.452069s
+[metrics] Decode tokens/time: 7 / 0.108849s
+Final Prefill Throughput: 10570.79tok/s
+Final Decode Throughput: 64.40tok/s
+[metrics] Prefill tokens/time: 513 / 0.048530s
+[metrics] Decode tokens/time: 7 / 0.108697s
+Final Prefill Throughput: 1700.50tok/s
+Final Decode Throughput: 64.72tok/s
+[metrics] Prefill tokens/time: 513 / 0.301677s
+[metrics] Decode tokens/time: 7 / 0.108157s
+Final Prefill Throughput: 31048.61tok/s
+Final Decode Throughput: 64.64tok/s
+[metrics] Prefill tokens/time: 513 / 0.016522s
+[metrics] Decode tokens/time: 7 / 0.108295s
+Final Prefill Throughput: 31038.01tok/s
+Final Decode Throughput: 64.77tok/s
+[metrics] Prefill tokens/time: 513 / 0.016528s
+[metrics] Decode tokens/time: 7 / 0.108069s
+Final Prefill Throughput: 31166.02tok/s
+Final Decode Throughput: 64.36tok/s
+[metrics] Prefill tokens/time: 513 / 0.016460s
+[metrics] Decode tokens/time: 7 / 0.108765s
+Final Prefill Throughput: 10483.63tok/s
+Final Decode Throughput: 64.36tok/s
+[metrics] Prefill tokens/time: 513 / 0.048933s
+[metrics] Decode tokens/time: 7 / 0.108770s
+Final Prefill Throughput: 10483.88tok/s
+Final Decode Throughput: 64.31tok/s
+[metrics] Prefill tokens/time: 513 / 0.048932s
+[metrics] Decode tokens/time: 7 / 0.108850s
+Final Prefill Throughput: 24411.03tok/s
+Final Decode Throughput: 64.40tok/s
+[metrics] Prefill tokens/time: 513 / 0.021015s
+[metrics] Decode tokens/time: 7 / 0.108697s
+Final Prefill Throughput: 24334.42tok/s
+Final Decode Throughput: 64.51tok/s
+[metrics] Prefill tokens/time: 513 / 0.021081s
+[metrics] Decode tokens/time: 7 / 0.108511s
+Final Prefill Throughput: 27425.50tok/s
+Final Decode Throughput: 63.89tok/s
+[metrics] Prefill tokens/time: 769 / 0.028040s
+[metrics] Decode tokens/time: 7 / 0.109563s
+Final Prefill Throughput: 10493.60tok/s
+Final Decode Throughput: 63.74tok/s
+[metrics] Prefill tokens/time: 769 / 0.073283s
+[metrics] Decode tokens/time: 7 / 0.109829s
+Final Prefill Throughput: 36677.57tok/s
+Final Decode Throughput: 64.21tok/s
+[metrics] Prefill tokens/time: 769 / 0.020966s
+[metrics] Decode tokens/time: 7 / 0.109021s
+Final Prefill Throughput: 46892.40tok/s
+Final Decode Throughput: 64.19tok/s
+[metrics] Prefill tokens/time: 769 / 0.016399s
+[metrics] Decode tokens/time: 7 / 0.109047s
+Final Prefill Throughput: 46710.42tok/s
+Final Decode Throughput: 64.25tok/s
+[metrics] Prefill tokens/time: 769 / 0.016463s
+[metrics] Decode tokens/time: 7 / 0.108957s
+Final Prefill Throughput: 46954.70tok/s
+Final Decode Throughput: 64.32tok/s
+[metrics] Prefill tokens/time: 769 / 0.016377s
+[metrics] Decode tokens/time: 7 / 0.108831s
+Final Prefill Throughput: 10591.90tok/s
+Final Decode Throughput: 64.07tok/s
+[metrics] Prefill tokens/time: 769 / 0.072603s
+[metrics] Decode tokens/time: 7 / 0.109249s
+Final Prefill Throughput: 10707.73tok/s
+Final Decode Throughput: 63.95tok/s
+[metrics] Prefill tokens/time: 769 / 0.071817s
+[metrics] Decode tokens/time: 7 / 0.109454s
+Final Prefill Throughput: 47085.18tok/s
+Final Decode Throughput: 64.38tok/s
+[metrics] Prefill tokens/time: 769 / 0.016332s
+[metrics] Decode tokens/time: 7 / 0.108733s
+Final Prefill Throughput: 47262.31tok/s
+Final Decode Throughput: 64.47tok/s
+[metrics] Prefill tokens/time: 769 / 0.016271s
+[metrics] Decode tokens/time: 7 / 0.108585s
+Final Prefill Throughput: 38970.66tok/s
+Final Decode Throughput: 64.10tok/s
+[metrics] Prefill tokens/time: 801 / 0.020554s
+[metrics] Decode tokens/time: 7 / 0.109197s
+Final Prefill Throughput: 10102.93tok/s
+Final Decode Throughput: 63.67tok/s
+[metrics] Prefill tokens/time: 801 / 0.079284s
+[metrics] Decode tokens/time: 7 / 0.109936s
+Final Prefill Throughput: 44809.25tok/s
+Final Decode Throughput: 64.16tok/s
+[metrics] Prefill tokens/time: 801 / 0.017876s
+[metrics] Decode tokens/time: 7 / 0.109105s
+Final Prefill Throughput: 44888.20tok/s
+Final Decode Throughput: 64.22tok/s
+[metrics] Prefill tokens/time: 801 / 0.017844s
+[metrics] Decode tokens/time: 7 / 0.108999s
+Final Prefill Throughput: 44887.59tok/s
+Final Decode Throughput: 64.16tok/s
+[metrics] Prefill tokens/time: 801 / 0.017845s
+[metrics] Decode tokens/time: 7 / 0.109095s
+Final Prefill Throughput: 45044.04tok/s
+Final Decode Throughput: 64.21tok/s
+[metrics] Prefill tokens/time: 801 / 0.017783s
+[metrics] Decode tokens/time: 7 / 0.109013s
+Final Prefill Throughput: 10045.27tok/s
+Final Decode Throughput: 63.67tok/s
+[metrics] Prefill tokens/time: 801 / 0.079739s
+[metrics] Decode tokens/time: 7 / 0.109948s
+Final Prefill Throughput: 9876.03tok/s
+Final Decode Throughput: 63.93tok/s
+[metrics] Prefill tokens/time: 801 / 0.081105s
+[metrics] Decode tokens/time: 7 / 0.109499s
+Final Prefill Throughput: 44859.73tok/s
+Final Decode Throughput: 64.18tok/s
+[metrics] Prefill tokens/time: 801 / 0.017856s
+[metrics] Decode tokens/time: 7 / 0.109069s
+Final Prefill Throughput: 45127.54tok/s
+Final Decode Throughput: 64.05tok/s
+[metrics] Prefill tokens/time: 801 / 0.017750s
+[metrics] Decode tokens/time: 7 / 0.109282s
+Final Prefill Throughput: 11957.39tok/s
+Final Decode Throughput: 436.81tok/s
+[metrics] Prefill tokens/time: 4104 / 0.343219s
+[metrics] Decode tokens/time: 56 / 0.128202s
+Final Prefill Throughput: 10898.54tok/s
+Final Decode Throughput: 438.33tok/s
+[metrics] Prefill tokens/time: 4104 / 0.376564s
+[metrics] Decode tokens/time: 56 / 0.127758s
+Final Prefill Throughput: 214758.01tok/s
+Final Decode Throughput: 439.14tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019110s
+[metrics] Decode tokens/time: 56 / 0.127521s
+Final Prefill Throughput: 215114.91tok/s
+Final Decode Throughput: 439.43tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019078s
+[metrics] Decode tokens/time: 56 / 0.127439s
+Final Prefill Throughput: 214523.92tok/s
+Final Decode Throughput: 439.13tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019131s
+[metrics] Decode tokens/time: 56 / 0.127526s
+Final Prefill Throughput: 213743.17tok/s
+Final Decode Throughput: 439.09tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019201s
+[metrics] Decode tokens/time: 56 / 0.127537s
+Final Prefill Throughput: 10947.89tok/s
+Final Decode Throughput: 436.91tok/s
+[metrics] Prefill tokens/time: 4104 / 0.374867s
+[metrics] Decode tokens/time: 56 / 0.128174s
+Final Prefill Throughput: 10904.44tok/s
+Final Decode Throughput: 437.79tok/s
+[metrics] Prefill tokens/time: 4104 / 0.376361s
+[metrics] Decode tokens/time: 56 / 0.127916s
+Final Prefill Throughput: 213371.77tok/s
+Final Decode Throughput: 439.02tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019234s
+[metrics] Decode tokens/time: 56 / 0.127556s
+Final Prefill Throughput: 214582.95tok/s
+Final Decode Throughput: 438.54tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019125s
+[metrics] Decode tokens/time: 56 / 0.127697s
+Final Prefill Throughput: 32474.73tok/s
+Final Decode Throughput: 407.68tok/s
+[metrics] Prefill tokens/time: 6152 / 0.189440s
+[metrics] Decode tokens/time: 56 / 0.137364s
+Final Prefill Throughput: 10681.41tok/s
+Final Decode Throughput: 406.89tok/s
+[metrics] Prefill tokens/time: 6152 / 0.575954s
+[metrics] Decode tokens/time: 56 / 0.137629s
+Final Prefill Throughput: 295301.06tok/s
+Final Decode Throughput: 409.53tok/s
+[metrics] Prefill tokens/time: 6152 / 0.020833s
+[metrics] Decode tokens/time: 56 / 0.136743s
+Final Prefill Throughput: 297685.90tok/s
+Final Decode Throughput: 409.47tok/s
+[metrics] Prefill tokens/time: 6152 / 0.020666s
+[metrics] Decode tokens/time: 56 / 0.136761s
+Final Prefill Throughput: 298801.52tok/s
+Final Decode Throughput: 409.28tok/s
+[metrics] Prefill tokens/time: 6152 / 0.020589s
+[metrics] Decode tokens/time: 56 / 0.136827s
+Final Prefill Throughput: 295737.94tok/s
+Final Decode Throughput: 409.55tok/s
+[metrics] Prefill tokens/time: 6152 / 0.020802s
+[metrics] Decode tokens/time: 56 / 0.136734s
+Final Prefill Throughput: 10707.37tok/s
+Final Decode Throughput: 407.38tok/s
+[metrics] Prefill tokens/time: 6152 / 0.574557s
+[metrics] Decode tokens/time: 56 / 0.137465s
+Final Prefill Throughput: 10690.44tok/s
+Final Decode Throughput: 407.43tok/s
+[metrics] Prefill tokens/time: 6152 / 0.575467s
+[metrics] Decode tokens/time: 56 / 0.137448s
+Final Prefill Throughput: 293027.08tok/s
+Final Decode Throughput: 409.05tok/s
+[metrics] Prefill tokens/time: 6152 / 0.020995s
+[metrics] Decode tokens/time: 56 / 0.136903s
+Final Prefill Throughput: 294488.01tok/s
+Final Decode Throughput: 408.87tok/s
+[metrics] Prefill tokens/time: 6152 / 0.020890s
+[metrics] Decode tokens/time: 56 / 0.136963s
+Final Prefill Throughput: 205580.56tok/s
+Final Decode Throughput: 405.41tok/s
+[metrics] Prefill tokens/time: 6408 / 0.031170s
+[metrics] Decode tokens/time: 56 / 0.138132s
+Final Prefill Throughput: 10539.72tok/s
+Final Decode Throughput: 403.71tok/s
+[metrics] Prefill tokens/time: 6408 / 0.607986s
+[metrics] Decode tokens/time: 56 / 0.138715s
+Final Prefill Throughput: 204741.21tok/s
+Final Decode Throughput: 404.97tok/s
+[metrics] Prefill tokens/time: 6408 / 0.031298s
+[metrics] Decode tokens/time: 56 / 0.138282s
+Final Prefill Throughput: 204206.32tok/s
+Final Decode Throughput: 405.12tok/s
+[metrics] Prefill tokens/time: 6408 / 0.031380s
+[metrics] Decode tokens/time: 56 / 0.138229s
+Final Prefill Throughput: 204199.65tok/s
+Final Decode Throughput: 405.79tok/s
+[metrics] Prefill tokens/time: 6408 / 0.031381s
+[metrics] Decode tokens/time: 56 / 0.138004s
+Final Prefill Throughput: 204600.82tok/s
+Final Decode Throughput: 405.38tok/s
+[metrics] Prefill tokens/time: 6408 / 0.031320s
+[metrics] Decode tokens/time: 56 / 0.138143s
+Final Prefill Throughput: 10559.64tok/s
+Final Decode Throughput: 404.18tok/s
+[metrics] Prefill tokens/time: 6408 / 0.606839s
+[metrics] Decode tokens/time: 56 / 0.138553s
+Final Prefill Throughput: 10534.09tok/s
+Final Decode Throughput: 403.54tok/s
+[metrics] Prefill tokens/time: 6408 / 0.608310s
+[metrics] Decode tokens/time: 56 / 0.138771s
+Final Prefill Throughput: 204901.00tok/s
+Final Decode Throughput: 405.45tok/s
+[metrics] Prefill tokens/time: 6408 / 0.031274s
+[metrics] Decode tokens/time: 56 / 0.138119s
+Final Prefill Throughput: 205681.38tok/s
+Final Decode Throughput: 404.76tok/s
+[metrics] Prefill tokens/time: 6408 / 0.031155s
+[metrics] Decode tokens/time: 56 / 0.138354s
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

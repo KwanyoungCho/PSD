@@ -1,0 +1,109 @@
+test_fully_cached_prompt_keeps_a_query_token (paper_prefix_tests.TestAdmission.test_fully_cached_prompt_keeps_a_query_token) ... FAIL
+
+======================================================================
+FAIL: test_fully_cached_prompt_keeps_a_query_token (paper_prefix_tests.TestAdmission.test_fully_cached_prompt_keeps_a_query_token)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_cached_prefill.py", line 28, in test_fully_cached_prompt_keeps_a_query_token
+    self.assertEqual(cached, 7)
+AssertionError: 8 != 7
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)
+test_mixed_cached_uncached_rows_match_dense_attention (paper_prefix_tests.TestCachedPrefill.test_mixed_cached_uncached_rows_match_dense_attention) ... 
+  test_mixed_cached_uncached_rows_match_dense_attention (paper_prefix_tests.TestCachedPrefill.test_mixed_cached_uncached_rows_match_dense_attention) (dtype=torch.float16) ... FAIL
+  test_mixed_cached_uncached_rows_match_dense_attention (paper_prefix_tests.TestCachedPrefill.test_mixed_cached_uncached_rows_match_dense_attention) (dtype=torch.bfloat16) ... FAIL
+
+======================================================================
+FAIL: test_mixed_cached_uncached_rows_match_dense_attention (paper_prefix_tests.TestCachedPrefill.test_mixed_cached_uncached_rows_match_dense_attention) (dtype=torch.float16)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_cached_prefill.py", line 86, in test_mixed_cached_uncached_rows_match_dense_attention
+    torch.testing.assert_close(actual.float(), torch.stack(expected), atol=.012, rtol=.015)
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/testing/_comparison.py", line 1587, in assert_close
+    raise error_metas[0].to_error(msg)
+AssertionError: Tensor-likes are not close!
+
+Mismatched elements: 1956 / 2048 (95.5%)
+Greatest absolute difference: 2.548828125 at index (3, 2, 55) (up to 0.012 allowed)
+Greatest relative difference: 1.0 at index (0, 0, 0) (up to 0.015 allowed)
+
+======================================================================
+FAIL: test_mixed_cached_uncached_rows_match_dense_attention (paper_prefix_tests.TestCachedPrefill.test_mixed_cached_uncached_rows_match_dense_attention) (dtype=torch.bfloat16)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_cached_prefill.py", line 86, in test_mixed_cached_uncached_rows_match_dense_attention
+    torch.testing.assert_close(actual.float(), torch.stack(expected), atol=.012, rtol=.015)
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/testing/_comparison.py", line 1587, in assert_close
+    raise error_metas[0].to_error(msg)
+AssertionError: Tensor-likes are not close!
+
+Mismatched elements: 1962 / 2048 (95.8%)
+Greatest absolute difference: 3.5 at index (3, 0, 10) (up to 0.012 allowed)
+Greatest relative difference: 1.0 at index (0, 0, 0) (up to 0.015 allowed)
+
+----------------------------------------------------------------------
+Ran 1 test in 0.837s
+
+FAILED (failures=2)
+test_completed_block_hash_points_to_its_own_physical_page (paper_state_tests.TestOutputAccounting.test_completed_block_hash_points_to_its_own_physical_page) ... FAIL
+
+======================================================================
+FAIL: test_completed_block_hash_points_to_its_own_physical_page (paper_state_tests.TestOutputAccounting.test_completed_block_hash_points_to_its_own_physical_page)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_output_accounting.py", line 33, in test_completed_block_hash_points_to_its_own_physical_page
+    self.assertEqual(manager.blocks[table[index]].hash, h)
+AssertionError: -1 != 15419903723500502158
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (failures=1)
+test_preemption_preserves_output_and_remaining_budget (paper_state_tests.TestOutputAccounting.test_preemption_preserves_output_and_remaining_budget) ... FAIL
+
+======================================================================
+FAIL: test_preemption_preserves_output_and_remaining_budget (paper_state_tests.TestOutputAccounting.test_preemption_preserves_output_and_remaining_budget)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_output_accounting.py", line 53, in test_preemption_preserves_output_and_remaining_budget
+    self.assertEqual(seq.completion_token_ids, [20, 21])
+AssertionError: Lists differ: [] != [20, 21]
+
+Second list contains 2 additional elements.
+First extra element 0:
+20
+
+- []
++ [20, 21]
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (failures=1)
+test_fully_cached_prompt_keeps_a_query_token (paper_prefix_tests.TestAdmission.test_fully_cached_prompt_keeps_a_query_token) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+test_mixed_cached_uncached_rows_match_dense_attention (paper_prefix_tests.TestCachedPrefill.test_mixed_cached_uncached_rows_match_dense_attention) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.009s
+
+OK
+test_completed_block_hash_points_to_its_own_physical_page (paper_state_tests.TestOutputAccounting.test_completed_block_hash_points_to_its_own_physical_page) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+test_preemption_preserves_output_and_remaining_budget (paper_state_tests.TestOutputAccounting.test_preemption_preserves_output_and_remaining_budget) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK

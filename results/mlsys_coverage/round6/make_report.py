@@ -51,7 +51,7 @@ lines += ['', 'Greedy tree의 serial legacy walk는 B1 약0.038ms/B2 약0.075ms�
 for r in profiles:
  s=r['steady_profile'];m=s['gpu_span_ms'];arm=r['name'].split('_')[2];v=lambda k:f"{m[k]['mean']:.3f}" if k in m else '—'
  lines.append('| '+' | '.join([r['name'].split('_')[0],str(r['batch']),arm,str(s['steps']),fmt(s['verify_ms']['mean']),v('batch_tree_accept'),v('batch_kv_restore'),v('batch_kv_stage'),v('batch_glue_forward')])+' |')
-lines += ['', '**기존 논문 B1 경로와의 직접 비교**: 아래는 같은48개 입력 설정에서 legacy B1과 unified+trim을 대조한 전체 verification 시간이다. 이후 full480 표의 graph0 기준 개선율과 구분한다. 이48입력 결과를 원 논문70B의 전체 데이터 TPS 개선율로 옮겨 쓰지 않는다.', '',
+lines += ['', '**현재 브랜치의 legacy B1 실행 경로와 비교**: 아래는 같은48개 입력 설정에서 현재 코드의 legacy B1과 unified+trim을 대조한 전체 verification 시간이다. 원 논문 commit checkout과의 전후 비교가 아니다. 이후 full480 표의 graph0 기준 개선율과 구분한다. 이48입력 결과를 원 논문70B의 전체 데이터 TPS 개선율로 옮겨 쓰지 않는다.', '',
           '| Model | Legacy B1 ms | Unified+trim B1 ms | 감소율 |', '|---|---:|---:|---:|']
 for model in ('llama2','llama3'):
  cs={r['name'].split('_')[2]:r['steady_profile']['verify_ms']['mean'] for r in profiles

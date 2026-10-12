@@ -95,7 +95,7 @@ Greedy tree의 serial legacy walk는 B1 약0.038ms/B2 약0.075ms로 graph 약0.1
 | llama3 | 8 | graph1 | 110 | 30.881 | 3.335 | 0.436 | 0.453 | 2.658 |
 | llama3 | 8 | trim1 | 110 | 29.870 | 2.851 | 0.427 | 0.407 | 2.656 |
 
-**기존 논문 B1 경로와의 직접 비교**: 아래는 같은48개 입력 설정에서 legacy B1과 unified+trim을 대조한 전체 verification 시간이다. 이후 full480 표의 graph0 기준 개선율과 구분한다. 이48입력 결과를 원 논문70B의 전체 데이터 TPS 개선율로 옮겨 쓰지 않는다.
+**현재 브랜치의 legacy B1 실행 경로와 비교**: 아래는 같은48개 입력 설정에서 현재 코드의 legacy B1과 unified+trim을 대조한 전체 verification 시간이다. 원 논문 commit checkout과의 전후 비교가 아니다. 이후 full480 표의 graph0 기준 개선율과 구분한다. 이48입력 결과를 원 논문70B의 전체 데이터 TPS 개선율로 옮겨 쓰지 않는다.
 
 | Model | Legacy B1 ms | Unified+trim B1 ms | 감소율 |
 |---|---:|---:|---:|

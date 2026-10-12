@@ -1,0 +1,56 @@
+[
+  {
+    "name": "unified_b1_unified_full_r1",
+    "arm": "unified",
+    "draft_seed": 122,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9411"
+    ],
+    "bench": "mlsys_paper_current.py",
+    "env": {
+      "SSD_BATCHED_TREE": "1",
+      "SSD_BATCH_TREE_ACCEPT_GRAPH": "1",
+      "SSD_TREE_LADDER_TRIM": "1",
+      "SSD_TREE_FUSED_MATH": "0",
+      "SSD_BATCH_TREE_BULK_EXPORT": "0",
+      "SSD_TREE_PARALLEL_INSERT": "0",
+      "SSD_BATCH_TREE_PROXY_STREAM": "0",
+      "SSD_PACKED_TREE_VERIFY": "0",
+      "SSD_TREE_EXPANSION_POLICY": "q_path"
+    }
+  },
+  {
+    "name": "unified_b1_base_full_r1",
+    "arm": "base",
+    "draft_seed": 122,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "9411"
+    ]
+  }
+]

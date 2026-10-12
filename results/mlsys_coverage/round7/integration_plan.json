@@ -1,0 +1,96 @@
+[
+  {
+    "name": "integration_chain_base_smoke_r0",
+    "arm": "base",
+    "draft_seed": 131,
+    "env": {},
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--limit",
+      "4",
+      "--warm-prompts",
+      "2",
+      "--output-tokens",
+      "32",
+      "--seed",
+      "9501"
+    ]
+  },
+  {
+    "name": "integration_chain_ported_smoke_r0",
+    "arm": "base",
+    "draft_seed": 131,
+    "env": {
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-paper-port-review",
+      "SSD_PAPER_TREE_ACCEPT_GRAPH": "1"
+    },
+    "args": [
+      "--mode",
+      "chain",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--limit",
+      "4",
+      "--warm-prompts",
+      "2",
+      "--output-tokens",
+      "32",
+      "--seed",
+      "9501"
+    ]
+  },
+  {
+    "name": "integration_tree_base_smoke_r0",
+    "arm": "base",
+    "draft_seed": 131,
+    "env": {},
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--limit",
+      "4",
+      "--warm-prompts",
+      "2",
+      "--output-tokens",
+      "32",
+      "--seed",
+      "9501"
+    ]
+  },
+  {
+    "name": "integration_tree_ported_smoke_r0",
+    "arm": "base",
+    "draft_seed": 131,
+    "env": {
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-paper-port-review",
+      "SSD_PAPER_TREE_ACCEPT_GRAPH": "1"
+    },
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--limit",
+      "4",
+      "--warm-prompts",
+      "2",
+      "--output-tokens",
+      "32",
+      "--seed",
+      "9501"
+    ]
+  }
+]

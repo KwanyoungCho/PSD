@@ -1,0 +1,30 @@
+START tree_b1_base_full_r0
+END tree_b1_base_full_r0 complete 0
+START tree_b1_tree_full_r0
+END tree_b1_tree_full_r0 complete 0
+START tree_b1_tree_full_r1
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/run_pair.py", line 39, in main
+    tr.write(json.dumps(dict(time=time.time(),processes=active,foreign=foreign,
+                                                                                
+OSError: [Errno 28] No space left on device
+
+During handling of the above exception, another exception occurred:
+
+OSError: [Errno 28] No space left on device
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/run_pair.py", line 53, in <module>
+    
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/run_pair.py", line 28, in main
+    print('START',job['name'],flush=True)
+                              ^^^^^^^^^^^^
+OSError: [Errno 28] No space left on device
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/after_profile.py", line 15, in <module>
+    subprocess.run([sys.executable,str(Path(__file__).with_name('run_pair.py')),'--plan',str(a.plan),
+  File "/home/chokwans99/anaconda3/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/chokwans99/PSD/ssd/.venv/bin/python', '/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round7/run_pair.py', '--plan', 'results/mlsys_coverage/round7/tree_b1_full_plan.json', '--gpus', '2,3', '--port', '27800', '--directory', 'results/mlsys_coverage/round7/tree_b1_full']' returned non-zero exit status 1.

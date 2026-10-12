@@ -1,0 +1,67 @@
+[
+  {
+    "arm": "base",
+    "test": "test_fully_cached_prompt_keeps_a_query_token",
+    "success": false,
+    "failures": [
+      "Traceback (most recent call last):\n  File \"/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_cached_prefill.py\", line 28, in test_fully_cached_prompt_keeps_a_query_token\n    self.assertEqual(cached, 7)\nAssertionError: 8 != 7\n"
+    ],
+    "errors": []
+  },
+  {
+    "arm": "base",
+    "test": "test_mixed_cached_uncached_rows_match_dense_attention",
+    "success": false,
+    "failures": [
+      "Traceback (most recent call last):\n  File \"/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_cached_prefill.py\", line 86, in test_mixed_cached_uncached_rows_match_dense_attention\n    torch.testing.assert_close(actual.float(), torch.stack(expected), atol=.012, rtol=.015)\n  File \"/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/testing/_comparison.py\", line 1587, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 1956 / 2048 (95.5%)\nGreatest absolute difference: 2.548828125 at index (3, 2, 55) (up to 0.012 allowed)\nGreatest relative difference: 1.0 at index (0, 0, 0) (up to 0.015 allowed)\n",
+      "Traceback (most recent call last):\n  File \"/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_cached_prefill.py\", line 86, in test_mixed_cached_uncached_rows_match_dense_attention\n    torch.testing.assert_close(actual.float(), torch.stack(expected), atol=.012, rtol=.015)\n  File \"/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/testing/_comparison.py\", line 1587, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 1962 / 2048 (95.8%)\nGreatest absolute difference: 3.5 at index (3, 0, 10) (up to 0.012 allowed)\nGreatest relative difference: 1.0 at index (0, 0, 0) (up to 0.015 allowed)\n"
+    ],
+    "errors": []
+  },
+  {
+    "arm": "base",
+    "test": "test_completed_block_hash_points_to_its_own_physical_page",
+    "success": false,
+    "failures": [
+      "Traceback (most recent call last):\n  File \"/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_output_accounting.py\", line 33, in test_completed_block_hash_points_to_its_own_physical_page\n    self.assertEqual(manager.blocks[table[index]].hash, h)\nAssertionError: -1 != 15419903723500502158\n"
+    ],
+    "errors": []
+  },
+  {
+    "arm": "base",
+    "test": "test_preemption_preserves_output_and_remaining_budget",
+    "success": false,
+    "failures": [
+      "Traceback (most recent call last):\n  File \"/home/chokwans99/PSD-mlsys-coverage/ssd/tests/test_output_accounting.py\", line 53, in test_preemption_preserves_output_and_remaining_budget\n    self.assertEqual(seq.completion_token_ids, [20, 21])\nAssertionError: Lists differ: [] != [20, 21]\n\nSecond list contains 2 additional elements.\nFirst extra element 0:\n20\n\n- []\n+ [20, 21]\n"
+    ],
+    "errors": []
+  },
+  {
+    "arm": "kv",
+    "test": "test_fully_cached_prompt_keeps_a_query_token",
+    "success": true,
+    "failures": [],
+    "errors": []
+  },
+  {
+    "arm": "kv",
+    "test": "test_mixed_cached_uncached_rows_match_dense_attention",
+    "success": true,
+    "failures": [],
+    "errors": []
+  },
+  {
+    "arm": "kv",
+    "test": "test_completed_block_hash_points_to_its_own_physical_page",
+    "success": true,
+    "failures": [],
+    "errors": []
+  },
+  {
+    "arm": "kv",
+    "test": "test_preemption_preserves_output_and_remaining_budget",
+    "success": true,
+    "failures": [],
+    "errors": []
+  }
+]

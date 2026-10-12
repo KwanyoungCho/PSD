@@ -1,0 +1,78 @@
+[
+  {
+    "name": "kv_b1_base_profile_r0",
+    "arm": "base",
+    "draft_seed": 91,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9101"
+    ]
+  },
+  {
+    "name": "kv_b1_kv_profile_r0",
+    "arm": "kv",
+    "draft_seed": 91,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9101"
+    ]
+  },
+  {
+    "name": "kv_b1_kv_profile_r1",
+    "arm": "kv",
+    "draft_seed": 92,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9111"
+    ]
+  },
+  {
+    "name": "kv_b1_base_profile_r1",
+    "arm": "base",
+    "draft_seed": 92,
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "1",
+      "--prompts",
+      "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/tuning48.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "9111"
+    ]
+  }
+]

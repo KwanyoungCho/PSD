@@ -1,0 +1,41 @@
+{
+  "python": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:27:36) [GCC 11.2.0]",
+  "packages": {
+    "torch": "2.8.0",
+    "transformers": "4.57.1",
+    "flashinfer-python": "0.5.2",
+    "sglang": null,
+    "sgl-kernel": "0.3.17.post1",
+    "numpy": "2.3.3",
+    "matplotlib": "3.11.1"
+  },
+  "runtime_imports": {
+    "ssd/ssd/utils/verify.py": {
+      "sha256": "0cf11b9ba19a73e9c39087fccde43071464c6f3b964e00081ebadc747ef142a4",
+      "git_source": "df8ac6e:ssd/ssd/utils/verify.py"
+    },
+    "ssd/ssd/utils/verify_fast.py": {
+      "sha256": "23b05b7e5032fe72c8f2ef5bd7a69aa874818b08b52ea7fc0344a54c76ea28d9",
+      "git_source": "df8ac6e:ssd/ssd/utils/verify_fast.py"
+    },
+    "ssd/ssd/engine/block_manager.py": {
+      "sha256": "05d873619b419d31f47b4be4025bc7c9f11759f5f0bc3f65fbff3a1e8f94660a",
+      "git_source": "df8ac6e:ssd/ssd/engine/block_manager.py"
+    },
+    "ssd/ssd/engine/sequence.py": {
+      "sha256": "6894715ef142074b118bfa3018b10826d2748518e9c8b71291064eb99fae9bd9",
+      "git_source": "df8ac6e:ssd/ssd/engine/sequence.py"
+    },
+    "ssd/ssd/engine/scheduler.py": {
+      "sha256": "52a36e8bb2abc26f775562a39bd95ea6cc8c70650e6193ddaa0fad762afb8ae4",
+      "git_source": "df8ac6e:ssd/ssd/engine/scheduler.py"
+    },
+    "ssd/ssd/layers/attention.py": {
+      "sha256": "bbafa69d9b52dedf81542f2c3227b7f061de11c679a6681a16b0c137ccfc672b",
+      "git_source": "df8ac6e:ssd/ssd/layers/attention.py"
+    }
+  },
+  "gpus": "index, uuid, name, driver_version, memory.total [MiB]\n0, GPU-3da85194-cf75-3668-0b67-4e5abf3d2a10, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n1, GPU-13825050-f567-b638-9467-d4b135c4fad2, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n2, GPU-98b22d7c-597c-b851-af6b-1f0c7b4c6904, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n3, GPU-211c89c3-d6d1-dfa7-b816-e6ee65c35c82, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n4, GPU-97d3e0bb-517b-9732-5c1d-6d1f471a7b6f, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n5, GPU-00cbad2d-7e9b-7c4f-8166-23a834ddc689, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n6, GPU-947d0308-a472-c345-d704-020de749b375, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n7, GPU-701c7c85-2f36-8ce2-590e-6bf428a4988c, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n",
+  "topology": "\t\u001b[4mGPU0\tGPU1\tGPU2\tGPU3\tGPU4\tGPU5\tGPU6\tGPU7\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID\u001b[0m\nGPU0\t X \tNODE\tNODE\tNODE\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU1\tNODE\t X \tPIX\tPIX\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU2\tNODE\tPIX\t X \tPIX\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU3\tNODE\tPIX\tPIX\t X \tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU4\tSYS\tSYS\tSYS\tSYS\t X \tPIX\tNODE\tNODE\t16-31,48-63\t1\t\tN/A\nGPU5\tSYS\tSYS\tSYS\tSYS\tPIX\t X \tNODE\tNODE\t16-31,48-63\t1\t\tN/A\nGPU6\tSYS\tSYS\tSYS\tSYS\tNODE\tNODE\t X \tPIX\t16-31,48-63\t1\t\tN/A\nGPU7\tSYS\tSYS\tSYS\tSYS\tNODE\tNODE\tPIX\t X \t16-31,48-63\t1\t\tN/A\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n",
+  "cpu": "Architecture:                       x86_64\nCPU op-mode(s):                     32-bit, 64-bit\nAddress sizes:                      46 bits physical, 57 bits virtual\nByte Order:                         Little Endian\nCPU(s):                             64\nOn-line CPU(s) list:                0-63\nVendor ID:                          GenuineIntel\nModel name:                         Intel(R) Xeon(R) Gold 6426Y\nCPU family:                         6\nModel:                              143\nThread(s) per core:                 2\nCore(s) per socket:                 16\nSocket(s):                          2\nStepping:                           8\nFrequency boost:                    enabled\nCPU max MHz:                        2501.0000\nCPU min MHz:                        800.0000\nBogoMIPS:                           5000.00\nFlags:                              fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 cat_l2 cdp_l3 invpcid_single cdp_l2 ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local split_lock_detect avx_vnni avx512_bf16 wbnoinvd dtherm ida arat pln pts avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg tme avx512_vpopcntdq la57 rdpid bus_lock_detect cldemote movdiri movdir64b enqcmd fsrm md_clear serialize tsxldtrk pconfig arch_lbr amx_bf16 avx512_fp16 amx_tile amx_int8 flush_l1d arch_capabilities\nVirtualization:                     VT-x\nL1d cache:                          1.5 MiB (32 instances)\nL1i cache:                          1 MiB (32 instances)\nL2 cache:                           64 MiB (32 instances)\nL3 cache:                           75 MiB (2 instances)\nNUMA node(s):                       2\nNUMA node0 CPU(s):                  0-15,32-47\nNUMA node1 CPU(s):                  16-31,48-63\nVulnerability Gather data sampling: Not affected\nVulnerability Itlb multihit:        Not affected\nVulnerability L1tf:                 Not affected\nVulnerability Mds:                  Not affected\nVulnerability Meltdown:             Not affected\nVulnerability Mmio stale data:      Not affected\nVulnerability Retbleed:             Not affected\nVulnerability Spec rstack overflow: Not affected\nVulnerability Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl and seccomp\nVulnerability Spectre v1:           Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:           Mitigation; Enhanced IBRS, IBPB conditional, RSB filling, PBRSB-eIBRS SW sequence\nVulnerability Srbds:                Not affected\nVulnerability Tsx async abort:      Not affected\n"
+}

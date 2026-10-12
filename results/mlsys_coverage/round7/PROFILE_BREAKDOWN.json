@@ -1,0 +1,493 @@
+{
+  "scope": "16 measured prompts after 4 warm prompts. Nominal B, no cap/clip; exclude target capture steps and their next step. Means conditional on each label occurring. CUDA spans include host launch gaps; labels can overlap and are not summed into verification wall time.",
+  "arms": {
+    "base": {
+      "counts": {
+        "capture_steps": 0,
+        "included_measured_steps": 677,
+        "excluded_measured_steps": 11
+      },
+      "trace": "profiles/base/duet_profile_target_rank0_185228.json",
+      "verification_by_source_ms": {
+        "0": {
+          "n": 255,
+          "mean": 17.63459607575308,
+          "median": 17.525227973237634
+        },
+        "2": {
+          "n": 257,
+          "mean": 17.779938560450297,
+          "median": 17.075160052627325
+        },
+        "1": {
+          "n": 165,
+          "mean": 17.213715595955197,
+          "median": 17.239446984604
+        }
+      },
+      "cuda_span_ms": {
+        "target_send_request": {
+          "n": 677,
+          "mean": 0.21008080378328856,
+          "median": 0.20787200331687927
+        },
+        "target_recv_fused": {
+          "n": 677,
+          "mean": 1.5417633553199261,
+          "median": 1.415168046951294
+        },
+        "target_response_meta_read": {
+          "n": 677,
+          "mean": 0.028182593791950577,
+          "median": 0.030079999938607216
+        },
+        "target_recv_chain_q": {
+          "n": 255,
+          "mean": 0.08672778010368347,
+          "median": 0.08575999736785889
+        },
+        "target_recv_response_wait": {
+          "n": 677,
+          "mean": 1.6723445807109028,
+          "median": 1.5496959686279297
+        },
+        "target_response_received": {
+          "n": 677,
+          "mean": 0.0030946883402539187,
+          "median": 0.0019519999623298645
+        },
+        "target_spec_wait": {
+          "n": 677,
+          "mean": 2.1649053584525646,
+          "median": 2.039583921432495
+        },
+        "verify_setup": {
+          "n": 677,
+          "mean": 0.5306580342363395,
+          "median": 0.3031040132045746
+        },
+        "graph_pre": {
+          "n": 677,
+          "mean": 10.22624801427258,
+          "median": 10.210304260253906
+        },
+        "exit_logits": {
+          "n": 677,
+          "mean": 0.2898481995351558,
+          "median": 0.289792001247406
+        },
+        "chain_proxy_graph_replay": {
+          "n": 255,
+          "mean": 0.1496244726227779,
+          "median": 0.14950400590896606
+        },
+        "proxy_send_enqueue": {
+          "n": 677,
+          "mean": 0.00551789661283375,
+          "median": 0.005119999870657921
+        },
+        "exit_proxy_side": {
+          "n": 677,
+          "mean": 0.23992002470366536,
+          "median": 0.27955201268196106
+        },
+        "exit_proxy_launch": {
+          "n": 677,
+          "mean": 0.2439207344190761,
+          "median": 0.2836480140686035
+        },
+        "graph_post": {
+          "n": 677,
+          "mean": 4.65073726870989,
+          "median": 4.645887851715088
+        },
+        "final_logits": {
+          "n": 677,
+          "mean": 0.28550862984255815,
+          "median": 0.28569599986076355
+        },
+        "verify_accept_prep": {
+          "n": 677,
+          "mean": 0.03743035759243074,
+          "median": 0.035840000957250595
+        },
+        "chain_accept": {
+          "n": 255,
+          "mean": 1.290993694230622,
+          "median": 1.288640022277832
+        },
+        "verify_sample_accept": {
+          "n": 677,
+          "mean": 1.0461077940604888,
+          "median": 1.0117119550704956
+        },
+        "target_postprocess": {
+          "n": 677,
+          "mean": 0.016243899557491878,
+          "median": 0.015904000028967857
+        },
+        "target_recv_parent_q_p2": {
+          "n": 257,
+          "mean": 0.05798088721496122,
+          "median": 0.056703999638557434
+        },
+        "tree_wire_parse_validate": {
+          "n": 422,
+          "mean": 0.05546661604955016,
+          "median": 0.05508799850940704
+        },
+        "tree_proxy_topology_prepare": {
+          "n": 422,
+          "mean": 0.14160068221919908,
+          "median": 0.14158400148153305
+        },
+        "tree_parent_q_select": {
+          "n": 422,
+          "mean": 0.05205194308682923,
+          "median": 0.05222399905323982
+        },
+        "tree_verify_meta_cpu": {
+          "n": 422,
+          "mean": 0.4865520502047799,
+          "median": 0.04169600084424019
+        },
+        "tree_verify_mask_prepare": {
+          "n": 422,
+          "mean": 0.1830669952582974,
+          "median": 0.1820319965481758
+        },
+        "tree_verify_attention_buffers": {
+          "n": 422,
+          "mean": 0.058506995324769294,
+          "median": 0.058368001133203506
+        },
+        "tree_proxy_graph_replay": {
+          "n": 422,
+          "mean": 0.2760602091725969,
+          "median": 0.27033600211143494
+        },
+        "tree_accept_walk": {
+          "n": 422,
+          "mean": 0.8121223881911327,
+          "median": 0.8431519865989685
+        },
+        "tree_kv_commit": {
+          "n": 133,
+          "mean": 0.15106983415614395,
+          "median": 0.15142400562763214
+        },
+        "target_recv_parent_q_p1": {
+          "n": 165,
+          "mean": 0.07375670319253748,
+          "median": 0.07478400319814682
+        }
+      },
+      "host_dispatch_ms": {
+        "target_send_request": {
+          "n": 677,
+          "mean": 0.21015075036927622,
+          "median": 0.208281
+        },
+        "target_recv_fused": {
+          "n": 677,
+          "mean": 0.039426029542097486,
+          "median": 0.039103
+        },
+        "target_response_meta_read": {
+          "n": 677,
+          "mean": 1.4986002156573117,
+          "median": 1.377453
+        },
+        "target_recv_chain_q": {
+          "n": 255,
+          "mean": 0.038985733333333335,
+          "median": 0.038211
+        },
+        "target_recv_response_wait": {
+          "n": 677,
+          "mean": 1.645818719350074,
+          "median": 1.525791
+        },
+        "target_response_received": {
+          "n": 677,
+          "mean": 0.007429314623338257,
+          "median": 0.007234
+        },
+        "target_spec_wait": {
+          "n": 677,
+          "mean": 2.164988066469719,
+          "median": 2.039716
+        },
+        "verify_setup": {
+          "n": 677,
+          "mean": 0.5303362968980798,
+          "median": 0.303002
+        },
+        "graph_pre": {
+          "n": 677,
+          "mean": 0.021562639586410637,
+          "median": 0.019668
+        },
+        "exit_logits": {
+          "n": 677,
+          "mean": 0.18980963220088626,
+          "median": 0.188099
+        },
+        "chain_proxy_graph_replay": {
+          "n": 255,
+          "mean": 0.0870368431372549,
+          "median": 0.087461
+        },
+        "proxy_send_enqueue": {
+          "n": 677,
+          "mean": 0.11988821270310192,
+          "median": 0.119641
+        },
+        "exit_proxy_side": {
+          "n": 677,
+          "mean": 0.2632459778434269,
+          "median": 0.261574
+        },
+        "exit_proxy_launch": {
+          "n": 677,
+          "mean": 0.2817038375184638,
+          "median": 0.27979
+        },
+        "graph_post": {
+          "n": 677,
+          "mean": 0.01626807976366322,
+          "median": 0.015264
+        },
+        "final_logits": {
+          "n": 677,
+          "mean": 0.04959683013293944,
+          "median": 0.046477
+        },
+        "verify_accept_prep": {
+          "n": 677,
+          "mean": 15.110006868537667,
+          "median": 15.090816
+        },
+        "chain_accept": {
+          "n": 255,
+          "mean": 1.2921854588235293,
+          "median": 1.290267
+        },
+        "verify_sample_accept": {
+          "n": 677,
+          "mean": 1.0463715376661742,
+          "median": 1.011597
+        },
+        "target_postprocess": {
+          "n": 677,
+          "mean": 0.01622084047267356,
+          "median": 0.015885
+        },
+        "target_recv_parent_q_p2": {
+          "n": 257,
+          "mean": 0.04024077431906615,
+          "median": 0.040159
+        },
+        "tree_wire_parse_validate": {
+          "n": 422,
+          "mean": 0.05544382464454976,
+          "median": 0.0550175
+        },
+        "tree_proxy_topology_prepare": {
+          "n": 422,
+          "mean": 0.14179424170616114,
+          "median": 0.1419155
+        },
+        "tree_parent_q_select": {
+          "n": 422,
+          "mean": 0.05214541469194313,
+          "median": 0.0522005
+        },
+        "tree_verify_meta_cpu": {
+          "n": 422,
+          "mean": 0.4867500592417061,
+          "median": 0.0423085
+        },
+        "tree_verify_mask_prepare": {
+          "n": 422,
+          "mean": 0.18331021563981043,
+          "median": 0.18222100000000002
+        },
+        "tree_verify_attention_buffers": {
+          "n": 422,
+          "mean": 0.058514744075829385,
+          "median": 0.058417
+        },
+        "tree_proxy_graph_replay": {
+          "n": 422,
+          "mean": 0.10598010189573459,
+          "median": 0.1063035
+        },
+        "tree_accept_walk": {
+          "n": 422,
+          "mean": 0.8131515900473933,
+          "median": 0.844231
+        },
+        "tree_kv_commit": {
+          "n": 133,
+          "mean": 0.1510347067669173,
+          "median": 0.151261
+        },
+        "target_recv_parent_q_p1": {
+          "n": 165,
+          "mean": 0.03989087878787879,
+          "median": 0.039966
+        }
+      }
+    },
+    "unified": {
+      "counts": {
+        "capture_steps": 6,
+        "included_measured_steps": 673,
+        "excluded_measured_steps": 22
+      },
+      "trace": "profiles/unified/duet_profile_target_rank0_185328.json",
+      "verification_by_source_ms": {
+        "0": {
+          "n": 285,
+          "mean": 16.544186927606923,
+          "median": 16.499443212524056
+        },
+        "2": {
+          "n": 212,
+          "mean": 16.726482028080117,
+          "median": 16.706205438822508
+        },
+        "1": {
+          "n": 176,
+          "mean": 16.957698204681616,
+          "median": 16.944230534136295
+        }
+      },
+      "cuda_span_ms": {
+        "target_send_request": {
+          "n": 673,
+          "mean": 0.2045374381373931,
+          "median": 0.20377600193023682
+        },
+        "target_recv_fused": {
+          "n": 673,
+          "mean": 2.832894706132685,
+          "median": 0.5294079780578613
+        },
+        "target_recv_response_wait": {
+          "n": 673,
+          "mean": 2.9146328758431754,
+          "median": 0.6210560202598572
+        },
+        "target_spec_wait": {
+          "n": 673,
+          "mean": 3.4037975117143513,
+          "median": 1.0986239910125732
+        },
+        "batch_tree_prepare": {
+          "n": 673,
+          "mean": 0.5186663658799601,
+          "median": 0.5071679949760437
+        },
+        "batch_target_pre": {
+          "n": 673,
+          "mean": 10.17918152263579,
+          "median": 10.143712043762207
+        },
+        "batch_target_proxy": {
+          "n": 673,
+          "mean": 0.5349205666807042,
+          "median": 0.5345280170440674
+        },
+        "batch_target_post": {
+          "n": 673,
+          "mean": 4.627121299726648,
+          "median": 4.60595178604126
+        },
+        "batch_target_final_logits": {
+          "n": 673,
+          "mean": 0.28515128510136484,
+          "median": 0.28467199206352234
+        },
+        "batch_tree_accept": {
+          "n": 673,
+          "mean": 0.33898365572869865,
+          "median": 0.33136001229286194
+        },
+        "batch_tree_commit": {
+          "n": 673,
+          "mean": 0.055556136652561566,
+          "median": 0.023391999304294586
+        },
+        "target_postprocess": {
+          "n": 673,
+          "mean": 0.014532945003986004,
+          "median": 0.014240000396966934
+        }
+      },
+      "host_dispatch_ms": {
+        "target_send_request": {
+          "n": 673,
+          "mean": 0.20455307578008916,
+          "median": 0.204186
+        },
+        "target_recv_fused": {
+          "n": 673,
+          "mean": 0.039415356612184246,
+          "median": 0.039295
+        },
+        "target_recv_response_wait": {
+          "n": 673,
+          "mean": 2.9075226983655273,
+          "median": 0.60253
+        },
+        "target_spec_wait": {
+          "n": 673,
+          "mean": 3.403904690936107,
+          "median": 1.099039
+        },
+        "batch_tree_prepare": {
+          "n": 673,
+          "mean": 0.5189550118870728,
+          "median": 0.506988
+        },
+        "batch_target_pre": {
+          "n": 673,
+          "mean": 0.02128404309063893,
+          "median": 0.019691
+        },
+        "batch_target_proxy": {
+          "n": 673,
+          "mean": 0.3659420208023774,
+          "median": 0.36382
+        },
+        "batch_target_post": {
+          "n": 673,
+          "mean": 0.015321331352154532,
+          "median": 0.014919
+        },
+        "batch_target_final_logits": {
+          "n": 673,
+          "mean": 0.04671120653789004,
+          "median": 0.044912
+        },
+        "batch_tree_accept": {
+          "n": 673,
+          "mean": 15.458217768202081,
+          "median": 15.41671
+        },
+        "batch_tree_commit": {
+          "n": 673,
+          "mean": 0.055619824665676075,
+          "median": 0.023449
+        },
+        "target_postprocess": {
+          "n": 673,
+          "mean": 0.014662973254086182,
+          "median": 0.014251
+        }
+      }
+    }
+  }
+}
