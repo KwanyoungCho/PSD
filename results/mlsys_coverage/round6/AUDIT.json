@@ -1,0 +1,1293 @@
+{
+  "status": "complete",
+  "counts": {
+    "profile": 58,
+    "full": 32
+  },
+  "core_source_versions": {
+    "e1af42da6e8fd3f2b9e62c10964da2c7da3285be053338904b228a3c78cdb02a": [
+      "llama2_b1_graph0_full_r0",
+      "llama2_b1_graph0_full_r1",
+      "llama2_b1_graph1_full_r0",
+      "llama2_b1_graph1_full_r1",
+      "llama2_b1_trim1_full_r0",
+      "llama2_b1_trim1_full_r1",
+      "llama2_b8_graph0_full_r0",
+      "llama2_b8_graph0_full_r1",
+      "llama2_b8_graph1_full_r0",
+      "llama2_b8_graph1_full_r1",
+      "llama2_b8_trim1_full_r0",
+      "llama2_b8_trim1_full_r1",
+      "llama2_chain_b1_fast_profile",
+      "llama2_chain_b1_general_profile",
+      "llama2_chain_b1_packed_profile",
+      "llama2_chain_b2_fast_profile",
+      "llama2_chain_b2_general_profile",
+      "llama2_chain_b2_packed_profile",
+      "llama2_chain_b4_fast_profile",
+      "llama2_chain_b4_general_profile",
+      "llama2_chain_b4_packed_profile",
+      "llama2_chain_b8_fast_profile",
+      "llama2_chain_b8_general_profile",
+      "llama2_chain_b8_packed_profile",
+      "llama2_greedy_b1_host0_full",
+      "llama2_greedy_b1_host0_profile",
+      "llama2_greedy_b1_host1_full",
+      "llama2_greedy_b1_host1_profile",
+      "llama2_greedy_b8_host0_full",
+      "llama2_greedy_b8_host0_profile",
+      "llama2_greedy_b8_host1_full",
+      "llama2_greedy_b8_host1_profile",
+      "llama2_b1_graph0_profile",
+      "llama2_b1_graph1_profile",
+      "llama2_b1_legacy_profile",
+      "llama2_b1_trim1_profile",
+      "llama2_b2_graph0_profile",
+      "llama2_b2_graph1_profile",
+      "llama2_b2_trim1_profile",
+      "llama2_b4_graph0_profile",
+      "llama2_b4_graph1_profile",
+      "llama2_b4_trim1_profile",
+      "llama2_b8_graph0_profile",
+      "llama2_b8_graph1_profile",
+      "llama2_b8_trim1_profile",
+      "llama3_b1_graph0_full_r0",
+      "llama3_b1_graph0_full_r1",
+      "llama3_b1_graph1_full_r0",
+      "llama3_b1_graph1_full_r1",
+      "llama3_b1_trim1_full_r0",
+      "llama3_b1_trim1_full_r1",
+      "llama3_b8_graph0_full_r0",
+      "llama3_b8_graph0_full_r1",
+      "llama3_b8_graph1_full_r0",
+      "llama3_b8_graph1_full_r1",
+      "llama3_b8_trim1_full_r0",
+      "llama3_b8_trim1_full_r1",
+      "llama3_chain_b1_fast_profile",
+      "llama3_chain_b1_general_profile",
+      "llama3_chain_b1_packed_profile",
+      "llama3_chain_b2_fast_profile",
+      "llama3_chain_b2_general_profile",
+      "llama3_chain_b2_packed_profile",
+      "llama3_chain_b4_fast_profile",
+      "llama3_chain_b4_general_profile",
+      "llama3_chain_b4_packed_profile",
+      "llama3_chain_b8_fast_profile",
+      "llama3_chain_b8_general_profile",
+      "llama3_chain_b8_packed_profile",
+      "llama3_greedy_b1_host0_full",
+      "llama3_greedy_b1_host0_profile",
+      "llama3_greedy_b1_host1_full",
+      "llama3_greedy_b1_host1_profile",
+      "llama3_greedy_b8_host0_full",
+      "llama3_greedy_b8_host0_profile",
+      "llama3_greedy_b8_host1_full",
+      "llama3_greedy_b8_host1_profile",
+      "llama3_b1_graph0_profile",
+      "llama3_b1_graph1_profile",
+      "llama3_b1_legacy_profile",
+      "llama3_b1_trim1_profile",
+      "llama3_b2_graph0_profile",
+      "llama3_b2_graph1_profile",
+      "llama3_b2_trim1_profile",
+      "llama3_b4_graph0_profile",
+      "llama3_b4_graph1_profile",
+      "llama3_b4_trim1_profile",
+      "llama3_b8_graph0_profile",
+      "llama3_b8_graph1_profile",
+      "llama3_b8_trim1_profile"
+    ]
+  },
+  "source_note": "One on-disk inference implementation. Greedy host1 explicitly substitutes acceptance replay in memory via the benchmark adapter; source identity is not execution identity.",
+  "population_and_accounting": [
+    {
+      "name": "llama2_b1_graph0_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_graph0_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_graph1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_graph1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_trim1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_trim1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_graph0_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_graph0_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_graph1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_graph1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_trim1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_trim1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b1_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b1_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b1_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b2_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b2_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b2_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b4_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b4_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b4_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b8_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b8_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_chain_b8_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b1_host0_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b1_host0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b1_host1_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b1_host1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b8_host0_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b8_host0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b8_host1_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_greedy_b8_host1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_legacy_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b1_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b2_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b2_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b2_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b4_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b4_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b4_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama2_b8_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.float16",
+        "torch.float16"
+      ]
+    },
+    {
+      "name": "llama3_b1_graph0_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_graph0_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_graph1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_graph1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_trim1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_trim1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_graph0_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_graph0_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_graph1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_graph1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_trim1_full_r0",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_trim1_full_r1",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b1_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b1_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b1_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b2_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b2_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b2_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b4_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b4_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b4_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b8_fast_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b8_general_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_chain_b8_packed_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b1_host0_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b1_host0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b1_host1_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b1_host1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b8_host0_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b8_host0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b8_host1_full",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 480,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_greedy_b8_host1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_legacy_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b1_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b2_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b2_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b2_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b4_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b4_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b4_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_graph0_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_graph1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    },
+    {
+      "name": "llama3_b8_trim1_profile",
+      "cells": 2,
+      "performance_recomputed": true,
+      "actual_output_accounting": true,
+      "requests_completed": 48,
+      "dtype": [
+        "torch.bfloat16",
+        "torch.bfloat16"
+      ]
+    }
+  ],
+  "graph_trim_output_controls": [
+    {
+      "graph1": "llama2_b1_graph1_full_r0",
+      "trim1": "llama2_b1_trim1_full_r0",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama2_b1_graph1_full_r1",
+      "trim1": "llama2_b1_trim1_full_r1",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama2_b8_graph1_full_r0",
+      "trim1": "llama2_b8_trim1_full_r0",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama2_b8_graph1_full_r1",
+      "trim1": "llama2_b8_trim1_full_r1",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama2_b1_graph1_profile",
+      "trim1": "llama2_b1_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama2_b2_graph1_profile",
+      "trim1": "llama2_b2_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama2_b4_graph1_profile",
+      "trim1": "llama2_b4_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama2_b8_graph1_profile",
+      "trim1": "llama2_b8_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b1_graph1_full_r0",
+      "trim1": "llama3_b1_trim1_full_r0",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b1_graph1_full_r1",
+      "trim1": "llama3_b1_trim1_full_r1",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b8_graph1_full_r0",
+      "trim1": "llama3_b8_trim1_full_r0",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b8_graph1_full_r1",
+      "trim1": "llama3_b8_trim1_full_r1",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b1_graph1_profile",
+      "trim1": "llama3_b1_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b2_graph1_profile",
+      "trim1": "llama3_b2_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b4_graph1_profile",
+      "trim1": "llama3_b4_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "graph1": "llama3_b8_graph1_profile",
+      "trim1": "llama3_b8_trim1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    }
+  ],
+  "greedy_adapter_output_controls": [
+    {
+      "control": "llama2_greedy_b1_host0_full",
+      "prototype": "llama2_greedy_b1_host1_full",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "control": "llama2_greedy_b1_host0_profile",
+      "prototype": "llama2_greedy_b1_host1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "control": "llama2_greedy_b8_host0_full",
+      "prototype": "llama2_greedy_b8_host1_full",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "control": "llama2_greedy_b8_host0_profile",
+      "prototype": "llama2_greedy_b8_host1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "control": "llama3_greedy_b1_host0_full",
+      "prototype": "llama3_greedy_b1_host1_full",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "control": "llama3_greedy_b1_host0_profile",
+      "prototype": "llama3_greedy_b1_host1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "control": "llama3_greedy_b8_host0_full",
+      "prototype": "llama3_greedy_b8_host1_full",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "control": "llama3_greedy_b8_host0_profile",
+      "prototype": "llama3_greedy_b8_host1_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    }
+  ],
+  "chain_fast_output_controls": [
+    {
+      "general": "llama2_chain_b1_general_profile",
+      "fast": "llama2_chain_b1_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "general": "llama2_chain_b2_general_profile",
+      "fast": "llama2_chain_b2_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "general": "llama2_chain_b4_general_profile",
+      "fast": "llama2_chain_b4_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "general": "llama2_chain_b8_general_profile",
+      "fast": "llama2_chain_b8_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "general": "llama3_chain_b1_general_profile",
+      "fast": "llama3_chain_b1_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "general": "llama3_chain_b2_general_profile",
+      "fast": "llama3_chain_b2_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "general": "llama3_chain_b4_general_profile",
+      "fast": "llama3_chain_b4_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    },
+    {
+      "general": "llama3_chain_b8_general_profile",
+      "fast": "llama3_chain_b8_fast_profile",
+      "all_output_tokens_equal": true,
+      "passes": 2
+    }
+  ],
+  "external_gpu_processes": []
+}

@@ -1,0 +1,22 @@
+CASE 32000 1 4 1 0.7 {'graph_trim0': 0.2688520005904138, 'graph_trim1': 0.2523593488149345, 'eager': 1.1197412037290633, 'serial_legacy_walk': 0.39794109761714935}
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 144, in <module>
+    if __name__=='__main__': main()
+                             ^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 131, in main
+    ms=timed(funcs[name],a.iterations)))
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 23, in timed
+    for _ in range(3): fn()
+                       ^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 119, in serial
+    return [tree_verify_walk_tensor(ints[i],pl[i],q[i],t,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/p2_tree.py", line 2453, in tree_verify_walk_tensor
+    validate_tree_ints(_checked_tree, _capacity)
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/p2_tree.py", line 2307, in validate_tree_ints
+    raise RuntimeError(
+RuntimeError: tree siblings for parent -1 use multiple q refs: [0, 1, 2]

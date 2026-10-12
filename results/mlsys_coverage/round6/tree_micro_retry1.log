@@ -1,0 +1,24 @@
+CASE 32000 1 4 1 0.7 {'graph_trim0': 0.2593896468169987, 'graph_trim1': 0.2417376497760415, 'eager': 0.8661161409690976, 'serial_legacy_walk': 0.3313353983685374}
+CASE 32000 1 4 3 0.7 {'graph_trim0': 0.31599345384165645, 'graph_trim1': 0.30013449722900987, 'eager': 1.2227935600094497, 'serial_legacy_walk': 0.47936304472386837}
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 144, in <module>
+    if __name__=='__main__': main()
+                             ^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 131, in main
+    ms=timed(funcs[name],a.iterations)))
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 23, in timed
+    for _ in range(3): fn()
+                       ^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_verify.py", line 122, in serial
+    return [tree_verify_walk_greedy(ints[i],pl[i]) for i in range(b)]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/p2_tree.py", line 2401, in tree_verify_walk_greedy
+    validate_tree_ints(tree_ints, len(tree_ints["tok"]))
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/p2_tree.py", line 2266, in validate_tree_ints
+    u_valid = int(tree_ints["u_valid"])
+                  ~~~~~~~~~^^^^^^^^^^^
+KeyError: 'u_valid'

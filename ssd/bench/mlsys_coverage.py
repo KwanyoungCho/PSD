@@ -70,7 +70,7 @@ def mean(values):
     return sum(values) / len(values) if values else None
 
 
-def summarize(metrics, outputs, wall, speculative=False):
+def summarize(metrics, outputs, wall, speculative=False, expected_batch=None):
     events = metrics.get("phase_events", [])
     total = sum(len(o["token_ids"]) for o in outputs)
     # Speculative prefill defers its recovery token until the first decode.
@@ -81,7 +81,7 @@ def summarize(metrics, outputs, wall, speculative=False):
     steps = metrics.get("decode_steps", [])
     clean_steps = [s for s in steps if not s['output_cap_reached'] and not s['clipped']]
     clean_time = sum(s['seconds'] for s in clean_steps)
-    return dict(
+    result = dict(
         boundary_excluded_al=mean([e['accepted_len'] for e in clean]),
         emitted_al=mean([e.get('emitted_len', e['accepted_len']) for e in events]),
         boundary_excluded_step_tps=(sum(s['emitted_tokens'] for s in clean_steps)/clean_time if clean_time else None),
@@ -100,6 +100,10 @@ def summarize(metrics, outputs, wall, speculative=False):
         observed_miss_valid_k=dict(Counter(e["valid_k"] for e in events if not e["cache_hit"])),
         tree_verify_events=sum(bool(e.get("tree")) for e in events),
         verify_events=len(events))
+    if expected_batch is not None:
+        from mlsys_step_metrics import performance_summary
+        result['performance'] = performance_summary(metrics, expected_batch)
+    return result
 
 
 def main():
@@ -297,7 +301,7 @@ def main():
                                 outputs=outputs, metrics=json.loads(json.dumps(metrics)),
                                 target_peak_allocated_bytes=torch.cuda.max_memory_allocated(),
                                 target_peak_reserved_bytes=torch.cuda.max_memory_reserved(),
-                                summary=summarize(metrics, outputs, wall, args.mode != "ar"))
+                                summary=summarize(metrics, outputs, wall, args.mode != "ar", batch))
                     report["cells"].append(cell)
                     if args.audit_preemption:
                         cell["preemption_events"] = list(preemption_events)

@@ -1,0 +1,191 @@
+{
+  "scope": "benchmark adapter only; production default unchanged",
+  "micro": [
+    {
+      "batch": 1,
+      "mean_case_medians_ms": {
+        "graph": 0.13690370717085898,
+        "batched_argmax_host": 0.03660589922219515,
+        "serial_legacy": 0.0455513212364167
+      }
+    },
+    {
+      "batch": 2,
+      "mean_case_medians_ms": {
+        "graph": 0.1393713167635724,
+        "batched_argmax_host": 0.037989834672771394,
+        "serial_legacy": 0.08866068325005472
+      }
+    },
+    {
+      "batch": 4,
+      "mean_case_medians_ms": {
+        "graph": 0.1406608277466148,
+        "batched_argmax_host": 0.03941921051591635,
+        "serial_legacy": 0.16150454233866185
+      }
+    },
+    {
+      "batch": 8,
+      "mean_case_medians_ms": {
+        "graph": 0.13269216753542423,
+        "batched_argmax_host": 0.04069690534379333,
+        "serial_legacy": 0.2986091800266877
+      }
+    }
+  ],
+  "model_pairs": [
+    {
+      "model": "llama2",
+      "batch": 1,
+      "kind": "profile",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": 1.4132848863640968,
+      "verify_ms": [
+        16.850749957132205,
+        16.701036561688138
+      ],
+      "verify_change_percent": -0.8884672541277561,
+      "base": "llama2_greedy_review/llama2_greedy_b1_host0_profile.json",
+      "optimized": "llama2_greedy_review/llama2_greedy_b1_host1_profile.json"
+    },
+    {
+      "model": "llama2",
+      "batch": 1,
+      "kind": "full",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": 0.028463607707074345,
+      "verify_ms": [
+        16.61325534936594,
+        16.591266710845993
+      ],
+      "verify_change_percent": -0.13235598958506456,
+      "base": "llama2_greedy_review/llama2_greedy_b1_host0_full.json",
+      "optimized": "llama2_greedy_review/llama2_greedy_b1_host1_full.json"
+    },
+    {
+      "model": "llama2",
+      "batch": 8,
+      "kind": "profile",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": -0.3186417814580178,
+      "verify_ms": [
+        24.385149680407874,
+        24.35961274265234
+      ],
+      "verify_change_percent": -0.1047233176347917,
+      "base": "llama2_greedy_review/llama2_greedy_b8_host0_profile.json",
+      "optimized": "llama2_greedy_review/llama2_greedy_b8_host1_profile.json"
+    },
+    {
+      "model": "llama2",
+      "batch": 8,
+      "kind": "full",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": 0.7968809390940024,
+      "verify_ms": [
+        23.24583871546872,
+        23.139215377446863
+      ],
+      "verify_change_percent": -0.4586770962619946,
+      "base": "llama2_greedy_review/llama2_greedy_b8_host0_full.json",
+      "optimized": "llama2_greedy_review/llama2_greedy_b8_host1_full.json"
+    },
+    {
+      "model": "llama3",
+      "batch": 1,
+      "kind": "profile",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": -1.014231248337416,
+      "verify_ms": [
+        19.821127118798447,
+        19.92983163689219
+      ],
+      "verify_change_percent": 0.5484275310996045,
+      "base": "llama3_greedy_review/llama3_greedy_b1_host0_profile.json",
+      "optimized": "llama3_greedy_review/llama3_greedy_b1_host1_profile.json"
+    },
+    {
+      "model": "llama3",
+      "batch": 1,
+      "kind": "full",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": 1.1190230959659653,
+      "verify_ms": [
+        19.822660742432507,
+        19.646235134659957
+      ],
+      "verify_change_percent": -0.8900198114922708,
+      "base": "llama3_greedy_review/llama3_greedy_b1_host0_full.json",
+      "optimized": "llama3_greedy_review/llama3_greedy_b1_host1_full.json"
+    },
+    {
+      "model": "llama3",
+      "batch": 8,
+      "kind": "profile",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": -0.9760337588879953,
+      "verify_ms": [
+        27.974486012854392,
+        27.961890512545192
+      ],
+      "verify_change_percent": -0.04502495703910814,
+      "base": "llama3_greedy_review/llama3_greedy_b8_host0_profile.json",
+      "optimized": "llama3_greedy_review/llama3_greedy_b8_host1_profile.json"
+    },
+    {
+      "model": "llama3",
+      "batch": 8,
+      "kind": "full",
+      "all_output_tokens_equal": true,
+      "both_passes_equal": [
+        true,
+        true
+      ],
+      "same_population_and_al_hit": true,
+      "tps_change_percent": 1.3668426287824609,
+      "verify_ms": [
+        27.6074955701828,
+        27.550600919499992
+      ],
+      "verify_change_percent": -0.20608407067628232,
+      "base": "llama3_greedy_review/llama3_greedy_b8_host0_full.json",
+      "optimized": "llama3_greedy_review/llama3_greedy_b8_host1_full.json"
+    }
+  ]
+}

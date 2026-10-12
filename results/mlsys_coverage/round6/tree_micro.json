@@ -1,0 +1,146 @@
+{
+  "status": "failed",
+  "args": {
+    "kind": "tree",
+    "vocab": [
+      32000,
+      128256
+    ],
+    "batches": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "nodes": [
+      4,
+      8
+    ],
+    "repeats": 5,
+    "iterations": 20,
+    "output": "results/mlsys_coverage/round6/tree_micro.json"
+  },
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "torch": "2.8.0+cu128",
+  "scope": "fixed synthetic logits; per-call wall ms including final host materialization; excludes forward/transport",
+  "cases": [
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.27086795307695866
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.2535158535465598
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.1409095488488674
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4098632954992354
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.38758254377171397
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.1197412037290633
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.2538616070523858
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.26940449606627226
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.2688520005904138
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.2522872411645949
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.1169591918587685
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.39794109761714935
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3930563572794199
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.1006338987499475
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.25179635267704725
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.26785865193232894
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.267728790640831
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.2523593488149345
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.2537144008092582
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3980600507929921
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.2688520005904138,
+        "graph_trim1": 0.2523593488149345,
+        "eager": 1.1197412037290633,
+        "serial_legacy_walk": 0.39794109761714935
+      }
+    }
+  ],
+  "error": "RuntimeError: tree siblings for parent -1 use multiple q refs: [0, 1, 2]"
+}

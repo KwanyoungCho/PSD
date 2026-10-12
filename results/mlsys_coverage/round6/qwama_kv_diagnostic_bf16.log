@@ -1,0 +1,28 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting Qwen2ForCausalLM init, draft=False, speculate=False, spec_k=1
+Finishing Qwen2ForCausalLM init, draft=False, speculate=False, spec_k=1
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.77it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.77it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 1357, 256, 2, 64])
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_kv.py", line 144, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_kv.py", line 109, in main
+    setup();q_wide=forward.run(chain_rows,n+1)[:,len(accepted)].float().clone()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/batch_tree_forward.py", line 119, in run
+    packed = build_forward_inputs(rows,width,g['batch'],pages,r.block_size)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/ssd/engine/helpers/batch_tree_common.py", line 38, in build_forward_inputs
+    raise ValueError('Tree forward row exceeds its captured canvas')
+ValueError: Tree forward row exceeds its captured canvas

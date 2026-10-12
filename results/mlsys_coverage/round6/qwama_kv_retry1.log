@@ -1,0 +1,29 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting Qwen2ForCausalLM init, draft=False, speculate=False, spec_k=1
+Finishing Qwen2ForCausalLM init, draft=False, speculate=False, spec_k=1
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.02it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  5.01it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 1357, 256, 2, 64])
+KV_CASE 1 127 8 1 contiguous {'copy_only': 0.07443991489708424, 'promotion_plus_tip': 1.7743229400366545, 'confirmed_chain_glue': 2.4776190984994173} {'finite': True, 'max_logit_abs': 1.0, 'logit_rmse': 0.015657251700758934, 'max_tv': 0.005468145478516817, 'max_kv_abs': 1.0, 'argmax_equal': True}
+KV_CASE 1 127 8 1 fragmented {'copy_only': 0.07277494296431541, 'promotion_plus_tip': 1.7695589922368526, 'confirmed_chain_glue': 2.4653479922562838} {'finite': True, 'max_logit_abs': 1.0, 'logit_rmse': 0.015657251700758934, 'max_tv': 0.005468145478516817, 'max_kv_abs': 1.0, 'argmax_equal': True}
+KV_CASE 1 127 8 3 contiguous {'copy_only': 0.07393094711005688, 'promotion_plus_tip': 1.7177099362015724, 'confirmed_chain_glue': 2.055718097835779} {'finite': True, 'max_logit_abs': 1.0, 'logit_rmse': 0.019454099237918854, 'max_tv': 0.007770583499222994, 'max_kv_abs': 0.0, 'argmax_equal': True}
+KV_CASE 1 127 8 3 fragmented {'copy_only': 0.07392792031168938, 'promotion_plus_tip': 1.7288860399276018, 'confirmed_chain_glue': 2.060229890048504} {'finite': True, 'max_logit_abs': 1.0, 'logit_rmse': 0.019454099237918854, 'max_tv': 0.007770583499222994, 'max_kv_abs': 0.0, 'argmax_equal': True}
+KV_CASE 1 127 16 3 contiguous {'copy_only': 0.059267040342092514, 'promotion_plus_tip': 1.6847848892211914, 'confirmed_chain_glue': 2.031828975304961} {'finite': True, 'max_logit_abs': 4.0, 'logit_rmse': 0.02317977137863636, 'max_tv': 0.007803712971508503, 'max_kv_abs': 0.25, 'argmax_equal': True}
+KV_CASE 1 127 16 3 fragmented {'copy_only': 0.05912291817367077, 'promotion_plus_tip': 1.6860680188983679, 'confirmed_chain_glue': 2.0344711374491453} {'finite': True, 'max_logit_abs': 4.0, 'logit_rmse': 0.02317977137863636, 'max_tv': 0.007803712971508503, 'max_kv_abs': 0.25, 'argmax_equal': True}
+KV_CASE 1 511 8 1 contiguous {'copy_only': 0.057674944400787354, 'promotion_plus_tip': 1.7056011129170656, 'confirmed_chain_glue': 2.3695649579167366} {'finite': True, 'max_logit_abs': 2.0, 'logit_rmse': 0.018361549824476242, 'max_tv': 0.007790921721607447, 'max_kv_abs': 0.5, 'argmax_equal': True}
+KV_CASE 1 511 8 1 fragmented {'copy_only': 0.056685181334614754, 'promotion_plus_tip': 1.7057338263839483, 'confirmed_chain_glue': 2.3686399217695} {'finite': True, 'max_logit_abs': 2.0, 'logit_rmse': 0.018361549824476242, 'max_tv': 0.007790921721607447, 'max_kv_abs': 0.5, 'argmax_equal': True}
+KV_CASE 1 511 8 3 contiguous {'copy_only': 0.05359109491109848, 'promotion_plus_tip': 1.6987398266792297, 'confirmed_chain_glue': 2.0566259045153856} {'finite': True, 'max_logit_abs': 2.0, 'logit_rmse': 0.026273876428604126, 'max_tv': 0.009550986811518669, 'max_kv_abs': 0.0, 'argmax_equal': True}
+KV_CASE 1 511 8 3 fragmented {'copy_only': 0.05679694004356861, 'promotion_plus_tip': 1.704139867797494, 'confirmed_chain_glue': 2.055315999314189} {'finite': True, 'max_logit_abs': 2.0, 'logit_rmse': 0.026273876428604126, 'max_tv': 0.009550986811518669, 'max_kv_abs': 0.0, 'argmax_equal': True}
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_kv.py", line 126, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-mlsys-coverage/ssd/bench/mlsys_review_kv.py", line 104, in main
+    raise AssertionError(f'KV reconstruction/context mismatch: {check}')
+AssertionError: KV reconstruction/context mismatch: {'finite': True, 'max_logit_abs': 2.0, 'logit_rmse': 0.02528647892177105, 'max_tv': 0.012284232303500175, 'max_kv_abs': 0.25, 'argmax_equal': False}

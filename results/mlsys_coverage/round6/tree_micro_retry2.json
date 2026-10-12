@@ -1,0 +1,7516 @@
+{
+  "status": "complete",
+  "args": {
+    "kind": "tree",
+    "vocab": [
+      32000,
+      128256
+    ],
+    "batches": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "nodes": [
+      4,
+      8
+    ],
+    "repeats": 5,
+    "iterations": 20,
+    "output": "results/mlsys_coverage/round6/tree_micro_retry2.json"
+  },
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "torch": "2.8.0+cu128",
+  "scope": "fixed synthetic logits; per-call wall ms including final host materialization; excludes forward/transport",
+  "cases": [
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.25767460465431213
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.24275470059365034
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.90864795492962
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.34732400672510266
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.34091860288754106
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.9058364084921777
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.24405724834650755
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.261877104640007
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.26144770672544837
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.24148335214704275
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.8680356084369123
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4183819517493248
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3298074472695589
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.8281062939204276
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.2399794990196824
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.25703220162540674
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.2566464012488723
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.24474599631503224
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.9148325538262725
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.33800224773585796
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.25767460465431213,
+        "graph_trim1": 0.24275470059365034,
+        "eager": 0.9058364084921777,
+        "serial_legacy_walk": 0.34091860288754106
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.33764635445550084
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.32084030099213123
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.1677644914016128
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4593970952555537
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.48885639989748597
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.2326178955845535
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.3271698020398617
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.34035324351862073
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.33799285301938653
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.3225088934414089
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.1437977547757328
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4787066951394081
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.46253184555098414
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.1795685975812376
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.32563830027356744
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.33996335696429014
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.43711939360946417
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.3342682961374521
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.2734931544400752
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.5045513971708715
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.33996335696429014,
+        "graph_trim1": 0.32563830027356744,
+        "eager": 1.1795685975812376,
+        "serial_legacy_walk": 0.4787066951394081
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.1096623600460589
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.1085571595467627
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.3052917425520718
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03295360365882516
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.032426591496914625
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.3015083959326148
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.10846600634977221
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.10806899517774582
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10759244905784726
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.10783504694700241
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.3059022477827966
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.033278355840593576
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03284519771113992
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.3089471021667123
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.10699459817260504
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10792469838634133
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.10746275074779987
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.10695980163291097
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.31072499696165323
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.033953296951949596
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.10792469838634133,
+        "graph_trim1": 0.10783504694700241,
+        "eager": 0.3059022477827966,
+        "serial_legacy_walk": 0.03295360365882516
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.10428574169054627
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.10390850948169827
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.295844255015254
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03220409853383899
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.031164695974439383
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.30644870130345225
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.10736185358837247
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.10625444119796157
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10595920030027628
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.10601689573377371
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.2892716904170811
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.030794902704656124
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0301115564070642
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.28294434305280447
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.102874799631536
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10512025328353047
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.10644524591043591
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.1066314522176981
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.2874867059290409
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.02930345945060253
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.10595920030027628,
+        "graph_trim1": 0.10601689573377371,
+        "eager": 0.2892716904170811,
+        "serial_legacy_walk": 0.030794902704656124
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.28169299475848675
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.25879470631480217
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.9587534936144948
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.41679744608700275
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.35261750454083085
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.0129546513780951
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.2581267966888845
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.2784352982416749
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.2818072447553277
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.26153684593737125
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.9980703936889768
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.41809959802776575
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3715606522746384
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.9719180525280535
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.26179784908890724
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.28049949323758483
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.28244995046406984
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.262963748537004
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.0402324958704412
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3917166031897068
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.28169299475848675,
+        "graph_trim1": 0.26153684593737125,
+        "eager": 0.9980703936889768,
+        "serial_legacy_walk": 0.3917166031897068
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.3821682999841869
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.36563220201060176
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.3838052516803145
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.5356499925255775
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.43273355113342404
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.3653218979015946
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.36677749594673514
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.3806618507951498
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.3815296455286443
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.36333424504846334
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.3635599985718727
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.5048664985224605
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4683101433329284
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.3882749015465379
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.36618219455704093
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.38328394293785095
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.3807429107837379
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.36114914109930396
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.3694210443645716
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4658217425458133
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.3815296455286443,
+        "graph_trim1": 0.36563220201060176,
+        "eager": 1.3694210443645716,
+        "serial_legacy_walk": 0.4683101433329284
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13165170093998313
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.13186680153012276
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4512227023951709
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.037485500797629356
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03700800007209182
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.44313414255157113
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.13136265333741903
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13093245215713978
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.13157320208847523
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13197645312175155
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4566727438941598
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.037524953950196505
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.037089246325194836
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.44777714647352695
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.1320133451372385
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.1311837462708354
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.13135354965925217
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13208850286900997
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.45386115089058876
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03714044578373432
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.13135354965925217,
+        "graph_trim1": 0.13197645312175155,
+        "eager": 0.4512227023951709,
+        "serial_legacy_walk": 0.03714044578373432
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13345179613679647
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.13212034245952964
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4538677050732076
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03371019847691059
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03291750326752663
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4451740416698158
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.1338389585725963
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13280665734782815
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1315523055382073
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1312201959080994
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.43488715309649706
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03370605409145355
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03346295561641455
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.445160293020308
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.1310945488512516
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.13091160217300057
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.13159775407984853
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13141629751771688
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.4439606098458171
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03346030134707689
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.13159775407984853,
+        "graph_trim1": 0.13141629751771688,
+        "eager": 0.445160293020308,
+        "serial_legacy_walk": 0.03346295561641455
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.25655999779701233
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.2380051533691585
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.9057668503373861
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6403875537216663
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6565523450262845
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.8808917948044837
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.2357272431254387
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.2565088449046016
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.2592394594103098
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.23670559749007225
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.8944530505686998
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6023165537044406
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.636622600723058
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.8611726458184421
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.23635365068912506
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.25289790937677026
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.2511174068786204
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.23569579934701324
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.882684753742069
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6388594512827694
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.2565088449046016,
+        "graph_trim1": 0.23635365068912506,
+        "eager": 0.882684753742069,
+        "serial_legacy_walk": 0.6388594512827694
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.33701565116643906
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.31865464989095926
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.2724340544082224
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7333540008403361
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7187341572716832
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.296239800285548
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.32057114876806736
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.33841250697150826
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.3373418003320694
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.3209577524103224
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.2787249987013638
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.717568292748183
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6944823428057134
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.2309386511333287
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.31680645188316703
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.33773715840652585
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.33766344422474504
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.3190469928085804
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.274844550061971
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6676731514744461
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.33766344422474504,
+        "graph_trim1": 0.3190469928085804,
+        "eager": 1.274844550061971,
+        "serial_legacy_walk": 0.717568292748183
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.11033564805984497
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.10902904905378819
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.31076129525899887
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06519204471260309
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06379949627444148
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.3113833023235202
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.10891060810536146
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.10798245202749968
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10754269314929843
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.10833264095708728
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.3114394028671086
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06417690310627222
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06373095093294978
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.29995645163580775
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.10859109461307526
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10883569484576583
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.10836723959073424
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.10792395332828164
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.30975169502198696
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06346924928948283
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.10836723959073424,
+        "graph_trim1": 0.10859109461307526,
+        "eager": 0.31076129525899887,
+        "serial_legacy_walk": 0.06379949627444148
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.10718315606936812
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.10727279586717486
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.30313124880194664
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06094424752518535
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06144944345578551
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.3019144991412759
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.1066941418685019
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.1067753997631371
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10772586101666093
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.10647210292518139
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.303265149705112
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06032785167917609
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.061400001868605614
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.30383095145225525
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.10698974365368485
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10639440733939409
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.1072542043402791
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.1070566475391388
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.30985979828983545
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0633057439699769
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.10718315606936812,
+        "graph_trim1": 0.10698974365368485,
+        "eager": 0.303265149705112,
+        "serial_legacy_walk": 0.061400001868605614
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.29814644949510694
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.2725485013797879
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.0664655943401158
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6332691991701722
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6237443070858717
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.0629032971337438
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.2737239468842745
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.2965349471196532
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.2963044447824359
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.27404939755797386
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.0608774493448436
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.5975206498987973
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.5757633014582098
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.0607760050334036
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.27273279847577214
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.29635659884661436
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.3015147987753153
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.27259355410933495
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.0544226039201021
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6491117528639734
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.2965349471196532,
+        "graph_trim1": 0.27273279847577214,
+        "eager": 1.0608774493448436,
+        "serial_legacy_walk": 0.6237443070858717
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.3941496484912932
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.3708155476488173
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.4310025610029697
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6704971543513238
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7025836035609245
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.4275401015765965
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.3711420460604131
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.39315340109169483
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.3920586430467665
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.3726424998603761
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.4078021049499512
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6945069995708764
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7432310958392918
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.393047603778541
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.37070404505357146
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.39251709822565317
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.3935990040190518
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.3691839403472841
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.4177359524182975
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7041604490950704
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.39315340109169483,
+        "graph_trim1": 0.3708155476488173,
+        "eager": 1.4177359524182975,
+        "serial_legacy_walk": 0.7025836035609245
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13304214226081967
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.13419234892353415
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4541403497569263
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07277079857885838
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07079635979607701
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.42898685205727816
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.13088199775665998
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13021359918639064
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.13303000014275312
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13403644552454352
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4509898484684527
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07060004863888025
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06800158880650997
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.44115125201642513
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.13305250322446227
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.13582290848717093
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.13019094476476312
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13033469440415502
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.5208826041780412
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06890309741720557
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.13303000014275312,
+        "graph_trim1": 0.13305250322446227,
+        "eager": 0.4509898484684527,
+        "serial_legacy_walk": 0.07060004863888025
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13030495028942823
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.1303478959016502
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.445572251919657
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06642495281994343
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0648990971967578
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.44057429768145084
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.13365695485845208
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13325070030987263
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1304819597862661
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13193085324019194
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4372866591438651
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06659585051238537
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.06603560177609324
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.45628619845956564
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.13309684582054615
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.13039500918239355
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.13360269367694855
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13277989346534014
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.43528859969228506
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0644125510007143
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.1304819597862661,
+        "graph_trim1": 0.13277989346534014,
+        "eager": 0.44057429768145084,
+        "serial_legacy_walk": 0.06603560177609324
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.2810906036756933
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.26110984617844224
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.8317460073158145
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0558260488323867
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.1083055986091495
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.8593720034696162
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.26053014444187284
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.28930475236847997
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.28025894425809383
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.2631055540405214
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.8670089417137206
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0752509464509785
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0733868926763535
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.8885533548891544
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.2601708984002471
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.2865988528355956
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.2790076076053083
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.2569376025348902
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.8319262997247279
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0664389934390783
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.2810906036756933,
+        "graph_trim1": 0.26053014444187284,
+        "eager": 0.8593720034696162,
+        "serial_legacy_walk": 1.0733868926763535
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.37713280180469155
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.3610701998695731
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.2274664011783898
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.1770796962082386
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.1936209979467094
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.2356729013845325
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.35692520905286074
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.37691579200327396
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.37290649488568306
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.3587336512282491
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.1184899951331317
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.1791454046033323
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.230254804249853
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.2655960978008807
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.36120645236223936
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.3797359415329993
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.3796310513280332
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.361593603156507
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.2696251971647143
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.263761252630502
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.37713280180469155,
+        "graph_trim1": 0.3610701998695731,
+        "eager": 1.2356729013845325,
+        "serial_legacy_walk": 1.1936209979467094
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.10366184869781137
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.10408300440758467
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.2855370519682765
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12068250216543674
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12055180268362164
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.27259455528110266
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.10291914222761989
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.10413270210847259
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10789090301841497
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1062861061654985
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.28751540230587125
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.11593360686674714
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.11986730387434363
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.28910894179716706
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.10331009980291128
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10461920173838735
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.10232720524072647
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.10245210723951459
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.2878351020626724
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12034454848617315
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.10413270210847259,
+        "graph_trim1": 0.10331009980291128,
+        "eager": 0.28751540230587125,
+        "serial_legacy_walk": 0.12034454848617315
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.10998814832419157
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.10917149484157562
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.3024122095666826
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12045809999108315
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12172454735264182
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.30444065341725945
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.10896209860220551
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.10946879629045725
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10886050295084715
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1108621945604682
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.3024358535185456
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.11905235005542636
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.11867649154737592
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.3010104992426932
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.10831410763785243
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10848504025489092
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.10845810174942017
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.10834239656105638
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.30248850816860795
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1210934016853571
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.10886050295084715,
+        "graph_trim1": 0.10896209860220551,
+        "eager": 0.3024358535185456,
+        "serial_legacy_walk": 0.12045809999108315
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.32907320419326425
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.2955757547169924
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.9044821024872363
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6479790094308555
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.7257770523428917
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.9595704497769475
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.29598959954455495
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.33217734890058637
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.3353029955178499
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.29989819740876555
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.9032801957800984
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.743798446841538
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6446228022687137
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.9020737488754094
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.30039234552532434
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.3340889001265168
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.33333959290757775
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.29572310158982873
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.8936032536439598
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.7576502519659698
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.33333959290757775,
+        "graph_trim1": 0.29598959954455495,
+        "eager": 0.9032801957800984,
+        "serial_legacy_walk": 1.7257770523428917
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.44587349984794855
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.4218193469569087
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.2926473398692906
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.497246348299086
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.5156055917032063
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.2792955967597663
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.4259314970113337
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.44794995337724686
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.44926354894414544
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.4249515477567911
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.2793915928341448
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.3682406512089074
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.5297775971703231
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.304149953648448
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.42211514664813876
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.4530824488028884
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.45289850095286965
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.42764744721353054
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.4065223396755755
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.5165234915912151
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.44926354894414544,
+        "graph_trim1": 0.4249515477567911,
+        "eager": 1.2926473398692906,
+        "serial_legacy_walk": 1.5156055917032063
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.1310713472776115
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.1313420943915844
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.43750605545938015
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.13074245071038604
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12613569851964712
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.40059464517980814
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.12790784239768982
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13194259954616427
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.13447244418784976
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13388089137151837
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.40176199981942773
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12740539386868477
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12750544119626284
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.38966324646025896
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.126733654178679
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.12823615688830614
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.12808814644813538
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13126709964126348
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.41768719675019383
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12863929150626063
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.1310713472776115,
+        "graph_trim1": 0.13126709964126348,
+        "eager": 0.40176199981942773,
+        "serial_legacy_walk": 0.12750544119626284
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13453980209305882
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.13386826030910015
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4248926998116076
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.13136869529262185
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1302769989706576
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.44900160282850266
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.13410995015874505
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13310814974829555
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1331662992015481
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13304015155881643
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4450233420357108
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12345894938334823
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1269113039597869
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.4236998036503792
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.128832645714283
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.13057049363851547
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.12921459274366498
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.1274443930014968
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.39356460329145193
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.12115924619138241
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.13310814974829555,
+        "graph_trim1": 0.13304015155881643,
+        "eager": 0.4248926998116076,
+        "serial_legacy_walk": 0.1269113039597869
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.3052459564059973
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.26736640138551593
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.8210578467696905
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.4533562012948096
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.5116674485616386
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.879114493727684
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.27111420640721917
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.3034395514987409
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.30591984977945685
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.2729951520450413
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.8656720980070531
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.3862603469751775
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.461022592615336
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.8520929957740009
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.2686445484869182
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.3035248024389148
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.30400370014831424
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.2756853587925434
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.7979477988556027
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.4146226001903415
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.30400370014831424,
+        "graph_trim1": 0.27111420640721917,
+        "eager": 0.8520929957740009,
+        "serial_legacy_walk": 2.4533562012948096
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.436509947758168
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.4039619932882488
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.2822496006265283
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.185852557886392
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.234475896693766
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.158499950543046
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.40649179136380553
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.43055544374510646
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.4283515503630042
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.4014878999441862
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.1810656054876745
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.080609102267772
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.019076806027442
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.1145206983201206
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.406094454228878
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.4304835572838783
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.4729634034447372
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.4045944078825414
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.1118634487502277
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.0664834999479353
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.43055544374510646,
+        "graph_trim1": 0.4045944078825414,
+        "eager": 1.158499950543046,
+        "serial_legacy_walk": 2.080609102267772
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.10367379290983081
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.10203435085713863
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.27893210062757134
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.251559994649142
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.25323580484837294
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.2892621560022235
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.10252625215798616
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.10507510742172599
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10321015724912286
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.11346574174240232
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.3645557560957968
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.24570219684392214
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.24036715039983392
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.2948894049040973
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.10256534442305565
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10181254474446177
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.10363550391048193
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.10084849782288074
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.278586451895535
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.22934204898774624
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.10363550391048193,
+        "graph_trim1": 0.10252625215798616,
+        "eager": 0.2892621560022235,
+        "serial_legacy_walk": 0.24570219684392214
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.10765804909169674
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.10589180747047067
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.2834731014445424
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.22215174976736307
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.22187884896993637
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.27348599396646023
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.1024042023345828
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.103407958522439
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.10457345051690936
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.10127865243703127
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.28682200936600566
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.23116194643080235
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.2240452915430069
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.2695493050850928
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.10023710783571005
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.10021585039794445
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.10031425626948476
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.10188539745286107
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.3218155005015433
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.23695494746789336
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.103407958522439,
+        "graph_trim1": 0.10188539745286107,
+        "eager": 0.2834731014445424,
+        "serial_legacy_walk": 0.2240452915430069
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.4129047505557537
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.36065385211259127
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.0888547520153224
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.207158506847918
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.8805061476305127
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.0870149009861052
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.3626812482252717
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.4102679085917771
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.41186605812981725
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.3598636481910944
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.0482009500265121
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.8251319541595876
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.646766195539385
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.042477646842599
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.3587962011806667
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.4055758472532034
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.4065510933287442
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.3589731524698436
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.9911720524542034
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.6698853936977684
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.4102679085917771,
+        "graph_trim1": 0.3598636481910944,
+        "eager": 1.0482009500265121,
+        "serial_legacy_walk": 2.8251319541595876
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.5901363445445895
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.5331824417226017
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.39121999964118
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.199986752588302
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.0415941029787064
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.3072241912595928
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.5330603569746017
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.5871288012713194
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.5972795537672937
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.5315053509548306
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.316352398134768
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.2759036985225976
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.0722327530384064
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.3306552544236183
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.5333779496140778
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.5867967498488724
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.5865616025403142
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.5372914019972086
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.3966258498840034
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.3233150490559638
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.5871288012713194,
+        "graph_trim1": 0.5331824417226017,
+        "eager": 1.3306552544236183,
+        "serial_legacy_walk": 3.199986752588302
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13367534847930074
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.13401879696175456
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.45717330649495125
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.2776354434899986
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.2785952063277364
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4336414975114167
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.13054314767941833
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13002814957872033
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.13081961078569293
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13243944849818945
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.43933725683018565
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.2804338000714779
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.2805151976644993
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.44792790431529284
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.1326055033132434
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.1332133891992271
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.13414070708677173
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13442594790831208
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.4573122598230839
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.27475995011627674
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.1332133891992271,
+        "graph_trim1": 0.1326055033132434,
+        "eager": 0.44792790431529284,
+        "serial_legacy_walk": 0.2785952063277364
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.1349655445665121
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.13480400666594505
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4602297558449209
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.2685633604414761
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.267594400793314
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.45740404166281223
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.135298992972821
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13439594767987728
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.13449930120259523
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1340996939688921
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4603093955665827
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.26467619463801384
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.26413415325805545
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.45699579641222954
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.134730595164001
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.1339604496024549
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.13504954986274242
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13515065656974912
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.46040640445426106
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.25426915381103754
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.13449930120259523,
+        "graph_trim1": 0.13480400666594505,
+        "eager": 0.4602297558449209,
+        "serial_legacy_walk": 0.26467619463801384
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.364053703378886
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.3377489512786269
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.9080734918825328
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.43997649336233735
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4568997537717223
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.9054331458173692
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.33828429877758026
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.36266244715079665
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.362884602509439
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.3372695413418114
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.8975393488071859
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4323301953263581
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.44265580363571644
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.8811765583232045
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.33674525329843163
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.3622298943810165
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.36089610075578094
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.3360076923854649
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.8926075999625027
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4337780992500484
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.36266244715079665,
+        "graph_trim1": 0.3372695413418114,
+        "eager": 0.8975393488071859,
+        "serial_legacy_walk": 0.43997649336233735
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.48996804980561137
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.4584053414873779
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.2029298464767635
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.44426119420677423
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4237911547534168
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.263465650845319
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.461278494913131
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.48855029745027423
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.48801355296745896
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.4598819534294307
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.2486060499213636
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.45122039737179875
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4265429568476975
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.2664032983593643
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.4609273048117757
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.4871618584729731
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.4904967499896884
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.4603564040735364
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.2909853016026318
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.43300880352035165
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.48855029745027423,
+        "graph_trim1": 0.4603564040735364,
+        "eager": 1.263465650845319,
+        "serial_legacy_walk": 0.43300880352035165
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.11788374977186322
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.11705924989655614
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.2964485436677933
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04072585143148899
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04028883995488286
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.30107334023341537
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.11831000447273254
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.11842700187116861
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.11823715176433325
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.11639385484158993
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.30690981075167656
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04162580007687211
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04086260451003909
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.30277749756351113
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.11745690135285258
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.11775766033679247
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.11768904514610767
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.11805464746430516
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.3043769975192845
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04059060011059046
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.11788374977186322,
+        "graph_trim1": 0.11745690135285258,
+        "eager": 0.30277749756351113,
+        "serial_legacy_walk": 0.04072585143148899
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.11748990509659052
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.11541685089468956
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.2821748494170606
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03896739799529314
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03880945732817054
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.2924473024904728
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.11732589919120073
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.11844345135614276
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.11720784241333604
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.11615930125117302
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.29936369974166155
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03964221104979515
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03911645617336035
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.278025702573359
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.11720125330612063
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.11708519887179136
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.11798909399658442
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.11728419922292233
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.2960781450383365
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.03932430408895016
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.11748990509659052,
+        "graph_trim1": 0.11720125330612063,
+        "eager": 0.2924473024904728,
+        "serial_legacy_walk": 0.03911645617336035
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.4160875454545021
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.379225448705256
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.0178852011449635
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.39689504774287343
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3622749005444348
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.0243867058306932
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.37961979396641254
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.41986354626715183
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.4156673443503678
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.38023400120437145
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.0367208975367248
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4437495023012161
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.40426425402984023
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.0869981488212943
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.3955029998905957
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.4278621054254472
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.4331735544838011
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.38624685257673264
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.0886186501011252
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.401747552677989
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.41986354626715183,
+        "graph_trim1": 0.38023400120437145,
+        "eager": 1.0367208975367248,
+        "serial_legacy_walk": 0.401747552677989
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.5664158961735666
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.5430825520306826
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.4027197496034205
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.35810915287584066
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.35696589620783925
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.411399245262146
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.5284797516651452
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.5664505995810032
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.5648404592648149
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.5275840521790087
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.3683706987649202
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3454525023698807
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.35606540041044354
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.416540250647813
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.5282276426441967
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.5636774585582316
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.5636913003399968
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.5258860532194376
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.3594812015071511
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.35596394445747137
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.5648404592648149,
+        "graph_trim1": 0.5282276426441967,
+        "eager": 1.4027197496034205,
+        "serial_legacy_walk": 0.35606540041044354
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.14189420035108924
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.14189495705068111
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4479334456846118
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04376840079203248
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.043976493179798126
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4526376025751233
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.14276375295594335
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.14174729585647583
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.14147469773888588
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13880414189770818
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4332436597906053
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.044457754120230675
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04458454204723239
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.44369924580678344
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.14161384897306561
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.14191510854288936
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.14132974902167916
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.14181900769472122
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.4427976440638304
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04419144243001938
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.14174729585647583,
+        "graph_trim1": 0.14181900769472122,
+        "eager": 0.44369924580678344,
+        "serial_legacy_walk": 0.04419144243001938
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 1,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.14295215951278806
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.14147640904411674
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.43589730048552155
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04178800154477358
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.040155695751309395
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.3968942444771528
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.1419342588633299
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.14332884456962347
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1425835071131587
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1398344524204731
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.42247275123372674
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0419140444137156
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0408769934438169
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.41429559933021665
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.13994999462738633
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.14103950234130025
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.14372520381584764
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.1403650501742959
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.42559440480545163
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.04177950322628021
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.14295215951278806,
+        "graph_trim1": 0.1403650501742959,
+        "eager": 0.42247275123372674,
+        "serial_legacy_walk": 0.04177950322628021
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.39679284673184156
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.3585272585041821
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.8536663488484919
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7871512090787292
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7629736443050206
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.889848091173917
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.35618485417217016
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.39571005618199706
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.3963240422308445
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.3566100960597396
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.9084553457796574
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7913202978670597
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7832029019482434
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.9215800906531513
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.35865410463884473
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.395438342820853
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.3961364505812526
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.3533809562213719
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.8472193498164415
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7778899976983666
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.3961364505812526,
+        "graph_trim1": 0.3566100960597396,
+        "eager": 0.889848091173917,
+        "serial_legacy_walk": 0.7832029019482434
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.5497969454154372
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.5137137952260673
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.229697943199426
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.9713668492622674
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0217073024250567
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.3834106037393212
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.5286612431518734
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.5510417511686683
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.5532442475669086
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.5162043962627649
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.3818857027217746
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0128858499228954
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0163035010918975
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.445860299281776
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.5286016501486301
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.5641419556923211
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.5665662931278348
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.5216354969888926
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.5628375462256372
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0628507006913424
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.5532442475669086,
+        "graph_trim1": 0.5216354969888926,
+        "eager": 1.3834106037393212,
+        "serial_legacy_walk": 1.0163035010918975
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.12031110236421227
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.11745014926418662
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.31060100300237536
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.08144060848280787
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07943389937281609
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.2959326608106494
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.11803320376202464
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.11923850979655981
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.11978785041719675
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.11684275232255459
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.2855109400115907
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0760686001740396
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07664175936952233
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.2748437924310565
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.11874589836224914
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.11926869628950953
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.12002105358988047
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.1174119533970952
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.28553325682878494
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07569855079054832
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.11978785041719675,
+        "graph_trim1": 0.11745014926418662,
+        "eager": 0.28553325682878494,
+        "serial_legacy_walk": 0.07664175936952233
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.11815004982054234
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.11729304678738117
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.2956567914225161
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07462759967893362
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07373390253633261
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.28999989153817296
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.11657669674605131
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.11720424517989159
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.11918774107471108
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.11808200506493449
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.2926846966147423
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07752419915050268
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07794405100867152
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.2961620455607772
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.116880948189646
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.11627139756456017
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.11689990060403943
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.11678930604830384
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.3034164081327617
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.07786705391481519
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.11720424517989159,
+        "graph_trim1": 0.116880948189646,
+        "eager": 0.2956567914225161,
+        "serial_legacy_walk": 0.07752419915050268
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.49229629803448915
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.43527380330488086
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.0431091533973813
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6785037461668253
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6644654436968267
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.9926357539370656
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.43696125503629446
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.4933914984576404
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.4979239543899894
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.4345020046457648
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.0311527526937425
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7158286985941231
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.6845824071206152
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.0049528907984495
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.43776275124400854
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.491461344063282
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.4957021912559867
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.4375576041638851
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.074153499212116
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.7127708988264203
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.4933914984576404,
+        "graph_trim1": 0.43696125503629446,
+        "eager": 1.0311527526937425,
+        "serial_legacy_walk": 0.6845824071206152
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.6915569072589278
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.6393970572389662
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.3449868536554277
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0302272508852184
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.024661841802299
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.4484601560980082
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.6388589972630143
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.7031118497252464
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.6921957479789853
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.6333681056275964
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.4227898558601737
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0531597072258592
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0821484960615635
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.3751603080891073
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.6380927981808782
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.702184799592942
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.6904123583808541
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.6376311415806413
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.5382325509563088
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.0902840527705848
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.6921957479789853,
+        "graph_trim1": 0.6380927981808782,
+        "eager": 1.4227898558601737,
+        "serial_legacy_walk": 1.0531597072258592
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.14415214536711574
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.1429504482075572
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4330122494138777
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.08886010618880391
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.08882189868018031
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4613620578311384
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.14411105075851083
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.14437135541811585
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1429549534805119
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.14420464867725968
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.46438875142484903
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.0895243021659553
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.08915169164538383
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.5494947079569101
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.14277209993451834
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.1429530093446374
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.14273349661380053
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.14233050169423223
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.456935097463429
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.08962874999269843
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.1429549534805119,
+        "graph_trim1": 0.1429504482075572,
+        "eager": 0.4613620578311384,
+        "serial_legacy_walk": 0.08915169164538383
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 2,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.16071434365585446
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.15939599834382534
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.5972990533336997
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.09720009984448552
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.09691115701571107
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.5789775983430445
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.15972835244610906
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.15767249278724194
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.15811994671821594
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1579619012773037
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.5809244001284242
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.09672455489635468
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.09730984456837177
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.5778467981144786
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.15944935148581862
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.15913795214146376
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.15869115013629198
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.15960615128278732
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.5878630909137428
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.09660510113462806
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.15869115013629198,
+        "graph_trim1": 0.15944935148581862,
+        "eager": 0.5809244001284242,
+        "serial_legacy_walk": 0.09691115701571107
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.5082113551907241
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.4412300535477698
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.1752572027035058
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6043164068832994
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6140292515046895
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.187138445675373
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.44326119823381305
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.5087891477160156
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.5067753954790533
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.43995389714837074
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.1811907519586384
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.606783247552812
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.7464835429564118
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.2337338528595865
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.44135580537840724
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.5070353043265641
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.5084341508336365
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.4439317504875362
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.178240345325321
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6312152496539056
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.5082113551907241,
+        "graph_trim1": 0.44135580537840724,
+        "eager": 1.1811907519586384,
+        "serial_legacy_walk": 1.6140292515046895
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.7216773461550474
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.6675070500932634
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.676628994755447
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6332919476553798
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6144464490935206
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.671365846414119
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.6641931948252022
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.7206527516245842
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.7192939054220915
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.6639171042479575
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.6604362986981869
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.5896248980425298
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6149996896274388
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.6496828524395823
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.6677645957097411
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.7209085975773633
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.7215842953883111
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.6707537919282913
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.6374501516111195
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.6188361449167132
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.7209085975773633,
+        "graph_trim1": 0.6675070500932634,
+        "eager": 1.6604362986981869,
+        "serial_legacy_walk": 1.6149996896274388
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13690640917047858
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.13535129837691784
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.40639369981363416
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.18127195071429014
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1806069049052894
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.39449200266972184
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.13435230357572436
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.13398794690147042
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.13500580098479986
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1354571431875229
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.39349624421447515
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1801785547286272
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.18166350200772285
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.39555609691888094
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.13471540296450257
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.13363264733925462
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.1342166098766029
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.13434760039672256
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.39559195283800364
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.18112845718860626
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.1342166098766029,
+        "graph_trim1": 0.13471540296450257,
+        "eager": 0.39555609691888094,
+        "serial_legacy_walk": 0.18112845718860626
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.13615849893540144
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.1344533055089414
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.3925533499568701
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.17653419636189938
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.17703910125419497
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4066599067300558
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.1357571454718709
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.1339974463917315
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.13434825232252479
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.13518325285986066
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.39736770559102297
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.20638875430449843
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.17735610017552972
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.39590816013514996
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.13726659817621112
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.13499815249815583
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.13353100512176752
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.134068145416677
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.3974174032919109
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1778557081706822
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.13434825232252479,
+        "graph_trim1": 0.13518325285986066,
+        "eager": 0.39736770559102297,
+        "serial_legacy_walk": 0.17735610017552972
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.8511090534739196
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.607048999518156
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.0519722942262888
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.5208626980893314
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.4628559001721442
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.0945090092718601
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.6056304555386305
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.8454883471131325
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.8453516056761146
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.6075184908695519
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.0022887494415045
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.3089839951135218
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.4797067968174815
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.0386859416030347
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.6067228503525257
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.8478546049445868
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.8483138517476618
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.6063410430215299
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.0091071482747793
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.4920157962478697
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.8478546049445868,
+        "graph_trim1": 0.6067228503525257,
+        "eager": 1.0386859416030347,
+        "serial_legacy_walk": 1.4797067968174815
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 1.4158737030811608
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 1.2472364003770053
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.5264672925695777
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.793076901230961
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.731433009263128
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.527184748556465
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 1.193262857850641
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 1.4177104458212852
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 1.420568604953587
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 1.1874979478307068
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.537127501796931
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.831765694078058
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.807111653033644
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.5232870006002486
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 1.1897329473868012
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 1.4146247413009405
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 1.417820597998798
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 1.1918441974557936
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.5342873986810446
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 1.726827200036496
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 1.4177104458212852,
+        "graph_trim1": 1.1918441974557936,
+        "eager": 1.527184748556465,
+        "serial_legacy_walk": 1.793076901230961
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.14676365535706282
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.1460563507862389
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.4456294933333993
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.17415490001440048
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.17611064249649644
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4448478575795889
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.1445066067390144
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.14830465661361814
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1491433009505272
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.14461014652624726
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.42845074785873294
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1708336523734033
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.17086099833250046
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.4191692918539047
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.14598959824070334
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.1478018006309867
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.14469260349869728
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.1429104944691062
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.4459540010429919
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.1677678432315588
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.1478018006309867,
+        "graph_trim1": 0.14461014652624726,
+        "eager": 0.4448478575795889,
+        "serial_legacy_walk": 0.17086099833250046
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 4,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.1455475459806621
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.1431097975000739
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.44972290052101016
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.16538499621674418
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.16572604654356837
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4510769504122436
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.14135870151221752
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.14589105267077684
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1424378016963601
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.14105929294601083
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4465479520149529
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.163955707103014
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.16108360141515732
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.4053053562529385
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.14110980555415154
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.14234869740903378
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.1412279438227415
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.14189925277605653
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.46116355806589127
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.16393224941566586
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.1424378016963601,
+        "graph_trim1": 0.14135870151221752,
+        "eager": 0.44972290052101016,
+        "serial_legacy_walk": 0.163955707103014
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.8953364100307226
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.6148666958324611
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.9487128932960331
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.9743210994638503
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.9296794557012618
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.9680871968157589
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.6141698104329407
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.8912016521207988
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.895459798630327
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.6173387519083917
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.951196497771889
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.0059728072956204
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.9258599504828453
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.9467890951782465
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.6144640035927296
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.8902204455807805
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.8917796891182661
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.6129947490990162
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.9431661455892026
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.936875692103058
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.8917796891182661,
+        "graph_trim1": 0.6144640035927296,
+        "eager": 0.9487128932960331,
+        "serial_legacy_walk": 2.936875692103058
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 1.530811854172498
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 1.2808470986783504
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.69127956032753
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.831789304036647
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.752529096323997
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.6299216076731682
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 1.2830398045480251
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 1.5320815960876644
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 1.5276146004907787
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 1.2808889034204185
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.634192408528179
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.833275601733476
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.779559849295765
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.6294235945679247
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 1.2835079454816878
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 1.5309423906728625
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 1.5323693514801562
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 1.2823989032767713
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.6280655981972814
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 2.7703761006705463
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 1.5309423906728625,
+        "graph_trim1": 1.2823989032767713,
+        "eager": 1.6299216076731682,
+        "serial_legacy_walk": 2.779559849295765
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.12272229650989175
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.12446094769984484
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.3101670532487333
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3158099949359894
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.31631869496777654
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.3080377937294543
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.12094374978914857
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.12256139889359474
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.12265749974176288
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.12268630089238286
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.30685049714520574
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3118767053820193
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.31193954637274146
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.29714994598180056
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.12283675605431199
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.12255944311618805
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.1222283928655088
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.12110015377402306
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.3016863018274307
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.310515402816236
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.12256139889359474,
+        "graph_trim1": 0.12268630089238286,
+        "eager": 0.30685049714520574,
+        "serial_legacy_walk": 0.31193954637274146
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.11861855164170265
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.11716729495674372
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.31407750211656094
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.30940165743231773
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3075883025303483
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.3087213961407542
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.11864474508911371
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.11799114290624857
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.12154345167800784
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.11786810355260968
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.31049600802361965
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.307430955581367
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.30689979903399944
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.3022598917596042
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.11778050102293491
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.11775795137509704
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.11809479910880327
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.11743300128728151
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.32715743873268366
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.30994159169495106
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.11809479910880327,
+        "graph_trim1": 0.11778050102293491,
+        "eager": 0.31049600802361965,
+        "serial_legacy_walk": 0.3075883025303483
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 1.8801886006258428
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 1.3853101991117
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.968192053027451
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.214062051847577
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.1695542042143643
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.9655852462165058
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 1.383243640884757
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 1.8771723960526288
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 1.8752568517811596
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 1.3855428551323712
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.9618802005425096
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.081054298672825
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.1820305506698787
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.9704083446413279
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 1.3819052022881806
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 1.8778474419377744
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 1.8803518498316407
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 1.3864918961189687
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.9601737498305738
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.215606848243624
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 1.8778474419377744,
+        "graph_trim1": 1.3853101991117,
+        "eager": 1.9655852462165058,
+        "serial_legacy_walk": 3.1820305506698787
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 3.189511352684349
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 2.7195453993044794
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 3.30912220524624
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.2543997978791595
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.2269511953927577
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 3.326018643565476
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 2.7157144504599273
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 3.179700905457139
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 3.1774510047398508
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 2.717922755982727
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 3.308436553925276
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.2504781964235008
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.2423489028587937
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 3.306307294405997
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 2.723886352032423
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 3.176162054296583
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 3.1764645013026893
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 2.717795502394438
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 3.3057346008718014
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 3.254757192917168
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 3.1774510047398508,
+        "graph_trim1": 2.717922755982727,
+        "eager": 3.308436553925276,
+        "serial_legacy_walk": 3.2504781964235008
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 1,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.1485104439780116
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.14931471087038517
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.46465054620057344
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3464688081294298
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.33856474328786135
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.4420220968313515
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.14728589449077845
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.14704500790685415
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.14619800494983792
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.1476449891924858
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.4367508925497532
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.33646044321358204
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.34386219922453165
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.4382206010632217
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.14891979517415166
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.1470727496780455
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.14620014699175954
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.14553300570696592
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.4401823505759239
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3465345478616655
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.14704500790685415,
+        "graph_trim1": 0.1476449891924858,
+        "eager": 0.4401823505759239,
+        "serial_legacy_walk": 0.34386219922453165
+      }
+    },
+    {
+      "vocab": 128256,
+      "batch": 8,
+      "nodes": 8,
+      "siblings": 3,
+      "temperature": 0.0,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.14488035812973976
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.14631554950028658
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.45962114818394184
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.33020750852301717
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.33040939597412944
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.46017575077712536
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.14598509296774864
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.14471919275820255
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.1449148985557258
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.14498134842142463
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.5086502991616726
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.33683545188978314
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3282777965068817
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.45009254245087504
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.1455754041671753
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.14542199205607176
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.14484520070254803
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.14561094576492906
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.459665444213897
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3452904522418976
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.14488035812973976,
+        "graph_trim1": 0.14561094576492906,
+        "eager": 0.459665444213897,
+        "serial_legacy_walk": 0.33040939597412944
+      }
+    }
+  ]
+}

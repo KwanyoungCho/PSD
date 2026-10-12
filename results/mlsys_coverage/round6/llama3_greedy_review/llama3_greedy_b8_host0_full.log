@@ -1,0 +1,128 @@
+test_mixed_branch_chain_and_empty_match_greedy_reference (mlsys_review_greedy_hook.AdapterContract.test_mixed_branch_chain_and_empty_match_greedy_reference) ... skipped 'adapter is disabled in this control'
+test_opt_in_and_exact_insertion_point (mlsys_review_greedy_hook.AdapterContract.test_opt_in_and_exact_insertion_point) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.000s
+
+OK (skipped=1)
+[Config] duet_proxy_top_k raised 3 → 13 (K_max=4 K_min=2 p1_sum_full=18 p1_sum_short=6 p1_max=2 per_pos=9 total=13 wire_N=25)
+[Config] DUET-SSD enabled: exit_layer=16, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+Draft runner created on rank 1 (async)!
+[Config] DUET-SSD enabled: exit_layer=16, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner about to wrapper.init()] graph_bs_list=[1, 2, 4, 8]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=6
+Finishing Qwen2ForCausalLM init, draft=True, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /data/chokwans99/models/layerskip-llama3-8B
+Loading model files:   0%|          | 0/4 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.76it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  4.76it/s]
+Loading model files:  25%|██▌       | 1/4 [00:00<00:02,  1.16it/s]Loading model files:  50%|█████     | 2/4 [00:01<00:01,  1.16it/s]Loading model files:  75%|███████▌  | 3/4 [00:02<00:00,  1.17it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.63it/s]Loading model files: 100%|██████████| 4/4 [00:02<00:00,  1.42it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/Qwama-0.5B-Instruct
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 24, 3676, 256, 2, 64])
+[load_model] finished loading model from /data/chokwans99/models/layerskip-llama3-8B
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 109, 256, 8, 128])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+[DUET split-K1K2] layouts: split_k1_long MQ=10 (K=K1=4, pos=5), split_k1_short MQ=6 (K=K1=4, pos=3), split_k2 MQ=5 (K=K2=2, pos=3)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[Config] DUET-SSD enabled: exit_layer=16, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 563.23tok/s
+Final Decode Throughput: 6.22tok/s
+[metrics] Prefill tokens/time: 276 / 0.490028s
+[metrics] Decode tokens/time: 83 / 13.347215s
+[metrics] Avg Tokens per step (incl recovery): 1.93
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.23 (denom=4)
+[metrics] Avg target time per full step (ms): 1153.11
+[metrics] Avg target verify time (ms): 451.99
+[metrics] Avg Cache Hits: 0.61
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.333
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.276
+[metrics] Avg Phase 1 Accepted Len: 1.24
+[metrics] Avg Phase 1 Acceptance Ratio: 0.309
+[metrics] Avg Phase 2 Accepted Len: 0.78
+[metrics] Avg Phase 2 Acceptance Ratio: 0.389
+[metrics] Avg Tokens per step on Cache Hit: 2.08
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.346
+  1: 0.385
+  2: 0.192
+  3: 0.000
+  4: 0.077
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.74
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 7243.68tok/s
+Final Decode Throughput: 342.22tok/s
+[metrics] Prefill tokens/time: 92477 / 12.766585s
+[metrics] Decode tokens/time: 22081 / 64.523622s
+[metrics] Avg Tokens per step (incl recovery): 2.86
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.47 (denom=4)
+[metrics] Avg target time per full step (ms): 56.14
+[metrics] Avg target verify time (ms): 32.31
+[metrics] Avg Cache Hits: 0.74
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.563
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.181
+[metrics] Avg Phase 1 Accepted Len: 2.47
+[metrics] Avg Phase 1 Acceptance Ratio: 0.618
+[metrics] Avg Phase 2 Accepted Len: 1.16
+[metrics] Avg Phase 2 Acceptance Ratio: 0.582
+[metrics] Avg Tokens per step on Cache Hit: 3.15
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.142
+  1: 0.259
+  2: 0.228
+  3: 0.045
+  4: 0.325
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.00
+COVERAGE_CELL {"batch": 8, "temperature": 0.0, "seed": 8400, "summary": {"boundary_excluded_al": 2.8178666666666667, "emitted_al": 2.77993201561123, "boundary_excluded_step_tps": 324.86342790631863, "boundary_excluded_events": 443, "boundary_excluded_steps": 362, "output_tokens": 22081, "wall_s": 77.32400585291907, "end_to_end_tps": 285.5646154960092, "decode_output_tokens": 22081, "decode_tps": 342.21575284854305, "al_including_recovery": 2.8601284149565656, "accepted_draft_tokens": 1.8601284149565656, "cache_hit": 0.7463175122749591, "phase1_hit": 0.5638927357421629, "phase2_hit": 0.18242477653279618, "observed_miss_valid_k": {"2": 2015}, "tree_verify_events": 5928, "verify_events": 7943, "performance": {"policy": "full_batch_without_cap_or_clip_v1", "nominal_batch": 8, "tps": 410.9892666183572, "al": 2.8156, "cache_hit": 0.7494, "emitted_tokens": 14078, "seconds": 34.253935913788155, "included_steps": 625, "included_events": 5000, "total_steps": 1005, "excluded_steps": 380, "exclusion_reasons": {"cap_or_clip": 362, "partial_batch": 24, "both": 6}, "included_step_indices": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 23, 27, 28, 29, 30, 31, 34, 36, 37, 38, 39, 40, 43, 44, 45, 46, 47, 48, 49, 52, 58, 59, 60, 62, 63, 64, 65, 67, 68, 69, 70, 71, 75, 76, 77, 78, 79, 81, 82, 83, 84, 85, 87, 92, 94, 96, 97, 98, 99, 101, 102, 103, 104, 105, 106, 107, 109, 111, 114, 115, 118, 120, 121, 122, 123, 124, 125, 129, 132, 134, 135, 136, 137, 141, 142, 143, 145, 147, 148, 149, 150, 154, 155, 156, 159, 160, 161, 162, 163, 164, 167, 168, 169, 170, 171, 174, 176, 177, 178, 179, 181, 184, 185, 186, 187, 188, 189, 190, 192, 199, 200, 202, 203, 204, 205, 206, 207, 208, 211, 214, 215, 217, 218, 219, 220, 223, 226, 230, 231, 232, 233, 235, 236, 237, 239, 241, 242, 243, 244, 245, 248, 249, 250, 255, 256, 257, 258, 261, 262, 263, 264, 265, 266, 267, 268, 271, 273, 276, 278, 279, 280, 282, 283, 284, 285, 286, 287, 288, 291, 292, 294, 298, 299, 300, 301, 302, 303, 304, 305, 308, 309, 310, 311, 313, 316, 317, 318, 319, 320, 321, 322, 323, 325, 328, 330, 331, 334, 335, 336, 337, 338, 339, 340, 342, 343, 344, 345, 348, 350, 351, 352, 353, 355, 356, 357, 358, 359, 362, 365, 366, 367, 369, 370, 371, 373, 374, 376, 377, 378, 379, 380, 381, 382, 384, 386, 389, 391, 392, 393, 394, 396, 397, 399, 401, 402, 403, 404, 405, 406, 409, 411, 412, 414, 415, 416, 419, 420, 421, 422, 423, 424, 426, 427, 429, 430, 431, 432, 433, 434, 435, 437, 440, 441, 442, 443, 444, 445, 446, 447, 448, 451, 453, 455, 456, 457, 459, 460, 462, 463, 464, 465, 467, 468, 469, 471, 472, 474, 476, 478, 482, 483, 484, 486, 490, 492, 493, 494, 497, 498, 499, 500, 502, 503, 504, 506, 507, 509, 510, 511, 514, 516, 517, 518, 519, 520, 521, 523, 525, 528, 529, 530, 531, 535, 536, 537, 538, 539, 540, 541, 542, 543, 545, 547, 548, 549, 555, 557, 558, 559, 560, 561, 562, 563, 564, 565, 574, 577, 578, 579, 580, 584, 591, 592, 593, 594, 595, 596, 600, 601, 604, 607, 608, 609, 610, 611, 612, 613, 622, 625, 626, 629, 630, 631, 632, 635, 637, 638, 639, 640, 643, 644, 645, 647, 649, 651, 652, 653, 661, 662, 663, 665, 668, 669, 670, 671, 678, 684, 685, 686, 687, 688, 689, 690, 692, 693, 694, 695, 696, 697, 700, 703, 704, 705, 707, 709, 711, 712, 717, 718, 719, 726, 739, 740, 741, 742, 743, 745, 746, 748, 750, 751, 754, 755, 756, 757, 758, 759, 760, 761, 763, 764, 765, 766, 767, 768, 770, 772, 773, 774, 776, 777, 779, 780, 782, 784, 785, 786, 787, 788, 790, 791, 792, 793, 794, 795, 799, 801, 802, 804, 805, 806, 807, 809, 810, 811, 812, 813, 815, 816, 817, 818, 819, 821, 822, 823, 824, 825, 828, 831, 834, 835, 836, 837, 838, 839, 841, 844, 845, 847, 848, 849, 850, 852, 853, 854, 855, 856, 857, 859, 862, 863, 864, 865, 866, 867, 869, 870, 871, 872, 874, 875, 876, 877, 878, 879, 882, 883, 885, 888, 891, 892, 894, 895, 896, 897, 898, 899, 901, 903, 906, 907, 908, 909, 910, 912, 914, 915, 916, 917, 918, 919, 921, 923, 924, 925, 926, 928, 930, 931, 932, 934, 935, 936, 938, 939, 941, 942, 944, 946, 947, 948, 949, 950, 951, 952, 954, 956, 957, 958, 960, 961, 962, 963, 964, 965, 968, 969, 970, 971, 974, 975, 976, 977, 978, 979]}}}
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 7249.21tok/s
+Final Decode Throughput: 470.29tok/s
+[metrics] Prefill tokens/time: 92477 / 12.756837s
+[metrics] Decode tokens/time: 22081 / 46.951893s
+[metrics] Avg Tokens per step (incl recovery): 2.86
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.47 (denom=4)
+[metrics] Avg target time per full step (ms): 43.37
+[metrics] Avg target verify time (ms): 27.51
+[metrics] Avg Cache Hits: 0.74
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.563
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.181
+[metrics] Avg Phase 1 Accepted Len: 2.47
+[metrics] Avg Phase 1 Acceptance Ratio: 0.618
+[metrics] Avg Phase 2 Accepted Len: 1.16
+[metrics] Avg Phase 2 Acceptance Ratio: 0.582
+[metrics] Avg Tokens per step on Cache Hit: 3.15
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.142
+  1: 0.259
+  2: 0.228
+  3: 0.045
+  4: 0.325
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.00
+COVERAGE_CELL {"batch": 8, "temperature": 0.0, "seed": 8401, "summary": {"boundary_excluded_al": 2.8178666666666667, "emitted_al": 2.77993201561123, "boundary_excluded_step_tps": 475.33725876194563, "boundary_excluded_events": 443, "boundary_excluded_steps": 362, "output_tokens": 22081, "wall_s": 59.74400966591202, "end_to_end_tps": 369.5935395611503, "decode_output_tokens": 22081, "decode_tps": 470.28987324164126, "al_including_recovery": 2.8601284149565656, "accepted_draft_tokens": 1.8601284149565656, "cache_hit": 0.7463175122749591, "phase1_hit": 0.5638927357421629, "phase2_hit": 0.18242477653279618, "observed_miss_valid_k": {"2": 2015}, "tree_verify_events": 5928, "verify_events": 7943, "performance": {"policy": "full_batch_without_cap_or_clip_v1", "nominal_batch": 8, "tps": 480.1607797731647, "al": 2.8156, "cache_hit": 0.7494, "emitted_tokens": 14078, "seconds": 29.319345921278, "included_steps": 625, "included_events": 5000, "total_steps": 1005, "excluded_steps": 380, "exclusion_reasons": {"cap_or_clip": 362, "partial_batch": 24, "both": 6}, "included_step_indices": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 23, 27, 28, 29, 30, 31, 34, 36, 37, 38, 39, 40, 43, 44, 45, 46, 47, 48, 49, 52, 58, 59, 60, 62, 63, 64, 65, 67, 68, 69, 70, 71, 75, 76, 77, 78, 79, 81, 82, 83, 84, 85, 87, 92, 94, 96, 97, 98, 99, 101, 102, 103, 104, 105, 106, 107, 109, 111, 114, 115, 118, 120, 121, 122, 123, 124, 125, 129, 132, 134, 135, 136, 137, 141, 142, 143, 145, 147, 148, 149, 150, 154, 155, 156, 159, 160, 161, 162, 163, 164, 167, 168, 169, 170, 171, 174, 176, 177, 178, 179, 181, 184, 185, 186, 187, 188, 189, 190, 192, 199, 200, 202, 203, 204, 205, 206, 207, 208, 211, 214, 215, 217, 218, 219, 220, 223, 226, 230, 231, 232, 233, 235, 236, 237, 239, 241, 242, 243, 244, 245, 248, 249, 250, 255, 256, 257, 258, 261, 262, 263, 264, 265, 266, 267, 268, 271, 273, 276, 278, 279, 280, 282, 283, 284, 285, 286, 287, 288, 291, 292, 294, 298, 299, 300, 301, 302, 303, 304, 305, 308, 309, 310, 311, 313, 316, 317, 318, 319, 320, 321, 322, 323, 325, 328, 330, 331, 334, 335, 336, 337, 338, 339, 340, 342, 343, 344, 345, 348, 350, 351, 352, 353, 355, 356, 357, 358, 359, 362, 365, 366, 367, 369, 370, 371, 373, 374, 376, 377, 378, 379, 380, 381, 382, 384, 386, 389, 391, 392, 393, 394, 396, 397, 399, 401, 402, 403, 404, 405, 406, 409, 411, 412, 414, 415, 416, 419, 420, 421, 422, 423, 424, 426, 427, 429, 430, 431, 432, 433, 434, 435, 437, 440, 441, 442, 443, 444, 445, 446, 447, 448, 451, 453, 455, 456, 457, 459, 460, 462, 463, 464, 465, 467, 468, 469, 471, 472, 474, 476, 478, 482, 483, 484, 486, 490, 492, 493, 494, 497, 498, 499, 500, 502, 503, 504, 506, 507, 509, 510, 511, 514, 516, 517, 518, 519, 520, 521, 523, 525, 528, 529, 530, 531, 535, 536, 537, 538, 539, 540, 541, 542, 543, 545, 547, 548, 549, 555, 557, 558, 559, 560, 561, 562, 563, 564, 565, 574, 577, 578, 579, 580, 584, 591, 592, 593, 594, 595, 596, 600, 601, 604, 607, 608, 609, 610, 611, 612, 613, 622, 625, 626, 629, 630, 631, 632, 635, 637, 638, 639, 640, 643, 644, 645, 647, 649, 651, 652, 653, 661, 662, 663, 665, 668, 669, 670, 671, 678, 684, 685, 686, 687, 688, 689, 690, 692, 693, 694, 695, 696, 697, 700, 703, 704, 705, 707, 709, 711, 712, 717, 718, 719, 726, 739, 740, 741, 742, 743, 745, 746, 748, 750, 751, 754, 755, 756, 757, 758, 759, 760, 761, 763, 764, 765, 766, 767, 768, 770, 772, 773, 774, 776, 777, 779, 780, 782, 784, 785, 786, 787, 788, 790, 791, 792, 793, 794, 795, 799, 801, 802, 804, 805, 806, 807, 809, 810, 811, 812, 813, 815, 816, 817, 818, 819, 821, 822, 823, 824, 825, 828, 831, 834, 835, 836, 837, 838, 839, 841, 844, 845, 847, 848, 849, 850, 852, 853, 854, 855, 856, 857, 859, 862, 863, 864, 865, 866, 867, 869, 870, 871, 872, 874, 875, 876, 877, 878, 879, 882, 883, 885, 888, 891, 892, 894, 895, 896, 897, 898, 899, 901, 903, 906, 907, 908, 909, 910, 912, 914, 915, 916, 917, 918, 919, 921, 923, 924, 925, 926, 928, 930, 931, 932, 934, 935, 936, 938, 939, 941, 942, 944, 946, 947, 948, 949, 950, 951, 952, 954, 956, 957, 958, 960, 961, 962, 963, 964, 965, 968, 969, 970, 971, 974, 975, 976, 977, 978, 979]}}}
+[LLMEngine] Exiting (hard=False)
+[metrics] batched tree: {'steps': 2021, 'tree_hits': 11882, 'phase1_replays': 2021, 'phase2_replays': 2021, 'captures': 34}
+[metrics] Avg draft step time (ms): 65.16
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1012 15:44:57.610962171 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

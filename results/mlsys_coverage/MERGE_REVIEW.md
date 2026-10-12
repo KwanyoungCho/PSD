@@ -2,24 +2,24 @@
 
 **다른 서버에서 전체 작업을 검토하려면 23절부터 읽는다 (2026-10-09).** 논문 기준에서 갈라진 systems/research 두 branch, 이전 연구의 별도 raw archive, 최근 미커밋 분석의 보존, 코드 중복 수정 6곳과 검토 순서를 한곳에 정리했다. 하나의 branch만으로 이전 root/tree 연구 원본까지 모두 포함되지는 않는다.
 
-**변경을 두 종류로 나눠 검토하려면 24절부터 읽는다 (2026-10-12).** 기존 논문 경로에 영향을 주는 수정·최적화와 기능 확장을 구분하고, 정확성·측정·정책 변경을 섞지 않는 검토 순서를 정리했다. 기존 기록과 코드 대조에 따른 문서 보완이며 GPU 실험 재개나 runtime 변경은 없다.
+**변경을 두 종류로 나눠 검토하려면 24절부터 읽는다 (2026-10-12).** 기존 논문 경로에 영향을 주는 수정·최적화와 기능 확장을 구분하고, 정확성·측정·정책 변경을 섞지 않는 검토 순서를 정리했다. 24절 자체는 기존 기록과 코드 대조에 따른 문서 보완 기록이다. 이후 GPU 검증과 집계 변경은26절을 따른다.
 
-**사용자 항목별 승인 상태는 25절을 따른다 (2026-10-12).** 현재 승인된 것은 1번 실제 온도 후보 점수뿐이다. 2–7번은 설명·증거 검토 중이며 채택/병합 승인으로 간주하지 않는다. 이전 절의 적용 추천은 사용자 승인을 대신하지 않는다. 이미 있는 systems 코드를 되돌린다는 뜻도 아니다.
+**사용자 항목별 최신 승인 상태는 26절을 따른다 (2026-10-12).** 실제 온도, G>M 정확성, cap/clip·B 미만 step의 성능 집계 제외, resident/prefill B 상한, 동일 int64 payload wire는 승인됐다. Verification과 KV는 실험 후 채택 검토 대상이다. 25절은 이전 승인 단계의 설명이며, 이전 절의 적용 추천은 사용자 승인을 대신하지 않는다. 이미 있는 systems 코드를 되돌린다는 뜻도 아니다.
 
-**최신 상태 (2026-10-08): Round5 실험·추가 최적화·검증 완료.** 이번 실제 온도 root 수식 통합·독립 SSD 튜닝·B1/B8 공동 파라미터 탐색과 결론은 **20절**, 최종 수치와 다른 서버의 재현 절차는 **20.4–20.7절**을 따른다. 완료487실행/691cell, 그중 full480실행70개이며 실패4시도도 보존했다. **19절은 완료된 Round4의94개 실행 기록**이다. 0–18절은 round3까지의 역사적 기록이다. 부록의 commit/file 목록은 Round5 runtime 기준으로 갱신했다.
+**Round5 완료 기록 (2026-10-08).** 실제 온도 root 수식 통합·독립 SSD 튜닝·B1/B8 공동 파라미터 탐색과 결론은 **20절**, 최종 수치와 다른 서버의 재현 절차는 **20.4–20.7절**을 따른다. 완료487실행/691cell, 그중 full480실행70개이며 실패4시도도 보존했다. **19절은 완료된 Round4의94개 실행 기록**이다. 0–18절은 round3까지의 역사적 기록이다. 부록의 commit/file 목록은 Round5 runtime 기준으로 갱신했다. **10/12의 집계 변경과 verification/KV 검증은 26절 및 [Round6 보고서](round6/REPORT.md)가 최신이다.**
 
 **2026-10-09 추가:** 기존 논문 표시 방법을 적용한 전체 성능표·파라미터·breakdown 그림은 **20.8절**과 [paper_view/REPORT.md](round5/paper_view/REPORT.md)에 정리했다. 실험 결과의 재표시이며 새 GPU 실행이나 runtime 수정은 없다.
 
 **2026-10-09 contribution 검토:** **21절**에 B>1의 cache 보존/Mixed-miss AR 구분, 실제 구현 시점, 기존 효과와 SSD·SPECTRE 등 선행연구 대조를 추가했다. M2는 paper branch에 이미 포함됐으며 mixed-miss AR은 현재 chain 옵션이다. 이 아이디어만으로 새로운 핵심 contribution을 주장하지 않는다.
 
-작성일: 2026-10-07, 최종 실험 갱신: 2026-10-08. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 아래0–18절은 당시 source/history와 저장된 실험을 재검토한 내용이다. 당시 문서 감사에는 새 GPU 실험/runtime 변경이 없었으며, 이후 추가 작업은19절, 최신 상태는20절을 따른다.
+작성일: 2026-10-07, 최종 검토 갱신: 2026-10-12. 이 문서는 이번 systems branch의 작업을 한곳에서 검토하기 위한 기준 문서다. 과거 보고서의 시점별 미완료 설명은 역사적 기록이며, 아래0–18절은 당시 source/history와 저장된 실험을 재검토한 내용이다. 당시 문서 감사에는 새 GPU 실험/runtime 변경이 없었으며, 이후 추가 작업은19절 이후, 최신 승인과 후속 검증은26절을 따른다.
 
 **0. 정확한 기준과 먼저 바로잡을 설명**
 
 | 구분 | 고정 revision / 상태 |
 |---|---|
 | 논문 기준 | `a82f7d24fb36827a9a81a3567f344dccb71f193e` |
-| 이번 systems 작업 | `feat/duet-mlsys-coverage`; 최종 runtime `641f5ce`, 결과·전체 그림 `1672deb`, 최신 인계는 이 문서를 포함한 branch HEAD. `68d0a26`은 초기 Round3 시점 |
+| 이번 systems 작업 | `feat/duet-mlsys-coverage`; Round5 runtime `641f5ce`, 당시 결과·전체 그림 `1672deb`. Round6는 `2fe4596` 이후 집계·계측·검증을 추가(26절), 최신 인계는 이 문서를 포함한 branch HEAD. `68d0a26`은 초기 Round3 시점 |
 | 작업 checkout | `/home/chokwans99/PSD-mlsys-coverage` |
 | 기존 root/tree 연구 | `feat/duet-proxy-source-ablation@539f763886a3261aa40beab9fa0183a57be9df3b`, `/home/chokwans99/PSD`. `cc4a3ba` 원본에 10/01 보고서·그림 및 인계 보완을 추가 |
 | 원격 논문 branch 확인 | 10/07 `git ls-remote origin refs/heads/feat/duet-p2tree-g0 refs/heads/main` 결과 두 ref 모두 `a82f7d2` |
@@ -1088,7 +1088,9 @@ Colocated target/draft의 RMSNorm 상수 capture 수정(`13f42d8`)도 공통 실
 - Mixed-miss AR의 unified-tree 이식 및 자동 선택 기준의 구현/검증은 남아 있다. 이는 실제 후속 작업이며 이미 완료한 옵션으로 켤 수 없다.
 - 이번 문서 갱신은 분류·검토 안내만 추가했다. 서버 점검으로 중단한 GPU 캠페인을 재개하지 않았다.
 
-**25. 사용자 항목별 승인과 질의 검토 (2026-10-12)**
+**25. 사용자 항목별 승인과 질의 검토 (2026-10-12, 후속 승인 이전 기록)**
+
+최신 승인/실험 상태는 26절을 따른다. 아래는 첫 검토 당시의 기록이다.
 
 현재 systems branch에는 아래 구현이 이미 들어 있다. 사용자는 이를 하나씩 검토한 뒤 OK한 항목만 진행하도록 요청했다. 이 절은 **논문 코드로 채택·병합할 승인 상태**를 기록한다. 이번 작업은 기존 source·저장된 측정값의 CPU 재집계와 문서화이며, runtime 수정/병합/되돌리기/GPU 실행은 하지 않았다.
 
@@ -1166,6 +1168,84 @@ Tree graph는 RNG 소비 순서와 실행 궤적도 달라 동일 토큰·동일
 - Llama3의 128256 vocabulary 등을 지원하려는 변경이다. 예전에도 전체 저장/통신 dtype은 int64였으며, 빈 상위 비트를 활용했다. 점수 정밀도·양자화 범위, pack/unpack의 연산 종류, NCCL 호출 수와 이 필드의 전송량은 유지한다. Token 수 N/다른 wire 항목이 같을 때 통신 모델 `L + 8N/BW`의 비용은 같다.
 - Bit shift 상수만 커졌다는 이유로 통신량이 늘지는 않는다. 실제 hardware latency가 정확히 같다는 보장은 별도이며 이 변경만의 A/B 통신 microbenchmark는 없다. 큰 vocab의 softmax/logit/parent-q 비용 증가를 이 bit-pack 변경 때문이라고 해석하지 않는다.
 - Old marker를 거부하므로 sender/receiver를 함께 갱신해야 한다. `TestPivPack`에는 32768,128255,151935,2**32-1 및 old-wire 거부 검사가 있다. 같은 지원 범위의 token/score에 대한 의미는 유지한다.
+
+**26. 항목별 후속 승인과 Round6 검증 (2026-10-12, 검증 완료)**
+
+사용자는 GPU 실험 재개를 요청했으며, 마지막 B 미만 tail은 끝까지 처리하되 성능 집계에서 제외하는 데 명시적으로 동의했다. 이 절이 25절의 승인 상태를 갱신한다. 실험은 systems branch에서 진행하며 논문 branch에는 아직 병합하지 않는다.
+
+| 항목 | 현재 상태 / 조치 |
+|---|---|
+| 실제 온도 후보 점수 | 사용자 승인 유지 |
+| Tree G>M | 정확성 수정으로 사용자 승인 |
+| TPS | 출력 cap/clip이 발생한 **전체 batch step**의 token/time을 함께 제외. 실제 B가 nominal B보다 작은 step도 제외. AL/hit도 같은 step 모집단 사용. 원시 결과와 제외 수 유지 |
+| Verification | 실험 허용, 채택 승인 대기. Chain/tree, B1/2/4/8, T0/.7 고정-input micro 및 full-model 검증 완료. 세부 범위·수치는26.3절 |
+| KV·요청 상태 | 실험 허용, 채택 승인 대기. 공통 prefix/preemption 수정과 기존 tree stage/restore, 제거된 KV promotion을 구분 |
+| Scheduler B | resident/prefill 상한 승인. B 미만 요청을 버리거나 dummy로 채우지 않음 |
+| Tree wire | 동일 int64 payload 길이 조건으로 승인. 단독 전송 latency 동일성 실측 주장 없음 |
+
+계획·측정 범위: [Round6 PLAN](round6/PLAN.md). 최종 표/실패 기록/재현 명령은 Round6 REPORT에 정리한다. Runtime에서 이번에 추가한 것은 decode step의 actual B 및 AR cap metadata, 계측 span뿐이며, 새 KV promotion이나 자동 verification 경로 선택은 도입하지 않았다.
+
+**26.1 이번에 새로 수정한 파일과 읽는 순서**
+
+| 검토 대상 | 파일 / 의미 |
+|---|---|
+| 승인된 집계 | `ssd/bench/mlsys_step_metrics.py`: batch-step 단위 제외 조건의 합집합. Token과 시간을 함께 제외하고 AL/hit event도 같은 step에서 선택 |
+| 필요한 metadata | `ssd/ssd/engine/llm_engine.py`: 실제 `batch_size`와 AR 경로에서도 출력 cap 발생 여부 기록. 생성·반환 token을 버리거나 batch를 dummy로 채우지 않음 |
+| 결과 인터페이스 | `ssd/bench/mlsys_coverage.py`: `summary.performance` 추가. 이전 raw `decode_tps` 등은 보존하며, 예전 수치의 의미를 소급 변경하지 않음 |
+| KV 비용 계측 | `ssd/ssd/engine/helpers/batch_tree_draft.py`: 기존 stage/restore/glue에 timing span만 추가. 복사할 token, page table, cache lifetime을 변경하지 않음 |
+| 검사 | `ssd/tests/test_step_performance_metrics.py`, `run_regressions.sh`: cap/partial-B 중복 제외, TPS 분자·분모 및 AL/hit 모집단, AR event가 없는 경우 검사 |
+| 진단용 bench | `mlsys_review_verify.py`, `mlsys_review_kv.py`, `mlsys_review_prefix.py`: acceptance/기존 KV 비용/prefix prefill을 각각 분리 측정 |
+| 미채택 greedy 후보 | `mlsys_review_greedy_host.py`, `mlsys_review_greedy_hook.py`: GPU argmax를 모아서 한 번 전달한 뒤 CPU topology를 따라가는 실험. Hook은 benchmark process에서만 verifier/replay를 대체하며 production 기본값을 바꾸지 않음 |
+| 결과와 재현 | `round6/REPORT.md`, `PLAN.md`, `FAILURES.md`, 실행별 `plan.json`·`campaign.json`, raw gzip 및 `ARCHIVE_MANIFEST.json`, 분석 script. 승인 검토의 입구는 이 문서로 유지 |
+
+**26.2 집계와 KV 검토에서 혼동하지 않을 점**
+
+- “마지막 B 미만 제외”는 남은 요청을 중단한다는 뜻이 아니다. 모든 입력의 출력을 반환한 뒤 성능 계산에서 해당 batch-step을 제외한다. 출력 cap/clip과 partial-B가 겹쳐도 한 번만 제외한다. 비교 방법 모두 같은 규칙을 적용해야 한다.
+- `TPS* = B × AL* / 평균 step 시간` 관계를 같은 모집단에서 검산한다. TPS*는 prefill·tail까지 포함한 전체 serving TPS가 아니며, 원시 TPS와 제외율도 함께 보고한다.
+- Prefix/preemption/hash 수정은 잘못된 page·길이·출력 경계 접근을 고치는 것이다. 전체 tree KV를 연속 메모리로 재조립하는 정책이 아니다. 이전 논문 기준에도 tree accepted-path stage/restore가 있었다.
+- 예전에 제거한 KV promotion은 draft 후보 KV를 사용해 glue forward를 대체하려던 별도 최적화다. 이번에도 production에 복구하지 않았다. 단일 확정 경로의 copy+tip micro가 현재 branching tree의 모든 outcome context를 계산하는 glue를 대체할 수 있다는 근거는 아니다.
+- Qwama draft의 다른 query 폭에서 logits/argmax가 달라지는 현상과 target losslessness를 구분한다. Draft 분포가 바뀌어도 실제 생성 법칙 q를 검증에 일치시켜 전달하면 SD의 분포 보존 조건은 유지된다. 이번 micro가 새로운 promotion serving의 q·KV lifetime 계약 전체를 검증한 것은 아니다.
+
+**26.3 검증 결과와 채택 판단 자료**
+
+전체 dense 모델 실행90개를 완료했다. Tree profile26 + chain profile24 + greedy profile8, 전체 저장 입력480개를 사용한 tree24 + greedy8 실행이다. 매 실행에서 warm/측정 두 pass를 수행했다. 전체 입력 반복은 tree B1/B8에서2회, greedy prototype은1회 대조다. B2/B4는48개 입력 진단과 fixed-input micro의 근거다.
+
+- 기존 GPU regression300개와 새 집계 검사3개, benchmark adapter 검사2개 통과. Chain32/tree64/greedy32개의 고정 입력 조건도 측정했다. Tree trim의 acceptance probability·필요 residual은 bitwise 동일했다.
+- 출력 대조: chain general↔fast8쌍, tree graph1↔trim1 16쌍, greedy graph↔host8쌍에서 **warm/측정 두 pass 모두 모든 출력 token이 일치**했다. Greedy는 AL·hit·집계 대상 수도 일치했다.
+- 90개 실행의 모든 pass에 대해 실제 반환 token 합·step 집계·최대 B·입력 완료 수를 검산했다. 비교 실행의 외부 GPU process 간섭은0건이었다. On-disk 추론 소스는 한 버전이며, greedy adapter의 process 내부 replay 대체는 별도 실험 변경으로 표시했다.
+
+**Verification — 실제 target forward를 포함한 구간**
+
+- Chain general→fast: 두 모델의 B1/2/4/8에서 전체 verification **2.15–5.01% 감소**. 같은 출력 궤적의 비교다. Packed의 추가 감소는 B4/B8에서1.32–4.87%, B2는 이득이 없었다. Packed는 일부 조건의 출력 궤적도 달라 따로 해석한다.
+- Tree full480의 아래 값은 **unified 실행기 graph OFF→graph ON+trim**, 같은 GPU pair/고정 파라미터 내 두 반복의 평균 변화율이다. 과거 논문 commit 전체의 개선율이 아니다.
+
+| Model | B | Verification 변화 | TPS* 변화 |
+|---|---:|---:|---:|
+| llama2 | 1 | -9.20% | +10.17% |
+| llama2 | 8 | -6.48% | +0.96% |
+| llama3 | 1 | -7.23% | +6.44% |
+| llama3 | 8 | -4.08% | +1.25% |
+
+Graph만 켠 경우에는 L2 B8의 TPS가 평균−0.11%였다. Verification은 줄어도 draft 대기와 나머지 비용 때문에 TPS가 자동으로 오르지 않는다. Trim 역시 B1의 모든 반복에서 추가 이득을 내지는 않았다. 모든 옵션을 항상 켜면 가장 빠르다는 결론이 아니다.
+
+기존 B1 경로와는 별도48입력 대조를 수행했다. 현재 branch의 legacy→unified+trim verification은 L2 17.634→16.946ms, L3 20.556→20.171ms였다. Legacy에도 공통 수정이 적용돼 있고 이 비교는 원 논문70B/TP2의 전후 재현이 아니다. B1에 unified 결과를 적용하려면 어떤 실행기를 쓰는지도 같이 검토해야 한다.
+
+추가 greedy host prototype은 full480에서 TPS +0.03–+1.37%, verification 감소0.13–0.89%였다. 단일 process 대조에서 관측한 작은 차이이므로 성능 우위를 확정하지 않는다. 기본 구현으로 채택하지 않고 benchmark 후보로 남겼다.
+
+**KV — 공통 정확성 수정과 glue 대체를 분리**
+
+- 반복 prompt의 prefix reuse는 두 target 모델에서 B1/B8 × 길이512/768/800 ×3회 cold/cached 대조를 완료했고, 모든 greedy 출력이 같았다. Cached prefill은 더 빨랐다. 수정된 정상 코드 내 cold/cached 비교이며, 잘못된 과거 paged 접근 코드의 전후 latency 비교는 아니다.
+- 현재 tree stage/restore/glue 비용과 연속·불연속 page의 copy/recompute를 별도로 측정했다. 단일 확정 경로의 재사용 micro만으로 branching-tree glue 전체 교체를 승인할 수 없다.
+- AMD48조건은 argmax 불일치0, 최대TV0.00211. Qwama BF16 진단48조건은6조건에서 argmax 차이, 최대TV0.02903; FP16 진단은2조건/0.00351. 같은 query 폭의 BF16 C3 KV는 bitwise 일치해 shape-dependent 수치 차이를 구분했지만, 진단 완료를 새 promotion의 정확성 승인으로 해석하지 않는다.
+- 공통 prefix/preemption/hash 정확성 수정과 새 KV promotion의 채택은 별개다. 요청 상태 수정은 정상적인 논리 주소·출력 경계를 유지하기 위한 것이며, 과거 제거한 glue 대체 최적화를 되살린 것이 아니다.
+
+**검토 순서 / 남은 결정**
+
+1. [Round6 REPORT](round6/REPORT.md)의 집계 정의와 full480 AL/hit/TPS*/raw TPS/제외율 표를 확인한다. 성능 그래프6종(PNG/PDF)과 모든 실행 파라미터도 연결돼 있다.
+2. Verification은 chain fast, tree graph, trim, packed, greedy prototype을 나누어 검토한다. 이번 실험을 마쳤다는 것이4번의 채택 승인을 대신하지 않는다.
+3. KV는 공통 정확성 수정과 기존 tree stage/restore의 필요성을 먼저 확인한다. 새 glue 대체 정책은 구현 채택 범위에 추가하지 않았다.5번도 사용자 채택 검토 상태로 유지한다.
+4. 다른 서버에서는 raw gzip을 복원한 뒤 분석·감사 명령을 실행한다. SHA256 manifest, 실패 기록, 전체 source/환경/seed/GPU telemetry를 보존했다. 중복 /tmp 프로파일52개는 보존본과 SHA256이 같음을 확인한 뒤 임시 복사본만 지웠으며 TEMP_PROFILE_CLEANUP.json에 남겼다.
+5. 이번 저장은 systems branch의 승인된 집계와 검증 자료다. 논문 branch로의 자동 병합이나 미승인 최적화의 기본값 변경은 수행하지 않았다.
 
 **부록 A. Systems branch commit 전체 — 논문 기준 이후**
 

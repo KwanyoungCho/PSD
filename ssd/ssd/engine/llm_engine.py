@@ -295,9 +295,10 @@ class LLMEngine:
             METRICS["decode_total_tokens"] += ttl_tokens
             events = METRICS["phase_events"][event_start:]
             METRICS["decode_steps"].append(dict(
-                seconds=time_taken, emitted_tokens=ttl_tokens,
+                seconds=time_taken, emitted_tokens=ttl_tokens, batch_size=len(seqs),
                 event_start=event_start, event_end=len(METRICS["phase_events"]),
-                output_cap_reached=any(e.get("output_cap_reached", False) for e in events),
+                output_cap_reached=(any(e.get("output_cap_reached", False) for e in events)
+                                    or any(s.num_completion_tokens >= s.max_new_tokens for s in seqs)),
                 clipped=any(e.get("clipped", False) for e in events)))
 
 

@@ -208,6 +208,7 @@ class BatchedDuetDraft:
         temp_cpu=temps.cpu().tolist()
         # Restore by identity, never by the current batch row. Prefill
         # explicitly invalidates the resumed sequence's old generation.
+        restore_event=duet_record('batch_kv_restore')
         flat=self._flat_kv()
         for b,(seq,terminal,_) in enumerate(key_cpu):
             previous=self.staged.pop(seq,None)
@@ -216,6 +217,7 @@ class BatchedDuetDraft:
                 if src:
                     flat[:,:,torch.tensor(dst,device=r.device)]=previous['kv'][:,:,src]
         self.staged={}
+        duet_close('batch_kv_restore',restore_event)
         hits=[self.entries.get(tuple(k)) for k in key_cpu]
         miss=[b for b,e in enumerate(hits) if e is None]
         _miss_event=duet_record("batch_miss_draft")
@@ -284,13 +286,17 @@ class BatchedDuetDraft:
         # One ancestor-masked draft forward covers both tree and chain rows.
         glue_width=next(x for x in sorted({cfg.duet_phase1_k+1,cfg.duet_phase2_k+1,
                                            cfg.duet_response_token_width+1}) if x>=max_valid+1)
+        glue_forward_event=duet_record('batch_glue_forward',parent='batch_glue')
         glue=self.glue.run(rows,glue_width)
+        duet_close('batch_glue_forward',glue_forward_event)
+        stage_event=duet_record('batch_kv_stage',parent='batch_glue')
         for b,entry in enumerate(hits):
             if not rows[b]['tree']: continue
             row=rows[b]; start=row['prefix']; n=len(row['tokens'])
             slots=[row['blocks'][j//r.block_size]*r.block_size+j%r.block_size for j in range(start,start+n)]
             self.staged[key_cpu[b][0]]=dict(parents=row['parents'],length=length_cpu[b],
                                           kv=flat[:,:,torch.tensor(slots,device=r.device)].clone())
+        duet_close('batch_kv_stage',stage_event)
         # No view from the previous generation is retained after q and KV
         # have been copied, so arena reuse cannot mutate a served snapshot.
         self.entries={}

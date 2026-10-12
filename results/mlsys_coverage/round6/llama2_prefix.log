@@ -1,0 +1,1292 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=1
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=1
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.64it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.34it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.28it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.32it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 37, 256, 32, 128])
+[LLMEngine] finished llm_engine init
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 808.68tok/s
+Final Decode Throughput: 63.26tok/s
+[metrics] Prefill tokens/time: 513 / 0.634367s
+[metrics] Decode tokens/time: 7 / 0.110663s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 11008.59tok/s
+Final Decode Throughput: 63.92tok/s
+[metrics] Prefill tokens/time: 513 / 0.046600s
+[metrics] Decode tokens/time: 7 / 0.109516s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 1103.16tok/s
+Final Decode Throughput: 63.97tok/s
+[metrics] Prefill tokens/time: 513 / 0.465028s
+[metrics] Decode tokens/time: 7 / 0.109433s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 23188.96tok/s
+Final Decode Throughput: 64.00tok/s
+[metrics] Prefill tokens/time: 513 / 0.022123s
+[metrics] Decode tokens/time: 7 / 0.109377s
+PREFIX_CASE 1 512 0 {'cold': 46.59998998977244, 'cached': 22.122592898085713} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 23161.18tok/s
+Final Decode Throughput: 63.84tok/s
+[metrics] Prefill tokens/time: 513 / 0.022149s
+[metrics] Decode tokens/time: 7 / 0.109647s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 23272.72tok/s
+Final Decode Throughput: 64.18tok/s
+[metrics] Prefill tokens/time: 513 / 0.022043s
+[metrics] Decode tokens/time: 7 / 0.109064s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 11079.31tok/s
+Final Decode Throughput: 64.29tok/s
+[metrics] Prefill tokens/time: 513 / 0.046303s
+[metrics] Decode tokens/time: 7 / 0.108879s
+PREFIX_CASE 1 512 1 {'cached': 22.042975993826985, 'cold': 46.3025311473757} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 11079.65tok/s
+Final Decode Throughput: 64.15tok/s
+[metrics] Prefill tokens/time: 513 / 0.046301s
+[metrics] Decode tokens/time: 7 / 0.109112s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 30267.53tok/s
+Final Decode Throughput: 64.28tok/s
+[metrics] Prefill tokens/time: 513 / 0.016949s
+[metrics] Decode tokens/time: 7 / 0.108892s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+Final Prefill Throughput: 29648.36tok/s
+Final Decode Throughput: 64.47tok/s
+[metrics] Prefill tokens/time: 513 / 0.017303s
+[metrics] Decode tokens/time: 7 / 0.108573s
+PREFIX_CASE 1 512 2 {'cold': 46.30111111328006, 'cached': 17.30281487107277} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 28273.79tok/s
+Final Decode Throughput: 63.83tok/s
+[metrics] Prefill tokens/time: 769 / 0.027198s
+[metrics] Decode tokens/time: 7 / 0.109662s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 10976.46tok/s
+Final Decode Throughput: 63.41tok/s
+[metrics] Prefill tokens/time: 769 / 0.070059s
+[metrics] Decode tokens/time: 7 / 0.110391s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 42647.75tok/s
+Final Decode Throughput: 63.88tok/s
+[metrics] Prefill tokens/time: 769 / 0.018031s
+[metrics] Decode tokens/time: 7 / 0.109574s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 45167.20tok/s
+Final Decode Throughput: 62.83tok/s
+[metrics] Prefill tokens/time: 769 / 0.017026s
+[metrics] Decode tokens/time: 7 / 0.111417s
+PREFIX_CASE 1 768 0 {'cold': 70.059048011899, 'cached': 17.025629989802837} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 24653.42tok/s
+Final Decode Throughput: 62.55tok/s
+[metrics] Prefill tokens/time: 769 / 0.031192s
+[metrics] Decode tokens/time: 7 / 0.111903s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 34292.88tok/s
+Final Decode Throughput: 63.55tok/s
+[metrics] Prefill tokens/time: 769 / 0.022424s
+[metrics] Decode tokens/time: 7 / 0.110152s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 10959.86tok/s
+Final Decode Throughput: 63.29tok/s
+[metrics] Prefill tokens/time: 769 / 0.070165s
+[metrics] Decode tokens/time: 7 / 0.110609s
+PREFIX_CASE 1 768 1 {'cached': 22.42448111064732, 'cold': 70.16514684073627} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 11047.61tok/s
+Final Decode Throughput: 63.11tok/s
+[metrics] Prefill tokens/time: 769 / 0.069608s
+[metrics] Decode tokens/time: 7 / 0.110918s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 33731.55tok/s
+Final Decode Throughput: 63.46tok/s
+[metrics] Prefill tokens/time: 769 / 0.022798s
+[metrics] Decode tokens/time: 7 / 0.110306s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+Final Prefill Throughput: 34561.61tok/s
+Final Decode Throughput: 63.53tok/s
+[metrics] Prefill tokens/time: 769 / 0.022250s
+[metrics] Decode tokens/time: 7 / 0.110187s
+PREFIX_CASE 1 768 2 {'cold': 69.60778986103833, 'cached': 22.25012192502618} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 25632.00tok/s
+Final Decode Throughput: 63.38tok/s
+[metrics] Prefill tokens/time: 801 / 0.031250s
+[metrics] Decode tokens/time: 7 / 0.110439s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 10258.11tok/s
+Final Decode Throughput: 63.18tok/s
+[metrics] Prefill tokens/time: 801 / 0.078085s
+[metrics] Decode tokens/time: 7 / 0.110795s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 31531.49tok/s
+Final Decode Throughput: 63.32tok/s
+[metrics] Prefill tokens/time: 801 / 0.025403s
+[metrics] Decode tokens/time: 7 / 0.110553s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 31759.66tok/s
+Final Decode Throughput: 63.43tok/s
+[metrics] Prefill tokens/time: 801 / 0.025221s
+[metrics] Decode tokens/time: 7 / 0.110351s
+PREFIX_CASE 1 800 0 {'cold': 78.08457198552787, 'cached': 25.220672832801938} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 31283.33tok/s
+Final Decode Throughput: 63.23tok/s
+[metrics] Prefill tokens/time: 801 / 0.025605s
+[metrics] Decode tokens/time: 7 / 0.110716s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 31965.86tok/s
+Final Decode Throughput: 63.39tok/s
+[metrics] Prefill tokens/time: 801 / 0.025058s
+[metrics] Decode tokens/time: 7 / 0.110435s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 10306.37tok/s
+Final Decode Throughput: 63.09tok/s
+[metrics] Prefill tokens/time: 801 / 0.077719s
+[metrics] Decode tokens/time: 7 / 0.110956s
+PREFIX_CASE 1 800 1 {'cached': 25.057984050363302, 'cold': 77.71891704760492} True
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 10303.01tok/s
+Final Decode Throughput: 63.13tok/s
+[metrics] Prefill tokens/time: 801 / 0.077744s
+[metrics] Decode tokens/time: 7 / 0.110875s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 31274.62tok/s
+Final Decode Throughput: 63.57tok/s
+[metrics] Prefill tokens/time: 801 / 0.025612s
+[metrics] Decode tokens/time: 7 / 0.110109s
+[scheduler] returning 1 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-']
+Final Prefill Throughput: 40325.73tok/s
+Final Decode Throughput: 63.71tok/s
+[metrics] Prefill tokens/time: 801 / 0.019863s
+[metrics] Decode tokens/time: 7 / 0.109870s
+PREFIX_CASE 1 800 2 {'cold': 77.74429395794868, 'cached': 19.86324810422957} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 12299.95tok/s
+Final Decode Throughput: 430.25tok/s
+[metrics] Prefill tokens/time: 4104 / 0.333660s
+[metrics] Decode tokens/time: 56 / 0.130156s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 11271.22tok/s
+Final Decode Throughput: 434.02tok/s
+[metrics] Prefill tokens/time: 4104 / 0.364113s
+[metrics] Decode tokens/time: 56 / 0.129028s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 207580.32tok/s
+Final Decode Throughput: 435.73tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019771s
+[metrics] Decode tokens/time: 56 / 0.128521s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 206777.08tok/s
+Final Decode Throughput: 434.33tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019847s
+[metrics] Decode tokens/time: 56 / 0.128935s
+PREFIX_CASE 8 512 0 {'cold': 364.11334201693535, 'cached': 19.84746102243662} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 207177.96tok/s
+Final Decode Throughput: 435.92tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019809s
+[metrics] Decode tokens/time: 56 / 0.128465s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 208290.49tok/s
+Final Decode Throughput: 435.42tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019703s
+[metrics] Decode tokens/time: 56 / 0.128611s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 11240.44tok/s
+Final Decode Throughput: 434.79tok/s
+[metrics] Prefill tokens/time: 4104 / 0.365110s
+[metrics] Decode tokens/time: 56 / 0.128797s
+PREFIX_CASE 8 512 1 {'cached': 19.70325200818479, 'cold': 365.110277896747} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 11271.32tok/s
+Final Decode Throughput: 433.87tok/s
+[metrics] Prefill tokens/time: 4104 / 0.364110s
+[metrics] Decode tokens/time: 56 / 0.129070s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 206166.59tok/s
+Final Decode Throughput: 434.60tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019906s
+[metrics] Decode tokens/time: 56 / 0.128853s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['post', 'arter', 'effectively', 'vert', 'character', 'imm', 'of', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['about', 'ly', 'compare', 'ed', ',', 'ers', 'the', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['a', 'Fin', 'and', 'friend', 'using', 'ive', 'street', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['recent', 'an', 'contrast', ',', 'strong', 'experience', 'held', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['trip', 'cial', 'the', 'who', 'imag', 'for', 'a', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', 'Report', 'features', 'dis', 'ery', 'the', 'secret', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', "'", ',', 'lik', 'and', 'reader', 'that', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'you', 'performance', 'es', 'cre', '.', 'no', '.']
+Final Prefill Throughput: 206087.73tok/s
+Final Decode Throughput: 435.52tok/s
+[metrics] Prefill tokens/time: 4104 / 0.019914s
+[metrics] Decode tokens/time: 56 / 0.128581s
+PREFIX_CASE 8 512 2 {'cold': 364.1100018285215, 'cached': 19.91384895518422} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 33951.52tok/s
+Final Decode Throughput: 403.83tok/s
+[metrics] Prefill tokens/time: 6152 / 0.181200s
+[metrics] Decode tokens/time: 56 / 0.138672s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 11048.15tok/s
+Final Decode Throughput: 405.80tok/s
+[metrics] Prefill tokens/time: 6152 / 0.556836s
+[metrics] Decode tokens/time: 56 / 0.138000s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 291142.89tok/s
+Final Decode Throughput: 407.08tok/s
+[metrics] Prefill tokens/time: 6152 / 0.021131s
+[metrics] Decode tokens/time: 56 / 0.137566s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 291712.01tok/s
+Final Decode Throughput: 406.81tok/s
+[metrics] Prefill tokens/time: 6152 / 0.021089s
+[metrics] Decode tokens/time: 56 / 0.137656s
+PREFIX_CASE 8 768 0 {'cold': 556.8355510476977, 'cached': 21.089292829856277} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 278406.53tok/s
+Final Decode Throughput: 406.24tok/s
+[metrics] Prefill tokens/time: 6152 / 0.022097s
+[metrics] Decode tokens/time: 56 / 0.137850s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 289156.44tok/s
+Final Decode Throughput: 406.13tok/s
+[metrics] Prefill tokens/time: 6152 / 0.021276s
+[metrics] Decode tokens/time: 56 / 0.137887s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 11048.00tok/s
+Final Decode Throughput: 404.04tok/s
+[metrics] Prefill tokens/time: 6152 / 0.556843s
+[metrics] Decode tokens/time: 56 / 0.138599s
+PREFIX_CASE 8 768 1 {'cached': 21.275680046528578, 'cold': 556.8427890539169} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 10931.60tok/s
+Final Decode Throughput: 402.90tok/s
+[metrics] Prefill tokens/time: 6152 / 0.562772s
+[metrics] Decode tokens/time: 56 / 0.138992s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 286798.42tok/s
+Final Decode Throughput: 406.78tok/s
+[metrics] Prefill tokens/time: 6152 / 0.021451s
+[metrics] Decode tokens/time: 56 / 0.137666s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: ['trip', 'point', '.', 'lik', 'imag', 'b', 'discovered', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['to', '.', 'Please', 'es', 'ery', 'ust', '.', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['Hawai', 'D', 'answer', 'public', 'and', 'ling', 'Could', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['i', 'raft', 'in', 'speaking', 'cre', 'market', 'you', '.']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: [',', 'a', 'fewer', ',', 'ative', 'place', 'write', 'The']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'professional', 'than', 'to', 'language', ',', 'a', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'email', '', 'volunte', '.', 'incorpor', 'capt', 'should']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', 'seeking', '2', 'er', 'Please', 'ating', 'iv', 'involve']
+Final Prefill Throughput: 290004.21tok/s
+Final Decode Throughput: 406.85tok/s
+[metrics] Prefill tokens/time: 6152 / 0.021213s
+[metrics] Decode tokens/time: 56 / 0.137641s
+PREFIX_CASE 8 768 2 {'cold': 562.7723191864789, 'cached': 21.213485160842538} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 209740.15tok/s
+Final Decode Throughput: 403.90tok/s
+[metrics] Prefill tokens/time: 6408 / 0.030552s
+[metrics] Decode tokens/time: 56 / 0.138650s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 10922.70tok/s
+Final Decode Throughput: 402.45tok/s
+[metrics] Prefill tokens/time: 6408 / 0.586668s
+[metrics] Decode tokens/time: 56 / 0.139148s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 208950.49tok/s
+Final Decode Throughput: 401.46tok/s
+[metrics] Prefill tokens/time: 6408 / 0.030668s
+[metrics] Decode tokens/time: 56 / 0.139491s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 208457.43tok/s
+Final Decode Throughput: 402.61tok/s
+[metrics] Prefill tokens/time: 6408 / 0.030740s
+[metrics] Decode tokens/time: 56 / 0.139092s
+PREFIX_CASE 8 800 0 {'cold': 586.668023141101, 'cached': 30.740089947357774} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 208990.59tok/s
+Final Decode Throughput: 403.46tok/s
+[metrics] Prefill tokens/time: 6408 / 0.030662s
+[metrics] Decode tokens/time: 56 / 0.138799s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 208887.93tok/s
+Final Decode Throughput: 403.47tok/s
+[metrics] Prefill tokens/time: 6408 / 0.030677s
+[metrics] Decode tokens/time: 56 / 0.138794s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 10916.24tok/s
+Final Decode Throughput: 403.24tok/s
+[metrics] Prefill tokens/time: 6408 / 0.587015s
+[metrics] Decode tokens/time: 56 / 0.138876s
+PREFIX_CASE 8 800 1 {'cached': 30.6767369620502, 'cold': 587.0151768904179} True
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 10820.79tok/s
+Final Decode Throughput: 402.26tok/s
+[metrics] Prefill tokens/time: 6408 / 0.592193s
+[metrics] Decode tokens/time: 56 / 0.139214s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 209794.78tok/s
+Final Decode Throughput: 403.22tok/s
+[metrics] Prefill tokens/time: 6408 / 0.030544s
+[metrics] Decode tokens/time: 56 / 0.138882s
+[scheduler] returning 8 sequences for prefill
+[auto_regressive_step] is_prefill=True
+[auto_regressive_step] generated tokens: [',', 'the', 'the', 'Write', 'ative', 'Write', 'one', 'paragraph']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['highlight', 'data', 'blog', 'a', 'language', 'a', 'had', 'for']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['ing', 'analysis', 'post', 'persu', '.', 'descript', 'ever', 'a']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['cultural', ',', ',', 'as', 'Please', 'ive', 'discovered', 'fict']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['experiences', 'presentation', 'including', 'ive', 'answer', 'paragraph', '.', 'ional']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['and', 'style', 'key', 'email', 'in', 'about', 'Could', 'short']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['must', ',', 'points', 'to', 'fewer', 'a', 'you', 'story']
+[auto_regressive_step] is_prefill=False
+[auto_regressive_step] generated tokens: ['-', 'and', 'and', 'conv', 'than', 'b', 'write', '.']
+Final Prefill Throughput: 210237.96tok/s
+Final Decode Throughput: 403.68tok/s
+[metrics] Prefill tokens/time: 6408 / 0.030480s
+[metrics] Decode tokens/time: 56 / 0.138724s
+PREFIX_CASE 8 800 2 {'cold': 592.1932919882238, 'cached': 30.47974710352719} True
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

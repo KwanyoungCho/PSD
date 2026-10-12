@@ -1,0 +1,263 @@
+{
+  "status": "failed",
+  "args": {
+    "kind": "tree",
+    "vocab": [
+      32000,
+      128256
+    ],
+    "batches": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "nodes": [
+      4,
+      8
+    ],
+    "repeats": 5,
+    "iterations": 20,
+    "output": "results/mlsys_coverage/round6/tree_micro_retry1.json"
+  },
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "torch": "2.8.0+cu128",
+  "scope": "fixed synthetic logits; per-call wall ms including final host materialization; excludes forward/transport",
+  "cases": [
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 1,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.2606964437291026
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.24114110274240375
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 0.8661161409690976
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3424823982641101
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.33074915409088135
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 0.8762449026107788
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.24199989857152104
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.25893565034493804
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.258628255687654
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.24163159541785717
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 0.8619008003734052
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3313353983685374
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3289105952717364
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 0.8592168451286852
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.2417376497760415
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.26114004431292415
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.2593896468169987
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.24257750483229756
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 0.8681776002049446
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.3337651025503874
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.2593896468169987,
+        "graph_trim1": 0.2417376497760415,
+        "eager": 0.8661161409690976,
+        "serial_legacy_walk": 0.3313353983685374
+      }
+    },
+    {
+      "vocab": 32000,
+      "batch": 1,
+      "nodes": 4,
+      "siblings": 3,
+      "temperature": 0.7,
+      "ragged": true,
+      "parity": true,
+      "timings": [
+        {
+          "repeat": 0,
+          "implementation": "graph_trim0",
+          "ms": 0.3168368013575673
+        },
+        {
+          "repeat": 0,
+          "implementation": "graph_trim1",
+          "ms": 0.30043929582461715
+        },
+        {
+          "repeat": 0,
+          "implementation": "eager",
+          "ms": 1.1952876928262413
+        },
+        {
+          "repeat": 0,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4598830942995846
+        },
+        {
+          "repeat": 1,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.4907698486931622
+        },
+        {
+          "repeat": 1,
+          "implementation": "eager",
+          "ms": 1.2227935600094497
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim1",
+          "ms": 0.30042059952393174
+        },
+        {
+          "repeat": 1,
+          "implementation": "graph_trim0",
+          "ms": 0.31599345384165645
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim0",
+          "ms": 0.3160843043588102
+        },
+        {
+          "repeat": 2,
+          "implementation": "graph_trim1",
+          "ms": 0.29963094275444746
+        },
+        {
+          "repeat": 2,
+          "implementation": "eager",
+          "ms": 1.2234722496941686
+        },
+        {
+          "repeat": 2,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.47936304472386837
+        },
+        {
+          "repeat": 3,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.47953359317034483
+        },
+        {
+          "repeat": 3,
+          "implementation": "eager",
+          "ms": 1.2282486539334059
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim1",
+          "ms": 0.30013449722900987
+        },
+        {
+          "repeat": 3,
+          "implementation": "graph_trim0",
+          "ms": 0.3147271927446127
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim0",
+          "ms": 0.3143116016872227
+        },
+        {
+          "repeat": 4,
+          "implementation": "graph_trim1",
+          "ms": 0.298059347551316
+        },
+        {
+          "repeat": 4,
+          "implementation": "eager",
+          "ms": 1.1822582455351949
+        },
+        {
+          "repeat": 4,
+          "implementation": "serial_legacy_walk",
+          "ms": 0.47857214231044054
+        }
+      ],
+      "median_ms": {
+        "graph_trim0": 0.31599345384165645,
+        "graph_trim1": 0.30013449722900987,
+        "eager": 1.2227935600094497,
+        "serial_legacy_walk": 0.47936304472386837
+      }
+    }
+  ],
+  "error": "KeyError: 'u_valid'"
+}
