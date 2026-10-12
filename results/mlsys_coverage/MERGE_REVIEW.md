@@ -4,6 +4,8 @@
 
 **변경을 두 종류로 나눠 검토하려면 24절부터 읽는다 (2026-10-12).** 기존 논문 경로에 영향을 주는 수정·최적화와 기능 확장을 구분하고, 정확성·측정·정책 변경을 섞지 않는 검토 순서를 정리했다. 기존 기록과 코드 대조에 따른 문서 보완이며 GPU 실험 재개나 runtime 변경은 없다.
 
+**사용자 항목별 승인 상태는 25절을 따른다 (2026-10-12).** 현재 승인된 것은 1번 실제 온도 후보 점수뿐이다. 2–7번은 설명·증거 검토 중이며 채택/병합 승인으로 간주하지 않는다. 이전 절의 적용 추천은 사용자 승인을 대신하지 않는다. 이미 있는 systems 코드를 되돌린다는 뜻도 아니다.
+
 **최신 상태 (2026-10-08): Round5 실험·추가 최적화·검증 완료.** 이번 실제 온도 root 수식 통합·독립 SSD 튜닝·B1/B8 공동 파라미터 탐색과 결론은 **20절**, 최종 수치와 다른 서버의 재현 절차는 **20.4–20.7절**을 따른다. 완료487실행/691cell, 그중 full480실행70개이며 실패4시도도 보존했다. **19절은 완료된 Round4의94개 실행 기록**이다. 0–18절은 round3까지의 역사적 기록이다. 부록의 commit/file 목록은 Round5 runtime 기준으로 갱신했다.
 
 **2026-10-09 추가:** 기존 논문 표시 방법을 적용한 전체 성능표·파라미터·breakdown 그림은 **20.8절**과 [paper_view/REPORT.md](round5/paper_view/REPORT.md)에 정리했다. 실험 결과의 재표시이며 새 GPU 실행이나 runtime 수정은 없다.
@@ -1085,6 +1087,85 @@ Colocated target/draft의 RMSNorm 상수 capture 수정(`13f42d8`)도 공통 실
 - B8 최종 TPS는 이번 두 모델 모두 SSD가 더 높았다. B>1 기능·최적화를 구현했다는 말이 SSD 대비 우위를 입증했다는 뜻은 아니다.
 - Mixed-miss AR의 unified-tree 이식 및 자동 선택 기준의 구현/검증은 남아 있다. 이는 실제 후속 작업이며 이미 완료한 옵션으로 켤 수 없다.
 - 이번 문서 갱신은 분류·검토 안내만 추가했다. 서버 점검으로 중단한 GPU 캠페인을 재개하지 않았다.
+
+**25. 사용자 항목별 승인과 질의 검토 (2026-10-12)**
+
+현재 systems branch에는 아래 구현이 이미 들어 있다. 사용자는 이를 하나씩 검토한 뒤 OK한 항목만 진행하도록 요청했다. 이 절은 **논문 코드로 채택·병합할 승인 상태**를 기록한다. 이번 작업은 기존 source·저장된 측정값의 CPU 재집계와 문서화이며, runtime 수정/병합/되돌리기/GPU 실행은 하지 않았다.
+
+| 번호 | 항목 | 사용자 승인 상태 |
+|---|---|---|
+| 1 | 후보 점수에 실제 온도 적용 | **승인**. T>0에서 proxy에는 target T, draft q에는 실제 draft T를 반영. 두 T가 같으면 같은 T. T0의 soft-budget 점수 의미는 greedy 규칙과 구분 |
+| 2 | Tree G>M 선택 | 검토 중. 정확성 수정의 근거와 실제 선택 정책 변경을 설명한 뒤 결정 |
+| 3 | TPS 토큰 집계 | 검토 중. SSD 공통성 및 과거 긴 입력 필터와의 관계 확인 |
+| 4 | Verification 실행 최적화 | 검토 중. Chain/tree, acceptance/전체 verification, B1/B8의 증거를 구분 |
+| 5 | KV·요청 상태 | 검토 중. Backend와 prefix 재사용/preemption 등 조건별 필요성 확인 |
+| 6 | Scheduler B 제한 | 검토 중. Decode batch 상한에서 resident 상한으로의 실험 조건 변경 |
+| 7 | Tree wire token 필드 확대 | 검토 중. 큰 vocab 지원 목적, payload·pack 연산·실측 한계 확인 |
+
+**25.1 Tree G>M: 정확성 문제를 해결하기 위해 선택 정책을 바꾼 것**
+
+- G는 생성한 continuation tree 노드 수, M은 target에 보내 검증할 노드 상한이다. 예를 들어 G=8, M=4이면 생성한 tree의 일부만 검증한다.
+- 이전 코드는 샘플된 노드의 누적 draft confidence를 보고 M-node subtree를 골랐다. Ancestor/sibling closure를 보존해도 어떤 토큰이 살아남는지가 그 토큰의 값에 의존하므로, verifier가 사용하는 원래 parent q와 선택 후 proposal 법칙이 달라질 수 있다.
+- 따라서 단순 계산 최적화가 아니다. **이전 선택 알고리즘의 정확성 문제를, 생성 순서의 앞 M개를 보존하는 정책으로 바꿔 해결**했다. P1 precompute/on-demand와 P2에 같은 규칙을 적용하고 parent-q 행을 대응시켰다. G=M은 기존 zero-copy 경로다.
+- `round4/audit_proposal.json`의 유한 분포 전수 감사에서 p=(.4,.3,.3), q=(.6,.25,.15)일 때 옛 production helper는 최종 (.4,.31875,.28125), fixed prefix는 p와 일치했다. 실제 LLM bias의 빈도/크기를 측정한 값은 아니다.
+- 이 수정은 reach/gain/frontier의 AL 개선과 별도다. 더 높은 점수로 M개를 고르는 능력을 유지한 수정이라고 설명하지 않는다. 기존 논문의 G/M 설정을 확인하기 전에는 실제 논문 결과에 영향을 줬다고 단정하지 않는다.
+
+**25.2 TPS 집계: DUET 전용이 아닌 공통 speculative 경로**
+
+- `SpecDecodeStep.run`의 이전 반환은 `sum(len(new_suffix))`, 수정 후는 scheduler가 실제 반영한 `sum(seq.num_tokens-before_num_tokens)`다. `LLMEngine`의 speculate 경로가 이 클래스를 사용하므로 이 저장소의 SD/SSD/DUET에 공통이다. 이번 SSD baseline에도 수정된 공통 경로를 사용했다. 별도 upstream checkout으로 옛 논문을 실행했다면 해당 runner는 따로 확인한다.
+- 수락 5개/남은 예산 2개라면 실제 반환 2개를 세야 한다. EOS 뒤 남은 수락 토큰도 같은 문제다. 기존 counter 사용 시 과대평가 가능성이 있다.
+- `ssd/docs/duet/00-server-setup.md`의 사후 처리에는 `prefill + 1024 <= 2048`인 질문만 남기는 context-safe 필터가 기록돼 있다. 이는 긴 입력과 TinyLlama의 context 한도를 위한 것이며, EOS 이후나 max-new-token 경계에서 버린 토큰의 집계 수정이 아니다. 짧은 입력도 출력 상한/EOS에 도달하므로 자동 해결되지 않는다.
+- 원 논문의 외부 `question_level_metrics.py`/runner 전체는 여기서 복원하지 못했다. 이미 실제 출력 길이로 집계했거나 해당 경계를 제거했다면 그 수치는 이 오류에 영향이 없을 수 있다. 입력 길이 필터만 보고 무영향을 확정하지 않는다.
+- 실제 반환량 계수와 경계 제외 AL*/TPS*는 별개 결정이다. 후자는 AL에서 cap/clip terminal event, TPS에서 해당 batch-step의 token/time을 함께 제외하며 원시 TPS도 보존한다. 사용자 3번 승인이 두 기준 모두에 자동으로 주어졌다고 간주하지 않는다.
+
+**25.3 Verification latency: chain 개선은 확인, tree 전체 개선으로 일반화 불가**
+
+`verification`을 acceptance/correction 계산과 target forward 등을 포함한 전체 verifier 시간으로 나눈다. 다음은 GPU 재실행 없이 기존 JSON을 재집계한 값이다.
+
+Chain microbenchmark: `verify_fast_microbench.json`, RTX4090, PyTorch2.8.0+cu128, BF16 synthetic logits, K=4, T=.7. Reference/optimized 실행 순서를 번갈아 세 번 측정한 per-call 평균들의 중앙값이다. GPU synchronize를 포함한 wall timing이며 target forward/모델 출력은 포함하지 않는다. Reference는 그 당시 일반 verifier로, 원 논문 commit 전체와의 A/B가 아니다.
+
+| vocab | B | 일반 verifier ms | fast verifier ms | 감소율 |
+|---|---:|---:|---:|---:|
+| 32000 | 1 | .846403 | .395880 | 53.23% |
+| 128256 | 1 | .862039 | .378479 | 56.09% |
+| 32000 | 8 | .868802 | .399913 | 53.97% |
+| 128256 | 8 | .968866 | .387264 | 60.03% |
+
+실제 chain B8/T.7의 `profiles/llama*_profile_{graph,fast}/*target*.json`에서 `label=chain_accept` 전체 event의 CUDA-event 중앙값도 L2 1.425104→.732736ms, L3 1.404432→.709216ms였다. 각각292/182 event이며 source revision·계측을 포함한 진단 대조다. 고정 입력 isolated microbenchmark와 구분하고 전체 TPS 감소율로 해석하지 않는다. 초기 `verify_microbench.json`의 첫 최적화만으로는 B1/T.7이 빨라지지 않았고, 후속 fast 경로 수치를 그 초기 변경의 효과로 소급하지 않는다.
+
+Tree: `round3/SUMMARY.json`의 `comparison`, B8/T.7, 같은 GPU pair의 full480 두 번째 pass(seed2027). Model forward는 양쪽 모두 graph이며, root/arena/accept 보조 graph OFF→ON의 **전체 target_verify_times 중앙값**이다.
+
+| 모델 | 보조 graph OFF ms | ON ms | 변화 |
+|---|---:|---:|---:|
+| Llama2 | 27.029237 | 24.767773 | 8.37% 감소 |
+| Llama3 | 34.885494 | 36.358350 | 4.22% 증가 |
+
+Tree graph는 RNG 소비 순서와 실행 궤적도 달라 동일 토큰·동일 shape 입력의 accept-only A/B가 아니다. 위 값은 실제 측정한 실행 경로의 관측값이지 순수 graph kernel 효과 추정치가 아니다. L3의 전체 TPS가 상승한 것과 verification 중앙값이 증가한 것은 모순이 아니다. TPS에는 draft 대기·AL 등도 들어 있고 중앙값과 총시간도 다르다. Tree packing은 이 대조에서 더 느렸으며 기본 OFF다. 이후 fused/bulk와 ladder trim의 TPS 이득을 B1 tree acceptance 지연 감소 수치로 바꿔 말하지 않는다.
+
+**미확인:** 원 논문 B1/T>0 tree에서 동일 tree·logits·난수·backend/TP를 고정한 accept-only 및 전체 verification의 전후 대조. 따라서 4번을 'tree/chain 모두 latency 감소 검증 완료'로 승인 요청하지 않는다. 다음 검증은 이 범위를 분리하고 GPU 실험 재개·채택은 사용자 결정 후 진행한다.
+
+**25.4 KV와 Scheduler: 일반 동작이 아닌 발생 조건을 먼저 확인**
+
+- KV는 attention의 KV 저장소이며 DUET 후보 cache 자체를 교체한 작업이 아니다. B>1·prefix 재사용·메모리 압박까지 검증 범위를 넓히며 공통 코드의 조건부 문제를 점검했다. 기존 B1 일반 생성이 잘됐다는 사실과 양립한다.
+- Paged prefill: SGL 경로에서 물리 page를 연속 K/V처럼 펼치던 처리를 요청별 page table로 교체. 예를 들어 page [7,2]를 읽어야 할 요청을 [0,1] 순서로 읽으면 다른 문맥이다. 기존 논문 FlashInfer의 `run_paged` 경로와 구분한다.
+- Fully cached prompt: KV만으로 다음 vocabulary logits를 얻을 수 없어 마지막 query 하나를 다시 계산. Block-aligned prompt 전체가 cache hit인 조건이다.
+- Preemption: prompt100+생성30을 재-prefill해도 원래 출력 예산64 중 남은34를 유지. 생성30을 새 prompt로 세어 출력 경계/예산을 초기화하면 안 된다.
+- Completed-block hash: block j의 hash를 마지막 page가 아니라 `block_table[j]`에 기록. 현재 생성이 정상이어도 잘못된 메타데이터를 나중에 prefix cache로 재사용하면 문제가 될 수 있다.
+- Scheduler: 옛 코드도 **한 decode forward의 요청 수**는 B로 제한했다. 새 제한은 prefill 후 KV를 점유하는 resident 요청 수까지 B로 묶는다. Corpus를 한꺼번에 넣으면 기존에는 token/KV budget 안에서 B보다 많은 요청을 prefill할 수 있었다. 이는 자원 압박을 통제하고 이번 batch sweep의 의미를 고정하기 위한 **serving 실험 조건 변경**이지, decode batch 상한을 처음 구현하거나 기존 scheduler를 무조건 잘못된 것으로 판정한 것이 아니다.
+- B1에서 한 요청이 끝난 뒤 다음 요청을 넣는다면 scheduler의 이 추가 조건은 실질 차이가 없다. B1이어도 여러 요청을 대기열에 미리 넣었다면 prefill·KV·cache 재사용·RNG 호출 순서가 달라질 수 있어 완전 동일을 보장하지 않는다. 원 외부 runner의 요청 제출 방식을 확인해야 한다.
+
+**25.5 Tree wire: 기존 int64의 빈 비트 사용, 단독 latency 실측은 없음**
+
+| 필드 | 이전 | 현재 |
+|---|---|---|
+| token ID | bit0–14 (15bit) | bit0–31 (32bit) |
+| quantized log10 P_iv | bit15–30 (16bit) | bit32–47 (16bit) |
+| format marker | bit31 | bit48 |
+| 후보당 packed 값 | int64 1개 (8byte) | int64 1개 (8byte) |
+
+- Llama3의 128256 vocabulary 등을 지원하려는 변경이다. 예전에도 전체 저장/통신 dtype은 int64였으며, 빈 상위 비트를 활용했다. 점수 정밀도·양자화 범위, pack/unpack의 연산 종류, NCCL 호출 수와 이 필드의 전송량은 유지한다. Token 수 N/다른 wire 항목이 같을 때 통신 모델 `L + 8N/BW`의 비용은 같다.
+- Bit shift 상수만 커졌다는 이유로 통신량이 늘지는 않는다. 실제 hardware latency가 정확히 같다는 보장은 별도이며 이 변경만의 A/B 통신 microbenchmark는 없다. 큰 vocab의 softmax/logit/parent-q 비용 증가를 이 bit-pack 변경 때문이라고 해석하지 않는다.
+- Old marker를 거부하므로 sender/receiver를 함께 갱신해야 한다. `TestPivPack`에는 32768,128255,151935,2**32-1 및 old-wire 거부 검사가 있다. 같은 지원 범위의 token/score에 대한 의미는 유지한다.
 
 **부록 A. Systems branch commit 전체 — 논문 기준 이후**
 
