@@ -1,0 +1,171 @@
+{
+  "model_runs": 34,
+  "full_480_runs": 11,
+  "native_population_groups_checked": 2283,
+  "final_tests": 205,
+  "failed": 0,
+  "skipped": 0,
+  "post_logging_model_outputs_and_al_hit_match_initial_smoke": true,
+  "primary_timed_runtime": "c1f96c1",
+  "final_runtime": "e4b080e",
+  "all_campaigns_complete": true,
+  "comparisons": {
+    "tree_r0:paper->before": {
+      "tps_pct": 3.206126357987471,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        3.0691413163985724,
+        3.322891024432902
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": -0.5362463032872924
+    },
+    "tree_r0:before->after": {
+      "tps_pct": -0.08376650210040193,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        -0.22818737442665132,
+        0.05719065531492316
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": 0.018424232338436042
+    },
+    "tree_r0:paper->after": {
+      "tps_pct": 3.119674195984068,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        2.974888430727287,
+        3.240936397532565
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": -0.5178220709488564
+    },
+    "tree_r1:paper->before": {
+      "tps_pct": 2.6035427460511684,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        2.441211592527816,
+        2.766965812136275
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": -0.44177339013549854
+    },
+    "tree_r1:before->after": {
+      "tps_pct": -2.081999760561004,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        -2.270703096393788,
+        -1.904469027811189
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": 0.16985764063389652
+    },
+    "tree_r1:paper->after": {
+      "tps_pct": 0.46733723175127473,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        0.30288882136110806,
+        0.6410607462856677
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": -0.271915749501602
+    },
+    "chain:paper->before": {
+      "tps_pct": 2.529604184745393,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        2.448647092465094,
+        2.6077526918394978
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": -0.5536353745672891
+    },
+    "chain:before->after": {
+      "tps_pct": 0.700552188075565,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        0.5753525894577055,
+        0.8071474836359522
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": -0.06242995625256498
+    },
+    "chain:paper->after": {
+      "tps_pct": 3.247877570286839,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        3.131853077954104,
+        3.3327510210153752
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": -0.616065330819854
+    },
+    "temperature:before->after": {
+      "tps_pct": 0.18690443858024874,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        -1.6741165334001198,
+        2.098858097718123
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": false,
+      "different_outputs": 475,
+      "al_delta": -0.005487627659688243,
+      "hit_delta": 0.011386329714295318,
+      "verify_ms_delta": -0.028635972985284752
+    },
+    "abba:0_before->1_after": {
+      "tps_pct": -0.1641441503204666,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        -0.3092682044896211,
+        0.016520477385109637
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": 0.017541286585444738
+    },
+    "abba:3_before->2_after": {
+      "tps_pct": 0.006550728757659385,
+      "paired_prompt_bootstrap_tps_pct_ci95": [
+        -0.06521698374792217,
+        0.07630725060530807
+      ],
+      "interpretation": "Prompt resampling interval only; does not quantify run-to-run or hardware uncertainty.",
+      "outputs_equal": true,
+      "different_outputs": 0,
+      "al_delta": 0.0,
+      "hit_delta": 0.0,
+      "verify_ms_delta": 0.0018171012265675301
+    }
+  },
+  "max_gpu_temperature": 72.0
+}

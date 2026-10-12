@@ -1,0 +1,34 @@
+[
+  {
+    "name": "profile_before",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "1",
+      "--batch",
+      "1",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "8-15,40-47",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-ver01-common-base",
+      "PAPER_BASELINE": "0",
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/common/profiles/profile_before"
+    }
+  }
+]

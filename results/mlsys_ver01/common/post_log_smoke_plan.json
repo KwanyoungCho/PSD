@@ -1,0 +1,31 @@
+[
+  {
+    "name": "post_log_smoke",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "1",
+      "--batch",
+      "1",
+      "--limit",
+      "8"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  }
+]

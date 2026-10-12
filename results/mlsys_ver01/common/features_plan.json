@@ -1,0 +1,209 @@
+[
+  {
+    "name": "tree_t07",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "0.7",
+      "--batch",
+      "1",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "tree_g_gt_m",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "1",
+      "--batch",
+      "1",
+      "--limit",
+      "24",
+      "--p1-verify",
+      "4",
+      "--p2-verify",
+      "2"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "tree_t0",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "0",
+      "--batch",
+      "1",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "chain_b4",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "chain",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "1",
+      "--batch",
+      "4",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "ssd_b4",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "ssd",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "1",
+      "--batch",
+      "4",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "sd_b4",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "sd",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "1",
+      "--batch",
+      "4",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "ar_b4",
+    "arm": "base",
+    "bench": "mlsys_ver01_common.py",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "ar",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "1",
+      "--batch",
+      "4",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "24-31,56-63",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  }
+]

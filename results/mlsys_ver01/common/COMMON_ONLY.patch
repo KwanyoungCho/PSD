@@ -1,0 +1,845 @@
+diff --git a/ssd/bench/bench.py b/ssd/bench/bench.py
+index 70b6b57..c7e9b26 100644
+--- a/ssd/bench/bench.py
++++ b/ssd/bench/bench.py
+@@ -500,23 +500,32 @@ def log_wandb_metrics(args, metrics, total_tokens, total_time, throughput, model
+ 
+         if "decode_total_time" in metrics and "decode_total_tokens" in metrics:
+             if metrics["decode_total_time"] > 0:
+-                wandb_metrics["metrics_decode_throughput"] = metrics["decode_total_tokens"] / metrics["decode_total_time"]
++                wandb_metrics["raw_decode_throughput"] = metrics["decode_total_tokens"] / metrics["decode_total_time"]
+ 
+         if "target_step_times" in metrics and metrics["target_step_times"]:
+             avg_target_step_time_ms = sum(metrics["target_step_times"]) * 1000 / len(metrics["target_step_times"])
+             wandb_metrics["metrics_avg_target_step_time_ms"] = avg_target_step_time_ms
+ 
+         if "cache_hits" in metrics and metrics["cache_hits"]:
+-            wandb_metrics["metrics_avg_cache_hits"] = sum(metrics["cache_hits"]) / len(metrics["cache_hits"])
++            wandb_metrics["raw_avg_cache_hits"] = sum(metrics["cache_hits"]) / len(metrics["cache_hits"])
+ 
+         if "accepted_suffix_lens_with_recovery" in metrics and metrics["accepted_suffix_lens_with_recovery"]:
+-            wandb_metrics["metrics_avg_accepted_suffix_lens_with_recovery"] = sum(metrics["accepted_suffix_lens_with_recovery"]) / len(metrics["accepted_suffix_lens_with_recovery"])
++            wandb_metrics["raw_avg_accepted_suffix_lens_with_recovery"] = sum(metrics["accepted_suffix_lens_with_recovery"]) / len(metrics["accepted_suffix_lens_with_recovery"])
+             wandb_metrics["metrics_accepted_suffix_lens_with_recovery_histogram"] = wandb.Histogram(metrics["accepted_suffix_lens_with_recovery"])
+ 
+         if "accepted_suffix_lens_on_hit" in metrics and metrics["accepted_suffix_lens_on_hit"]:
+             wandb_metrics["metrics_avg_accepted_suffix_lens_on_hit"] = sum(metrics["accepted_suffix_lens_on_hit"]) / len(metrics["accepted_suffix_lens_on_hit"])
+             wandb_metrics["metrics_accepted_suffix_lens_on_hit_histogram"] = wandb.Histogram(metrics["accepted_suffix_lens_on_hit"])
+ 
++    population = metrics.get("performance", {}) if metrics else {}
++    if population:
++        for metric, key in (("metrics_decode_throughput", "tps"),
++                            ("metrics_avg_cache_hits", "cache_hit"),
++                            ("metrics_avg_accepted_suffix_lens_with_recovery", "al"),
++                            ("metrics_included_steps", "included_steps"),
++                            ("metrics_excluded_steps", "excluded_steps")):
++            wandb_metrics[metric] = population[key]
++        wandb_metrics["performance_population"] = population["policy"]
+     wandb.log(wandb_metrics)
+ 
+ 
+diff --git a/ssd/ssd/config.py b/ssd/ssd/config.py
+index 93c1d53..b931d2f 100644
+--- a/ssd/ssd/config.py
++++ b/ssd/ssd/config.py
+@@ -695,11 +695,11 @@ class Config:
+                         f"confidence|level|frontier; "
+                         f"got {self.duet_tree_policy!r}")
+                 if self.duet_tree_enabled:
+-                    # D2 pack 가드: 토큰이 비트 0-14를 넘으면 안 됨.
+-                    if self.hf_config.vocab_size > 32768:
++                    # Packed token IDs use uint32; wire payload remains int64.
++                    if self.hf_config.vocab_size > 2**32:
+                         raise ValueError(
+-                            f"DUET tree pack requires vocab_size <= 32768 "
+-                            f"(D2 — token bits 0-14); got "
++                            f"DUET tree pack requires vocab_size <= 2**32 "
++                            f"(token bits 0-31); got "
+                             f"{self.hf_config.vocab_size}")
+                     if self.duet_tree_fanout_policy not in (
+                             "backbone", "ctensor"):
+diff --git a/ssd/ssd/engine/block_manager.py b/ssd/ssd/engine/block_manager.py
+index 1b28ca8..159ada6 100644
+--- a/ssd/ssd/engine/block_manager.py
++++ b/ssd/ssd/engine/block_manager.py
+@@ -126,6 +126,16 @@ class BlockManager:
+                 self.hash_to_block_id[h] = block_id
+             block_table.append(block_id)
+ 
++        # A fully cached, block-aligned prompt still needs one forward to
++        # produce next-token logits. KV alone does not contain the lm_head
++        # result; an empty query either indexes the preceding row or crashes.
++        if self.is_draft:
++            seq.num_draft_cached_tokens = min(seq.num_draft_cached_tokens,
++                                              seq.num_tokens - 1)
++        else:
++            seq.num_cached_tokens = min(seq.num_cached_tokens,
++                                       seq.num_tokens - 1)
++
+ 
+     def deallocate(self, seq: Sequence):
+         block_table = seq.draft_block_table if self.is_draft else seq.block_table
+@@ -174,4 +184,3 @@ class BlockManager:
+             new_blocks = self._allocate_n_blocks(needed)
+             for block in new_blocks:
+                 block_table.append(block.block_id)
+-
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index eb7fb20..7a3e80e 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -767,72 +767,28 @@ class DraftRunner(ModelRunner):
+         return current
+ 
+     def _precompute_p1_rerank_views(self, views, roots: int):
+-        """Move unchanged P1 reranking from a future hit into P1 slack.
++        """Invalidate the old post-sampling confidence-selection cache.
+ 
+-        This is deliberately a scheduling optimization, not a new selection
+-        policy.  The batched CUDA helper implements the same cumulative path
+-        score and prerequisite closure as ``rerank_tree_indices``; the chosen
+-        row is still copied to CPU and validated before serving.
++        G>M now serves a generation-order prefix. Confidence-based pruning
++        conditions which proposals survive, invalidating original parent q.
++        Equal G=M retains its existing zero-copy fast path.
+         """
+         self._p1_rerank_cache = None
+-        generated_cap = int(self.config.duet_p1_tree_max_nodes)
+-        verify_cap = int(self.config.duet_p1_tree_verify_nodes)
+-        if (os.environ.get("SSD_P1_RERANK_PRECOMPUTE", "1") != "1"
+-                or verify_cap == generated_cap or int(roots) < 1):
+-            return
+-
+-        from ssd.engine.helpers.cudagraph_helpers import (
+-            duet_record as _mr_pre, duet_close as _mc_pre)
+-        from ssd.engine.helpers.tree_rerank_gpu import \
+-            precompute_reranked_tree_views_fused_gpu
+-
+-        wire_cap = int(self.config.duet_tree_wire_nodes)
+-        label = "p1_rerank_precompute"
+-        event = _mr_pre(label)
+-
+-        gpu = self._ensure_p1_rerank_precompute_buf(roots, wire_cap)
+-        gpu_label = "p1_rerank_precompute_gpu"
+-        gpu_event = _mr_pre(gpu_label)
+-        precompute_reranked_tree_views_fused_gpu(
+-            views["tok"][:roots], views["parent_local"][:roots],
+-            views["sib_order"][:roots], views["raw_q"][:roots],
+-            views["parent_q_ref"][:roots],
+-            views["parent_q_cells"][:roots], views["valid"][:roots],
+-            verify_cap=verify_cap, wire_cap=wire_cap, output_buffers=gpu)
+-        _mc_pre(gpu_label, gpu_event)
+-
+-        compact_names = (
+-            "tok", "parent_local", "sib_order", "raw_q",
+-            "parent_q_ref", "parent_q_cells", "valid", "u_valid")
+-        compact_views = {
+-            name: gpu[name][:roots] for name in compact_names
+-        }
+-        # Full-vocabulary logits remain in the P1 executor's persistent
+-        # matrix.  Reranking only changes the tiny row-id topology.
+-        compact_views["cell_logits"] = views["cell_logits"]
+-        self._p1_rerank_cache = {
+-            "source_views": views,
+-            "roots": int(roots),
+-            "views": compact_views,
+-            "packed_gpu": gpu["packed"][:roots],
+-            "original_valid": views["valid"][:roots],
+-        }
+-        _mc_pre(label, event)
+ 
+     def _rerank_tree_hit_view(self, views, root: int, phase: int):
+         """Return the one-root view actually sent to target verification.
+ 
+         Generation and verification limits are intentionally separate.  The
+         executor may search a wider tree for every cache root, but once the
+-        matching root is known this method keeps only the highest cumulative-
+-        confidence subtree that satisfies DUET's parent and ordered-sibling
+-        prerequisites.  Default equal limits take the old zero-copy path.
++        matching root is known this method keeps a generation-order prefix.
++        This preserves parent and ordered-sibling prerequisites without
++        conditioning inclusion on the sampled token score.  Default equal limits take the old zero-copy path.
+ 
+         Returns ``(served_view, served_root, packed_gpu, packed_cpu,
+         parsed_cpu, original_valid)``.
+         """
+         from ssd.engine.helpers.p2_tree import (
+-            pack_tree_ints, parse_tree_ints, rerank_tree_indices,
++            pack_tree_ints, parse_tree_ints,
+             validate_tree_ints)
+         from ssd.engine.helpers.cudagraph_helpers import (
+             duet_record as _mr_rerank, duet_close as _mc_rerank)
+@@ -857,40 +813,6 @@ class DraftRunner(ModelRunner):
+             _mc_rerank(_equal_label, _ev_equal)
+             return views, root, packed, packed_cpu, parsed, int(parsed["valid"])
+ 
+-        # Fast path: P1 prepared this exact subtree after generation, while
+-        # it was waiting for the target's proxy.  Identity-check the source
+-        # view so an executor replay can never serve stale topology.
+-        if (phase == 1
+-                and os.environ.get("SSD_P1_RERANK_PRECOMPUTE", "1") == "1"):
+-            # Runtime initialises this field in ``__init__``, but keep the
+-            # hit-time helper robust for lightweight diagnostic/test runners
+-            # and partially constructed objects as well.  Absence simply
+-            # means the ordinary on-demand rerank path must be used.
+-            cache = getattr(self, "_p1_rerank_cache", None)
+-            if (cache is not None and cache["source_views"] is views
+-                    and 0 <= int(root) < int(cache["roots"])):
+-                root = int(root)
+-                _served_label = "tree_hit_pack_served_p1"
+-                _ev_served = _mr_rerank(_served_label)
+-                packed = cache["packed_gpu"][root]
+-                packed_cpu = packed.detach().cpu()
+-                parsed = parse_tree_ints(packed_cpu, wire_cap)
+-                validate_tree_ints(
+-                    parsed, wire_cap, self.hf_config.vocab_size)
+-                if int(parsed["valid"]) < 1:
+-                    raise RuntimeError(
+-                        "P1 rerank produced an empty served subtree")
+-                # Generated width is diagnostic-only.  Avoid a second scalar
+-                # D2H on production runs; exact traces retain it.
+-                original_valid = int(parsed["valid"])
+-                if os.environ.get("SSD_TREE_TOPO_TRACE", ""):
+-                    original_valid = int(cache["original_valid"][root])
+-                _mc_rerank(_served_label, _ev_served)
+-                return (
+-                    cache["views"], root,
+-                    packed, packed_cpu, parsed, original_valid,
+-                )
+-
+         if self._tree_compact_view is None:
+             raise RuntimeError("tree compact buffers were not preallocated")
+ 
+@@ -910,11 +832,9 @@ class DraftRunner(ModelRunner):
+         _select_label = f"tree_hit_select_subtree_p{phase}"
+         _ev_select = _mr_rerank(_select_label)
+         original_valid = int(full["valid"])
+-        raw_cpu = views["raw_q"][root, :original_valid] \
+-            .detach().float().cpu().tolist()
+-        keep = rerank_tree_indices(
+-            full["parent_local"][:original_valid],
+-            full["sib_order"][:original_valid], raw_cpu, verify_cap)
++        # Generation order is topological and sibling-prefix closed. Do not
++        # use realized token scores to decide whether to retain a proposal.
++        keep = list(range(min(original_valid, verify_cap)))
+         n = len(keep)
+         if n < 1 or n > verify_cap:
+             raise RuntimeError(
+diff --git a/ssd/ssd/engine/helpers/p2_tree.py b/ssd/ssd/engine/helpers/p2_tree.py
+index 5923ca0..58f5f4a 100644
+--- a/ssd/ssd/engine/helpers/p2_tree.py
++++ b/ssd/ssd/engine/helpers/p2_tree.py
+@@ -18,7 +18,10 @@ from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
+ 
+ def rerank_tree_indices(parent_local, sibling_order, raw_q,
+                         max_nodes: int) -> list[int]:
+-    """Select a confidence-ranked, lossless-safe subtree.
++    """Diagnostic confidence-ranked subtree, not a lossless serving policy.
++
++    Post-sampling score selection changes the proposal law. Production uses
++    a generation-order prefix when G>M; retain this helper for diagnostics.
+ 
+     EAGLE-2 ranks final draft nodes by cumulative draft confidence.  DUET's
+     temperature>0 verifier has one extra constraint: siblings are ordered
+@@ -1041,7 +1044,8 @@ def tree_policy_b_ladder_fixed(tokens, p_rows, q_rows, child,
+ 
+ def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
+                                 wire_n: int, depth_steps: int,
+-                                top_k: int | None = None):
++                                top_k: int | None = None, *,
++                                target_temps=1.0, draft_temps=1.0):
+     """Fixed-shape, capture-safe tree proxy candidate computation.
+ 
+     ``top_k`` preserves the established chain Policy-B score scale: each
+@@ -1051,8 +1055,9 @@ def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
+     because contexts with different top-k retained mass receive different
+     relative scales.
+     """
+-    p_rows = torch.softmax(exit_logits.float(), dim=-1)
+-    q_rows = torch.softmax(q_logits.float(), dim=-1)
++    from ssd.engine.helpers.proxy_temperature import probabilities
++    p_rows = probabilities(exit_logits[None], target_temps)[0]
++    q_rows = probabilities(q_logits[None], draft_temps)[0]
+     _alpha, term, resid = tree_policy_b_ladder_fixed(
+         tokens, p_rows, q_rows,
+         topology["child"], topology["child_valid"],
+@@ -1123,6 +1128,10 @@ class TreeProxyCUDAGraph:
+ 
+         # Warm every op before capture; allocation/compilation is forbidden
+         # inside a first production replay.
++        self.tt = torch.ones(1, dtype=torch.float32, device=self.device)
++        self.dt = torch.ones_like(self.tt)
++        self._temperature_values = (1.0, 1.0)
++
+         warm = torch.cuda.Stream(device=self.device)
+         warm.wait_stream(torch.cuda.current_stream(self.device))
+         with torch.cuda.stream(warm):
+@@ -1130,7 +1139,7 @@ class TreeProxyCUDAGraph:
+                 tree_proxy_candidates_fixed(
+                     self.in_exit, self.in_q, self.in_tokens,
+                     self.topology, self.wire_n, self.depth_steps,
+-                    self.top_k)
++                    self.top_k, target_temps=self.tt, draft_temps=self.dt)
+         warm.synchronize()
+         # Capture failures leave CUDA's graph/RNG bookkeeping unusable for
+         # ordinary eager execution in this process.  Synchronize explicitly
+@@ -1142,7 +1151,7 @@ class TreeProxyCUDAGraph:
+                 tree_proxy_candidates_fixed(
+                     self.in_exit, self.in_q, self.in_tokens,
+                     self.topology, self.wire_n, self.depth_steps,
+-                    self.top_k)
++                    self.top_k, target_temps=self.tt, draft_temps=self.dt)
+ 
+     @torch.inference_mode()
+     def prepare_topology(self, par, sib):
+@@ -1177,7 +1186,7 @@ class TreeProxyCUDAGraph:
+         self.valid = self.nv
+ 
+     @torch.inference_mode()
+-    def replay(self, exit_logits, q_logits, tokens):
++    def replay(self, exit_logits, q_logits, tokens, target_temps=1.0, draft_temps=1.0):
+         """Copy dynamic values, replay, and return persistent wire buffers."""
+         valid = int(self.valid)
+         if exit_logits.shape[0] != valid + 1 \
+@@ -1186,6 +1195,8 @@ class TreeProxyCUDAGraph:
+                 "tree proxy graph input mismatch: "
+                 f"valid={valid} exit={tuple(exit_logits.shape)} "
+                 f"q={tuple(q_logits.shape)} tok={tuple(tokens.shape)}")
++        from ssd.engine.helpers.proxy_temperature import update_graph_temperatures
++        update_graph_temperatures(self, target_temps, draft_temps)
+         self.in_exit.zero_()
+         self.in_q.zero_()
+         self.in_tokens.zero_()
+@@ -1199,7 +1210,8 @@ class TreeProxyCUDAGraph:
+ 
+ def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
+                                  top_k: int, wire_n: int,
+-                                 pack_scores: bool):
++                                 pack_scores: bool, *, target_temps=1.0,
++                                 draft_temps=1.0):
+     """Capture-safe B=1 Policy-B proxy calculation for a chain.
+ 
+     This is the fixed-shape equivalent of
+@@ -1210,8 +1222,9 @@ def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
+     graph replay instead of dozens of small PyTorch launches.
+     """
+     K, V = q_logits.shape
+-    p_e = torch.softmax(exit_logits[:K].float(), dim=-1)
+-    p_d = torch.softmax(q_logits.float(), dim=-1)
++    from ssd.engine.helpers.proxy_temperature import probabilities
++    p_e = probabilities(exit_logits[None, :K], target_temps)[0]
++    p_d = probabilities(q_logits[None], draft_temps)[0]
+     gather = tokens[:K].view(K, 1)
+     p_e_y = p_e.gather(1, gather).squeeze(1)
+     p_d_y = p_d.gather(1, gather).squeeze(1)
+@@ -1229,7 +1242,7 @@ def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
+         h[1:K] = cumprod[:-1] * (1 - accept[1:])
+     h[K] = cumprod[-1]
+ 
+-    p_last = torch.softmax(exit_logits[K].float(), dim=-1)
++    p_last = probabilities(exit_logits[None, K:K+1], target_temps)[0, 0]
+     last_prob, last_id = p_last.topk(int(top_k), dim=-1)
+     last_prob = last_prob / last_prob.sum().clamp(min=1e-10)
+     correction_prob = torch.cat([top_prob, last_prob.unsqueeze(0)], dim=0)
+@@ -1269,13 +1282,18 @@ class ChainProxyCUDAGraph:
+         self.in_tokens = torch.zeros(
+             self.k, dtype=torch.int64, device=self.device)
+ 
++        self.tt = torch.ones(1, dtype=torch.float32, device=self.device)
++        self.dt = torch.ones_like(self.tt)
++        self._temperature_values = (1.0, 1.0)
++
+         warm = torch.cuda.Stream(device=self.device)
+         warm.wait_stream(torch.cuda.current_stream(self.device))
+         with torch.cuda.stream(warm):
+             for _ in range(2):
+                 chain_proxy_candidates_fixed(
+                     self.in_exit, self.in_q, self.in_tokens,
+-                    self.top_k, self.wire_n, self.pack_scores)
++                    self.top_k, self.wire_n, self.pack_scores,
++                    target_temps=self.tt, draft_temps=self.dt)
+         warm.synchronize()
+         torch.cuda.synchronize(self.device)
+         self.graph = torch.cuda.CUDAGraph()
+@@ -1283,10 +1301,11 @@ class ChainProxyCUDAGraph:
+             self.out_pos, self.out_tok, self.out_piv = \
+                 chain_proxy_candidates_fixed(
+                     self.in_exit, self.in_q, self.in_tokens,
+-                    self.top_k, self.wire_n, self.pack_scores)
++                    self.top_k, self.wire_n, self.pack_scores,
++                    target_temps=self.tt, draft_temps=self.dt)
+ 
+     @torch.inference_mode()
+-    def replay(self, exit_logits, q_logits, tokens):
++    def replay(self, exit_logits, q_logits, tokens, target_temps=1.0, draft_temps=1.0):
+         if exit_logits.shape != self.in_exit.shape \
+                 or q_logits.shape != self.in_q.shape \
+                 or tokens.shape[0] < self.k:
+@@ -1294,6 +1313,8 @@ class ChainProxyCUDAGraph:
+                 "chain proxy graph input mismatch: "
+                 f"K={self.k} exit={tuple(exit_logits.shape)} "
+                 f"q={tuple(q_logits.shape)} tok={tuple(tokens.shape)}")
++        from ssd.engine.helpers.proxy_temperature import update_graph_temperatures
++        update_graph_temperatures(self, target_temps, draft_temps)
+         self.in_exit.copy_(exit_logits)
+         self.in_q.copy_(q_logits)
+         self.in_tokens.copy_(tokens[:self.k])
+@@ -1447,16 +1468,18 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
+ 
+ 
+ # --- T2.0: P_iv wire 비트-pack (설계 v6 D2; tree policy != off 게이트) ---
+-PIV_SHIFT = 15                      # 토큰은 비트 0-14 (vocab ≤ 32768 가드)
++PIV_SHIFT = 32                      # uint32 token IDs
+ PIV_BITS = 16                       # log10 P_iv ∈ [-6, 0] 16비트 양자화
+-PIV_VER_BIT = 31                    # 버전/유효 마커
++PIV_VER_BIT = 48                    # v2 format marker; old wire is rejected
+ _PIV_QMAX = (1 << PIV_BITS) - 1
+ _TOK_MASK = (1 << PIV_SHIFT) - 1
+ _LOG_MIN = -6.0
+ 
+ 
+ def pack_piv(chosen_tok: torch.Tensor, piv: torch.Tensor) -> torch.Tensor:
+-    """chosen_tok int64의 비트 15-30에 양자화 log10(P_iv)를 pack.
++    """Pack uint32 tokens (bits0-31) and score (32-47), marker48.
++
++    Both endpoints use v2. Payload remains one int64 per candidate.
+ 
+     양자화 오차 ≤ 반스텝 (6데케이드/65535 ≈ 9.2e-5 데케이드). NCCL
+     호출 수·크기 불변 (같은 int64 자리). 수신측은 dedup **이전**에
+diff --git a/ssd/ssd/engine/helpers/proxy_temperature.py b/ssd/ssd/engine/helpers/proxy_temperature.py
+new file mode 100644
+index 0000000..a9b5fd8
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/proxy_temperature.py
+@@ -0,0 +1,25 @@
++"""Request-temperature scaling for existing cache-root scores, not verification."""
++import torch
++
++
++def probabilities(logits, temperatures=1.0):
++    """[batch, contexts, vocabulary]; T0 uses soft T1 ranking scores."""
++    t = torch.as_tensor(temperatures, dtype=torch.float32, device=logits.device)
++    t = t.reshape(-1).expand(logits.shape[0])
++    t = torch.where(t > 0, t, torch.ones_like(t))
++    return torch.softmax(logits.float() / t[:, None, None], dim=-1)
++
++
++def update_graph_temperatures(graph, target, draft):
++    """Keep captured FP32 buffers live; constant CPU temperatures need no copy."""
++    values = []
++    for index, (buffer, value) in enumerate(((graph.tt, target), (graph.dt, draft))):
++        if torch.is_tensor(value):
++            buffer.copy_(value.reshape(-1))
++            values.append(None)
++        else:
++            value = float(value)
++            if graph._temperature_values[index] != value:
++                buffer.fill_(value)
++            values.append(value)
++    graph._temperature_values = tuple(values)
+diff --git a/ssd/ssd/engine/llm_engine.py b/ssd/ssd/engine/llm_engine.py
+index 51fea30..67fa67e 100644
+--- a/ssd/ssd/engine/llm_engine.py
++++ b/ssd/ssd/engine/llm_engine.py
+@@ -37,6 +37,7 @@ METRICS = {
+     # lets offline analysis map each source decision to the realized output
+     # prefix without adding file I/O to the engine hot path.
+     "phase_events": [],
++    "decode_steps": [],
+     "prefill_total_time": 0,
+     "decode_total_time": 0,
+     "prefill_total_tokens": 0,
+@@ -295,6 +296,13 @@ class LLMEngine:
+         if self.config.greedy_only and (sampling_params.temperature != 0
+                 or sampling_params.draft_temperature not in (None, 0)):
+             raise ValueError("greedy_only requires target and draft temperature zero")
++        # The legacy top-M wire omits the full vocabulary partition at other
++        # temperatures. Reject unsupported requests before launching workers.
++        if (getattr(self.config, "duet_enabled", False) and
++                (self.config.duet_proxy_on_draft or self.config.duet_exit_topm_gather) and
++                (sampling_params.temperature not in (0.0, 1.0) or
++                 sampling_params.draft_temperature not in (None, 0.0, 1.0))):
++            raise ValueError("Legacy raw/top-M proxy requires T1 ranking; use the default full-vocabulary proxy for actual temperatures")
+         if isinstance(prompt, str):
+             prompt = self.tokenizer.encode(prompt)
+         seq = Sequence(prompt, sampling_params)
+@@ -303,6 +311,7 @@ class LLMEngine:
+ 
+     def step(self, step: InferenceStep):
+         t = perf_counter()
++        event_start = len(METRICS["phase_events"])
+         seqs, is_prefill = self.scheduler.schedule()
+         if is_prefill is None:
+             # Scheduler-side context termination: the completed prefix is
+@@ -322,6 +331,12 @@ class LLMEngine:
+         else:
+             METRICS["decode_total_time"] += time_taken
+             METRICS["decode_total_tokens"] += ttl_tokens
++            events = METRICS["phase_events"][event_start:]
++            METRICS["decode_steps"].append(dict(
++                seconds=time_taken, emitted_tokens=ttl_tokens, batch_size=len(seqs),
++                event_start=event_start, event_end=len(METRICS["phase_events"]),
++                output_cap_reached=any(s.num_completion_tokens >= s.max_new_tokens for s in seqs),
++                clipped=any(e.get("clipped", False) for e in events)))
+ 
+         outputs = [(seq.seq_id, seq.completion_token_ids)
+                    for seq in seqs if seq.is_finished]
+@@ -332,6 +347,8 @@ class LLMEngine:
+         return self.scheduler.is_finished()
+ 
+     def log_metrics(self):
++        from ssd.utils.performance import performance_summary
++        selected = performance_summary(METRICS, self.config.max_num_seqs)
+         prefill_time = float(METRICS["prefill_total_time"])
+         decode_time = float(METRICS["decode_total_time"])
+         avg_prefill_throughput = (
+@@ -343,7 +360,9 @@ class LLMEngine:
+         print(
+             f"Final Prefill Throughput: {avg_prefill_throughput:.2f}tok/s", flush=True)
+         print(
+-            f"Final Decode Throughput: {avg_decode_throughput:.2f}tok/s", flush=True)
++            f"Final Decode Throughput: {selected['tps'] or 0.0:.2f}tok/s", flush=True)
++        print(f"[metrics] Performance population: { {k:v for k,v in selected.items() if k != 'included_step_indices'} }", flush=True)
++        print(f"[raw metrics] All decode throughput: {avg_decode_throughput:.2f}tok/s", flush=True)
+         print(
+             f"[metrics] Prefill tokens/time: {METRICS['prefill_total_tokens']} / "
+             f"{METRICS['prefill_total_time']:.6f}s", flush=True)
+@@ -365,8 +384,9 @@ class LLMEngine:
+                     flush=True)
+                 return
+             avg_tokens_per_step = ttl_accepted_with_recovery / ttl_num_spec_steps
+-            print(
+-                f"[metrics] Avg Tokens per step (incl recovery): {avg_tokens_per_step:.2f}", flush=True)
++            selected_al = f"{selected['al']:.2f}" if selected['al'] is not None else "N/A"
++            print(f"[metrics] Avg Tokens per step (incl recovery): {selected_al}", flush=True)
++            print(f"[raw metrics] All-event accepted length: {avg_tokens_per_step:.2f}", flush=True)
+ 
+             total_accepted = ttl_accepted_with_recovery - ttl_num_spec_steps
+             # Split-only K1/K2 mode: effective spec depth is K_max = max(K1, K2),
+@@ -391,8 +411,9 @@ class LLMEngine:
+                 print(
+                     f"[metrics] Avg target verify time (ms): {sum(METRICS['target_verify_times']) * 1000 / len(METRICS['target_verify_times']):.2f}", flush=True)
+             if self.config.draft_async:
+-                print(
+-                    f"[metrics] Avg Cache Hits: {sum(METRICS['cache_hits']) / len(METRICS['cache_hits']):.2f}", flush=True)
++                selected_hit = f"{selected['cache_hit']:.2f}" if selected['cache_hit'] is not None else "N/A"
++                print(f"[metrics] Avg Cache Hits: {selected_hit}", flush=True)
++                print(f"[raw metrics] All-event cache hit: {sum(METRICS['cache_hits']) / len(METRICS['cache_hits']):.2f}", flush=True)
+                 # DUET-only: phase 1 (draft-sourced) vs phase 2 (proxy-sourced) hit split.
+                 # Non-DUET paths leave these zero.
+                 if self.config.duet_enabled and METRICS['phase1_hits']:
+@@ -548,6 +569,8 @@ class LLMEngine:
+         if use_tqdm:
+             pbar.close()
+ 
++        from ssd.utils.performance import performance_summary
++        METRICS["performance"] = performance_summary(METRICS, self.config.max_num_seqs)
+         if not stream_callback:
+             self.log_metrics()
+ 
+diff --git a/ssd/ssd/engine/scheduler.py b/ssd/ssd/engine/scheduler.py
+index 51bd3b6..c8a38b2 100644
+--- a/ssd/ssd/engine/scheduler.py
++++ b/ssd/ssd/engine/scheduler.py
+@@ -166,7 +166,8 @@ class Scheduler:
+         scheduled_seqs = []
+         num_batched_tokens = 0 # within this round only 
+         
+-        while self.waiting: 
++        # Bound the resident request set during prefill as well as decode.
++        while self.waiting and len(self.running) < self.max_num_seqs:
+ 
+             seq = self.waiting[0]
+ 
+@@ -387,9 +388,9 @@ class Scheduler:
+     def _finalize_block(self, block_manager, seq: Sequence, block_table: list[int], block_index: int):
+         """Finalize a block by computing its hash and updating the cache."""
+         token_ids = seq.block(block_index)
+-        prefix = block_manager.blocks[block_table[-2]].hash if len(block_table) > 1 else -1
++        prefix = block_manager.blocks[block_table[block_index - 1]].hash if block_index > 0 else -1
+         h = block_manager.compute_hash(token_ids, prefix)
+-        last_block = block_manager.blocks[block_table[-1]]
++        last_block = block_manager.blocks[block_table[block_index]]
+         last_block.update(h, token_ids)
+         block_manager.hash_to_block_id[h] = last_block.block_id
+ 
+diff --git a/ssd/ssd/engine/sequence.py b/ssd/ssd/engine/sequence.py
+index 55d7658..9c4d610 100644
+--- a/ssd/ssd/engine/sequence.py
++++ b/ssd/ssd/engine/sequence.py
+@@ -17,7 +17,7 @@ class Sequence:
+ 
+     _ATTRIBUTES = [
+         'seq_id', 'status', 'token_ids', 'last_token', 'num_tokens',
+-        'num_prompt_tokens', 'num_cached_tokens', 'block_table',
++        'num_prompt_tokens', 'initial_num_prompt_tokens', 'num_cached_tokens', 'block_table',
+         'last_spec_step_accepted_len', 'draft_block_table',
+         'num_draft_cached_tokens', 'temperature', 'draft_temperature', 'max_new_tokens',
+         'ignore_eos', 'recovery_token_id', 'last_target_hidden_state',
+@@ -32,6 +32,10 @@ class Sequence:
+         self.last_token = token_ids[-1]
+         self.num_tokens = len(self.token_ids)
+         self.num_prompt_tokens = len(token_ids)
++        # Re-prefill moves num_prompt_tokens forward to include the already
++        # generated prefix. Output slicing and the generation budget must
++        # retain the immutable boundary of the original request.
++        self.initial_num_prompt_tokens = len(token_ids)
+         self.num_cached_tokens = 0
+         self.block_table = []
+         self.last_spec_step_accepted_len = -1 # -1 on first req to force cache miss
+@@ -66,7 +70,7 @@ class Sequence:
+ 
+     @property
+     def num_completion_tokens(self):
+-        return self.num_tokens - self.num_prompt_tokens
++        return self.num_tokens - self.initial_num_prompt_tokens
+ 
+     @property
+     def prompt_token_ids(self):
+@@ -74,7 +78,7 @@ class Sequence:
+ 
+     @property
+     def completion_token_ids(self):
+-        return self.token_ids[self.num_prompt_tokens:]
++        return self.token_ids[self.initial_num_prompt_tokens:]
+ 
+     @property
+     def num_cached_blocks(self):
+@@ -122,3 +126,5 @@ class Sequence:
+     def __setstate__(self, state):
+         for attr in self._ATTRIBUTES:
+             setattr(self, attr, state.get(attr))
++        if self.initial_num_prompt_tokens is None:
++            self.initial_num_prompt_tokens = self.num_prompt_tokens
+diff --git a/ssd/ssd/engine/step.py b/ssd/ssd/engine/step.py
+index 1d8b9a4..ce59559 100644
+--- a/ssd/ssd/engine/step.py
++++ b/ssd/ssd/engine/step.py
+@@ -156,6 +156,7 @@ class SpecDecodeStep(InferenceStep):
+                 print(f"[SpecDecodeStep] speculation {i}: {decoded_tokens}", flush=True)
+ 
+         #### STEP 2: VERIFY ####
++        event_start = len(getattr(self.verifier, "metrics", {}).get("phase_events", []))
+         out_verify_result = self.verifier.verify(seqs, speculate_result, eagle=self.eagle)
+ 
+         if _prof:
+@@ -186,6 +187,22 @@ class SpecDecodeStep(InferenceStep):
+             eagle_acts=out_verify_result.eagle_acts if self.eagle else None,
+         )
+         _mc("target_postprocess", _mev_pp)
++        metric_events = getattr(self.verifier, "metrics", {}).get("phase_events", [])
++        # Synchronous SD has no cache-hit events from Verifier, but uses the
++        # same emitted-token and full-batch performance population as SSD/DUET.
++        if len(metric_events) == event_start:
++            metric_events.extend(dict(accepted_len=len(suffix), cache_hit=None,
++                                      source=None, step_id=_step_id)
++                                 for suffix in out_verify_result.new_suffixes)
++        events = metric_events[event_start:]
++        if len(events) == len(seqs):
++            for event, seq, before, suffix in zip(events, seqs, saved, out_verify_result.new_suffixes):
++                emitted = seq.num_tokens-before[1]
++                cap = seq.num_completion_tokens >= seq.max_new_tokens
++                event.update(seq_id=seq.seq_id, emitted_len=emitted,
++                             clipped=len(suffix)>emitted, output_cap_reached=cap,
++                             finished=seq.is_finished)
++
+ 
+         if _prof:
+             torch.cuda.synchronize()
+@@ -195,4 +212,6 @@ class SpecDecodeStep(InferenceStep):
+             toks = sum(len(s) for s in out_verify_result.new_suffixes)
+             print(f"[PROFILE target] handshake={(_t1-_t0)*1000:.2f}ms verify={(_t2-_t1)*1000:.2f}ms postprocess={(_t3-_t2)*1000:.2f}ms total={(_t3-_t0)*1000:.2f}ms {hits_str} toks={toks}", flush=True)
+ 
+-        return sum(len(s) for s in out_verify_result.new_suffixes)
++        # Verification may accept past EOS or the requested output cap.
++        # Throughput counts only tokens actually committed by the scheduler.
++        return sum(seq.num_tokens - before[1] for seq, before in zip(seqs, saved))
+diff --git a/ssd/ssd/engine/verifier.py b/ssd/ssd/engine/verifier.py
+index 2f45bc8..30aef6c 100644
+--- a/ssd/ssd/engine/verifier.py
++++ b/ssd/ssd/engine/verifier.py
+@@ -398,7 +398,10 @@ class Verifier(VerifierBase):
+                     self._compute_and_send_proxy(
+                         exit_logits, draft_tokens, logits_q, orig_bs,
+                         _vk, async_pg, draft_rank, cache_hits=cache_hits,
+-                        valid_k=speculate_result.valid_k)
++                        valid_k=speculate_result.valid_k,
++                        target_temps=[seq.temperature for seq in seqs],
++                        draft_temps=[seq.temperature if seq.draft_temperature is None
++                                     else seq.draft_temperature for seq in seqs])
+ 
+             self.target_model_runner._duet_proxy_fn = _proxy_fn
+ 
+@@ -819,7 +822,8 @@ class Verifier(VerifierBase):
+             _ev_graph = _mr_tree_coarse(
+                 "tree_proxy_graph_replay", parent="exit_proxy_side")
+             chosen_pos, chosen_tok, _top_v = _proxy_graph.replay(
+-                exit_logits[0], logits_q[0], draft_tokens[0])
++                exit_logits[0], logits_q[0], draft_tokens[0],
++                target_temps=temp_p, draft_temps=temp_d)
+             _mc_tree_coarse("tree_proxy_graph_replay", _ev_graph)
+             _ev_send = _mr_tree_coarse(
+                 "proxy_send_enqueue", parent="exit_proxy_side")
+@@ -829,16 +833,12 @@ class Verifier(VerifierBase):
+             _mc_tree_coarse("proxy_send_enqueue", _ev_send)
+             return
+ 
+-        # 리뷰3-9(분포 미러)는 **동일-시드 A/B로 원복** (2026-08-04):
+-        # temp/sampler_x 반영판은 hit +0.011에 P2AL 2.13→1.94 —
+-        # 날카로워진 p^E가 wire 후보를 얕은 ctx로 몰아 깊이를 깎았다
+-        # (tok/step 4.55→4.36 순손실). plain softmax가 체인 proxy와도
+-        # 일관된 경험적 동작점 — 재도전은 P_iv 랭킹·β·prior 공동
+-        # recalibration으로만 (T6 부채; 20번 판정표 참조).
++        # Preserve the original ladder/ranking policy; scale only request temperatures.
+         _ev_softmax = (_mr_tree("tree_proxy_softmax")
+                        if _detail_profile else None)
+-        p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
+-        q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
++        from ssd.engine.helpers.proxy_temperature import probabilities
++        p_E = probabilities(exit_logits, temp_p)[0]
++        q_rows = probabilities(logits_q, temp_d)[0]
+         tokens = draft_tokens[0, :valid].to(p_E.device)
+         if _detail_profile:
+             _mc_tree("tree_proxy_softmax", _ev_softmax)
+@@ -893,7 +893,7 @@ class Verifier(VerifierBase):
+ 
+     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
+                                  B, K, async_pg, draft_rank, cache_hits=None,
+-                                 valid_k=None):
++                                 valid_k=None, target_temps=1.0, draft_temps=1.0):
+         """Compute DUET proxy from early-exit logits and send to draft.
+ 
+         Args:
+@@ -1004,7 +1004,9 @@ class Verifier(VerifierBase):
+             _ev_graph = _mr_chain(
+                 "chain_proxy_graph_replay", parent="exit_proxy_side")
+             chosen_pos, chosen_tok, _ = _chain_graph.replay(
+-                exit_logits[0], logits_q[0], draft_tokens[0, :K])
++                exit_logits[0], logits_q[0], draft_tokens[0, :K],
++                target_temps=(target_temps[0] if isinstance(target_temps, (list, tuple)) else target_temps),
++                draft_temps=(draft_temps[0] if isinstance(draft_temps, (list, tuple)) else draft_temps))
+             _mc_chain("chain_proxy_graph_replay", _ev_graph)
+             _ev_send = _mr_chain(
+                 "proxy_send_enqueue", parent="exit_proxy_side")
+@@ -1016,8 +1018,9 @@ class Verifier(VerifierBase):
+ 
+         _ev_compute = _mr_d("proxy_compute") if _detail_profile else None
+         # p_E (early-exit proxy), p_D (draft)
+-        p_E = torch.softmax(exit_logits[:, :K, :].float(), dim=-1)  # [B, K, V]
+-        p_D = torch.softmax(logits_q.float(), dim=-1)                # [B, K, V]
++        from ssd.engine.helpers.proxy_temperature import probabilities
++        p_E = probabilities(exit_logits[:, :K, :], target_temps)
++        p_D = probabilities(logits_q, draft_temps)
+ 
+         # Accept probability proxy: â_i = min(1, p_E(y_i) / p_D(y_i))
+         gather_idx = draft_tokens.unsqueeze(-1)  # [B, K, 1]
+@@ -1080,7 +1083,7 @@ class Verifier(VerifierBase):
+             _ev_pack = _mr_d("proxy_pack") if _detail_profile else None
+             # pos == K (all-accept): target's full distribution at exit_logits[:, K, :].
+             # Note: existing p_E only covers [:, :K, :] (line 246) — read separately.
+-            pE_K = torch.softmax(exit_logits[:, K, :].float(), dim=-1)        # [B, V]
++            pE_K = probabilities(exit_logits[:, K:K+1, :], target_temps)[:, 0]
+             pE_K_topk_probs, pE_K_topk_ids = pE_K.topk(top_k, dim=-1)         # [B, top_k]
+             pE_K_topk_probs = pE_K_topk_probs / pE_K_topk_probs.sum(-1, keepdim=True).clamp(min=1e-10)
+ 
+diff --git a/ssd/ssd/layers/attention.py b/ssd/ssd/layers/attention.py
+index 429eb70..cd4e51f 100644
+--- a/ssd/ssd/layers/attention.py
++++ b/ssd/ssd/layers/attention.py
+@@ -112,19 +112,29 @@ class Attention(nn.Module):
+                     o = fi_backend.run_ragged(q, k, v)
+             else:
+                 if context.block_tables is not None:
+-                    k, v = k_cache, v_cache
+-
+-                k = k.view(-1, self.num_kv_heads, self.head_dim)
+-                v = v.view(-1, self.num_kv_heads, self.head_dim)
+-                o = flash_attn_varlen_func(
+-                    q, k, v,
+-                    max_seqlen_q=context.max_seqlen_q,
+-                    cu_seqlens_q=context.cu_seqlens_q,
+-                    max_seqlen_k=context.max_seqlen_k,
+-                    cu_seqlens_k=context.cu_seqlens_k,
+-                    softmax_scale=self.scale,
+-                    causal=True,
+-                )
++                    # Prefix-cache blocks are noncontiguous physical pages.
++                    # Flattening them as packed K/V ignores block_tables and
++                    # reads another request's context, including uncached
++                    # rows in a mixed cached/uncached prefill batch.
++                    o = flash_attn_with_kvcache(
++                        q, k_cache, v_cache,
++                        cache_seqlens=(context.cu_seqlens_k[1:]
++                                       - context.cu_seqlens_k[:-1]),
++                        page_table=context.block_tables,
++                        cu_seqlens_q=context.cu_seqlens_q,
++                        max_seqlen_q=context.max_seqlen_q,
++                        softmax_scale=self.scale, causal=True,
++                    )
++                else:
++                    o = flash_attn_varlen_func(
++                        q, k, v,
++                        max_seqlen_q=context.max_seqlen_q,
++                        cu_seqlens_q=context.cu_seqlens_q,
++                        max_seqlen_k=context.max_seqlen_k,
++                        cu_seqlens_k=context.cu_seqlens_k,
++                        softmax_scale=self.scale,
++                        causal=True,
++                    )
+         else:
+             # P2-tree TREE_VERIFY (T3.1b, docs/duet/internal/20): 명시 mode — 현행
+             # 암묵 dispatch(cu_seqlens 유무)로는 트리 mask를 표현할 수
+diff --git a/ssd/ssd/utils/performance.py b/ssd/ssd/utils/performance.py
+new file mode 100644
+index 0000000..67c4bce
+--- /dev/null
++++ b/ssd/ssd/utils/performance.py
+@@ -0,0 +1,48 @@
++"""Performance population: complete nominal batches, excluding cap/clip steps.
++
++This does not alter generation or discard raw counters. Every retained
++event, emitted token and second belongs to exactly the same decode steps.
++"""
++from collections import Counter
++
++
++def performance_summary(metrics, expected_batch):
++    if expected_batch < 1:
++        raise ValueError("expected_batch must be positive")
++    events = metrics.get("phase_events", [])
++    steps = metrics.get("decode_steps", [])
++    reasons = Counter()
++    kept = []
++    kept_events = []
++    for step in steps:
++        start, end = step["event_start"], step["event_end"]
++        row_events = events[start:end]
++        batch = step.get("batch_size", len(row_events) if row_events else None)
++        if batch is None:
++            raise ValueError("Step lacks actual batch size; cannot infer AR batch from events")
++        if batch > expected_batch:
++            raise ValueError("Actual step batch exceeds the nominal batch")
++        boundary = bool(step.get("output_cap_reached") or step.get("clipped"))
++        short = batch != expected_batch
++        if boundary: reasons["cap_or_clip"] += 1
++        if short: reasons["partial_batch"] += 1
++        if boundary and short: reasons["both"] += 1
++        if boundary or short:
++            continue
++        kept.append(step)
++        kept_events.extend(row_events)
++    seconds = sum(s["seconds"] for s in kept)
++    tokens = sum(s["emitted_tokens"] for s in kept)
++    def mean(name):
++        values = [e[name] for e in kept_events if e.get(name) is not None]
++        return sum(values) / len(values) if values else None
++    return dict(
++        policy="full_batch_without_cap_or_clip_v1", nominal_batch=expected_batch,
++        tps=tokens / seconds if seconds > 0 else None,
++        al=mean("accepted_len"), cache_hit=mean("cache_hit"),
++        emitted_tokens=tokens, seconds=seconds, included_steps=len(kept),
++        included_events=len(kept_events), total_steps=len(steps),
++        excluded_steps=len(steps)-len(kept), exclusion_reasons=dict(reasons),
++        included_step_indices=[i for i,s in enumerate(steps)
++                               if not(s.get("output_cap_reached") or s.get("clipped"))
++                               and s.get("batch_size", s["event_end"]-s["event_start"])==expected_batch])

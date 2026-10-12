@@ -1,4 +1,6 @@
-# MLSys-ver0.1 논문 브랜치 verification 변경 리뷰
+# MLSys-ver0.1 논문 브랜치 변경·공통 수정 리뷰
+
+**최신 상태:** [공통 수정의 구현·성능·이식 자료](#common-fixes)까지 반영했다. 아래 앞부분은 최초 verification 변경(`be61186`)의 역사적 결과이고, 이후 독립 리뷰 수정(`3d51664`)과 공통 수정(`c1f96c1`), 대표 로그 모집단 정리(`e4b080e`)를 단계별로 보존한다. 과거 표를 최신 코드의 재측정 값으로 인용하지 않는다.
 
 2026-10-13. `feat/duet-p2tree-g0@a82f7d24fb36827a9a81a3567f344dccb71f193e`에서 `MLSys-ver0.1`을 만들었다. 기준 revision은 작업 시작 시 원격 논문 브랜치와도 일치했다. 구현 commit은 `be61186`이다. 작업 폴더는 `/home/chokwans99/PSD-MLSys-ver0.1`이다.
 
@@ -8,7 +10,7 @@
 
 먼저 [전체 성능·구간 그림 PDF](figs/REVIEW.pdf), 아래 성능표와 구간표를 확인한 뒤 파일별 변경을 검토하면 된다. 수치 원본은 [PERFORMANCE.csv](PERFORMANCE.csv), 전체 파라미터는 [PARAMETERS.json](PARAMETERS.json)이다.
 
-## 이번 브랜치의 범위
+## 최초 verification 변경의 범위 (be61186)
 
 기존 논문 실행기를 유지하면서 chain 간소화, tree CPU 정보 재사용, 온도별 계산 간소화, T=0 tree 지원을 적용했다. Tree의 수락 경로는 **CPU에서 선택하는 한 가지 구현**이다. Target·draft forward와 vocabulary 분포 연산은 GPU에서 실행한다. CPU/GPU 수락 경로 선택 옵션은 없다.
 
@@ -252,3 +254,122 @@ Forward 자체는 거의 변하지 않았고 phase 전체 구간 감소가 관�
 다른 서버에서 최신 내용을 이식할 때에는 **[후속 누적 RUNTIME.patch](review_followup/RUNTIME.patch)**를 사용한다. 이는 논문 원본 `a82f7d2` 기준으로 기존 verification 변경과 이번 세 수정을 모두 포함한다. 이전 `RUNTIME.patch`와 중복 적용하지 않는다. 원본 파일만 별도 임시 폴더에 복원하여 patch 적용 후11개 파일이 현재 코드와 같은지 확인했다([PATCH_CHECK.json](review_followup/PATCH_CHECK.json)). 기존 상위 폴더의 `SOURCE_MANIFEST.json`, `VALIDATION.json`, `RUNTIME.patch`는 최초480입력 측정 버전의 증거로 그대로 보존한다.
 
 재현은 `review_followup/check_review.py`, `fallback_plan.json`, `profile_plan.json`, `summarize.py`를 따른다. 구간 측정 전에 profile 출력 디렉터리를 만들고, 모델·baseline checkout 경로와 GPU/CPU 배치를 해당 서버에 맞춘다. 초기 profile 실행의 디렉터리 생성 전 proxy-send 통계 저장 경고는 최종 dump 전에 디렉터리를 만들어 해결했으며, 두 process의 최종 구간 파일·step 대응과 archive를 확인했다. 이 후속 작업에서 원격 push나 논문 브랜치 merge는 수행하지 않았다.
+
+<a id="common-fixes"></a>
+
+## 공통 수정 반영과 검증 결과 — 2026-10-13
+
+논문 원본 `a82f7d2` 기반의 이 브랜치에서, 공통 수정 직전 `3d51664`를 별도 clean checkout으로 보존하고 비교한다. 이번 범위는 실제 요청 온도의 후보 점수 반영, G>M generation-prefix 전송, 실제 반환 token 집계, cap/clip·부분 batch step 제외, prefill의 resident B 제한, 동일 int64 크기의 uint32 token wire, 기존 KV·요청 상태 오류 수정이다. 기존 residual·위치 예산·tree 확장 정책과 CPU tree 수락 기본 경로를 유지한다. 새로운 연구 점수나 통합 B>1 tree 실행기는 포함하지 않는다.
+
+원본과 출력이 같아야 하는 B1·T1·G=M 대조와, 동작이 의도적으로 바뀌는 T≠1·G>M·prefix/preemption 조건을 분리한다. 전체 480입력 실험은 target LayerSkip-Llama2-7B / draft AMD-135m, FP16, GPU pair 내 순차 실행, 입력 최대512·출력96, exit21·K1/K2=4/2·G=M=8/4·C3를 사용한다. Prefix cache OFF는 이전 상대 성능 비교와 동일한 조건이며, KV 정확성은 별도 cache ON 검사로 검증한다. 계획과 원시 기록은 `common/`에 보존한다. 전체 대조는 완료했으며 결과를 아래에 구분해 기록한다.
+
+### 이번 공통 수정의 리뷰 목록
+
+| ID | 논문 원본의 문제/제약 | 이번 처리 | 기존 논문 실험에 영향이 생기는 조건 |
+|---|---|---|---|
+| P01 후보 점수 온도 | Eager·CUDA graph의 root 점수에서 proxy/draft softmax가 T=1로 고정 | Target T와 draft T를 각 분포에 반영. Capture된 FP32 온도 buffer를 replay 전에 갱신 | T>0이면서 T≠1인 요청에서 root 후보·hit·AL이 달라질 수 있음. T=1은 기존 점수와 같음 |
+| P02 G>M | 샘플링 완료 뒤 `raw_q`에 따라 tree를 재선정하면서 기존 q를 계속 verification에 사용 | P1/P2 모두 생성 순서의 앞 M개를 유지. 부모·형제 순서와 q context를 함께 보존. 예전 P1 재정렬 cache 비활성화 | G>M에서 선택되는 tree가 달라짐. G=M의 전송은 유지 |
+| P03 반환 토큰 집계 | EOS/출력 상한 뒤로 잘린 accepted token까지 decode token에 포함 가능 | Scheduler가 실제 추가한 token 수를 반환·집계. SD/SSD/DUET 공통 | 잘림이 발생한 step. 종전 집계는 과소가 아니라 과대평가 가능 |
+| P04 성능 모집단 | 전체 decode 시간·raw accepted 수에 cap/clip·B 미만 tail이 섞임 | 해당 **batch step 전체**의 token과 시간을 함께 제외. AL/hit도 같은 step의 event로 계산 | 성능표 정의가 달라짐. 생성 자체는 끝까지 실행. 긴 prompt/전체 요청을 삭제하는 방식과 다름 |
+| P05 Scheduler B | Prefill 때 resident request 수가 B를 초과할 수 있음 | Running+새로 prefill할 request를 합쳐 B 이하로 제한 | 여러 요청을 한꺼번에 제출할 때. B1 요청을 하나씩 제출했던 주 대조는 동일 |
+| P06 Token wire | Packed int64의 token 영역이15bit여서 큰 vocabulary 지원 불가 | Token32bit·score16bit·version bit로 재배치. 위치 wire와 token wire의 개수/자료형은 유지 | 새 vocabulary 지원. 작은 token도 wire encoding은 달라지므로 양단 동시 이식 필요 |
+| K01 Cached prefill | 대체 FlashAttention 경로가 비연속 physical page를 flatten하여 잘못된 prefix를 읽음 | Page table과 요청별 KV 길이를 전달 | Cached prefill + 해당 backend. 주 성능 실험의 FlashInfer 경로에 같은 변경을 가한 것이 아님 |
+| K02 완전 cached prompt | Block 경계까지 prompt가 모두 cached면 query 길이가0이 됨 | 마지막 query token을 다시 계산해 다음 logits를 만듦 | Block-aligned prompt의 완전 cache hit |
+| K03 Preemption | Re-prefill을 위해 `num_prompt_tokens`를 이동하면 이미 생성한 출력과 남은 예산 계산까지 초기화 | 원래 prompt 경계를 별도 불변 필드로 유지. 직렬화·clone도 포함 | KV 부족 등으로 preemption/re-prefill 발생 시 |
+| K04 Block hash | 예약된 마지막 page를 현재 완성된 block으로 오인할 수 있음 | 실제 `block_index`의 page와 이전 block hash 사용 | 생성 중 block 경계를 지나고 앞서 예약한 page가 더 있을 때 |
+
+P01은 **사용자가 승인한 후보 점수 정책의 변경**이다. 원본 주석에도 과거 A/B에서 온도 반영 후 AL이 낮아져 T1 점수로 되돌렸다는 기록이 있다. 따라서 이를 target lossless 검증의 필수 오류 수정이나 자동적인 성능 개선으로 표현하지 않는다. Root 후보 점수와 최종 p/q 수락 검증은 별개다. P01은 기존 residual·top-k 내부 정규화·위치 예산 수식을 바꾸지 않는다. T=0은 분포를 0으로 나누지 않고 기존 T1 soft ranking을 쓰며, draft/target greedy 규칙과 분리한다. 드물게 사용하던 raw/top-M proxy 전송 옵션은 T1의 partition만 담고 있어 T≠1 분포를 복원할 수 없다. 이 옵션과 non-unit T 조합은 요청 등록 때 명시적으로 거부하며, 기본 full-vocabulary proxy 경로에서 실제 온도를 지원한다. 조용히 T1 점수로 실행하지 않는다.
+
+P02는 **확률적 정확성을 위한 선택 규칙 수정**이다. 기존 점수를 유지한 채 비용만 줄인 최적화라고 표현하지 않는다. 작은 vocabulary의18개 proposal 상태와 모든 수락/거절 분기를 열거한 결과, target `[0.4,0.3,0.3]`에 대해 기존 score 재정렬은 첫 출력 `[0.4,0.31875,0.28125]`(TV0.01875), 생성 prefix는 target과 정확히 일치했다. 이는 알고리즘 반례이며 실제 LLM의 분포 편향 발생률 측정이 아니다. [PROPOSAL_AUDIT.json](common/PROPOSAL_AUDIT.json)에 유리수 계산·production walk 적분을 함께 보존했다.
+
+K01–K04는 새 prefix 재사용 기능이나 tree KV 재구축 최적화를 추가한 것이 아니다. 기존 기능의 예외 상태를 고쳤으며 glue decode 정책은 유지한다. 이 네 파일은 논문 원본과 직전 `3d51664`가 byte 단위로 같았다([KV_PROVENANCE.json](common/KV_PROVENANCE.json)). 따라서 이번 verification 최적화에서 새로 유입된 오류가 아니다. 반대로 이 예외들이 발생하지 않았던 모든 기존 논문 실행을 잘못된 실험이라고 결론 내릴 근거도 아니다.
+
+### 기능 검증 방식
+
+- 같은 재현 테스트를 clean `3d51664`에 실행해 block hash·preemption·반환 token 수·완전 cached prompt·prefill B 초과·paged attention 실패를 확인하고, 수정본 통과와 대조한다.
+- 비연속 page `[5,2]`와 별도의 uncached page7을 같은 prefill에 배치하고 FP16/BF16 GPU attention을 독립 dense reference와 대조한다. 분기 mock만 검사한 것이 아니다.
+- 후보 온도는 chain/tree의 실제 CUDA graph를 1→0.7/0.3→0→0.3/1→1로 갱신해 eager 경로와 비교한다. FP16 기본 dtype 환경에서도 온도 buffer는 FP32다. 독립 scalar 분할 reference와는 FP32 반올림·wire 양자화 한 칸을 허용하고, token/위치는 같아야 한다. B4 eager 경로도 행별 reference와 대조한다.
+- Token ID0·32767·32768·128255·151935·2^32−1의 wire roundtrip, 이전 version 거부, 전송 byte 수를 검사한다. 큰 vocabulary full model 실행까지 했다는 뜻은 아니다.
+- `common/analyze.py`는 엔진이 저장한 `performance`와 benchmark가 sequence 길이를 직접 관찰한 독립 집계를 총2,283개 입력 group에서 대조했다. 포함 token·시간·AL·hit·step 수가 일치해야 한다. 원본 arm에도 같은 외부 필터를 적용하므로, 기존/신규 집계 기준을 섞어 TPS 개선율을 만들지 않는다.
+- 기존 수락 함수에 대한 원 논문 parity는 chain384·tree288·sampler12·q분포12 조건에서 출력·recovery 분포·RNG를 함께 검사했다. P01은 root 후보 선택, P02는 G>M proposal 선택을 변경하며, 이 두 조건을 원본과 출력이 같아야 하는 검사에 혼합하지 않는다.
+
+### 480입력 성능 대조 — T=1, G=M
+
+같은 GPU pair 내에서 tree 반복0은 paper→before→after, 반복1은 after→before→paper 순서로 실행했다. Chain은 before→after→paper 순서다. `paper=a82f7d2`, `before=3d51664`, `after=c1f96c1`이다. 이번 full-run warmup은16입력으로 세 arm에 동일하다. 위의 과거 warmup32 실험과 수치를 섞지 않는다.
+
+| 실행 | 버전 | B | AL (recovery 포함) | Cache hit | TPS | 평균 verification ms |
+|---|---|---:|---:|---:|---:|---:|
+| tree_r0 | paper | 1 | 1.7657 | 64.57% | 90.203 | 17.2770 |
+| tree_r0 | before | 1 | 1.7657 | 64.57% | 93.095 | 16.7407 |
+| tree_r0 | after | 1 | 1.7657 | 64.57% | 93.017 | 16.7592 |
+| tree_r1 | paper | 1 | 1.7732 | 63.75% | 91.363 | 17.2092 |
+| tree_r1 | before | 1 | 1.7732 | 63.75% | 93.742 | 16.7674 |
+| tree_r1 | after | 1 | 1.7732 | 63.75% | 91.790 | 16.9372 |
+| chain | paper | 1 | 1.7210 | 66.14% | 88.900 | 17.6067 |
+| chain | before | 1 | 1.7210 | 66.14% | 91.149 | 17.0530 |
+| chain | after | 1 | 1.7210 | 66.14% | 91.788 | 16.9906 |
+
+각 대조의480개 출력·AL·cache hit는 모두 같았다. 논문 원본 대비 누적 TPS 차이는 tree +3.12%/+0.47%, chain +3.25%다. 그러나 **이번 공통 수정만의 차이**는 tree −0.08%/−2.08%, chain +0.70%다. 공통 수정 자체의 TPS 향상을 주장하지 않는다. Tree 반복 간 차이가 있으므로 하드웨어 clock만 보고 실행 변동이 없다고 판단하지도 않는다. 추가 ABBA 진단도 아래에 별도로 기록한다.
+
+[성능 그림 PNG](common/figs/TPS.png) · [성능 그림 PDF](common/figs/TPS.pdf) · [기계 판독 표](common/PERFORMANCE.csv) · [전후 대조 및 bootstrap](common/ANALYSIS.json). Bootstrap은 prompt 재표집 구간이며 run-to-run 오차까지 포괄하는 신뢰구간이 아니다.
+
+### Target/draft 구간과 추가 비용
+
+다음은 비계측 TPS와 별도로 실행한24입력 profile의 중앙값이다. 첫19 step·cap/clip·capture 및 다음 step을 공통으로 제외한다. GPU event span에는 launch gap이 포함되고 P1/P2 전체 구간에는 준비 작업이 포함된다. 중첩 구간의 중앙값을 더하지 않는다.
+
+| 구간 ms | 논문 원본 | 공통 수정 직전 | 공통 수정 후 |
+|---|---:|---:|---:|
+| Target exit 이전 forward | 10.2359 | 10.2339 | 10.2380 |
+| Target exit 이후 forward | 4.6582 | 4.6582 | 4.6582 |
+| Draft P1 graph replay | 3.8932 | 3.9014 | 3.9045 |
+| Draft P2 graph replay | 1.6895 | 1.6927 | 1.6927 |
+| Target tree 수락 보행 | 0.8160 | 0.5290 | 0.5396 |
+| Target chain 수락 (miss 등) | 1.3011 | 0.6882 | 0.7185 |
+| Draft P1 전체 | 5.0684 | 4.7500 | 4.7695 |
+| Draft P2 전체 | 3.8184 | 3.7520 | 3.7910 |
+
+Forward 자체는 거의 유지됐다. 원본 대비 수락 보행 감소는 앞서 반영한 verification 최적화의 효과다. 이번 공통 수정으로 forward가 빨라졌다고 표현하지 않는다.
+
+동일 tensor·idle GPU·순서 교대15회로 proxy graph replay를 따로 비교하면 chain143.74→155.62μs(+11.88μs), tree266.25→273.88μs(+7.63μs)다. T1 점수/token/위치는 wire 해독 후 정확히 같았다. 실제 온도를 반영하는 추가 GPU 계산은 작지만 공짜는 아니다. 이 microbenchmark 차이를 전체 TPS 변화의 유일한 원인으로 단정하지 않는다. Wire의 위치+token payload는 N=15에서 양쪽 모두240byte이고 NCCL call site도 그대로다. **NCCL latency가 실측으로 완전히 같다는 뜻은 아니다.**
+
+[구간 그림 PNG](common/figs/COMPONENTS.png) · [PDF](common/figs/COMPONENTS.pdf) · [구간 원시 통계](common/COMPONENTS.json) · [고정 입력 대조](common/MICRO.json).
+
+### KV와 집계 검증의 실제 의미
+
+기존 원본의480입력 tree 반복0에서 raw accepted count는39,856token, 실제 반환한 decode token은39,606token이었다. 차이250token으로, raw numerator를 그대로 사용하면 같은 decode 시간 기준0.631% 높아진다. 이것은 이번 저장 workload에서 재구성한 값이며 과거 논문 표 전체의 오차율이라고 일반화하지 않는다. 주 성능표는 모든 arm에 같은 cap/clip step 제외 규칙을 적용했으므로 이 집계 교정을 TPS 최적화 이득으로 세지 않았다.
+
+반복되는 동일512-token prompt의 실제 모델 검사에서는 tree와 AR 모두 cache ON/OFF 출력8개가 같았다. 평균 prefill은 tree46.83→17.10ms, AR46.06→16.64ms였고 cached query의 prefix는511token이었다. **기존 prefix 재사용이 가능한 조건의 효과**이며, KV 오류 수정만으로 decode가 이만큼 빨라졌다는 뜻은 아니다. Decode TPS는 각각78.27→78.44, 65.02→65.14로 거의 같았고, 짧은 인위적 반복 workload이므로 일반 속도 향상 주장에 쓰지 않는다.
+
+또한8개 요청을 한꺼번에 제출한 B1 tree/B4 chain/B4 AR에서 실제 prefill·decode batch의 최대값이 각각 지정한 B를 넘지 않았고 요청8개를 모두 반환했다. Tail은 생성하되 성능 집계에서 제외했다. [PREFIX_AND_BULK.json](common/PREFIX_AND_BULK.json)에 입력·출력·집계 근거를 보존한다.
+
+### 온도 변경과 추가 교대 대조
+
+T1에서는 P01의 선택 정책이 같으므로, T0.7에서도 직전 버전/변경본을 동일 GPU6/7에서 저장480입력 전부로 대조했다. 다른 파라미터는 그대로 두었다.
+
+| T=0.7, B=1 tree | AL | Cache hit | TPS |
+|---|---:|---:|---:|
+| 후보 점수 T1 고정 (`3d51664`) | 2.07194 | 78.3698% | 109.9508 |
+| 후보 점수에 실제 T 반영 (`c1f96c1`) | 2.06645 | 79.5085% | 110.1563 |
+
+Hit는 **+1.1386%p**, AL은 **−0.00549**, TPS는 **+0.187%**였다. Prompt bootstrap의 TPS 차이95% 구간은 −1.674%~+2.099%로0을 포함하며, 한 쌍의 실행이므로 반복 실행 불확실성까지 검증한 구간은 아니다. **이 설정에서 큰 TPS 개선 또는 저하를 확인한 결과가 아니다.** P2 hit의 AL은1.7774→1.7417로 내려갔다. Cache hit 증가가 전체 AL/TPS 증가를 자동으로 의미하지 않는 사례다.
+
+P01 때문에 후보와 이후 RNG 소비 순서가 달라져480개 중475개 출력이 달랐다. T1의 출력 보존 대조와 구분한다. Root 점수는 prefetch 후보용이며 최종 target p/q 수락 규칙은 그대로다. 함수 parity와 proposal-law 검증으로 확률적 검증 계약을 확인했으며, 이 확률적 두 실행의 token열 일치를 lossless의 정의로 사용하지 않는다.
+
+T1 tree의 큰 반복 간 차이를 확인하기 위해 동일96입력(저장480개에서 균등 선택)을 **before→after→after→before** 순서로 추가 실행했다. TPS는94.56897→94.41374→94.62224→94.61604였고 출력·AL·hit는 모두 같았다. 두 전후 차이는 **−0.164%, +0.0066%**다. 큰 지속적 저하가 이 진단에서 재현되지는 않았지만, 전체480입력의 −2.08% 관측을 삭제하거나 설명 없이 outlier로 버리지 않는다. 당시 다른 독립 GPU pair의 모델 로딩/실험도 병행됐으며 host 자원은 공유한다. 그 변동의 단일 원인을 확정한 결과는 아니다. 원본 GPU clock은 서로 비슷했지만 그것만으로 모든 시스템 변동을 배제할 수 없다.
+
+결론적으로 P02~P05와 K 항목은 기존 정확성/집계 계약을 고치는 이유로 반영한다. P06은 통신 범위 확장이다. P01은 사용자 승인한 실제 온도 정책으로 반영했지만 보편적인 cache hit·AL·TPS 개선 기법으로 주장하지 않는다. 이번 공통 수정 묶음에 대해 새로운 TPS 우위를 주장하지도 않는다. 기존 verification 최적화를 포함한 **누적** 효과와 분리한다.
+
+### 최종 검증 범위와 다른 서버 이식
+
+- 모델 실행34회(480입력 전체 실행11회)가 모두 정상 종료했다. 최종 회귀 검사205개, 실패0·skip0. 별도 원본 CPU parity는 chain384·tree288·sampler12·q분포12 조건 통과. [CHECKS.json](common/CHECKS.json), [PAPER_PARITY.json](common/PAPER_PARITY.json).
+- 기능 실행은 T0/T0.7/G>M tree, B4 DUET chain·SSD·동기 SD·AR, prefix ON/OFF, bulk admission을 포함한다. 짧은 기능 실행들의 TPS를 최종 SSD 경쟁 결과로 인용하지 않는다. 별도 SSD parameter 최적화를 이번 작업에서 다시 수행한 것이 아니다.
+- 원본/직전/현재 runtime SHA를 commit과 대조한 [SOURCE_AUDIT.json](common/SOURCE_AUDIT.json)을 제공한다. Git working tree에 문서·진단 파일 변경이 있어도 측정 runtime이 해당 commit과 같음을 파일별로 확인한다. 최초 구현 smoke는 commit 전 실행임을 표시하고 이 감사에서 제외한다.
+- 전체 성능표와 profile은 `c1f96c1` runtime에서 측정했다. 이후 `e4b080e`의 runtime 차이는 `LLMEngine.log_metrics`의 대표 AL/hit 표시뿐이다. 기존 `METRICS["performance"]` 계산이나 model/draft/verify/step 실행은 바꾸지 않았다. 로그도 같은 모집단을 쓰는 회귀 검사를 추가하고 최종 실제 모델8입력 smoke에서 초기 공통 수정 smoke와 출력·AL·hit가 같음을 확인했다. 기존 raw list·histogram은 사후 분석용으로 보존하며, 대표 성능값은 `performance`를 사용한다.
+- [COMMON_ONLY.patch](common/COMMON_ONLY.patch)는 `3d51664`에 이번 공통 수정만 적용할 때 사용한다. [RUNTIME.patch](common/RUNTIME.patch)는 논문 원본 `a82f7d2`에 기존 verification 변경부터 공통 수정까지 누적으로 적용할 때 사용한다. **둘 중 기준에 맞는 하나만 적용한다.** 서로 겹치는 patch를 연속 적용하지 않는다.
+- 두 patch를 각각의 원본 파일에 적용한 뒤 현재 runtime과 byte 단위로 일치하는지 검사했다([PATCH_CHECK.json](common/PATCH_CHECK.json)). GPU target/draft 양단에 동일한 v2 wire 코드를 배포한다. 새 임의의 알고리즘 선택 옵션은 추가하지 않았고 CPU tree 수락 기본 경로는 한 가지다.
+- 재현 계획은 `common/*_plan.json`, 실행기는 기존 `run_pair.py`다. 동일 pair 내 순차 실행·CPU affinity·온도·G/M·seed를 유지하고 다른 서버의 모델 경로와 장비 번호만 맞춘다. `common/analyze.py`, `components.py`, `make_figures.py`가 표·그림을 생성한다. `common/archive.py`가 원시 실행·실패 재현·profile을 보존하고 archive 재독출 hash를 확인한다.
+- 이번 완료 범위는 full dense7B/AMD135M·FP16·4090·TP1, 주 성능 B1·C3·G=M이다. G>M·B4·prefix 등은 명시한 기능 검사 범위다. 70B·TP2·큰 vocabulary의 실제 모델 실행·C>3·B>1 통합 tree 실행기·새 root/위치/tree 연구 정책을 검증 완료했다고 확대하지 않는다. Prefix OFF 주 성능표는 원 논문 운영 설정의 절대 TPS 재현이 아니다.
+
+원시 기록은 [공통 수정 RAW_RESULTS.tar.gz](common/RAW_RESULTS.tar.gz)와 [manifest](common/RAW_MANIFEST.json), 최신 소스 hash는 [SOURCE_MANIFEST.json](common/SOURCE_MANIFEST.json)에 있다. 이전 `RAW_RESULTS.tar.gz` 및 `review_followup/` 자료는 역사적 증거로 그대로 보존했다. `MLSys-ver0.1`에서 검토할 수 있으며 원본 논문 branch에 merge하거나 원격 push하지 않았다.
+
+최종 완료 집계는 [FINAL_VALIDATION.json](common/FINAL_VALIDATION.json)에 있다. 34개 실행에서 외부 GPU process 간섭을 관측하지 않았고, 기록된 GPU 최고 온도는72°C였다. 다른 자체 실험과 host 자원을 공유한 점은 위 성능 해석의 제한으로 남긴다. GPU kernel 오류/모델 실행 실패는 없었으며, 종료 시 기존 NCCL·semaphore 정리 경고가 발생한 로그도 그대로 보존했다. 각 실행 종료 후 GPU worker가 남지 않았는지 controller가 확인했다.
