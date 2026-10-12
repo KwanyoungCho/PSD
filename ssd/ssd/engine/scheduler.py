@@ -166,7 +166,8 @@ class Scheduler:
         scheduled_seqs = []
         num_batched_tokens = 0 # within this round only 
         
-        while self.waiting: 
+        # Bound the resident request set during prefill as well as decode.
+        while self.waiting and len(self.running) < self.max_num_seqs:
 
             seq = self.waiting[0]
 
@@ -387,9 +388,9 @@ class Scheduler:
     def _finalize_block(self, block_manager, seq: Sequence, block_table: list[int], block_index: int):
         """Finalize a block by computing its hash and updating the cache."""
         token_ids = seq.block(block_index)
-        prefix = block_manager.blocks[block_table[-2]].hash if len(block_table) > 1 else -1
+        prefix = block_manager.blocks[block_table[block_index - 1]].hash if block_index > 0 else -1
         h = block_manager.compute_hash(token_ids, prefix)
-        last_block = block_manager.blocks[block_table[-1]]
+        last_block = block_manager.blocks[block_table[block_index]]
         last_block.update(h, token_ids)
         block_manager.hash_to_block_id[h] = last_block.block_id
 

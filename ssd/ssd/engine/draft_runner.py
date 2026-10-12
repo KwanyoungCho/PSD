@@ -767,72 +767,28 @@ class DraftRunner(ModelRunner):
         return current
 
     def _precompute_p1_rerank_views(self, views, roots: int):
-        """Move unchanged P1 reranking from a future hit into P1 slack.
+        """Invalidate the old post-sampling confidence-selection cache.
 
-        This is deliberately a scheduling optimization, not a new selection
-        policy.  The batched CUDA helper implements the same cumulative path
-        score and prerequisite closure as ``rerank_tree_indices``; the chosen
-        row is still copied to CPU and validated before serving.
+        G>M now serves a generation-order prefix. Confidence-based pruning
+        conditions which proposals survive, invalidating original parent q.
+        Equal G=M retains its existing zero-copy fast path.
         """
         self._p1_rerank_cache = None
-        generated_cap = int(self.config.duet_p1_tree_max_nodes)
-        verify_cap = int(self.config.duet_p1_tree_verify_nodes)
-        if (os.environ.get("SSD_P1_RERANK_PRECOMPUTE", "1") != "1"
-                or verify_cap == generated_cap or int(roots) < 1):
-            return
-
-        from ssd.engine.helpers.cudagraph_helpers import (
-            duet_record as _mr_pre, duet_close as _mc_pre)
-        from ssd.engine.helpers.tree_rerank_gpu import \
-            precompute_reranked_tree_views_fused_gpu
-
-        wire_cap = int(self.config.duet_tree_wire_nodes)
-        label = "p1_rerank_precompute"
-        event = _mr_pre(label)
-
-        gpu = self._ensure_p1_rerank_precompute_buf(roots, wire_cap)
-        gpu_label = "p1_rerank_precompute_gpu"
-        gpu_event = _mr_pre(gpu_label)
-        precompute_reranked_tree_views_fused_gpu(
-            views["tok"][:roots], views["parent_local"][:roots],
-            views["sib_order"][:roots], views["raw_q"][:roots],
-            views["parent_q_ref"][:roots],
-            views["parent_q_cells"][:roots], views["valid"][:roots],
-            verify_cap=verify_cap, wire_cap=wire_cap, output_buffers=gpu)
-        _mc_pre(gpu_label, gpu_event)
-
-        compact_names = (
-            "tok", "parent_local", "sib_order", "raw_q",
-            "parent_q_ref", "parent_q_cells", "valid", "u_valid")
-        compact_views = {
-            name: gpu[name][:roots] for name in compact_names
-        }
-        # Full-vocabulary logits remain in the P1 executor's persistent
-        # matrix.  Reranking only changes the tiny row-id topology.
-        compact_views["cell_logits"] = views["cell_logits"]
-        self._p1_rerank_cache = {
-            "source_views": views,
-            "roots": int(roots),
-            "views": compact_views,
-            "packed_gpu": gpu["packed"][:roots],
-            "original_valid": views["valid"][:roots],
-        }
-        _mc_pre(label, event)
 
     def _rerank_tree_hit_view(self, views, root: int, phase: int):
         """Return the one-root view actually sent to target verification.
 
         Generation and verification limits are intentionally separate.  The
         executor may search a wider tree for every cache root, but once the
-        matching root is known this method keeps only the highest cumulative-
-        confidence subtree that satisfies DUET's parent and ordered-sibling
-        prerequisites.  Default equal limits take the old zero-copy path.
+        matching root is known this method keeps a generation-order prefix.
+        This preserves parent and ordered-sibling prerequisites without
+        conditioning inclusion on the sampled token score.  Default equal limits take the old zero-copy path.
 
         Returns ``(served_view, served_root, packed_gpu, packed_cpu,
         parsed_cpu, original_valid)``.
         """
         from ssd.engine.helpers.p2_tree import (
-            pack_tree_ints, parse_tree_ints, rerank_tree_indices,
+            pack_tree_ints, parse_tree_ints,
             validate_tree_ints)
         from ssd.engine.helpers.cudagraph_helpers import (
             duet_record as _mr_rerank, duet_close as _mc_rerank)
@@ -857,40 +813,6 @@ class DraftRunner(ModelRunner):
             _mc_rerank(_equal_label, _ev_equal)
             return views, root, packed, packed_cpu, parsed, int(parsed["valid"])
 
-        # Fast path: P1 prepared this exact subtree after generation, while
-        # it was waiting for the target's proxy.  Identity-check the source
-        # view so an executor replay can never serve stale topology.
-        if (phase == 1
-                and os.environ.get("SSD_P1_RERANK_PRECOMPUTE", "1") == "1"):
-            # Runtime initialises this field in ``__init__``, but keep the
-            # hit-time helper robust for lightweight diagnostic/test runners
-            # and partially constructed objects as well.  Absence simply
-            # means the ordinary on-demand rerank path must be used.
-            cache = getattr(self, "_p1_rerank_cache", None)
-            if (cache is not None and cache["source_views"] is views
-                    and 0 <= int(root) < int(cache["roots"])):
-                root = int(root)
-                _served_label = "tree_hit_pack_served_p1"
-                _ev_served = _mr_rerank(_served_label)
-                packed = cache["packed_gpu"][root]
-                packed_cpu = packed.detach().cpu()
-                parsed = parse_tree_ints(packed_cpu, wire_cap)
-                validate_tree_ints(
-                    parsed, wire_cap, self.hf_config.vocab_size)
-                if int(parsed["valid"]) < 1:
-                    raise RuntimeError(
-                        "P1 rerank produced an empty served subtree")
-                # Generated width is diagnostic-only.  Avoid a second scalar
-                # D2H on production runs; exact traces retain it.
-                original_valid = int(parsed["valid"])
-                if os.environ.get("SSD_TREE_TOPO_TRACE", ""):
-                    original_valid = int(cache["original_valid"][root])
-                _mc_rerank(_served_label, _ev_served)
-                return (
-                    cache["views"], root,
-                    packed, packed_cpu, parsed, original_valid,
-                )
-
         if self._tree_compact_view is None:
             raise RuntimeError("tree compact buffers were not preallocated")
 
@@ -910,11 +832,9 @@ class DraftRunner(ModelRunner):
         _select_label = f"tree_hit_select_subtree_p{phase}"
         _ev_select = _mr_rerank(_select_label)
         original_valid = int(full["valid"])
-        raw_cpu = views["raw_q"][root, :original_valid] \
-            .detach().float().cpu().tolist()
-        keep = rerank_tree_indices(
-            full["parent_local"][:original_valid],
-            full["sib_order"][:original_valid], raw_cpu, verify_cap)
+        # Generation order is topological and sibling-prefix closed. Do not
+        # use realized token scores to decide whether to retain a proposal.
+        keep = list(range(min(original_valid, verify_cap)))
         n = len(keep)
         if n < 1 or n > verify_cap:
             raise RuntimeError(

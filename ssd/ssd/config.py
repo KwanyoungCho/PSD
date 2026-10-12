@@ -695,11 +695,11 @@ class Config:
                         f"confidence|level|frontier; "
                         f"got {self.duet_tree_policy!r}")
                 if self.duet_tree_enabled:
-                    # D2 pack 가드: 토큰이 비트 0-14를 넘으면 안 됨.
-                    if self.hf_config.vocab_size > 32768:
+                    # Packed token IDs use uint32; wire payload remains int64.
+                    if self.hf_config.vocab_size > 2**32:
                         raise ValueError(
-                            f"DUET tree pack requires vocab_size <= 32768 "
-                            f"(D2 — token bits 0-14); got "
+                            f"DUET tree pack requires vocab_size <= 2**32 "
+                            f"(token bits 0-31); got "
                             f"{self.hf_config.vocab_size}")
                     if self.duet_tree_fanout_policy not in (
                             "backbone", "ctensor"):

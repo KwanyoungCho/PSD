@@ -18,7 +18,10 @@ from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
 
 def rerank_tree_indices(parent_local, sibling_order, raw_q,
                         max_nodes: int) -> list[int]:
-    """Select a confidence-ranked, lossless-safe subtree.
+    """Diagnostic confidence-ranked subtree, not a lossless serving policy.
+
+    Post-sampling score selection changes the proposal law. Production uses
+    a generation-order prefix when G>M; retain this helper for diagnostics.
 
     EAGLE-2 ranks final draft nodes by cumulative draft confidence.  DUET's
     temperature>0 verifier has one extra constraint: siblings are ordered
@@ -1041,7 +1044,8 @@ def tree_policy_b_ladder_fixed(tokens, p_rows, q_rows, child,
 
 def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
                                 wire_n: int, depth_steps: int,
-                                top_k: int | None = None):
+                                top_k: int | None = None, *,
+                                target_temps=1.0, draft_temps=1.0):
     """Fixed-shape, capture-safe tree proxy candidate computation.
 
     ``top_k`` preserves the established chain Policy-B score scale: each
@@ -1051,8 +1055,9 @@ def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
     because contexts with different top-k retained mass receive different
     relative scales.
     """
-    p_rows = torch.softmax(exit_logits.float(), dim=-1)
-    q_rows = torch.softmax(q_logits.float(), dim=-1)
+    from ssd.engine.helpers.proxy_temperature import probabilities
+    p_rows = probabilities(exit_logits[None], target_temps)[0]
+    q_rows = probabilities(q_logits[None], draft_temps)[0]
     _alpha, term, resid = tree_policy_b_ladder_fixed(
         tokens, p_rows, q_rows,
         topology["child"], topology["child_valid"],
@@ -1123,6 +1128,10 @@ class TreeProxyCUDAGraph:
 
         # Warm every op before capture; allocation/compilation is forbidden
         # inside a first production replay.
+        self.tt = torch.ones(1, dtype=torch.float32, device=self.device)
+        self.dt = torch.ones_like(self.tt)
+        self._temperature_values = (1.0, 1.0)
+
         warm = torch.cuda.Stream(device=self.device)
         warm.wait_stream(torch.cuda.current_stream(self.device))
         with torch.cuda.stream(warm):
@@ -1130,7 +1139,7 @@ class TreeProxyCUDAGraph:
                 tree_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
                     self.topology, self.wire_n, self.depth_steps,
-                    self.top_k)
+                    self.top_k, target_temps=self.tt, draft_temps=self.dt)
         warm.synchronize()
         # Capture failures leave CUDA's graph/RNG bookkeeping unusable for
         # ordinary eager execution in this process.  Synchronize explicitly
@@ -1142,7 +1151,7 @@ class TreeProxyCUDAGraph:
                 tree_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
                     self.topology, self.wire_n, self.depth_steps,
-                    self.top_k)
+                    self.top_k, target_temps=self.tt, draft_temps=self.dt)
 
     @torch.inference_mode()
     def prepare_topology(self, par, sib):
@@ -1177,7 +1186,7 @@ class TreeProxyCUDAGraph:
         self.valid = self.nv
 
     @torch.inference_mode()
-    def replay(self, exit_logits, q_logits, tokens):
+    def replay(self, exit_logits, q_logits, tokens, target_temps=1.0, draft_temps=1.0):
         """Copy dynamic values, replay, and return persistent wire buffers."""
         valid = int(self.valid)
         if exit_logits.shape[0] != valid + 1 \
@@ -1186,6 +1195,8 @@ class TreeProxyCUDAGraph:
                 "tree proxy graph input mismatch: "
                 f"valid={valid} exit={tuple(exit_logits.shape)} "
                 f"q={tuple(q_logits.shape)} tok={tuple(tokens.shape)}")
+        from ssd.engine.helpers.proxy_temperature import update_graph_temperatures
+        update_graph_temperatures(self, target_temps, draft_temps)
         self.in_exit.zero_()
         self.in_q.zero_()
         self.in_tokens.zero_()
@@ -1199,7 +1210,8 @@ class TreeProxyCUDAGraph:
 
 def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
                                  top_k: int, wire_n: int,
-                                 pack_scores: bool):
+                                 pack_scores: bool, *, target_temps=1.0,
+                                 draft_temps=1.0):
     """Capture-safe B=1 Policy-B proxy calculation for a chain.
 
     This is the fixed-shape equivalent of
@@ -1210,8 +1222,9 @@ def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
     graph replay instead of dozens of small PyTorch launches.
     """
     K, V = q_logits.shape
-    p_e = torch.softmax(exit_logits[:K].float(), dim=-1)
-    p_d = torch.softmax(q_logits.float(), dim=-1)
+    from ssd.engine.helpers.proxy_temperature import probabilities
+    p_e = probabilities(exit_logits[None, :K], target_temps)[0]
+    p_d = probabilities(q_logits[None], draft_temps)[0]
     gather = tokens[:K].view(K, 1)
     p_e_y = p_e.gather(1, gather).squeeze(1)
     p_d_y = p_d.gather(1, gather).squeeze(1)
@@ -1229,7 +1242,7 @@ def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
         h[1:K] = cumprod[:-1] * (1 - accept[1:])
     h[K] = cumprod[-1]
 
-    p_last = torch.softmax(exit_logits[K].float(), dim=-1)
+    p_last = probabilities(exit_logits[None, K:K+1], target_temps)[0, 0]
     last_prob, last_id = p_last.topk(int(top_k), dim=-1)
     last_prob = last_prob / last_prob.sum().clamp(min=1e-10)
     correction_prob = torch.cat([top_prob, last_prob.unsqueeze(0)], dim=0)
@@ -1269,13 +1282,18 @@ class ChainProxyCUDAGraph:
         self.in_tokens = torch.zeros(
             self.k, dtype=torch.int64, device=self.device)
 
+        self.tt = torch.ones(1, dtype=torch.float32, device=self.device)
+        self.dt = torch.ones_like(self.tt)
+        self._temperature_values = (1.0, 1.0)
+
         warm = torch.cuda.Stream(device=self.device)
         warm.wait_stream(torch.cuda.current_stream(self.device))
         with torch.cuda.stream(warm):
             for _ in range(2):
                 chain_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
-                    self.top_k, self.wire_n, self.pack_scores)
+                    self.top_k, self.wire_n, self.pack_scores,
+                    target_temps=self.tt, draft_temps=self.dt)
         warm.synchronize()
         torch.cuda.synchronize(self.device)
         self.graph = torch.cuda.CUDAGraph()
@@ -1283,10 +1301,11 @@ class ChainProxyCUDAGraph:
             self.out_pos, self.out_tok, self.out_piv = \
                 chain_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
-                    self.top_k, self.wire_n, self.pack_scores)
+                    self.top_k, self.wire_n, self.pack_scores,
+                    target_temps=self.tt, draft_temps=self.dt)
 
     @torch.inference_mode()
-    def replay(self, exit_logits, q_logits, tokens):
+    def replay(self, exit_logits, q_logits, tokens, target_temps=1.0, draft_temps=1.0):
         if exit_logits.shape != self.in_exit.shape \
                 or q_logits.shape != self.in_q.shape \
                 or tokens.shape[0] < self.k:
@@ -1294,6 +1313,8 @@ class ChainProxyCUDAGraph:
                 "chain proxy graph input mismatch: "
                 f"K={self.k} exit={tuple(exit_logits.shape)} "
                 f"q={tuple(q_logits.shape)} tok={tuple(tokens.shape)}")
+        from ssd.engine.helpers.proxy_temperature import update_graph_temperatures
+        update_graph_temperatures(self, target_temps, draft_temps)
         self.in_exit.copy_(exit_logits)
         self.in_q.copy_(q_logits)
         self.in_tokens.copy_(tokens[:self.k])
@@ -1447,16 +1468,18 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
 
 
 # --- T2.0: P_iv wire 비트-pack (설계 v6 D2; tree policy != off 게이트) ---
-PIV_SHIFT = 15                      # 토큰은 비트 0-14 (vocab ≤ 32768 가드)
+PIV_SHIFT = 32                      # uint32 token IDs
 PIV_BITS = 16                       # log10 P_iv ∈ [-6, 0] 16비트 양자화
-PIV_VER_BIT = 31                    # 버전/유효 마커
+PIV_VER_BIT = 48                    # v2 format marker; old wire is rejected
 _PIV_QMAX = (1 << PIV_BITS) - 1
 _TOK_MASK = (1 << PIV_SHIFT) - 1
 _LOG_MIN = -6.0
 
 
 def pack_piv(chosen_tok: torch.Tensor, piv: torch.Tensor) -> torch.Tensor:
-    """chosen_tok int64의 비트 15-30에 양자화 log10(P_iv)를 pack.
+    """Pack uint32 tokens (bits0-31) and score (32-47), marker48.
+
+    Both endpoints use v2. Payload remains one int64 per candidate.
 
     양자화 오차 ≤ 반스텝 (6데케이드/65535 ≈ 9.2e-5 데케이드). NCCL
     호출 수·크기 불변 (같은 int64 자리). 수신측은 dedup **이전**에

@@ -37,6 +37,7 @@ METRICS = {
     # lets offline analysis map each source decision to the realized output
     # prefix without adding file I/O to the engine hot path.
     "phase_events": [],
+    "decode_steps": [],
     "prefill_total_time": 0,
     "decode_total_time": 0,
     "prefill_total_tokens": 0,
@@ -295,6 +296,13 @@ class LLMEngine:
         if self.config.greedy_only and (sampling_params.temperature != 0
                 or sampling_params.draft_temperature not in (None, 0)):
             raise ValueError("greedy_only requires target and draft temperature zero")
+        # The legacy top-M wire omits the full vocabulary partition at other
+        # temperatures. Reject unsupported requests before launching workers.
+        if (getattr(self.config, "duet_enabled", False) and
+                (self.config.duet_proxy_on_draft or self.config.duet_exit_topm_gather) and
+                (sampling_params.temperature not in (0.0, 1.0) or
+                 sampling_params.draft_temperature not in (None, 0.0, 1.0))):
+            raise ValueError("Legacy raw/top-M proxy requires T1 ranking; use the default full-vocabulary proxy for actual temperatures")
         if isinstance(prompt, str):
             prompt = self.tokenizer.encode(prompt)
         seq = Sequence(prompt, sampling_params)
@@ -303,6 +311,7 @@ class LLMEngine:
 
     def step(self, step: InferenceStep):
         t = perf_counter()
+        event_start = len(METRICS["phase_events"])
         seqs, is_prefill = self.scheduler.schedule()
         if is_prefill is None:
             # Scheduler-side context termination: the completed prefix is
@@ -322,6 +331,12 @@ class LLMEngine:
         else:
             METRICS["decode_total_time"] += time_taken
             METRICS["decode_total_tokens"] += ttl_tokens
+            events = METRICS["phase_events"][event_start:]
+            METRICS["decode_steps"].append(dict(
+                seconds=time_taken, emitted_tokens=ttl_tokens, batch_size=len(seqs),
+                event_start=event_start, event_end=len(METRICS["phase_events"]),
+                output_cap_reached=any(s.num_completion_tokens >= s.max_new_tokens for s in seqs),
+                clipped=any(e.get("clipped", False) for e in events)))
 
         outputs = [(seq.seq_id, seq.completion_token_ids)
                    for seq in seqs if seq.is_finished]
@@ -332,6 +347,8 @@ class LLMEngine:
         return self.scheduler.is_finished()
 
     def log_metrics(self):
+        from ssd.utils.performance import performance_summary
+        selected = performance_summary(METRICS, self.config.max_num_seqs)
         prefill_time = float(METRICS["prefill_total_time"])
         decode_time = float(METRICS["decode_total_time"])
         avg_prefill_throughput = (
@@ -343,7 +360,9 @@ class LLMEngine:
         print(
             f"Final Prefill Throughput: {avg_prefill_throughput:.2f}tok/s", flush=True)
         print(
-            f"Final Decode Throughput: {avg_decode_throughput:.2f}tok/s", flush=True)
+            f"Final Decode Throughput: {selected['tps'] or 0.0:.2f}tok/s", flush=True)
+        print(f"[metrics] Performance population: { {k:v for k,v in selected.items() if k != 'included_step_indices'} }", flush=True)
+        print(f"[raw metrics] All decode throughput: {avg_decode_throughput:.2f}tok/s", flush=True)
         print(
             f"[metrics] Prefill tokens/time: {METRICS['prefill_total_tokens']} / "
             f"{METRICS['prefill_total_time']:.6f}s", flush=True)
@@ -366,7 +385,7 @@ class LLMEngine:
                 return
             avg_tokens_per_step = ttl_accepted_with_recovery / ttl_num_spec_steps
             print(
-                f"[metrics] Avg Tokens per step (incl recovery): {avg_tokens_per_step:.2f}", flush=True)
+                f"[raw metrics] Avg Tokens per step (incl recovery): {avg_tokens_per_step:.2f}", flush=True)
 
             total_accepted = ttl_accepted_with_recovery - ttl_num_spec_steps
             # Split-only K1/K2 mode: effective spec depth is K_max = max(K1, K2),
@@ -548,6 +567,8 @@ class LLMEngine:
         if use_tqdm:
             pbar.close()
 
+        from ssd.utils.performance import performance_summary
+        METRICS["performance"] = performance_summary(METRICS, self.config.max_num_seqs)
         if not stream_callback:
             self.log_metrics()
 

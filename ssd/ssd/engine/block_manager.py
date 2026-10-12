@@ -126,6 +126,16 @@ class BlockManager:
                 self.hash_to_block_id[h] = block_id
             block_table.append(block_id)
 
+        # A fully cached, block-aligned prompt still needs one forward to
+        # produce next-token logits. KV alone does not contain the lm_head
+        # result; an empty query either indexes the preceding row or crashes.
+        if self.is_draft:
+            seq.num_draft_cached_tokens = min(seq.num_draft_cached_tokens,
+                                              seq.num_tokens - 1)
+        else:
+            seq.num_cached_tokens = min(seq.num_cached_tokens,
+                                       seq.num_tokens - 1)
+
 
     def deallocate(self, seq: Sequence):
         block_table = seq.draft_block_table if self.is_draft else seq.block_table
@@ -174,4 +184,3 @@ class BlockManager:
             new_blocks = self._allocate_n_blocks(needed)
             for block in new_blocks:
                 block_table.append(block.block_id)
-

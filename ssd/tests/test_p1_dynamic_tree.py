@@ -411,7 +411,7 @@ class TestNativeContextMetrics(unittest.TestCase):
                 METRICS[name] = [] if isinstance(value, list) else 0
             METRICS["prefill_total_tokens"] = 2047
             METRICS["prefill_total_time"] = 1.0
-            stub = SimpleNamespace(config=SimpleNamespace(speculate=True))
+            stub = SimpleNamespace(config=SimpleNamespace(speculate=True, max_num_seqs=1))
             out = StringIO()
             with redirect_stdout(out):
                 LLMEngine.log_metrics(stub)

@@ -17,7 +17,7 @@ class Sequence:
 
     _ATTRIBUTES = [
         'seq_id', 'status', 'token_ids', 'last_token', 'num_tokens',
-        'num_prompt_tokens', 'num_cached_tokens', 'block_table',
+        'num_prompt_tokens', 'initial_num_prompt_tokens', 'num_cached_tokens', 'block_table',
         'last_spec_step_accepted_len', 'draft_block_table',
         'num_draft_cached_tokens', 'temperature', 'draft_temperature', 'max_new_tokens',
         'ignore_eos', 'recovery_token_id', 'last_target_hidden_state',
@@ -32,6 +32,10 @@ class Sequence:
         self.last_token = token_ids[-1]
         self.num_tokens = len(self.token_ids)
         self.num_prompt_tokens = len(token_ids)
+        # Re-prefill moves num_prompt_tokens forward to include the already
+        # generated prefix. Output slicing and the generation budget must
+        # retain the immutable boundary of the original request.
+        self.initial_num_prompt_tokens = len(token_ids)
         self.num_cached_tokens = 0
         self.block_table = []
         self.last_spec_step_accepted_len = -1 # -1 on first req to force cache miss
@@ -66,7 +70,7 @@ class Sequence:
 
     @property
     def num_completion_tokens(self):
-        return self.num_tokens - self.num_prompt_tokens
+        return self.num_tokens - self.initial_num_prompt_tokens
 
     @property
     def prompt_token_ids(self):
@@ -74,7 +78,7 @@ class Sequence:
 
     @property
     def completion_token_ids(self):
-        return self.token_ids[self.num_prompt_tokens:]
+        return self.token_ids[self.initial_num_prompt_tokens:]
 
     @property
     def num_cached_blocks(self):
@@ -122,3 +126,5 @@ class Sequence:
     def __setstate__(self, state):
         for attr in self._ATTRIBUTES:
             setattr(self, attr, state.get(attr))
+        if self.initial_num_prompt_tokens is None:
+            self.initial_num_prompt_tokens = self.num_prompt_tokens

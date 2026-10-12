@@ -398,7 +398,10 @@ class Verifier(VerifierBase):
                     self._compute_and_send_proxy(
                         exit_logits, draft_tokens, logits_q, orig_bs,
                         _vk, async_pg, draft_rank, cache_hits=cache_hits,
-                        valid_k=speculate_result.valid_k)
+                        valid_k=speculate_result.valid_k,
+                        target_temps=[seq.temperature for seq in seqs],
+                        draft_temps=[seq.temperature if seq.draft_temperature is None
+                                     else seq.draft_temperature for seq in seqs])
 
             self.target_model_runner._duet_proxy_fn = _proxy_fn
 
@@ -819,7 +822,8 @@ class Verifier(VerifierBase):
             _ev_graph = _mr_tree_coarse(
                 "tree_proxy_graph_replay", parent="exit_proxy_side")
             chosen_pos, chosen_tok, _top_v = _proxy_graph.replay(
-                exit_logits[0], logits_q[0], draft_tokens[0])
+                exit_logits[0], logits_q[0], draft_tokens[0],
+                target_temps=temp_p, draft_temps=temp_d)
             _mc_tree_coarse("tree_proxy_graph_replay", _ev_graph)
             _ev_send = _mr_tree_coarse(
                 "proxy_send_enqueue", parent="exit_proxy_side")
@@ -829,16 +833,12 @@ class Verifier(VerifierBase):
             _mc_tree_coarse("proxy_send_enqueue", _ev_send)
             return
 
-        # 리뷰3-9(분포 미러)는 **동일-시드 A/B로 원복** (2026-08-04):
-        # temp/sampler_x 반영판은 hit +0.011에 P2AL 2.13→1.94 —
-        # 날카로워진 p^E가 wire 후보를 얕은 ctx로 몰아 깊이를 깎았다
-        # (tok/step 4.55→4.36 순손실). plain softmax가 체인 proxy와도
-        # 일관된 경험적 동작점 — 재도전은 P_iv 랭킹·β·prior 공동
-        # recalibration으로만 (T6 부채; 20번 판정표 참조).
+        # Preserve the original ladder/ranking policy; scale only request temperatures.
         _ev_softmax = (_mr_tree("tree_proxy_softmax")
                        if _detail_profile else None)
-        p_E = torch.softmax(exit_logits[0].float(), dim=-1)      # [vk+1, V]
-        q_rows = torch.softmax(logits_q[0].float(), dim=-1)      # [vk, V]
+        from ssd.engine.helpers.proxy_temperature import probabilities
+        p_E = probabilities(exit_logits, temp_p)[0]
+        q_rows = probabilities(logits_q, temp_d)[0]
         tokens = draft_tokens[0, :valid].to(p_E.device)
         if _detail_profile:
             _mc_tree("tree_proxy_softmax", _ev_softmax)
@@ -893,7 +893,7 @@ class Verifier(VerifierBase):
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,
-                                 valid_k=None):
+                                 valid_k=None, target_temps=1.0, draft_temps=1.0):
         """Compute DUET proxy from early-exit logits and send to draft.
 
         Args:
@@ -1004,7 +1004,9 @@ class Verifier(VerifierBase):
             _ev_graph = _mr_chain(
                 "chain_proxy_graph_replay", parent="exit_proxy_side")
             chosen_pos, chosen_tok, _ = _chain_graph.replay(
-                exit_logits[0], logits_q[0], draft_tokens[0, :K])
+                exit_logits[0], logits_q[0], draft_tokens[0, :K],
+                target_temps=(target_temps[0] if isinstance(target_temps, (list, tuple)) else target_temps),
+                draft_temps=(draft_temps[0] if isinstance(draft_temps, (list, tuple)) else draft_temps))
             _mc_chain("chain_proxy_graph_replay", _ev_graph)
             _ev_send = _mr_chain(
                 "proxy_send_enqueue", parent="exit_proxy_side")
@@ -1016,8 +1018,9 @@ class Verifier(VerifierBase):
 
         _ev_compute = _mr_d("proxy_compute") if _detail_profile else None
         # p_E (early-exit proxy), p_D (draft)
-        p_E = torch.softmax(exit_logits[:, :K, :].float(), dim=-1)  # [B, K, V]
-        p_D = torch.softmax(logits_q.float(), dim=-1)                # [B, K, V]
+        from ssd.engine.helpers.proxy_temperature import probabilities
+        p_E = probabilities(exit_logits[:, :K, :], target_temps)
+        p_D = probabilities(logits_q, draft_temps)
 
         # Accept probability proxy: â_i = min(1, p_E(y_i) / p_D(y_i))
         gather_idx = draft_tokens.unsqueeze(-1)  # [B, K, 1]
@@ -1080,7 +1083,7 @@ class Verifier(VerifierBase):
             _ev_pack = _mr_d("proxy_pack") if _detail_profile else None
             # pos == K (all-accept): target's full distribution at exit_logits[:, K, :].
             # Note: existing p_E only covers [:, :K, :] (line 246) — read separately.
-            pE_K = torch.softmax(exit_logits[:, K, :].float(), dim=-1)        # [B, V]
+            pE_K = probabilities(exit_logits[:, K:K+1, :], target_temps)[:, 0]
             pE_K_topk_probs, pE_K_topk_ids = pE_K.topk(top_k, dim=-1)         # [B, top_k]
             pE_K_topk_probs = pE_K_topk_probs / pE_K_topk_probs.sum(-1, keepdim=True).clamp(min=1e-10)
 

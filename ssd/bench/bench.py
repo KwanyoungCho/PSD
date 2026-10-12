@@ -500,23 +500,32 @@ def log_wandb_metrics(args, metrics, total_tokens, total_time, throughput, model
 
         if "decode_total_time" in metrics and "decode_total_tokens" in metrics:
             if metrics["decode_total_time"] > 0:
-                wandb_metrics["metrics_decode_throughput"] = metrics["decode_total_tokens"] / metrics["decode_total_time"]
+                wandb_metrics["raw_decode_throughput"] = metrics["decode_total_tokens"] / metrics["decode_total_time"]
 
         if "target_step_times" in metrics and metrics["target_step_times"]:
             avg_target_step_time_ms = sum(metrics["target_step_times"]) * 1000 / len(metrics["target_step_times"])
             wandb_metrics["metrics_avg_target_step_time_ms"] = avg_target_step_time_ms
 
         if "cache_hits" in metrics and metrics["cache_hits"]:
-            wandb_metrics["metrics_avg_cache_hits"] = sum(metrics["cache_hits"]) / len(metrics["cache_hits"])
+            wandb_metrics["raw_avg_cache_hits"] = sum(metrics["cache_hits"]) / len(metrics["cache_hits"])
 
         if "accepted_suffix_lens_with_recovery" in metrics and metrics["accepted_suffix_lens_with_recovery"]:
-            wandb_metrics["metrics_avg_accepted_suffix_lens_with_recovery"] = sum(metrics["accepted_suffix_lens_with_recovery"]) / len(metrics["accepted_suffix_lens_with_recovery"])
+            wandb_metrics["raw_avg_accepted_suffix_lens_with_recovery"] = sum(metrics["accepted_suffix_lens_with_recovery"]) / len(metrics["accepted_suffix_lens_with_recovery"])
             wandb_metrics["metrics_accepted_suffix_lens_with_recovery_histogram"] = wandb.Histogram(metrics["accepted_suffix_lens_with_recovery"])
 
         if "accepted_suffix_lens_on_hit" in metrics and metrics["accepted_suffix_lens_on_hit"]:
             wandb_metrics["metrics_avg_accepted_suffix_lens_on_hit"] = sum(metrics["accepted_suffix_lens_on_hit"]) / len(metrics["accepted_suffix_lens_on_hit"])
             wandb_metrics["metrics_accepted_suffix_lens_on_hit_histogram"] = wandb.Histogram(metrics["accepted_suffix_lens_on_hit"])
 
+    population = metrics.get("performance", {}) if metrics else {}
+    if population:
+        for metric, key in (("metrics_decode_throughput", "tps"),
+                            ("metrics_avg_cache_hits", "cache_hit"),
+                            ("metrics_avg_accepted_suffix_lens_with_recovery", "al"),
+                            ("metrics_included_steps", "included_steps"),
+                            ("metrics_excluded_steps", "excluded_steps")):
+            wandb_metrics[metric] = population[key]
+        wandb_metrics["performance_population"] = population["policy"]
     wandb.log(wandb_metrics)
 
 

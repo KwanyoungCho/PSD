@@ -156,6 +156,7 @@ class SpecDecodeStep(InferenceStep):
                 print(f"[SpecDecodeStep] speculation {i}: {decoded_tokens}", flush=True)
 
         #### STEP 2: VERIFY ####
+        event_start = len(getattr(self.verifier, "metrics", {}).get("phase_events", []))
         out_verify_result = self.verifier.verify(seqs, speculate_result, eagle=self.eagle)
 
         if _prof:
@@ -186,6 +187,22 @@ class SpecDecodeStep(InferenceStep):
             eagle_acts=out_verify_result.eagle_acts if self.eagle else None,
         )
         _mc("target_postprocess", _mev_pp)
+        metric_events = getattr(self.verifier, "metrics", {}).get("phase_events", [])
+        # Synchronous SD has no cache-hit events from Verifier, but uses the
+        # same emitted-token and full-batch performance population as SSD/DUET.
+        if len(metric_events) == event_start:
+            metric_events.extend(dict(accepted_len=len(suffix), cache_hit=None,
+                                      source=None, step_id=_step_id)
+                                 for suffix in out_verify_result.new_suffixes)
+        events = metric_events[event_start:]
+        if len(events) == len(seqs):
+            for event, seq, before, suffix in zip(events, seqs, saved, out_verify_result.new_suffixes):
+                emitted = seq.num_tokens-before[1]
+                cap = seq.num_completion_tokens >= seq.max_new_tokens
+                event.update(seq_id=seq.seq_id, emitted_len=emitted,
+                             clipped=len(suffix)>emitted, output_cap_reached=cap,
+                             finished=seq.is_finished)
+
 
         if _prof:
             torch.cuda.synchronize()
@@ -195,4 +212,6 @@ class SpecDecodeStep(InferenceStep):
             toks = sum(len(s) for s in out_verify_result.new_suffixes)
             print(f"[PROFILE target] handshake={(_t1-_t0)*1000:.2f}ms verify={(_t2-_t1)*1000:.2f}ms postprocess={(_t3-_t2)*1000:.2f}ms total={(_t3-_t0)*1000:.2f}ms {hits_str} toks={toks}", flush=True)
 
-        return sum(len(s) for s in out_verify_result.new_suffixes)
+        # Verification may accept past EOS or the requested output cap.
+        # Throughput counts only tokens actually committed by the scheduler.
+        return sum(seq.num_tokens - before[1] for seq, before in zip(seqs, saved))
