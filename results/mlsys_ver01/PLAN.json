@@ -1,0 +1,21 @@
+{
+  "base": "a82f7d24fb36827a9a81a3567f344dccb71f193e",
+  "branch": "MLSys-ver0.1",
+  "scope": "single CPU tree traversal, common verification simplifications, homogeneous-temperature sampler and T0 support; no root/tree scoring or KV policy changes",
+  "datasets": "saved 480 first-turn inputs, six groups of 80; not all original dataset rows or fresh holdout",
+  "comparisons": [
+    "tree_r0",
+    "tree_r1",
+    "chain",
+    "greedy"
+  ],
+  "pairs": {
+    "tree_r0": "2,3",
+    "tree_r1": "6,7",
+    "chain": "4,5",
+    "greedy": "0,1"
+  },
+  "acceptance": "Preserve T>0 conditional proposal law; T0 own-target argmax. Full480 before/after plus component profiles. No guarantee of bitwise AR equivalence in fp16.",
+  "baseline_adapters": "identical AMD dtype, SHM/safe teardown, prefix lookup off, bounded request groups, exclude cap/clipped/tail steps from both numerator and denominator",
+  "measurement": "two reversed-order tree process pairs, one chain pair; profile runs excluded from TPS claim; prompt bootstrap conditional on run pair"
+}

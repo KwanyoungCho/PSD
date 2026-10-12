@@ -9,8 +9,12 @@ _SEED = int(os.environ.get("SSD_SEED", "0"))
 torch.manual_seed(_SEED)
 
 class Sampler(nn.Module): 
-    def __init__(self, sampler_x: float | None = None, async_fan_out: int = 3):
+    def __init__(self, sampler_x: float | None = None, async_fan_out: int = 3,
+                 greedy_only: bool = False, stochastic_only: bool = False):
         super().__init__()
+        if greedy_only and stochastic_only:
+            raise ValueError("Sampler temperature modes are mutually exclusive")
+        self.greedy_only, self.stochastic_only = greedy_only, stochastic_only
         self.sampler_x = sampler_x
         self.F = async_fan_out # will need to accomodate lists for hit/miss eventually 
     
@@ -18,8 +22,12 @@ class Sampler(nn.Module):
     def forward(self, logits: torch.Tensor, temperatures: torch.Tensor, is_tree: bool = False):
         # logits: [B, V], temperatures: [B]
         
+        if self.greedy_only:
+            return logits.argmax(dim=-1)
+
         logits_cpy = logits.to(torch.float) 
-        greedy_tokens = logits_cpy.argmax(dim=-1)
+        if not self.stochastic_only:
+            greedy_tokens = logits_cpy.argmax(dim=-1)
 
         # Fast path: any zero temperature rows are greedy
         temps = temperatures
@@ -36,6 +44,8 @@ class Sampler(nn.Module):
         epsilon = 1e-10
         scores = probs.div_(torch.empty_like(probs).exponential_(1) + epsilon)
         sample_tokens = scores.argmax(dim=-1)
+        if self.stochastic_only:
+            return sample_tokens
         return torch.where(zero_mask, greedy_tokens, sample_tokens)
 
 

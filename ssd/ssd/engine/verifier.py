@@ -1,4 +1,5 @@
 import os
+import ctypes
 from ssd.engine.helpers.e0_trace import E0_TRACE as _E0_TRACE
 from ssd.engine.helpers import e0_trace as _e0
 import torch
@@ -240,6 +241,10 @@ class Verifier(VerifierBase):
         # T3.4-b5: 트리 step 감지 플래그 — 비-DUET 경로에서도 정의돼야
         # 아래 verify 분기가 안전하다.
         _tree_meta_arg = None
+        self._accept_cpu_tree = None
+        self._accept_tt = ctypes.c_float(seqs[0].temperature).value
+        _dt = seqs[0].draft_temperature
+        self._accept_td = ctypes.c_float(seqs[0].temperature if _dt is None else _dt).value
         _tree_wire_gpu_source = None
         # DUET: set proxy function on target model runner (rank 0 only)
         if config.duet_enabled:
@@ -299,6 +304,7 @@ class Verifier(VerifierBase):
                         parse_tree_ints, validate_tree_ints)
                     _nv_t = int(config.duet_tree_wire_nodes)
                     _ti_checked = parse_tree_ints(_tree_meta_arg, _nv_t)
+                    self._accept_cpu_tree = _ti_checked
                     validate_tree_ints(
                         _ti_checked, _nv_t, config.hf_config.vocab_size,
                         sibling_capacity=3)
@@ -376,12 +382,8 @@ class Verifier(VerifierBase):
             _td0 = (seqs[0].draft_temperature
                     if seqs[0].draft_temperature is not None
                     else seqs[0].temperature)
-            if _tree_meta_arg is not None and _tp0 <= 0:
-                # 리뷰3-10: target temp=0 + 트리 미정의 — draft측 WOR
-                # 게이트와 동일하게 명시 차단 (조용한 오분포 금지).
-                raise NotImplementedError(
-                    "DUET dynamic tree requires target temperature > 0 "
-                    "(temp-0 tree verify is gated; use chain policy)")
+            if _tree_meta_arg is not None and _tp0 == 0 and not config.greedy_only:
+                raise ValueError("T=0 tree requires greedy_only=True for captured draft execution")
 
             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead,
                           _tm=_tree_meta_for_proxy, _tp=_tp0, _td=_td0):
@@ -458,8 +460,15 @@ class Verifier(VerifierBase):
             seq.draft_temperature if seq.draft_temperature is not None else seq.temperature
             for seq in seqs
         ]
-        temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
-        temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
+        # Tree acceptance consumes CPU request temperatures directly (GPU
+        # graphs cache their scalar buffers). Pure greedy chain needs no
+        # probabilities. Avoid allocating/copying unused temperature tensors.
+        if not _E0_TRACE and (_tree_meta_arg is not None
+                or all(t == 0 for t in temps_target + temps_draft)):
+            temperatures_target = temperatures_draft = None
+        else:
+            temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
+            temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
 
         # ===== E0: 최종층 분포 기록 (P0 확장 — 기본 OFF, 전용 런 전용) =====
         if _E0_TRACE:
@@ -515,6 +524,8 @@ class Verifier(VerifierBase):
                 async_fan_out=self.async_fan_out,
                 jit_speculate=self.jit_speculate,
                 valid_k=speculate_result.valid_k,
+                all_stochastic=all(t > 0 for t in temps_target + temps_draft),
+                all_greedy=all(t == 0 for t in temps_target + temps_draft),
             )
             _mc("chain_accept", _mev_chain_accept)
         _mc("verify_sample_accept", _mev_vs)
@@ -604,30 +615,28 @@ class Verifier(VerifierBase):
         append — 트리 경로가 그대로 실린다).
         """
         from ssd.engine.helpers.p2_tree import (
-            parse_tree_ints, tree_verify_walk_tensor, q_probs_from_logits)
+            parse_tree_ints, tree_verify_walk_tensor, tree_verify_walk_greedy, q_probs_from_logits)
         cfg = self.target_model_runner.config
         nv = int(cfg.duet_tree_wire_nodes)
-        ti = parse_tree_ints(speculate_result.tree_ints[0].cpu(), nv)
-        pq = speculate_result.parent_q_logits[0].float()         # [nv, V] GPU
-        td = float(temperatures_draft[0])
-        tt = float(temperatures_target[0])
-        q_probs = q_probs_from_logits(
-            pq, torch.full((pq.shape[0],), max(td, 1e-8),
-                           device=pq.device),
-            self.sampler_x, self.async_fan_out)
-        p_rows = logits_p[0].float()             # [valid+1, V] GPU 상주 —
-        # 사다리 벡터 연산([V])을 GPU에서 수행 (CPU 복사 2.3MB/step 제거;
-        # walk_tensor는 device-agnostic, 스칼라 sync는 형제당 소수)
-
+        ti = self._accept_cpu_tree
+        td = self._accept_td
+        tt = self._accept_tt
+        p_rows = logits_p[0].float()
         def _coin():
             return float(torch.rand(1).item())
-
         def _mult(probs):
             return int(torch.multinomial(probs, 1).item())
-
-        path, terminal = tree_verify_walk_tensor(
-            ti, p_rows, q_probs, tt, _coin, _mult)
         _calib = os.environ.get("SSD_TREE_CALIB_TRACE", "")
+        if tt == 0:
+            path, terminal = tree_verify_walk_greedy(ti, p_rows)
+            if _calib:
+                raise ValueError("Stochastic calibration is not a greedy label")
+        else:
+            pq = speculate_result.parent_q_logits[0].float()
+            q_probs = q_probs_from_logits(
+                pq, torch.full((pq.shape[0],), td, device=pq.device),
+                self.sampler_x, self.async_fan_out)
+            path, terminal = tree_verify_walk_tensor(ti, p_rows, q_probs, tt, _coin, _mult)
         if _calib:
             # Diagnostic-only post-hoc calibration.  Keep three labels
             # separate: an unattempted later sibling is not a rejection.
@@ -642,8 +651,8 @@ class Verifier(VerifierBase):
             _tok_cpu = [int(ti["tok"][j]) for j in range(_v)]
             _tok = torch.tensor(
                 _tok_cpu, dtype=torch.int64, device=q_probs.device)
-            _qref = ti["parent_q_ref"][:_v].to(
-                q_probs.device, torch.int64)
+            _qref = torch.as_tensor(ti["parent_q_ref"][:_v],
+                device=q_probs.device, dtype=torch.int64)
             _q_node = q_probs[_qref, _tok].detach().float().cpu().tolist()
             _depth, _path_conf = [0] * _v, [0.0] * _v
             for _j in range(_v):

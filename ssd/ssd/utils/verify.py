@@ -2,6 +2,11 @@ import torch
 from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
 from ssd.config import Config
 
+def _materialize_verified(speculations, counts, recovery):
+    rows = torch.cat((counts[:, None], recovery[:, None], speculations), dim=1).tolist()
+    return [r[2:3 + r[0]] for r in rows], [r[1] for r in rows]
+
+
 def verify(
     logits_p: torch.Tensor,
     logits_q: torch.Tensor,
@@ -13,6 +18,8 @@ def verify(
     async_fan_out: int | None = None,
     jit_speculate: bool = False,
     valid_k: torch.Tensor | None = None,
+    all_stochastic: bool = False,
+    all_greedy: bool = False,
 ) -> tuple[list[list[int]], list[int]]:
     """
     Speculative‐decoding verification:
@@ -26,6 +33,22 @@ def verify(
        accept_until = min(accept_until, valid_k) guarantees padded positions
        can never be accepted. None (default) keeps every other caller unchanged.
     """
+
+    if all_greedy:
+        preds = logits_p.argmax(dim=-1)
+        matches = speculations[:, 1:] == preds[:, :-1]
+        k = speculations.shape[1] - 1
+        counts = torch.where((~matches).any(1), (~matches).int().argmax(1), k)
+        if valid_k is not None:
+            counts = torch.minimum(counts, valid_k)
+        rows = torch.arange(logits_p.shape[0], device=logits_p.device)
+        return _materialize_verified(speculations, counts, preds[rows, counts])
+
+    if all_stochastic and jit_speculate:
+        from ssd.utils.verify_fast import verify_stochastic
+        return verify_stochastic(logits_p, logits_q, speculations,
+            temperatures_target, temperatures_draft, valid_k,
+            sampler_x, async_fan_out)
 
     device = logits_p.device
     B, Kp1, V = logits_p.shape

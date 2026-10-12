@@ -1030,6 +1030,8 @@ class P2TreeExecutor:
             self.cell_logits[cell_base:cell_base + wf] = logits
             toks, raws = PT.tree_sample_wor(
                 logits, self.in_temps[:wf], C, assume_pos_temps=True,
+                allow_greedy=getattr(self.cfg, "greedy_only", False),
+                greedy_only=getattr(self.cfg, "greedy_only", False),
                 sampler_x=getattr(self.cfg, "sampler_x", None),
                 F=getattr(self.cfg, "async_fan_out", None),
                 generator=self.gen,

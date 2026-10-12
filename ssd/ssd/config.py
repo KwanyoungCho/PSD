@@ -67,6 +67,8 @@ class Config:
     gpu_memory_utilization: float = 0.7
     num_gpus: int = 1
     enforce_eager: bool = False
+    greedy_only: bool = False  # Compile homogeneous T=0 draft paths without RNG.
+    stochastic_only: bool = False  # CPU request contract; no unused greedy sampler work.
     hf_config: AutoConfig | None = None
     eos: int = -1
     kvcache_block_size: int = 256

@@ -1,0 +1,141 @@
+[
+  {
+    "name": "tree_smoke",
+    "arm": "base",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "4",
+      "--seed",
+      "10801",
+      "--temperature",
+      "0",
+      "--batch",
+      "1",
+      "--limit",
+      "8"
+    ],
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "chain_smoke",
+    "arm": "base",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "chain",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "8",
+      "--seed",
+      "10801",
+      "--temperature",
+      "0",
+      "--batch",
+      "1",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "tree",
+    "arm": "base",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "32",
+      "--seed",
+      "10801",
+      "--temperature",
+      "0",
+      "--batch",
+      "1"
+    ],
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0"
+    }
+  },
+  {
+    "name": "ar",
+    "arm": "base",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "ar",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "32",
+      "--seed",
+      "10801",
+      "--temperature",
+      "0",
+      "--batch",
+      "1"
+    ],
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-paper-review",
+      "PAPER_BASELINE": "1"
+    }
+  },
+  {
+    "name": "greedy_tree_profile",
+    "arm": "base",
+    "draft_seed": 231,
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "10801",
+      "--temperature",
+      "0",
+      "--batch",
+      "1",
+      "--limit",
+      "24"
+    ],
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0",
+      "SSD_PROFILE_DUET": "1",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/profiles/greedy_tree_profile"
+    }
+  }
+]

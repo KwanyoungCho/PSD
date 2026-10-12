@@ -362,6 +362,12 @@ def create_llm_kwargs(args, draft_path):
     if args.gpu_memory_utilization is not None:
         llm_kwargs["gpu_memory_utilization"] = args.gpu_memory_utilization
 
+    # This benchmark has one fixed target/draft temperature per engine.
+    # Select the matching sampler before CUDA graph capture; no new CLI knob.
+    draft_temp = args.temp if args.dtemp is None else args.dtemp
+    llm_kwargs["greedy_only"] = args.temp == 0 and draft_temp == 0
+    llm_kwargs["stochastic_only"] = args.temp > 0 and draft_temp > 0
+
     # DUET-SSD
     if getattr(args, 'duet', False):
         llm_kwargs["duet_enabled"] = True

@@ -62,7 +62,7 @@ def _should_run_p2_tree(config, batch_size, temperatures):
     """
     return (getattr(config, "duet_p2_tree_policy", "off") == "on"
             and int(batch_size) == 1
-            and bool((temperatures > 0).all()))
+            and (getattr(config, "greedy_only", False) or bool((temperatures > 0).all())))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -3089,7 +3089,7 @@ class DraftRunner(ModelRunner):
         entirely inside :class:`P1TreeExecutor`; host work here occurs once
         before replay and never between the K1 draft forwards.
 
-        Returns ``None`` for the explicitly unsupported B>1/temp=0/near-end
+        Returns ``None`` for the explicitly unsupported B>1/near-end
         cases so the caller can retain the established chain path.
         """
         self._p1_tree_fallback_reason = None
@@ -3097,8 +3097,8 @@ class DraftRunner(ModelRunner):
             self._p1_tree_fallback_reason = "policy_off"
             return None
         B, contexts, _ = glue_logits.shape
-        if B != 1 or not bool((partial_tree_decode_args["temperatures"] > 0)
-                              .all()):
+        if B != 1 or (not getattr(self.config, "greedy_only", False) and not bool(
+                (partial_tree_decode_args["temperatures"] > 0).all())):
             self._p1exec_count("chain_fallback_batch_or_temperature")
             self._p1_tree_fallback_reason = (
                 f"batch_or_temperature:B={B}")
