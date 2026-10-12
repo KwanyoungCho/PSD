@@ -1,0 +1,306 @@
+[
+  {
+    "question_id": 88,
+    "category": "writing",
+    "turns": [
+      "Craft an intriguing opening paragraph for a fictional short story. The story should involve a character who wakes up one morning to find that they can time travel.",
+      "Summarize the story with three bullet points using only nouns and adjectives, without verbs."
+    ],
+    "index": 7,
+    "group": "mt_bench"
+  },
+  {
+    "question_id": 90,
+    "category": "writing",
+    "turns": [
+      "Edit the following paragraph to correct any grammatical errors:\nShe didn't remembre where is her purse, so I thinks its in the car but he's say it's on kitchen table but he are not sure, and then they asked me to looking for it, she's say, \"Can you?\", and I responds with, \"Maybe, but ain't no sure,\" and he not heard me, and, \"What?\", he asks, \"Did you found it?\".",
+      "Modify your earlier reply and eliminate the use of gendered pronouns."
+    ],
+    "index": 9,
+    "group": "mt_bench"
+  },
+  {
+    "question_id": 102,
+    "category": "reasoning",
+    "turns": [
+      "You can see a beautiful red house to your left and a hypnotic greenhouse to your right, an attractive heated pink place in the front. So, where is the White House?",
+      "Does the original question contain any clues to definitively determine the location of the White House?"
+    ],
+    "reference": [
+      "The answer is \"Washington, DC\".",
+      "No."
+    ],
+    "index": 21,
+    "group": "mt_bench"
+  },
+  {
+    "question_id": 133,
+    "category": "extraction",
+    "turns": [
+      "Extract the following information from the presented texts: The name of the book, the author, the main character, the year of publication. Output in the format of \"main character, book, author, year of publication\", one book per line.\na) In the realm of wizarding literature, a true standout is the work of J.K. Rowling. One of her books that left an indelible mark is 'Harry Potter and the Philosopher's Stone'. This iconic tale, published in 1997, tells the story of Harry, a young orphan who discovers his magical abilities on his 11th birthday. Soon, he finds himself at the Hogwarts School of Witchcraft and Wizardry, a place teeming with magic and adventure, located somewhere in Scotland.\nb) The magic of Middle-earth has entranced readers worldwide, thanks to the brilliance of J.R.R. Tolkien. In one of his seminal works, 'The Lord of the Rings: The Fellowship of the Ring', published in 1954, we meet Frodo Baggins, a brave hobbit tasked with the perilous quest of destroying the One Ring. The epic journey takes him from the peaceful Shire to the tumultuous regions of Middle-earth.\nc) In a galaxy far, far away, the imagination of L.E. Starlighter gives us 'The Prism Galaxy Chronicles: The Awakening of the Starcaster'. Published in 2028, the story is about Zylo, a humble spaceship mechanic, who unexpectedly discovers he's a Starcaster - a rare individual with the power to manipulate stardust. Set against the backdrop of an interstellar empire in turmoil, Zylo's destiny unfolds on numerous alien worlds, each with its unique cosmic charm.",
+      "Reformulate your earlier reply, output it in JSON format and only include books published after 1980."
+    ],
+    "reference": [
+      "",
+      "The answer to should only include 'Harry Potter and the Philosopher's Stone' and 'The Prism Galaxy Chronicles: The Awakening of the Starcaster'"
+    ],
+    "index": 52,
+    "group": "mt_bench"
+  },
+  {
+    "question_id": 183,
+    "category": "translation",
+    "turns": [
+      "Translate German to English: Bis heute sind im unteren Ende der Mikwe , deren Urspr\u00fcnge bis ins achte Jahrhundert zur\u00fcckgehen , unterschiedliche Wasserst\u00e4nde durch wechselnde Pegel des Rheins ablesbar ."
+    ],
+    "reference": [
+      "To this day the differing water levels caused by the varying levels of the Rhine can be read at the lower end of the Mikwe , the origins of which trace back to the eighth century ."
+    ],
+    "index": 102,
+    "group": "translation"
+  },
+  {
+    "question_id": 221,
+    "category": "translation",
+    "turns": [
+      "Translate German to English: In Nevada , wo vor kurzem 50 Freiwillige mit den Ger\u00e4ten ausgestattet wurden , waren Autofahrer skeptisch beim Gedanken , die Regierung k\u00f6nnte jede ihrer Bewegungen verfolgen ."
+    ],
+    "reference": [
+      "In Nevada , where about 50 volunteers' cars were equipped with the devices not long ago , drivers were uneasy about the government being able to monitor their every move ."
+    ],
+    "index": 140,
+    "group": "translation"
+  },
+  {
+    "question_id": 226,
+    "category": "translation",
+    "turns": [
+      "Translate German to English: Ein Prozess wegen versuchten Totschlags , gef\u00e4hrlicher K\u00f6rperverletzung und Sachbesch\u00e4digung gegen zwei 30-J\u00e4hrige hat vor dem Landgericht Frankfurt ( Oder ) begonnen ."
+    ],
+    "reference": [
+      "Proceedings for attempted murder , grievous bodily harm and material damage , brought against two 30-year-olds have begun before the Frankfurt District Court ."
+    ],
+    "index": 145,
+    "group": "translation"
+  },
+  {
+    "question_id": 240,
+    "category": "translation",
+    "turns": [
+      "Translate German to English: Ein Schuldspruch erfolgte au\u00dferdem in einer Reihe terrorismusbezogener Anklagepunkte , wozu eine Welle von Sprengstoffanschl\u00e4gen auf Kirchen in Indonesien an Heiligabend im Jahr 2000 z\u00e4hlten ."
+    ],
+    "reference": [
+      "He was also found guilty of a number of other terrorism-related charges , including a wave of bombings of churches across Indonesia on Christmas Eve in 2000 ."
+    ],
+    "index": 159,
+    "group": "translation"
+  },
+  {
+    "question_id": 247,
+    "category": "summarization",
+    "turns": [
+      "Summarize: Francois Hollande has vowed to 'show no mercy' if French peacekeepers are found guilty of sexual assaulting starving children in the Central African Republic. Fourteen soldiers dispatched to restore order after a 2013 coup have been accused of abusing children as young as nine as they begged for something to eat, according\u00a0to a French judicial source. The investigation has been underway since last year but was only made public yesterday. The French president today said: 'If some soldiers have behaved badly, I will show no mercy.' President Francois Hollande has vowed to 'show no mercy' if French peacekeepers in Central African Republic are found guilty of raping hungry children in exchange for food. The French defence ministry has vehemently denied covering up the scandal following revelations it was made aware of the allegations in July last year when it received a leaked UN report on the subject. The ministry said it immediately launched a probe into the case when it received the news, sending investigators to the former French colony on August 1. A defence ministry spokesman urged 'great caution' because the accusations have not yet been proven, adding: 'There is no desire to hide anything. 'We are not hiding the facts, we are trying to verify the facts.' The abuse reportedly took place at a centre for displaced people near Bangui airport between December 2013  and June 2014. Paula Donovan, co-director of advocacy group AIDS-Free World, saw the report. A French soldier taking part in 'Operation Sangaris' stands guard  at the Boali church as people sit on the floor. She said: 'The children were saying that they were hungry and they thought that they could get some food from the soldiers. 'The answer was \"if you do this, then I will give you food\".' Of the six children testifying against the soldiers, four say they were direct victims of sexual abuse while two others witnessed it, the French judicial source revealed. The UN employee accused of the leak, Anders Kompass, turned the report over to French authorities because his bosses had failed to take action and has since been suspended, The Guardian reported. A UN spokesman confirmed  investigators had conducted a probe last year following 'serious allegations' of child abuse and sexual exploitation by French troops. French soldiers prepare to blow up captured weapons and explosive devices in Bangui on December 4, 2014. French soldiers patrol in a tank in Bangui amid dust as citizens go about their daily business. They added that an unnamed staff member had been suspended for leaking the report. Florent Geel, head of the Africa desk at the International Federation for Human Rights, said Kompass likely leaked the report because those accused are French. He said: 'When it involves Chad, there is never any follow-up. But here it involves France, where there is an independent judicial system, it could move things on.' The violence in the Central African Republic has largely pitted the Christian majority against mainly Muslim Seleka rebels who led the March 2013 coup against former leader Francois Bozize. The country has yet to react officially, but a government member who wished to remain anonymous said that if true, the allegations were 'horrible and unacceptable'. 'French soldiers cannot behave like this in a country where they came to help civilians,' they added."
+    ],
+    "reference": [
+      "14 soldiers have been accused of abusing children as young as nine. Investigation was started last year but was only made public yesterday. French defence ministry has denied covering up the scandal."
+    ],
+    "index": 166,
+    "group": "summarization"
+  },
+  {
+    "question_id": 260,
+    "category": "summarization",
+    "turns": [
+      "Summarize: Taken at the dawn of photography, these unique pictures are some of the first ever taken of the city of Bristol, nearly 100 years before much of its historic centre was destroyed by Nazi bombing. The images, captured between 1850 and 1855 by photographer Hugh Owen, have surfaced after being put up for auction - and could fetch up to \u00a330,000. Everything from the waterfront, city centre and St Mary Redcliffe church can be seen in the shots, as well as\u00a0The Fourteen Stars Tavern building which was pulled down in 1857. It became part of the site for The Bristol Brewery Georges before that was closed in 1999 and later turned into a block of flats. Many of the buildings pictured have changed dramatically between the 19th century and today, particularly the area of High Street. Other shots are almost identical, including the one of St John's Gate at the Church of St John the Baptist, which shows that little is different in certain areas that escaped the heavy bombing during the Second World War. The albumen prints were made in the 1870s from the original paper negatives of the early 1850s. They are due to go up for auction in Cirencester tomorrow. Stepping back in time: The Fourteen Stars Tavern (pictured left) can be seen in a photo believed to have been taken shortly before it was knocked down. It was replaced by The Bristol Brewery Georges, which has since closed and been converted into flats. As it is today (right) Many uses: There was a builder, undertaker and joiner stationed at\u00a0Broad Quay Bristol when this photo was taken between 1850 and 1855. How Broad Quay Bristol looks now. It has become restaurants but retained some of its old character for people to enjoy while they eat. Little difference: The view through St John's Gate at the Church of St John the Baptist has not changed much between 1850 and today - apart from the road works. High Street in Bristol (left in 1850) is one of the areas where the buildings have changed quite dramatically over the past 160 years. The structure was overhauled in 1962 to make way for what is the former Norwich Union building. Today it stands defunct and boarded up (right) This fascinating picture shows Sleep Street in Bristol at the dawn of photography, believed to have been taken between 1850 and 1855. St Mary Redcliffe church was constructed from the 12th to the 15th centuries and has been a place of Christian worship for over 900 years. Pictured left is what the towering structure looked like in the 19th century after being snapped by Hugh Owen and, right, how it appears now. Hugh Owen's photograph shows St Peter's Hospital, which was\u00a0destroyed in the Bristol Blitz in 1940.\u00a0Built as a merchant's house, it had been a showcase of Jacobean architecture before it was bombed. Not much change: The church is renowned for the beauty of its Gothic architecture and is classed as a Grade I listed building by English Heritage.\u00a0Queen Elizabeth I is said to have described it as 'the fairest, goodliest, and most famous parish church in England' St Mary-Le-Port Street in Bristol.\u00a0The albumen prints were made in the 1870s from the original paper negatives of the early 1850s. Area of beauty: College Green, Bristol, as it looked in the 19th century. A replica of the Bristol High Cross had been erected there, in the shadow of the cathedral, because the original was deemed too fragile to move again. Missing landmark: The remains of the replica cross can now be seen in nearby Berkeley Square, where they were transferred in about 1950 from College Green (pictured). Much of the trees which shielded the cathedral are now gone. Another image of Sleep Street in Bristol. It is believed the set of pictures could fetch up to \u00a330,000 when they go up for auction tomorrow. This photo shows Host Street in Bristol. It provides a glimpse into the past as much of the historic city centre was destroyed by bombing during the Second World War."
+    ],
+    "reference": [
+      "Images were taken at the dawn of photography by Hugh Owen and give a glimpse of how the city looked in 1850. They are being put up for auction in Cirencester tomorrow and are expected to fetch between \u00a320,000-\u00a330,000. The unique pictures provide a rare chance to see what Bristol looked like before it was heavily bombed in the war."
+    ],
+    "index": 179,
+    "group": "summarization"
+  },
+  {
+    "question_id": 272,
+    "category": "summarization",
+    "turns": [
+      "Summarize: Yet another scientific study has found no link between autism and the vaccine against measles, mumps and rubella (MMR) - even among high risk children. The findings, in the Journal of the American Medical Association (JAMA), are based on a study of about 95,000 young people. All those in the study had older siblings. Some of the elder children had autism and some did not. Numerous studies over the last 15 years have ruled out a link between the MMR vaccine and autism. Since autism can run in families, researchers decided to look at whether vaccines could make autism even more likely in children who had siblings with autism. They found that vaccines had no effect on autism risk, whether or not a sibling in the family was diagnosed. 'Consistent with studies in other populations, we observed no association between MMR vaccination and increased ASD risk among privately insured children,' said the study, led by Anjali Jain, a doctor in Falls Church, Virginia. 'We also found no evidence that receipt of either one or two doses of MMR vaccination was associated with an increased risk of ASD among children who had older siblings with ASD.' Autism is on the rise, and affects as many as one in 68 children in the United States, but its causes remain poorly understood. Fears about vaccines and autism began to spread after the publication in 1998 of an article by Andrew Wakefield. He was later stripped of his medical license. Fears about vaccines and autism began to spread after the publication in 1998 of an article by Andrew Wakefield that purported to find a link between the MMR vaccine and autism in 12 children. It was later found to be fraudulent and was retracted by the journal that published it. As the author, Wakefield was stripped of his medical license. But concerns over vaccine safety, particularly in the Internet age, have proven difficult to quell. 'Although a substantial body of research over the last 15 years has found no link between the MMR vaccine and ASD, parents and others continue to associate the vaccine with ASD,' said the JAMA study. 'Surveys of parents who have children with ASD suggest that many believe the MMR vaccine was a contributing cause.' Children who have an older sibling with autism are less likely to get vaccinated, the study found. The MMR vaccination rate for the children with unaffected siblings was 92 percent by age five. In contrast, the MMR vaccination rates for children with older siblings with ASD was 86 percent by age five. An accompanying editorial by Bryan King, a doctor at the University of Washington and Seattle Children's Hospital, said the data is clear. 'The only conclusion that can be drawn from the study is that there is no signal to suggest a relationship between MMR and the development of autism in children with or without a sibling who has autism,' King wrote. 'Taken together, some dozen studies have now shown that the age of onset of ASD does not differ between vaccinated and unvaccinated children, the severity or course of ASD does not differ between vaccinated and unvaccinated children, and now the risk of ASD recurrence in families does not differ between vaccinated and unvaccinated children.'"
+    ],
+    "reference": [
+      "The findings, in the Journal of the American Medical Association, are based on a study of about 95,000 young people. Some children in the study had elder siblings with autism. But researchers found vaccines had no effect on autism risk, whether or not a sibling in the family was diagnosed."
+    ],
+    "index": 191,
+    "group": "summarization"
+  },
+  {
+    "question_id": 274,
+    "category": "summarization",
+    "turns": [
+      "Summarize: This is the man who allegedly opened fire in the campus library of a North Carolina college on Monday morning, leaving one person dead. Kenneth Stancil, 20, is a former student who did not graduate from Wayne Community College in Goldsboro, where he is accused of shooting dead a man who working in the school's print shop. According to police, Stancil walked into the building at 8am carrying a long-barreled\u00a0gun, went up to the third floor, and fired one shot, which killed long-time employee Ron Lane. It is not known whether Stancil and Lane are connected or related. Scroll Down for Video. Manhunt: Police believe the shooter was Kenneth Stancil, a former student who did not graduate from Wayne Community College in Goldsboro, North Carolina. He allegedly entered the building at 8am and fired one shot. Killed: The single bullet fired on Monday morning killed Rodney Lane (pictured left and right) who was a long-time employee at the Wayne Community College print shop. It is not known if he was connected to Stancil. Issuing a warrant for his arrest, authorities described Stancil as\u00a0white, approximately 5'11\", with a goatee, and a tattoo over his left eye. SWAT teams raced to Wayne Community College in Goldsboro just before 9am on Monday after frantic 911 calls of a gunman who had opened fire. Goldsboro City Manager Scott Stevens, told CNN that one person was fatally shot and that the suspect was still at large and an 'active shooter' situation existed. 'There have been shots fired on the campus of Wayne Community College,' said Kim Best, spokeswoman for the city of Goldsboro. 'There has been one fatality, and there is one shooter.' Police identified the victim as Rod Lane who worked in the college print shop. Take over: A military style SWAT vehicle from the Johnston County Sheriff's Office arrived at the college. Response:\u00a0Goldsboro Sheriff's Department rushed to Wayne Community College in Goldsboro, North Carolina after a shooting inside the campus library just before 9am on Monday. Relief: SWAT teams were clearing the campus building by building and students were congregating in the college parking lot on Monday morning. Clearing buildings:\u00a0A line of about 20 to 30 students were escorted out of the campus with their hands up. Leaving: As the morning progressed students were escorted off the college campus by police. Evacuation: Students on the campus were led to safety after SWAT teams arrived just after the shooting. Early morning: Police from around Wayne County descended on the community college after 911 calls were made reporting a shooting inside the campus library. Warning: The college website advised all students to shelter as there was an active shooter on campus. At a press conference late on Monday morning, WCC president Kay Albertson said: 'Our hearts are heavy, but it could have been a lot worse.' Goldsboro Police confirmed that one person had been shot in the 'vicinity' of the campus library. Stancil was reported to be wearing a blue jacket with light colored pants. Authorities have urged the public not to approach him as he is considered extremely dangerous. They have asked anyone who believes they have seen him to phone 911 immediately. According to WRAL, a student government representative said the shooting took place on the third floor of the Wayne Learning Center, which houses the library, cafeteria and student lounge. Fire Marshall Brian Taylor told NBC News that multiple members of local law enforcement descended on the scene and a massive manhunt was underway for the suspected shooter. According to MSNBC, the lockdown was lifted as of about 10.30am ET. Daniel Wiggins, assistant operations manager for Wayne County, North Carolina, told CNN that just before 9am the college website confirmed the school was on lockdown with a message reading, 'This is not a drill. The entire campus is on lockdown.' Appeal for calm:\u00a0Wayne Community College in Goldsboro, North Carolina, was on lockdown after one person was shot in the library, said Daniel Wiggins, assistant operations manager for Wayne County. Rapid response: Shortly after 9am the\u00a0The GPD crime lab arrived at the community college. Swat teams hurried to arrive on the scene and according to the local Goldsboro News Argus the entire campus was evacuated building by building. Speaking to THV11.com Tara Humphries, of Wayne Community College claimed that police have one suspect 'under control.' However, that has not been confirmed by law enforcement sources. School officials said there was no hostage situation, but did say that some students and teachers 'are still trapped inside and trying to get out.' College President Kay Albertson said staff and students had been evacuated and 'we've been told to pull back.' According to Wayne County Schools spokesman Ken Derksen, the Tommy's Road Elementary School was also on lockdown because it is one mile from the community college. The college is one hour away from Raleigh and has 3,900 students currently enrolled."
+    ],
+    "reference": [
+      "Shooter identified as Kenneth Stancil who was once a student at college. He 'carried a long gun' and 'fired one shot' that killed worker Rodney Lane. Wayne Community College in Goldsboro was on lockdown just before 9am. College campus was systematically evacuated as SWAT teams arrived. The college is one hour away from Raleigh and has 3,900 students."
+    ],
+    "index": 193,
+    "group": "summarization"
+  },
+  {
+    "question_id": 283,
+    "category": "summarization",
+    "turns": [
+      "Summarize: Manny Pacquiao decided to train on the streets of Los Angeles on Friday as he ran along the trail at Griffith Park ahead of his highly-anticipated fight against Floyd Mayweather. The Filipino swapped the gym for the great outdoors as he worked on his fitness and stamina in preparation for what could be a lengthy bout against his welterweight rival. Pacquiao was spotted with several fitness fanatics during his run around one of the North America's largest urban parks. Manny Pacquiao is joined by several fitness fanatics as he jogs around Griffith Park. Pacquiao was joined by his dog Pacman as he ran around one of North America's largest urban parks. The Filipino boxer shows off his skills by shadow boxing in front of interested spectators. The 36-year-old was joined by his pet dog Pacman as he continued to gear up for his May 2 encounter against the undefeated Mayweather. As well as working on his aerobic endurance, Pacquiao was also tested on his core strength and showed off his impressive footwork in front of watching spectators by shadow boxing. Pacquiao recently unveiled the multicoloured mouth guard he will wear during his $300million Las Vegas showdown with Mayweather. The container that it comes in reads 'MouthGuards for Champions', demonstrating Pacquiao's undoubted confidence. Pacquiao worked out on the mats as he took time out from the gym ahead of his fight with Floyd Mayweather. The 36-year-old looked extremely focused as he worked on his core strength during the training session. Spectators watch on as a fitness coach puts Pacquiao through his paces at LA's Griffith Park. Pacquiao has revealed the colourful mouthpiece he will wear during the May 2 bout in Las Vegas."
+    ],
+    "reference": [
+      "Manny Pacquiao ran along Griffith Park trail as he worked on his fitness. The Filipino was accompanied by his pet dog Pacman during jog. Pacquiao goes toe-to-toe with Floyd Mayweather in Las Vegas on May 2. READ: Pacquiao reveals his colourful mouth guard ahead of his bout."
+    ],
+    "index": 202,
+    "group": "summarization"
+  },
+  {
+    "question_id": 313,
+    "category": "summarization",
+    "turns": [
+      "Summarize: Diego Costa has identified Chelsea's crunch clash against Arsenal for his latest hamstring injury comeback. The Spain international limped off just 11 minutes after coming on as a substitute in Chelsea's 2-1 win over Stoke on Saturday. Costa has been told he will miss just over two weeks following his latest hamstring setback, a problem that has dogged him all season. Diego Costa is unlikely to miss the entirety of Chelsea's title run-in and could return within two weeks. Costa limped off just 11 minutes into his return from injury in Chelsea's 2-1 win over Stoke City on Saturday. Costa is likely to be fit to face Arsenal in what could prove a key game in Chelsea's title run-in. The striker will not do any ball work at the club's Cobham HQ this week, instead focusing on strength sessions and intensive massages on the injured muscle. Costa is also expected to see a specialist before he is given the green light to step up his rehabilitation regime. The striker will definitely miss the games against Queens Park Rangers and Manchester United. But the league leaders face second placed Arsenal, in a clash that could prove pivotal in the title race on April 26 and Costa is said to be determined to play. Chelsea's trip to the Emirates Stadium is the most likely date for Costa to return to Jose Mourinho's side. Costa has pulled out of a planned in-store appearance at Chelsea's club shop on Wednesday. But Jose Mourinho will not take any unnecessary risks with his star striker and could decide against fielding Costa against the Gunners if the title is virtually sewn up by then. Depending on how the title race develops, the the club are considering giving Costa an extended break between now and the end of the season to help him overcome his hamstring problems. Mourinho is determined to avoid the need for surgery and may decide to use the striker sparingly for the run-in depending on how close the title race pans out. The Chelsea striker had been subbed off against Hull City before the international break with a similar injury. Mourinho will be delighted by the news that his top scorer could be back soon, although he will miss him. In the meantime, Loic Remy is likely to lead the line in the Blues' short trip to face QPR on Sunday afternoon."
+    ],
+    "reference": [
+      "Injured Chelsea striker Diego Costa is expected to be out for two weeks. He could return in time to face  Arsenal in the Premier League run-in. Spain striker limped off just 11 minutes into appearance against Stoke City."
+    ],
+    "index": 232,
+    "group": "summarization"
+  },
+  {
+    "question_id": 354,
+    "category": "qa",
+    "turns": [
+      "When does lana and clark get back together?"
+    ],
+    "index": 273,
+    "group": "qa"
+  },
+  {
+    "question_id": 355,
+    "category": "qa",
+    "turns": [
+      "When is the next time easter falls on april 11th?"
+    ],
+    "index": 274,
+    "group": "qa"
+  },
+  {
+    "question_id": 356,
+    "category": "qa",
+    "turns": [
+      "Who sings good night on the beatles white album?"
+    ],
+    "index": 275,
+    "group": "qa"
+  },
+  {
+    "question_id": 368,
+    "category": "qa",
+    "turns": [
+      "Who has smoked the most cigarettes in the world?"
+    ],
+    "index": 287,
+    "group": "qa"
+  },
+  {
+    "question_id": 371,
+    "category": "qa",
+    "turns": [
+      "Who is the coach of university of kentucky basketball?"
+    ],
+    "index": 290,
+    "group": "qa"
+  },
+  {
+    "question_id": 398,
+    "category": "qa",
+    "turns": [
+      "Who sang wind beneath my wings from london's burning?"
+    ],
+    "index": 317,
+    "group": "qa"
+  },
+  {
+    "question_id": 436,
+    "category": "math_reasoning",
+    "turns": [
+      "A loaf of bread at the bakery costs $2. Bagels cost $1 each. How much more do 3 loaves of bread cost than 2 bagels?"
+    ],
+    "reference": [
+      "3 loaves of bread cost 3 * $2 = $<<3*2=6>>6.\n2 bagels cost 2 * $1 = $<<2*1=2>>2.\nThe loaves of bread cost $6 - $2 = $<<6-2=4>>4 more than the bagels.\n#### 4"
+    ],
+    "index": 355,
+    "group": "math_reasoning"
+  },
+  {
+    "question_id": 466,
+    "category": "math_reasoning",
+    "turns": [
+      "While Joanne is gathering apples from her family\u2019s orchard, her sister comes outside to help her. Joanne gathers 30 apples from the tallest trees, half this amount from the shortest trees, and more apples from the average trees. Compared with Joanne, her sister gathers twice as many apples from the tallest trees and 3 times as many apples from the shortest trees. She doesn't take any from the average trees. If the sisters have gathered a combined total of 500 apples, how many apples did Joanne gather from the average trees?"
+    ],
+    "reference": [
+      "Joanna gathered 30 apples / 2 = <<30/2=15>>15 apples from the shortest trees.\nHer sister gathered 30 apples * 2 = <<30*2=60>>60 apples from the tallest trees.\nHer sister also gathered 15 apples * 3 = <<15*3=45>>45 apples from the shortest trees.\nIn total, her sister gathered 60 + 45 = <<60+45=105>>105 apples.\nFrom the tallest and shortest trees, Joanna gathered 30 + 15 = <<30+15=45>>45 apples.\nSo far, the sisters have a combined total of 105 + 45 = <<105+45=150>>150 apples.\nTherefore, Joanna must have gathered 500 total apples \u2013 150 apples so far = <<500-150=350>>350 apples from the average trees.\n#### 350"
+    ],
+    "index": 385,
+    "group": "math_reasoning"
+  },
+  {
+    "question_id": 482,
+    "category": "rag",
+    "turns": [
+      "Got My Mind Set on You \"Got My Mind Set on You\" (also written as \"(Got My Mind) Set on You\") is a song written and composed by Rudy Clark and originally recorded by James Ray in 1962, under the title \"I've Got My Mind Set on You\". An edited version of the song was released later in the year as a single on the Dynamic Sound label. In 1987, George Harrison released a cover version of the song as a single, and released it on his album \"Cloud Nine,\" which he had recorded on his own Dark Horse Records\nlabel. Of Harrison's three number-one singles in the US, it was both the only song not written or composed by Harrison himself and the only one without religious overtones. It also was not only the last US No. 1 hit by Harrison, but also from any of the ex-Beatles (as of 2018) in the US. When the song hit No. 1, it broke a three-way tie among Harrison, John Lennon, and Ringo Starr, all of whom had two No. 1 hit singles as solo artists (discounting Paul McCartney's work with Wings). It also happened to be the No. 1 single\nsignificant airplay, and was nominated for three MTV VMAs. Harrison's version of the song was parodied by \"Weird Al\" Yankovic on his 1988 album \"Even Worse,\" as \"(This Song's Just) Six Words Long\" poking fun at the repetitive nature of the lyrics. Shakin' Stevens recorded the song for his 2006 album \"Now Listen\". Irish singer Lee Matthews covered it in his 2015 album \"It's a Great Day to Be Alive\". Got My Mind Set on You \"Got My Mind Set on You\" (also written as \"(Got My Mind) Set on You\") is a song written and composed by Rudy Clark\nthe Cupcakes 1963, Jerry Lee Lewis 1965, Carl Hall 1966, Sleepy LaBeef 1970, Price Mitchell & Jerri Kelly 1974, Carol Channing & Webb Pierce 1977, and by Dale Sellers. The song was also the title track on albums of the same title by Jean Shephard 1961 and William Galison and Madeleine Peyroux 2004. Got You on My Mind (song) \"Got You on My Mind\" is a song written by Howard Biggs and Joe Thomas. The lyrics commence: \"Got you on my mind feeling kinda sad and low / Wonderin' where you are / wonderin' why you had to go /\nYou Got My Mind Messed Up You Got My Mind Messed Up is a 1967 album by James Carr. Although Carr is not as well known as his contemporaries such as Otis Redding or Aretha Franklin, \"You Got My Mind Messed Up\" has been cited as one of the top soul music albums of all time. Allmusic gave it 5 stars from two different reviewers. On the 2002 re-release Mojo magazine stated \"This is undoubtedly one of the greatest soul albums of all time.\" . After Carr's death in 2001, Kent Records re-released the album with another dozen bonus tracks.\nWho sings got my mind set on you?"
+    ],
+    "reference": [
+      [
+        "James Ray",
+        "George Harrison"
+      ]
+    ],
+    "index": 401,
+    "group": "rag"
+  },
+  {
+    "question_id": 493,
+    "category": "rag",
+    "turns": [
+      "stars as Gordon, alongside Donal Logue, David Mazouz, Morena Baccarin, Sean Pertwee, Robin Lord Taylor, Erin Richards, Camren Bicondova, Cory Michael Smith, Jessica Lucas, Chris Chalk, Drew Powell, Crystal Reed and Alexander Siddig. The fourth season premiered on September 21, 2017, on Fox, while the second half premiered on March 1, 2018. The season concluded on May 17, 2018. The season received positive reviews from critics and audiences, who cited the character development, writing and action sequences as highlights of the season, with some calling it the best season yet. The premiere was watched by 3.21 million viewers with a\nto Get Away with Murder\", \"Superstore\", \"Scandal\", \"Will & Grace\", an NCAA game, and \"Grey's Anatomy\". With DVR factored in, the episode was viewed by 4.00 million viewers with a 1.2 in the 18-49 demo. Reunion (Gotham) \"Reunion\" is the fourteenth episode of the fourth season and 80th episode overall from the Fox series \"Gotham\". The show is itself based on the characters created by DC Comics set in the Batman mythology. The episode was written by Peter Blake and directed by co-executive producer Annabelle K. Frost. It was first broadcast on March 15, 2018. In the episode, Ivy decides\nhave masterfully honored the mythology of \"Gotham\" and brought it to life with depth, emotion and memorable high drama.\" In May 2017, Fox renewed the series for a fourth season, which premiered on September 21, 2017. On May 13, 2018, Fox renewed the series for a fifth and final season originally consisting of 10 episodes then later increased to 12. The season began production in July that year, and is set to premiere on January 3, 2019. In January 2014, rumors arose that Donal Logue would portray Gordon in the series. Logue denied these rumors via Twitter. Logue was eventually\n1.0 in the 18\u201349 demo, which was a 17% decline from the previous season premiere but on par with last season's average. Despite remaining with consistent ratings throughout the first half of the season, the second half experienced new series lows in the spring and being in danger of cancellation. Despite the ratings drop, Fox renewed the show for a fifth and final season on May 13, 2018. <onlyinclude></onlyinclude> The show was officially renewed by Fox for a fourth season on May 10, 2017. Just like the second and third seasons, the fourth season also carried a new subtitle for\nReunion (Gotham) \"Reunion\" is the fourteenth episode of the fourth season and 80th episode overall from the Fox series \"Gotham\". The show is itself based on the characters created by DC Comics set in the Batman mythology. The episode was written by Peter Blake and directed by co-executive producer Annabelle K. Frost. It was first broadcast on March 15, 2018. In the episode, Ivy decides to go against everyone who harmed her, targeting the Wayne Enterprises foundation charity event. Meanwhile, Nygma continues suffering a mental breakdown regarding his split personality, causing him to consider suicide. Bruce also continues pursuing Alfred\nWhen does the new gotham season come out?"
+    ],
+    "reference": [
+      [
+        "September 21 , 2017"
+      ]
+    ],
+    "index": 412,
+    "group": "rag"
+  },
+  {
+    "question_id": 497,
+    "category": "rag",
+    "turns": [
+      "events probably redirected sediments in similar ways before that. Two oceanic plates meet at the Kermadec Trench which is located far from any larger landmass. Because of this, the Pacific Plate as well as the trench itself is only covered by of sediments. The trench is almost perfectly straight and its simple geometry is the result of the uniformity of the subducting sea-floor. This sea-floor formed at the extinct Osbourn Trough, an abandoned spreading centre located just north of the Louisville Seamount Chain. Abyssal hills on the subducting sea-floor are oriented perpendicular to the old spreading centre and the sea-floor\nthe eastern side is a transform boundary with the North American Plate along the San Andreas Fault, and a boundary with the Cocos Plate. The south-eastern side is a divergent boundary with the Nazca Plate forming the East Pacific Rise. The southern side is a divergent boundary with the Antarctic Plate forming the Pacific-Antarctic Ridge. The western side, the plate is bounded by the Okhotsk Plate at the Kuril-Kamchatka Trench and the Japan Trench, forms a convergent boundary by subducting under the Philippine Sea Plate creating the Mariana Trench, has a transform boundary with the Caroline Plate, and has a\nto have formed from the Pacific Plate sliding over a long-lived center of upwelling magma called the Louisville hotspot. Pacific-Antarctic Ridge The Pacific-Antarctic Ridge (PAR) is a divergent tectonic plate boundary located on the seafloor of the South Pacific Ocean, separating the Pacific Plate from the Antarctic Plate. It is regarded as the southern section of the East Pacific Rise in some usages, generally south of the Challenger Fracture Zone and stretching to the Macquarie Triple Junction south of New Zealand. Stretching for 4,300 km north-west from the Pacific-Antarctic Ridge to the Osbourn Seamount at Tonga and Kermadec Junction is\nEast Pacific Rise The East Pacific Rise is a mid-oceanic ridge, a divergent tectonic plate boundary located along the floor of the Pacific Ocean. It separates the Pacific Plate to the west from (north to south) the North American Plate, the Rivera Plate, the Cocos Plate, the Nazca Plate, and the Antarctic Plate. It runs south from the Gulf of California in the Salton Sea basin in southern California to a point near 55\u00b0 S, 130\u00b0 W where it joins the Pacific-Antarctic Ridge trending west-southwest towards Antarctica near New Zealand (though in some uses the PAR is regarded as the\nas lava, creating new crust upon cooling. A mid-ocean ridge demarcates the boundary between two tectonic plates, and consequently is termed a divergent plate boundary. Mid-ocean ridges are geologically active, with continuing volcanism and seismicity. New magma steadily emerges onto the ocean floor and intrudes into the ocean crust at and near rifts along the ridge axes. The crystallized magma forms new crust of basalt (known as MORB for mid-ocean ridge basalt) and below it (in the lower oceanic crust), gabbro. MORs are formed by two oceanic plates moving away from each other. Hydrothermal vents are a common feature at\nWhere does the coral sea meet the pacific ocean?"
+    ],
+    "reference": [
+      [
+        "South Pacific",
+        "in the east"
+      ]
+    ],
+    "index": 416,
+    "group": "rag"
+  },
+  {
+    "question_id": 519,
+    "category": "rag",
+    "turns": [
+      "time of 2:11:32. On the women's side, the winner was Shalane Flanagan, a native of Marblehead, Massachusetts. She was the first American to win since 1977. Her time was 2:26:53. Mary Keitany placed 2nd with 2:27:54, and Mamitu Daska finished 3rd with a time of 2:28:08. The 2018 TCS New York City Marathon was run on Sunday, November 4. Lelisa Desisa of Ethiopia won his first New York City Marathon after finishing third in 2017, third in 2015 and second in 2014, followed by Shura Kitata and defending champion Geoffrey Kamworor. Their times of 2:05:59, 2:06:01 and 2:06:26 were the\na time of 2:05:05, breaking the 10-year-old course record. Second-place runner Emmanuel Mutai, also of Kenya, and third-place runner Tsegaye Kebede of Ethiopia also beat the previous record for the event, with times of 2:06:28 and 2:07:14, respectively. Geoffrey Mutai, who won the Boston Marathon earlier in the year, became the first man to win both races in course-record time in the same year. Firehiwot Dado of Ethiopia won the women's race in a time of 2:23:15, her first major marathon victory. Coming second, 4 seconds behind the leader originally from Ethiopia, but now living in the Bronx, was Bizunesh\nNew York area on WNBC, and on Universal Sports for the entire country, However, in 2013, WABC-TV and ESPN announced they would begin broadcasting the New York City Marathon. The Marathon can also be watched online. On September 29, 1974, Norbert Sander and Kathrine Switzer became the only New York City residents to win the New York City Marathon. Grete Waitz, the Norwegian long distance runner, sets a new course record for women at 2:32:30 and wins her first New York Marathon. Waitz goes on to win 9 New York Marathons, the most course wins in any category to date.\na time of 2:08:14. The race featured 37-year-old world record holder Haile Gebrselassie, who ran with a bad knee and dropped out of the race at the 16th mile. Afterwards, he announced his retirement, but later reversed this decision. Edna Kiplagat won the women's title with a time of 2 hours, 28 minutes, 20 seconds, ahead of American Shalane Flanagan. The total number of official finishers, 44,829 (28,757 men and 16,072 women) was a new world record for a marathon race. The 2011 Marathon was held on November 6. The men's event was won by Geoffrey Mutai of Kenya in\nNew York City Marathon The New York City Marathon (currently branded TCS New York City Marathon for sponsorship reasons) is an annual marathon () that courses through the five boroughs of New York City. It is the largest marathon in the world, with 52,812 finishers in 2018 and 98,247 applicants for the 2017 race. Along with the Boston Marathon and Chicago Marathon, it is among the pre-eminent long-distance annual running events in the United States and is one of the World Marathon Majors. The race is organized by New York Road Runners and has been run every year since 1970,\nWho won the marathon in new york city?"
+    ],
+    "reference": [
+      [
+        "Geoffrey Kamworor"
+      ]
+    ],
+    "index": 438,
+    "group": "rag"
+  }
+]

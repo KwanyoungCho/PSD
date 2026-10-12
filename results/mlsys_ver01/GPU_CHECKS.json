@@ -1,0 +1,39 @@
+[
+  {
+    "name": "p2_gpu_tests",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "ssd/tests",
+      "-p",
+      "test_p2_tree_alloc.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "p1_gpu_tests",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "ssd/tests",
+      "-p",
+      "test_p1_dynamic_tree.py"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "chain_gpu_parity",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "ssd/bench/mlsys_ver01_chain_check.py",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/CHAIN_GPU_PARITY.json"
+    ],
+    "exit_code": 0
+  }
+]

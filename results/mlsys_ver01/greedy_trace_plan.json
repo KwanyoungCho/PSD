@@ -1,0 +1,56 @@
+[
+  {
+    "name": "ar",
+    "arm": "base",
+    "draft_seed": 231,
+    "bench": "mlsys_ver01_greedy_trace.py",
+    "args": [
+      "--mode",
+      "ar",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/greedy_questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "0",
+      "--temperature",
+      "0",
+      "--seed",
+      "10801"
+    ],
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-paper-review",
+      "PAPER_BASELINE": "1",
+      "GREEDY_TRACE_FOCUS": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/greedy_focus.json",
+      "GREEDY_TRACE_DIR": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/greedy_trace/ar"
+    }
+  },
+  {
+    "name": "tree",
+    "arm": "base",
+    "draft_seed": 231,
+    "bench": "mlsys_ver01_greedy_trace.py",
+    "args": [
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/greedy_questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "0",
+      "--temperature",
+      "0",
+      "--seed",
+      "10801"
+    ],
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_BASELINE": "0",
+      "GREEDY_TRACE_FOCUS": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/greedy_focus.json",
+      "GREEDY_TRACE_DIR": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/greedy_trace/tree"
+    }
+  }
+]

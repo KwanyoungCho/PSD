@@ -47,7 +47,7 @@ class TestP2ExecutorWarmup(unittest.TestCase):
 
         gen = torch.Generator().manual_seed(1234)
         before = gen.get_state().clone()
-        executor = SimpleNamespace(F=3, W=10, gen=gen, graphs={})
+        executor = SimpleNamespace(F=3, W=10, total_cells=30, gen=gen, graphs={})
 
         def capture(bucket):
             # Model the graph warmup's real sampling side effect.
@@ -70,7 +70,7 @@ class TestP2ExecutorWarmup(unittest.TestCase):
                                                                 16 << 30)):
             DraftRunner._warmup_p2_tree_executor(runner)
 
-        self.assertEqual(sorted(executor.graphs), list(range(1, 8)))
+        self.assertEqual(sorted(executor.graphs), list(range(1, 9)))
         self.assertTrue(torch.equal(before, gen.get_state()))
 
 

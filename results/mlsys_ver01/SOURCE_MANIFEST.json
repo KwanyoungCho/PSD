@@ -1,0 +1,44 @@
+{
+  "paper_base": "a82f7d24fb36827a9a81a3567f344dccb71f193e",
+  "runtime_commit": "be61186",
+  "runtime_files": {
+    "ssd/ssd/config.py": "3a960d7eba528dce33e0f69b002947c71f6c0b82082f9315924e9e68164e363f",
+    "ssd/ssd/engine/draft_runner.py": "f771a78b1e254bc070ece9572e8b967ebbbfb89eba76ad13e857d647ece0a8d2",
+    "ssd/ssd/engine/helpers/p2_tree.py": "99756c994ee079d6f7ac2cc851318b1f22915be74064a556708609583b4a0de1",
+    "ssd/ssd/engine/helpers/p2_tree_executor.py": "9e7f6783e0ee2a9b49757740433d3372b8ea2c50e903ebe2a18fe6d06f5be026",
+    "ssd/ssd/engine/llm_engine.py": "f3cf08f868cf69ea57c95d76a30210d4166023e7a4a8a3bf08578ef75199398f",
+    "ssd/ssd/engine/model_runner.py": "69329917813a6de74157588bb090b727adece00027da21f6c3f3c8ad8f8ba429",
+    "ssd/ssd/engine/verifier.py": "a8e882ac3d7a3626c92af61f47dd4b0b1a6df5037233717465e9baa820937430",
+    "ssd/ssd/layers/sampler.py": "d234ed3bd825d25214874b93399d00d48dbf62a10fe8ce97e1c5555558f6aae0",
+    "ssd/ssd/utils/verify.py": "d45382c9df1f8ed261320747e49c1138a6d893421c2feff21f183251f9af565c",
+    "ssd/ssd/utils/verify_fast.py": "23b05b7e5032fe72c8f2ef5bd7a69aa874818b08b52ea7fc0344a54c76ea28d9"
+  },
+  "topology": "\t\u001b[4mGPU0\tGPU1\tGPU2\tGPU3\tGPU4\tGPU5\tGPU6\tGPU7\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID\u001b[0m\nGPU0\t X \tNODE\tNODE\tNODE\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU1\tNODE\t X \tPIX\tPIX\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU2\tNODE\tPIX\t X \tPIX\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU3\tNODE\tPIX\tPIX\t X \tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU4\tSYS\tSYS\tSYS\tSYS\t X \tPIX\tNODE\tNODE\t16-31,48-63\t1\t\tN/A\nGPU5\tSYS\tSYS\tSYS\tSYS\tPIX\t X \tNODE\tNODE\t16-31,48-63\t1\t\tN/A\nGPU6\tSYS\tSYS\tSYS\tSYS\tNODE\tNODE\t X \tPIX\t16-31,48-63\t1\t\tN/A\nGPU7\tSYS\tSYS\tSYS\tSYS\tNODE\tNODE\tPIX\t X \t16-31,48-63\t1\t\tN/A\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n",
+  "gpu": "index, name, driver_version, memory.total [MiB]\n0, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n1, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n2, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n3, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n4, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n5, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n6, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n7, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB\n",
+  "questions_sha256": "aec560cbe7bee67ca764c211c822cad8ff26e1a84834b86b86f35870c0048af4",
+  "groups": {
+    "mt_bench": 80,
+    "translation": 80,
+    "summarization": 80,
+    "qa": 80,
+    "math_reasoning": 80,
+    "rag": 80
+  },
+  "packages": {
+    "torch": "2.8.0",
+    "transformers": "4.57.1",
+    "numpy": "2.3.3"
+  },
+  "model_config_sha256": {
+    "/home/chokwans99/models_mlsys/layerskip-llama2-7b": {
+      "generation_config.json": "53912d1e42e24314ffb9eeb49f2074c2d2aae8081242d844fc58e2779d19ee78",
+      "tokenizer_config.json": "bcdc6f267b05e1afd27fa622a62fea649bcb941e6dc705d2835883a0746192da",
+      "config.json": "f884817531e2589b45a2d00993d3cf1f67253866a343f4c574c510ee82b1697f"
+    },
+    "/home/chokwans99/models_mlsys/AMD-Llama-135m": {
+      "generation_config.json": "5b3483ac487c163175e8ff639766cbc61051171f8ae03aec7e95ceddb4dc0195",
+      "tokenizer_config.json": "1925d511c509861135f23ac36557ac42304ecfc44776eb2ba4184dc877adfb01",
+      "config.json": "9510a29fcc0b5d675f5d6aacc830634e9d1d93eeff91cd0e0078eb9f2ba9e63f"
+    }
+  }
+}
