@@ -37,6 +37,33 @@ class StepMetrics(unittest.TestCase):
         row['output_cap_reached']=True
         self.assertIsNone(performance_summary(dict(decode_steps=[row]),2)['tps'])
 
+    def test_primary_log_labels_use_same_population(self):
+        import os
+        os.environ.setdefault('SSD_HF_CACHE','/tmp');os.environ.setdefault('SSD_DATASET_DIR','/tmp')
+        from types import SimpleNamespace
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from ssd.engine.llm_engine import LLMEngine,METRICS
+        saved=METRICS.copy()
+        try:
+            for k,v in METRICS.items():METRICS[k]=[] if isinstance(v,list) else 0
+            METRICS.update(prefill_total_time=1.,prefill_total_tokens=100,
+                decode_total_time=2.,decode_total_tokens=6,
+                accepted_suffix_lens_with_recovery=[2,2,10,1],
+                cache_hits=[1,1,0,0],target_step_times=[1.,1.],
+                phase_events=[dict(accepted_len=n,cache_hit=h) for n,h in zip([2,2,10,1],[1,1,0,0])],
+                decode_steps=[dict(seconds=1.,emitted_tokens=4,batch_size=2,event_start=0,event_end=2),
+                              dict(seconds=1.,emitted_tokens=2,batch_size=2,event_start=2,event_end=4,output_cap_reached=True)])
+            stub=SimpleNamespace(config=SimpleNamespace(max_num_seqs=2,speculate=True,
+                duet_phase1_k=None,speculate_k=2,draft_async=True,duet_enabled=False))
+            out=StringIO()
+            with redirect_stdout(out):LLMEngine.log_metrics(stub)
+            self.assertIn('Final Decode Throughput: 4.00tok/s',out.getvalue())
+            self.assertIn('[metrics] Avg Tokens per step (incl recovery): 2.00',out.getvalue())
+            self.assertIn('[metrics] Avg Cache Hits: 1.00',out.getvalue())
+            self.assertIn('[raw metrics] All-event accepted length: 3.75',out.getvalue())
+        finally:METRICS.clear();METRICS.update(saved)
+
     def test_historical_speculative_rows_and_unknown_ar(self):
         event=dict(accepted_len=3,cache_hit=0)
         row=dict(event_start=0,event_end=1,emitted_tokens=3,seconds=1)

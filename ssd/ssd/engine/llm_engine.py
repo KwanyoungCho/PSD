@@ -384,8 +384,9 @@ class LLMEngine:
                     flush=True)
                 return
             avg_tokens_per_step = ttl_accepted_with_recovery / ttl_num_spec_steps
-            print(
-                f"[raw metrics] Avg Tokens per step (incl recovery): {avg_tokens_per_step:.2f}", flush=True)
+            selected_al = f"{selected['al']:.2f}" if selected['al'] is not None else "N/A"
+            print(f"[metrics] Avg Tokens per step (incl recovery): {selected_al}", flush=True)
+            print(f"[raw metrics] All-event accepted length: {avg_tokens_per_step:.2f}", flush=True)
 
             total_accepted = ttl_accepted_with_recovery - ttl_num_spec_steps
             # Split-only K1/K2 mode: effective spec depth is K_max = max(K1, K2),
@@ -410,8 +411,9 @@ class LLMEngine:
                 print(
                     f"[metrics] Avg target verify time (ms): {sum(METRICS['target_verify_times']) * 1000 / len(METRICS['target_verify_times']):.2f}", flush=True)
             if self.config.draft_async:
-                print(
-                    f"[metrics] Avg Cache Hits: {sum(METRICS['cache_hits']) / len(METRICS['cache_hits']):.2f}", flush=True)
+                selected_hit = f"{selected['cache_hit']:.2f}" if selected['cache_hit'] is not None else "N/A"
+                print(f"[metrics] Avg Cache Hits: {selected_hit}", flush=True)
+                print(f"[raw metrics] All-event cache hit: {sum(METRICS['cache_hits']) / len(METRICS['cache_hits']):.2f}", flush=True)
                 # DUET-only: phase 1 (draft-sourced) vs phase 2 (proxy-sourced) hit split.
                 # Non-DUET paths leave these zero.
                 if self.config.duet_enabled and METRICS['phase1_hits']:

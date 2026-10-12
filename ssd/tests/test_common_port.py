@@ -51,6 +51,26 @@ class CommonPort(unittest.TestCase):
             torch.testing.assert_close(actual,expect,rtol=0,atol=0)
             self.assertTrue(torch.equal(probabilities(logits,1.),logits.float().softmax(-1)))
 
+    def test_eager_batched_temperature_matches_independent_rows(self):
+        from unittest.mock import patch
+        from ssd.engine.verifier import Verifier
+        torch.manual_seed(123)
+        B,K,V=4,3,97
+        ex=torch.randn(B,K+1,V);q=torch.randn(B,K,V);tok=torch.randint(V,(B,K))
+        cfg=SimpleNamespace(duet_proxy_top_k=8,duet_exit_replica=False,
+            duet_proxy_on_draft=False,jit_speculate=True,duet_policy='b',
+            duet_proxy_wire_N=10,duet_tree_enabled=False,duet_p2_budget_at=lambda k:10)
+        runner=SimpleNamespace(target_model_runner=SimpleNamespace(config=cfg),jit_speculate=True)
+        captured=[]
+        with patch.object(Verifier,'_send_proxy_wire',side_effect=lambda *args:captured.append(args[-2:])):
+            Verifier._compute_and_send_proxy(runner,ex,tok,q,B,K,None,1,
+                target_temps=[.3,.7,1.,0.],draft_temps=[.7,1.,.3,0.])
+        pos,ids=[x.reshape(B,-1) for x in captured[0]]
+        for row,(a,b) in enumerate(zip([.3,.7,1.,0.],[.7,1.,.3,0.])):
+            rp,ri,_=pt.chain_proxy_candidates_fixed(ex[row],q[row],tok[row],8,10,False,
+                                                     target_temps=a,draft_temps=b)
+            self.assertTrue(torch.equal(pos[row],rp));self.assertTrue(torch.equal(ids[row],ri))
+
     @unittest.skipUnless(torch.cuda.is_available(),'CUDA required')
     def test_live_chain_tree_graph_temperature_and_t0_ranking(self):
         torch.manual_seed(82)
