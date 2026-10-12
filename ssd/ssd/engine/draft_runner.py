@@ -51,6 +51,14 @@ _P2_EXECUTOR_POLICIES = frozenset({
 })
 
 
+def _tree_temperatures_supported(config, temperatures):
+    # Both contracts are checked at request admission. Rechecking a CUDA
+    # temperature tensor would synchronize after the preceding draft work.
+    return (getattr(config, "greedy_only", False)
+            or getattr(config, "stochastic_only", False)
+            or bool((temperatures > 0).all()))
+
+
 def _should_run_p2_tree(config, batch_size, temperatures):
     """Return whether this *phase-2* step may use the tree executor.
 
@@ -62,7 +70,7 @@ def _should_run_p2_tree(config, batch_size, temperatures):
     """
     return (getattr(config, "duet_p2_tree_policy", "off") == "on"
             and int(batch_size) == 1
-            and (getattr(config, "greedy_only", False) or bool((temperatures > 0).all())))
+            and _tree_temperatures_supported(config, temperatures))
 
 
 @dataclasses.dataclass(frozen=True)
@@ -3097,8 +3105,8 @@ class DraftRunner(ModelRunner):
             self._p1_tree_fallback_reason = "policy_off"
             return None
         B, contexts, _ = glue_logits.shape
-        if B != 1 or (not getattr(self.config, "greedy_only", False) and not bool(
-                (partial_tree_decode_args["temperatures"] > 0).all())):
+        if B != 1 or not _tree_temperatures_supported(
+                self.config, partial_tree_decode_args["temperatures"]):
             self._p1exec_count("chain_fallback_batch_or_temperature")
             self._p1_tree_fallback_reason = (
                 f"batch_or_temperature:B={B}")
@@ -3949,6 +3957,7 @@ class DraftRunner(ModelRunner):
             context_len=st["ctx0"], sampler_x=cfg.sampler_x,
             F_x=cfg.async_fan_out, device=self.device,
             noise_list=noise, trace_out=tr,
+            greedy_only=getattr(cfg, "greedy_only", False),
             proxy_threshold=cfg.duet_tree_proxy_threshold,
             conf_threshold=cfg.duet_tree_conf_threshold)
         pool = ar.to_pool(st["n_seeds"])
@@ -4896,6 +4905,7 @@ class DraftRunner(ModelRunner):
                     context_len=ctx_len, sampler_x=cfg.sampler_x,
                     F_x=cfg.async_fan_out, device=self.device,
                     p2_gen=_p2gen,
+                    greedy_only=getattr(cfg, "greedy_only", False),
                     noise_list=(self._s1_noise
                                 if (_stage1
                                     and hasattr(self, "_s1_noise")
@@ -4965,6 +4975,7 @@ class DraftRunner(ModelRunner):
                     fanout_policy=cfg.duet_tree_fanout_policy,
                     context_len=ctx_len,
                     sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out,
+                    greedy_only=getattr(cfg, "greedy_only", False),
                     proxy_threshold=cfg.duet_tree_proxy_threshold,
                     conf_threshold=cfg.duet_tree_conf_threshold)
             _mc_p2("p2_output_convert", _mev_cv2)

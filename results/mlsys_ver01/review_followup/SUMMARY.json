@@ -1,0 +1,183 @@
+{
+  "profile": {
+    "outputs_equal": true,
+    "inputs": 24,
+    "before": {
+      "steps": 1141,
+      "all_steps": 1160,
+      "tokens": 2041,
+      "seconds": 22.729229042306542,
+      "tps": 89.79627052906328,
+      "verify_ms": 17.00503846951234,
+      "step_ms": 19.920446136990833,
+      "al": 1.7887817703768625,
+      "hit": 0.6257668711656442,
+      "actual_output_tokens": 2072,
+      "emitted_decode_tokens": 2072
+    },
+    "after": {
+      "steps": 1141,
+      "all_steps": 1160,
+      "tokens": 2041,
+      "seconds": 22.322713571600616,
+      "tps": 91.43153646860385,
+      "verify_ms": 16.838084455370563,
+      "step_ms": 19.564166145136387,
+      "al": 1.7887817703768625,
+      "hit": 0.6257668711656442,
+      "actual_output_tokens": 2072,
+      "emitted_decode_tokens": 2072
+    }
+  },
+  "fallback": [
+    {
+      "name": "arena_exec_off",
+      "inputs": 8,
+      "calls": 308,
+      "rows": 1540,
+      "callers": [
+        "run_rollout_arena"
+      ],
+      "all_first_child_argmax": true,
+      "scope": "Assertions include warmup; diagnostic synchronization excludes TPS use."
+    },
+    {
+      "name": "arena_executor_none",
+      "inputs": 8,
+      "calls": 308,
+      "rows": 1540,
+      "callers": [
+        "run_rollout_arena"
+      ],
+      "all_first_child_argmax": true,
+      "scope": "Assertions include warmup; diagnostic synchronization excludes TPS use."
+    },
+    {
+      "name": "cpu_fallback",
+      "inputs": 8,
+      "calls": 308,
+      "rows": 1540,
+      "callers": [
+        "run_rollout"
+      ],
+      "all_first_child_argmax": true,
+      "scope": "Assertions include warmup; diagnostic synchronization excludes TPS use."
+    }
+  ],
+  "components": {
+    "target_pre_ms": {
+      "before_profile": {
+        "n": 695,
+        "mean": 10.246971483024762,
+        "median": 10.23481559753418,
+        "p10": 10.037247657775879,
+        "p90": 10.631168365478516
+      },
+      "after_profile": {
+        "n": 695,
+        "mean": 10.244917032529981,
+        "median": 10.23078441619873,
+        "p10": 10.036224365234375,
+        "p90": 10.629119873046875
+      }
+    },
+    "target_post_ms": {
+      "before_profile": {
+        "n": 695,
+        "mean": 4.659941127145891,
+        "median": 4.65715217590332,
+        "p10": 4.570112228393555,
+        "p90": 4.832255840301514
+      },
+      "after_profile": {
+        "n": 695,
+        "mean": 4.660210757632908,
+        "median": 4.6561279296875,
+        "p10": 4.569087982177734,
+        "p90": 4.832255840301514
+      }
+    },
+    "target_tree_walk_ms": {
+      "before_profile": {
+        "n": 447,
+        "mean": 0.536499973944903,
+        "median": 0.5782399773597717,
+        "p10": 0.32528001070022583,
+        "p90": 0.6890559792518616
+      },
+      "after_profile": {
+        "n": 447,
+        "mean": 0.4752405184160676,
+        "median": 0.5274239778518677,
+        "p10": 0.2650560140609741,
+        "p90": 0.6058880090713501
+      }
+    },
+    "draft_p1_replay_ms": {
+      "before_profile": {
+        "n": 695,
+        "mean": 3.745638786974571,
+        "median": 3.851263999938965,
+        "p10": 3.451904058456421,
+        "p90": 3.9966719150543213
+      },
+      "after_profile": {
+        "n": 695,
+        "mean": 3.7411788460162048,
+        "median": 3.8451199531555176,
+        "p10": 3.446784019470215,
+        "p90": 3.9915521144866943
+      }
+    },
+    "draft_p2_replay_ms": {
+      "before_profile": {
+        "n": 695,
+        "mean": 1.7010881871628247,
+        "median": 1.6885759830474854,
+        "p10": 1.6803840398788452,
+        "p90": 1.7274880409240723
+      },
+      "after_profile": {
+        "n": 695,
+        "mean": 1.698975636461656,
+        "median": 1.6855039596557617,
+        "p10": 1.679360032081604,
+        "p90": 1.7254400253295898
+      }
+    },
+    "draft_p1_total_ms": {
+      "before_profile": {
+        "n": 695,
+        "mean": 5.093890545323741,
+        "median": 5.154297,
+        "p10": 4.78125,
+        "p90": 5.337891
+      },
+      "after_profile": {
+        "n": 695,
+        "mean": 4.619208054676259,
+        "median": 4.703125,
+        "p10": 4.322266,
+        "p90": 4.876953
+      }
+    },
+    "draft_p2_total_ms": {
+      "before_profile": {
+        "n": 695,
+        "mean": 4.005249549640288,
+        "median": 3.992187,
+        "p10": 3.804688,
+        "p90": 4.199219
+      },
+      "after_profile": {
+        "n": 695,
+        "mean": 3.787713568345324,
+        "median": 3.792969,
+        "p10": 3.626953,
+        "p90": 3.931641
+      }
+    }
+  },
+  "jobs_complete": true,
+  "external_gpu_interference": false
+}

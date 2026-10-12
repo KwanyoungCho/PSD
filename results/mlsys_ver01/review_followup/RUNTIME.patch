@@ -1,0 +1,614 @@
+diff --git a/ssd/bench/bench.py b/ssd/bench/bench.py
+index 54cab5f..70b6b57 100644
+--- a/ssd/bench/bench.py
++++ b/ssd/bench/bench.py
+@@ -362,6 +362,12 @@ def create_llm_kwargs(args, draft_path):
+     if args.gpu_memory_utilization is not None:
+         llm_kwargs["gpu_memory_utilization"] = args.gpu_memory_utilization
+ 
++    # This benchmark has one fixed target/draft temperature per engine.
++    # Select the matching sampler before CUDA graph capture; no new CLI knob.
++    draft_temp = args.temp if args.dtemp is None else args.dtemp
++    llm_kwargs["greedy_only"] = args.temp == 0 and draft_temp == 0
++    llm_kwargs["stochastic_only"] = args.temp > 0 and draft_temp > 0
++
+     # DUET-SSD
+     if getattr(args, 'duet', False):
+         llm_kwargs["duet_enabled"] = True
+diff --git a/ssd/ssd/config.py b/ssd/ssd/config.py
+index 521a03f..93c1d53 100644
+--- a/ssd/ssd/config.py
++++ b/ssd/ssd/config.py
+@@ -67,6 +67,8 @@ class Config:
+     gpu_memory_utilization: float = 0.7
+     num_gpus: int = 1
+     enforce_eager: bool = False
++    greedy_only: bool = False  # Compile homogeneous T=0 draft paths without RNG.
++    stochastic_only: bool = False  # CPU request contract; no unused greedy sampler work.
+     hf_config: AutoConfig | None = None
+     eos: int = -1
+     kvcache_block_size: int = 256
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 2da48b6..eb7fb20 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -51,6 +51,14 @@ _P2_EXECUTOR_POLICIES = frozenset({
+ })
+ 
+ 
++def _tree_temperatures_supported(config, temperatures):
++    # Both contracts are checked at request admission. Rechecking a CUDA
++    # temperature tensor would synchronize after the preceding draft work.
++    return (getattr(config, "greedy_only", False)
++            or getattr(config, "stochastic_only", False)
++            or bool((temperatures > 0).all()))
++
++
+ def _should_run_p2_tree(config, batch_size, temperatures):
+     """Return whether this *phase-2* step may use the tree executor.
+ 
+@@ -62,7 +70,7 @@ def _should_run_p2_tree(config, batch_size, temperatures):
+     """
+     return (getattr(config, "duet_p2_tree_policy", "off") == "on"
+             and int(batch_size) == 1
+-            and bool((temperatures > 0).all()))
++            and _tree_temperatures_supported(config, temperatures))
+ 
+ 
+ @dataclasses.dataclass(frozen=True)
+@@ -3089,7 +3097,7 @@ class DraftRunner(ModelRunner):
+         entirely inside :class:`P1TreeExecutor`; host work here occurs once
+         before replay and never between the K1 draft forwards.
+ 
+-        Returns ``None`` for the explicitly unsupported B>1/temp=0/near-end
++        Returns ``None`` for the explicitly unsupported B>1/near-end
+         cases so the caller can retain the established chain path.
+         """
+         self._p1_tree_fallback_reason = None
+@@ -3097,8 +3105,8 @@ class DraftRunner(ModelRunner):
+             self._p1_tree_fallback_reason = "policy_off"
+             return None
+         B, contexts, _ = glue_logits.shape
+-        if B != 1 or not bool((partial_tree_decode_args["temperatures"] > 0)
+-                              .all()):
++        if B != 1 or not _tree_temperatures_supported(
++                self.config, partial_tree_decode_args["temperatures"]):
+             self._p1exec_count("chain_fallback_batch_or_temperature")
+             self._p1_tree_fallback_reason = (
+                 f"batch_or_temperature:B={B}")
+@@ -3949,6 +3957,7 @@ class DraftRunner(ModelRunner):
+             context_len=st["ctx0"], sampler_x=cfg.sampler_x,
+             F_x=cfg.async_fan_out, device=self.device,
+             noise_list=noise, trace_out=tr,
++            greedy_only=getattr(cfg, "greedy_only", False),
+             proxy_threshold=cfg.duet_tree_proxy_threshold,
+             conf_threshold=cfg.duet_tree_conf_threshold)
+         pool = ar.to_pool(st["n_seeds"])
+@@ -4896,6 +4905,7 @@ class DraftRunner(ModelRunner):
+                     context_len=ctx_len, sampler_x=cfg.sampler_x,
+                     F_x=cfg.async_fan_out, device=self.device,
+                     p2_gen=_p2gen,
++                    greedy_only=getattr(cfg, "greedy_only", False),
+                     noise_list=(self._s1_noise
+                                 if (_stage1
+                                     and hasattr(self, "_s1_noise")
+@@ -4965,6 +4975,7 @@ class DraftRunner(ModelRunner):
+                     fanout_policy=cfg.duet_tree_fanout_policy,
+                     context_len=ctx_len,
+                     sampler_x=cfg.sampler_x, F_x=cfg.async_fan_out,
++                    greedy_only=getattr(cfg, "greedy_only", False),
+                     proxy_threshold=cfg.duet_tree_proxy_threshold,
+                     conf_threshold=cfg.duet_tree_conf_threshold)
+             _mc_p2("p2_output_convert", _mev_cv2)
+diff --git a/ssd/ssd/engine/helpers/p2_tree.py b/ssd/ssd/engine/helpers/p2_tree.py
+index 2a895eb..5923ca0 100644
+--- a/ssd/ssd/engine/helpers/p2_tree.py
++++ b/ssd/ssd/engine/helpers/p2_tree.py
+@@ -1308,8 +1308,12 @@ def q_probs_from_logits(logits: torch.Tensor, temperatures: torch.Tensor,
+     전제: 같은 logits → 같은 q). op 시퀀스는 기존 tree_sample_wor
+     인라인과 bit-identical (c=1 RNG-parity 테스트가 고정).
+     """
+-    logits_cpy = logits.to(torch.float)
+-    logits_cpy.div_(temperatures.unsqueeze(dim=1))
++    # At T=0 this is a ranking score only. Greedy verification never uses
++    # this soft distribution for an acceptance ratio. Keep multiple distinct
++    # children meaningful by ranking with the untempered draft distribution.
++    logits_cpy = logits.float() / torch.where(
++        temperatures > 0, temperatures, torch.ones_like(temperatures)
++    ).unsqueeze(dim=1)
+     probs = torch.softmax(logits_cpy, dim=-1, dtype=torch.float)
+     if sampler_x is not None:
+         probs = apply_sampler_x_rescaling(probs, sampler_x, F)
+@@ -1347,8 +1351,9 @@ def selected_q_probs_from_logits(logits: torch.Tensor,
+     # the caller's glue logits in place.
+     if scaled is logits:
+         scaled = scaled.clone()
+-    scaled.div_(temperatures.to(
+-        device=logits.device, dtype=torch.float32).reshape(-1, 1))
++    rank_temps = temperatures.to(device=logits.device, dtype=torch.float32)
++    scaled.div_(torch.where(rank_temps > 0, rank_temps,
++                           torch.ones_like(rank_temps)).reshape(-1, 1))
+     log_z = torch.logsumexp(scaled, dim=-1, keepdim=True)
+     if source_rows is None:
+         selected_logits = scaled.gather(1, token_ids)
+@@ -1386,7 +1391,7 @@ def selected_q_probs_from_logits(logits: torch.Tensor,
+ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
+                     c_tensor: int, sampler_x=None, F=None,
+                     assume_pos_temps: bool = False, generator=None,
+-                    noise=None):
++                    noise=None, allow_greedy=False, greedy_only=False):
+     """비복원(WOR) C_tensor개 샘플 — 순서 보존 (T1.3; D8/D11).
+ 
+     구현: exponential-race top-k — race 점수 내림차순 = 순차 비복원
+@@ -1394,9 +1399,10 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
+     Sampler.forward와 op 시퀀스·RNG 소비·결과가 bit-identical**
+     (fast-path 게이트의 근거; 테스트로 고정).
+ 
+-    temp==0 금지 (v6 게이트: 트리 OFF 폴백은 호출자 책임) — one-hot
+-    support에서 2번째 비복원 추출이 미정의이기 때문 (fallback 미구현
+-    을 의도적으로 게이트).
++    기본 호출은 temp==0을 거부한다. allow_greedy=True이면 T0 행은
++    untempered draft score의 상위 C개를 고른다. 이는 one-hot WOR가
++    아니며 target greedy walk에서만 사용한다. greedy_only=True는
++    모든 행이 T0라는 호출자 계약으로 RNG 작업도 생략한다.
+ 
+     Returns:
+         tokens [B, C] int64 — WOR 순서 (형제 순서 기록 그 자체).
+@@ -1405,13 +1411,21 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
+     """
+     # gap-prof: GPU temps의 .any()→bool()은 forward 완료 대기 동기점
+     # (2.4ms/forward). rollout은 진입 전 temp>0 확인 — 가드 생략 허용.
+-    if not assume_pos_temps and bool((temperatures <= 0).any()):
++    if not allow_greedy and not assume_pos_temps and bool((temperatures <= 0).any()):
+         raise ValueError(
+             "tree_sample_wor: temperature==0 is gated (v6 §7.2 — "
+             "support-exhaustion fallback intentionally not implemented; "
+             "caller must fall back to the chain path)")
+     probs = q_probs_from_logits(logits, temperatures, sampler_x, F)
+     raw_q = probs.clone()                      # 원본 보존 (c_raw)
++    if greedy_only:
++        first = logits.argmax(dim=-1, keepdim=True)
++        if c_tensor == 1:
++            tokens = first
++        else:
++            rest = logits.float().scatter(1, first, -float("inf")).topk(c_tensor - 1, dim=-1).indices
++            tokens = torch.cat((first, rest), dim=1)
++        return tokens, raw_q.gather(1, tokens)
+     epsilon = 1e-10
+     # generator: P2 전용 CUDA graph-safe 제너레이터 (리뷰11-1 — 기본
+     # 제너레이터는 P1/eager 전용으로 격리; None이면 종전 동작 그대로).
+@@ -1423,6 +1437,8 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
+         scores = probs.div_(
+             torch.empty_like(probs).exponential_(1, generator=generator)
+             + epsilon)
++    if allow_greedy:
++        scores = torch.where((temperatures == 0).unsqueeze(1), raw_q, scores)
+     if c_tensor == 1:
+         tokens = scores.argmax(dim=-1, keepdim=True)   # Sampler와 동일 op
+     else:
+@@ -1823,7 +1839,8 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
+                 beta, depth_cap, temps, forward_fn, glue_rows_by_root,
+                 rope_base_by_root, K_glue, context_len, sampler_x=None,
+                 F_x=None, pad_token=0, fanout_policy="ctensor",
+-                proxy_threshold=0.0, conf_threshold=0.0):
++                proxy_threshold=0.0, conf_threshold=0.0,
++                greedy_only=False):
+     """엔진-주입형 rollout (T1.4b-a): forward_fn만 바꾸면 stub/실엔진
+     양쪽에서 동작. per-forward로 (input_ids[W], rope[W], packed mask)를
+     구성해 forward_fn(f, input_ids, rope, packed, indptr) -> logits[W,V]
+@@ -1832,6 +1849,8 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
+     rollout_reference와 topology가 동일해야 한다 (stub 테스트로 고정).
+     pad 행: 유효 노드가 W 미만이면 pad_token/rope_base[0]로 채우고
+     fanout 0 (자식 무시; RNG는 소비 — 고정 shape 유지).
++    greedy_only는 executor와 동일한 T0 계약이다. 이때 첫 자식은
++    logits argmax, 나머지는 서로 다른 상위 후보이며 RNG를 쓰지 않는다.
+     """
+     R = len(root_toks)
+     if policy in ("dynamic", "eagle", "hybrid"):
+@@ -1940,9 +1959,11 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
+                                       dtype=logits.dtype,
+                                       device=logits.device)
+         cell_logits[f * W:(f + 1) * W] = logits[:W]
++        sample_mode = dict(allow_greedy=True, greedy_only=True) if greedy_only else {}
+         toks, raws = tree_sample_wor(logits, temps.to(logits.device),
+                                      c_tensor, sampler_x=sampler_x, F=F_x,
+-                                     assume_pos_temps=True)
++                                     assume_pos_temps=True,
++                                     **sample_mode)
+         if _gp:
+             _t3 = _t.perf_counter()
+         toks, raws = toks.cpu(), raws.cpu()   # pool 장부는 CPU (소량 1회)
+@@ -2346,6 +2367,36 @@ def build_verify_mask_packed(valid: int, ancestors, kv_len: int):
+     return torch.from_numpy(packed)
+ 
+ 
++def tree_verify_walk_greedy(tree_ints, p_logits):
++    """Follow target argmax through any matching child, including siblings.
++
++    Candidates can be selected by any ranking heuristic. No proposal ratio
++    is involved: every emitted edge is exactly the target's next argmax at
++    that prefix. All row argmax IDs cross to CPU in one bounded transfer.
++    """
++    valid = int(tree_ints["valid"])
++    validate_tree_ints(tree_ints, len(tree_ints["tok"]))
++    if p_logits.shape[0] < valid + 1:
++        raise ValueError("greedy tree logits do not cover all node contexts")
++    argmax_ids = p_logits[:valid + 1].argmax(-1).tolist()
++    children = {}
++    for j in range(valid):
++        key = (int(tree_ints["parent_local"][j]), int(tree_ints["tok"][j]))
++        if key in children:
++            raise ValueError("greedy tree contains duplicate sibling tokens")
++        children[key] = j
++    path, ctx = [], -1
++    for _ in range(valid + 1):
++        token = int(argmax_ids[ctx + 1])
++        child = children.get((ctx, token))
++        if child is None:
++            return path, token
++        path.append(child)
++        ctx = child
++    raise RuntimeError("greedy tree walk exceeded its node bound")
++
++
++
+ def tree_verify_walk_tensor(tree_ints, p_logits, q_parent_probs, temp_p,
+                             coin_fn, mult_fn):
+     """프로덕션 보행 (T3.4-a — full-vocab 텐서; 참조 tree_verify_walk와
+@@ -2864,7 +2915,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
+                       fanout_policy="backbone", device=None,
+                       workspace=None, p2_gen=None, noise_list=None,
+                       trace_out=None, proxy_threshold=0.0,
+-                      conf_threshold=0.0):
++                      conf_threshold=0.0, greedy_only=False):
+     """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
+ 
+     정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
+@@ -2875,6 +2926,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
+     Args (run_rollout 대비): root_piv/temps는 device 텐서 권장 (CPU면
+     올림); glue_rows_by_root [R, K_glue+1] uint8, rope_base_by_root
+     [R] int64 (텐서/리스트 허용). forward_fn은 device 텐서를 받는다.
++    greedy_only=True이면 captured executor와 동일한 argmax-first
++    자식 선택을 사용하며 T0의 soft score는 예산/순위용으로만 유지한다.
+ 
+     Returns: (arena, eval_trace, cell_logits) — eval_trace =
+     (sel [F,W], sel_valid [F,W], fan [F,W]) device 텐서.
+@@ -2996,6 +3049,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
+         cell_logits[f * W:(f + 1) * W] = logits[:W]
+         sample_kwargs = dict(
+             sampler_x=sampler_x, F=F_x, assume_pos_temps=True)
++        if greedy_only:
++            sample_kwargs.update(allow_greedy=True, greedy_only=True)
+         if p2_gen is not None:
+             sample_kwargs["generator"] = p2_gen
+         if noise_list is not None:
+diff --git a/ssd/ssd/engine/helpers/p2_tree_executor.py b/ssd/ssd/engine/helpers/p2_tree_executor.py
+index 922982d..bac6a41 100644
+--- a/ssd/ssd/engine/helpers/p2_tree_executor.py
++++ b/ssd/ssd/engine/helpers/p2_tree_executor.py
+@@ -1030,6 +1030,8 @@ class P2TreeExecutor:
+             self.cell_logits[cell_base:cell_base + wf] = logits
+             toks, raws = PT.tree_sample_wor(
+                 logits, self.in_temps[:wf], C, assume_pos_temps=True,
++                allow_greedy=getattr(self.cfg, "greedy_only", False),
++                greedy_only=getattr(self.cfg, "greedy_only", False),
+                 sampler_x=getattr(self.cfg, "sampler_x", None),
+                 F=getattr(self.cfg, "async_fan_out", None),
+                 generator=self.gen,
+diff --git a/ssd/ssd/engine/llm_engine.py b/ssd/ssd/engine/llm_engine.py
+index 485335e..51fea30 100644
+--- a/ssd/ssd/engine/llm_engine.py
++++ b/ssd/ssd/engine/llm_engine.py
+@@ -289,6 +289,12 @@ class LLMEngine:
+             os._exit(0)
+ 
+     def add_request(self, prompt: str | list[int], sampling_params: SamplingParams):
++        if self.config.stochastic_only and (sampling_params.temperature <= 0
++                or (sampling_params.draft_temperature is not None and sampling_params.draft_temperature <= 0)):
++            raise ValueError("stochastic_only requires positive target and draft temperatures")
++        if self.config.greedy_only and (sampling_params.temperature != 0
++                or sampling_params.draft_temperature not in (None, 0)):
++            raise ValueError("greedy_only requires target and draft temperature zero")
+         if isinstance(prompt, str):
+             prompt = self.tokenizer.encode(prompt)
+         seq = Sequence(prompt, sampling_params)
+diff --git a/ssd/ssd/engine/model_runner.py b/ssd/ssd/engine/model_runner.py
+index 5f32736..3d62227 100644
+--- a/ssd/ssd/engine/model_runner.py
++++ b/ssd/ssd/engine/model_runner.py
+@@ -676,7 +676,8 @@ class ModelRunner:
+             assert config.draft_async, "ERROR in ModelRunner: sampler_x requires draft_async"
+             assert sum(config.fan_out_list) == sum(config.fan_out_list_miss) == config.async_fan_out * (config.speculate_k + 1), "ERROR in ModelRunner: fancy sampling only supported for constant fan out for now."
+ 
+-        self.sampler = Sampler(sampler_x=config.sampler_x, async_fan_out=config.async_fan_out)
++        self.sampler = Sampler(sampler_x=config.sampler_x, async_fan_out=config.async_fan_out,
++                               greedy_only=config.greedy_only, stochastic_only=config.stochastic_only)
+ 
+         # DUET exit-replica (SSD_DUET_EXIT_REPLICA=1, docs/duet/09 WS3c):
+         # rank 0 keeps a full-vocab lm_head replica so the mid-verify exit
+diff --git a/ssd/ssd/engine/verifier.py b/ssd/ssd/engine/verifier.py
+index cb67c8a..2f45bc8 100644
+--- a/ssd/ssd/engine/verifier.py
++++ b/ssd/ssd/engine/verifier.py
+@@ -1,4 +1,5 @@
+ import os
++import ctypes
+ from ssd.engine.helpers.e0_trace import E0_TRACE as _E0_TRACE
+ from ssd.engine.helpers import e0_trace as _e0
+ import torch
+@@ -240,6 +241,10 @@ class Verifier(VerifierBase):
+         # T3.4-b5: 트리 step 감지 플래그 — 비-DUET 경로에서도 정의돼야
+         # 아래 verify 분기가 안전하다.
+         _tree_meta_arg = None
++        self._accept_cpu_tree = None
++        self._accept_tt = ctypes.c_float(seqs[0].temperature).value
++        _dt = seqs[0].draft_temperature
++        self._accept_td = ctypes.c_float(seqs[0].temperature if _dt is None else _dt).value
+         _tree_wire_gpu_source = None
+         # DUET: set proxy function on target model runner (rank 0 only)
+         if config.duet_enabled:
+@@ -299,6 +304,7 @@ class Verifier(VerifierBase):
+                         parse_tree_ints, validate_tree_ints)
+                     _nv_t = int(config.duet_tree_wire_nodes)
+                     _ti_checked = parse_tree_ints(_tree_meta_arg, _nv_t)
++                    self._accept_cpu_tree = _ti_checked
+                     validate_tree_ints(
+                         _ti_checked, _nv_t, config.hf_config.vocab_size,
+                         sibling_capacity=3)
+@@ -376,12 +382,8 @@ class Verifier(VerifierBase):
+             _td0 = (seqs[0].draft_temperature
+                     if seqs[0].draft_temperature is not None
+                     else seqs[0].temperature)
+-            if _tree_meta_arg is not None and _tp0 <= 0:
+-                # 리뷰3-10: target temp=0 + 트리 미정의 — draft측 WOR
+-                # 게이트와 동일하게 명시 차단 (조용한 오분포 금지).
+-                raise NotImplementedError(
+-                    "DUET dynamic tree requires target temperature > 0 "
+-                    "(temp-0 tree verify is gated; use chain policy)")
++            if _tree_meta_arg is not None and _tp0 == 0 and not config.greedy_only:
++                raise ValueError("T=0 tree requires greedy_only=True for captured draft execution")
+ 
+             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead,
+                           _tm=_tree_meta_for_proxy, _tp=_tp0, _td=_td0):
+@@ -458,8 +460,15 @@ class Verifier(VerifierBase):
+             seq.draft_temperature if seq.draft_temperature is not None else seq.temperature
+             for seq in seqs
+         ]
+-        temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
+-        temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
++        # Tree acceptance consumes CPU request temperatures directly (GPU
++        # graphs cache their scalar buffers). Pure greedy chain needs no
++        # probabilities. Avoid allocating/copying unused temperature tensors.
++        if not _E0_TRACE and (_tree_meta_arg is not None
++                or all(t == 0 for t in temps_target + temps_draft)):
++            temperatures_target = temperatures_draft = None
++        else:
++            temperatures_target = torch.tensor(temps_target, dtype=torch.float32, device=self.device)
++            temperatures_draft = torch.tensor(temps_draft, dtype=torch.float32, device=self.device)
+ 
+         # ===== E0: 최종층 분포 기록 (P0 확장 — 기본 OFF, 전용 런 전용) =====
+         if _E0_TRACE:
+@@ -515,6 +524,8 @@ class Verifier(VerifierBase):
+                 async_fan_out=self.async_fan_out,
+                 jit_speculate=self.jit_speculate,
+                 valid_k=speculate_result.valid_k,
++                all_stochastic=all(t > 0 for t in temps_target + temps_draft),
++                all_greedy=all(t == 0 for t in temps_target + temps_draft),
+             )
+             _mc("chain_accept", _mev_chain_accept)
+         _mc("verify_sample_accept", _mev_vs)
+@@ -604,30 +615,28 @@ class Verifier(VerifierBase):
+         append — 트리 경로가 그대로 실린다).
+         """
+         from ssd.engine.helpers.p2_tree import (
+-            parse_tree_ints, tree_verify_walk_tensor, q_probs_from_logits)
++            parse_tree_ints, tree_verify_walk_tensor, tree_verify_walk_greedy, q_probs_from_logits)
+         cfg = self.target_model_runner.config
+         nv = int(cfg.duet_tree_wire_nodes)
+-        ti = parse_tree_ints(speculate_result.tree_ints[0].cpu(), nv)
+-        pq = speculate_result.parent_q_logits[0].float()         # [nv, V] GPU
+-        td = float(temperatures_draft[0])
+-        tt = float(temperatures_target[0])
+-        q_probs = q_probs_from_logits(
+-            pq, torch.full((pq.shape[0],), max(td, 1e-8),
+-                           device=pq.device),
+-            self.sampler_x, self.async_fan_out)
+-        p_rows = logits_p[0].float()             # [valid+1, V] GPU 상주 —
+-        # 사다리 벡터 연산([V])을 GPU에서 수행 (CPU 복사 2.3MB/step 제거;
+-        # walk_tensor는 device-agnostic, 스칼라 sync는 형제당 소수)
+-
++        ti = self._accept_cpu_tree
++        td = self._accept_td
++        tt = self._accept_tt
++        p_rows = logits_p[0].float()
+         def _coin():
+             return float(torch.rand(1).item())
+-
+         def _mult(probs):
+             return int(torch.multinomial(probs, 1).item())
+-
+-        path, terminal = tree_verify_walk_tensor(
+-            ti, p_rows, q_probs, tt, _coin, _mult)
+         _calib = os.environ.get("SSD_TREE_CALIB_TRACE", "")
++        if tt == 0:
++            path, terminal = tree_verify_walk_greedy(ti, p_rows)
++            if _calib:
++                raise ValueError("Stochastic calibration is not a greedy label")
++        else:
++            pq = speculate_result.parent_q_logits[0].float()
++            q_probs = q_probs_from_logits(
++                pq, torch.full((pq.shape[0],), td, device=pq.device),
++                self.sampler_x, self.async_fan_out)
++            path, terminal = tree_verify_walk_tensor(ti, p_rows, q_probs, tt, _coin, _mult)
+         if _calib:
+             # Diagnostic-only post-hoc calibration.  Keep three labels
+             # separate: an unattempted later sibling is not a rejection.
+@@ -642,8 +651,8 @@ class Verifier(VerifierBase):
+             _tok_cpu = [int(ti["tok"][j]) for j in range(_v)]
+             _tok = torch.tensor(
+                 _tok_cpu, dtype=torch.int64, device=q_probs.device)
+-            _qref = ti["parent_q_ref"][:_v].to(
+-                q_probs.device, torch.int64)
++            _qref = torch.as_tensor(ti["parent_q_ref"][:_v],
++                device=q_probs.device, dtype=torch.int64)
+             _q_node = q_probs[_qref, _tok].detach().float().cpu().tolist()
+             _depth, _path_conf = [0] * _v, [0.0] * _v
+             for _j in range(_v):
+diff --git a/ssd/ssd/layers/sampler.py b/ssd/ssd/layers/sampler.py
+index 5b6218a..495c9b7 100644
+--- a/ssd/ssd/layers/sampler.py
++++ b/ssd/ssd/layers/sampler.py
+@@ -9,8 +9,12 @@ _SEED = int(os.environ.get("SSD_SEED", "0"))
+ torch.manual_seed(_SEED)
+ 
+ class Sampler(nn.Module): 
+-    def __init__(self, sampler_x: float | None = None, async_fan_out: int = 3):
++    def __init__(self, sampler_x: float | None = None, async_fan_out: int = 3,
++                 greedy_only: bool = False, stochastic_only: bool = False):
+         super().__init__()
++        if greedy_only and stochastic_only:
++            raise ValueError("Sampler temperature modes are mutually exclusive")
++        self.greedy_only, self.stochastic_only = greedy_only, stochastic_only
+         self.sampler_x = sampler_x
+         self.F = async_fan_out # will need to accomodate lists for hit/miss eventually 
+     
+@@ -18,8 +22,12 @@ class Sampler(nn.Module):
+     def forward(self, logits: torch.Tensor, temperatures: torch.Tensor, is_tree: bool = False):
+         # logits: [B, V], temperatures: [B]
+         
++        if self.greedy_only:
++            return logits.argmax(dim=-1)
++
+         logits_cpy = logits.to(torch.float) 
+-        greedy_tokens = logits_cpy.argmax(dim=-1)
++        if not self.stochastic_only:
++            greedy_tokens = logits_cpy.argmax(dim=-1)
+ 
+         # Fast path: any zero temperature rows are greedy
+         temps = temperatures
+@@ -36,6 +44,8 @@ class Sampler(nn.Module):
+         epsilon = 1e-10
+         scores = probs.div_(torch.empty_like(probs).exponential_(1) + epsilon)
+         sample_tokens = scores.argmax(dim=-1)
++        if self.stochastic_only:
++            return sample_tokens
+         return torch.where(zero_mask, greedy_tokens, sample_tokens)
+ 
+ 
+diff --git a/ssd/ssd/utils/verify.py b/ssd/ssd/utils/verify.py
+index 43d141c..d1d553b 100644
+--- a/ssd/ssd/utils/verify.py
++++ b/ssd/ssd/utils/verify.py
+@@ -2,6 +2,11 @@ import torch
+ from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
+ from ssd.config import Config
+ 
++def _materialize_verified(speculations, counts, recovery):
++    rows = torch.cat((counts[:, None], recovery[:, None], speculations), dim=1).tolist()
++    return [r[2:3 + r[0]] for r in rows], [r[1] for r in rows]
++
++
+ def verify(
+     logits_p: torch.Tensor,
+     logits_q: torch.Tensor,
+@@ -13,6 +18,8 @@ def verify(
+     async_fan_out: int | None = None,
+     jit_speculate: bool = False,
+     valid_k: torch.Tensor | None = None,
++    all_stochastic: bool = False,
++    all_greedy: bool = False,
+ ) -> tuple[list[list[int]], list[int]]:
+     """
+     Speculative‐decoding verification:
+@@ -27,6 +34,22 @@ def verify(
+        can never be accepted. None (default) keeps every other caller unchanged.
+     """
+ 
++    if all_greedy:
++        preds = logits_p.argmax(dim=-1)
++        matches = speculations[:, 1:] == preds[:, :-1]
++        k = speculations.shape[1] - 1
++        counts = torch.where((~matches).any(1), (~matches).int().argmax(1), k)
++        if valid_k is not None:
++            counts = torch.minimum(counts, valid_k)
++        rows = torch.arange(logits_p.shape[0], device=logits_p.device)
++        return _materialize_verified(speculations, counts, preds[rows, counts])
++
++    if all_stochastic and jit_speculate:
++        from ssd.utils.verify_fast import verify_stochastic
++        return verify_stochastic(logits_p, logits_q, speculations,
++            temperatures_target, temperatures_draft, valid_k,
++            sampler_x, async_fan_out)
++
+     device = logits_p.device
+     B, Kp1, V = logits_p.shape
+     K = Kp1 - 1
+@@ -48,10 +71,6 @@ def verify(
+         first_mismatch,
+         torch.full_like(first_mismatch, K)
+     )                                                    # [B]
+-    batch_idx = torch.arange(B, device=device)
+-    # greedy recovery = preds_p[b, accept_greedy[b]]
+-    rec_greedy = preds_p[batch_idx, accept_greedy]       # [B]
+-
+     # 2) Ratio‐based acceptance (only needed if any temp>0)
+     # ------------------------------------------------------
+     temps_t = temperatures_target
+@@ -146,6 +165,9 @@ def verify(
+     #  - Else (misses): sample directly from p
+     # For rows with temps_t==0: use greedy
+     batch_idx = torch.arange(B, device=device)
++    # Recover at the real accepted prefix, after excluding padded proposal
++    # positions. This also covers greedy rows in the generic/mixed path.
++    rec_greedy = preds_p[batch_idx, accept_until]
+     if probs_p is None:
+         # No temperatures require sampling; keep greedy
+         rec_ratio = rec_greedy
+diff --git a/ssd/ssd/utils/verify_fast.py b/ssd/ssd/utils/verify_fast.py
+new file mode 100644
+index 0000000..4b11398
+--- /dev/null
++++ b/ssd/ssd/utils/verify_fast.py
+@@ -0,0 +1,42 @@
++"""All-stochastic JIT verification without data-dependent CPU branching.
++
++Caller must know from CPU request metadata that both temperatures are positive
++and every proposal comes from its accompanying q (JIT on cache misses). Mixed
++greedy/stochastic and non-JIT requests retain the general verifier.
++"""
++import torch
++
++
++def verify_stochastic(logits_p, logits_q, speculations, temperatures_target,
++                      temperatures_draft, valid_k=None, sampler_x=None,
++                      async_fan_out=None):
++    from ssd.utils.verify import _materialize_verified
++    from ssd.utils.async_helpers.async_spec_helpers import apply_sampler_x_rescaling
++    b, kp1, _ = logits_p.shape
++    k = kp1 - 1
++    # Match the reference's division/cast order, random draw shapes and order.
++    p = torch.softmax((logits_p / temperatures_target[:, None, None].clamp(min=1e-8)).float(), -1)
++    q = torch.softmax((logits_q / temperatures_draft[:, None, None].clamp(min=1e-8)).float(), -1)
++    if sampler_x is not None:
++        if async_fan_out is None:
++            raise ValueError("sampler_x requires async_fan_out")
++        q = apply_sampler_x_rescaling(q, sampler_x, async_fan_out)
++    tokens = speculations[:, 1:, None]
++    ratio = (p[:, :k].gather(2, tokens).squeeze(2) /
++             (q.gather(2, tokens).squeeze(2) + 1e-10)).clamp(max=1.)
++    rejected = torch.rand_like(ratio) > ratio
++    counts = torch.where(rejected.any(1), rejected.int().argmax(1), k)
++    if valid_k is not None:
++        counts = torch.minimum(counts, valid_k)
++    rows = torch.arange(b, device=logits_p.device)
++    fallback = p[rows, counts]
++    fallback = fallback / fallback.sum(1, keepdim=True)
++    # Reference subtracts from unnormalized p_fallback (softmax roundoff).
++    residual = (p[rows, counts] - q[rows, counts.clamp(max=k-1)]).clamp(min=0.)
++    mass = residual.sum(1, keepdim=True)
++    adjusted = torch.where(mass > 0, residual / mass, fallback)
++    from_residual = torch.multinomial(adjusted, 1).squeeze(1)
++    from_target = torch.multinomial(fallback, 1).squeeze(1)
++    real_k = k if valid_k is None else valid_k.clamp(max=k)
++    recovery = torch.where(counts < real_k, from_residual, from_target)
++    return _materialize_verified(speculations, counts, recovery)

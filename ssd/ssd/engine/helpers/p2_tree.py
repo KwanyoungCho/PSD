@@ -1839,7 +1839,8 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                 beta, depth_cap, temps, forward_fn, glue_rows_by_root,
                 rope_base_by_root, K_glue, context_len, sampler_x=None,
                 F_x=None, pad_token=0, fanout_policy="ctensor",
-                proxy_threshold=0.0, conf_threshold=0.0):
+                proxy_threshold=0.0, conf_threshold=0.0,
+                greedy_only=False):
     """엔진-주입형 rollout (T1.4b-a): forward_fn만 바꾸면 stub/실엔진
     양쪽에서 동작. per-forward로 (input_ids[W], rope[W], packed mask)를
     구성해 forward_fn(f, input_ids, rope, packed, indptr) -> logits[W,V]
@@ -1848,6 +1849,8 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     rollout_reference와 topology가 동일해야 한다 (stub 테스트로 고정).
     pad 행: 유효 노드가 W 미만이면 pad_token/rope_base[0]로 채우고
     fanout 0 (자식 무시; RNG는 소비 — 고정 shape 유지).
+    greedy_only는 executor와 동일한 T0 계약이다. 이때 첫 자식은
+    logits argmax, 나머지는 서로 다른 상위 후보이며 RNG를 쓰지 않는다.
     """
     R = len(root_toks)
     if policy in ("dynamic", "eagle", "hybrid"):
@@ -1956,9 +1959,11 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                                       dtype=logits.dtype,
                                       device=logits.device)
         cell_logits[f * W:(f + 1) * W] = logits[:W]
+        sample_mode = dict(allow_greedy=True, greedy_only=True) if greedy_only else {}
         toks, raws = tree_sample_wor(logits, temps.to(logits.device),
                                      c_tensor, sampler_x=sampler_x, F=F_x,
-                                     assume_pos_temps=True)
+                                     assume_pos_temps=True,
+                                     **sample_mode)
         if _gp:
             _t3 = _t.perf_counter()
         toks, raws = toks.cpu(), raws.cpu()   # pool 장부는 CPU (소량 1회)
@@ -2910,7 +2915,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                       fanout_policy="backbone", device=None,
                       workspace=None, p2_gen=None, noise_list=None,
                       trace_out=None, proxy_threshold=0.0,
-                      conf_threshold=0.0):
+                      conf_threshold=0.0, greedy_only=False):
     """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
 
     정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
@@ -2921,6 +2926,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
     Args (run_rollout 대비): root_piv/temps는 device 텐서 권장 (CPU면
     올림); glue_rows_by_root [R, K_glue+1] uint8, rope_base_by_root
     [R] int64 (텐서/리스트 허용). forward_fn은 device 텐서를 받는다.
+    greedy_only=True이면 captured executor와 동일한 argmax-first
+    자식 선택을 사용하며 T0의 soft score는 예산/순위용으로만 유지한다.
 
     Returns: (arena, eval_trace, cell_logits) — eval_trace =
     (sel [F,W], sel_valid [F,W], fan [F,W]) device 텐서.
@@ -3042,6 +3049,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         cell_logits[f * W:(f + 1) * W] = logits[:W]
         sample_kwargs = dict(
             sampler_x=sampler_x, F=F_x, assume_pos_temps=True)
+        if greedy_only:
+            sample_kwargs.update(allow_greedy=True, greedy_only=True)
         if p2_gen is not None:
             sample_kwargs["generator"] = p2_gen
         if noise_list is not None:

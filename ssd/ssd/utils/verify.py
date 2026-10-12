@@ -71,10 +71,6 @@ def verify(
         first_mismatch,
         torch.full_like(first_mismatch, K)
     )                                                    # [B]
-    batch_idx = torch.arange(B, device=device)
-    # greedy recovery = preds_p[b, accept_greedy[b]]
-    rec_greedy = preds_p[batch_idx, accept_greedy]       # [B]
-
     # 2) Ratio‐based acceptance (only needed if any temp>0)
     # ------------------------------------------------------
     temps_t = temperatures_target
@@ -169,6 +165,9 @@ def verify(
     #  - Else (misses): sample directly from p
     # For rows with temps_t==0: use greedy
     batch_idx = torch.arange(B, device=device)
+    # Recover at the real accepted prefix, after excluding padded proposal
+    # positions. This also covers greedy rows in the generic/mixed path.
+    rec_greedy = preds_p[batch_idx, accept_until]
     if probs_p is None:
         # No temperatures require sampling; keep greedy
         rec_ratio = rec_greedy

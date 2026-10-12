@@ -1,0 +1,238 @@
+{
+  "status": "complete",
+  "baseline": "4b0d208",
+  "source_hashes": {
+    "ssd/ssd/__init__.py": "f1a221b38f55b42ef0619cba48a411acbbd1965c4845b4643f77443b7ce77950",
+    "ssd/ssd/paths.py": "72c52420daaf6d457c60235617efc3f8b1e3ae208a35f3bc45438adc9d7e01ac",
+    "ssd/ssd/llm.py": "496950f31428f674b70e8e137e029aa16dd82fdc8d8b8cc76f9ebdce86f7f653",
+    "ssd/ssd/sampling_params.py": "7f79868c4ca115bb18e017411a6c5545f354aa858aa0b8076aafb756d0785032",
+    "ssd/ssd/config.py": "3a960d7eba528dce33e0f69b002947c71f6c0b82082f9315924e9e68164e363f",
+    "ssd/ssd/layers/embed_head.py": "b896a56b908d75c8f30462b0b1a4ce634276ddb41165fdaa0220c55a2ddf7257",
+    "ssd/ssd/layers/linear.py": "82c096262013516c5f0a43f7c28f23aa6db6b14f52cbe1ce1dacc5f9d5c4b0b6",
+    "ssd/ssd/layers/rotary_embedding.py": "1bcca21cf5e4d81c11a5c55d59a6033874c4e6a0003cc4ae8e1aa6165976a723",
+    "ssd/ssd/layers/sampler.py": "d234ed3bd825d25214874b93399d00d48dbf62a10fe8ce97e1c5555558f6aae0",
+    "ssd/ssd/layers/activation.py": "13d88b460e7610df28c6a7c719dd8bf21c5c59ae0f85c94d505d499215618a82",
+    "ssd/ssd/layers/fi_attn.py": "4b0a275d020c1c3ce37f4e2a6c04bff12577d6f11feec7d79959652300fc9a0c",
+    "ssd/ssd/layers/attention.py": "a3a0ab09474d73af75c5a2080b5f98961a00c3823925048943850f9cdf374c40",
+    "ssd/ssd/layers/layernorm.py": "fd273e4759397a52b6bdc826b1982f4142f944df734f8ffe46dfcf06780159ac",
+    "ssd/ssd/models/eagle3_draft_llama3.py": "0d6e713a419cf884fc85984f9a2a6de520119032075a7c99158e0df7e2faca84",
+    "ssd/ssd/models/llama3.py": "ac801bd73e999f04a6fc862ca1d49bc94c88315456cfb6cb1215a503bcc5e07d",
+    "ssd/ssd/models/qwen2.py": "6804e3662a173368632e5f05b9893cc0cd28a61ac9bd25dbe8cd6f387ca0d1ca",
+    "ssd/ssd/models/qwen3.py": "535495bf69933fd9c677275453b801189e2c3c78a94fcc5133fc65b88c9f69c7",
+    "ssd/ssd/utils/misc.py": "1ad623d83d29b083a7c94ad7fc49dae073f0b3bf67defb162b010c151edbb873",
+    "ssd/ssd/utils/loader.py": "c008eac34810772e8d9f51da896c00867481f3e1a0e6f725e0d06599c0aab59e",
+    "ssd/ssd/utils/verify.py": "c239996bc5aef88b9bcbd9550775b31a539a869ebd75cdad28d5bee7f7c66797",
+    "ssd/ssd/utils/int8_debug.py": "9a71dbf2b997a9c8d9b776cc3659c8dbf32ce5411eb5cedb4a73368cee60d3d7",
+    "ssd/ssd/utils/verify_fast.py": "23b05b7e5032fe72c8f2ef5bd7a69aa874818b08b52ea7fc0344a54c76ea28d9",
+    "ssd/ssd/utils/context.py": "ce55eb45f00c91412946dd1c96f5c8f972372dd4c8069770c48e120773f301fc",
+    "ssd/ssd/utils/quantize.py": "c0ee73d55f3781eba88007325d5e9e53e66ad952e0e8f19143aa8c50bc39f406",
+    "ssd/ssd/quant/adapter.py": "fbb1ce4a198a585c31b0102555d1f84d18b09b0de1b90a5808d93ec8ff7ac271",
+    "ssd/ssd/quant/loader.py": "14f901b1f53a3650be7eff497f626469e2b1fbc487202c639d33c8dd4c9047fb",
+    "ssd/ssd/quant/__init__.py": "a69f0de0a516ba2bf9e13680b75b8f5d538c2eb281b095662ed1515f8b0f8698",
+    "ssd/ssd/quant/marlin.py": "4f1996e9f63d7109e92a3a7ec5350069ba67d7659f2149e99b84ca3c6626b241",
+    "ssd/ssd/quant/state.py": "82cb1050a3b1776765df7ad8f6c59c23a86ac8d1d4cc3c974cded7f8e762f806",
+    "ssd/ssd/quant/init_context.py": "6aa3dc3f6e95d8902fa7244d0010110b6fcf1ffdccedd6eaa389204339fc214f",
+    "ssd/ssd/quant/io.py": "f44f98a57351ff1063b7423d2f8390a565a30796fd6c3beaeaa8825f906e66b5",
+    "ssd/ssd/quant/build.py": "37f9c72ac69af213f2720c86faf380b8a46baaad0b98bf5f2e3c7fa9b3fbc43c",
+    "ssd/ssd/quant/awq_calibrate.py": "116807eca0a3e4e001aa24a3344031416e4060a6c1b2e39f59829fba09484126",
+    "ssd/ssd/quant/importer.py": "c8990b69bc9e4e152e7e80b7f08f273c6a4652c1f7e95a8247f85e50030f4f92",
+    "ssd/ssd/quant/config.py": "080c327b2297d0905f8fddc8d994aa7b9dc1086d7703d951471d48cea8723a1d",
+    "ssd/ssd/quant/pack.py": "b7dd683b7cdbfbb6f4ce1e13a51a72240a8dc3a35b7ed652dc664d26bb384711",
+    "ssd/ssd/quant/marlin_utils.py": "f64ec8d7ec8260556abd21e229567971a928882f14b93d288a6732d55c12fc90",
+    "ssd/ssd/quant/naming.py": "7ba73900af5e6d6fa2d1907bd2611625fc72f28a1fb9ea4834cd9a45901632d6",
+    "ssd/ssd/engine/verifier.py": "a8e882ac3d7a3626c92af61f47dd4b0b1a6df5037233717465e9baa820937430",
+    "ssd/ssd/engine/sequence.py": "9a83b0531c96e18ce4851e65bd9d58466c3637120adc55d242394fd558b24389",
+    "ssd/ssd/engine/draft_runner.py": "54eb3ef68b0c946b8f8d492d18f22890f1d93183c414bbb27fb3dee565628641",
+    "ssd/ssd/engine/scheduler.py": "b03892bf97ef17a295cd8b1bf7f4d71dead5e40879e5f711d405875ca2284d9c",
+    "ssd/ssd/engine/speculator_sync.py": "30487afa7f5027735ebd752ca1a53003f1d56350f503ea91931ef64e7aab115e",
+    "ssd/ssd/engine/model_runner.py": "69329917813a6de74157588bb090b727adece00027da21f6c3f3c8ad8f8ba429",
+    "ssd/ssd/engine/step.py": "aafa6a39536913cb6bf22ec8e2795b3f0bfa71e2925195377a756fedd466b677",
+    "ssd/ssd/engine/speculator_async.py": "bba4ecb4bcb873efd1e6094fca1600a6cfd9e406d971e4f40e35fc48e450dfc3",
+    "ssd/ssd/engine/block_manager.py": "cb3e5d4d19260f1419e9514d2868b2fb6759415a7043e0f740d8454ba4c681ec",
+    "ssd/ssd/engine/llm_engine.py": "f3cf08f868cf69ea57c95d76a30210d4166023e7a4a8a3bf08578ef75199398f",
+    "ssd/ssd/utils/async_helpers/duet_policy.py": "1fb3e1ec1c41a9cda5f531f8c732b09145c7d87ea79d74c331b8176f11f22aaf",
+    "ssd/ssd/utils/async_helpers/tests.py": "6491ced36a2a6f06d8cf411204b1190d2ca0bc700cd0becf79c3f4cd8abcd87e",
+    "ssd/ssd/utils/async_helpers/async_spec_helpers.py": "0d70779098c5051fcba5d3add5ff0b7896139f1b7789babe701a8df6eaa40f24",
+    "ssd/ssd/utils/async_helpers/nccl_pack.py": "6330e785f3e81acffe25a82061d3098f7834ad3c2d07bb071d79ed9923b18dc1",
+    "ssd/ssd/engine/helpers/p1_tree.py": "f7bfce700460c62abeb39013d517da1c5444c54032af5df8ac71a560195cb191",
+    "ssd/ssd/engine/helpers/e0_trace.py": "23ecd9bce2587cbef3f99c8894964c0d9642d33d372bd7be4954a5a2840a142e",
+    "ssd/ssd/engine/helpers/p2_tree_executor.py": "9e7f6783e0ee2a9b49757740433d3372b8ea2c50e903ebe2a18fe6d06f5be026",
+    "ssd/ssd/engine/helpers/tree_topology_gpu.py": "3a6cf8796faabbe8adef56deedf8956c1cf252a31e0491f3b71a8544bdcf89af",
+    "ssd/ssd/engine/helpers/tree_rerank_gpu.py": "a70f460a926671d85114772577d8d02d5e349c55ad995b10ba96ebd202bbb18a",
+    "ssd/ssd/engine/helpers/mask_helpers.py": "8ada4e709a6ab310ee920a7176b3684f89860022fc659442f6cb02ed5fb87d88",
+    "ssd/ssd/engine/helpers/p2_tree.py": "e73f66e85002fbf274843b624d20f8083cb97bfd075f4444fa07706802efb1cd",
+    "ssd/ssd/engine/helpers/runner_helpers.py": "bfb570d8e018ee296a6c2a8c3c9e75919fd0eb1beb288ceb80121ad116419bf2",
+    "ssd/ssd/engine/helpers/speculate_types.py": "2929b5f3a176d04b6a4b01f092b224ad733dfda10a647bb73801cd346441ae91",
+    "ssd/ssd/engine/helpers/tree_layout.py": "4e5e47c54a4efd5a30ae8c528e1d2d9493d12aa5605c0e65c2f86ba874805be1",
+    "ssd/ssd/engine/helpers/cudagraph_helpers.py": "9c8a453a5477c1a4d9ff3d9041a1a40ec870ec1804938dbbac62ef8d0a292511"
+  },
+  "ragged_reproduction": {
+    "before": [
+      [
+        [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      [
+        5,
+        5
+      ]
+    ],
+    "after": [
+      [
+        [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      [
+        5,
+        3
+      ]
+    ]
+  },
+  "fallback_greedy": [
+    {
+      "device": "cpu",
+      "arena": false,
+      "child_draws": 32,
+      "before_not_argmax": 16,
+      "after_not_argmax": 0,
+      "after_rng_unchanged": true
+    },
+    {
+      "device": "cpu",
+      "arena": true,
+      "child_draws": 32,
+      "before_not_argmax": 16,
+      "after_not_argmax": 0,
+      "after_rng_unchanged": true
+    },
+    {
+      "device": "cuda",
+      "arena": false,
+      "child_draws": 32,
+      "before_not_argmax": 16,
+      "after_not_argmax": 0,
+      "after_rng_unchanged": true
+    },
+    {
+      "device": "cuda",
+      "arena": true,
+      "child_draws": 32,
+      "before_not_argmax": 16,
+      "after_not_argmax": 0,
+      "after_rng_unchanged": true
+    }
+  ],
+  "fallback_positive_parity": 64,
+  "dispatch_microbenchmark": {
+    "before_us": 20.745742755631607,
+    "after_us": 0.18014339730143547,
+    "samples_us": [
+      [
+        21.582053353389103,
+        20.979469797263544,
+        20.745742755631607,
+        21.199153270572424,
+        20.891100478669006,
+        19.956994025657576,
+        20.253876379380625,
+        19.360816416641075,
+        18.822799902409315
+      ],
+      [
+        0.20673653731743494,
+        0.18848339095711708,
+        0.19030645489692688,
+        0.18693972378969193,
+        0.16430004810293516,
+        0.16202684491872787,
+        0.18014339730143547,
+        0.17743324860930443,
+        0.15701943387587866
+      ]
+    ],
+    "profiler_10_calls": [
+      {
+        "aten::item": 10,
+        "aten::_local_scalar_dense": 10
+      },
+      {}
+    ],
+    "scope": "Idle GPU host dispatch check only; excludes draft forwards and is not a TPS estimate."
+  },
+  "unit_suites": [
+    {
+      "name": "test_ver01_review",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "test_tree_accept_port",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "test_p1_dynamic_tree",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "test_p2_tree_alloc",
+      "tests": 108,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "test_p2_executor_parity",
+      "tests": 35,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "test_tree_verify_planless",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "paper_cpu_parity": {
+    "status": "complete",
+    "device": "cpu",
+    "checks": {
+      "chain": 384,
+      "tree": 288,
+      "sampler": 12,
+      "q_probs": 12
+    },
+    "reference": "/home/chokwans99/PSD-paper-review",
+    "scope": "Exact output, recovery distribution and RNG equality on supplied tensors; not an end-to-end model or GPU timing test."
+  }
+}
