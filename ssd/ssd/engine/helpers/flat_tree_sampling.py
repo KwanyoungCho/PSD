@@ -98,7 +98,7 @@ def ladder(tokens,p,q,topo,depth,exact=False,overlap_mix=0.0,need_residual=True)
 
 def candidates(exit_logits,q_logits,tokens,topo,wire_n,depth,top_k,tt,dt,
                source='complement',normalization='full',overlap_mix=.25,
-               sampler_x=None,fan_out=1):
+               sampler_x=None,fan_out=1,return_scores=False):
     t=torch.where(tt>0,tt,torch.ones_like(tt))[topo['req']]
     d=torch.where(dt>0,dt,torch.ones_like(dt))[topo['req']]
     p=(exit_logits.float()/t[:,None]).softmax(-1)
@@ -113,10 +113,17 @@ def candidates(exit_logits,q_logits,tokens,topo,wire_n,depth,top_k,tt,dt,
     exclude=torch.where(topo['child_valid'],tokens[topo['child']],v)
     scores=torch.cat([scores,scores.new_zeros(scores.shape[0],1)],1).scatter(1,exclude,0)[:,:v]
     values,ids=scores.topk(min(top_k,v),-1)
-    denom=scores.sum(-1,keepdim=True) if normalization=='full' else values.sum(-1,keepdim=True)
-    piv=values/denom.clamp_min(1e-10)*terminal[:,None]
-    piv=piv[topo['dense']]*topo['dense_valid'][...,None]
+    from ssd.engine.helpers.root_policy import vocabulary_mass
+    denom=vocabulary_mass(scores) if normalization=='full' else vocabulary_mass(values)
+    # Restore only the tiny top-k table before final score arithmetic.
+    # TensorIterator uses different vectorization for flat/dense broadcasts;
+    # normalizing first on [Q,K] changed a tie by one FP32 ULP, swapping
+    # positive candidate IDs. Keep the serving rank operation order/layout.
+    values=values[topo['dense']]
+    denom=denom[topo['dense']]
+    terminal=terminal[topo['dense']]*topo['dense_valid']
     ids=ids[topo['dense']]
+    piv=values/denom.clamp_min(1e-10)*terminal[...,None]
     score,index=piv.flatten(1).topk(min(wire_n,piv[0].numel()),1)
     pos=index//values.shape[-1];tok=ids.flatten(1).gather(1,index)
     if pos.shape[1]<wire_n:
@@ -124,7 +131,8 @@ def candidates(exit_logits,q_logits,tokens,topo,wire_n,depth,top_k,tt,dt,
         pos=torch.cat([pos,pos.new_zeros(b,pad)],1)
         tok=torch.cat([tok,tok.new_zeros(b,pad)],1)
         score=torch.cat([score,score.new_zeros(b,pad)],1)
-    return pos,pack_piv(tok,score)
+    packed = pack_piv(tok,score)
+    return (pos,packed,score) if return_scores else (pos,packed)
 
 
 def verify(logits_p,logits_q,tokens,topo,n,tt,dt,sampler_x=None,fan_out=1,

@@ -70,6 +70,9 @@ class Config:
     greedy_only: bool = False  # Compile homogeneous T=0 draft paths without RNG.
     stochastic_only: bool = False  # CPU request contract; no unused greedy sampler work.
     hf_config: AutoConfig | None = None
+    # Internal runner role: early exit always belongs to the target model.
+    runner_role: str = "target"
+    target_hf_config: AutoConfig | None = None
     eos: int = -1
     kvcache_block_size: int = 256
     num_kvcache_blocks: int = -1
@@ -527,9 +530,17 @@ class Config:
                     f"[1, generated={int(_generated)}]; got {_verify}")
 
         model = self.model 
-        assert os.path.isdir(model)
+        if not (os.path.isdir(model)):
+            raise ValueError('Invalid config.py contract: os.path.isdir(model)')
 
-        assert 1 <= self.num_gpus <= 8 # this codebase only works on one node 
+        if not (1 <= self.num_gpus <= 8):
+            raise ValueError('Invalid config.py contract: 1 <= self.num_gpus <= 8')
+        if self.max_num_seqs < 1 or self.kvcache_block_size < 1:
+            raise ValueError("max_num_seqs and kvcache_block_size must be positive")
+        if self.speculate and self.speculate_k < 1:
+            raise ValueError("speculate_k must be positive")
+        if self.draft_async and self.async_fan_out < 1:
+            raise ValueError("async_fan_out must be positive")
         requested_max_model_len = int(self.max_model_len)
         if requested_max_model_len < 1:
             raise ValueError(
@@ -537,6 +548,13 @@ class Config:
 
         self.hf_config = AutoConfig.from_pretrained(model)
         _ensure_head_dim(self.hf_config)
+        if self.runner_role not in ("target", "draft"):
+            raise ValueError("runner_role must be target|draft")
+        if self.runner_role == "target":
+            self.target_hf_config = self.hf_config
+        elif self.target_hf_config is None:
+            raise ValueError("Draft config requires the original target_hf_config")
+        target_hf = self.target_hf_config
         target_max_position_embeddings = int(
             self.hf_config.max_position_embeddings)
         self.max_model_len = min(
@@ -569,9 +587,19 @@ class Config:
                 if self.fan_out_list is None: 
                     self.fan_out_list = [self.async_fan_out] * (self.speculate_k + 1)
                     self.MQ_LEN = sum(self.fan_out_list)
+                if (len(self.fan_out_list) != self.speculate_k + 1
+                        or any(x < 0 for x in self.fan_out_list)
+                        or sum(self.fan_out_list) <= 0):
+                    raise ValueError("fan_out_list requires K+1 nonnegative entries and a positive total")
+                self.MQ_LEN = sum(self.fan_out_list)
                 if self.fan_out_list_miss is None:
-                    self.fan_out_list_miss = self.fan_out_list 
-                assert sum(self.fan_out_list_miss) == sum(self.fan_out_list), "ERROR in Config: fan_out_list_miss must be the same as fan_out_list"
+                    self.fan_out_list_miss = self.fan_out_list
+                if (len(self.fan_out_list_miss) != self.speculate_k + 1
+                        or any(x < 0 for x in self.fan_out_list_miss)
+                        or sum(self.fan_out_list_miss) <= 0):
+                    raise ValueError("fan_out_list_miss requires K+1 nonnegative entries and a positive total")
+                if not (sum(self.fan_out_list_miss) == sum(self.fan_out_list)):
+                    raise ValueError("ERROR in Config: fan_out_list_miss must be the same as fan_out_list")
                 
         if self.use_eagle:
             if self.eagle_layers is None:
@@ -596,12 +624,18 @@ class Config:
                     self.draft_hf_config.max_position_embeddings = target_max_pos
         
         if self.duet_enabled:
-            assert self.draft_async, "DUET-SSD requires draft_async=True"
-            assert self.speculate, "DUET-SSD requires speculate=True"
-            assert self.hf_config.model_type == "llama", "DUET-SSD only supports Llama models"
-            assert not self.use_eagle, "DUET-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)"
-            assert not self.enforce_eager, "DUET-SSD requires CudaGraph mode (enforce_eager must be False)"
-            assert self.jit_speculate, "DUET-SSD requires jit_speculate=True (miss rows need valid logits_q)"
+            if not (self.draft_async):
+                raise ValueError("DUET-SSD requires draft_async=True")
+            if not (self.speculate):
+                raise ValueError("DUET-SSD requires speculate=True")
+            if not (target_hf.model_type == "llama"):
+                raise ValueError("DUET-SSD only supports Llama models")
+            if not (not self.use_eagle):
+                raise ValueError("DUET-SSD + EAGLE: not yet implemented (eagle_acts split collection needed)")
+            if not (not self.enforce_eager):
+                raise ValueError("DUET-SSD requires CudaGraph mode (enforce_eager must be False)")
+            if not (self.jit_speculate):
+                raise ValueError("DUET-SSD requires jit_speculate=True (miss rows need valid logits_q)")
             if self.duet_only_proxy and self.duet_tree_enabled:
                 raise ValueError(
                     "duet_only_proxy is a chain-only ablation; set both "
@@ -624,9 +658,9 @@ class Config:
             # Policy A this comment used to blame. Cap raised 8 -> 32 for
             # the bscale32 campaign (CG bucket axis already derives
             # {1,2,4,8,16,32} from max_bs; no new CG families).
-            assert self.max_num_seqs <= 32, \
-                "DUET-SSD supports max_num_seqs <= 32 (docs/duet/13 B>1); " \
-                f"got {self.max_num_seqs}"
+            if not (self.max_num_seqs <= 32):
+                raise ValueError("DUET-SSD supports max_num_seqs <= 32 (docs/duet/13 B>1); " \
+                f"got {self.max_num_seqs}")
             # B==1-only gates (docs/duet/13 §6, out of scope v1): fail fast
             # at config time instead of hitting the runtime B==1 asserts
             # mid-run.
@@ -641,14 +675,22 @@ class Config:
                     f"with max_num_seqs=1 (got max_num_seqs={self.max_num_seqs})."
                 )
             if self.duet_exit_layer is None:
-                L = self.hf_config.num_hidden_layers
+                L = target_hf.num_hidden_layers
                 self.duet_exit_layer = (2 * L) // 3
-            assert 0 < self.duet_exit_layer < self.hf_config.num_hidden_layers, \
-                f"duet_exit_layer must be in (0, {self.hf_config.num_hidden_layers}), got {self.duet_exit_layer}"
+            if not (0 <= self.duet_exit_layer < target_hf.num_hidden_layers):
+                raise ValueError(f"duet_exit_layer must be in [0, {target_hf.num_hidden_layers}), got {self.duet_exit_layer}")
             if self.duet_draft_fan_out is None:
                 self.duet_draft_fan_out = max(1, self.async_fan_out // 2)
-            assert 0 < self.duet_draft_fan_out < self.async_fan_out, \
-                f"duet_draft_fan_out must be in (0, {self.async_fan_out}), got {self.duet_draft_fan_out}"
+            explicit_split = (self.duet_phase1_k is not None
+                              and self.duet_phase2_k is not None
+                              and self.duet_p2_budget is not None
+                              and self.duet_p2_budget > 0)
+            limit = self.async_fan_out if explicit_split else self.async_fan_out - 1
+            if not 1 <= self.duet_draft_fan_out <= limit:
+                raise ValueError(
+                    f"duet_draft_fan_out must be in [1, {limit}]; got "
+                    f"{self.duet_draft_fan_out}. Equality with async_fan_out "
+                    "requires explicit positive split K1/K2 and P2 budget.")
             self.duet_proxy_fan_out = self.async_fan_out - self.duet_draft_fan_out
 
             # Phase 1/2 K validation moved up (auto-raise needs validated K1/K2).
@@ -961,12 +1003,14 @@ class Config:
                       f'per_pos={per_pos_min} total={total_min} wire_N={wire_N})',
                       flush=True)
                 self.duet_proxy_top_k = required_top_k
-            assert self.duet_proxy_top_k >= 1, "duet_proxy_top_k must be >= 1"
+            if not (self.duet_proxy_top_k >= 1):
+                raise ValueError("duet_proxy_top_k must be >= 1")
             if self.duet_proxy_on_draft or self.duet_exit_topm_gather:
                 raise ValueError('Local root policy requires full-vocabulary exit logits; raw/top-M proxy gates are unsupported')
             print('[DUET policy] root=complement normalization=full '
                   'position=0.75 observed + 0.25 overlap; '
-                  'tree=historical reach/gain/frontier (resolved per executor)',flush=True)
+                  f'tree_requested={os.getenv("SSD_TREE_EXPANSION_POLICY", "reach_gain_frontier")} '
+                  '(resolved per executor)',flush=True)
             # Raw-proxy wire (SSD_DUET_PROXY_ON_DRAFT=1): the draft-side
             # residual topk(top_k) runs over M wire candidates — M must
             # cover the (auto-raised) top_k.
@@ -1024,4 +1068,5 @@ class Config:
                   f'tree_conf_thr={self.duet_tree_conf_threshold}',
                   flush=True)
 
-        assert self.max_num_batched_tokens >= self.max_model_len
+        if not (self.max_num_batched_tokens >= self.max_model_len):
+            raise ValueError('Invalid config.py contract: self.max_num_batched_tokens >= self.max_model_len')

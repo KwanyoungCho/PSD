@@ -18,18 +18,34 @@ class TreeExpansionPolicy:
                  'reach_frontier', 'reach_gain_frontier')
         if self.mode not in modes:
             raise ValueError(f'Unknown expansion policy {self.mode}')
+        self.requested_mode = self.mode
+        self.fallback_reason = None
+        self.calibration_hashes = {}
+        def report(reason=None):
+            self.fallback_reason = reason
+            print('[tree-policy-resolved] '+json.dumps(dict(
+                phase=executor.phase, requested=self.requested_mode,
+                resolved=self.mode, fallback=reason,
+                calibration_sha256=self.calibration_hashes,
+                allocation=executor.policy, width=getattr(executor,'W',None),
+                round_widths=getattr(executor,'round_widths',None),
+                roots=getattr(executor,'R',None), depth=getattr(executor,'F',None), nodes=executor.NV,
+                siblings=executor.C),sort_keys=True),flush=True)
         self.frontier = False
         self.gain = None
         self.alpha = None
         if self.mode == 'q_path':
+            report()
             return
         ex = executor
         # Chain phases are intentionally unchanged in mixed chain/tree runs.
         if getattr(ex.cfg, f'duet_{ex.phase}_tree_policy', 'off') != 'on':
             self.mode = 'q_path'
+            report('phase tree disabled')
             return
         if ex.policy not in ('dynamic', 'eagle'):
             self.mode = 'q_path'
+            report('allocation not dynamic/eagle')
             return
         if ex.C > 3 or ex.NV > 32:
             # Historical calibration covers C<=3. Never extrapolate its
@@ -38,6 +54,7 @@ class TreeExpansionPolicy:
                   f'calibration requires C<=3 and exact allocator NV<=32; '
                   f'got C={ex.C}, NV={ex.NV}', flush=True)
             self.mode = 'q_path'
+            report('calibration only covers C<=3 and NV<=32')
             return
         phase = '1' if ex.phase == 'p1' else '2'
         self.frontier = 'frontier' in self.mode
@@ -45,6 +62,7 @@ class TreeExpansionPolicy:
             filename = 'reach.json' if 'REACH' in key else 'gain.json'
             path = Path(os.environ.get(key, Path(__file__).with_name('tree_calibration') / filename))
             data = path.read_bytes()
+            self.calibration_hashes[key] = hashlib.sha256(data).hexdigest()
             print(f'[tree expansion] {self.mode} {ex.phase} {key} '
                   f'SHA256={hashlib.sha256(data).hexdigest()}', flush=True)
             return json.loads(data)
@@ -66,6 +84,7 @@ class TreeExpansionPolicy:
             if len(curve) < ex.C+1:
                 raise ValueError('Gain curve must cover C')
             self.gain = make_constants(ex.NV, curve[:ex.C+1], ex.dev)
+        report()
 
     def priority(self, parent_logpri, parents, raw_q):
         if self.alpha is None:

@@ -1,3 +1,4 @@
+from ssd.utils.debug import debug_tokens_enabled
 import os
 import time
 import torch
@@ -138,7 +139,8 @@ class Scheduler:
                 f"target needs position {target_end - 1} "
                 f"(lookahead={target_lookahead_len})")
         if self.speculate:
-            assert draft_lookahead_len is not None
+            if not (draft_lookahead_len is not None):
+                raise RuntimeError('Invalid engine/scheduler.py contract: draft_lookahead_len is not None')
             draft_end = seq.num_tokens + draft_lookahead_len
             if draft_end > self.max_model_len:
                 return (
@@ -152,7 +154,8 @@ class Scheduler:
             draft_can_append = self.draft_block_manager.can_append(
                 seq, draft_lookahead_len)
         else:
-            assert draft_lookahead_len is None, "ERROR in bms_can_append: draft_lookahead_len should be None if not speculate"
+            if not (draft_lookahead_len is None):
+                raise RuntimeError("ERROR in bms_can_append: draft_lookahead_len should be None if not speculate")
             draft_can_append = True
 
         return target_can_append and draft_can_append
@@ -188,7 +191,7 @@ class Scheduler:
             self.running.append(seq)
             scheduled_seqs.append(seq)
         if scheduled_seqs:
-            if __debug__: print(f'[scheduler] returning {len(scheduled_seqs)} sequences for prefill', flush=True)
+            if debug_tokens_enabled(): print(f'[scheduler] returning {len(scheduled_seqs)} sequences for prefill', flush=True)
             return scheduled_seqs, True
 
         # decode, these sequences are already running
@@ -232,7 +235,7 @@ class Scheduler:
                 # Do not extend RoPE, preempt/re-prefill forever, or raise and
                 # lose the completed prefix.  Return the sequence as a normal
                 # context-limited completion before launching the unsafe step.
-                if __debug__:
+                if debug_tokens_enabled():
                     print(
                         "[scheduler] context limit reached; finishing "
                         f"seq_id={seq.seq_id}, num_tokens={seq.num_tokens}, "
@@ -342,7 +345,8 @@ class Scheduler:
                 seq.num_tokens + new_suffix_len >= self.max_model_len):  
             finished = True
 
-        assert seq.num_completion_tokens <= seq.max_new_tokens, f"seq.num_completion_tokens = {seq.num_completion_tokens} and seq.max_new_tokens = {seq.max_new_tokens}"
+        if not (seq.num_completion_tokens <= seq.max_new_tokens):
+            raise RuntimeError(f"seq.num_completion_tokens = {seq.num_completion_tokens} and seq.max_new_tokens = {seq.max_new_tokens}")
 
         return new_suffix, finished
 
@@ -396,7 +400,8 @@ class Scheduler:
 
     def _update_sequence_metadata(self, seq: Sequence, new_suffix: list[int], recovery_token: int):
         new_suffix_len = len(new_suffix)
-        assert new_suffix_len >= 1, "ERROR in _update_sequence_metadata: new_suffix_len = 0, should be non-empty"
+        if not (new_suffix_len >= 1):
+            raise RuntimeError("ERROR in _update_sequence_metadata: new_suffix_len = 0, should be non-empty")
 
         # always need to actually ADD the new suffix to this seq, even after finish
         seq.token_ids.extend(new_suffix)
@@ -409,9 +414,12 @@ class Scheduler:
         seq.last_spec_step_accepted_len = new_suffix_len
         seq.recovery_token_id = recovery_token
 
-        assert seq.last_block_num_tokens == seq.last_block_num_tokens_draft, f"ERROR in _update_sequence_metadata: seq.last_block_num_tokens = {seq.last_block_num_tokens} and seq.last_draft_block_num_tokens = {seq.last_block_num_tokens_draft}"
-        assert seq.block_table, "ERROR in _update_sequence_metadata: seq.block_table is empty"
-        assert seq.draft_block_table, "ERROR in _update_sequence_metadata: seq.draft_block_table is empty"
+        if not (seq.last_block_num_tokens == seq.last_block_num_tokens_draft):
+            raise RuntimeError(f"ERROR in _update_sequence_metadata: seq.last_block_num_tokens = {seq.last_block_num_tokens} and seq.last_draft_block_num_tokens = {seq.last_block_num_tokens_draft}")
+        if not (seq.block_table):
+            raise RuntimeError("ERROR in _update_sequence_metadata: seq.block_table is empty")
+        if not (seq.draft_block_table):
+            raise RuntimeError("ERROR in _update_sequence_metadata: seq.draft_block_table is empty")
 
         # Finalize all blocks that become complete after accepting new_suffix
         new_total = seq.num_tokens
@@ -464,7 +472,7 @@ class Scheduler:
                     seq.extend_token_ids = None
 
             if finished:
-                if __debug__: print(f'Sequence {seq.seq_id} finished, deallocating and marking as done + removing from running', flush=True)
+                if debug_tokens_enabled(): print(f'Sequence {seq.seq_id} finished, deallocating and marking as done + removing from running', flush=True)
                 seq.status = SequenceStatus.FINISHED
                 self.block_manager.deallocate(seq)
                 self.draft_block_manager.deallocate(seq)

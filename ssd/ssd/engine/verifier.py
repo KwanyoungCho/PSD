@@ -1,3 +1,4 @@
+from ssd.utils.debug import debug_tokens_enabled
 from ssd.engine.helpers.root_policy import options as root_options
 import os
 import ctypes
@@ -546,7 +547,7 @@ class Verifier(VerifierBase):
 
 
         # # Debug: print recovery tokens detokenized
-        if __debug__ and recovery_tokens is not None and len(recovery_tokens) > 0:
+        if debug_tokens_enabled() and recovery_tokens is not None and len(recovery_tokens) > 0:
             recovery_texts = []
             for token in recovery_tokens:
                 try:
@@ -600,7 +601,7 @@ class Verifier(VerifierBase):
                     self.metrics["accepted_suffix_lens_on_miss"].append(suffix_len)
 
         # Print mean length of new suffixes for monitoring
-        if __debug__ and new_suffixes:
+        if debug_tokens_enabled() and new_suffixes:
             mean_suffix_len = sum([len(suffix) for suffix in new_suffixes]) / len(new_suffixes)
             print(f"[verify] mean new suffix length: {mean_suffix_len:.2f}", flush=True)
 

@@ -272,6 +272,8 @@ class TestP1ShapeBuckets(unittest.TestCase):
             d_model_target: int | None = None
             use_eagle: bool = False
             hf_config: object | None = None
+            runner_role: str = "target"
+            target_hf_config: object | None = None
             enforce_eager: bool = False
 
         chain = DraftRunner.create_draft_config(_Cfg())

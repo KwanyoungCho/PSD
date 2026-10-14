@@ -159,6 +159,9 @@ class ModelRunner:
         
         torch.cuda.set_device(self.rank)
         self.device = torch.device(f'cuda:{self.rank}') 
+        from ssd.utils.runtime_manifest import log_runtime_manifest
+        log_runtime_manifest(config, self.hf_config, rank, is_draft,
+                             self.num_tp_gpus, self.device)
         
         # cudagraph logic for FlashInfer kernels, need diff wrapper for each batch size we make a graph for 
         if is_draft and config.draft_async:
