@@ -1538,6 +1538,13 @@ class ModelRunner:
         )
 
     @torch.inference_mode()
+    def warm_batched_tree_forward(self, batch, width, pages):
+        from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
+        if not hasattr(self, '_batched_tree_forward'):
+            self._batched_tree_forward=BatchedTreeForward(self, split=True)
+        self._batched_tree_forward.capture(batch,width,pages)
+
+    @torch.inference_mode()
     def run_batched_tree(self, rows, width):
         from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
         if not hasattr(self, '_batched_tree_forward'):
@@ -1604,7 +1611,8 @@ class ModelRunner:
         # therefore fails coherently instead of leaving only rank 0 in the
         # acceptance path while its peers wait forever.
         validate_tree_ints(
-            ti, nv, cfg.hf_config.vocab_size, sibling_capacity=3)
+            ti, nv, cfg.hf_config.vocab_size,
+            sibling_capacity=cfg.duet_tree_c_tensor)
         valid = int(ti["valid"])
         n_rows = valid + 1
         assert input_ids.shape[0] == n_rows, (

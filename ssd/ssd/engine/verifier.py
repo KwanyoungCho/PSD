@@ -310,7 +310,7 @@ class Verifier(VerifierBase):
                     self._accept_cpu_tree = _ti_checked
                     validate_tree_ints(
                         _ti_checked, _nv_t, config.hf_config.vocab_size,
-                        sibling_capacity=3)
+                        sibling_capacity=config.duet_tree_c_tensor)
                     _tree_wire_gpu_source = _ti_row
                     _phase_t = int(speculate_result.phase_source[0]) \
                         if speculate_result.phase_source is not None else 0

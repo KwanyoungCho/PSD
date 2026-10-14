@@ -80,6 +80,16 @@ class LLMEngine:
         ctx = mp.get_context("spawn")
         self.num_tp_gpus = config.num_gpus if not self.config.draft_async else config.num_gpus - 1
 
+        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
+        if batch_tree_enabled(config):
+            from ssd.engine.helpers.batch_tree_forward import proxy_stream_enabled
+            replica_source = 'default' if 'SSD_DUET_EXIT_REPLICA' not in os.environ else 'env'
+            stream_source = 'auto' if 'SSD_BATCH_TREE_PROXY_STREAM' not in os.environ else 'env'
+            print(f'[duet-tree-runtime] batch={config.max_num_seqs} target_tp={self.num_tp_gpus} '
+                  f'exit_replica={int(config.duet_exit_replica)} source={replica_source} '
+                  f'proxy_stream={int(proxy_stream_enabled(config, self.num_tp_gpus))} '
+                  f'stream_source={stream_source}', flush=True)
+
         if config.speculate and config.draft_async:
             self.draft_ps = None
 
@@ -147,6 +157,10 @@ class LLMEngine:
             self.draft_runner = DraftRunner(config)
             self.draft_cfg = self.draft_runner.draft_cfg
             print(f'Draft runner created on rank 0 (no async)', flush=True)
+
+        if self.model_runner.batched_tree_enabled:
+            from ssd.engine.helpers.batch_tree_warmup import prewarm_target
+            prewarm_target(self.model_runner)
 
         config.eos = self.tokenizer.eos_token_id
         self.scheduler = Scheduler(config, draft_cfg=self.draft_cfg if config.speculate else None)

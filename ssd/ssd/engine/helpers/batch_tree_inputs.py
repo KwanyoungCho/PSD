@@ -1,5 +1,6 @@
 """Prepare all request arenas with one captured graph and one host upload."""
 import torch
+import numpy as np
 from ssd.engine.helpers.tree_host_topology import context_topology
 
 
@@ -45,7 +46,7 @@ class BatchedArenaInputs:
     @torch.inference_mode()
     def replay(self,rows,params,temps):
         B=len(rows);ex=self.executor.first
-        host=torch.zeros_like(self.meta,device='cpu');safe=[]
+        host=np.zeros(tuple(self.meta.shape),dtype=np.int64);safe=[]
         self.tokens.zero_();self.scores.zero_();self.contexts.zero_()
         for b in range(len(self.executor.executors)):
             row=rows[min(b,B-1)];prefix=row['prefix'];n=len(row['tokens']);bt=row['blocks']
@@ -53,16 +54,16 @@ class BatchedArenaInputs:
             okay=b<B and final<=self.max_model_len and (final-1)//ex.bs<len(bt) and all(x>=0 for x in bt[:(final+ex.bs-1)//ex.bs])
             if b<B:safe.append(okay)
             depths,_,vis=context_topology(row['parents'])
-            host[b,:3]=torch.tensor([prefix,n,int(okay)])
-            host[b,3:3+len(bt)]=torch.tensor(bt)
-            host[b,3+self.M:3+self.M+n]=torch.tensor([0]+[d+1 for d in depths])
-            host[b,3+self.M+self.G:3+self.M+self.G+self.G*self.G].view(self.G,self.G)[:n,:n]=torch.as_tensor(vis)
+            host[b,:3]=[prefix,n,int(okay)]
+            host[b,3:3+len(bt)]=bt
+            host[b,3+self.M:3+self.M+n]=[0]+[d+1 for d in depths]
+            host[b,3+self.M+self.G:3+self.M+self.G+self.G*self.G].reshape(self.G,self.G)[:n,:n]=vis
             live=min((final+ex.bs-1)//ex.bs,len(bt)) if okay else (prefix+n+ex.bs-1)//ex.bs
-            host[b,-self.P:]=torch.tensor([bt[j] if j<live else bt[0] for j in range(self.P)])
+            host[b,-self.P:]=[bt[j] if j<live else bt[0] for j in range(self.P)]
             if b<B:
                 tok,score,ctx=params[b];nr=len(tok)
                 self.tokens[b,:nr].copy_(tok);self.scores[b,:nr].copy_(score);self.contexts[b,:nr].copy_(ctx)
-        self.meta.copy_(host)
+        self.meta.copy_(torch.from_numpy(host))
         self.temps[:B].copy_(torch.tensor(temps,dtype=torch.float32))
         self.graph.replay()
         return safe

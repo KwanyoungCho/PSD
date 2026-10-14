@@ -439,6 +439,9 @@ class Config:
         exit-topm-gather null result: the exit cost is rendezvous-
         dominated, not volume-dominated (docs/duet/09 WS3c)."""
         import os as _os_cfg
+        # Fixed-input gains did not establish a full-serving gain for B>1.
+        # Preserve the paper default; the existing explicit override remains
+        # available for measured deployments and diagnostic comparisons.
         return _os_cfg.environ.get("SSD_DUET_EXIT_REPLICA", "0") == "1"
 
     @property
@@ -628,11 +631,12 @@ class Config:
             # at config time instead of hitting the runtime B==1 asserts
             # mid-run.
             if self.max_num_seqs > 1 and (
-                    self.duet_exit_topm_gather or self.duet_exit_replica
+                    self.duet_exit_topm_gather
+                    or (self.duet_exit_replica and not self.duet_tree_enabled)
                     or self.duet_proxy_on_draft):
                 raise ValueError(
-                    "SSD_DUET_EXIT_TOPM_GATHER / SSD_DUET_EXIT_REPLICA / "
-                    "SSD_DUET_PROXY_ON_DRAFT are B==1-only gates "
+                    "Top-M/proxy-on-draft and non-tree exit-replica modes "
+                    "are B==1-only gates "
                     "(docs/duet/13 §6, out of scope v1); unset them or run "
                     f"with max_num_seqs=1 (got max_num_seqs={self.max_num_seqs})."
                 )

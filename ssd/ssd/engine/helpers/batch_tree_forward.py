@@ -8,6 +8,11 @@ from ssd.engine.helpers.batch_tree_common import capacity, build_forward_inputs
 
 DETAIL_TREE = os.getenv('SSD_PROFILE_DUET_DETAIL','0') == '1'
 
+def proxy_stream_enabled(config, num_tp_gpus):
+    """Resolve the existing override and the full-head TP default."""
+    default = getattr(config, 'duet_exit_replica', False) and num_tp_gpus > 1
+    return os.getenv('SSD_BATCH_TREE_PROXY_STREAM', '1' if default else '0') == '1'
+
 class BatchedTreeForward:
     def __init__(self, runner, split):
         self.r = runner
@@ -107,11 +112,14 @@ class BatchedTreeForward:
     def run(self, rows, width, proxy=None):
         r = self.r
         b = len(rows)
-        if proxy is not None and os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1':
+        # Glue/full forwards have no proxy and do not require proxy config.
+        side_enabled = (self.split and proxy is not None
+                        and proxy_stream_enabled(r.config, r.num_tp_gpus))
+        if proxy is not None and side_enabled:
             if self.proxy_side is None:
                 from ssd.engine.helpers.tree_proxy_stream import TreeProxySideStream
                 self.proxy_side=TreeProxySideStream(r.device)
-        side=self.proxy_side if os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1' else None
+        side=self.proxy_side if side_enabled else None
         pages = capacity(max((row['prefix']+len(row['tokens'])+r.block_size-1)//r.block_size
                              for row in rows))
         pages = min(pages,r.config.max_blocks)

@@ -33,6 +33,8 @@ class BatchedDuetDraft:
         self.graph_pool=None
         self.glue=BatchedTreeForward(runner,split=False)
         self.stats=dict(steps=0,tree_hits=0,phase1_replays=0,phase2_replays=0,captures=0)
+        from ssd.engine.helpers.batch_tree_warmup import prewarm_draft
+        prewarm_draft(self)
 
     def invalidate(self,seq_ids):
         ids=set(seq_ids)

@@ -4,6 +4,7 @@ import os
 import torch
 from ssd.engine.helpers.batch_tree_common import capacity
 from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy, BatchedTreeAccept, verify_batch
+from ssd.engine.helpers.flat_tree_sampling import FlatProxy, FlatAccept, verify as verify_flat
 from ssd.engine.helpers.p2_tree import parse_tree_ints, validate_tree_ints, commit_copy_plan
 from ssd.engine.helpers.speculate_types import VerifyResult
 from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
@@ -53,15 +54,19 @@ def verify(verifier,seqs,result):
     if not hasattr(r,'_batch_tree_proxies'):
         r._batch_tree_proxies={}; r._batch_tree_proxy_pool=None
     cap=capacity(B)
-    proxy_key=cap,N
+    # Preserve target GEMM/attention shapes; compact only vocabulary work.
+    flat_q=((sum(v+1 for v in valid)+7)//8)*8
+    compact=B==cap and flat_q<cap*(N+1)
+    proxy_type=FlatProxy if compact else BatchedTreeProxy
+    accept_type=FlatAccept if compact else BatchedTreeAccept
+    proxy_key=(cap,N,'flat') if compact else (cap,N)
     if proxy_key not in r._batch_tree_proxies:
         capture_event=duet_record('batch_proxy_capture') if DETAIL_TREE else None
-        p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
+        p=proxy_type(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
                            cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
                            q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor)
         r._batch_tree_proxies[proxy_key]=p
-        if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
         if DETAIL_TREE:duet_close('batch_proxy_capture',capture_event)
     proxy=r._batch_tree_proxies[proxy_key]
     tokens=torch.zeros(B,N,dtype=torch.int64,device=r.device)
@@ -69,8 +74,11 @@ def verify(verifier,seqs,result):
     q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
     q[:,:result.logits_q.shape[1]].copy_(result.logits_q)
     proxy.prepare(parents,siblings,tokens,q,tt,dt)
+    if r._batch_tree_proxy_pool is None:r._batch_tree_proxy_pool=proxy.graph.pool()
+    flat_topology=proxy.current['topo'] if compact else None
     if DETAIL_TREE:duet_close('batch_tree_prepare',prepare_event)
     def callback(logits,b):
+        if compact:logits=logits[flat_topology['req'],flat_topology['local']]
         pos,packed=proxy.replay(logits)
         verifier._send_proxy_wire(cfg,r.async_pg,r.draft_rank,pos[:B],packed[:B])
     r._duet_proxy_fn=callback
@@ -78,22 +86,28 @@ def verify(verifier,seqs,result):
         logits=r.call('run_batched_tree',rows,N+1)
     finally:
         r._duet_proxy_fn=None
+    if compact:logits=logits[flat_topology['req'],flat_topology['local']]
     topology={k:v[:B] for k,v in proxy.topology.items()}
     accept_event=duet_record('batch_tree_accept') if DETAIL_TREE else None
     greedy=all(t==0 for t in tt)
     if os.getenv('SSD_BATCH_TREE_ACCEPT_GRAPH','1')=='1':
         if not hasattr(r,'_batch_tree_accept'):
             r._batch_tree_accept={};r._batch_tree_accept_pool=None
-        key=cap,N,greedy,cfg.stochastic_only
+        key=(cap,N,greedy,cfg.stochastic_only,'flat') if compact else (cap,N,greedy,cfg.stochastic_only)
         if key not in r._batch_tree_accept:
             capture_event=duet_record('batch_accept_capture') if DETAIL_TREE else None
-            graph=BatchedTreeAccept(proxy,verifier.sampler_x,verifier.async_fan_out,
+            graph=accept_type(proxy,verifier.sampler_x,verifier.async_fan_out,
                                     greedy,pool=r._batch_tree_accept_pool,
                                     stochastic_only=cfg.stochastic_only)
             r._batch_tree_accept[key]=graph
             if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=graph.graph.pool()
             if DETAIL_TREE:duet_close('batch_accept_capture',capture_event)
         paths,recoveries,terminal=r._batch_tree_accept[key].replay(logits,tt,dt)
+    elif compact:
+        c=proxy.current
+        paths,recoveries,terminal=verify_flat(logits,c['q'],c['tokens'],c['topo'],N,
+            c['tt'],c['dt'],verifier.sampler_x,verifier.async_fan_out,greedy,
+            stochastic_only=cfg.stochastic_only)
     else:
         paths,recoveries,terminal=verify_batch(logits,q,tokens,topology,tt,dt,
                                               verifier.sampler_x,verifier.async_fan_out,greedy,
@@ -126,6 +140,7 @@ def verify(verifier,seqs,result):
         m['phase_events'].append(dict(tree=is_tree[b],batch_size=B,verify_width=step_width,
             physical_verify_width=N,
             physical_batch_queries=physical_queries,
+            probability_queries=flat_q if compact else cap*(N+1),
             step_id=result.step_id,source=phases[b],cache_hit=int(hits[b]),
             accepted_len=length,accepted_spec_len=length-1,valid_k=valid[b]))
         if os.getenv('SSD_TREE_SHAPE_METRICS','0')=='1':
