@@ -204,10 +204,13 @@ def load_safetensors_model(model: nn.Module, path: str, packed_modules_mapping: 
         the AWQ loader owns them. Non-TP-linear dense weights (embeddings,
         lm_head, norms) still load through this path.
     """
+    from ssd.utils.checkpoint_rope import redundant_rope_buffer
     safetensor_files = glob(os.path.join(path, "*.safetensors"))
     for file in tqdm(safetensor_files, desc="Loading model files"):
         with safe_open(file, "pt", "cpu") as f:
             for weight_name in f.keys():
+                if redundant_rope_buffer(model, path, weight_name, f):
+                    continue
                 # AWQ-specific keys are loaded by the AWQ artifact loader,
                 # not by the dense path. Skip them so we don't try to
                 # get_parameter a name that doesn't exist on the SSD model.

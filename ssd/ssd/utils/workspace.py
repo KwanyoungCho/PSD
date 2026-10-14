@@ -14,6 +14,21 @@ def workspace_bytes(variable, default_mib):
     return mib * 2**20
 
 
+def tree_verify_workspace_bytes(device, max_verify_nodes):
+    """B=1 per-page graph scratch; choose before KV sizing and capture.
+
+    SM120/70B's wide query planner requests 197132288 bytes (~188 MiB).
+    The older 96 MiB graph default was an architecture-specific observation,
+    not a bound. Preserve that default elsewhere and allow explicit overrides.
+    """
+    import torch
+    if 'SSD_TREE_VERIFY_WORKSPACE_MB' in os.environ:
+        return workspace_bytes('SSD_TREE_VERIFY_WORKSPACE_MB', 256)
+    wide = max_verify_nodes > 6
+    default = 256 if wide and torch.cuda.get_device_capability(device)[0] >= 12 else (96 if wide else 64)
+    return workspace_bytes('SSD_TREE_VERIFY_WORKSPACE_MB', default)
+
+
 @contextmanager
 def planning_workspace(variable, workspace, **shape):
     """Attach allocation and shape to the original planner failure.

@@ -247,17 +247,13 @@ class ModelRunner:
     def _init_tree_verify_wrappers(self):
         """T3.1 — target rank-로컬 tree-verify wrapper (N_v bucket별).
 
-        리뷰4 반영: workspace는 rank당 1개 공유, 128MB (FlashInfer 권장
-        — draft의 512MB는 그쪽 선택값), KV cache 할당 전에 잡는다
-        (이 함수는 __init__ 초기에 호출됨). bucket = N_v+1 행 고정
-        (B=1 — v6: B>1은 tree 게이트 OFF).
+        B=1 uses one eager workspace and isolated (node,page) graph storage.
+        Allocate before KV sizing; B>1 uses the separate batch executor.
         """
         import flashinfer
         nv = int(self.config.duet_tree_wire_nodes)
         max_blocks = (self.config.max_model_len + self.block_size - 1) \
             // self.block_size
-        self._tree_workspace = torch.zeros(
-            128 * 1024 * 1024, dtype=torch.uint8, device=self.device)
         # One persistent copy of the common P1/P2 tree wire for target TP
         # followers.  Rank 0 consumes the response tensor directly; followers
         # receive the same validated metadata through SHM and perform one H2D
@@ -278,6 +274,10 @@ class ModelRunner:
             verify_buckets.add(int(self.config.duet_p2_tree_verify_nodes))
         if not verify_buckets:
             verify_buckets.add(nv)
+        from ssd.utils.workspace import tree_verify_workspace_bytes
+        graph_ws_bytes = tree_verify_workspace_bytes(self.device, max(verify_buckets))
+        self._tree_workspace = torch.zeros(
+            max(128 * 2**20, graph_ws_bytes), dtype=torch.uint8, device=self.device)
 
         def _new_wrapper(nv_b, workspace, page_capacity):
             r = nv_b + 1
@@ -310,25 +310,16 @@ class ModelRunner:
         # page shapes made later captures silently corrupt earlier graphs.
         # Keep one modest workspace per (node,page) graph, matching the
         # isolation rule already used by P2TreeExecutor.
-        # FlashInfer's temporary storage grows with the verify query width.
-        # 64 MiB is sufficient through six verify nodes, but FlashInfer
-        # switches kernels at eight nodes for this Llama-2-70B shape and then
-        # requests about 82 MiB (P1=18 has the same observed requirement).
-        # Keep the smaller allocation only for narrow trees.  The environment
-        # override is intentionally retained for other models whose
-        # requirement differs.
-        default_graph_ws_mb = 96 if max(verify_buckets) > 6 else 64
-        graph_ws_mb = int(os.environ.get(
-            "SSD_TREE_VERIFY_WORKSPACE_MB", str(default_graph_ws_mb)))
-        if graph_ws_mb <= 0:
-            raise ValueError("SSD_TREE_VERIFY_WORKSPACE_MB must be positive")
+        print(f'[tree-verify-workspace] graph={graph_ws_bytes/2**20:g} MiB '
+              f'eager={self._tree_workspace.numel()/2**20:g} MiB '
+              f'node_buckets={sorted(verify_buckets)} pages={max_blocks}',flush=True)
         self._tree_verify_graph_workspaces = {}
         self.tree_verify_graph_wrappers = {}
         for nv_b in sorted(verify_buckets):
             for n_pages in range(1, max_blocks + 1):
                 key = (int(nv_b), int(n_pages))
                 ws = torch.empty(
-                    graph_ws_mb * 2**20, dtype=torch.uint8,
+                    graph_ws_bytes, dtype=torch.uint8,
                     device=self.device)
                 self._tree_verify_graph_workspaces[key] = ws
                 self.tree_verify_graph_wrappers[key] = _new_wrapper(

@@ -51,7 +51,8 @@ class LocalRootMath(unittest.TestCase):
                 expect.extend((float(s),i,v) for v,s in enumerate(score))
             expect=sorted(expect,reverse=True)[:5]
             pos,ids,values=rp.chain_candidates(e,q,tok,torch.tensor([2]),4,5,
-                                               target_temps=temperature,draft_temps=temperature)
+                                               target_temps=temperature,draft_temps=temperature,
+                                               normalization='full')
             self.assertEqual(list(zip(pos[0].tolist(),ids[0].tolist())),[(i,v) for _,i,v in expect])
             torch.testing.assert_close(values[0].double(),torch.tensor([s for s,_,_ in expect],dtype=torch.double),rtol=2e-6,atol=1e-7)
 
@@ -153,7 +154,8 @@ class LocalTreeMath(unittest.TestCase):
         for c,nv,m in ((1,4,4),(3,14,12),(3,18,12),(4,4,4)):
             ex=SimpleNamespace(C=c,NV=nv,phase='p1',policy='dynamic',dev='cpu',
                 cfg=SimpleNamespace(duet_p1_tree_policy='on',duet_p1_tree_verify_nodes=m))
-            with patch.dict(os.environ,SSD_TREE_EXPANSION_POLICY='reach_gain_frontier'):
+            with patch.dict(os.environ,SSD_TREE_EXPANSION_POLICY='reach_gain_frontier',
+                            SSD_TREE_LEGACY_CALIBRATION='1'):
                 p=TreeExpansionPolicy(ex)
             self.assertEqual(p.mode,'q_path' if c==4 else 'reach_gain_frontier')
             if c<4:self.assertIsNotNone(p.gain)
@@ -178,7 +180,8 @@ class LocalGraphs(unittest.TestCase):
             for x,y in zip(a,c[:2]):self.assertTrue(torch.equal(x[0],y))
 
     @torch.inference_mode()
-    @patch.dict(os.environ, {'SSD_TREE_EXPANSION_POLICY':'reach_gain_frontier'})
+    @patch.dict(os.environ, {'SSD_TREE_EXPANSION_POLICY':'reach_gain_frontier',
+                            'SSD_TREE_LEGACY_CALIBRATION':'1'})
     def test_research_executor_eager_graph_and_proposal_q(self):
         if __package__:
             from . import test_p2_executor_parity as fixture

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from transformers import AutoConfig
 import torch
 from ssd.paths import DEFAULT_TARGET, DEFAULT_DRAFT
+from ssd.engine.helpers.tree_expansion_config import resolve_tree_expansion, validate_tree_score_mode
 
 
 def _normalize_tree_switches(p1_policy: str, p2_policy: str,
@@ -61,6 +62,7 @@ def _ensure_head_dim(hf_config: AutoConfig) -> None:
 @dataclass
 class Config:
     model: str = DEFAULT_TARGET
+    dtype: str | None = None  # None=checkpoint; explicit float16 or bfloat16
     max_num_batched_tokens: int = 16384
     max_num_seqs: int = 1 
     max_model_len: int = 4096 
@@ -110,6 +112,10 @@ class Config:
     # candidate generation, deduplication, and cache population entirely;
     # every cache root is sourced from the early-exit proxy (P2).
     duet_only_proxy: bool = False
+    # Cache-root ranking only. Target verification and proposal q are unchanged.
+    duet_root_source: str = "complement"  # complement=e(1-q), residual, proxy
+    duet_root_normalization: str = "topm"  # retained top-M (default) | full vocabulary
+    duet_root_overlap_mix: float = 0.25  # weight of h_bar, not of h_hat
     duet_exit_layer: int | None = None      # None=auto: 2*L//3
     duet_proxy_top_k: int = 3              # proxy correction token count
     duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
@@ -138,6 +144,11 @@ class Config:
     # Public ``on`` normalizes to DUET's internal ``dynamic`` selector; the
     # old ``eagle`` spelling remains only for exact experiment reproduction.
     duet_tree_policy: str | None = None
+    # Same q-path score in both modes. Last: only newly generated depth;
+    # frontier: every unexpanded leaf, across depths. No fitted acceptance.
+    duet_tree_expansion: str = "last"
+    duet_p1_tree_expansion: str | None = None
+    duet_p2_tree_expansion: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
     # Per-phase maximum number of nodes generated for each cache root.  The
     # optional verify-node limits keep a generation-order prefix
@@ -157,7 +168,7 @@ class Config:
     # Values above one remain an explicit compute/coverage experiment knob.
     duet_p1_tree_forward_scale: float = 1.0
     # P1 is a future cache-key forest rather than one current-request tree.
-    # ``dynamic`` is the EAGLE-like global frontier; ``backbone`` reserves
+    # ``dynamic`` uses the last/frontier choice above; ``backbone`` reserves
     # one continuation lane per root and therefore guarantees one full-depth
     # chain for every root before retaining ordered siblings; ``hybrid`` uses
     # the chain-sized compute budget, preserves two levels where capacity
@@ -171,15 +182,14 @@ class Config:
     # 불변, P_iv 상위 R root만 예산 (나머지는 뷰 없음 → #14 키 무효화
     # = 명시적 miss). None = 전 seed (R=W, 종전 동작).
     duet_tree_root_count: int | None = None
-    # Post-hoc calibrated expansion floors (docs/duet/internal/27).  Round
-    # zero ignores them so every root/cache key is retained; later dynamic
-    # rounds use them only to stop spending forwards below tail nodes.
+    # Optional historical expansion floors (disabled in the q-path default).
+    # Round zero ignores them so every root/cache key is retained.
     # P2 expansion floors.  P1 has a different score source and scale, so it
     # must not silently inherit thresholds calibrated on early-exit proxy
     # scores.  All variants keep round-zero roots/children and only suppress
     # deeper expansion.
-    duet_tree_proxy_threshold: float = 0.01
-    duet_tree_conf_threshold: float = 0.03
+    duet_tree_proxy_threshold: float = 0.0
+    duet_tree_conf_threshold: float = 0.0
     duet_p1_tree_start_threshold: float = 0.0
     duet_p1_tree_conf_threshold: float = 0.0
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
@@ -488,6 +498,10 @@ class Config:
         return max(1, round(self.duet_p2_budget * (K + 1) / (K_max + 1)))
 
     def __post_init__(self):
+        if self.dtype not in (None, 'float16', 'bfloat16'):
+            raise ValueError('dtype must be None|float16|bfloat16')
+        from ssd.engine.helpers.root_policy_config import validate_root_policy
+        validate_root_policy(self)
         # Normalize the public phase-specific on/off controls before any
         # derived DUET property or legacy implementation branch reads them.
         # Old scripts remain reproducible, but ``eagle`` is never a public
@@ -497,6 +511,17 @@ class Config:
          self.duet_tree_policy) = _normalize_tree_switches(
             self.duet_p1_tree_policy, self.duet_p2_tree_policy,
             _legacy_tree_policy)
+        if self.duet_enabled and self.duet_tree_enabled:
+            validate_tree_score_mode()
+        for _phase in ("p1", "p2"):
+            _expansion = resolve_tree_expansion(self, _phase)
+            _allocation = (self.duet_p1_tree_allocation_policy if _phase == "p1"
+                           else self.duet_tree_policy)
+            if (getattr(self, f"duet_{_phase}_tree_policy") == "on"
+                    and _expansion == "frontier"
+                    and _allocation not in ("dynamic", "eagle")):
+                raise ValueError(
+                    f"{_phase} frontier requires dynamic allocation, not {_allocation!r}")
         if self.duet_tree_nv is not None:
             self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
         self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
@@ -547,6 +572,8 @@ class Config:
                 f"max_model_len must be positive; got {self.max_model_len}")
 
         self.hf_config = AutoConfig.from_pretrained(model)
+        if self.dtype is not None:
+            self.hf_config.torch_dtype = getattr(torch, self.dtype)
         _ensure_head_dim(self.hf_config)
         if self.runner_role not in ("target", "draft"):
             raise ValueError("runner_role must be target|draft")
@@ -562,6 +589,8 @@ class Config:
         if self.speculate:
             draft = self.draft
             self.draft_hf_config = AutoConfig.from_pretrained(draft)
+            if self.dtype is not None:
+                self.draft_hf_config.torch_dtype = getattr(torch, self.dtype)
             _ensure_head_dim(self.draft_hf_config)
             draft_max_position_embeddings = int(
                 self.draft_hf_config.max_position_embeddings)
@@ -1007,9 +1036,13 @@ class Config:
                 raise ValueError("duet_proxy_top_k must be >= 1")
             if self.duet_proxy_on_draft or self.duet_exit_topm_gather:
                 raise ValueError('Local root policy requires full-vocabulary exit logits; raw/top-M proxy gates are unsupported')
-            print('[DUET policy] root=complement normalization=full '
-                  'position=0.75 observed + 0.25 overlap; '
+            print(f'[DUET policy] root={self.duet_root_source} '
+                  f'normalization={self.duet_root_normalization} '
+                  f'position={1-self.duet_root_overlap_mix:g} observed + '
+                  f'{self.duet_root_overlap_mix:g} overlap; '
                   f'tree_requested={os.getenv("SSD_TREE_EXPANSION_POLICY", "q_path")} '
+                  f'expansion_p1={resolve_tree_expansion(self, "p1")} '
+                  f'expansion_p2={resolve_tree_expansion(self, "p2")} '
                   '(resolved per executor)',flush=True)
             # Raw-proxy wire (SSD_DUET_PROXY_ON_DRAFT=1): the draft-side
             # residual topk(top_k) runs over M wire candidates — M must

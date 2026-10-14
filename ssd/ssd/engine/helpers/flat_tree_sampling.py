@@ -97,7 +97,7 @@ def ladder(tokens,p,q,topo,depth,exact=False,overlap_mix=0.0,need_residual=True)
 
 
 def candidates(exit_logits,q_logits,tokens,topo,wire_n,depth,top_k,tt,dt,
-               source='complement',normalization='full',overlap_mix=.25,
+               source='complement',normalization='topm',overlap_mix=.25,
                sampler_x=None,fan_out=1,return_scores=False):
     t=torch.where(tt>0,tt,torch.ones_like(tt))[topo['req']]
     d=torch.where(dt>0,dt,torch.ones_like(dt))[topo['req']]

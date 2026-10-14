@@ -1,22 +1,21 @@
-"""Local research default: complement/full/.25 terminal-mass mixture.
+"""Cache-root scores with request-matched temperatures and terminal mixture.
 
 Scores select cache roots, never actual correction tokens or proposal q.
-Function keywords allow isolated ablations without adding Config knobs.
+Startup Config options propagate to eager, dense and flat CUDA-graph paths.
 """
 import torch
-
-
-def options(config):
-    return dict(source='complement', normalization='full', overlap_mix=.25,
-                sampler_x=getattr(config, 'sampler_x', None),
-                fan_out=getattr(config, 'async_fan_out', 1))
+from ssd.engine.helpers.root_policy_config import options
 
 
 def probabilities(logits, temperatures=1.0, sampler_x=None, fan_out=1):
     """Batched [B,contexts,V]; T=0 retains soft scores for budget ranking."""
     from ssd.engine.helpers.p2_tree import q_probs_from_logits
     b, n, v = logits.shape
-    t = torch.as_tensor(temperatures, dtype=torch.float32, device=logits.device)
+    # A Python scalar must not create a pageable CPU->CUDA copy in capture.
+    # Tensor temperatures remain live inputs of serving graphs.
+    t = (torch.full((b,), float(temperatures), dtype=torch.float32, device=logits.device)
+         if isinstance(temperatures, (int, float)) else
+         torch.as_tensor(temperatures, dtype=torch.float32, device=logits.device))
     t = t.reshape(-1).expand(b)
     return q_probs_from_logits(logits.reshape(b*n, v),
         t[:, None].expand(b, n).reshape(-1), sampler_x, fan_out).view(b, n, v)
@@ -69,7 +68,7 @@ def hazard(alpha):
 
 def chain_candidates(exit_logits, q_logits, tokens, valid_k, top_k, wire_n,
                      pack_scores=False, target_temps=1.0, draft_temps=1.0,
-                     source='complement', normalization='full', overlap_mix=.25,
+                     source='complement', normalization='topm', overlap_mix=.25,
                      sampler_x=None, fan_out=1, cache_hits=None):
     b, k, v = q_logits.shape
     e = probabilities(exit_logits, target_temps)
@@ -96,7 +95,7 @@ def chain_candidates(exit_logits, q_logits, tokens, valid_k, top_k, wire_n,
 
 def tree_candidates(exit_logits, q_logits, tokens, topology, wire_n, depth,
                     top_k, target_temps=1.0, draft_temps=1.0,
-                    source='complement', normalization='full', overlap_mix=.25,
+                    source='complement', normalization='topm', overlap_mix=.25,
                     sampler_x=None, fan_out=1):
     from ssd.engine.helpers.batch_tree_sampling import ladder
     e = probabilities(exit_logits, target_temps)

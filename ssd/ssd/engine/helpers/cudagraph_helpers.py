@@ -1358,19 +1358,25 @@ def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
         # Capture with the exact page-count launch geometry.  Page ids are
         # contents and are replaced before replay; all-zero ids are finite
         # and valid for warmup/capture.
-        wrapper.plan(
-            torch.tensor([0, r], dtype=torch.int32, device=dev),
-            torch.tensor([0, n_pages], dtype=torch.int32, device=dev),
-            torch.zeros(n_pages, dtype=torch.int32, device=dev),
-            torch.tensor([bs_blk], dtype=torch.int32, device=dev),
-            max(1, hf_config.num_attention_heads // _tp),
-            max(1, hf_config.num_key_value_heads // _tp),
-            hf_config.head_dim, bs_blk,
-            custom_mask=torch.ones(
-                r * canvas_cols, dtype=torch.bool, device=dev),
-            q_data_type=hf_config.torch_dtype,
-            kv_data_type=hf_config.torch_dtype,
-        )
+        from ssd.utils.workspace import planning_workspace
+        with planning_workspace('SSD_TREE_VERIFY_WORKSPACE_MB',
+                model_runner._tree_verify_graph_workspaces[(nv_b,n_pages)],
+                batch=1, width=r, pages=n_pages,
+                q_heads=hf_config.num_attention_heads//_tp,
+                kv_heads=hf_config.num_key_value_heads//_tp, head_dim=hf_config.head_dim):
+            wrapper.plan(
+                torch.tensor([0, r], dtype=torch.int32, device=dev),
+                torch.tensor([0, n_pages], dtype=torch.int32, device=dev),
+                torch.zeros(n_pages, dtype=torch.int32, device=dev),
+                torch.tensor([bs_blk], dtype=torch.int32, device=dev),
+                max(1, hf_config.num_attention_heads // _tp),
+                max(1, hf_config.num_key_value_heads // _tp),
+                hf_config.head_dim, bs_blk,
+                custom_mask=torch.ones(
+                    r * canvas_cols, dtype=torch.bool, device=dev),
+                q_data_type=hf_config.torch_dtype,
+                kv_data_type=hf_config.torch_dtype,
+            )
         set_context(
             is_prefill=False,
             slot_mapping=bufs["slot_mapping"],

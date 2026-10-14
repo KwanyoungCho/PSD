@@ -11,6 +11,11 @@ from ssd.engine.helpers.batched_tree_executor import BatchedTreeExecutor
 class TestBatchedTreeExecutor(unittest.TestCase):
     @torch.inference_mode()
     def test_separate_prefixes_masks_and_captured_replay(self):
+        for mode in ('last', 'frontier'):
+            with self.subTest(expansion=mode):
+                self._check_mode(mode)
+
+    def _check_mode(self, mode):
         device = torch.device('cuda:0')
         torch.manual_seed(37)
         class ToyModel(torch.nn.Module):
@@ -33,6 +38,7 @@ class TestBatchedTreeExecutor(unittest.TestCase):
                 return self.head(x)
         model = ToyModel()
         cfg = SimpleNamespace(duet_proxy_total_budget=3, duet_p2_seed_count=3,
+                              duet_tree_expansion=mode,
                               duet_phase1_k=3, duet_phase2_k=3,
                               duet_tree_c_tensor=3, duet_p2_tree_max_nodes=6,
                               duet_tree_policy='dynamic', greedy_only=False)

@@ -1,0 +1,150 @@
+{
+  "status": "complete",
+  "started": 1791995028.8603063,
+  "differences": [
+    {
+      "model": "layerskip",
+      "name": "layerskip_tree_last_t0_full_b1",
+      "ar_name": "layerskip_ar_last_t0_full_b1",
+      "prompt": 1,
+      "offset": 16,
+      "key": "5fbcd77500a4943eef0581e3f32e176bdcc8b6f7f8198ce80509acef61064a20",
+      "ar_token": 6273,
+      "tree_token": 1881,
+      "ar": {
+        "argmax": 6273,
+        "top2_gap": 0.125,
+        "competing_logits": [
+          18.125,
+          18.0
+        ]
+      },
+      "tree": {
+        "argmax": 1881,
+        "top2_gap": 0.0,
+        "competing_logits": [
+          18.0,
+          18.0
+        ]
+      },
+      "max_logit_difference": 0.125,
+      "mean_logit_difference": 0.011299866251647472
+    },
+    {
+      "model": "layerskip",
+      "name": "layerskip_tree_last_t0_full_b1",
+      "ar_name": "layerskip_ar_last_t0_full_b1",
+      "prompt": 2,
+      "offset": 27,
+      "key": "79a727633e36cb41dcb9539f74267e7a5ba18c31d3f983e16b47b47ea30c3e9e",
+      "ar_token": 278,
+      "tree_token": 263,
+      "ar": {
+        "argmax": 278,
+        "top2_gap": 0.0625,
+        "competing_logits": [
+          12.625,
+          12.5625
+        ]
+      },
+      "tree": {
+        "argmax": 263,
+        "top2_gap": 0.0,
+        "competing_logits": [
+          12.625,
+          12.625
+        ]
+      },
+      "max_logit_difference": 0.21875,
+      "mean_logit_difference": 0.025992501527071
+    },
+    {
+      "model": "layerskip",
+      "name": "layerskip_tree_frontier_t0_topm_b1",
+      "ar_name": "layerskip_ar_last_t0_full_b1",
+      "prompt": 1,
+      "offset": 16,
+      "key": "5fbcd77500a4943eef0581e3f32e176bdcc8b6f7f8198ce80509acef61064a20",
+      "ar_token": 6273,
+      "tree_token": 1881,
+      "ar": {
+        "argmax": 6273,
+        "top2_gap": 0.125,
+        "competing_logits": [
+          18.125,
+          18.0
+        ]
+      },
+      "tree": {
+        "argmax": 1881,
+        "top2_gap": 0.0,
+        "competing_logits": [
+          18.0,
+          18.0
+        ]
+      },
+      "max_logit_difference": 0.125,
+      "mean_logit_difference": 0.011299866251647472
+    }
+  ],
+  "runs": [
+    {
+      "name": "layerskip_ar_last_t0_full_b1",
+      "command": [
+        "/home/eslab/chokwans99/baseline/.venv-ssd/bin/python",
+        "-B",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/diagnose_greedy.py",
+        "--worker",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/models_attempt2/layerskip_ar_last_t0_full_b1.json",
+        "--focus",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/greedy_diagnosis/layerskip_focus.json",
+        "--output-dir",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/greedy_diagnosis/layerskip_ar_last_t0_full_b1"
+      ],
+      "started": 1791995028.8612382,
+      "pid": 654900,
+      "returncode": 0,
+      "ended": 1791995123.5143394
+    },
+    {
+      "name": "layerskip_tree_frontier_t0_topm_b1",
+      "command": [
+        "/home/eslab/chokwans99/baseline/.venv-ssd/bin/python",
+        "-B",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/diagnose_greedy.py",
+        "--worker",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/models_attempt2/layerskip_tree_frontier_t0_topm_b1.json",
+        "--focus",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/greedy_diagnosis/layerskip_focus.json",
+        "--output-dir",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/greedy_diagnosis/layerskip_tree_frontier_t0_topm_b1"
+      ],
+      "started": 1791995157.5197394,
+      "pid": 662605,
+      "returncode": 0,
+      "ended": 1791995229.37436
+    },
+    {
+      "name": "layerskip_tree_last_t0_full_b1",
+      "command": [
+        "/home/eslab/chokwans99/baseline/.venv-ssd/bin/python",
+        "-B",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/diagnose_greedy.py",
+        "--worker",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/models_attempt2/layerskip_tree_last_t0_full_b1.json",
+        "--focus",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/greedy_diagnosis/layerskip_focus.json",
+        "--output-dir",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/greedy_diagnosis/layerskip_tree_last_t0_full_b1"
+      ],
+      "started": 1791995229.3763783,
+      "pid": 664875,
+      "returncode": 0,
+      "ended": 1791995290.4061637
+    }
+  ],
+  "ended": 1791995291.2946064,
+  "all_emissions_are_own_target_argmax": true,
+  "strict_token_parity_passed": false,
+  "observer_reproduced_original_outputs": true
+}

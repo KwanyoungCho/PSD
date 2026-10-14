@@ -42,6 +42,21 @@ def make_config(**kwargs):
 
 
 class ReviewContracts(unittest.TestCase):
+    def test_single_request_tree_workspace_covers_blackwell_plan(self):
+        from ssd.utils.workspace import tree_verify_workspace_bytes
+        with patch.dict(os.environ,{},clear=False):
+            os.environ.pop('SSD_TREE_VERIFY_WORKSPACE_MB',None)
+            for cap, nodes, mb in (((12,0),12,256),((12,0),8,256),
+                                   ((8,9),12,96),((12,0),4,64)):
+                with patch('torch.cuda.get_device_capability',return_value=cap):
+                    size=tree_verify_workspace_bytes('cuda',nodes)
+                    self.assertEqual(size,mb*2**20)
+                    if mb==256:self.assertGreater(size,197132288)
+            os.environ['SSD_TREE_VERIFY_WORKSPACE_MB']='224'
+            self.assertEqual(tree_verify_workspace_bytes('cuda',12),224*2**20)
+            os.environ['SSD_TREE_VERIFY_WORKSPACE_MB']='bad'
+            with self.assertRaises(ValueError):tree_verify_workspace_bytes('cuda',12)
+
     def test_runtime_manifest_reports_uncalibrated_default_and_explicit_override(self):
         from ssd.utils.runtime_manifest import runtime_manifest
         with patch.dict(os.environ,clear=False):

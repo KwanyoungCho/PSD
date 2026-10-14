@@ -1049,7 +1049,7 @@ def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
     """B1 wrapper for the same local policy as batched tree verification.
 
     top_k=None retains the historical full-residual diagnostic reference.
-    Production always provides top_k and uses complement/full/mixed positions.
+    Production provides top_k and configured root scores (default: complement/topm/mixed).
     """
     if top_k is None:
         from ssd.engine.helpers.proxy_temperature import probabilities
@@ -1585,7 +1585,7 @@ def select_nodes(pool: TreePool, policy: str, W: int, fwd: int,
 def select_nodes_global(pool: TreePool, W: int, fwd: int, depth_cap: int,
                         root_remaining: torch.Tensor,
                         future_rounds: int, proxy_threshold: float = 0.0,
-                        conf_threshold: float = 0.0):
+                        conf_threshold: float = 0.0, all_frontier=False):
     """Select productive global-frontier parents for one fixed-width round.
 
     Plain top-W can waste lanes when many high-score candidates belong to a
@@ -1595,7 +1595,8 @@ def select_nodes_global(pool: TreePool, W: int, fwd: int, depth_cap: int,
     candidate nodes receive a later draft forward.
     """
     n = pool.n
-    elig = ((pool.state[:n] == 0) & (pool.depth[:n] == fwd)
+    elig = ((pool.state[:n] == 0)
+            & ((pool.depth[:n] <= fwd) if all_frontier else (pool.depth[:n] == fwd))
             & (pool.depth[:n] < depth_cap))
     if fwd > 0:
         # Floors control only *later expansion*.  The low-score node remains
@@ -1800,7 +1801,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                 rope_base_by_root, K_glue, context_len, sampler_x=None,
                 F_x=None, pad_token=0, fanout_policy="ctensor",
                 proxy_threshold=0.0, conf_threshold=0.0,
-                greedy_only=False):
+                greedy_only=False, all_frontier=False):
     """엔진-주입형 rollout (T1.4b-a): forward_fn만 바꾸면 stub/실엔진
     양쪽에서 동작. per-forward로 (input_ids[W], rope[W], packed mask)를
     구성해 forward_fn(f, input_ids, rope, packed, indptr) -> logits[W,V]
@@ -1849,7 +1850,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
                 pool, W, f, depth_cap, remaining,
                 future_rounds=F_total - f - 1,
                 proxy_threshold=proxy_threshold,
-                conf_threshold=conf_threshold)
+                conf_threshold=conf_threshold, all_frontier=all_frontier)
         else:
             sel = select_nodes(
                 pool, policy, W, f, depth_cap,
@@ -2876,7 +2877,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                       fanout_policy="backbone", device=None,
                       workspace=None, p2_gen=None, noise_list=None,
                       trace_out=None, proxy_threshold=0.0,
-                      conf_threshold=0.0, greedy_only=False, expansion_policy=None):
+                      conf_threshold=0.0, greedy_only=False, expansion_policy=None,
+                      all_frontier=False):
     """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
 
     정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
@@ -2961,7 +2963,8 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                 future_rounds=F_total - f - 1, R=R,
                 proxy_threshold=proxy_threshold,
                 conf_threshold=conf_threshold,
-                all_frontier=bool(expansion_policy and expansion_policy.frontier))
+                all_frontier=(expansion_policy.frontier if expansion_policy is not None
+                              else all_frontier))
             if expansion_policy is not None and expansion_policy.gain is not None:
                 fan=expansion_policy.fanout(ar,sel,sel_valid,remaining,F_total-f-1)
             else:

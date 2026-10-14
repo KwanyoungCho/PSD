@@ -1,7 +1,7 @@
-"""Frozen local reach/gain/frontier selection, before new child sampling.
+"""Q-path scoring with last-depth or all-frontier expansion.
 
 Only future expansion changes. Original q and ordered-WOR samples are kept.
-Historical calibration ships with the package and is never fitted to evaluation outputs.
+Historical calibration is gated behind an explicit reproduction opt-in.
 """
 import hashlib
 import json
@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import torch
 from ssd.engine.helpers.tree_gain_allocation import allocate, make_constants
+from ssd.engine.helpers.tree_expansion_config import resolve_tree_expansion, validate_tree_score_mode
 
 
 class TreeExpansionPolicy:
@@ -20,6 +21,14 @@ class TreeExpansionPolicy:
                  'reach_frontier', 'reach_gain_frontier')
         if self.mode not in modes:
             raise ValueError(f'Unknown expansion policy {self.mode}')
+        validate_tree_score_mode()
+        self.selection = resolve_tree_expansion(
+            getattr(executor, 'cfg', None), executor.phase)
+        if (self.selection == 'frontier'
+                and executor.policy not in ('dynamic', 'eagle')
+                and getattr(getattr(executor, 'cfg', None),
+                            f'duet_{executor.phase}_tree_policy', 'on') == 'on'):
+            raise ValueError('frontier expansion requires dynamic allocation')
         self.requested_mode = self.mode
         self.fallback_reason = None
         self.calibration_hashes = {}
@@ -27,13 +36,14 @@ class TreeExpansionPolicy:
             self.fallback_reason = reason
             print('[tree-policy-resolved] '+json.dumps(dict(
                 phase=executor.phase, requested=self.requested_mode,
+                selection='frontier' if self.frontier else 'last',
                 resolved=self.mode, fallback=reason,
                 calibration_sha256=self.calibration_hashes,
                 allocation=executor.policy, width=getattr(executor,'W',None),
                 round_widths=getattr(executor,'round_widths',None),
                 roots=getattr(executor,'R',None), depth=getattr(executor,'F',None), nodes=executor.NV,
                 siblings=executor.C),sort_keys=True),flush=True)
-        self.frontier = False
+        self.frontier = self.selection == 'frontier'
         self.gain = None
         self.alpha = None
         if self.mode == 'q_path':

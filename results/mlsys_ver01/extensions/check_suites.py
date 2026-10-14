@@ -26,6 +26,9 @@ SUITES = (
     'test_runtime_manifest', 'test_fi_attn_backend', 'test_blackwell_review', 'test_blackwell_attention_shapes', 'test_job_status_review',
     'test_request_reporting', 'test_release_review', 'test_tree_payload_prepare', 'test_local_research_policy',
     'test_equal_budget_tree', 'test_equal_dataset',
+    'test_tree_expansion_modes',
+    'test_ver10_root_settings', 'test_ver10_profile_analysis',
+    'test_ver10_checkpoint_rope',
 )
 
 

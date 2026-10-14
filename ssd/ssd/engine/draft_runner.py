@@ -3887,6 +3887,7 @@ class DraftRunner(ModelRunner):
 
     def _lab_rollout(self, st, noise, forward_fn):
         from ssd.engine.helpers import p2_tree as _PT
+        from ssd.engine.helpers.tree_expansion_config import resolve_tree_expansion
         cfg = self.config
         W = cfg.duet_proxy_total_budget
         K2 = cfg.duet_phase2_k
@@ -3903,6 +3904,7 @@ class DraftRunner(ModelRunner):
             context_len=st["ctx0"], sampler_x=cfg.sampler_x,
             F_x=cfg.async_fan_out, device=self.device,
             noise_list=noise, trace_out=tr,
+            all_frontier=resolve_tree_expansion(cfg, 'p2') == 'frontier',
             greedy_only=getattr(cfg, "greedy_only", False),
             proxy_threshold=cfg.duet_tree_proxy_threshold,
             conf_threshold=cfg.duet_tree_conf_threshold)
@@ -4919,8 +4921,10 @@ class DraftRunner(ModelRunner):
                 if (cfg.duet_tree_policy in ('dynamic','eagle')
                         and os.getenv('SSD_TREE_EXPANSION_POLICY','q_path')!='q_path'):
                     raise NotImplementedError('CPU reference rollout preserves q_path; use the eager arena or captured executor for local research selection')
+                from ssd.engine.helpers.tree_expansion_config import resolve_tree_expansion
                 pool, eval_log, cell_logits = _PT.run_rollout(
                     [t for _p, t in seeds], root_piv,
+                    all_frontier=resolve_tree_expansion(cfg, 'p2') == 'frontier',
                     policy=cfg.duet_tree_policy, W=W, F_total=K2,
                     c_tensor=cfg.duet_tree_c_tensor,
                     nv=cfg.duet_tree_nv,

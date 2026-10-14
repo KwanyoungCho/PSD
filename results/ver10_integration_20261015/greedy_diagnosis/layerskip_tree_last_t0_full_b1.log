@@ -1,0 +1,240 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+Draft runner created on rank 2 (async)!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:0", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 128, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411", "model_tp": 2, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 0, "requested_dtype": "bfloat16", "role": "target", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[tree-verify-workspace] graph=256 MiB eager=256 MiB node_buckets=[8, 12] pages=8
+[W1015 01:27:14.887342896 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+`torch_dtype` is deprecated! Use `dtype` instead!
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:2", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 64, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "model_tp": 1, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 2, "requested_dtype": "bfloat16", "role": "draft", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[W1015 01:27:17.279789737 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+`torch_dtype` is deprecated! Use `dtype` instead!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:1", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 128, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411", "model_tp": 2, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 1, "requested_dtype": "bfloat16", "role": "target", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[tree-verify-workspace] graph=256 MiB eager=256 MiB node_buckets=[8, 12] pages=8
+[W1015 01:27:20.498815709 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.84it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.84it/s]
+Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+Loading model files:   0%|          | 0/29 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+Loading model files:   0%|          | 0/29 [00:00<?, ?it/s]Loading model files:   3%|▎         | 1/29 [00:00<00:19,  1.40it/s]Loading model files:   3%|▎         | 1/29 [00:00<00:22,  1.26it/s]Loading model files:   7%|▋         | 2/29 [00:01<00:18,  1.48it/s]Loading model files:   7%|▋         | 2/29 [00:01<00:21,  1.28it/s]Loading model files:  10%|█         | 3/29 [00:02<00:17,  1.52it/s]Loading model files:  10%|█         | 3/29 [00:02<00:19,  1.31it/s]Loading model files:  14%|█▍        | 4/29 [00:02<00:16,  1.54it/s]Loading model files:  14%|█▍        | 4/29 [00:03<00:18,  1.32it/s]Loading model files:  17%|█▋        | 5/29 [00:03<00:15,  1.55it/s]Loading model files:  17%|█▋        | 5/29 [00:03<00:17,  1.34it/s]Loading model files:  21%|██        | 6/29 [00:03<00:14,  1.56it/s]Loading model files:  24%|██▍       | 7/29 [00:04<00:14,  1.56it/s]Loading model files:  21%|██        | 6/29 [00:04<00:17,  1.35it/s]Loading model files:  28%|██▊       | 8/29 [00:05<00:13,  1.53it/s]Loading model files:  24%|██▍       | 7/29 [00:05<00:16,  1.35it/s]Loading model files:  31%|███       | 9/29 [00:05<00:12,  1.59it/s]Loading model files:  28%|██▊       | 8/29 [00:06<00:15,  1.34it/s]Loading model files:  34%|███▍      | 10/29 [00:06<00:12,  1.56it/s]Loading model files:  31%|███       | 9/29 [00:06<00:14,  1.39it/s]Loading model files:  38%|███▊      | 11/29 [00:07<00:11,  1.60it/s]Loading model files:  34%|███▍      | 10/29 [00:07<00:13,  1.37it/s]Loading model files:  41%|████▏     | 12/29 [00:07<00:11,  1.54it/s]Loading model files:  38%|███▊      | 11/29 [00:08<00:12,  1.39it/s]Loading model files:  45%|████▍     | 13/29 [00:08<00:10,  1.51it/s]Loading model files:  41%|████▏     | 12/29 [00:08<00:12,  1.36it/s]Loading model files:  48%|████▊     | 14/29 [00:09<00:10,  1.49it/s]Loading model files:  45%|████▍     | 13/29 [00:09<00:11,  1.41it/s]Loading model files:  52%|█████▏    | 15/29 [00:09<00:09,  1.48it/s]Loading model files:  48%|████▊     | 14/29 [00:10<00:10,  1.48it/s]Loading model files:  55%|█████▌    | 16/29 [00:10<00:08,  1.47it/s]Loading model files:  52%|█████▏    | 15/29 [00:10<00:09,  1.53it/s]Loading model files:  59%|█████▊    | 17/29 [00:11<00:08,  1.46it/s]Loading model files:  55%|█████▌    | 16/29 [00:11<00:08,  1.57it/s]Loading model files:  62%|██████▏   | 18/29 [00:11<00:07,  1.49it/s]Loading model files:  59%|█████▊    | 17/29 [00:11<00:07,  1.59it/s]Loading model files:  66%|██████▌   | 19/29 [00:12<00:06,  1.47it/s]Loading model files:  62%|██████▏   | 18/29 [00:12<00:06,  1.63it/s]Loading model files:  69%|██████▉   | 20/29 [00:13<00:05,  1.51it/s]Loading model files:  66%|██████▌   | 19/29 [00:13<00:06,  1.62it/s]Loading model files:  69%|██████▉   | 20/29 [00:13<00:05,  1.65it/s]Loading model files:  72%|███████▏  | 21/29 [00:13<00:05,  1.53it/s]Loading model files:  76%|███████▌  | 22/29 [00:14<00:04,  1.70it/s]Loading model files:  72%|███████▏  | 21/29 [00:14<00:04,  1.63it/s]Loading model files:  79%|███████▉  | 23/29 [00:14<00:03,  1.70it/s]Loading model files:  76%|███████▌  | 22/29 [00:14<00:03,  1.79it/s]Loading model files:  83%|████████▎ | 24/29 [00:15<00:02,  1.72it/s]Loading model files:  79%|███████▉  | 23/29 [00:15<00:03,  1.77it/s]Loading model files:  86%|████████▌ | 25/29 [00:16<00:02,  1.70it/s]Loading model files:  83%|████████▎ | 24/29 [00:15<00:02,  1.76it/s]Loading model files:  86%|████████▌ | 25/29 [00:16<00:02,  1.74it/s]Loading model files:  90%|████████▉ | 26/29 [00:16<00:01,  1.66it/s]Loading model files:  90%|████████▉ | 26/29 [00:17<00:01,  1.70it/s]Loading model files:  93%|█████████▎| 27/29 [00:17<00:01,  1.57it/s]Loading model files:  93%|█████████▎| 27/29 [00:17<00:01,  1.60it/s]Loading model files:  97%|█████████▋| 28/29 [00:18<00:00,  1.48it/s]Loading model files:  97%|█████████▋| 28/29 [00:18<00:00,  1.50it/s]Loading model files: 100%|██████████| 29/29 [00:18<00:00,  1.46it/s]Loading model files: 100%|██████████| 29/29 [00:18<00:00,  1.54it/s]
+Loading model files: 100%|██████████| 29/29 [00:19<00:00,  1.49it/s]Loading model files: 100%|██████████| 29/29 [00:19<00:00,  1.50it/s]
+[load_model] finished loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+[load_model] finished loading model from /home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6
+[load_model] finished loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 12675, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 448, 256, 4, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 447, 256, 4, 128])
+[DUET] captured target chain proxy graphs (K=[4, 8])
+[DUET tree] captured target proxy graphs (buckets=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=39
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=39
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 12, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 15, "round_widths": [15, 15, 15, 15, 15, 15, 15, 15], "selection": "last", "siblings": 3, "width": 15}
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 12, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 27, "round_widths": [27, 27, 27, 27, 27, 27, 27, 27], "selection": "last", "siblings": 3, "width": 27}
+[DUET tree] warmed GPU target topology (valid=1..12, buckets=[8, 12])
+[DUET tree] Captured tree_verify CG (buckets=[(8, 1), (8, 2), (8, 3), (8, 4), (8, 5), (8, 6), (8, 7), (8, 8), (12, 1), (12, 2), (12, 3), (12, 4), (12, 5), (12, 6), (12, 7), (12, 8)])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=39
+[DUET tree] warmed GPU target topology (valid=1..12, buckets=[8, 12])
+[DUET tree] Captured tree_verify CG (buckets=[(8, 1), (8, 2), (8, 3), (8, 4), (8, 5), (8, 6), (8, 7), (8, 8), (12, 1), (12, 2), (12, 3), (12, 4), (12, 5), (12, 6), (12, 7), (12, 8)])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=39
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 12, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 39, "round_widths": [39, 39, 39, 39, 39, 39, 39, 39], "selection": "last", "siblings": 3, "width": 39}
+[DUET tree] warmed P1 executors contexts={5: [1, 2, 3, 4, 5, 6, 7, 8], 9: [1, 2, 3, 4, 5, 6, 7, 8], 13: [1, 2, 3, 4, 5, 6, 7]} round_widths={5: (15, 15, 15, 15, 15, 15, 15, 15), 9: (27, 27, 27, 27, 27, 27, 27, 27), 13: (39, 39, 39, 39, 39, 39, 39, 39)} in 12.17s (reserved delta=3638.0 MiB)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_tree_glue MQ_LEN=13
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue starting...
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue warmup...
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (4 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[4, 8])
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": null, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": null, "round_widths": null, "selection": "last", "siblings": 3, "width": null}
+Final Prefill Throughput: 6.43tok/s
+Final Decode Throughput: 46.69tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 46.68612824490552, 'al': 4.666666666666667, 'cache_hit': 0.8333333333333334, 'emitted_tokens': 28, 'seconds': 0.599749884015182, 'included_steps': 6, 'included_events': 6, 'total_steps': 7, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 48.02tok/s
+[metrics] Prefill tokens/time: 6 / 0.932977s
+[metrics] Decode tokens/time: 32 / 0.666376s
+[metrics] Avg Tokens per step (incl recovery): 4.67
+[raw metrics] All-event accepted length: 4.57
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.45 (denom=8)
+[metrics] Avg target time per full step (ms): 199.94
+[metrics] Avg target verify time (ms): 66.13
+[metrics] Avg Cache Hits: 0.83
+[raw metrics] All-event cache hit: 0.86
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.857
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.000
+[metrics] Avg Phase 1 Accepted Len: 4.17
+[metrics] Avg Phase 1 Acceptance Ratio: 0.521
+[metrics] Avg Tokens per step on Cache Hit: 5.17
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 0.167
+  2: 0.167
+  3: 0.333
+  4: 0.000
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.333
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.00
+[DUET] warmed acceptance kernels (K=[4, 8])
+Final Prefill Throughput: 96.93tok/s
+Final Decode Throughput: 50.51tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 50.51352101158281, 'al': 3.375, 'cache_hit': 0.875, 'emitted_tokens': 27, 'seconds': 0.5345103540457785, 'included_steps': 8, 'included_events': 8, 'total_steps': 9, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 53.46tok/s
+[metrics] Prefill tokens/time: 11 / 0.113483s
+[metrics] Decode tokens/time: 32 / 0.598594s
+[metrics] Avg Tokens per step (incl recovery): 3.38
+[raw metrics] All-event accepted length: 3.56
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.32 (denom=8)
+[metrics] Avg target time per full step (ms): 71.22
+[metrics] Avg target verify time (ms): 59.56
+[metrics] Avg Cache Hits: 0.88
+[raw metrics] All-event cache hit: 0.89
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.444
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.444
+[metrics] Avg Phase 1 Accepted Len: 3.75
+[metrics] Avg Phase 1 Acceptance Ratio: 0.469
+[metrics] Avg Phase 2 Accepted Len: 2.00
+[metrics] Avg Phase 2 Acceptance Ratio: 0.500
+[metrics] Avg Tokens per step on Cache Hit: 3.88
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.250
+  1: 0.000
+  2: 0.125
+  3: 0.125
+  4: 0.375
+  5: 0.000
+  6: 0.125
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.00
+[DUET] warmed acceptance kernels (K=[4, 8])
+Final Prefill Throughput: 129.46tok/s
+Final Decode Throughput: 43.97tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 43.97174141642952, 'al': 2.9, 'cache_hit': 0.8, 'emitted_tokens': 29, 'seconds': 0.6595144760212861, 'included_steps': 10, 'included_events': 10, 'total_steps': 11, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 44.01tok/s
+[metrics] Prefill tokens/time: 13 / 0.100419s
+[metrics] Decode tokens/time: 32 / 0.727157s
+[metrics] Avg Tokens per step (incl recovery): 2.90
+[raw metrics] All-event accepted length: 2.91
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.24 (denom=8)
+[metrics] Avg target time per full step (ms): 68.98
+[metrics] Avg target verify time (ms): 58.46
+[metrics] Avg Cache Hits: 0.80
+[raw metrics] All-event cache hit: 0.82
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.545
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.273
+[metrics] Avg Phase 1 Accepted Len: 2.17
+[metrics] Avg Phase 1 Acceptance Ratio: 0.271
+[metrics] Avg Phase 2 Accepted Len: 2.00
+[metrics] Avg Phase 2 Acceptance Ratio: 0.500
+[metrics] Avg Tokens per step on Cache Hit: 3.11
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.222
+  1: 0.333
+  2: 0.222
+  3: 0.000
+  4: 0.111
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.111
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.00
+[DUET] warmed acceptance kernels (K=[4, 8])
+Final Prefill Throughput: 114.55tok/s
+Final Decode Throughput: 58.16tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 58.16308655892351, 'al': 3.857142857142857, 'cache_hit': 0.8571428571428571, 'emitted_tokens': 27, 'seconds': 0.464211952930782, 'included_steps': 7, 'included_events': 7, 'total_steps': 8, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 60.27tok/s
+[metrics] Prefill tokens/time: 13 / 0.113486s
+[metrics] Decode tokens/time: 32 / 0.530950s
+[metrics] Avg Tokens per step (incl recovery): 3.86
+[raw metrics] All-event accepted length: 4.12
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.39 (denom=8)
+[metrics] Avg target time per full step (ms): 71.62
+[metrics] Avg target verify time (ms): 59.41
+[metrics] Avg Cache Hits: 0.86
+[raw metrics] All-event cache hit: 0.88
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.875
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.000
+[metrics] Avg Phase 1 Accepted Len: 3.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.375
+[metrics] Avg Tokens per step on Cache Hit: 4.00
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 0.286
+  2: 0.429
+  3: 0.000
+  4: 0.000
+  5: 0.143
+  6: 0.000
+  7: 0.000
+  8: 0.143
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 5.00
+[LLMEngine] Exiting (hard=False)
+[metrics] Avg draft step time (ms): 72.22
+[metrics] p1exec stats: {'replay': 35}
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1015 01:28:07.672154390 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/eslab/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

@@ -1,3 +1,14 @@
+## DUET — MLSys ver1.0
+
+This checkout includes DUET integration on `MLSys-ver0.2@1b93104b`.
+Start with the [integration decisions and 70B preset](../MLSYS_VER1_INTEGRATION.md),
+[calibration-free tree algorithm](../TREE_EXPANSION_FINAL.md), and
+[validation report](../results/ver10_integration_20261015/REPORT.md).
+The report separates functional checks from historical performance evidence;
+it does not claim that the integrated version improves TPS on a full dataset.
+For this version, token debugging is opt-in (`SSD_DEBUG_TOKENS=1`), independent
+of Python's `-O` flag. The SSD documentation below is retained as upstream context.
+
 <h1 align="center">Speculative Speculative Decoding</h1>
 
 <h3 align="center">
@@ -71,7 +82,7 @@ python scripts/get_data_from_hf.py --num-samples 10000
 
 ## Usage
 
-All commands below run from inside the `bench/` directory. Large models (Llama-3 70B, Qwen-3 32B) take a few minutes for load/warmup/compile before generation starts. Always use `python -O` to disable debug overhead.
+All commands below run from inside the `bench/` directory. Large models (Llama-3 70B, Qwen-3 32B) take a few minutes for load/warmup/compile before generation starts. The examples retain upstream's `python -O` convention; DUET token debugging is disabled by default and enabled explicitly with `SSD_DEBUG_TOKENS=1`, not controlled by `-O`.
 
 ### Benchmarks
 

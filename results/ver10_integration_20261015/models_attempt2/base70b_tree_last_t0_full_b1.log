@@ -1,0 +1,398 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+Draft runner created on rank 2 (async)!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:0", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 128, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--meta-llama--Llama-2-70b-hf/snapshots/3aba440b59558f995867ba6e1f58f21d0336b5bb", "model_tp": 2, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 0, "requested_dtype": "bfloat16", "role": "target", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[tree-verify-workspace] graph=256 MiB eager=256 MiB node_buckets=[8, 12] pages=8
+[W1015 01:14:03.040603559 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+`torch_dtype` is deprecated! Use `dtype` instead!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:1", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 128, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--meta-llama--Llama-2-70b-hf/snapshots/3aba440b59558f995867ba6e1f58f21d0336b5bb", "model_tp": 2, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 1, "requested_dtype": "bfloat16", "role": "target", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[tree-verify-workspace] graph=256 MiB eager=256 MiB node_buckets=[8, 12] pages=8
+[W1015 01:14:08.594844046 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+`torch_dtype` is deprecated! Use `dtype` instead!
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:2", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 64, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "model_tp": 1, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 2, "requested_dtype": "bfloat16", "role": "draft", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[W1015 01:14:09.769848072 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--meta-llama--Llama-2-70b-hf/snapshots/3aba440b59558f995867ba6e1f58f21d0336b5bb
+Loading model files:   0%|          | 0/15 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--meta-llama--Llama-2-70b-hf/snapshots/3aba440b59558f995867ba6e1f58f21d0336b5bb
+Loading model files:   0%|          | 0/15 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.20it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.19it/s]
+[checkpoint-rope] validated redundant model.layers.29.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.29.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.30.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.30.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.31.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.31.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.32.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.32.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.33.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.33.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.34.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.34.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:   7%|▋         | 1/15 [00:19<04:39, 19.97s/it]Loading model files:   7%|▋         | 1/15 [00:19<04:39, 19.94s/it][checkpoint-rope] validated redundant model.layers.75.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.75.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.76.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.76.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.77.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.77.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.78.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.78.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.79.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.79.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  13%|█▎        | 2/15 [00:40<04:20, 20.02s/it]Loading model files:  13%|█▎        | 2/15 [00:40<04:20, 20.05s/it][checkpoint-rope] validated redundant model.layers.52.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.52.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.53.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.53.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.54.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.54.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.55.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.55.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.56.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.56.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.57.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.57.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  20%|██        | 3/15 [01:00<04:03, 20.32s/it]Loading model files:  20%|██        | 3/15 [01:00<04:04, 20.35s/it][checkpoint-rope] validated redundant model.layers.35.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.35.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.36.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.36.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.37.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.37.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.38.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.38.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.39.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  27%|██▋       | 4/15 [01:21<03:45, 20.53s/it][checkpoint-rope] validated redundant model.layers.39.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  27%|██▋       | 4/15 [01:22<03:50, 21.00s/it][checkpoint-rope] validated redundant model.layers.10.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.10.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.11.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.11.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.6.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.6.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.7.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.7.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.8.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.8.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.9.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.9.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  33%|███▎      | 5/15 [01:41<03:24, 20.44s/it]Loading model files:  33%|███▎      | 5/15 [01:41<03:23, 20.34s/it][checkpoint-rope] validated redundant model.layers.69.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.69.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.70.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.70.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.71.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.71.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.72.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.72.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.73.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.73.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.74.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.74.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  40%|████      | 6/15 [02:05<03:13, 21.55s/it]Loading model files:  40%|████      | 6/15 [02:05<03:13, 21.47s/it][checkpoint-rope] validated redundant model.layers.0.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.0.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.1.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.1.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.2.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.2.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.3.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.3.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.4.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.4.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.5.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.5.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  47%|████▋     | 7/15 [02:29<02:59, 22.48s/it]Loading model files:  47%|████▋     | 7/15 [02:29<02:59, 22.42s/it][checkpoint-rope] validated redundant model.layers.63.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.63.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.64.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.64.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.65.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.65.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.66.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.66.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.67.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.67.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.68.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.68.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  53%|█████▎    | 8/15 [02:50<02:32, 21.74s/it]Loading model files:  53%|█████▎    | 8/15 [02:50<02:32, 21.71s/it][checkpoint-rope] validated redundant model.layers.58.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.58.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.59.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.59.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.60.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.60.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.61.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.61.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.62.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.62.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  60%|██████    | 9/15 [03:15<02:17, 22.99s/it]Loading model files:  60%|██████    | 9/15 [03:15<02:17, 22.97s/it][checkpoint-rope] validated redundant model.layers.40.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.40.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.41.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.41.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.42.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.42.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.43.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.43.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.44.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.44.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.45.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.45.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  67%|██████▋   | 10/15 [03:37<01:52, 22.50s/it]Loading model files:  67%|██████▋   | 10/15 [03:37<01:52, 22.48s/it][checkpoint-rope] validated redundant model.layers.17.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.17.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.18.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.18.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.19.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.19.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.20.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.20.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.21.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.21.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.22.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.22.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  73%|███████▎  | 11/15 [03:58<01:28, 22.24s/it]Loading model files:  73%|███████▎  | 11/15 [03:58<01:28, 22.23s/it][checkpoint-rope] validated redundant model.layers.46.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.46.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.47.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.47.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.48.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.48.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.49.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.49.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.50.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.50.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.51.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.51.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  80%|████████  | 12/15 [04:24<01:09, 23.18s/it]Loading model files:  80%|████████  | 12/15 [04:24<01:09, 23.16s/it][checkpoint-rope] validated redundant model.layers.12.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.12.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.13.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.13.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.14.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.14.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.15.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.15.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.16.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.16.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files:  87%|████████▋ | 13/15 [04:44<00:44, 22.26s/it]Loading model files:  87%|████████▋ | 13/15 [04:44<00:44, 22.26s/it]Loading model files:  93%|█████████▎| 14/15 [04:45<00:15, 15.84s/it]Loading model files:  93%|█████████▎| 14/15 [04:45<00:15, 15.84s/it][checkpoint-rope] validated redundant model.layers.23.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.23.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.24.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.24.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.25.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.25.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.26.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.26.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.27.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.27.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.28.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+[checkpoint-rope] validated redundant model.layers.28.self_attn.rotary_emb.inv_freq: fp16_roundtrip
+Loading model files: 100%|██████████| 15/15 [05:09<00:00, 18.26s/it]Loading model files: 100%|██████████| 15/15 [05:09<00:00, 20.62s/it]
+Loading model files: 100%|██████████| 15/15 [05:09<00:00, 18.25s/it]Loading model files: 100%|██████████| 15/15 [05:09<00:00, 20.62s/it]
+[load_model] finished loading model from /home/eslab/models/hub/models--meta-llama--Llama-2-70b-hf/snapshots/3aba440b59558f995867ba6e1f58f21d0336b5bb
+[load_model] finished loading model from /home/eslab/models/hub/models--meta-llama--Llama-2-70b-hf/snapshots/3aba440b59558f995867ba6e1f58f21d0336b5bb
+[load_model] finished loading model from /home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 12675, 256, 4, 64])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 448, 256, 4, 128])
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 447, 256, 4, 128])
+[DUET] captured target chain proxy graphs (K=[4, 8])
+[DUET tree] captured target proxy graphs (buckets=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=39
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=39
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 12, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 15, "round_widths": [15, 15, 15, 15, 15, 15, 15, 15], "selection": "last", "siblings": 3, "width": 15}
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 12, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 27, "round_widths": [27, 27, 27, 27, 27, 27, 27, 27], "selection": "last", "siblings": 3, "width": 27}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 12, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 39, "round_widths": [39, 39, 39, 39, 39, 39, 39, 39], "selection": "last", "siblings": 3, "width": 39}
+[DUET tree] warmed GPU target topology (valid=1..12, buckets=[8, 12])
+[DUET tree] Captured tree_verify CG (buckets=[(8, 1), (8, 2), (8, 3), (8, 4), (8, 5), (8, 6), (8, 7), (8, 8), (12, 1), (12, 2), (12, 3), (12, 4), (12, 5), (12, 6), (12, 7), (12, 8)])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=39
+[DUET tree] warmed GPU target topology (valid=1..12, buckets=[8, 12])
+[DUET tree] Captured tree_verify CG (buckets=[(8, 1), (8, 2), (8, 3), (8, 4), (8, 5), (8, 6), (8, 7), (8, 8), (12, 1), (12, 2), (12, 3), (12, 4), (12, 5), (12, 6), (12, 7), (12, 8)])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=39
+[DUET tree] warmed P1 executors contexts={5: [1, 2, 3, 4, 5, 6, 7, 8], 9: [1, 2, 3, 4, 5, 6, 7, 8], 13: [1, 2, 3, 4, 5, 6, 7]} round_widths={5: (15, 15, 15, 15, 15, 15, 15, 15), 9: (27, 27, 27, 27, 27, 27, 27, 27), 13: (39, 39, 39, 39, 39, 39, 39, 39)} in 11.14s (reserved delta=3638.0 MiB)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_long MQ_LEN=27
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_long warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k1_short MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k1_short warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_split_k2 MQ_LEN=15
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 starting...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup...
+  [FI capture] bs=1 key=fi_tree_decode_split_k2 warmup done, capturing...
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode_tree_glue MQ_LEN=13
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue starting...
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue warmup...
+  [FI capture] bs=1 key=fi_tree_decode_tree_glue warmup done, capturing...
+[DUET] Captured FI tree decode CudaGraphs (4 layouts)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[4, 8])
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": null, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": null, "round_widths": null, "selection": "last", "siblings": 3, "width": null}
+Final Prefill Throughput: 6.56tok/s
+Final Decode Throughput: 22.98tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 22.98456034497949, 'al': 2.727272727272727, 'cache_hit': 0.6363636363636364, 'emitted_tokens': 30, 'seconds': 1.3052240090619307, 'included_steps': 11, 'included_events': 11, 'total_steps': 12, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 23.23tok/s
+[metrics] Prefill tokens/time: 6 / 0.915130s
+[metrics] Decode tokens/time: 32 / 1.377618s
+[metrics] Avg Tokens per step (incl recovery): 2.73
+[raw metrics] All-event accepted length: 3.17
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.27 (denom=8)
+[metrics] Avg target time per full step (ms): 176.38
+[metrics] Avg target verify time (ms): 63.70
+[metrics] Avg Cache Hits: 0.64
+[raw metrics] All-event cache hit: 0.67
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.667
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.000
+[metrics] Avg Phase 1 Accepted Len: 2.12
+[metrics] Avg Phase 1 Acceptance Ratio: 0.266
+[metrics] Avg Tokens per step on Cache Hit: 3.12
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.125
+  1: 0.250
+  2: 0.500
+  3: 0.000
+  4: 0.000
+  5: 0.000
+  6: 0.000
+  7: 0.125
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 3.25
+[DUET] warmed acceptance kernels (K=[4, 8])
+Final Prefill Throughput: 99.00tok/s
+Final Decode Throughput: 44.09tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 44.090946679012546, 'al': 3.2222222222222223, 'cache_hit': 0.5555555555555556, 'emitted_tokens': 29, 'seconds': 0.6577313980378676, 'included_steps': 9, 'included_events': 9, 'total_steps': 10, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 43.64tok/s
+[metrics] Prefill tokens/time: 11 / 0.111109s
+[metrics] Decode tokens/time: 32 / 0.733287s
+[metrics] Avg Tokens per step (incl recovery): 3.22
+[raw metrics] All-event accepted length: 3.40
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.30 (denom=8)
+[metrics] Avg target time per full step (ms): 76.77
+[metrics] Avg target verify time (ms): 57.56
+[metrics] Avg Cache Hits: 0.56
+[raw metrics] All-event cache hit: 0.60
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.400
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.200
+[metrics] Avg Phase 1 Accepted Len: 2.75
+[metrics] Avg Phase 1 Acceptance Ratio: 0.344
+[metrics] Avg Phase 2 Accepted Len: 1.00
+[metrics] Avg Phase 2 Acceptance Ratio: 0.250
+[metrics] Avg Tokens per step on Cache Hit: 3.17
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 0.333
+  2: 0.333
+  3: 0.167
+  4: 0.167
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 3.75
+[DUET] warmed acceptance kernels (K=[4, 8])
+Final Prefill Throughput: 113.11tok/s
+Final Decode Throughput: 77.45tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 77.44677477241554, 'al': 5.6, 'cache_hit': 0.4, 'emitted_tokens': 28, 'seconds': 0.36153861903585494, 'included_steps': 5, 'included_events': 5, 'total_steps': 6, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 73.79tok/s
+[metrics] Prefill tokens/time: 13 / 0.114929s
+[metrics] Decode tokens/time: 32 / 0.433639s
+[metrics] Avg Tokens per step (incl recovery): 5.60
+[raw metrics] All-event accepted length: 6.17
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.65 (denom=8)
+[metrics] Avg target time per full step (ms): 78.37
+[metrics] Avg target verify time (ms): 56.88
+[metrics] Avg Cache Hits: 0.40
+[raw metrics] All-event cache hit: 0.50
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.500
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.000
+[metrics] Avg Phase 1 Accepted Len: 7.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.875
+[metrics] Avg Tokens per step on Cache Hit: 8.00
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 0.000
+  2: 0.000
+  3: 0.000
+  4: 0.000
+  5: 0.333
+  6: 0.000
+  7: 0.000
+  8: 0.667
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 4.33
+[DUET] warmed acceptance kernels (K=[4, 8])
+Final Prefill Throughput: 113.27tok/s
+Final Decode Throughput: 47.60tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 47.60047779880117, 'al': 3.4444444444444446, 'cache_hit': 0.6666666666666666, 'emitted_tokens': 31, 'seconds': 0.6512539670511615, 'included_steps': 9, 'included_events': 9, 'total_steps': 10, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 44.25tok/s
+[metrics] Prefill tokens/time: 13 / 0.114770s
+[metrics] Decode tokens/time: 32 / 0.723179s
+[metrics] Avg Tokens per step (incl recovery): 3.44
+[raw metrics] All-event accepted length: 3.70
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.34 (denom=8)
+[metrics] Avg target time per full step (ms): 76.19
+[metrics] Avg target verify time (ms): 57.81
+[metrics] Avg Cache Hits: 0.67
+[raw metrics] All-event cache hit: 0.70
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.700
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.000
+[metrics] Avg Phase 1 Accepted Len: 3.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.375
+[metrics] Avg Tokens per step on Cache Hit: 4.00
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.000
+  1: 0.286
+  2: 0.429
+  3: 0.000
+  4: 0.000
+  5: 0.143
+  6: 0.000
+  7: 0.000
+  8: 0.143
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 3.00
+[LLMEngine] Exiting (hard=False)
+[metrics] Avg draft step time (ms): 86.71
+[metrics] p1exec stats: {'replay': 38}
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1015 01:19:46.736181357 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/eslab/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

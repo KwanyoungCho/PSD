@@ -29,6 +29,8 @@ def parse_arguments():
                         help="Direct path to draft model (overrides --draft)")
 
     # Execution configuration
+    parser.add_argument("--dtype", choices=("float16", "bfloat16"), default=None,
+                        help="Explicit runtime dtype; omit to use checkpoint config.")
     parser.add_argument("--eager", action="store_true", help="Use eager execution (disable CUDA graphs)")
     parser.add_argument("--gpus", type=int, default=1, help="Total number of gpus")
 
@@ -86,6 +88,12 @@ def parse_arguments():
 
     # DUET-SSD configuration
     parser.add_argument("--duet", action="store_true", help="Enable DUET-SSD (early-exit proxy)")
+    parser.add_argument("--duet_root_source", choices=("complement", "residual", "proxy"),
+                        default="complement", help="Cache token score; never changes target sampling.")
+    parser.add_argument("--duet_root_normalization", choices=("full", "topm"), default="topm",
+                        help="Normalize over retained per-position top-M (default) or full vocabulary.")
+    parser.add_argument("--duet_root_overlap_mix", type=float, default=.25,
+                        help="Weight of h_bar in the terminal-position mixture (0=h_hat, 1=h_bar).")
     parser.add_argument("--duet_exit_layer", type=int, default=None,
                         help="Early-exit layer index (default: 2*L//3)")
     parser.add_argument("--duet_proxy_top_k", type=int, default=3,
@@ -136,15 +144,21 @@ def parse_arguments():
                         help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_c_tensor", type=int, default=3,
                         help="Dynamic tree: maximum ordered child samples per parent.")
+    parser.add_argument("--duet_tree_expansion", choices=("last", "frontier"),
+                        default="last", help="Q-path expansion: last depth or all unexpanded leaves.")
+    for phase in ("p1", "p2"):
+        parser.add_argument(f"--duet_{phase}_tree_expansion",
+                            choices=("last", "frontier"), default=None,
+                            help=f"Optional {phase.upper()} override of --duet_tree_expansion.")
     parser.add_argument("--duet_p1_tree_max_nodes", type=int, default=18,
                         help="Maximum P1 tree nodes generated per cache root.")
     parser.add_argument("--duet_p2_tree_max_nodes", type=int, default=8,
                         help="Maximum P2 tree nodes generated per cache root.")
     parser.add_argument("--duet_p1_tree_verify_nodes", type=int, default=None,
-                        help="Maximum P1 tree nodes reranked and sent on a hit. "
+                        help="Maximum generation-order P1 prefix nodes sent on a hit. "
                              "Default: all generated P1 nodes.")
     parser.add_argument("--duet_p2_tree_verify_nodes", type=int, default=None,
-                        help="Maximum P2 tree nodes reranked and sent on a hit. "
+                        help="Maximum generation-order P2 prefix nodes sent on a hit. "
                              "Default: all generated P2 nodes.")
     parser.add_argument("--duet_p1_roots_per_position", type=int, default=2,
                         help="Uniform number of P1 root candidates per glue position.")
@@ -156,28 +170,27 @@ def parse_arguments():
     parser.add_argument(
         "--duet_p1_tree_allocation_policy", type=str, default="dynamic",
         choices=["dynamic", "backbone", "hybrid"],
-        help="P1 forest allocation: global confidence, full per-root "
-             "backbone coverage, or a two-level backbone followed by global "
-             "selection.")
+        help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_nv", type=int, default=None,
                         help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_fanout_policy", type=str,
-                        default="backbone", choices=["backbone", "ctensor"])
+                        default="backbone", choices=["backbone", "ctensor"],
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_root_count", type=int, default=None,
                         help="Number R of P2 roots. Dynamic P2 defaults to R=W; "
                              "R must not exceed the P2 forward width W. "
                              "Legacy level/frontier also honor this override; "
                              "confidence derives R and coverage keeps R=W.")
     parser.add_argument("--duet_tree_proxy_threshold", type=float,
-                        default=0.01,
+                        default=0.0,
                         help="Dynamic P2 tree: keep every root's first "
                              "forward, but do not expand deeper below roots "
-                             "with a smaller calibrated proxy score.")
+                             "with a smaller root score (disabled by default).")
     parser.add_argument("--duet_tree_conf_threshold", type=float,
-                        default=0.03,
+                        default=0.0,
                         help="Dynamic P2 tree: keep the sampled child as a leaf, "
                              "but do not expand deeper below children with "
-                             "smaller calibrated draft confidence.")
+                             "smaller draft confidence (disabled by default).")
     parser.add_argument("--duet_p1_tree_start_threshold", type=float,
                         default=0.0,
                         help="Dynamic P1 tree: minimum glue-reach*root-q start "
@@ -343,6 +356,7 @@ def initialize_wandb(args, run_name):
 def create_llm_kwargs(args, draft_path):
     """Create LLM initialization arguments."""
     llm_kwargs = dict(
+        dtype=args.dtype,
         enforce_eager=args.eager,
         num_gpus=args.gpus,
         speculate=args.spec,
@@ -371,6 +385,8 @@ def create_llm_kwargs(args, draft_path):
     # DUET-SSD
     if getattr(args, 'duet', False):
         llm_kwargs["duet_enabled"] = True
+        for field in ("duet_root_source", "duet_root_normalization", "duet_root_overlap_mix"):
+            llm_kwargs[field] = getattr(args, field)
         llm_kwargs["jit_speculate"] = True  # DUET requires jit_speculate
         if args.duet_exit_layer is not None:
             llm_kwargs["duet_exit_layer"] = args.duet_exit_layer
@@ -393,6 +409,9 @@ def create_llm_kwargs(args, draft_path):
                      or args.duet_p2_tree_policy == "on"
                      or args.duet_tree_policy not in (None, "off"))
         if _any_tree:
+            llm_kwargs["duet_tree_expansion"] = args.duet_tree_expansion
+            llm_kwargs["duet_p1_tree_expansion"] = args.duet_p1_tree_expansion
+            llm_kwargs["duet_p2_tree_expansion"] = args.duet_p2_tree_expansion
             llm_kwargs["duet_tree_c_tensor"] = args.duet_tree_c_tensor
             llm_kwargs["duet_p1_tree_max_nodes"] = \
                 args.duet_p1_tree_max_nodes

@@ -73,11 +73,13 @@ class LargeExpansion(unittest.TestCase):
                 with self.subTest(c=c,frontier=frontier),patch.dict(os.environ,{'SSD_TREE_EXPANSION_POLICY':'q_path'}):
                     old,cfg,page,v=fixture._mk('cuda',policy='dynamic')
                     cfg.duet_tree_c_tensor=c
+                    cfg.duet_tree_expansion='frontier' if frontier else 'last'
                     cfg.duet_tree_proxy_threshold=0.;cfg.duet_tree_conf_threshold=0.
                     ex=P2TreeExecutor(old.model,old.model.logits_fn,cfg,'cuda',page,8,v,4,2,64,
                         width=8,root_count=8,depth=8,max_nodes=64*c,glue_width=9,
                         materialize_backbone_logits=False)
-                    ex.expansion_policy.frontier=frontier;ex.debug_buffers_enabled=True
+                    self.assertEqual(ex.expansion_policy.frontier, frontier)
+                    ex.debug_buffers_enabled=True
                     ex._finalize_outputs=lambda:None
                     ex.prepare_bucket(2);fixture._fill_inputs(ex,page,page+21)
                     gen=torch.Generator().manual_seed(21)

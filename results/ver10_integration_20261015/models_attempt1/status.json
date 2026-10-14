@@ -1,0 +1,36 @@
+{
+  "status": "failed",
+  "runs": [
+    {
+      "name": "layerskip_tree_last_t0_full_b1",
+      "command": [
+        "/home/eslab/chokwans99/baseline/.venv-ssd/bin/python",
+        "-B",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/probe.py",
+        "--target",
+        "/home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411",
+        "--draft",
+        "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+        "--mode",
+        "tree",
+        "--expansion",
+        "last",
+        "--temperature",
+        "0",
+        "--normalization",
+        "full",
+        "--batch",
+        "1",
+        "--output",
+        "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/models_attempt1/layerskip_tree_last_t0_full_b1.json"
+      ],
+      "gpus": "0,1,2",
+      "started": 1791993743.1995049,
+      "pid": 618352,
+      "returncode": 1,
+      "ended": 1791993836.9482143
+    }
+  ],
+  "started": 1791993743.1993895,
+  "ended": 1791993836.9490635
+}

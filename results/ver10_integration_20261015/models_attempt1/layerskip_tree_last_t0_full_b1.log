@@ -1,0 +1,108 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+Draft runner created on rank 2 (async)!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:0", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 128, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411", "model_tp": 2, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 0, "requested_dtype": "bfloat16", "role": "target", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[W1015 01:02:27.740904240 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+`torch_dtype` is deprecated! Use `dtype` instead!
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=56, only_proxy=False, proxy_top_k=28, draft_fan_out=3, proxy_fan_out=0, K1=8, K2=4, P2_W=15, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=10, P1_tree_nodes=12/12(gen/verify), P2_tree_nodes=8/8(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:2", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 64, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "model_tp": 1, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 2, "requested_dtype": "bfloat16", "role": "draft", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[W1015 01:02:31.945350064 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+`torch_dtype` is deprecated! Use `dtype` instead!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "flashinfer", "capability": [12, 0], "debug_tokens": false, "device": "cuda:1", "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition", "draft": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6", "dtype": "torch.bfloat16", "exit_layer": 56, "fan_out_list": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], "head_dim": 128, "k1": 8, "k2": 4, "local_kv_heads": 4, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411", "model_tp": 2, "mq_len": 39, "optimize": 0, "p2_budget": 15, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": null, "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "legacy_calibration": false, "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "p1_expansion": "last", "p2_expansion": "last", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.11.15", "python_abi": "cpython-311", "rank": 1, "requested_dtype": "bfloat16", "role": "target", "speculate_k": 12, "target_tp": 2, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[W1015 01:02:33.798143163 socket.cpp:755] [c10d] The client socket cannot be initialized to connect to [localhost]:29895 (errno: 97 - Address family not supported by protocol).
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+Loading model files:   0%|          | 0/29 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=12
+[load_model] loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+Loading model files:   0%|          | 0/29 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:04<00:00,  4.52s/it]Loading model files: 100%|██████████| 1/1 [00:04<00:00,  4.52s/it]
+Loading model files:   3%|▎         | 1/29 [00:05<02:27,  5.27s/it]Loading model files:   3%|▎         | 1/29 [00:05<02:27,  5.28s/it]Loading model files:   7%|▋         | 2/29 [00:06<01:12,  2.67s/it]Loading model files:   7%|▋         | 2/29 [00:06<01:12,  2.70s/it]Loading model files:  10%|█         | 3/29 [00:06<00:47,  1.85s/it]Loading model files:  10%|█         | 3/29 [00:07<00:48,  1.87s/it]Loading model files:  14%|█▍        | 4/29 [00:07<00:36,  1.46s/it]Loading model files:  14%|█▍        | 4/29 [00:07<00:36,  1.47s/it]Loading model files:  17%|█▋        | 5/29 [00:08<00:30,  1.25s/it]Loading model files:  17%|█▋        | 5/29 [00:08<00:29,  1.25s/it]Loading model files:  21%|██        | 6/29 [00:09<00:25,  1.11s/it]Loading model files:  21%|██        | 6/29 [00:09<00:26,  1.13s/it]Loading model files:  24%|██▍       | 7/29 [00:10<00:22,  1.03s/it]Loading model files:  24%|██▍       | 7/29 [00:10<00:23,  1.06s/it]Loading model files:  28%|██▊       | 8/29 [00:11<00:19,  1.05it/s]Loading model files:  28%|██▊       | 8/29 [00:11<00:21,  1.03s/it]Loading model files:  31%|███       | 9/29 [00:11<00:17,  1.15it/s]Loading model files:  31%|███       | 9/29 [00:12<00:19,  1.04it/s]Loading model files:  34%|███▍      | 10/29 [00:12<00:17,  1.11it/s]Loading model files:  34%|███▍      | 10/29 [00:13<00:18,  1.05it/s]Loading model files:  38%|███▊      | 11/29 [00:13<00:15,  1.18it/s]Loading model files:  38%|███▊      | 11/29 [00:14<00:16,  1.10it/s]Loading model files:  41%|████▏     | 12/29 [00:14<00:14,  1.20it/s]Loading model files:  41%|████▏     | 12/29 [00:15<00:15,  1.08it/s]Loading model files:  45%|████▍     | 13/29 [00:16<00:18,  1.16s/it]Loading model files:  45%|████▍     | 13/29 [00:16<00:16,  1.05s/it]Loading model files:  48%|████▊     | 14/29 [00:18<00:23,  1.56s/it]Loading model files:  48%|████▊     | 14/29 [00:18<00:22,  1.49s/it]Loading model files:  52%|█████▏    | 15/29 [00:21<00:26,  1.90s/it]Loading model files:  52%|█████▏    | 15/29 [00:21<00:25,  1.85s/it]Loading model files:  55%|█████▌    | 16/29 [00:24<00:27,  2.14s/it]Loading model files:  55%|█████▌    | 16/29 [00:24<00:27,  2.10s/it]Loading model files:  59%|█████▊    | 17/29 [00:26<00:27,  2.28s/it]Loading model files:  59%|█████▊    | 17/29 [00:26<00:27,  2.27s/it]Loading model files:  62%|██████▏   | 18/29 [00:27<00:20,  1.83s/it]Loading model files:  62%|██████▏   | 18/29 [00:27<00:20,  1.85s/it]Loading model files:  66%|██████▌   | 19/29 [00:28<00:15,  1.51s/it]Loading model files:  66%|██████▌   | 19/29 [00:28<00:15,  1.56s/it]Loading model files:  69%|██████▉   | 20/29 [00:29<00:11,  1.26s/it]Loading model files:  69%|██████▉   | 20/29 [00:29<00:11,  1.32s/it]Loading model files:  72%|███████▏  | 21/29 [00:31<00:11,  1.47s/it]Loading model files:  72%|███████▏  | 21/29 [00:31<00:12,  1.60s/it]Loading model files:  76%|███████▌  | 22/29 [00:37<00:21,  3.08s/it]Loading model files:  76%|███████▌  | 22/29 [00:37<00:20,  2.98s/it]Loading model files:  79%|███████▉  | 23/29 [00:46<00:28,  4.69s/it]Loading model files:  79%|███████▉  | 23/29 [00:46<00:28,  4.77s/it]Loading model files:  83%|████████▎ | 24/29 [00:54<00:28,  5.75s/it]Loading model files:  83%|████████▎ | 24/29 [00:54<00:28,  5.71s/it]Loading model files:  86%|████████▌ | 25/29 [01:01<00:23,  5.95s/it]Loading model files:  86%|████████▌ | 25/29 [01:01<00:23,  5.99s/it]Loading model files:  90%|████████▉ | 26/29 [01:03<00:14,  4.84s/it]Loading model files:  90%|████████▉ | 26/29 [01:03<00:14,  4.87s/it]Loading model files:  93%|█████████▎| 27/29 [01:05<00:07,  3.89s/it]Loading model files:  93%|█████████▎| 27/29 [01:05<00:07,  3.88s/it]Loading model files:  97%|█████████▋| 28/29 [01:06<00:03,  3.03s/it]Loading model files:  97%|█████████▋| 28/29 [01:06<00:03,  3.05s/it]Loading model files: 100%|██████████| 29/29 [01:07<00:00,  2.41s/it]Loading model files: 100%|██████████| 29/29 [01:07<00:00,  2.31s/it]
+Loading model files: 100%|██████████| 29/29 [01:07<00:00,  2.43s/it]Loading model files: 100%|██████████| 29/29 [01:07<00:00,  2.31s/it]
+[load_model] finished loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+[load_model] finished loading model from /home/eslab/models/hub/models--facebook--layerskip-llama2-70B/snapshots/0a1815fcbd11543b0de227aa8dcbced952149411
+[load_model] finished loading model from /home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 22, 12675, 256, 4, 64])
+inside allocate_kv_cache -- 
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 495, 256, 4, 128])
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 80, 494, 256, 4, 128])
+[DUET] captured target chain proxy graphs (K=[4, 8])
+[DUET tree] captured target proxy graphs (buckets=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+[DUET split-K1K2] Captured draft glue_k1 CG (K1+1=9) + glue_k2 CG (K2+1=5)
+About to capture FI cudagraphs for bs=[1] key=fi_tree_decode MQ_LEN=39
+  [FI capture] bs=1 key=fi_tree_decode starting...
+  [FI capture] bs=1 key=fi_tree_decode warmup...
+  [FI capture] bs=1 key=fi_tree_decode warmup done, capturing...
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], MQ_LEN=39
+[DUET split-K1K2] layouts: split_k1_long MQ=27 (K=K1=8, pos=9), split_k1_short MQ=15 (K=K1=8, pos=5), split_k2 MQ=15 (K=K2=4, pos=5)
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 12, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 15, "round_widths": [15, 15, 15, 15, 15, 15, 15, 15], "selection": "last", "siblings": 3, "width": 15}
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "/home/eslab/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/home/eslab/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/ssd/ssd/engine/model_runner.py", line 205, in __init__
+    model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/ssd/ssd/engine/model_runner.py", line 773, in setup_and_warmup_model_and_cudagraphs
+    capture_tree_verify_cudagraph(
+  File "/home/eslab/chokwans99/baseline/.venv-ssd/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/ssd/ssd/engine/helpers/cudagraph_helpers.py", line 1361, in capture_tree_verify_cudagraph
+    wrapper.plan(
+  File "/home/eslab/chokwans99/baseline/.venv-ssd/lib/python3.11/site-packages/flashinfer/prefill.py", line 1905, in plan
+    self._plan_info = self._cached_module.plan(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "python/tvm_ffi/cython/function.pxi", line 929, in tvm_ffi.core.Function.__call__
+RuntimeError: Error in function 'aligned_alloc' at /home/eslab/chokwans99/baseline/.venv-ssd/lib/python3.11/site-packages/flashinfer/data/include/flashinfer/allocator.h:49: Buffer overflow when allocating memory for batch_prefill_tmp_v with size 197132288 and alignment 16, but only 100663296 bytes available in AlignedAllocator. Increase the workspace buffer size.
+[DUET split-K1K2] Captured duet_verify_k1 CG (K1=8) + duet_verify_k2 CG (K2=4)
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/probe.py", line 86, in <module>
+[rank0]:     if __name__=='__main__':main()
+[rank0]:                             ^^^^^^
+[rank0]:   File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/results/ver10_integration_20261015/probe.py", line 63, in main
+[rank0]:     llm=LLM(a.target,**kwargs)
+[rank0]:         ^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/ssd/ssd/engine/llm_engine.py", line 130, in __init__
+[rank0]:     self.model_runner = ModelRunner(
+[rank0]:                         ^^^^^^^^^^^^
+[rank0]:   File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/ssd/ssd/engine/model_runner.py", line 205, in __init__
+[rank0]:     model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+[rank0]:                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/ssd/ssd/engine/model_runner.py", line 773, in setup_and_warmup_model_and_cudagraphs
+[rank0]:     capture_tree_verify_cudagraph(
+[rank0]:   File "/home/eslab/chokwans99/baseline/.venv-ssd/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/eslab/chokwans99/PSD-MLSys-ver1.0/ssd/ssd/engine/helpers/cudagraph_helpers.py", line 1361, in capture_tree_verify_cudagraph
+[rank0]:     wrapper.plan(
+[rank0]:   File "/home/eslab/chokwans99/baseline/.venv-ssd/lib/python3.11/site-packages/flashinfer/prefill.py", line 1905, in plan
+[rank0]:     self._plan_info = self._cached_module.plan(
+[rank0]:                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "python/tvm_ffi/cython/function.pxi", line 929, in tvm_ffi.core.Function.__call__
+[rank0]: RuntimeError: Error in function 'aligned_alloc' at /home/eslab/chokwans99/baseline/.venv-ssd/lib/python3.11/site-packages/flashinfer/data/include/flashinfer/allocator.h:49: Buffer overflow when allocating memory for batch_prefill_tmp_v with size 197132288 and alignment 16, but only 100663296 bytes available in AlignedAllocator. Increase the workspace buffer size.
+[rank0]:[W1015 01:03:53.264005172 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/eslab/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
