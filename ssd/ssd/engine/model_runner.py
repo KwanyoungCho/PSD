@@ -166,8 +166,10 @@ class ModelRunner:
         # FlashInfer wrapper/workspace 필요 (기존엔 draft 전용 — 리뷰4
         # 확인). tree policy 게이트 — off면 무할당 (OFF 경로 불변).
         self.tree_verify_wrappers = None
+        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
+        self.batched_tree_enabled = batch_tree_enabled(config)
         if (not is_draft) and getattr(config, "duet_enabled", False) \
-                and getattr(config, "duet_tree_enabled", False):
+                and getattr(config, "duet_tree_enabled", False) and not self.batched_tree_enabled:
             self._init_tree_verify_wrappers()
         
         if self.verbose: print(f'INSIDE MODEL RUNNER INIT, DRAFT={is_draft}', flush=True)
@@ -214,23 +216,26 @@ class ModelRunner:
             print(f'F={self.config.async_fan_out}, fan_out_list={self.config.fan_out_list}, fan_out_list_miss={self.config.fan_out_list_miss}, MQ_LEN={self.config.MQ_LEN}', flush=True)
 
         if should_use_dist: # (draft model when async=False or just single gpu logic) doesn't even enter this loop 
+            # One namespace per engine, inherited by spawned TP workers.
+            # Never unlink another experiment's shared-memory segment.
+            shm_name = os.environ.get("SSD_SHM_NAME", "ssd")
             if self.is_draft and self.draft_async: 
                 pass # handled on draft runner after this init, includes doing draft_loop
             elif self.rank == 0: # target in a distributed setup 
                 # Try to clean up any existing shared memory first
                 try:
-                    existing_shm = SharedMemory(name="ssd")
+                    existing_shm = SharedMemory(name=shm_name)
                     existing_shm.close() # here we bind it 
                     existing_shm.unlink()
                 except FileNotFoundError:
                     # can proceed, nothing to clean up 
                     pass
                 
-                self.shm = SharedMemory(name="ssd", create=True, size=2**28)
+                self.shm = SharedMemory(name=shm_name, create=True, size=2**28)
                 dist.barrier(group=self.tp_pg, device_ids=[self.rank]) # leader on tp_group 
             else: 
                 dist.barrier(group=self.tp_pg, device_ids=[self.rank]) # follower on tp_group, don't want them hooking onto shm before its been created 
-                self.shm = SharedMemory(name="ssd")
+                self.shm = SharedMemory(name=shm_name)
                 self.loop()
                 
         if self.verbose: print(f'-----{model_type}MODEL RUNNER INITIALIZED----', flush=True)
@@ -725,7 +730,7 @@ class ModelRunner:
             self.graph_pools["decode"] = decode_graph_pool
             self.graphs["decode"] = decode_graphs
             self.graph_bs_list["decode"] = decode_graph_bs_list
-            if self.config.speculate and not (self.is_draft and self.config.use_eagle):  # verify CG: target always, non-EAGLE draft for fan-out; EAGLE draft uses glue_decode CG instead
+            if self.config.speculate and not self.batched_tree_enabled and not (self.is_draft and self.config.use_eagle):  # verify CG: target always, non-EAGLE draft for fan-out; EAGLE draft uses glue_decode CG instead
                 if self.config.duet_enabled and not self.is_draft:
                     # DUET target: split verify CudaGraph (skip full verify → VRAM saving).
                     # Split-only K1/K2 mode: target verify per-bucket
@@ -811,7 +816,7 @@ class ModelRunner:
                                   + (f' + glue_k2 CG (K2+1={K2 + 1})' if K2 < K1
                                      else ' (K2==K1, k2 SKIPPED)'),
                                   flush=True)
-            if self.config.speculate and self.is_draft and self.config.draft_async:
+            if self.config.speculate and self.is_draft and self.config.draft_async and not self.batched_tree_enabled:
                 fi_tree_decode_graph_vars, fi_tree_decode_graph_pool, fi_tree_decode_graphs, fi_tree_decode_graph_bs_list = capture_fi_tree_decode_cudagraph(self)  # fi tree decode cudagraph, draft only
                 self.graph_vars["fi_tree_decode"] = fi_tree_decode_graph_vars
                 self.graph_pools["fi_tree_decode"] = fi_tree_decode_graph_pool
@@ -1116,6 +1121,8 @@ class ModelRunner:
         """
         self._tree_proxy_graphs_prebuilt = {}
         self._chain_proxy_graphs_prebuilt = {}
+        if self.batched_tree_enabled:
+            return
         cfg = self.config
         if (self.is_draft or self.rank != 0
                 or self.device.type != "cuda"
@@ -1529,6 +1536,13 @@ class ModelRunner:
             duet_proxy_fn=self._duet_proxy_fn,
             bucket=bucket,
         )
+
+    @torch.inference_mode()
+    def run_batched_tree(self, rows, width):
+        from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
+        if not hasattr(self, '_batched_tree_forward'):
+            self._batched_tree_forward = BatchedTreeForward(self, split=True)
+        return self._batched_tree_forward.run(rows, width, self._duet_proxy_fn)
 
     @torch.inference_mode()
     def commit_tree_kv(self, src_slots, dst_slots):

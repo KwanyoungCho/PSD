@@ -2,6 +2,15 @@ import torch
 from torch import nn
 
 
+def prepare_norms_for_colocation():
+    # Two colocated models may have different eps values. Dynamo can otherwise
+    # generalize self.eps into a scalar graph input and create its CUDA tensor
+    # inside a surrounding CUDA Graph capture. Keep Python float inputs as
+    # guarded constants. mark_static(module_class) alone only fixes integer
+    # attributes and does not prevent this float-to-tensor conversion.
+    torch._dynamo.config.specialize_float = True
+
+
 class RMSHeadNorm(nn.Module):
 
     def __init__(

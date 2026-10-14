@@ -319,14 +319,12 @@ class P1TreeExecutor(P2TreeExecutor):
             glue_width=int(context_bucket),
             materialize_backbone_logits=materialize_backbone_logits,
             round_widths=round_widths)
-        # Three context buckets remove substantial live-lane padding, but a
-        # generic 64 MiB FlashInfer workspace for every one of seven page
-        # shapes would exhaust the 24 GiB production draft GPU.  The real
-        # TinyLlama/FA2 P1 shape requests about 41 MiB; keep a 48 MiB P1-only
-        # margin (the generic/P2 executor retains its conservative 64 MiB).
-        # This is set before prepare_bucket() allocates any workspace.
+        # Qwama-0.5B's widest P1 bucket needs 56 MiB for FA2 temporary V;
+        # the historical TinyLlama-specific 48 MiB limit fails at startup.
+        # Retain an explicit override for model/hardware-specific sizing.
+        # DraftRunner reserves graph headroom separately from KV capacity.
         p1_workspace_mb = int(os.environ.get(
-            "SSD_P1_TREE_EXEC_WORKSPACE_MB", "48"))
+            "SSD_P1_TREE_EXEC_WORKSPACE_MB", "64"))
         if p1_workspace_mb <= 0:
             raise ValueError(
                 "SSD_P1_TREE_EXEC_WORKSPACE_MB must be positive")

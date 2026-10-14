@@ -223,6 +223,9 @@ class Verifier(VerifierBase):
 
     def verify(self, seqs: list[Sequence], speculate_result: SpeculateResult, eagle: bool = False) -> VerifyResult:
         """Verify speculative tokens using the target model."""
+        if getattr(self.target_model_runner, 'batched_tree_enabled', False):
+            from ssd.engine.helpers.batch_tree_verify import verify as verify_batched_tree
+            return verify_batched_tree(self, seqs, speculate_result)
         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
         batch_size = len(seqs)
         config = self.target_model_runner.config
@@ -572,6 +575,9 @@ class Verifier(VerifierBase):
             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
                 _src = int(_ps_cpu[i].item()) if _ps_cpu is not None else 0
                 self.metrics["phase_events"].append({
+                    "tree": _tree_meta_arg is not None,
+                    "batch_size": batch_size,
+                    "verify_width": _step_lookahead,
                     "step_id": (int(speculate_result.step_id)
                                 if speculate_result.step_id is not None else None),
                     "source": _src,

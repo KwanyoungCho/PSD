@@ -177,7 +177,7 @@ class Attention(nn.Module):
                     )
 
             elif tree_decode:
-                if self.only_prefill_wrapper is not None:
+                if context.active_wrappers is None and self.only_prefill_wrapper is not None:
                     prefill_wrapper = self.only_prefill_wrapper
                 else:
                     # Layout-aware: use context.active_mq_len/active_wrappers if set

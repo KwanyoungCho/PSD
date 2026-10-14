@@ -111,6 +111,10 @@ class DraftRunner(ModelRunner):
         draft_memory_utilization = (
             0.75 if (not cfg.draft_async or both_dynamic_trees) else 0.8
         )
+        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
+        if batch_tree_enabled(cfg):
+            # Batch forests retain separate arenas and captured page plans.
+            draft_memory_utilization = 0.55
         draft_cfg = dataclasses.replace(
             cfg,
             model=cfg.draft,
@@ -119,6 +123,15 @@ class DraftRunner(ModelRunner):
             d_model_target=cfg.hf_config.hidden_size if cfg.use_eagle and cfg.hf_config else None,
             enforce_eager=cfg.enforce_eager,
         )
+        # replace() reloads BOTH configs from the draft checkpoint. AMD's
+        # checkpoint advertises float32, which FlashAttention cannot run.
+        # Preserve the target runtime dtype before constructing draft layers,
+        # graphs and communication buffers (also matches verifier q logits).
+        runtime_dtype = getattr(cfg.hf_config, "torch_dtype", None)
+        if runtime_dtype is not None:
+            draft_cfg.hf_config.torch_dtype = runtime_dtype
+            draft_cfg.draft_hf_config.torch_dtype = runtime_dtype
+            cfg.draft_hf_config.torch_dtype = runtime_dtype
         if getattr(cfg, "extend_draft_rope", False):
             # dataclasses.replace() re-enters Config.__post_init__ with the
             # draft as `model`, where its native max_position_embeddings
@@ -152,11 +165,12 @@ class DraftRunner(ModelRunner):
             # The target ranks are still loading/capturing their own graphs at
             # this point, so most of this one-time work overlaps engine start
             # instead of extending the first generation.
-            self._warmup_p2_tree_executor()
-            self._warmup_p1_tree_executors()
+            if not self.batched_tree_enabled:
+                self._warmup_p2_tree_executor()
+                self._warmup_p1_tree_executors()
             # DUET: capture split-K1/K2 layout CudaGraphs
             # (split_k1_{long,short} + split_k2).
-            if self.config.duet_enabled and not self.enforce_eager:
+            if self.config.duet_enabled and not self.enforce_eager and not self.batched_tree_enabled:
                 from ssd.engine.helpers.cudagraph_helpers import (
                     capture_fi_tree_decode_cudagraph,
                 )
@@ -192,6 +206,9 @@ class DraftRunner(ModelRunner):
                 "capture cache before service",
                 flush=True,
             )
+            if self.batched_tree_enabled:
+                from ssd.engine.helpers.batch_tree_draft import BatchedDuetDraft
+                self.batch_tree = BatchedDuetDraft(self)
             if init_q is not None:
                 # The parent must not expose the engine until every draft
                 # graph (including the P2 warmup buckets) is ready.  The first
@@ -391,6 +408,11 @@ class DraftRunner(ModelRunner):
         draft_block_table = fused[off:off + batch_size * max_blocks].view(batch_size, max_blocks).to(torch.int32); off += batch_size * max_blocks
         assert off == fused_total
 
+        if self.batched_tree_enabled:
+            seq_ids = torch.empty(batch_size,dtype=torch.int64,device=self.device)
+            dist.recv(seq_ids,src=0,group=self.async_pg)
+            self.batch_tree.invalidate(seq_ids.cpu().tolist())
+
         eagle_acts = None
         if use_eagle:
             eagle_acts = torch.zeros(
@@ -544,7 +566,7 @@ class DraftRunner(ModelRunner):
             K1 = self.config.duet_phase1_k
             K2 = self.config.duet_phase2_k
             # Hard check (assert is stripped under python -O).
-            if K2 > K1:
+            if K2 > K1 and not getattr(self, 'batched_tree_enabled', False):
                 raise ValueError(
                     f"split-K1K2 mode requires K2 <= K1, got K1={K1}, K2={K2}. "
                     f"K2>K1 is not supported (proxy_horizon tail source undefined). "
@@ -617,7 +639,9 @@ class DraftRunner(ModelRunner):
                 f'split_k1_short MQ={self.split_k1_short_layout.MQ_LEN} '
                 f'(K=K1={K1}, pos={K2+1}), '
                 if self.split_k1_short_layout is not None else
-                'split_k1_short SKIPPED (K1==K2, long bucket reused), '
+                ('split_k1_short SKIPPED (unified tree owns context buckets), '
+                 if getattr(self, 'batched_tree_enabled', False) else
+                 'split_k1_short SKIPPED (K1==K2, long bucket reused), ')
             )
             print(f'[DUET split-K1K2] layouts: '
                   f'split_k1_long MQ={self.split_k1_long_layout.MQ_LEN} (K=K1={K1}, pos={K1+1}), '
@@ -5664,6 +5688,10 @@ class DraftRunner(ModelRunner):
             # SPECULATE request: serve out-of-cache or random speculations
             elif cmd == 0:
                 _ds0 = time.perf_counter()
+                if self.batched_tree_enabled:
+                    self.batch_tree.serve()
+                    self._draft_step_times.append(time.perf_counter()-_ds0)
+                    continue
                 _prof = os.environ.get("SSD_PROFILE", "0") == "1"
                 if _prof or PROFILE_DRAFT:
                     torch.cuda.synchronize()
@@ -5713,6 +5741,8 @@ class DraftRunner(ModelRunner):
 
             # EXIT: clean up and break out of the loop
             elif cmd == 2:
+                if self.batched_tree_enabled:
+                    print(f'[metrics] batched tree: {self.batch_tree.stats}',flush=True)
                 if self._draft_step_times:
                     avg_ms = sum(self._draft_step_times) * 1000 / len(self._draft_step_times)
                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)

@@ -12,8 +12,10 @@ compute_logits → WOR 샘플(전용 generator) → 자식 삽입 + [R,Nv] 직�
 - RNG: 전용 generator + register_generator_state (기본 RNG 무오염
   참증명 통과 패턴).
 - set_context는 라운드당 capture 시 1회 (replay 중 파이썬 0).
-- 미지원 조건(비-Llama draft/EAGLE/B>1/temp0/페이지 초과)은 호출측
-  arena fallback.
+- 이 실행기는 한 요청의 arena를 유지한다. BatchedTreeExecutor는
+  iter_rounds 프로토콜로 여러 요청의 model forward를 합친다.
+- T=0은 greedy WOR 경로를 사용한다. 비-Llama draft/EAGLE 및
+  페이지 용량 초과 처리는 호출측 지원 범위를 확인한다.
 
 최종 범위: [W,Nv] tok/par/sib/raw_q/parent_cell/valid, parent-q
 uniq(U-slot) 매핑, chain 호환 backbone token/logits까지 graph가 직접
@@ -825,6 +827,10 @@ class P2TreeExecutor:
         """행별 [prefix 1s | glue | 조상셀 | self] canvas — 열 배치가
         prefix 길이(요청별 상이)에 의존하므로 전부 버퍼-구동 텐서
         연산 (python int 슬라이싱은 캡처에 박힘 — 금지)."""
+        if os.getenv('SSD_TREE_FUSED_MATH',str(int(getattr(self,'batched_fused_math',False))))=='1':
+            from ssd.engine.helpers.tree_fused_math import pack_mask
+            pack_mask(self,wr,f)
+            return
         W = self.round_widths[f]
         canvas = wr._canvas_cols
         ar = self.arena
@@ -886,7 +892,7 @@ class P2TreeExecutor:
             1, dtype=torch.int64).to(torch.uint8)
         wr._custom_mask_buf[:packed.numel()].copy_(packed)
 
-    def run_once(self, n_pages0, finalize=True):
+    def iter_rounds(self, n_pages0, finalize=True):
         """Execute the fixed-shape P2 body once.
 
         ``finalize=False`` is used for CUDA graph capture.  The four draft
@@ -977,7 +983,10 @@ class P2TreeExecutor:
                 sel, sel_valid = PT._arena_select(
                     ar, "level", wf, f, F, tip_idx, remaining)
             self._sel[f] = (sel, sel_valid)
-            if _global:
+            if _global and os.getenv('SSD_TREE_FUSED_MATH',str(int(getattr(self,'batched_fused_math',False))))=='1':
+                from ssd.engine.helpers.tree_fused_math import fanout
+                fan = fanout(ar,sel,sel_valid,remaining,C,F-f-1)
+            elif _global:
                 fan = PT._arena_fanout_global(
                     ar, sel, sel_valid, remaining, C, R,
                     future_rounds=F - f - 1)
@@ -1013,7 +1022,7 @@ class P2TreeExecutor:
                 self.dbg_fan[f, :wf].copy_(fan)
             self._pack_row_mask(wrappers[f], f)
             # ── raw draft forward (capture-시 context 1회 bake)
-            set_context(
+            logits = yield ids, rope, dict(
                 is_prefill=False,
                 slot_mapping=self.in_slot[f][:wf],
                 context_lens=self.in_ctx_len[f],
@@ -1021,11 +1030,6 @@ class P2TreeExecutor:
                 active_mq_len=wf,
                 active_wrappers={1: wrappers[f]},
             )
-            try:
-                hidden = self.model(ids, rope)
-                logits = self.compute_logits(hidden, False)[:wf].float()
-            finally:
-                reset_context()
             cell_base = self.round_offsets[f]
             self.cell_logits[cell_base:cell_base + wf] = logits
             toks, raws = PT.tree_sample_wor(
@@ -1046,7 +1050,8 @@ class P2TreeExecutor:
             par = sel.unsqueeze(1).expand(wf, C).reshape(-1)
             rq = raws.double().reshape(-1)
             lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
-            if wf > 10 or ar.anc_words > 1:
+            if (wf > 10 or ar.anc_words > 1
+                    or os.getenv("SSD_TREE_PARALLEL_INSERT", "0") == "1"):
                 _mark_selected_parents_kernel[(triton.cdiv(wf, 32),)](
                     sel, sel_valid, ar.cell, ar.state,
                     CELL_BASE=cell_base, W=wf, BLOCK=32)
@@ -1088,6 +1093,23 @@ class P2TreeExecutor:
             self.out_u_valid.zero_()
         else:
             self._finalize_outputs()
+
+    def run_once(self, n_pages0, finalize=True):
+        """Drive one arena, sharing the round protocol with batched execution."""
+        rounds = self.iter_rounds(n_pages0, finalize=finalize)
+        request = next(rounds)
+        while True:
+            ids, rope, context = request
+            set_context(**context)
+            try:
+                hidden = self.model(ids, rope)
+                logits = self.compute_logits(hidden, False).reshape(-1, self.V).float()
+            finally:
+                reset_context()
+            try:
+                request = rounds.send(logits)
+            except StopIteration:
+                break
 
     def _finalize_outputs(self):
         """Build parent-q and backbone outputs using fixed-shape GPU ops.
