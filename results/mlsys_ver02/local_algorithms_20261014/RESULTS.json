@@ -1,0 +1,4662 @@
+{
+  "status": "complete",
+  "baseline": "18e912f",
+  "candidate": "992b8b8",
+  "models": {
+    "l2": {
+      "base": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1952,
+          "all_steps": 4789,
+          "tokens": 31643,
+          "seconds": 57.30466167163104,
+          "tps": 552.1889332725094,
+          "al": 2.0263191598360657,
+          "hit": 0.7450691598360656,
+          "verify_ms": 23.234692394788773,
+          "step_ms": 29.356896348171638,
+          "actual_output_tokens": 57792,
+          "emitted_decode_tokens": 57792
+        },
+        "source": {
+          "0": {
+            "requests": 3981,
+            "al": 1.6734488821904043,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 5065,
+            "al": 2.6412635735439287,
+            "valid_k": 7.2724580454096746
+          },
+          "2": {
+            "requests": 6570,
+            "al": 1.7660578386605783,
+            "valid_k": 3.9488584474885844
+          }
+        },
+        "batch_metrics": {
+          "steps": 1952,
+          "request_hit": 0.7450691598360656,
+          "all_hit": 0.19415983606557377,
+          "any_miss": 0.8058401639344263,
+          "mixed": 0.7402663934426229,
+          "all_miss": 0.06557377049180328,
+          "actual_jit_step": 0.8058401639344263,
+          "actual_jit_request": 0.2549308401639344,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06557377049180328,
+          "miss_histogram": {
+            "0": 379,
+            "1": 586,
+            "2": 465,
+            "3": 242,
+            "4": 90,
+            "5": 31,
+            "6": 17,
+            "7": 14,
+            "8": 128
+          }
+        },
+        "preparation": {
+          "steps": 4789,
+          "seconds": 130.26381251425482,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+          "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.3367244410952022,
+            "reached_depth_ceiling": 0.24541572469228837
+          },
+          "1": {
+            "valid_k": 7.2724580454096746,
+            "tree_max_depth": 3.5634748272458046,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.22473675551168146,
+            "reached_depth_ceiling": 0.28568608094768017
+          },
+          "2": {
+            "valid_k": 3.9488584474885844,
+            "tree_max_depth": 1.9488584474885844,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.19296042617960427,
+            "reached_depth_ceiling": 0.2143074581430746
+          }
+        }
+      },
+      "root_only": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1872,
+          "all_steps": 4654,
+          "tokens": 29859,
+          "seconds": 50.56984068453312,
+          "tps": 590.4507428897721,
+          "al": 1.993790064102564,
+          "hit": 0.7534054487179487,
+          "verify_ms": 22.50302535890697,
+          "step_ms": 27.01380378447282,
+          "actual_output_tokens": 57308,
+          "emitted_decode_tokens": 57308
+        },
+        "source": {
+          "0": {
+            "requests": 3693,
+            "al": 1.62767397779583,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 4579,
+            "al": 2.655820048045425,
+            "valid_k": 7.326272111814807
+          },
+          "2": {
+            "requests": 6704,
+            "al": 1.7432875894988067,
+            "valid_k": 3.950477326968974
+          }
+        },
+        "batch_metrics": {
+          "steps": 1872,
+          "request_hit": 0.7534054487179487,
+          "all_hit": 0.2077991452991453,
+          "any_miss": 0.7922008547008547,
+          "mixed": 0.7222222222222222,
+          "all_miss": 0.06997863247863248,
+          "actual_jit_step": 0.7922008547008547,
+          "actual_jit_request": 0.2465945512820513,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06997863247863248,
+          "miss_histogram": {
+            "0": 389,
+            "1": 600,
+            "2": 404,
+            "3": 236,
+            "4": 62,
+            "5": 28,
+            "6": 13,
+            "7": 9,
+            "8": 131
+          }
+        },
+        "preparation": {
+          "steps": 4654,
+          "seconds": 117.8514537147712,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+          "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.31383698889791495,
+            "reached_depth_ceiling": 0.2279989168697536
+          },
+          "1": {
+            "valid_k": 7.326272111814807,
+            "tree_max_depth": 3.595763267088884,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.224403071995341,
+            "reached_depth_ceiling": 0.2860886656475213
+          },
+          "2": {
+            "valid_k": 3.950477326968974,
+            "tree_max_depth": 1.9504773269689737,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.18701521479713604,
+            "reached_depth_ceiling": 0.20689140811455847
+          }
+        }
+      },
+      "tree_only": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1870,
+          "all_steps": 4747,
+          "tokens": 31181,
+          "seconds": 51.71460830792785,
+          "tps": 602.943752649867,
+          "al": 2.0842914438502675,
+          "hit": 0.7483957219251337,
+          "verify_ms": 22.25941397239738,
+          "step_ms": 27.654870752902593,
+          "actual_output_tokens": 57544,
+          "emitted_decode_tokens": 57544
+        },
+        "source": {
+          "0": {
+            "requests": 3764,
+            "al": 1.650106269925611,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 4976,
+            "al": 2.77451768488746,
+            "valid_k": 7.747990353697749
+          },
+          "2": {
+            "requests": 6220,
+            "al": 1.794855305466238,
+            "valid_k": 3.9488745980707396
+          }
+        },
+        "batch_metrics": {
+          "steps": 1870,
+          "request_hit": 0.7483957219251337,
+          "all_hit": 0.19572192513368983,
+          "any_miss": 0.8042780748663102,
+          "mixed": 0.7352941176470589,
+          "all_miss": 0.06898395721925134,
+          "actual_jit_step": 0.8042780748663102,
+          "actual_jit_request": 0.2516042780748663,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06898395721925134,
+          "miss_histogram": {
+            "0": 366,
+            "1": 579,
+            "2": 442,
+            "3": 243,
+            "4": 60,
+            "5": 22,
+            "6": 13,
+            "7": 16,
+            "8": 129
+          }
+        },
+        "preparation": {
+          "steps": 4747,
+          "seconds": 122.44611907331273,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+          "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.3250531349628055,
+            "reached_depth_ceiling": 0.24335812964930925
+          },
+          "1": {
+            "valid_k": 7.747990353697749,
+            "tree_max_depth": 3.7439710610932475,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.22955184887459806,
+            "reached_depth_ceiling": 0.27512057877813506
+          },
+          "2": {
+            "valid_k": 3.9488745980707396,
+            "tree_max_depth": 1.9488745980707396,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.20014737406216504,
+            "reached_depth_ceiling": 0.23633440514469453
+          }
+        }
+      },
+      "combined": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1768,
+          "all_steps": 4774,
+          "tokens": 30056,
+          "seconds": 47.84838019893505,
+          "tps": 628.150835514991,
+          "al": 2.125,
+          "hit": 0.7385463800904978,
+          "verify_ms": 22.071152261502586,
+          "step_ms": 27.063563460936113,
+          "actual_output_tokens": 57324,
+          "emitted_decode_tokens": 57324
+        },
+        "source": {
+          "0": {
+            "requests": 3698,
+            "al": 1.6665765278528935,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 4708,
+            "al": 2.8311384876805437,
+            "valid_k": 7.758071367884452
+          },
+          "2": {
+            "requests": 5738,
+            "al": 1.8410596026490067,
+            "valid_k": 3.9578250261415127
+          }
+        },
+        "batch_metrics": {
+          "steps": 1768,
+          "request_hit": 0.7385463800904978,
+          "all_hit": 0.17024886877828055,
+          "any_miss": 0.8297511312217194,
+          "mixed": 0.7562217194570136,
+          "all_miss": 0.07352941176470588,
+          "actual_jit_step": 0.8297511312217194,
+          "actual_jit_request": 0.2614536199095023,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.07352941176470588,
+          "miss_histogram": {
+            "0": 301,
+            "1": 566,
+            "2": 443,
+            "3": 202,
+            "4": 71,
+            "5": 27,
+            "6": 15,
+            "7": 13,
+            "8": 130
+          }
+        },
+        "preparation": {
+          "steps": 4774,
+          "seconds": 120.25051937391981,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+          "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.3332882639264467,
+            "reached_depth_ceiling": 0.24364521362898864
+          },
+          "1": {
+            "valid_k": 7.758071367884452,
+            "tree_max_depth": 3.7512744265080715,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.2369345996682445,
+            "reached_depth_ceiling": 0.28483432455395075
+          },
+          "2": {
+            "valid_k": 3.9578250261415127,
+            "tree_max_depth": 1.9578250261415127,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.2112234227953991,
+            "reached_depth_ceiling": 0.24869292436388984
+          }
+        }
+      },
+      "root_norm": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1934,
+          "all_steps": 4821,
+          "tokens": 31772,
+          "seconds": 55.488489443669096,
+          "tps": 572.5872215760055,
+          "al": 2.0535160289555328,
+          "hit": 0.750258531540848,
+          "verify_ms": 23.13713622585251,
+          "step_ms": 28.69104935039767,
+          "actual_output_tokens": 58105,
+          "emitted_decode_tokens": 58105
+        },
+        "source": {
+          "0": {
+            "requests": 3864,
+            "al": 1.6796066252587991,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 5101,
+            "al": 2.673397373064105,
+            "valid_k": 7.297196628112135
+          },
+          "2": {
+            "requests": 6507,
+            "al": 1.789611187951437,
+            "valid_k": 3.950053788228062
+          }
+        },
+        "batch_metrics": {
+          "steps": 1934,
+          "request_hit": 0.750258531540848,
+          "all_hit": 0.1970010341261634,
+          "any_miss": 0.8029989658738366,
+          "mixed": 0.734746639089969,
+          "all_miss": 0.06825232678386763,
+          "actual_jit_step": 0.8029989658738366,
+          "actual_jit_request": 0.24974146845915202,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06825232678386763,
+          "miss_histogram": {
+            "0": 381,
+            "1": 596,
+            "2": 470,
+            "3": 232,
+            "4": 74,
+            "5": 24,
+            "6": 15,
+            "7": 10,
+            "8": 132
+          }
+        },
+        "preparation": {
+          "steps": 4821,
+          "seconds": 129.4135415069759,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+          "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.3398033126293996,
+            "reached_depth_ceiling": 0.25077639751552794
+          },
+          "1": {
+            "valid_k": 7.297196628112135,
+            "tree_max_depth": 3.578317976867281,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.22779847088806116,
+            "reached_depth_ceiling": 0.29621642815134286
+          },
+          "2": {
+            "valid_k": 3.950053788228062,
+            "tree_max_depth": 1.9500537882280622,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.19900363710875466,
+            "reached_depth_ceiling": 0.227293683725219
+          }
+        }
+      },
+      "root_position": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1710,
+          "all_steps": 4751,
+          "tokens": 27601,
+          "seconds": 52.594669487793,
+          "tps": 524.7870225024625,
+          "al": 2.0176169590643274,
+          "hit": 0.7386695906432749,
+          "verify_ms": 23.96206476859073,
+          "step_ms": 30.75711665952807,
+          "actual_output_tokens": 56880,
+          "emitted_decode_tokens": 56880
+        },
+        "source": {
+          "0": {
+            "requests": 3575,
+            "al": 1.633006993006993,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 4361,
+            "al": 2.6665902315982573,
+            "valid_k": 7.3155239623939465
+          },
+          "2": {
+            "requests": 5744,
+            "al": 1.764275766016713,
+            "valid_k": 3.949860724233983
+          }
+        },
+        "batch_metrics": {
+          "steps": 1710,
+          "request_hit": 0.7386695906432749,
+          "all_hit": 0.18304093567251462,
+          "any_miss": 0.8169590643274853,
+          "mixed": 0.7409356725146199,
+          "all_miss": 0.07602339181286549,
+          "actual_jit_step": 0.8169590643274853,
+          "actual_jit_request": 0.26133040935672514,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.07602339181286549,
+          "miss_histogram": {
+            "0": 313,
+            "1": 528,
+            "2": 407,
+            "3": 210,
+            "4": 75,
+            "5": 28,
+            "6": 10,
+            "7": 9,
+            "8": 130
+          }
+        },
+        "preparation": {
+          "steps": 4751,
+          "seconds": 136.18660745420493,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+          "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.3165034965034965,
+            "reached_depth_ceiling": 0.2302097902097902
+          },
+          "1": {
+            "valid_k": 7.3155239623939465,
+            "tree_max_depth": 3.589314377436368,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.22666819536803484,
+            "reached_depth_ceiling": 0.2880073377665673
+          },
+          "2": {
+            "valid_k": 3.949860724233983,
+            "tree_max_depth": 1.9498607242339834,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.19243268337975858,
+            "reached_depth_ceiling": 0.21901114206128133
+          }
+        }
+      },
+      "root_proxy": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 2055,
+          "all_steps": 4821,
+          "tokens": 33098,
+          "seconds": 72.59492549113929,
+          "tps": 455.9271846630635,
+          "al": 2.0132603406326033,
+          "hit": 0.7534671532846715,
+          "verify_ms": 24.866218596171144,
+          "step_ms": 35.3259978059072,
+          "actual_output_tokens": 58145,
+          "emitted_decode_tokens": 58145
+        },
+        "source": {
+          "0": {
+            "requests": 4053,
+            "al": 1.6380458919319023,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 5256,
+            "al": 2.628614916286149,
+            "valid_k": 7.256088280060883
+          },
+          "2": {
+            "requests": 7131,
+            "al": 1.7729631187771702,
+            "valid_k": 3.953022016547469
+          }
+        },
+        "batch_metrics": {
+          "steps": 2055,
+          "request_hit": 0.7534671532846715,
+          "all_hit": 0.20632603406326033,
+          "any_miss": 0.7936739659367397,
+          "mixed": 0.7299270072992701,
+          "all_miss": 0.06374695863746958,
+          "actual_jit_step": 0.7936739659367397,
+          "actual_jit_request": 0.24653284671532846,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06374695863746958,
+          "miss_histogram": {
+            "0": 424,
+            "1": 626,
+            "2": 492,
+            "3": 235,
+            "4": 91,
+            "5": 25,
+            "6": 16,
+            "7": 15,
+            "8": 131
+          }
+        },
+        "preparation": {
+          "steps": 4821,
+          "seconds": 156.02578828134574,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+          "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.31902294596595115,
+            "reached_depth_ceiling": 0.22896619787811498
+          },
+          "1": {
+            "valid_k": 7.256088280060883,
+            "tree_max_depth": 3.5536529680365296,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.2236333079654997,
+            "reached_depth_ceiling": 0.2857686453576865
+          },
+          "2": {
+            "valid_k": 3.953022016547469,
+            "tree_max_depth": 1.9530220165474688,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.19470153788622444,
+            "reached_depth_ceiling": 0.21974477632870565
+          }
+        }
+      }
+    },
+    "l3": {
+      "base": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 956,
+          "all_steps": 3933,
+          "tokens": 18305,
+          "seconds": 41.95158458035439,
+          "tps": 436.3363191904816,
+          "al": 2.393436192468619,
+          "hit": 0.7174424686192469,
+          "verify_ms": 27.446635842184968,
+          "step_ms": 43.882410648906266,
+          "actual_output_tokens": 51200,
+          "emitted_decode_tokens": 51200
+        },
+        "source": {
+          "0": {
+            "requests": 2161,
+            "al": 1.959740860712633,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 3388,
+            "al": 2.8367768595041323,
+            "valid_k": 7.175029515938607
+          },
+          "2": {
+            "requests": 2099,
+            "al": 2.1243449261553122,
+            "valid_k": 3.9614101953311103
+          }
+        },
+        "batch_metrics": {
+          "steps": 956,
+          "request_hit": 0.7174424686192469,
+          "all_hit": 0.1202928870292887,
+          "any_miss": 0.8797071129707112,
+          "mixed": 0.8148535564853556,
+          "all_miss": 0.06485355648535565,
+          "actual_jit_step": 0.8797071129707112,
+          "actual_jit_request": 0.2825575313807531,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06485355648535565,
+          "miss_histogram": {
+            "0": 115,
+            "1": 251,
+            "2": 280,
+            "3": 157,
+            "4": 72,
+            "5": 19,
+            "6": 0,
+            "7": 0,
+            "8": 62
+          }
+        },
+        "preparation": {
+          "steps": 3933,
+          "seconds": 153.98615995654836,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/data/chokwans99/models/layerskip-llama3-8B",
+          "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.47987043035631655,
+            "reached_depth_ceiling": 0.3794539565016196
+          },
+          "1": {
+            "valid_k": 7.175029515938607,
+            "tree_max_depth": 3.5050177095631643,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.2552390791027155,
+            "reached_depth_ceiling": 0.35182998819362454
+          },
+          "2": {
+            "valid_k": 3.9614101953311103,
+            "tree_max_depth": 1.96141019533111,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.283190408130856,
+            "reached_depth_ceiling": 0.364459266317294
+          }
+        }
+      },
+      "tree_only": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1085,
+          "all_steps": 3895,
+          "tokens": 21190,
+          "seconds": 48.411462338408455,
+          "tps": 437.70625749489864,
+          "al": 2.4412442396313363,
+          "hit": 0.7078341013824885,
+          "verify_ms": 26.72976382347124,
+          "step_ms": 44.61885929807231,
+          "actual_output_tokens": 51688,
+          "emitted_decode_tokens": 51688
+        },
+        "source": {
+          "0": {
+            "requests": 2536,
+            "al": 1.945583596214511,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 3690,
+            "al": 2.9989159891598915,
+            "valid_k": 7.6796747967479675
+          },
+          "2": {
+            "requests": 2454,
+            "al": 2.1149144254278727,
+            "valid_k": 3.95680521597392
+          }
+        },
+        "batch_metrics": {
+          "steps": 1085,
+          "request_hit": 0.7078341013824885,
+          "all_hit": 0.09308755760368663,
+          "any_miss": 0.9069124423963134,
+          "mixed": 0.8470046082949308,
+          "all_miss": 0.059907834101382486,
+          "actual_jit_step": 0.9069124423963134,
+          "actual_jit_request": 0.2921658986175115,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.059907834101382486,
+          "miss_histogram": {
+            "0": 101,
+            "1": 276,
+            "2": 331,
+            "3": 196,
+            "4": 94,
+            "5": 18,
+            "6": 4,
+            "7": 0,
+            "8": 65
+          }
+        },
+        "preparation": {
+          "steps": 3895,
+          "seconds": 153.11496150679886,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/data/chokwans99/models/layerskip-llama3-8B",
+          "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.4727917981072555,
+            "reached_depth_ceiling": 0.3615930599369085
+          },
+          "1": {
+            "valid_k": 7.6796747967479675,
+            "tree_max_depth": 3.6886178861788617,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.2597835204542522,
+            "reached_depth_ceiling": 0.32791327913279134
+          },
+          "2": {
+            "valid_k": 3.95680521597392,
+            "tree_max_depth": 1.9568052159739202,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.28117359413202936,
+            "reached_depth_ceiling": 0.3842705786471068
+          }
+        }
+      },
+      "combined": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 980,
+          "all_steps": 3773,
+          "tokens": 18915,
+          "seconds": 44.11291263764724,
+          "tps": 428.7860145479804,
+          "al": 2.412627551020408,
+          "hit": 0.6980867346938775,
+          "verify_ms": 26.91896737705232,
+          "step_ms": 45.01317616086453,
+          "actual_output_tokens": 50479,
+          "emitted_decode_tokens": 50479
+        },
+        "source": {
+          "0": {
+            "requests": 2367,
+            "al": 1.9455006337135614,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 3224,
+            "al": 2.9686724565756824,
+            "valid_k": 7.680210918114144
+          },
+          "2": {
+            "requests": 2249,
+            "al": 2.107158737216541,
+            "valid_k": 3.963983992885727
+          }
+        },
+        "batch_metrics": {
+          "steps": 980,
+          "request_hit": 0.6980867346938775,
+          "all_hit": 0.08673469387755102,
+          "any_miss": 0.9132653061224489,
+          "mixed": 0.8489795918367347,
+          "all_miss": 0.06428571428571428,
+          "actual_jit_step": 0.9132653061224489,
+          "actual_jit_request": 0.30191326530612245,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06428571428571428,
+          "miss_histogram": {
+            "0": 85,
+            "1": 258,
+            "2": 272,
+            "3": 189,
+            "4": 80,
+            "5": 25,
+            "6": 7,
+            "7": 1,
+            "8": 63
+          }
+        },
+        "preparation": {
+          "steps": 3773,
+          "seconds": 150.5582818260882,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/data/chokwans99/models/layerskip-llama3-8B",
+          "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.47275031685678076,
+            "reached_depth_ceiling": 0.37389100126742714
+          },
+          "1": {
+            "valid_k": 7.680210918114144,
+            "tree_max_depth": 3.696029776674938,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.256175779865296,
+            "reached_depth_ceiling": 0.3228908188585608
+          },
+          "2": {
+            "valid_k": 3.963983992885727,
+            "tree_max_depth": 1.963983992885727,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.27871646657773824,
+            "reached_depth_ceiling": 0.37750111160515787
+          }
+        }
+      },
+      "root_norm": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1093,
+          "all_steps": 3901,
+          "tokens": 20794,
+          "seconds": 45.2518214462325,
+          "tps": 459.5174146682052,
+          "al": 2.378087831655993,
+          "hit": 0.7192360475754803,
+          "verify_ms": 26.609920758126886,
+          "step_ms": 41.40148348237191,
+          "actual_output_tokens": 51604,
+          "emitted_decode_tokens": 51604
+        },
+        "source": {
+          "0": {
+            "requests": 2455,
+            "al": 1.9665987780040732,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 3828,
+            "al": 2.8113897596656217,
+            "valid_k": 7.158829676071055
+          },
+          "2": {
+            "requests": 2461,
+            "al": 2.1145875660300693,
+            "valid_k": 3.9561154002438035
+          }
+        },
+        "batch_metrics": {
+          "steps": 1093,
+          "request_hit": 0.7192360475754803,
+          "all_hit": 0.11161939615736505,
+          "any_miss": 0.888380603842635,
+          "mixed": 0.8298261665141812,
+          "all_miss": 0.0585544373284538,
+          "actual_jit_step": 0.888380603842635,
+          "actual_jit_request": 0.2807639524245197,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.0585544373284538,
+          "miss_histogram": {
+            "0": 122,
+            "1": 285,
+            "2": 321,
+            "3": 208,
+            "4": 74,
+            "5": 18,
+            "6": 1,
+            "7": 0,
+            "8": 64
+          }
+        },
+        "preparation": {
+          "steps": 3901,
+          "seconds": 145.09488324378617,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/data/chokwans99/models/layerskip-llama3-8B",
+          "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.4832993890020367,
+            "reached_depth_ceiling": 0.3723014256619145
+          },
+          "1": {
+            "valid_k": 7.158829676071055,
+            "tree_max_depth": 3.4952978056426334,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.2518395158481365,
+            "reached_depth_ceiling": 0.3388192267502612
+          },
+          "2": {
+            "valid_k": 3.9561154002438035,
+            "tree_max_depth": 1.9561154002438033,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.28101720167953403,
+            "reached_depth_ceiling": 0.370581064607883
+          }
+        }
+      },
+      "root_position": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 923,
+          "all_steps": 3897,
+          "tokens": 17326,
+          "seconds": 37.48725583287887,
+          "tps": 462.18373724768406,
+          "al": 2.346424702058505,
+          "hit": 0.71397616468039,
+          "verify_ms": 26.59232564016224,
+          "step_ms": 40.61457836714938,
+          "actual_output_tokens": 50675,
+          "emitted_decode_tokens": 50675
+        },
+        "source": {
+          "0": {
+            "requests": 2112,
+            "al": 1.9517045454545454,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 3155,
+            "al": 2.816798732171157,
+            "valid_k": 7.150554675118859
+          },
+          "2": {
+            "requests": 2117,
+            "al": 2.0392064241851675,
+            "valid_k": 3.9603212092583844
+          }
+        },
+        "batch_metrics": {
+          "steps": 923,
+          "request_hit": 0.71397616468039,
+          "all_hit": 0.10834236186348863,
+          "any_miss": 0.8916576381365113,
+          "mixed": 0.8299024918743229,
+          "all_miss": 0.06175514626218852,
+          "actual_jit_step": 0.8916576381365113,
+          "actual_jit_request": 0.28602383531960995,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06175514626218852,
+          "miss_histogram": {
+            "0": 100,
+            "1": 252,
+            "2": 254,
+            "3": 174,
+            "4": 62,
+            "5": 19,
+            "6": 4,
+            "7": 1,
+            "8": 57
+          }
+        },
+        "preparation": {
+          "steps": 3897,
+          "seconds": 141.14321374357678,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/data/chokwans99/models/layerskip-llama3-8B",
+          "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.4758522727272727,
+            "reached_depth_ceiling": 0.3778409090909091
+          },
+          "1": {
+            "valid_k": 7.150554675118859,
+            "tree_max_depth": 3.4903328050713154,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.25331484416270467,
+            "reached_depth_ceiling": 0.3486529318541997
+          },
+          "2": {
+            "valid_k": 3.9603212092583844,
+            "tree_max_depth": 1.9603212092583846,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.261848527790899,
+            "reached_depth_ceiling": 0.31695795937647614
+          }
+        }
+      },
+      "root_only": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 1064,
+          "all_steps": 3938,
+          "tokens": 20229,
+          "seconds": 54.71486664447002,
+          "tps": 369.716701156294,
+          "al": 2.3765272556390977,
+          "hit": 0.7201597744360902,
+          "verify_ms": 29.474209333661438,
+          "step_ms": 51.42374684630641,
+          "actual_output_tokens": 51716,
+          "emitted_decode_tokens": 51716
+        },
+        "source": {
+          "0": {
+            "requests": 2382,
+            "al": 1.9546599496221662,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 3676,
+            "al": 2.852829162132753,
+            "valid_k": 7.1662132752992385
+          },
+          "2": {
+            "requests": 2454,
+            "al": 2.072534637326813,
+            "valid_k": 3.9621026894865525
+          }
+        },
+        "batch_metrics": {
+          "steps": 1064,
+          "request_hit": 0.7201597744360902,
+          "all_hit": 0.1137218045112782,
+          "any_miss": 0.8862781954887218,
+          "mixed": 0.8233082706766918,
+          "all_miss": 0.06296992481203008,
+          "actual_jit_step": 0.8862781954887218,
+          "actual_jit_request": 0.27984022556390975,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06296992481203008,
+          "miss_histogram": {
+            "0": 121,
+            "1": 303,
+            "2": 297,
+            "3": 180,
+            "4": 75,
+            "5": 17,
+            "6": 4,
+            "7": 0,
+            "8": 67
+          }
+        },
+        "preparation": {
+          "steps": 3938,
+          "seconds": 182.98037152993493,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/data/chokwans99/models/layerskip-llama3-8B",
+          "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.47732997481108314,
+            "reached_depth_ceiling": 0.37405541561712846
+          },
+          "1": {
+            "valid_k": 7.1662132752992385,
+            "tree_max_depth": 3.499727965179543,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.25727693144722524,
+            "reached_depth_ceiling": 0.3585418933623504
+          },
+          "2": {
+            "valid_k": 3.9621026894865525,
+            "tree_max_depth": 1.9621026894865525,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.2701711491442543,
+            "reached_depth_ceiling": 0.3345558272208639
+          }
+        }
+      },
+      "root_proxy": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 921,
+          "all_steps": 3887,
+          "tokens": 17710,
+          "seconds": 48.181417908053845,
+          "tps": 367.5690913413251,
+          "al": 2.4036373507057545,
+          "hit": 0.7124049945711184,
+          "verify_ms": 29.298908171981136,
+          "step_ms": 52.31424311406498,
+          "actual_output_tokens": 51575,
+          "emitted_decode_tokens": 51575
+        },
+        "source": {
+          "0": {
+            "requests": 2119,
+            "al": 1.971212836243511,
+            "valid_k": 2.0
+          },
+          "1": {
+            "requests": 3162,
+            "al": 2.888045540796964,
+            "valid_k": 7.168247944339026
+          },
+          "2": {
+            "requests": 2087,
+            "al": 2.108768567321514,
+            "valid_k": 3.95495927168184
+          }
+        },
+        "batch_metrics": {
+          "steps": 921,
+          "request_hit": 0.7124049945711184,
+          "all_hit": 0.12160694896851248,
+          "any_miss": 0.8783930510314875,
+          "mixed": 0.8089033659066233,
+          "all_miss": 0.06948968512486428,
+          "actual_jit_step": 0.8783930510314875,
+          "actual_jit_request": 0.28759500542888167,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06948968512486428,
+          "miss_histogram": {
+            "0": 112,
+            "1": 228,
+            "2": 276,
+            "3": 164,
+            "4": 58,
+            "5": 14,
+            "6": 2,
+            "7": 3,
+            "8": 64
+          }
+        },
+        "preparation": {
+          "steps": 3887,
+          "seconds": 179.62302780337632,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "parameters": {
+          "target": "/data/chokwans99/models/layerskip-llama3-8B",
+          "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "batch": 8,
+          "temperature": 0.7,
+          "k1": 4,
+          "k2": 2,
+          "exit_layer": 21,
+          "p1_nodes": 8,
+          "p2_nodes": 4,
+          "p1_verify": 8,
+          "p2_verify": 4,
+          "roots": 2,
+          "siblings": 3
+        },
+        "shape": {
+          "0": {
+            "valid_k": 2.0,
+            "tree_max_depth": 2.0,
+            "tree_sibling_width": 1.0,
+            "node_utilization": 0.48560641812175553,
+            "reached_depth_ceiling": 0.38414346389806514
+          },
+          "1": {
+            "valid_k": 7.168247944339026,
+            "tree_max_depth": 3.5009487666034156,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.26150379506641364,
+            "reached_depth_ceiling": 0.3776091081593928
+          },
+          "2": {
+            "valid_k": 3.95495927168184,
+            "tree_max_depth": 1.95495927168184,
+            "tree_sibling_width": 3.0,
+            "node_utilization": 0.27982750359367514,
+            "reached_depth_ceiling": 0.36224245328222326
+          }
+        }
+      }
+    }
+  },
+  "comparisons": {
+    "l2": {
+      "base -> root_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.0325290957335016,
+            "ci95": [
+              -0.09832787884753785,
+              0.03077063731686543
+            ]
+          },
+          "hit_pp": {
+            "delta": 0.8336288881883149,
+            "ci95": [
+              -0.7574714572186544,
+              2.538921443396712
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.014556474501496108,
+            "ci95": [
+              -0.0639735929745797,
+              0.09012395804189745
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.022770249161771616,
+            "ci95": [
+              -0.08972859485729621,
+              0.041784209528994545
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.8590947702115699,
+            "ci95": [
+              -3.756219689575427,
+              -0.02718415227501514
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 2.692723658399892,
+            "ci95": [
+              -0.1645577639011099,
+              5.677902105439995
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.02841268940530735,
+            0.11097995428803727
+          ],
+          "verify_change_ci95": [
+            -0.04249124429416951,
+            -0.02022503074091586
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.06929115618182835,
+          "verify_change": -0.031490282868814945,
+          "equal_output_sequences": 19,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2549308401639344,
+            "share_after": 0.2465945512820513,
+            "al_before": 1.6734488821904043,
+            "al_after": 1.62767397779583,
+            "mix_contribution": -0.013759556897716727,
+            "conditional_contribution": -0.01147863842244573
+          },
+          "1": {
+            "share_before": 0.3243468237704918,
+            "share_after": 0.30575587606837606,
+            "al_before": 2.6412635735439287,
+            "al_after": 2.655820048045425,
+            "mix_contribution": -0.04923890229135071,
+            "conditional_contribution": 0.004586036941764168
+          },
+          "2": {
+            "share_before": 0.42072233606557374,
+            "share_after": 0.44764957264957267,
+            "al_before": 1.7660578386605783,
+            "al_after": 1.7432875894988067,
+            "mix_contribution": 0.04724848729951138,
+            "conditional_contribution": -0.00988652236326354
+          }
+        }
+      },
+      "base -> tree_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.05797228401420185,
+            "ci95": [
+              -0.010792547668209118,
+              0.12646465744032256
+            ]
+          },
+          "hit_pp": {
+            "delta": 0.3326562089068119,
+            "ci95": [
+              -1.3645818303307582,
+              2.084967085251587
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.13325411134353127,
+            "ci95": [
+              0.05215372783219355,
+              0.21777100674454575
+            ]
+          },
+          "p2_hit_al": {
+            "delta": 0.028797466805659644,
+            "ci95": [
+              -0.04008498610647768,
+              0.0883373173822062
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": 0.8273497085123225,
+            "ci95": [
+              -1.187516579299879,
+              2.8318308420080838
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": -0.49469349960550346,
+            "ci95": [
+              -3.370321917145213,
+              2.3362818426800898
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.048525658597684256,
+            0.13399789644420546
+          ],
+          "verify_change_ci95": [
+            -0.05126288334618908,
+            -0.03225255562909764
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.09191567653585997,
+          "verify_change": -0.04197509507851871,
+          "equal_output_sequences": 23,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2549308401639344,
+            "share_after": 0.2516042780748663,
+            "al_before": 1.6734488821904043,
+            "al_after": 1.650106269925611,
+            "mix_contribution": -0.005528006284978081,
+            "conditional_contribution": -0.005911926431774773
+          },
+          "1": {
+            "share_before": 0.3243468237704918,
+            "share_after": 0.332620320855615,
+            "al_before": 2.6412635735439287,
+            "al_after": 2.77451768488746,
+            "mix_contribution": 0.02240372522764849,
+            "conditional_contribution": 0.04377178651952452
+          },
+          "2": {
+            "share_before": 0.42072233606557374,
+            "share_after": 0.4157754010695187,
+            "al_before": 1.7660578386605783,
+            "al_after": 1.794855305466238,
+            "mix_contribution": -0.008807802925296648,
+            "conditional_contribution": 0.012044507909078616
+          }
+        }
+      },
+      "base -> combined": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.0986808401639343,
+            "ci95": [
+              0.02952603710595929,
+              0.16952265873813094
+            ]
+          },
+          "hit_pp": {
+            "delta": -0.6522779745567817,
+            "ci95": [
+              -2.6400758665310637,
+              1.288485258531039
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.18987491413661495,
+            "ci95": [
+              0.11728140063995987,
+              0.2652106994471213
+            ]
+          },
+          "p2_hit_al": {
+            "delta": 0.0750017639884284,
+            "ci95": [
+              -0.005236763283420259,
+              0.1497973424721688
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": 0.8515167179734462,
+            "ci95": [
+              -1.341279784901922,
+              3.1406982983245544
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": -1.503794692530228,
+            "ci95": [
+              -5.054405744679594,
+              1.7568274050770298
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.09381896666097939,
+            0.18454059570303702
+          ],
+          "verify_change_ci95": [
+            -0.0594720692302492,
+            -0.04071430292910839
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.13756505729352186,
+          "verify_change": -0.05007770765870578,
+          "equal_output_sequences": 17,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2549308401639344,
+            "share_after": 0.2614536199095023,
+            "al_before": 1.6734488821904043,
+            "al_after": 1.6665765278528935,
+            "mix_contribution": 0.010893125047156211,
+            "conditional_contribution": -0.0017743884920044474
+          },
+          "1": {
+            "share_before": 0.3243468237704918,
+            "share_after": 0.3328619909502262,
+            "al_before": 2.6412635735439287,
+            "al_after": 2.8311384876805437,
+            "mix_contribution": 0.023299209213024863,
+            "conditional_contribution": 0.06239373363246141
+          },
+          "2": {
+            "share_before": 0.42072233606557374,
+            "share_after": 0.4056843891402715,
+            "al_before": 1.7660578386605783,
+            "al_after": 1.8410596026490067,
+            "mix_contribution": -0.027121820317872792,
+            "conditional_contribution": 0.030990981081169402
+          }
+        }
+      },
+      "root_only -> combined": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.1312099358974359,
+            "ci95": [
+              0.05933802834494478,
+              0.2032751028274063
+            ]
+          },
+          "hit_pp": {
+            "delta": -1.4859068627450966,
+            "ci95": [
+              -3.3043526977254265,
+              0.2409690808221089
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.17531843963511884,
+            "ci95": [
+              0.08980719593928901,
+              0.2666339820985594
+            ]
+          },
+          "p2_hit_al": {
+            "delta": 0.09777201315020001,
+            "ci95": [
+              0.02533433866385639,
+              0.16615691759938198
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": 2.710611488185016,
+            "ci95": [
+              0.5857565227757959,
+              4.813475270655779
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": -4.19651835093012,
+            "ci95": [
+              -7.451388572387299,
+              -1.05671196211711
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.01680074624477036,
+            0.11230789933261429
+          ],
+          "verify_change_ci95": [
+            -0.030368894388658606,
+            -0.007981299362798186
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.06384968277067093,
+          "verify_change": -0.019191779350390514,
+          "equal_output_sequences": 18,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2465945512820513,
+            "share_after": 0.2614536199095023,
+            "al_before": 1.62767397779583,
+            "al_after": 1.6665765278528935,
+            "mix_contribution": 0.024474747169724743,
+            "conditional_contribution": 0.009882184705589474
+          },
+          "1": {
+            "share_before": 0.30575587606837606,
+            "share_after": 0.3328619909502262,
+            "al_before": 2.655820048045425,
+            "al_after": 2.8311384876805437,
+            "mix_contribution": 0.07436506421066821,
+            "conditional_contribution": 0.055980743984404585
+          },
+          "2": {
+            "share_before": 0.44764957264957267,
+            "share_after": 0.4056843891402715,
+            "al_before": 1.7432875894988067,
+            "al_after": 1.8410596026490067,
+            "mix_contribution": -0.07520889383976569,
+            "conditional_contribution": 0.041716089666814456
+          }
+        }
+      },
+      "tree_only -> combined": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.040708556149732456,
+            "ci95": [
+              -0.011695818326918439,
+              0.09470839982397446
+            ]
+          },
+          "hit_pp": {
+            "delta": -0.9849341834635936,
+            "ci95": [
+              -2.412299150266292,
+              0.34438614964557707
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.05662080279308368,
+            "ci95": [
+              -0.012822196274305198,
+              0.1273334743824804
+            ]
+          },
+          "p2_hit_al": {
+            "delta": 0.04620429718276875,
+            "ci95": [
+              -0.006507909301878195,
+              0.10092339833828887
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": 0.024167009461123712,
+            "ci95": [
+              -1.6389123608190361,
+              1.7440943075125777
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": -1.0091011929247244,
+            "ci95": [
+              -3.467728992986002,
+              1.165027235243706
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.013063644581003692,
+            0.07372898310690981
+          ],
+          "verify_change_ci95": [
+            -0.01598397599098998,
+            -0.0017319271898426738
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.04180669051522945,
+          "verify_change": -0.008457622070744741,
+          "equal_output_sequences": 23,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2516042780748663,
+            "share_after": 0.2614536199095023,
+            "al_before": 1.650106269925611,
+            "al_after": 1.6665765278528935,
+            "mix_contribution": 0.01633357131618867,
+            "conditional_contribution": 0.004225097955715947
+          },
+          "1": {
+            "share_before": 0.332620320855615,
+            "share_after": 0.3328619909502262,
+            "al_before": 2.77451768488746,
+            "al_after": 2.8311384876805437,
+            "mix_contribution": 0.0006773597287912812,
+            "conditional_contribution": 0.018840071369521982
+          },
+          "2": {
+            "share_before": 0.4157754010695187,
+            "share_after": 0.4056843891402715,
+            "al_before": 1.794855305466238,
+            "al_after": 1.8410596026490067,
+            "mix_contribution": -0.018345030355759368,
+            "conditional_contribution": 0.01897748613527401
+          }
+        }
+      },
+      "base -> root_norm": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.02719686911946706,
+            "ci95": [
+              -0.04006510785862295,
+              0.08684958714247341
+            ]
+          },
+          "hit_pp": {
+            "delta": 0.5189371704782388,
+            "ci95": [
+              -1.0289630867655617,
+              2.202550757155908
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.032133799520176254,
+            "ci95": [
+              -0.05185087085197412,
+              0.11589670719413442
+            ]
+          },
+          "p2_hit_al": {
+            "delta": 0.023553349290858616,
+            "ci95": [
+              -0.04967519031294627,
+              0.08076520537655407
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": 0.5345523695899104,
+            "ci95": [
+              -1.6561427634504002,
+              2.4409132369145574
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": -0.015615199111664424,
+            "ci95": [
+              -2.645887163096004,
+              3.101038959747672
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.0036345687277644727,
+            0.07499319028535434
+          ],
+          "verify_change_ci95": [
+            -0.014442542727791151,
+            0.007198841515254997
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.036940777104327305,
+          "verify_change": -0.004198728663097895,
+          "equal_output_sequences": 16,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2549308401639344,
+            "share_after": 0.24974146845915202,
+            "al_before": 1.6734488821904043,
+            "al_after": 1.6796066252587991,
+            "mix_contribution": -0.00870012568746084,
+            "conditional_contribution": 0.0015538212051173016
+          },
+          "1": {
+            "share_before": 0.3243468237704918,
+            "share_after": 0.3296923474663909,
+            "al_before": 2.6412635735439287,
+            "al_after": 2.673397373064105,
+            "mix_contribution": 0.014204823012881486,
+            "conditional_contribution": 0.010508381803434108
+          },
+          "2": {
+            "share_before": 0.42072233606557374,
+            "share_after": 0.42056618407445706,
+            "al_before": 1.7660578386605783,
+            "al_after": 1.789611187951437,
+            "mix_contribution": -0.00027761239912869033,
+            "conditional_contribution": 0.009907581184623846
+          }
+        }
+      },
+      "root_norm -> root_position": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.03589906989120539,
+            "ci95": [
+              -0.08487602510656703,
+              0.015322768325019016
+            ]
+          },
+          "hit_pp": {
+            "delta": -1.158894089757311,
+            "ci95": [
+              -2.6529507667740035,
+              0.20829010963632413
+            ]
+          },
+          "p1_hit_al": {
+            "delta": -0.00680714146584771,
+            "ci95": [
+              -0.08832242502497153,
+              0.06996463021185877
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.025335421934723934,
+            "ci95": [
+              -0.07292516006810812,
+              0.02929229722405765
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.0905797758788545,
+            "ci95": [
+              -2.6482876785326153,
+              0.6203193041370267
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": -0.0683143138784601,
+            "ci95": [
+              -2.4515219478032177,
+              2.112914975982549
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.11412398168392632,
+            -0.051548276896252625
+          ],
+          "verify_change_ci95": [
+            0.024325186540155207,
+            0.04681935533189644
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": -0.08348107899085899,
+          "verify_change": 0.03565387413056231,
+          "equal_output_sequences": 20,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.24974146845915202,
+            "share_after": 0.26133040935672514,
+            "al_before": 1.6796066252587991,
+            "al_after": 1.633006993006993,
+            "mix_contribution": 0.019194841719289053,
+            "conditional_contribution": -0.011907880780229921
+          },
+          "1": {
+            "share_before": 0.3296923474663909,
+            "share_after": 0.31878654970760234,
+            "al_before": 2.673397373064105,
+            "al_after": 2.6665902315982573,
+            "mix_contribution": -0.0291184124254428,
+            "conditional_contribution": -0.0022071437953401414
+          },
+          "2": {
+            "share_before": 0.42056618407445706,
+            "share_after": 0.4198830409356725,
+            "al_before": 1.789611187951437,
+            "al_after": 1.764275766016713,
+            "mix_contribution": -0.001213906744309609,
+            "conditional_contribution": -0.010646567865171685
+          }
+        }
+      },
+      "root_position -> root_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.023826894961763267,
+            "ci95": [
+              -0.09512443575042778,
+              0.04697884130831059
+            ]
+          },
+          "hit_pp": {
+            "delta": 1.473585807467387,
+            "ci95": [
+              -0.11984747055694134,
+              3.1509648150498295
+            ]
+          },
+          "p1_hit_al": {
+            "delta": -0.010770183552832435,
+            "ci95": [
+              -0.09933881469881684,
+              0.07789280249342294
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.0209881765179063,
+            "ci95": [
+              -0.09247194920851462,
+              0.049947015268325005
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.3030673639226258,
+            "ci95": [
+              -3.548445488733778,
+              0.8781426275090667
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 2.7766531713900164,
+            "ci95": [
+              -0.2533604138992707,
+              6.138839974447412
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.06938021842409227,
+            0.1830855654085561
+          ],
+          "verify_change_ci95": [
+            -0.0739261893616737,
+            -0.04717834297404331
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.12512451255785662,
+          "verify_change": -0.060889552873434116,
+          "equal_output_sequences": 19,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.26133040935672514,
+            "share_after": 0.2465945512820513,
+            "al_before": 1.633006993006993,
+            "al_after": 1.62767397779583,
+            "mix_contribution": -0.02402446600627006,
+            "conditional_contribution": -0.0013543857706079885
+          },
+          "1": {
+            "share_before": 0.31878654970760234,
+            "share_after": 0.30575587606837606,
+            "al_before": 2.6665902315982573,
+            "al_after": 2.655820048045425,
+            "mix_contribution": -0.03467729566404994,
+            "conditional_contribution": -0.003363218281069257
+          },
+          "2": {
+            "share_before": 0.4198830409356725,
+            "share_after": 0.44764957264957267,
+            "al_before": 1.764275766016713,
+            "al_after": 1.7432875894988067,
+            "mix_contribution": 0.04869643457471784,
+            "conditional_contribution": -0.009103963814483862
+          }
+        }
+      },
+      "root_proxy -> root_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.019470276530039188,
+            "ci95": [
+              -0.07177500075130633,
+              0.03642998162204377
+            ]
+          },
+          "hit_pp": {
+            "delta": -0.006170456672279556,
+            "ci95": [
+              -1.5822244947379995,
+              1.5161240907779951
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.027205131759275858,
+            "ci95": [
+              -0.05050724686878331,
+              0.1048262089642502
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.029675529278363477,
+            "ci95": [
+              -0.07260249315406059,
+              0.021928951320774742
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.3952153128704197,
+            "ci95": [
+              -3.0403507011451585,
+              0.3281784256892873
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 1.38904485619814,
+            "ci95": [
+              -1.2263484397444586,
+              3.8280929634980403
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.23096333406921885,
+            0.3623697006345442
+          ],
+          "verify_change_ci95": [
+            -0.11180568794830122,
+            -0.07890460795987587
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.29505491831140396,
+          "verify_change": -0.09503629303846195,
+          "equal_output_sequences": 17,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.24653284671532846,
+            "share_after": 0.2465945512820513,
+            "al_before": 1.6380458919319023,
+            "al_after": 1.62767397779583,
+            "mix_contribution": 0.00010075491479984505,
+            "conditional_contribution": -0.0025573375150867877
+          },
+          "1": {
+            "share_before": 0.3197080291970803,
+            "share_after": 0.30575587606837606,
+            "al_before": 2.628614916286149,
+            "al_after": 2.655820048045425,
+            "mix_contribution": -0.03686462291051641,
+            "conditional_contribution": 0.008507913976708987
+          },
+          "2": {
+            "share_before": 0.43375912408759126,
+            "share_after": 0.44764957264957267,
+            "al_before": 1.7729631187771702,
+            "al_after": 1.7432875894988067,
+            "mix_contribution": 0.02442114979716907,
+            "conditional_contribution": -0.013078134793113951
+          }
+        }
+      }
+    },
+    "l3": {
+      "base -> root_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.016908936829521437,
+            "ci95": [
+              -0.07425744496397736,
+              0.04338244731685819
+            ]
+          },
+          "hit_pp": {
+            "delta": 0.27173058168433784,
+            "ci95": [
+              -1.370887420517207,
+              1.9060289211505623
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.016052302628620563,
+            "ci95": [
+              -0.08338152512303372,
+              0.12342785562459951
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.05181028882849903,
+            "ci95": [
+              -0.0923418193374779,
+              -0.01124083608531357
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.1130729543524112,
+            "ci95": [
+              -2.801635412329352,
+              0.5229391646019389
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 1.3848035360367454,
+            "ci95": [
+              -0.07794278586198002,
+              2.95231601288883
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.1885841129163295,
+            -0.11526136925571112
+          ],
+          "verify_change_ci95": [
+            0.055404739788196315,
+            0.09404651472191262
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": -0.15267951601595875,
+          "verify_change": 0.07387329737366666,
+          "equal_output_sequences": 59,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2825575313807531,
+            "share_after": 0.27984022556390975,
+            "al_before": 1.959740860712633,
+            "al_after": 1.9546599496221662,
+            "mix_contribution": -0.005318312045689583,
+            "conditional_contribution": -0.0014287465002569008
+          },
+          "1": {
+            "share_before": 0.4429916317991632,
+            "share_after": 0.4318609022556391,
+            "al_before": 2.8367768595041323,
+            "al_after": 2.852829162132753,
+            "mix_contribution": -0.031664732918023054,
+            "conditional_contribution": 0.007021698816031632
+          },
+          "2": {
+            "share_before": 0.2744508368200837,
+            "share_after": 0.28829887218045114,
+            "al_before": 2.1243449261553122,
+            "al_after": 2.072534637326813,
+            "mix_contribution": 0.02905926829915197,
+            "conditional_contribution": -0.014578112480735747
+          }
+        }
+      },
+      "base -> tree_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.04780804716271714,
+            "ci95": [
+              0.00031485012122353114,
+              0.09510042737868804
+            ]
+          },
+          "hit_pp": {
+            "delta": -0.9608367236758255,
+            "ci95": [
+              -2.88933732658663,
+              0.8986439139388207
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.16213912965575927,
+            "ci95": [
+              0.09033840468436631,
+              0.2354169648657466
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.009430500727439561,
+            "ci95": [
+              -0.05170747935034124,
+              0.035689382510421815
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.7876424425891315,
+            "ci95": [
+              -3.375868257549014,
+              -0.1400295637551275
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 0.8268057189132918,
+            "ci95": [
+              -0.6206498572242766,
+              2.279431391948272
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.02476683087729821,
+            0.03241034508621109
+          ],
+          "verify_change_ci95": [
+            -0.033415640428382014,
+            -0.018319012420580545
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.0031396384948165768,
+          "verify_change": -0.02611875724353463,
+          "equal_output_sequences": 52,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2825575313807531,
+            "share_after": 0.2921658986175115,
+            "al_before": 1.959740860712633,
+            "al_after": 1.945583596214511,
+            "mix_contribution": 0.018761895780425024,
+            "conditional_contribution": -0.004068255805876682
+          },
+          "1": {
+            "share_before": 0.4429916317991632,
+            "share_after": 0.4251152073732719,
+            "al_before": 2.8367768595041323,
+            "al_after": 2.9989159891598915,
+            "mix_contribution": -0.05216066109092828,
+            "conditional_contribution": 0.07037704367581542
+          },
+          "2": {
+            "share_before": 0.2744508368200837,
+            "share_after": 0.28271889400921657,
+            "al_before": 2.1243449261553122,
+            "al_after": 2.1149144254278727,
+            "mix_contribution": 0.01752521937922805,
+            "conditional_contribution": -0.00262719477594651
+          }
+        }
+      },
+      "base -> combined": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.019191358551788884,
+            "ci95": [
+              -0.0544186065065735,
+              0.09835262263868562
+            ]
+          },
+          "hit_pp": {
+            "delta": -1.9355733925369236,
+            "ci95": [
+              -3.876376205269671,
+              -0.1607960119868129
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.13189559707155007,
+            "ci95": [
+              0.007547051468525127,
+              0.2624532801312371
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.01718618893877144,
+            "ci95": [
+              -0.07699792952569208,
+              0.03855160908185116
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -3.176714200324483,
+            "ci95": [
+              -5.327946852401352,
+              -0.9794995066064967
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 1.241140807787552,
+            "ci95": [
+              -0.7000774901793372,
+              3.1512567950000308
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.049909108990323914,
+            0.020870853344772802
+          ],
+          "verify_change_ci95": [
+            -0.027224798733636518,
+            -0.01016302274359058
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": -0.01730386472643164,
+          "verify_change": -0.019225251071449456,
+          "equal_output_sequences": 59,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2825575313807531,
+            "share_after": 0.30191326530612245,
+            "al_before": 1.959740860712633,
+            "al_after": 1.9455006337135614,
+            "mix_contribution": 0.037794407640212545,
+            "conditional_contribution": -0.0041614984095746585
+          },
+          "1": {
+            "share_before": 0.4429916317991632,
+            "share_after": 0.41122448979591836,
+            "al_before": 2.8367768595041323,
+            "al_after": 2.9686724565756824,
+            "mix_contribution": -0.09221126640827398,
+            "conditional_contribution": 0.05633367269296355
+          },
+          "2": {
+            "share_before": 0.2744508368200837,
+            "share_after": 0.2868622448979592,
+            "al_before": 2.1243449261553122,
+            "al_after": 2.107158737216541,
+            "mix_contribution": 0.02625945937456659,
+            "conditional_contribution": -0.004823416338105169
+          }
+        }
+      },
+      "root_only -> combined": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.03610029538131032,
+            "ci95": [
+              -0.022016460397124803,
+              0.09600569766886968
+            ]
+          },
+          "hit_pp": {
+            "delta": -2.2073039742212615,
+            "ci95": [
+              -3.786509654150493,
+              -0.7013072396693935
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.11584329444292951,
+            "ci95": [
+              0.021201587999166948,
+              0.2147104001336938
+            ]
+          },
+          "p2_hit_al": {
+            "delta": 0.03462409988972759,
+            "ci95": [
+              -0.02345737346734017,
+              0.09143402469639365
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -2.0636412459720717,
+            "ci95": [
+              -3.7396402214252142,
+              -0.37533188575792636
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": -0.14366272824919335,
+            "ci95": [
+              -1.8339405694877677,
+              1.523590733891841
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.11862755365934996,
+            0.20277594301728583
+          ],
+          "verify_change_ci95": [
+            -0.10222615773315077,
+            -0.07163744376779108
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.159769123783011,
+          "verify_change": -0.08669416464009672,
+          "equal_output_sequences": 60,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.27984022556390975,
+            "share_after": 0.30191326530612245,
+            "al_before": 1.9546599496221662,
+            "al_after": 1.9455006337135614,
+            "mix_contribution": 0.043044199778490486,
+            "conditional_contribution": -0.002664232001906116
+          },
+          "1": {
+            "share_before": 0.4318609022556391,
+            "share_after": 0.41122448979591836,
+            "al_before": 2.852829162132753,
+            "al_after": 2.9686724565756824,
+            "mix_contribution": -0.060067454269299644,
+            "conditional_contribution": 0.04883289465598062
+          },
+          "2": {
+            "share_before": 0.28829887218045114,
+            "share_after": 0.2868622448979592,
+            "al_before": 2.072534637326813,
+            "al_after": 2.107158737216541,
+            "mix_contribution": -0.0030023307671598973,
+            "conditional_contribution": 0.009957217985205092
+          }
+        }
+      },
+      "tree_only -> combined": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.028616688610928254,
+            "ci95": [
+              -0.091125774500898,
+              0.039466569849009384
+            ]
+          },
+          "hit_pp": {
+            "delta": -0.9747366688610981,
+            "ci95": [
+              -2.9457148182401816,
+              0.7812504887216815
+            ]
+          },
+          "p1_hit_al": {
+            "delta": -0.0302435325842092,
+            "ci95": [
+              -0.13726103357081457,
+              0.08296844587763874
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.007755688211331879,
+            "ci95": [
+              -0.06305214178980863,
+              0.04423801736590008
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.3890717577353513,
+            "ci95": [
+              -3.3353345782818162,
+              0.5667450464990171
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 0.4143350888742603,
+            "ci95": [
+              -1.5646802299740168,
+              2.32350538424601
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.04677305901350107,
+            0.00935791247535865
+          ],
+          "verify_change_ci95": [
+            0.0012368875682332082,
+            0.012948747131205236
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": -0.020379518899206528,
+          "verify_change": 0.007078384785986769,
+          "equal_output_sequences": 64,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2921658986175115,
+            "share_after": 0.30191326530612245,
+            "al_before": 1.945583596214511,
+            "al_after": 1.9455006337135614,
+            "mix_contribution": 0.018963912402690093,
+            "conditional_contribution": -2.464314660055341e-05
+          },
+          "1": {
+            "share_before": 0.4251152073732719,
+            "share_after": 0.41122448979591836,
+            "al_before": 2.9989159891598915,
+            "al_after": 2.9686724565756824,
+            "mix_contribution": -0.041447042858795545,
+            "conditional_contribution": -0.01264693344140203
+          },
+          "2": {
+            "share_before": 0.28271889400921657,
+            "share_after": 0.2868622448979592,
+            "al_before": 2.1149144254278727,
+            "al_after": 2.107158737216541,
+            "mix_contribution": 0.008746765295389558,
+            "conditional_contribution": -0.0022087468622096844
+          }
+        }
+      },
+      "base -> root_norm": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.01534836081262636,
+            "ci95": [
+              -0.062358618306609125,
+              0.037536436437908646
+            ]
+          },
+          "hit_pp": {
+            "delta": 0.17935789562335458,
+            "ci95": [
+              -1.4006284124747546,
+              1.771105380856379
+            ]
+          },
+          "p1_hit_al": {
+            "delta": -0.02538709983851062,
+            "ci95": [
+              -0.09974112205985203,
+              0.05715993186497789
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.009757360125242975,
+            "ci95": [
+              -0.05310918016387538,
+              0.03591437144717963
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -0.5205721460645378,
+            "ci95": [
+              -2.0725860094546293,
+              1.033495551718722
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 0.6999300416878818,
+            "ci95": [
+              -0.429518091784759,
+              1.8416490635638807
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            0.027247915907900176,
+            0.08558228243534458
+          ],
+          "verify_change_ci95": [
+            -0.03807862375561434,
+            -0.022478081949489345
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.05312666963119317,
+          "verify_change": -0.030485159961646913,
+          "equal_output_sequences": 57,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2825575313807531,
+            "share_after": 0.2807639524245197,
+            "al_before": 1.959740860712633,
+            "al_after": 1.9665987780040732,
+            "mix_contribution": -0.003521100075513753,
+            "conditional_contribution": 0.00193160607221398
+          },
+          "1": {
+            "share_before": 0.4429916317991632,
+            "share_after": 0.4377859103385178,
+            "al_before": 2.8367768595041323,
+            "al_after": 2.8113897596656217,
+            "mix_contribution": -0.014701391091356344,
+            "conditional_contribution": -0.01118019369888365
+          },
+          "2": {
+            "share_before": 0.2744508368200837,
+            "share_after": 0.2814501372369625,
+            "al_before": 2.1243449261553122,
+            "al_after": 2.1145875660300693,
+            "mix_contribution": 0.014834780979837106,
+            "conditional_contribution": -0.002712062998923976
+          }
+        }
+      },
+      "root_norm -> root_position": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.03166312959748785,
+            "ci95": [
+              -0.09121897615849762,
+              0.022805524366188195
+            ]
+          },
+          "hit_pp": {
+            "delta": -0.52598828950903,
+            "ci95": [
+              -1.9786280385420423,
+              0.8522949190133623
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.005408972505535292,
+            "ci95": [
+              -0.10314658260074847,
+              0.10323409378405456
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.07538114184490174,
+            "ci95": [
+              -0.12109041338607365,
+              -0.03342323255289814
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": -1.0510720739384567,
+            "ci95": [
+              -2.6736995327782513,
+              0.5562271638721206
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 0.5250837844294303,
+            "ci95": [
+              -1.3340089803270707,
+              2.213571074579438
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.021318576979643664,
+            0.03116223916977832
+          ],
+          "verify_change_ci95": [
+            -0.004756380016886236,
+            0.0031447317514949496
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.005802440765828365,
+          "verify_change": -0.0006612239895255057,
+          "equal_output_sequences": 66,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.2807639524245197,
+            "share_after": 0.28602383531960995,
+            "al_before": 1.9665987780040732,
+            "al_after": 1.9517045454545454,
+            "mix_contribution": 0.01030490831441768,
+            "conditional_contribution": -0.00422093455844674
+          },
+          "1": {
+            "share_before": 0.4377859103385178,
+            "share_after": 0.42727518959913324,
+            "al_before": 2.8113897596656217,
+            "al_after": 2.816798732171157,
+            "mix_contribution": -0.029578158753157235,
+            "conditional_contribution": 0.0023395458525854364
+          },
+          "2": {
+            "share_before": 0.2814501372369625,
+            "share_after": 0.28670097508125675,
+            "al_before": 2.1145875660300693,
+            "al_after": 2.0392064241851675,
+            "mix_contribution": 0.010905449340612099,
+            "conditional_contribution": -0.021413939793499193
+          }
+        }
+      },
+      "root_position -> root_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": 0.030102553580592772,
+            "ci95": [
+              -0.02126329729193377,
+              0.08350720759056099
+            ]
+          },
+          "hit_pp": {
+            "delta": 0.6183609755700132,
+            "ci95": [
+              -1.0598173694623043,
+              2.4857143221385685
+            ]
+          },
+          "p1_hit_al": {
+            "delta": 0.03603042996159589,
+            "ci95": [
+              -0.056771855695344486,
+              0.13000618490120538
+            ]
+          },
+          "p2_hit_al": {
+            "delta": 0.03332821314164569,
+            "ci95": [
+              -0.008642430833892444,
+              0.08090988144159776
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": 0.45857126565058337,
+            "ci95": [
+              -1.1576585997668472,
+              2.044126429101699
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 0.15978970991943342,
+            "ci95": [
+              -1.5239923080432487,
+              2.1184493487133387
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.22949275259135601,
+            -0.16839086646616086
+          ],
+          "verify_change_ci95": [
+            0.09021312711403748,
+            0.127736587575455
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": -0.20006553376809322,
+          "verify_change": 0.10837275883635789,
+          "equal_output_sequences": 66,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.28602383531960995,
+            "share_after": 0.27984022556390975,
+            "al_before": 1.9517045454545454,
+            "al_after": 1.9546599496221662,
+            "mix_contribution": -0.012077716800538627,
+            "conditional_contribution": 0.0008361785019209767
+          },
+          "1": {
+            "share_before": 0.42727518959913324,
+            "share_after": 0.4318609022556391,
+            "al_before": 2.816798732171157,
+            "al_after": 2.852829162132753,
+            "mix_contribution": 0.012999642196294079,
+            "conditional_contribution": 0.015477521392526294
+          },
+          "2": {
+            "share_before": 0.28670097508125675,
+            "share_after": 0.28829887218045114,
+            "al_before": 2.0392064241851675,
+            "al_after": 2.072534637326813,
+            "mix_contribution": 0.0032850695574142275,
+            "conditional_contribution": 0.00958185873297596
+          }
+        }
+      },
+      "root_proxy -> root_only": {
+        "quality": {
+          "clusters": 60,
+          "al": {
+            "delta": -0.027110095066656736,
+            "ci95": [
+              -0.0801076517037245,
+              0.02148583208366876
+            ]
+          },
+          "hit_pp": {
+            "delta": 0.7754779864971795,
+            "ci95": [
+              -0.6949964749802785,
+              2.3734729513656148
+            ]
+          },
+          "p1_hit_al": {
+            "delta": -0.035216378664211234,
+            "ci95": [
+              -0.1223764351941782,
+              0.04846952376885894
+            ]
+          },
+          "p2_hit_al": {
+            "delta": -0.036233929994700986,
+            "ci95": [
+              -0.08848016015090301,
+              0.01773743431273272
+            ]
+          },
+          "p1_hit_pp": {
+            "delta": 0.27078077930983824,
+            "ci95": [
+              -1.1266574612246874,
+              1.7541878806595845
+            ]
+          },
+          "p2_hit_pp": {
+            "delta": 0.5046972071873483,
+            "ci95": [
+              -0.963142733521237,
+              2.066691111496514
+            ]
+          }
+        },
+        "timing": {
+          "prompt_group_clusters": 60,
+          "tps_change_ci95": [
+            -0.034654441980076126,
+            0.047731514531738815
+          ],
+          "verify_change_ci95": [
+            -0.014239117131102432,
+            0.027529317430865195
+          ],
+          "valid_tps_bootstraps": 5000,
+          "valid_verify_bootstraps": 5000,
+          "tps_change": 0.005842737775181073,
+          "verify_change": 0.005983197757790215,
+          "equal_output_sequences": 62,
+          "output_sequences": 960,
+          "same_all_outputs": false,
+          "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+        },
+        "al_accounting": {
+          "0": {
+            "share_before": 0.28759500542888167,
+            "share_after": 0.27984022556390975,
+            "al_before": 1.971212836243511,
+            "al_after": 1.9546599496221662,
+            "mix_contribution": -0.015222139616136181,
+            "conditional_contribution": -0.004696345521790168
+          },
+          "1": {
+            "share_before": 0.42915309446254074,
+            "share_after": 0.4318609022556391,
+            "al_before": 2.888045540796964,
+            "al_after": 2.852829162132753,
+            "mix_contribution": 0.007772592629897193,
+            "conditional_contribution": -0.015160897471806675
+          },
+          "2": {
+            "share_before": 0.28325190010857765,
+            "share_after": 0.28829887218045114,
+            "al_before": 2.108768567321514,
+            "al_after": 2.072534637326813,
+            "mix_contribution": 0.010551460248947616,
+            "conditional_contribution": -0.010354765335768975
+          }
+        }
+      }
+    }
+  },
+  "exclusions": [
+    {
+      "model": "l3",
+      "job": {
+        "name": "root_only",
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD-MLSys-ver0.1/ssd/bench/mlsys_local_algorithms.py",
+          "--mode",
+          "tree",
+          "--prompts",
+          "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+          "--limit",
+          "480",
+          "--output-tokens",
+          "64",
+          "--input-cap",
+          "512",
+          "--warm-prompts",
+          "48",
+          "--passes",
+          "2",
+          "--seed",
+          "15101",
+          "--batch",
+          "8",
+          "--temperature",
+          ".7",
+          "--target",
+          "/data/chokwans99/models/layerskip-llama3-8B",
+          "--draft",
+          "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "--k1",
+          "4",
+          "--k2",
+          "2",
+          "--exit-layer",
+          "21",
+          "--p1-nodes",
+          "8",
+          "--p1-verify",
+          "8",
+          "--p2-nodes",
+          "4",
+          "--p2-verify",
+          "4",
+          "--roots",
+          "2",
+          "--siblings",
+          "3",
+          "--output",
+          "/data/chokwans99/ver02-local-algorithms-full-l3-20261014/root_only.json"
+        ],
+        "started": 1791955530.3319027,
+        "gpu_uuids": [
+          "GPU-701c7c85-2f36-8ce2-590e-6bf428a4988c",
+          "GPU-947d0308-a472-c345-d704-020de749b375"
+        ],
+        "external_pids": [
+          3040652
+        ],
+        "samples": 152,
+        "ended": 1791955873.9143069,
+        "returncode": 0,
+        "result_status": "complete",
+        "status": "complete"
+      }
+    },
+    {
+      "model": "l3",
+      "job": {
+        "name": "root_proxy",
+        "command": [
+          "/home/chokwans99/PSD/ssd/.venv/bin/python",
+          "-O",
+          "/home/chokwans99/PSD-MLSys-ver0.1/ssd/bench/mlsys_local_algorithms.py",
+          "--mode",
+          "tree",
+          "--prompts",
+          "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+          "--limit",
+          "480",
+          "--output-tokens",
+          "64",
+          "--input-cap",
+          "512",
+          "--warm-prompts",
+          "48",
+          "--passes",
+          "2",
+          "--seed",
+          "15101",
+          "--batch",
+          "8",
+          "--temperature",
+          ".7",
+          "--target",
+          "/data/chokwans99/models/layerskip-llama3-8B",
+          "--draft",
+          "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+          "--k1",
+          "4",
+          "--k2",
+          "2",
+          "--exit-layer",
+          "21",
+          "--p1-nodes",
+          "8",
+          "--p1-verify",
+          "8",
+          "--p2-nodes",
+          "4",
+          "--p2-verify",
+          "4",
+          "--roots",
+          "2",
+          "--siblings",
+          "3",
+          "--output",
+          "/data/chokwans99/ver02-local-algorithms-full-l3-20261014/root_proxy.json"
+        ],
+        "started": 1791957182.9048357,
+        "gpu_uuids": [
+          "GPU-701c7c85-2f36-8ce2-590e-6bf428a4988c",
+          "GPU-947d0308-a472-c345-d704-020de749b375"
+        ],
+        "external_pids": [
+          3143163,
+          3143168
+        ],
+        "samples": 19,
+        "ended": 1791957225.953876,
+        "returncode": 1,
+        "result_status": "running",
+        "status": "failed"
+      }
+    }
+  ],
+  "common_requests": {
+    "l2": {
+      "question_ids": [
+        "0",
+        "1",
+        "10",
+        "100",
+        "101",
+        "102",
+        "103",
+        "104",
+        "105",
+        "106",
+        "107",
+        "108",
+        "109",
+        "11",
+        "110",
+        "111",
+        "112",
+        "113",
+        "114",
+        "115",
+        "116",
+        "117",
+        "118",
+        "119",
+        "12",
+        "120",
+        "121",
+        "122",
+        "123",
+        "124",
+        "125",
+        "126",
+        "127",
+        "128",
+        "129",
+        "13",
+        "130",
+        "131",
+        "132",
+        "133",
+        "134",
+        "135",
+        "136",
+        "137",
+        "138",
+        "139",
+        "14",
+        "140",
+        "141",
+        "142",
+        "143",
+        "144",
+        "145",
+        "146",
+        "147",
+        "148",
+        "149",
+        "15",
+        "150",
+        "151",
+        "152",
+        "153",
+        "154",
+        "155",
+        "156",
+        "157",
+        "158",
+        "159",
+        "16",
+        "160",
+        "161",
+        "162",
+        "163",
+        "164",
+        "165",
+        "166",
+        "167",
+        "168",
+        "169",
+        "17",
+        "170",
+        "171",
+        "172",
+        "173",
+        "174",
+        "175",
+        "176",
+        "177",
+        "178",
+        "179",
+        "18",
+        "180",
+        "181",
+        "182",
+        "183",
+        "184",
+        "185",
+        "186",
+        "187",
+        "188",
+        "189",
+        "19",
+        "190",
+        "191",
+        "192",
+        "193",
+        "194",
+        "195",
+        "196",
+        "197",
+        "198",
+        "199",
+        "2",
+        "20",
+        "200",
+        "201",
+        "202",
+        "203",
+        "204",
+        "205",
+        "206",
+        "207",
+        "208",
+        "209",
+        "21",
+        "210",
+        "211",
+        "212",
+        "213",
+        "214",
+        "215",
+        "216",
+        "217",
+        "218",
+        "219",
+        "22",
+        "220",
+        "221",
+        "222",
+        "223",
+        "224",
+        "225",
+        "226",
+        "227",
+        "228",
+        "229",
+        "23",
+        "230",
+        "231",
+        "232",
+        "233",
+        "234",
+        "235",
+        "236",
+        "237",
+        "238",
+        "239",
+        "24",
+        "240",
+        "241",
+        "242",
+        "243",
+        "244",
+        "245",
+        "246",
+        "247",
+        "248",
+        "249",
+        "25",
+        "250",
+        "251",
+        "252",
+        "253",
+        "254",
+        "255",
+        "256",
+        "257",
+        "258",
+        "259",
+        "26",
+        "260",
+        "261",
+        "262",
+        "263",
+        "264",
+        "265",
+        "266",
+        "267",
+        "268",
+        "269",
+        "27",
+        "270",
+        "271",
+        "272",
+        "273",
+        "274",
+        "275",
+        "276",
+        "277",
+        "278",
+        "279",
+        "28",
+        "280",
+        "281",
+        "282",
+        "283",
+        "284",
+        "285",
+        "286",
+        "287",
+        "288",
+        "289",
+        "29",
+        "290",
+        "291",
+        "292",
+        "293",
+        "294",
+        "295",
+        "296",
+        "297",
+        "298",
+        "299",
+        "3",
+        "30",
+        "300",
+        "301",
+        "302",
+        "303",
+        "304",
+        "305",
+        "306",
+        "307",
+        "308",
+        "309",
+        "31",
+        "310",
+        "311",
+        "312",
+        "313",
+        "314",
+        "315",
+        "316",
+        "317",
+        "318",
+        "319",
+        "32",
+        "320",
+        "321",
+        "322",
+        "323",
+        "324",
+        "325",
+        "326",
+        "327",
+        "328",
+        "329",
+        "33",
+        "330",
+        "331",
+        "332",
+        "333",
+        "334",
+        "335",
+        "336",
+        "337",
+        "338",
+        "339",
+        "34",
+        "340",
+        "341",
+        "342",
+        "343",
+        "344",
+        "345",
+        "346",
+        "347",
+        "348",
+        "349",
+        "35",
+        "350",
+        "351",
+        "352",
+        "353",
+        "354",
+        "355",
+        "356",
+        "357",
+        "358",
+        "359",
+        "36",
+        "360",
+        "361",
+        "362",
+        "363",
+        "364",
+        "365",
+        "366",
+        "367",
+        "368",
+        "369",
+        "37",
+        "370",
+        "371",
+        "372",
+        "373",
+        "374",
+        "375",
+        "376",
+        "377",
+        "378",
+        "379",
+        "38",
+        "380",
+        "381",
+        "382",
+        "383",
+        "384",
+        "385",
+        "386",
+        "387",
+        "388",
+        "389",
+        "39",
+        "390",
+        "391",
+        "392",
+        "393",
+        "394",
+        "395",
+        "396",
+        "397",
+        "398",
+        "399",
+        "4",
+        "40",
+        "400",
+        "401",
+        "402",
+        "403",
+        "404",
+        "405",
+        "406",
+        "407",
+        "408",
+        "409",
+        "41",
+        "410",
+        "411",
+        "412",
+        "413",
+        "414",
+        "415",
+        "416",
+        "417",
+        "418",
+        "419",
+        "42",
+        "420",
+        "421",
+        "422",
+        "423",
+        "424",
+        "425",
+        "426",
+        "427",
+        "428",
+        "429",
+        "43",
+        "430",
+        "431",
+        "432",
+        "433",
+        "434",
+        "435",
+        "436",
+        "437",
+        "438",
+        "439",
+        "44",
+        "440",
+        "441",
+        "442",
+        "443",
+        "444",
+        "445",
+        "446",
+        "447",
+        "448",
+        "449",
+        "45",
+        "450",
+        "451",
+        "452",
+        "453",
+        "454",
+        "455",
+        "456",
+        "457",
+        "458",
+        "459",
+        "46",
+        "460",
+        "461",
+        "462",
+        "463",
+        "464",
+        "465",
+        "466",
+        "467",
+        "468",
+        "469",
+        "47",
+        "470",
+        "471",
+        "472",
+        "473",
+        "474",
+        "475",
+        "476",
+        "477",
+        "478",
+        "479",
+        "48",
+        "49",
+        "5",
+        "50",
+        "51",
+        "52",
+        "53",
+        "54",
+        "55",
+        "56",
+        "57",
+        "58",
+        "59",
+        "6",
+        "60",
+        "61",
+        "62",
+        "63",
+        "64",
+        "65",
+        "66",
+        "67",
+        "68",
+        "69",
+        "7",
+        "70",
+        "71",
+        "72",
+        "73",
+        "74",
+        "75",
+        "76",
+        "77",
+        "78",
+        "79",
+        "8",
+        "80",
+        "81",
+        "82",
+        "83",
+        "84",
+        "85",
+        "86",
+        "87",
+        "88",
+        "89",
+        "9",
+        "90",
+        "91",
+        "92",
+        "93",
+        "94",
+        "95",
+        "96",
+        "97",
+        "98",
+        "99"
+      ],
+      "arms": {
+        "base": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 73.75860811808298,
+            "al": 2.12489901107658,
+            "hit": 0.7597166833224984,
+            "p1_al": 2.4890771823072413,
+            "p2_al": 1.9401521538491417,
+            "step_ms": 28.49650976461147
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 479,
+            "p2_al": 472,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 931,
+            "p2_al": 914,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_only": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 79.71931636984651,
+            "al": 2.1207322427195345,
+            "hit": 0.7597255306228171,
+            "p1_al": 2.5142613989897273,
+            "p2_al": 1.948629434987149,
+            "step_ms": 26.252823682262218
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 475,
+            "p2_al": 470,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 920,
+            "p2_al": 910,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "tree_only": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 78.47564852917883,
+            "al": 2.153195895163473,
+            "hit": 0.7594187193851247,
+            "p1_al": 2.579498855517961,
+            "p2_al": 1.944322089360835,
+            "step_ms": 27.026982186792186
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 478,
+            "p2_al": 473,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 925,
+            "p2_al": 914,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "combined": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 80.41699856206955,
+            "al": 2.1645362441287834,
+            "hit": 0.7572264361095706,
+            "p1_al": 2.616260261619063,
+            "p2_al": 1.9677834464252757,
+            "step_ms": 26.47639760469506
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 476,
+            "p2_al": 472,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 927,
+            "p2_al": 919,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_norm": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 74.76683824225614,
+            "al": 2.1401404231852674,
+            "hit": 0.7698027367444461,
+            "p1_al": 2.515114657796821,
+            "p2_al": 1.9382763467495316,
+            "step_ms": 28.202344126629
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 479,
+            "p2_al": 474,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 935,
+            "p2_al": 925,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_position": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 69.7012238400537,
+            "al": 2.1112756386512386,
+            "hit": 0.7540671264258821,
+            "p1_al": 2.4967736005944663,
+            "p2_al": 1.9366784309153873,
+            "step_ms": 29.945650701953973
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 478,
+            "p2_al": 472,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 920,
+            "p2_al": 911,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_proxy": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 61.67771836394048,
+            "al": 2.11013491220761,
+            "hit": 0.762565315305067,
+            "p1_al": 2.4768229949611924,
+            "p2_al": 1.9407386674220466,
+            "step_ms": 34.19301612878805
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 479,
+            "p2_al": 473,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 929,
+            "p2_al": 917,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        }
+      }
+    },
+    "l3": {
+      "question_ids": [
+        "0",
+        "1",
+        "10",
+        "100",
+        "101",
+        "102",
+        "103",
+        "104",
+        "105",
+        "106",
+        "107",
+        "108",
+        "109",
+        "11",
+        "110",
+        "111",
+        "112",
+        "113",
+        "114",
+        "115",
+        "116",
+        "117",
+        "118",
+        "119",
+        "12",
+        "120",
+        "121",
+        "122",
+        "123",
+        "124",
+        "125",
+        "126",
+        "127",
+        "128",
+        "129",
+        "13",
+        "130",
+        "131",
+        "132",
+        "133",
+        "134",
+        "135",
+        "136",
+        "137",
+        "138",
+        "139",
+        "14",
+        "140",
+        "141",
+        "142",
+        "143",
+        "144",
+        "145",
+        "146",
+        "147",
+        "148",
+        "149",
+        "15",
+        "150",
+        "151",
+        "152",
+        "153",
+        "154",
+        "155",
+        "156",
+        "157",
+        "158",
+        "159",
+        "16",
+        "160",
+        "161",
+        "162",
+        "163",
+        "164",
+        "165",
+        "166",
+        "167",
+        "168",
+        "169",
+        "17",
+        "170",
+        "171",
+        "172",
+        "173",
+        "174",
+        "175",
+        "176",
+        "177",
+        "178",
+        "179",
+        "18",
+        "180",
+        "181",
+        "182",
+        "183",
+        "184",
+        "185",
+        "186",
+        "187",
+        "188",
+        "189",
+        "19",
+        "190",
+        "191",
+        "192",
+        "193",
+        "194",
+        "195",
+        "196",
+        "197",
+        "198",
+        "199",
+        "2",
+        "20",
+        "200",
+        "201",
+        "202",
+        "203",
+        "204",
+        "205",
+        "206",
+        "207",
+        "208",
+        "209",
+        "21",
+        "210",
+        "211",
+        "212",
+        "213",
+        "214",
+        "215",
+        "216",
+        "217",
+        "218",
+        "219",
+        "22",
+        "220",
+        "221",
+        "222",
+        "223",
+        "224",
+        "225",
+        "226",
+        "227",
+        "228",
+        "229",
+        "23",
+        "230",
+        "231",
+        "232",
+        "233",
+        "234",
+        "235",
+        "236",
+        "237",
+        "238",
+        "239",
+        "24",
+        "240",
+        "241",
+        "242",
+        "243",
+        "244",
+        "245",
+        "246",
+        "247",
+        "248",
+        "249",
+        "25",
+        "250",
+        "251",
+        "252",
+        "253",
+        "254",
+        "255",
+        "256",
+        "257",
+        "258",
+        "259",
+        "26",
+        "260",
+        "261",
+        "262",
+        "263",
+        "264",
+        "265",
+        "266",
+        "267",
+        "268",
+        "269",
+        "27",
+        "270",
+        "271",
+        "272",
+        "273",
+        "274",
+        "275",
+        "276",
+        "277",
+        "278",
+        "279",
+        "28",
+        "280",
+        "281",
+        "282",
+        "283",
+        "284",
+        "285",
+        "286",
+        "287",
+        "288",
+        "289",
+        "29",
+        "290",
+        "291",
+        "292",
+        "293",
+        "294",
+        "295",
+        "296",
+        "297",
+        "298",
+        "299",
+        "3",
+        "30",
+        "300",
+        "301",
+        "302",
+        "303",
+        "304",
+        "305",
+        "306",
+        "307",
+        "308",
+        "309",
+        "31",
+        "310",
+        "311",
+        "312",
+        "313",
+        "314",
+        "315",
+        "316",
+        "317",
+        "318",
+        "319",
+        "32",
+        "320",
+        "321",
+        "322",
+        "323",
+        "324",
+        "325",
+        "326",
+        "327",
+        "328",
+        "329",
+        "33",
+        "330",
+        "331",
+        "332",
+        "333",
+        "334",
+        "335",
+        "336",
+        "337",
+        "338",
+        "339",
+        "34",
+        "340",
+        "341",
+        "342",
+        "343",
+        "344",
+        "345",
+        "346",
+        "347",
+        "348",
+        "349",
+        "35",
+        "350",
+        "351",
+        "352",
+        "353",
+        "354",
+        "355",
+        "356",
+        "357",
+        "358",
+        "359",
+        "36",
+        "360",
+        "361",
+        "362",
+        "363",
+        "364",
+        "365",
+        "366",
+        "367",
+        "368",
+        "369",
+        "37",
+        "370",
+        "371",
+        "372",
+        "373",
+        "374",
+        "375",
+        "376",
+        "377",
+        "378",
+        "379",
+        "38",
+        "380",
+        "381",
+        "382",
+        "383",
+        "384",
+        "385",
+        "386",
+        "387",
+        "388",
+        "389",
+        "39",
+        "390",
+        "391",
+        "392",
+        "393",
+        "394",
+        "395",
+        "396",
+        "397",
+        "398",
+        "399",
+        "4",
+        "40",
+        "400",
+        "401",
+        "402",
+        "403",
+        "404",
+        "405",
+        "406",
+        "407",
+        "408",
+        "409",
+        "41",
+        "410",
+        "411",
+        "412",
+        "413",
+        "414",
+        "415",
+        "416",
+        "417",
+        "418",
+        "419",
+        "42",
+        "420",
+        "421",
+        "422",
+        "423",
+        "424",
+        "425",
+        "426",
+        "427",
+        "428",
+        "429",
+        "43",
+        "430",
+        "431",
+        "432",
+        "433",
+        "434",
+        "435",
+        "436",
+        "437",
+        "438",
+        "439",
+        "44",
+        "440",
+        "441",
+        "442",
+        "443",
+        "444",
+        "445",
+        "446",
+        "447",
+        "448",
+        "449",
+        "45",
+        "450",
+        "451",
+        "452",
+        "453",
+        "454",
+        "455",
+        "456",
+        "457",
+        "458",
+        "459",
+        "46",
+        "460",
+        "461",
+        "462",
+        "463",
+        "464",
+        "465",
+        "466",
+        "467",
+        "468",
+        "469",
+        "47",
+        "470",
+        "471",
+        "472",
+        "473",
+        "474",
+        "475",
+        "476",
+        "477",
+        "478",
+        "479",
+        "48",
+        "49",
+        "5",
+        "50",
+        "51",
+        "52",
+        "53",
+        "54",
+        "55",
+        "56",
+        "57",
+        "58",
+        "59",
+        "6",
+        "60",
+        "61",
+        "62",
+        "63",
+        "64",
+        "65",
+        "66",
+        "67",
+        "68",
+        "69",
+        "7",
+        "70",
+        "71",
+        "72",
+        "73",
+        "74",
+        "75",
+        "76",
+        "77",
+        "78",
+        "79",
+        "8",
+        "80",
+        "81",
+        "82",
+        "83",
+        "84",
+        "85",
+        "86",
+        "87",
+        "88",
+        "89",
+        "9",
+        "90",
+        "91",
+        "92",
+        "93",
+        "94",
+        "95",
+        "96",
+        "97",
+        "98",
+        "99"
+      ],
+      "arms": {
+        "base": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 54.33900001896015,
+            "al": 2.368037438826017,
+            "hit": 0.6357342859625443,
+            "p1_al": 2.881279440005531,
+            "p2_al": 2.1380860825469528,
+            "step_ms": 40.55073768939244
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 449,
+            "p2_al": 448,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 820,
+            "p2_al": 808,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "tree_only": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 54.95393899798728,
+            "al": 2.420526332901119,
+            "hit": 0.6293993504766896,
+            "p1_al": 3.011405889463637,
+            "p2_al": 2.1434457471183666,
+            "step_ms": 40.77948809771271
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 451,
+            "p2_al": 449,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 821,
+            "p2_al": 810,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "combined": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 54.587468271316375,
+            "al": 2.4147513452840452,
+            "hit": 0.6285930195159933,
+            "p1_al": 3.0201175281811445,
+            "p2_al": 2.155116560783326,
+            "step_ms": 40.977648906517864
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 448,
+            "p2_al": 445,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 812,
+            "p2_al": 801,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_norm": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 57.17339965212338,
+            "al": 2.3587402515087326,
+            "hit": 0.6407610033444012,
+            "p1_al": 2.844796733670056,
+            "p2_al": 2.111188264962472,
+            "step_ms": 38.38212950425647
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 449,
+            "p2_al": 451,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 819,
+            "p2_al": 815,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_position": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 58.2002477856972,
+            "al": 2.347690242169678,
+            "hit": 0.6319515657031831,
+            "p1_al": 2.843640100261052,
+            "p2_al": 2.102628521057206,
+            "step_ms": 37.23371318333826
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 445,
+            "p2_al": 445,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 805,
+            "p2_al": 795,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_only": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 46.157955201817096,
+            "al": 2.371372746405087,
+            "hit": 0.6474981816369068,
+            "p1_al": 2.860230378664432,
+            "p2_al": 2.1182204917061975,
+            "step_ms": 48.85321265170508
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 448,
+            "p2_al": 445,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 821,
+            "p2_al": 811,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        },
+        "root_proxy": {
+          "questions": 480,
+          "turn_records": 960,
+          "metrics": {
+            "request_decode_tps": 47.30834820998077,
+            "al": 2.3964365948575352,
+            "hit": 0.6446439888408783,
+            "p1_al": 2.9136381338970807,
+            "p2_al": 2.1321476221517135,
+            "step_ms": 48.02198151161062
+          },
+          "metric_questions": {
+            "request_decode_tps": 480,
+            "al": 480,
+            "hit": 480,
+            "p1_al": 454,
+            "p2_al": 449,
+            "step_ms": 480
+          },
+          "metric_turn_records": {
+            "request_decode_tps": 960,
+            "al": 960,
+            "hit": 960,
+            "p1_al": 819,
+            "p2_al": 804,
+            "step_ms": 960
+          },
+          "context_guard_no_decode_uids": [],
+          "policy": "mean of valid turns/passes within question, then mean across questions",
+          "time_definition": "shared batch decode time while request active; not aggregate TPS"
+        }
+      }
+    }
+  }
+}

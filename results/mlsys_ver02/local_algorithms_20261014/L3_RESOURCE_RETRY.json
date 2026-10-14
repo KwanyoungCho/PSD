@@ -1,0 +1,30 @@
+{
+  "reason": "root_proxy failed with CUDA OOM during graph preparation while external GPU processes entered; inspected traceback, no measured prompts. Preserve original and retry in new directory.",
+  "external_pids": [
+    3143163,
+    3143168
+  ],
+  "retry_arms": [
+    "root_only",
+    "root_proxy"
+  ],
+  "gpu_pair": [
+    6,
+    7
+  ],
+  "recheck_failure": {
+    "external_pid": 3145858,
+    "external_gib": 6.62,
+    "stage": "prewarm allocation",
+    "raw_preserved": "/data/chokwans99/ver02-local-algorithms-l3-recheck-20261014",
+    "next_directory": "/data/chokwans99/ver02-local-algorithms-l3-recheck2-20261014"
+  },
+  "second_recheck_failure": {
+    "external_pid": 3149065,
+    "external_gib": 5.9,
+    "stage": "prewarm allocation",
+    "raw_preserved": "/data/chokwans99/ver02-local-algorithms-l3-recheck2-20261014",
+    "next_directory": "/data/chokwans99/ver02-local-algorithms-l3-recheck3-20261014",
+    "quiet_seconds": 120
+  }
+}

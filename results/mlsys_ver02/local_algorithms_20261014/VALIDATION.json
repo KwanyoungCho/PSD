@@ -1,0 +1,117 @@
+{
+  "runtime_commit": "cd2506c",
+  "tests_commit": "992b8b8",
+  "baseline": "18e912f",
+  "suites": 26,
+  "tests": 278,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "frozen_source_unchanged": true,
+  "smokes": [
+    {
+      "name": "l2_b1_t07",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    },
+    {
+      "name": "l2_b1_t0",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    },
+    {
+      "name": "l2_b8_t07",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    },
+    {
+      "name": "l2_b8_t0",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    },
+    {
+      "name": "l2_b1_eager",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    },
+    {
+      "name": "l2_b1_g_gt_m",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    }
+  ],
+  "calibration": {
+    "reach.json": "afcb6510bfa6e64c8c1bad11ec49cbefd9c76bee790dcad3e65a076ec2537d39",
+    "gain.json": "e78f1392318dc8bcd03c31a2489d428ef12b55d5c039e173082500271208b2f6"
+  },
+  "smoke_runtime_differences_vs_final": {
+    "l2_b8_t0": [
+      "ssd/ssd/engine/helpers/tree_expansion_policy.py",
+      "ssd/ssd/engine/helpers/root_policy.py"
+    ],
+    "l2_b8_t07": [
+      "ssd/ssd/engine/helpers/tree_expansion_policy.py",
+      "ssd/ssd/engine/helpers/p2_tree_executor.py",
+      "ssd/ssd/engine/helpers/tree_gain_allocation.py",
+      "ssd/ssd/engine/helpers/root_policy.py"
+    ],
+    "l2_b1_g_gt_m": [],
+    "l2_b1_t0": [
+      "ssd/ssd/engine/draft_runner.py",
+      "ssd/ssd/engine/helpers/tree_expansion_policy.py",
+      "ssd/ssd/engine/helpers/p2_tree_executor.py",
+      "ssd/ssd/engine/helpers/batch_tree_warmup.py",
+      "ssd/ssd/engine/helpers/tree_gain_allocation.py",
+      "ssd/ssd/engine/helpers/root_policy.py"
+    ],
+    "l2_b1_t07": [
+      "ssd/ssd/engine/draft_runner.py",
+      "ssd/ssd/engine/helpers/tree_expansion_policy.py",
+      "ssd/ssd/engine/helpers/p2_tree_executor.py",
+      "ssd/ssd/engine/helpers/batch_tree_warmup.py",
+      "ssd/ssd/engine/helpers/tree_gain_allocation.py",
+      "ssd/ssd/engine/helpers/root_policy.py"
+    ],
+    "l2_b1_eager": []
+  },
+  "final_greedy_smokes": [
+    {
+      "name": "l2_b1_t0",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    },
+    {
+      "name": "l2_b8_t0",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    },
+    {
+      "name": "l3_b8_t0",
+      "status": "complete",
+      "returncode": 0,
+      "external_pids": []
+    }
+  ],
+  "final_greedy_scope": "Actual model execution smoke; formal greedy acceptance cases covered separately by regression. Not a full T=0 quality/TPS comparison or a bitwise AR parity experiment.",
+  "final_evidence_audit": {
+    "runs": 21,
+    "source_files": 195,
+    "source_unchanged": true,
+    "runtime_clean": true,
+    "file": "FINAL_AUDIT.json"
+  },
+  "l3_b8_t0_smoke_note": {
+    "outputs": 16,
+    "all_decode_steps": 30,
+    "performance_eligible_steps": 0,
+    "note": "No full-B8 cap/clip-free steps remained. Execution validation only; no T0 performance conclusion."
+  }
+}

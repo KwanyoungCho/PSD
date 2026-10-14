@@ -1,0 +1,35 @@
+{
+  "scope": "Diagnostic only: first run excluded because external processes were observed during initialization; do not re-admit it as a primary arm.",
+  "equal_outputs": 960,
+  "outputs": 960,
+  "same_source": true,
+  "first_excluded": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 1064,
+    "all_steps": 3938,
+    "tokens": 20229,
+    "seconds": 48.099520285846666,
+    "tps": 420.5655249736951,
+    "al": 2.3765272556390977,
+    "hit": 0.7201597744360902,
+    "verify_ms": 27.931227729282924,
+    "step_ms": 45.20631605812657,
+    "actual_output_tokens": 51716,
+    "emitted_decode_tokens": 51716
+  },
+  "clean_recheck": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 1064,
+    "all_steps": 3938,
+    "tokens": 20229,
+    "seconds": 54.71486664447002,
+    "tps": 369.716701156294,
+    "al": 2.3765272556390977,
+    "hit": 0.7201597744360902,
+    "verify_ms": 29.474209333661438,
+    "step_ms": 51.42374684630641,
+    "actual_output_tokens": 51716,
+    "emitted_decode_tokens": 51716
+  },
+  "caveat": "Single-process timing differences are not covered by prompt bootstrap; no causal TPS gain is claimed for the new root formula."
+}

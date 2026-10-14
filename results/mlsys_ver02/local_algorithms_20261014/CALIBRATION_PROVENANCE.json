@@ -1,0 +1,66 @@
+{
+  "source_manifest": "/home/chokwans99/PSD/results/duet_tree_analysis/probe/manifest.json",
+  "calibration_prompts": [
+    {
+      "dataset": "alpaca",
+      "source_row": 89,
+      "input_tokens": 20,
+      "token_sha256": "1931926fe4a82d7a924cf30876c2354bbd13aa45ec289e8a79ef88c7c6a3e084",
+      "split": "calibration"
+    },
+    {
+      "dataset": "c4",
+      "source_row": 90,
+      "input_tokens": 106,
+      "token_sha256": "e535bbdc2585f07fdef4d4cc25f111707d889f11985db3c1107d39b97b4d6578",
+      "split": "calibration"
+    },
+    {
+      "dataset": "gsm",
+      "source_row": 89,
+      "input_tokens": 36,
+      "token_sha256": "9f20179ea9819dd49fa7efba98d8f2a76e622242331320f3e227586aecc33ba9",
+      "split": "calibration"
+    },
+    {
+      "dataset": "humaneval",
+      "source_row": 89,
+      "input_tokens": 224,
+      "token_sha256": "d51e8b75eaff994b33fabd9536c3af2d42bcfbf202ca0754a401ffe98ec1fcaf",
+      "split": "calibration"
+    },
+    {
+      "dataset": "alpaca",
+      "source_row": 90,
+      "input_tokens": 23,
+      "token_sha256": "f6585bbceddcbfe1c9f9bc327584b7fe8a960ab85a92a9ad30c896cabbff50e0",
+      "split": "calibration"
+    },
+    {
+      "dataset": "c4",
+      "source_row": 91,
+      "input_tokens": 442,
+      "token_sha256": "a3f73a5da4b0306a81ddec26f93e2da0ba74b6df40f022bcf25d3f55b4a9848f",
+      "split": "calibration"
+    },
+    {
+      "dataset": "gsm",
+      "source_row": 90,
+      "input_tokens": 62,
+      "token_sha256": "aaba1528684628f705d17318ffd97eb6e0ab8e7007ef0e7cb820684875acbcc4",
+      "split": "calibration"
+    },
+    {
+      "dataset": "humaneval",
+      "source_row": 90,
+      "input_tokens": 122,
+      "token_sha256": "e44e0a1d2b9c3c4cf89bda32f4fe8746cea5ae708ffed219479d053214d1817a",
+      "split": "calibration"
+    }
+  ],
+  "notes": [
+    "Historical Alpaca/C4/GSM/HumanEval calibration, not freshly fitted Spec-Bench calibration",
+    "No exact cross-corpus text de-duplication has been established in this port",
+    "Transferred unchanged from coverage round4; source hashes in SOURCE_PORT.json"
+  ]
+}
