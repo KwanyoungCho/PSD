@@ -1,10 +1,12 @@
 # 동일 draft 입력 예산의 tree AL 비교
 
+병합 전 정정: 초기 BF16 표기를 실제 FP16 runtime으로 수정했다. 수치 변경은 없으며 [근거](DTYPE_AUDIT.json)를 보존했다.
+
 최종 확인: 2026-10-14T22:38:21+09:00
 
 **상태: 14/14 실행·검증·최종 분석 완료. [최종 분석 보고서](FINAL_REPORT.md)와 [그림 PDF](figs/ALL_FIGURES.pdf) 참조.**
 
-- 모델: LayerSkip-Llama2-7B + AMD-Llama-135m, full BF16.
+- 모델: LayerSkip-Llama2-7B + AMD-Llama-135m, full FP16.
 - B=1, T=0.7, raw Spec-Bench 480문항/560턴, 입력 절단 없음, 출력 상한1024, 문맥 상한2048.
 - MT-Bench 두 턴은 기존 논문 실행처럼 독립 raw prompt. 문항별 턴 평균 후 문항 평균.
 - K1=K2=8, P1/P2 root 각각8개, forward 폭8개. Phase당 물리 입력64행.

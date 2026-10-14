@@ -1,5 +1,7 @@
 # 동일 생성 입력 예산의 tree 비교 — 2026-10-14
 
+2026-10-14 병합 전 문서 정정: BF16 표기를 실제 FP16 runtime으로 수정했다. 모델 config 및 frozen 소스 근거는 `DTYPE_AUDIT.json`; 원시 결과와 실행 조건을 바꾼 것은 아니다.
+
 상태: 14/14 full 실행 및 최종 분석 완료. 결과·한계·후속 권고는 [FINAL_REPORT.md](FINAL_REPORT.md) 참조. 아래는 실험 당시 합의한 계획이다. 기준 `MLSys-ver0.2@76c98f9`.
 
 ## 사용자와 합의한 조건
@@ -13,7 +15,7 @@
 - 생성 후 점수 rerank는 이번 주 비교에 넣지 않는다. Native ordered-WOR proposal/verification을 유지한다.
 - Root별 생성 상한 R*K*C는 한 root가 가질 수 있는 전체 생성 수보다 작지 않으므로 탐색을 막지 않는다.
 - 검증은 생성 순서 prefix M=32를 우선 비교한다. C8에서 M=64 영향은 별도 진단한다. 모든 방법에 같은 검증 상한을 주며 점수 rerank는 하지 않는다.
-- B=1(사용자 확정; B>1은 후속 검증), T=.7, exit21, full BF16 LayerSkip-Llama2-7B + AMD-Llama-135m 단일 조합. 사용자 최신 지시에 따라 Llama3 시도는 중단하고 결과에서 제외한다. 로컬 GPU4–7 및 eslab18 GPU2–7을 이용하며, 각 서버 안에 모든 비교군을 배치하고 GPU pair별로 나누어 실행한다. 로컬 seed16101, 원격 seed26101이며 서버 간 절대 latency는 비교하지 않는다.
+- B=1(사용자 확정; B>1은 후속 검증), T=.7, exit21, full FP16 LayerSkip-Llama2-7B + AMD-Llama-135m 단일 조합. 사용자 최신 지시에 따라 Llama3 시도는 중단하고 결과에서 제외한다. 로컬 GPU4–7 및 eslab18 GPU2–7을 이용하며, 각 서버 안에 모든 비교군을 배치하고 GPU pair별로 나누어 실행한다. 로컬 seed16101, 원격 seed26101이며 서버 간 절대 latency는 비교하지 않는다.
 - Spec-Bench 전체 480문항/560턴, 입력 절단 없음, 출력 상한 1024, 문맥 상한 2048. PDF §5.1과 논문 브랜치 run_full_arm.sh를 대조했다. PAPER_PROTOCOL.json에 근거를 보존했다. MT 턴은 기존 논문 입력처럼 독립 raw prompt이며 앞선 생성 응답을 붙이지 않는다.
 - Miss는 기존 JIT chain K2=8. Mixed-miss AR, proxy replica/side stream, target packed 변경 없음.
 

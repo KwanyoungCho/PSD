@@ -76,7 +76,7 @@ def render(status,analysis=None):
  finalized=(HERE/'FINAL_REPORT.md').exists() and status['state']=='runs_validated'
  lines=['# 동일 draft 입력 예산의 tree AL 비교', '',f'최종 확인: {now}', '',
  '**상태: '+('14/14 실행·검증·최종 분석 완료. [최종 분석 보고서](FINAL_REPORT.md)와 [그림 PDF](figs/ALL_FIGURES.pdf) 참조.' if finalized else '전체 실행 및 자동 검증 완료. 결과 해석·최종 검토 필요.' if status['state']=='runs_validated' else '전체 데이터 실험 진행 중. 부분 결과로 우열을 확정하지 않음.')+'**','',
- '- 모델: LayerSkip-Llama2-7B + AMD-Llama-135m, full BF16.',
+ '- 모델: LayerSkip-Llama2-7B + AMD-Llama-135m, full FP16.',
  '- B=1, T=0.7, raw Spec-Bench 480문항/560턴, 입력 절단 없음, 출력 상한1024, 문맥 상한2048.',
  '- MT-Bench 두 턴은 기존 논문 실행처럼 독립 raw prompt. 문항별 턴 평균 후 문항 평균.',
  '- K1=K2=8, P1/P2 root 각각8개, forward 폭8개. Phase당 물리 입력64행.',
