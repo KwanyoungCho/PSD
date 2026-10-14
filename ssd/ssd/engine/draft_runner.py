@@ -4917,7 +4917,7 @@ class DraftRunner(ModelRunner):
                         print(f"[tree-alloc #27/arena] {st}", flush=True)
             else:
                 if (cfg.duet_tree_policy in ('dynamic','eagle')
-                        and os.getenv('SSD_TREE_EXPANSION_POLICY','reach_gain_frontier')!='q_path'):
+                        and os.getenv('SSD_TREE_EXPANSION_POLICY','q_path')!='q_path'):
                     raise NotImplementedError('CPU reference rollout preserves q_path; use the eager arena or captured executor for local research selection')
                 pool, eval_log, cell_logits = _PT.run_rollout(
                     [t for _p, t in seeds], root_piv,
