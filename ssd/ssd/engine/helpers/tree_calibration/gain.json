@@ -1,0 +1,279 @@
+{
+  "schema": "duet_gain_c3_v1",
+  "source_prompts": 8,
+  "source_trees": 77,
+  "contexts": 230,
+  "curves": {
+    "1": [
+      0.0,
+      0.8414730725813493,
+      0.9120163014298007,
+      0.9360119592989871
+    ],
+    "2": [
+      0.0,
+      0.7045681524022955,
+      0.7829208453864488,
+      0.8308131634608281
+    ]
+  },
+  "numerical_integration": {
+    "1": {
+      "raw": [
+        0.0,
+        0.8414730725813493,
+        0.9120163014298007,
+        0.9360119592989871
+      ],
+      "adjustment": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "se": 6.854000782691575e-10,
+      "deterministic_bound": [
+        0.9359250280068879,
+        0.9365702175174242
+      ],
+      "contexts": 190,
+      "reach_weight": 88.67352086454328
+    },
+    "2": {
+      "raw": [
+        0.0,
+        0.7045681524022955,
+        0.7829208453864488,
+        0.8308131634608281
+      ],
+      "adjustment": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "se": 3.1811781699802063e-09,
+      "deterministic_bound": [
+        0.8306647410620226,
+        0.8326360330424344
+      ],
+      "contexts": 40,
+      "reach_weight": 18.89630243420933
+    }
+  },
+  "calibration_stability": {
+    "1": {
+      "leave_one_prompt_out": [
+        [
+          0.0,
+          0.8240800437361249,
+          0.8968273629630277,
+          0.9248781119879256
+        ],
+        [
+          0.0,
+          0.8480535135383158,
+          0.9157500980859417,
+          0.9355493467154866
+        ],
+        [
+          0.0,
+          0.8583952932414318,
+          0.928863900640626,
+          0.951788803665467
+        ],
+        [
+          0.0,
+          0.8088023673757253,
+          0.8886141366307303,
+          0.917670260531608
+        ],
+        [
+          0.0,
+          0.8488580297649476,
+          0.9195499126683082,
+          0.9434736391302185
+        ],
+        [
+          0.0,
+          0.8487032629216192,
+          0.916825734882519,
+          0.9393307874065555
+        ],
+        [
+          0.0,
+          0.8627701228283827,
+          0.9258276771092672,
+          0.9445647622907151
+        ],
+        [
+          0.0,
+          0.8233192881839593,
+          0.8967507021831118,
+          0.9253031275273872
+        ]
+      ],
+      "min": [
+        0.0,
+        0.8088023673757253,
+        0.8886141366307303,
+        0.917670260531608
+      ],
+      "max": [
+        0.0,
+        0.8627701228283827,
+        0.928863900640626,
+        0.951788803665467
+      ]
+    },
+    "2": {
+      "leave_one_prompt_out": [
+        [
+          0.0,
+          0.7045681524022955,
+          0.7829208453864488,
+          0.8308131634608281
+        ],
+        [
+          0.0,
+          0.6954803991929187,
+          0.7610874931187728,
+          0.8058806493030605
+        ],
+        [
+          0.0,
+          0.6740382865575547,
+          0.7621412734833737,
+          0.8153068305747688
+        ],
+        [
+          0.0,
+          0.7122424741808904,
+          0.7835002174914097,
+          0.828234212176288
+        ],
+        [
+          0.0,
+          0.7693023201136536,
+          0.8494371421053876,
+          0.8904522918862019
+        ],
+        [
+          0.0,
+          0.6843928309971268,
+          0.770106856599739,
+          0.8226371178271452
+        ],
+        [
+          0.0,
+          0.7056079151459378,
+          0.7862627373598265,
+          0.8362811188080415
+        ],
+        [
+          0.0,
+          0.7045681524022955,
+          0.7829208453864488,
+          0.8308131634608281
+        ]
+      ],
+      "min": [
+        0.0,
+        0.6740382865575547,
+        0.7610874931187728,
+        0.8058806493030605
+      ],
+      "max": [
+        0.0,
+        0.7693023201136536,
+        0.8494371421053876,
+        0.8904522918862019
+      ]
+    }
+  },
+  "source_sha256": {
+    "prompt000_tree0000.npz": "61a51bf22b22fdca41451d65e8d7744387df2ada30e30654bd30c3b42124d52f",
+    "prompt000_tree0004.npz": "15bca52f2d01db5b01319864b502a3388f526e5141ec8ee7e22bfb3fb286c252",
+    "prompt000_tree0008.npz": "2a20b2017b74b7fc3919d68b5054d14dc1b882ec97d168adbef1b18559196432",
+    "prompt000_tree0012.npz": "b0c7caead936fcb489c3d748c88e9c1d5d8ee71912f80550be2ca51547f67604",
+    "prompt000_tree0016.npz": "3107995f81ca5788b2203bb7543ada86634a6c96ac293aacf7e9e041e2019fcd",
+    "prompt000_tree0020.npz": "54f0d6794ccad3e2c463fc6a512de5140bb5ba69bfbb3605d32a09357cd6d9ed",
+    "prompt000_tree0024.npz": "64c93b9944b67e3002db8b669e131b7702db77ea2c2432d6333b672dfe21d788",
+    "prompt000_tree0028.npz": "aa8085df943a09970518020ff650f657aa4e1570f7c73b81ce3085c997cfffdc",
+    "prompt000_tree0032.npz": "6c48e3ce28cb5a0b89c7010c854f8e5f8cf43eec9306c36887748214dcad3be2",
+    "prompt001_tree0000.npz": "d89e86fb905dab9467b598991c8aa701730c95211758a893a9471f11a499d642",
+    "prompt001_tree0004.npz": "bb77632c9a5986e390ffcb671476ed8725f827a631d1e82814cf25feb8da05c0",
+    "prompt001_tree0008.npz": "d6117c545be0034957c13b89b205e957ed19ef10cd15091d410ae78f47b0122f",
+    "prompt001_tree0012.npz": "f946bcb528881d5b1bc3030e0fad5c678b6df199a7edc6f4f533092928673dbe",
+    "prompt001_tree0016.npz": "a7d34c2e0ba0eea037e313a4dbe10b04ec440be8e06a9980e1af9f1164f81fb0",
+    "prompt001_tree0020.npz": "133000fc544b109eea4cd911d4c2cdd3267a3244fda4b1675242ab221f58292a",
+    "prompt001_tree0024.npz": "4e9832b2573d2246de0b0e04dc8c828d96dfaa700511c139e046aa4f9f2204e2",
+    "prompt001_tree0028.npz": "8f538045cd79d3e05a393ac6f4dee5829199682442f53fb69f09343913717b71",
+    "prompt001_tree0032.npz": "a99e4a8e5c0f5b8e39085d1ee620fddd370238eedbd4193014539d3a3b81cf75",
+    "prompt001_tree0036.npz": "1ae05cd648541933c7389840c37fdd5e2218c5522fb22a782256ff0525f346ec",
+    "prompt002_tree0000.npz": "1cf2381cc82d6d5a14be06828e73e8540871ddeab456b375a4f4da97cd8e5a44",
+    "prompt002_tree0004.npz": "730bef3d7cf18cbfbb867a7a25eef5158d2008015b3e24bdafcf99114cad1ac8",
+    "prompt002_tree0008.npz": "0d6c94bb72046655330f3c0714637af4b22a906b37f901f3bf735390279890d2",
+    "prompt002_tree0012.npz": "1c7429c978f477e15eba35e4fcb46d580f656731f4e097fdf4b7542d89d876a2",
+    "prompt002_tree0016.npz": "7d1c26cf8644178450974ba8fb7698298fc633babf0fa6ad5482b6aeabe67453",
+    "prompt002_tree0020.npz": "8b6f2906d4d743976202f1063048fcaef8fa12ef511b1d27fcf24c8cc2fb5127",
+    "prompt002_tree0024.npz": "3b192507f6624550f12074d1e61a539e8759fd1e763eb4952f729bed6054408f",
+    "prompt002_tree0028.npz": "e5036c346b58b6b8070cda0663087750ef11c4dd5708bcb92db72e38d244f3c2",
+    "prompt002_tree0032.npz": "dc496dd809263224b13274a5b386bb1200a7344d749f7b1c107c00daa49b96ec",
+    "prompt002_tree0036.npz": "4778c0c8a7edcc5cffef17ce463b1c2dcb07340c8ea0f05cb9d37549404faf1f",
+    "prompt003_tree0000.npz": "815d0d2a1bc7ed821d6402d1320e49a891351864991ef589ee30be7732f827ab",
+    "prompt003_tree0004.npz": "515982d3d159178aa05637b741040a276fc06f656c15aed5e451e4a59d227584",
+    "prompt003_tree0008.npz": "266239b0853c5979ae276264621b7c34fa4c4a5ad264a158b2b083734a0a8904",
+    "prompt003_tree0012.npz": "38ec6bd4cbde5a65cb20c3c5de2e24e987ca85c423d02bdde8c86118eac1877a",
+    "prompt003_tree0016.npz": "804753e65cbc3203b9926e9a439fc584b2f699c903d8e9d87773e351b9b94f47",
+    "prompt003_tree0020.npz": "a6c108ab3fa7ad213cbc2db3969503c5d7eb46288c32ef687a1d2e71193e19b0",
+    "prompt003_tree0024.npz": "878fa293e2b4cd73c8602b3dbc60179dcc3bc39043727038c258247b856e5463",
+    "prompt003_tree0028.npz": "478d75216c51e6e2da9a41229b4c56bf204ad75a62e4118bb498a361d257afab",
+    "prompt004_tree0000.npz": "5f7d4155011cd396189be26a87f3c7e4cfd22b70f34542b8ea5bd895c3346a05",
+    "prompt004_tree0004.npz": "593080488cb1698ab14f632641667007724f7d094fcb35afdf9d4aeef348ea99",
+    "prompt004_tree0008.npz": "d7d001d1e63d160d0c8c45e30717433e0602a28340dc32d58b9c4306a3304be2",
+    "prompt004_tree0012.npz": "1c62df8c8d64c7bddefdf3a04f375ed3db534b006bf82f8652a76bf6ed719d50",
+    "prompt004_tree0016.npz": "7ea895e04b42ec2374d3502d037826eca5a79402e2bd3f8a3276cff7fd34b8e7",
+    "prompt004_tree0020.npz": "ad7fa86df5db415a40ad447d6786b2b0c90164fad301ef87f63f5e6a4cf9e17e",
+    "prompt004_tree0024.npz": "42b5926138534a3d796df79b3f2e5032ec0229bf35869964860d078b36c62d11",
+    "prompt004_tree0028.npz": "dbe8bbb187a60ff71297fbb0ceef5779706c1c7fdb16d7ca94db298ec3e2cb14",
+    "prompt004_tree0032.npz": "9fdd89cf265764bbcbce80df6e0971a4f5bbd1f0cd54965726539a1da550a6b3",
+    "prompt004_tree0036.npz": "79ad569d4217410f8d5957b051d312a52f05388119b9f07cb075389d1f24e45d",
+    "prompt004_tree0040.npz": "03efc5a48eea956b0859cac0290b6477984f99ac60e41b5e71dd6f112970646f",
+    "prompt005_tree0000.npz": "a5e94dc4cd87e3aef082302ac55d6a239de570066be585012584f6e42b69b78f",
+    "prompt005_tree0004.npz": "9769f67e4842a6689640caa83d4aea48d425bb3c59dc50263cdb61f0c08b8444",
+    "prompt005_tree0008.npz": "73a42ad2c6378bdbb9a5aacbbe58e3f9b01b7ff76876fefb7f531e80eb9b7157",
+    "prompt005_tree0012.npz": "96b1f9d2265ca1c4008afc6ae6f6679d272bf50d8e6d26d5ecfa2ece19261abe",
+    "prompt005_tree0016.npz": "650b454b965b7c8762b3bf5842644bef85c4187d63b0596ede0be6f8f4beec03",
+    "prompt005_tree0020.npz": "ad3d952996f1c8fbeca9257d9f761bc2a1158cd2d26ccee75838d08fc20eb609",
+    "prompt005_tree0024.npz": "e9b2da0469c127bbf4a7c75cd1a427eddc62612249232739f8afef27f01343eb",
+    "prompt005_tree0028.npz": "5765d3274d9ff30632536504a5b68348cc7f9deea08502d20e05c4847b5a5a10",
+    "prompt005_tree0032.npz": "e383c99f8b91c80369678e5a150d36d7d5faf0178e599a306e201e290ee48bd7",
+    "prompt005_tree0036.npz": "5ff7aa05c00d18f5bf6c346bc6e9cb203b2c4099042e61b6c49dac276829f3ff",
+    "prompt006_tree0000.npz": "45d7f22e1168a2070f3fe0528f0a1d2d39773d9458a377e247f2ed76d68f960f",
+    "prompt006_tree0004.npz": "a8ef0ff279fefdceadc554ccfaf3985b9726e888608258a302ec9c211332f473",
+    "prompt006_tree0008.npz": "a4d10dcf2a28305aa558029ff49a33786d49fbb2dc1bd01686e0eb9201cea808",
+    "prompt006_tree0012.npz": "36948ce4941277bc7431e35f589830e6a2731d5766836bf0228baa3b3d79e5dc",
+    "prompt006_tree0016.npz": "8e4084804dc0f7b2bad8e1eb2eaa6967431fa8c83c00df020a9435a1d161383f",
+    "prompt006_tree0020.npz": "ab84d9f82c91789dacacbb23f1dbbfa94d626aec6a89118f18b829182ca7f5d4",
+    "prompt006_tree0024.npz": "ad461de22784e8b459808178b0eff121f5e43dd11d31525dfe2bd872092f0cf2",
+    "prompt006_tree0028.npz": "d27e58b8c7f0686b984695318c84b8d6020f88172fd169f20540429da66d114d",
+    "prompt006_tree0032.npz": "5035bcf15f3a1599d6d4414c2cac841e1ddc544a1f7da1b3007085ded2d6001b",
+    "prompt006_tree0036.npz": "a436fe36e127ad8747c8df9196e165d6f535d78d636fa473d46d8da87ed655a2",
+    "prompt006_tree0040.npz": "418496fcf51f6de02ed19a91826e14a738c86f12d3acde20bf45a395d729bc25",
+    "prompt007_tree0000.npz": "7a5cf9553bef9c171e9d366f4be13f741cc44a0e531b1cc9679f07bd15910a4e",
+    "prompt007_tree0004.npz": "163186d47bdf72f0cdb57c99b00001417d990a88be43e4386e3cd33998889f6a",
+    "prompt007_tree0008.npz": "0ec1c8c953ee3927a8f297568fbdf91e875ee94b5b86b809b8feb9dbb66df083",
+    "prompt007_tree0012.npz": "77de2236b5511485c1bca2dd42325ac70648100dd0e0542fd1f36333d2402053",
+    "prompt007_tree0016.npz": "03255331516f7f680d3067c9eb9206955943889528865715465eda69611c3245",
+    "prompt007_tree0020.npz": "14eb349cc85ca5c442dd1bf0b7aeaeae815c94123939f797b359e6ae80e77068",
+    "prompt007_tree0024.npz": "8cb238ab1d25f831959633e8939b8cbed93429b16d47bb2264aa4b8b8f412631",
+    "prompt007_tree0028.npz": "6a413f56dc7f9906bd15ece5f1fde29850ac1f0ade1de7b1752081526ca773ce"
+  },
+  "source_manifest_sha256": "68da6b8086cffcccbaa80e4dda1cb46997910629ccdb6b980612bfa9a2259881",
+  "method": "Exact g1/g2; exact first-rejection head32 plus IID tail512, conditional analytic g2.",
+  "root_contexts_excluded": true,
+  "neural_training": false,
+  "full_dataset_fit": false,
+  "wall_s": 30.396155834197998
+}

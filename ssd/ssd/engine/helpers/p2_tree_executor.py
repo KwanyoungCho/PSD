@@ -563,8 +563,10 @@ class P2TreeExecutor:
         # draft-derived context-reach/root prior where P2 supplies the target
         # proxy prior.  Legacy selectors remain available only for controlled
         # reproduction tests.
-        self.policy = ("dynamic" if phase == "p1" else
+        self.policy = (getattr(config, "duet_p1_tree_allocation_policy", "dynamic") if phase == "p1" else
                        getattr(config, "duet_tree_policy", "eagle"))
+        from ssd.engine.helpers.tree_expansion_policy import TreeExpansionPolicy
+        self.expansion_policy = TreeExpansionPolicy(self)
         W, R, F, C, NV = self.W, self.R, self.F, self.C, self.NV
         if R > W:
             raise ValueError(
@@ -978,12 +980,15 @@ class P2TreeExecutor:
                     # extending.  Treating P1 as threshold-free made roots
                     # with vanishing start probability grow almost to NV.
                     proxy_threshold=start_threshold,
-                    conf_threshold=conf_threshold)
+                    conf_threshold=conf_threshold,
+                    all_frontier=self.expansion_policy.frontier)
             else:
                 sel, sel_valid = PT._arena_select(
                     ar, "level", wf, f, F, tip_idx, remaining)
             self._sel[f] = (sel, sel_valid)
-            if _global and os.getenv('SSD_TREE_FUSED_MATH',str(int(getattr(self,'batched_fused_math',False))))=='1':
+            if _global and self.expansion_policy.gain is not None:
+                fan = self.expansion_policy.fanout(ar, sel, sel_valid, remaining, F-f-1)
+            elif _global and os.getenv('SSD_TREE_FUSED_MATH',str(int(getattr(self,'batched_fused_math',False))))=='1':
                 from ssd.engine.helpers.tree_fused_math import fanout
                 fan = fanout(ar,sel,sel_valid,remaining,C,F-f-1)
             elif _global:
@@ -1049,7 +1054,7 @@ class P2TreeExecutor:
             # selector; the integer bookkeeping itself is one tiny kernel.
             par = sel.unsqueeze(1).expand(wf, C).reshape(-1)
             rq = raws.double().reshape(-1)
-            lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
+            lp = self.expansion_policy.priority(ar.logpri, par, raws)
             if (wf > 10 or ar.anc_words > 1
                     or os.getenv("SSD_TREE_PARALLEL_INSERT", "0") == "1"):
                 _mark_selected_parents_kernel[(triton.cdiv(wf, 32),)](

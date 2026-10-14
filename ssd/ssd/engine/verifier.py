@@ -1,3 +1,4 @@
+from ssd.engine.helpers.root_policy import options as root_options
 import os
 import ctypes
 from ssd.engine.helpers.e0_trace import E0_TRACE as _E0_TRACE
@@ -74,7 +75,7 @@ class Verifier(VerifierBase):
                     depth_steps=_tree_depth_steps,
                     top_k=_cfg.duet_proxy_top_k,
                     dtype=_cfg.hf_config.torch_dtype,
-                    device=self.device)
+                    device=self.device, policy=root_options(_cfg), c_max=_cfg.duet_tree_c_tensor)
             if self._tree_proxy_graphs:
                 print("[DUET tree] captured target proxy graphs lazily "
                       f"(buckets={sorted(self._tree_proxy_graphs)})",
@@ -839,63 +840,16 @@ class Verifier(VerifierBase):
             _mc_tree_coarse("proxy_send_enqueue", _ev_send)
             return
 
-        # Preserve the original ladder/ranking policy; scale only request temperatures.
-        _ev_softmax = (_mr_tree("tree_proxy_softmax")
-                       if _detail_profile else None)
-        from ssd.engine.helpers.proxy_temperature import probabilities
-        p_E = probabilities(exit_logits, temp_p)[0]
-        q_rows = probabilities(logits_q, temp_d)[0]
-        tokens = draft_tokens[0, :valid].to(p_E.device)
-        if _detail_profile:
-            _mc_tree("tree_proxy_softmax", _ev_softmax)
-
-        _ev_ladder = (_mr_tree("tree_proxy_accept_residual")
-                      if _detail_profile else None)
-        _alpha, term, resid = tree_policy_b_ladder(
-            par, sib, tokens, p_E, q_rows)
-        if _detail_profile:
-            _mc_tree("tree_proxy_accept_residual", _ev_ladder)
-
-        # Preserve the chain Policy-B score scale: remove already-drafted
-        # children, keep top-k per context, renormalize that retained set,
-        # and only then rank contexts on the common wire.  Ranking the full
-        # vocabulary here changes roots even for a C=1 chain-shaped tree.
-        _ev_rank = (_mr_tree("tree_proxy_rank_candidates")
-                    if _detail_profile else None)
-        correction = resid.clone()
-        if valid:
-            par_t = torch.tensor(par, dtype=torch.int64,
-                                 device=p_E.device)
-            correction[par_t + 1, tokens] = 0.0
-        ctx_k = min(int(config.duet_proxy_top_k), V)
-        correction_prob, correction_id = correction.topk(ctx_k, dim=-1)
-        correction_prob = correction_prob / correction_prob.sum(
-            -1, keepdim=True).clamp(min=1e-10)
-        piv = correction_prob * term.unsqueeze(1)
-        wire_N = config.duet_proxy_wire_N
-        flat = piv.flatten()
-        k = min(wire_N, flat.numel())
-        top_v, top_i = flat.topk(k)
-        chosen_pos = (top_i // ctx_k).to(torch.int64)
-        chosen_tok = correction_id.flatten().gather(0, top_i).to(torch.int64)
-        if k < wire_N:                       # pad (드묾)
-            pad = wire_N - k
-            chosen_pos = torch.cat([chosen_pos, chosen_pos.new_zeros(pad)])
-            chosen_tok = torch.cat([chosen_tok, chosen_tok.new_zeros(pad)])
-            top_v = torch.cat([top_v, top_v.new_zeros(pad)])
-        if getattr(config, "duet_tree_enabled", False):
-            chosen_tok = pack_piv(chosen_tok, top_v)
-        if _detail_profile:
-            _mc_tree("tree_proxy_rank_candidates", _ev_rank)
-        dev = self.device
-        _ev_send = (_mr_tree("tree_proxy_send")
-                    if _detail_profile else None)
-        Verifier._send_proxy_wire(
-            self,
-            config, async_pg, draft_rank,
-            chosen_pos.to(dev), chosen_tok.to(dev))
-        if _detail_profile:
-            _mc_tree("tree_proxy_send", _ev_send)
+        from ssd.engine.helpers.batch_tree_sampling import pack_topologies
+        from ssd.engine.helpers.root_policy import tree_candidates, options
+        ev = _mr_tree("tree_proxy_candidates") if _detail_profile else None
+        topology=pack_topologies([par],[sib],valid,exit_logits.device,
+                                 config.duet_tree_c_tensor)
+        pos,tok,_=tree_candidates(exit_logits[:,:valid+1],logits_q[:,:valid],
+            draft_tokens[:,:valid],topology,config.duet_proxy_wire_N,valid,
+            config.duet_proxy_top_k,temp_p,temp_d,**options(config))
+        if _detail_profile:_mc_tree("tree_proxy_candidates",ev)
+        Verifier._send_proxy_wire(self,config,async_pg,draft_rank,pos[0],tok[0])
 
     def _compute_and_send_proxy(self, exit_logits, draft_tokens, logits_q,
                                  B, K, async_pg, draft_rank, cache_hits=None,
@@ -1022,143 +976,18 @@ class Verifier(VerifierBase):
             _mc_chain("proxy_send_enqueue", _ev_send)
             return
 
-        _ev_compute = _mr_d("proxy_compute") if _detail_profile else None
-        # p_E (early-exit proxy), p_D (draft)
-        from ssd.engine.helpers.proxy_temperature import probabilities
-        p_E = probabilities(exit_logits[:, :K, :], target_temps)
-        p_D = probabilities(logits_q, draft_temps)
-
-        # Accept probability proxy: â_i = min(1, p_E(y_i) / p_D(y_i))
-        gather_idx = draft_tokens.unsqueeze(-1)  # [B, K, 1]
-        p_E_y = p_E.gather(2, gather_idx).squeeze(-1)  # [B, K]
-        p_D_y = p_D.gather(2, gather_idx).squeeze(-1)  # [B, K]
-        accept_probs = (p_E_y / (p_D_y + 1e-10)).clamp(max=1.0)  # [B, K]
-
-        # Residual proxy: [p_E - p_D]_+
-        residual = (p_E - p_D).clamp(min=0)  # [B, K, V]
-        residual.scatter_(2, gather_idx, 0.0)  # exclude draft token y_i
-        topk_probs, topk_ids = residual.topk(top_k, dim=-1)  # [B, K, top_k]
-        topk_sum = topk_probs.sum(dim=-1, keepdim=True).clamp(min=1e-10)
-        topk_probs = topk_probs / topk_sum
-
-        # M6 (docs/duet/13): zero α̂ at a short seq's padded columns
-        # (j >= vk_i). Then cumprod stalls at the real prefix, h[b, vk_i]
-        # carries the FULL all-real-accept mass ( = cumprod[vk_i-1]·(1-0) )
-        # and h[b, j > vk_i] = 0 → P_iv mass 0 → chosen never lands beyond
-        # vk_i (the M1 design §3 claim; previously unimplemented, so short
-        # seqs leaked budget to unreachable positions). No-op when valid_k
-        # is uniform == K (B=1 / all-long batches).
-        if valid_k is not None:
-            _pad_cols = (torch.arange(K, device=accept_probs.device)[None, :]
-                         >= valid_k[:, None])                       # [B, K]
-            accept_probs = accept_probs.masked_fill(_pad_cols, 0.0)
-
-        # Cache miss handling: if jit_speculate=False, miss rows have random logits_q
-        if cache_hits is not None and not config.jit_speculate:
-            miss_mask = ~cache_hits.to(torch.bool)
-            if miss_mask.any():
-                accept_probs[miss_mask] = 0.0
-                miss_p_E = p_E[miss_mask].clone()
-                miss_p_E.scatter_(2, gather_idx[miss_mask], 0.0)
-                miss_topk_probs, miss_topk_ids = miss_p_E.topk(top_k, dim=-1)
-                topk_ids[miss_mask] = miss_topk_ids
-                topk_probs[miss_mask] = miss_topk_probs / miss_topk_probs.sum(-1, keepdim=True).clamp(min=1e-10)
-
-        # Compute h_i (first reject position distribution) and fan_out_list on target side
-        # This removes ~0.5ms from draft critical path
-        # M1 (docs/duet/13 §3): batched over B — h [B, K+1]. At B=1 this is
-        # numerically identical to the former accept_probs[0] single-seq path.
-        # Tier-3: per-step budget helper (K = step vk_max, varies per step —
-        # a DIFFERENT quantity from the constant duet_proxy_total_budget;
-        # == pfo*(K+1) exactly when duet_p2_budget is unset).
-        proxy_fan_out_total = config.duet_p2_budget_at(K)
-        cumprod = torch.cumprod(accept_probs, dim=1)     # [B, K]
-        h = torch.zeros(B, K + 1, device=accept_probs.device)
-        h[:, 0] = 1 - accept_probs[:, 0]
-        if K > 1:
-            h[:, 1:K] = cumprod[:, :-1] * (1 - accept_probs[:, 1:])
-        h[:, K] = cumprod[:, -1]  # all-accept
-        if _detail_profile:
-            _mc_d("proxy_compute", _ev_compute)
-
-        # === Policy B unified K+1 path (default since 2026-04-29) ===
-        # docs/duet/05-policy-b-fix.md Step 2.
-        # Replaces legacy Policy A/B branches below. GPU-only, no .cpu().tolist().
-        # Wire schema (Policy B): {chosen_pos[N], chosen_tok[N]} score-sorted.
-        if config.duet_policy == "b":
-            _ev_pack = _mr_d("proxy_pack") if _detail_profile else None
-            # pos == K (all-accept): target's full distribution at exit_logits[:, K, :].
-            # Note: existing p_E only covers [:, :K, :] (line 246) — read separately.
-            pE_K = probabilities(exit_logits[:, K:K+1, :], target_temps)[:, 0]
-            pE_K_topk_probs, pE_K_topk_ids = pE_K.topk(top_k, dim=-1)         # [B, top_k]
-            pE_K_topk_probs = pE_K_topk_probs / pE_K_topk_probs.sum(-1, keepdim=True).clamp(min=1e-10)
-
-            # concat positions [0..K-1] (residual) + position K (all-accept) → [B, K+1, top_k]
-            correction_topk_probs = torch.cat(
-                [topk_probs, pE_K_topk_probs.unsqueeze(1)], dim=1)            # [B, K+1, top_k]
-            correction_topk_ids = torch.cat(
-                [topk_ids, pE_K_topk_ids.unsqueeze(1)], dim=1)                # [B, K+1, top_k]
-
-            # Global top-N. wire_N is config-fixed (K_max+1 worst-case).
-            # top_k auto-raise (config.py) ensures (K+1)*top_k ≥ wire_N for current step's K.
-            # M1 (docs/duet/13 §3): per-seq flatten+topk over the B axis. At
-            # B=1 the [1, ...] row-wise topk is identical to the old flat topk.
-            wire_N = config.duet_proxy_wire_N
-            P_iv = h.unsqueeze(-1) * correction_topk_probs                    # [B, K+1, top_k]
-            _, top_idx = P_iv.flatten(1).topk(wire_N, dim=-1)                 # [B, wire_N]
-            chosen_pos = top_idx // top_k                                     # [B, wire_N], ∈ [0, K]
-            chosen_tok = correction_topk_ids.flatten(1).gather(1, top_idx)    # [B, wire_N]
-            _tree_enabled = getattr(
-                config, "duet_tree_enabled",
-                getattr(config, "duet_tree_policy", "off") != "off")
-            if _tree_enabled:
-                # T2.0 (v6 D2): 라이브 P_iv를 wire에 동승 (양자화 pack).
-                from ssd.engine.helpers.p2_tree import pack_piv
-                _piv_chosen = P_iv.flatten(1).gather(1, top_idx)
-                chosen_tok = pack_piv(chosen_tok, _piv_chosen)
-            if _detail_profile:
-                _mc_d("proxy_pack", _ev_pack)
-
-            # ===== E0 calibration trace (P0, docs/duet/internal/17 §2; default OFF —
-            # dedicated runs only, never TPS measurement) =====
-            if _E0_TRACE:
-                _e0.record_target_wire(
-                    config, exit_logits, logits_q, draft_tokens, B, K,
-                    valid_k, cache_hits, P_iv, top_idx, chosen_pos,
-                    chosen_tok, h)
-
-            # ===== TRACE point 3 (Policy B) =====
-            if (
-                os.environ.get("SSD_TRACE_SPLIT_K1K2", "0") == "1"
-                and os.environ.get("SSD_FORCE_SPLIT_K1K2", "0") == "1"
-                and config.duet_phase1_k is not None
-            ):
-                _K1 = config.duet_phase1_k
-                _K2 = config.duet_phase2_k
-                print(f"[TRACE-split-k1k2 #3 proxy_compute policy=b] K1={_K1} K2={_K2} "
-                      f"K(=valid_k)={K} wire_N={wire_N} top_k={top_k} "
-                      f"chosen_pos.shape={list(chosen_pos.shape)}",
-                      flush=True)
-            # NCCL send: chosen_pos [B*wire_N int64] + chosen_tok [B*wire_N int64]
-            # (M1, docs/duet/13 §3 — flattened batched wire; at B=1 the length
-            # is 2*wire_N, byte-identical to the old single-seq wire).
-            # Batch 3a (docs/duet/08 §3): env-gated non-blocking send via ring
-            # buffer. SSD_ASYNC_PROXY_SEND=1 → dist.isend + persistent buf;
-            # else keep the legacy blocking send. Ring is lazy-inited on first
-            # use so non-rank-0 processes (which never fire this callback)
-            # don't allocate.
-            _ev_send = _mr_d("proxy_send") if _detail_profile else None
-            Verifier._send_proxy_wire(
-                self,
-                config, async_pg, draft_rank,
-                chosen_pos.reshape(-1), chosen_tok.reshape(-1))
-            if _detail_profile:
-                _mc_d("proxy_send", _ev_send)
-            return
-
-        # === Legacy Policy A / non-unified Policy B: removed (2026-07) ===
-        raise RuntimeError(
-            "duet_policy='a' / non-unified Policy B proxy path was removed "
-            "(2026-07). Only duet_policy='b' (unified K+1) is supported; the "
-            "removed implementation is preserved in git history "
-            "(feat/mesa-proxy-async-overlap @ 19c8f73 and earlier).")
+        from ssd.engine.helpers.root_policy import chain_candidates, options
+        if _E0_TRACE:
+            raise NotImplementedError('Legacy E0 trace describes the old root policy; use the local-policy comparison harness')
+        ev=_mr_d('proxy_compute') if _detail_profile else None
+        lengths=(valid_k if valid_k is not None else
+                 torch.full((B,),K,dtype=torch.long,device=logits_q.device))
+        tree_enabled=getattr(config,'duet_tree_enabled',
+                             getattr(config,'duet_tree_policy','off')!='off')
+        pos,tok,_=chain_candidates(exit_logits,logits_q,draft_tokens,lengths,
+            top_k,config.duet_proxy_wire_N,tree_enabled,target_temps,draft_temps,
+            cache_hits=cache_hits if not config.jit_speculate else None,
+            **options(config))
+        if _detail_profile:_mc_d('proxy_compute',ev)
+        Verifier._send_proxy_wire(self,config,async_pg,draft_rank,
+                                 pos.reshape(-1),tok.reshape(-1))

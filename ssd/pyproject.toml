@@ -39,3 +39,6 @@ Homepage="https://github.com/tanishqkumar/ssd"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ssd*"]
+
+[tool.setuptools.package-data]
+ssd = ["engine/helpers/tree_calibration/*.json"]

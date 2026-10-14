@@ -1045,62 +1045,31 @@ def tree_policy_b_ladder_fixed(tokens, p_rows, q_rows, child,
 def tree_proxy_candidates_fixed(exit_logits, q_logits, tokens, topology,
                                 wire_n: int, depth_steps: int,
                                 top_k: int | None = None, *,
-                                target_temps=1.0, draft_temps=1.0):
-    """Fixed-shape, capture-safe tree proxy candidate computation.
+                                target_temps=1.0, draft_temps=1.0, **policy):
+    """B1 wrapper for the same local policy as batched tree verification.
 
-    ``top_k`` preserves the established chain Policy-B score scale: each
-    terminal context first keeps and renormalizes its top-k correction
-    candidates, then contexts compete for the shared wire.  Ranking the full
-    vocabulary directly is not chain-equivalent even for a one-child tree,
-    because contexts with different top-k retained mass receive different
-    relative scales.
+    top_k=None retains the historical full-residual diagnostic reference.
+    Production always provides top_k and uses complement/full/mixed positions.
     """
-    from ssd.engine.helpers.proxy_temperature import probabilities
-    p_rows = probabilities(exit_logits[None], target_temps)[0]
-    q_rows = probabilities(q_logits[None], draft_temps)[0]
-    _alpha, term, resid = tree_policy_b_ladder_fixed(
-        tokens, p_rows, q_rows,
-        topology["child"], topology["child_valid"],
-        topology["par"], topology["sib"], topology["node_valid"],
-        depth_steps)
-    V = resid.shape[-1]
-    n = tokens.shape[0]
-    exclude_idx = ((topology["par"] + 1).clamp(min=0, max=n) * V
-                   + tokens.clamp(min=0, max=V - 1))
     if top_k is None:
-        # Legacy/full-vocabulary reference used by analysis tests.  Keep its
-        # exact arithmetic available; production always supplies top_k.
-        piv_rows = resid * term.unsqueeze(1)
-        flat_ext = torch.cat([
-            piv_rows.reshape(-1), piv_rows.new_zeros(1)])
-        exclude = torch.where(
-            topology["node_valid"], exclude_idx,
-            torch.full_like(exclude_idx, piv_rows.numel()))
-        flat_ext.scatter_(0, exclude, 0.0)
-        flat = flat_ext[:-1]
-        k = min(int(wire_n), flat.numel())
-        top_v, top_i = flat.topk(k)
-        chosen_pos = (top_i // V).to(torch.int64)
-        chosen_tok = pack_piv((top_i % V).to(torch.int64), top_v)
-        return chosen_pos, chosen_tok, top_v
-
-    flat_ext = torch.cat([resid.reshape(-1), resid.new_zeros(1)])
-    exclude = torch.where(
-        topology["node_valid"], exclude_idx,
-        torch.full_like(exclude_idx, resid.numel()))
-    flat_ext.scatter_(0, exclude, 0.0)
-    correction = flat_ext[:-1].view(n + 1, V)
-    ctx_k = min(int(top_k), V)
-    correction_prob, correction_id = correction.topk(ctx_k, dim=-1)
-    correction_prob = correction_prob / correction_prob.sum(
-        -1, keepdim=True).clamp(min=1e-10)
-    piv = correction_prob * term.unsqueeze(1)
-    k = min(int(wire_n), piv.numel())
-    top_v, top_i = piv.reshape(-1).topk(k)
-    chosen_pos = (top_i // ctx_k).to(torch.int64)
-    chosen_id = correction_id.reshape(-1).gather(0, top_i)
-    chosen_tok = pack_piv(chosen_id.to(torch.int64), top_v)
-    return chosen_pos, chosen_tok, top_v
+        from ssd.engine.helpers.proxy_temperature import probabilities
+        p = probabilities(exit_logits[None], target_temps)[0]
+        q = probabilities(q_logits[None], draft_temps)[0]
+        _, term, residual = tree_policy_b_ladder_fixed(tokens, p, q,
+            topology['child'], topology['child_valid'], topology['par'],
+            topology['sib'], topology['node_valid'], depth_steps)
+        v = residual.shape[-1]; n = tokens.numel()
+        piv = residual * term[:, None]
+        flat = torch.cat([piv.flatten(), piv.new_zeros(1)])
+        exclude = (topology['par']+1).clamp(0,n)*v+tokens
+        flat.scatter_(0, torch.where(topology['node_valid'],exclude,piv.numel()),0)
+        values,index = flat[:-1].topk(min(wire_n,piv.numel()))
+        return index//v,pack_piv(index%v,values),values
+    from ssd.engine.helpers.root_policy import tree_candidates
+    out = tree_candidates(exit_logits[None],q_logits[None],tokens[None],
+        {k:v[None] for k,v in topology.items()},wire_n,depth_steps,top_k,
+        target_temps,draft_temps,**policy)
+    return tuple(x[0] for x in out)
 
 
 class TreeProxyCUDAGraph:
@@ -1108,7 +1077,10 @@ class TreeProxyCUDAGraph:
 
     @torch.inference_mode()
     def __init__(self, nv: int, vocab_size: int, wire_n: int,
-                 depth_steps: int, dtype, device, top_k: int | None = None):
+                 depth_steps: int, dtype, device, top_k: int | None = None,
+                 policy=None, c_max=3):
+        self.policy = policy or {}
+        self.c_max = c_max
         self.nv = int(nv)
         self.V = int(vocab_size)
         self.wire_n = int(wire_n)
@@ -1122,7 +1094,7 @@ class TreeProxyCUDAGraph:
         self.in_tokens = torch.zeros(
             self.nv, dtype=torch.int64, device=self.device)
         topo = pack_tree_proxy_topology([], [], self.nv,
-                                        device=self.device)
+                                        device=self.device,c_max=self.c_max)
         self.topology = topo
         self.valid = 0
 
@@ -1139,7 +1111,7 @@ class TreeProxyCUDAGraph:
                 tree_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
                     self.topology, self.wire_n, self.depth_steps,
-                    self.top_k, target_temps=self.tt, draft_temps=self.dt)
+                    self.top_k, target_temps=self.tt, draft_temps=self.dt,**self.policy)
         warm.synchronize()
         # Capture failures leave CUDA's graph/RNG bookkeeping unusable for
         # ordinary eager execution in this process.  Synchronize explicitly
@@ -1151,14 +1123,14 @@ class TreeProxyCUDAGraph:
                 tree_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
                     self.topology, self.wire_n, self.depth_steps,
-                    self.top_k, target_temps=self.tt, draft_temps=self.dt)
+                    self.top_k, target_temps=self.tt, draft_temps=self.dt,**self.policy)
 
     @torch.inference_mode()
     def prepare_topology(self, par, sib):
         from ssd.engine.helpers.cudagraph_helpers import (
             duet_record, duet_close)
         _ev_pack = duet_record("tree_topology_cpu_pack")
-        packed = pack_tree_proxy_topology(par, sib, self.nv)
+        packed = pack_tree_proxy_topology(par, sib, self.nv,c_max=self.c_max)
         duet_close("tree_topology_cpu_pack", _ev_pack)
         self.valid = len(par)
         _ev_copy = duet_record("tree_topology_h2d_copies")
@@ -1211,49 +1183,13 @@ class TreeProxyCUDAGraph:
 def chain_proxy_candidates_fixed(exit_logits, q_logits, tokens,
                                  top_k: int, wire_n: int,
                                  pack_scores: bool, *, target_temps=1.0,
-                                 draft_temps=1.0):
-    """Capture-safe B=1 Policy-B proxy calculation for a chain.
-
-    This is the fixed-shape equivalent of
-    ``Verifier._compute_and_send_proxy``.  It deliberately preserves that
-    function's row shapes and operation order: K early-exit rows are
-    normalized separately from the final all-accepted row.  Keeping the
-    exact chain policy here lets cache-miss, K1-hit and K2-hit steps use one
-    graph replay instead of dozens of small PyTorch launches.
-    """
-    K, V = q_logits.shape
-    from ssd.engine.helpers.proxy_temperature import probabilities
-    p_e = probabilities(exit_logits[None, :K], target_temps)[0]
-    p_d = probabilities(q_logits[None], draft_temps)[0]
-    gather = tokens[:K].view(K, 1)
-    p_e_y = p_e.gather(1, gather).squeeze(1)
-    p_d_y = p_d.gather(1, gather).squeeze(1)
-    accept = (p_e_y / (p_d_y + 1e-10)).clamp(max=1.0)
-
-    residual = (p_e - p_d).clamp(min=0)
-    residual.scatter_(1, gather, 0.0)
-    top_prob, top_id = residual.topk(int(top_k), dim=-1)
-    top_prob = top_prob / top_prob.sum(-1, keepdim=True).clamp(min=1e-10)
-
-    cumprod = torch.cumprod(accept, dim=0)
-    h = torch.zeros(K + 1, dtype=accept.dtype, device=accept.device)
-    h[0] = 1 - accept[0]
-    if K > 1:
-        h[1:K] = cumprod[:-1] * (1 - accept[1:])
-    h[K] = cumprod[-1]
-
-    p_last = probabilities(exit_logits[None, K:K+1], target_temps)[0, 0]
-    last_prob, last_id = p_last.topk(int(top_k), dim=-1)
-    last_prob = last_prob / last_prob.sum().clamp(min=1e-10)
-    correction_prob = torch.cat([top_prob, last_prob.unsqueeze(0)], dim=0)
-    correction_id = torch.cat([top_id, last_id.unsqueeze(0)], dim=0)
-    piv = h.unsqueeze(1) * correction_prob
-    top_v, top_i = piv.reshape(-1).topk(int(wire_n))
-    chosen_pos = (top_i // int(top_k)).to(torch.int64)
-    chosen_tok = correction_id.reshape(-1).gather(0, top_i)
-    if pack_scores:
-        chosen_tok = pack_piv(chosen_tok, top_v)
-    return chosen_pos, chosen_tok, top_v
+                                 draft_temps=1.0, **policy):
+    """B1 wrapper for the shared temperature-aware local root policy."""
+    from ssd.engine.helpers.root_policy import chain_candidates
+    out=chain_candidates(exit_logits[None],q_logits[None],tokens[None],
+        tokens.new_full((1,),q_logits.shape[0]),top_k,wire_n,pack_scores,
+        target_temps,draft_temps,**policy)
+    return tuple(x[0] for x in out)
 
 
 class ChainProxyCUDAGraph:
@@ -1261,7 +1197,8 @@ class ChainProxyCUDAGraph:
 
     @torch.inference_mode()
     def __init__(self, k: int, vocab_size: int, top_k: int, wire_n: int,
-                 pack_scores: bool, dtype, device):
+                 pack_scores: bool, dtype, device,policy=None):
+        self.policy = policy or {}
         self.k = int(k)
         self.V = int(vocab_size)
         self.top_k = int(top_k)
@@ -1293,7 +1230,7 @@ class ChainProxyCUDAGraph:
                 chain_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
                     self.top_k, self.wire_n, self.pack_scores,
-                    target_temps=self.tt, draft_temps=self.dt)
+                    target_temps=self.tt, draft_temps=self.dt,**self.policy)
         warm.synchronize()
         torch.cuda.synchronize(self.device)
         self.graph = torch.cuda.CUDAGraph()
@@ -1302,7 +1239,7 @@ class ChainProxyCUDAGraph:
                 chain_proxy_candidates_fixed(
                     self.in_exit, self.in_q, self.in_tokens,
                     self.top_k, self.wire_n, self.pack_scores,
-                    target_temps=self.tt, draft_temps=self.dt)
+                    target_temps=self.tt, draft_temps=self.dt,**self.policy)
 
     @torch.inference_mode()
     def replay(self, exit_logits, q_logits, tokens, target_temps=1.0, draft_temps=1.0):
@@ -2817,13 +2754,14 @@ def _arena_fanout_adaptive(ar: TreeArena, sel, sel_valid, tip_idx,
 
 def _arena_select_global(ar: TreeArena, W, f, depth_cap, remaining,
                          future_rounds, R, proxy_threshold=0.0,
-                         conf_threshold=0.0):
+                         conf_threshold=0.0, all_frontier=False):
     """Fixed-shape GPU mirror of :func:`select_nodes_global`."""
     cap = ar.capacity
     dev = ar.device
     idxs = torch.arange(cap, device=dev)
     elig = ((idxs < ar.n) & (ar.state == 0) & ar.valid
-            & (ar.depth == f) & (ar.depth < depth_cap))
+            & ((ar.depth <= f) if all_frontier else (ar.depth == f))
+            & (ar.depth < depth_cap))
     if f > 0:
         if proxy_threshold > 0.0:
             root_logp = ar.logpri.gather(0, ar.root.clamp(min=0))
@@ -2938,7 +2876,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                       fanout_policy="backbone", device=None,
                       workspace=None, p2_gen=None, noise_list=None,
                       trace_out=None, proxy_threshold=0.0,
-                      conf_threshold=0.0, greedy_only=False):
+                      conf_threshold=0.0, greedy_only=False, expansion_policy=None):
     """run_rollout의 GPU 상주판 (T6 1a — 22번 v2 1단계).
 
     정책·예산 산술(float64)·선택/fanout 규약·RNG 소비 순서([W,V]
@@ -3022,10 +2960,14 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
                 ar, W, f, depth_cap, remaining,
                 future_rounds=F_total - f - 1, R=R,
                 proxy_threshold=proxy_threshold,
-                conf_threshold=conf_threshold)
-            fan = _arena_fanout_global(
-                ar, sel, sel_valid, remaining, c_tensor, R,
-                future_rounds=F_total - f - 1)
+                conf_threshold=conf_threshold,
+                all_frontier=bool(expansion_policy and expansion_policy.frontier))
+            if expansion_policy is not None and expansion_policy.gain is not None:
+                fan=expansion_policy.fanout(ar,sel,sel_valid,remaining,F_total-f-1)
+            else:
+                fan = _arena_fanout_global(
+                    ar, sel, sel_valid, remaining, c_tensor, R,
+                    future_rounds=F_total - f - 1)
         else:
             sel, sel_valid = _arena_select(ar, policy, W, f, depth_cap,
                                            _tips, remaining)
@@ -3116,8 +3058,9 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
         ar.depth.scatter_(0, sl, ar.depth.gather(0, par) + 1)
         ar.root.scatter_(0, sl, ar.root.gather(0, par))
         ar.sib.scatter_(0, sl, cix)
-        child_lp = ar.logpri.gather(0, par) \
-            + rq.clamp_min(1e-9).log()
+        child_lp = (expansion_policy.priority(ar.logpri,par,raws)
+                    if expansion_policy is not None else
+                    ar.logpri.gather(0,par)+rq.clamp_min(1e-9).log())
         ar.logpri.scatter_(0, sl, torch.where(
             ok_q, child_lp, torch.full_like(child_lp, float("-inf"))))
         ar.raw_q.scatter_(0, sl, rq)

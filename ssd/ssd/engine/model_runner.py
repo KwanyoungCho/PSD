@@ -1,3 +1,4 @@
+from ssd.engine.helpers.root_policy import options as root_options
 
 import pickle
 import time
@@ -1149,7 +1150,7 @@ class ModelRunner:
                     wire_n=cfg.duet_proxy_wire_N,
                     pack_scores=pack_scores,
                     dtype=cfg.hf_config.torch_dtype,
-                    device=self.device)
+                    device=self.device, policy=root_options(cfg))
             print("[DUET] captured target chain proxy graphs "
                   f"(K={widths})", flush=True)
 
@@ -1170,7 +1171,7 @@ class ModelRunner:
                 depth_steps=tree_depth_steps,
                 top_k=cfg.duet_proxy_top_k,
                 dtype=cfg.hf_config.torch_dtype,
-                device=self.device)
+                device=self.device, policy=root_options(cfg), c_max=cfg.duet_tree_c_tensor)
             # Compile and initialize the GPU topology packer for this exact
             # proxy bucket.  Live requests overwrite these representative
             # chain values before replay.

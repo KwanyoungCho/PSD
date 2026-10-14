@@ -1,4 +1,5 @@
 """Prepare finite batch/context/page graph shapes before serving requests."""
+from ssd.engine.helpers.root_policy import options as root_options
 import os
 
 
@@ -77,8 +78,8 @@ def prewarm_target(r):
         for b in batches:
             for n in widths:
                 p=BatchedTreeProxy(b,n,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
-                    cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),cfg.duet_proxy_top_k,
-                    pool=r._batch_tree_proxy_pool,q_dtype=cfg.draft_hf_config.torch_dtype,c_max=cfg.duet_tree_c_tensor)
+                    cfg.duet_proxy_wire_N,n,cfg.duet_proxy_top_k,
+                    pool=r._batch_tree_proxy_pool,q_dtype=cfg.draft_hf_config.torch_dtype,c_max=cfg.duet_tree_c_tensor,policy=root_options(cfg))
                 r._batch_tree_proxies[b,n]=p
                 if r._batch_tree_proxy_pool is None:r._batch_tree_proxy_pool=p.graph.pool()
                 a=BatchedTreeAccept(p,cfg.sampler_x,cfg.async_fan_out,cfg.greedy_only,
@@ -96,8 +97,8 @@ def prewarm_target(r):
                             k=min(n,remaining);lengths.append(k);remaining-=k
                         if fp is None:
                             fp=FlatProxy(b,n,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
-                                cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),cfg.duet_proxy_top_k,
-                                pool=r._batch_tree_proxy_pool,q_dtype=cfg.draft_hf_config.torch_dtype,c_max=cfg.duet_tree_c_tensor)
+                                cfg.duet_proxy_wire_N,n,cfg.duet_proxy_top_k,
+                                pool=r._batch_tree_proxy_pool,q_dtype=cfg.draft_hf_config.torch_dtype,c_max=cfg.duet_tree_c_tensor,policy=root_options(cfg))
                             r._batch_tree_proxies[b,n,'flat']=fp
                         fp.prepare([list(range(-1,k-1)) for k in lengths],[[0]*k for k in lengths],
                             torch.zeros(b,n,device=r.device,dtype=torch.long),torch.zeros_like(p.q),[.7]*b,[.7]*b)

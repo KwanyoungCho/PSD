@@ -62,10 +62,12 @@ def verify(verifier,seqs,result):
     proxy_key=(cap,N,'flat') if compact else (cap,N)
     if proxy_key not in r._batch_tree_proxies:
         capture_event=duet_record('batch_proxy_capture') if DETAIL_TREE else None
+        from ssd.engine.helpers.root_policy import options
         p=proxy_type(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
-                           cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
+                           cfg.duet_proxy_wire_N,N,
                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
-                           q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor)
+                           q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor,
+                           policy=options(cfg))
         r._batch_tree_proxies[proxy_key]=p
         if DETAIL_TREE:duet_close('batch_proxy_capture',capture_event)
     proxy=r._batch_tree_proxies[proxy_key]

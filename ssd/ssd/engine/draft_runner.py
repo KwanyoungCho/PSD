@@ -4836,9 +4836,16 @@ class DraftRunner(ModelRunner):
                     _p2gen = self._p2_iso_gen
                 _mev_roll = _mr_p2("p2_rollout")
                 _s1_trace = {} if _s1_art is not None else None
+                from types import SimpleNamespace
+                from ssd.engine.helpers.tree_expansion_policy import TreeExpansionPolicy
+                if not hasattr(self,'_p2_eager_expansion'):
+                    self._p2_eager_expansion=TreeExpansionPolicy(SimpleNamespace(cfg=cfg,phase='p2',
+                        C=cfg.duet_tree_c_tensor,NV=cfg.duet_tree_nv,
+                        policy=cfg.duet_tree_policy,dev=self.device))
+                _expansion=self._p2_eager_expansion
                 _ar, eval_log, cell_logits = _PT.run_rollout_arena(
                     toks[:len(seeds)], root_piv,
-                    workspace=self._tree_arena_ws,
+                    workspace=self._tree_arena_ws, expansion_policy=_expansion,
                     policy=cfg.duet_tree_policy, W=W, F_total=K2,
                     c_tensor=cfg.duet_tree_c_tensor,
                     nv=cfg.duet_tree_nv, beta=cfg.duet_tree_beta,
@@ -4907,6 +4914,9 @@ class DraftRunner(ModelRunner):
                     if st["generated"] != st["allocated"]:
                         print(f"[tree-alloc #27/arena] {st}", flush=True)
             else:
+                if (cfg.duet_tree_policy in ('dynamic','eagle')
+                        and os.getenv('SSD_TREE_EXPANSION_POLICY','reach_gain_frontier')!='q_path'):
+                    raise NotImplementedError('CPU reference rollout preserves q_path; use the eager arena or captured executor for local research selection')
                 pool, eval_log, cell_logits = _PT.run_rollout(
                     [t for _p, t in seeds], root_piv,
                     policy=cfg.duet_tree_policy, W=W, F_total=K2,

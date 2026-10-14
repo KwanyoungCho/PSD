@@ -137,8 +137,8 @@ class Config:
     duet_tree_policy: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
     # Per-phase maximum number of nodes generated for each cache root.  The
-    # optional verify-node limits below perform an EAGLE-style final rerank
-    # only after the matching root is known.  Separating the two quantities
+    # optional verify-node limits keep a generation-order prefix
+    # after the matching root is known.  Separating the two quantities
     # lets the draft search a wider tree without forcing the target to verify
     # every generated node.  ``duet_tree_nv`` is a legacy P2 generation alias.
     duet_p1_tree_max_nodes: int = 18
@@ -962,6 +962,11 @@ class Config:
                       flush=True)
                 self.duet_proxy_top_k = required_top_k
             assert self.duet_proxy_top_k >= 1, "duet_proxy_top_k must be >= 1"
+            if self.duet_proxy_on_draft or self.duet_exit_topm_gather:
+                raise ValueError('Local root policy requires full-vocabulary exit logits; raw/top-M proxy gates are unsupported')
+            print('[DUET policy] root=complement normalization=full '
+                  'position=0.75 observed + 0.25 overlap; '
+                  'tree=historical reach/gain/frontier (resolved per executor)',flush=True)
             # Raw-proxy wire (SSD_DUET_PROXY_ON_DRAFT=1): the draft-side
             # residual topk(top_k) runs over M wire candidates — M must
             # cover the (auto-raised) top_k.

@@ -45,13 +45,16 @@ def pack_nodes(t, topo):
     return t[topo['req'],(topo['local']-1).clamp_min(0)]
 
 
-def ladder(tokens,p,q,topo,depth,exact=False):
+def ladder(tokens,p,q,topo,depth,exact=False,overlap_mix=0.0,need_residual=True):
+    if exact and not need_residual:
+        raise ValueError('Exact verification requires the final residual')
     child=topo['child'];cv=topo['child_valid']
     residual=p
     draft=q[child[:,0]]
     draft=torch.where(cv[:,:1],draft,torch.zeros_like(draft))
     reject=p.new_ones(p.shape[0],1)
     alphas=[];pres=[]
+    avg_alphas=[];avg_pres=[];avg_reject=reject.clone()
     for s in range(child.shape[1]):
         tok=tokens[child[:,s],None]
         valid=cv[:,s:s+1]
@@ -60,15 +63,21 @@ def ladder(tokens,p,q,topo,depth,exact=False):
         denom=torch.where(d>0,d,torch.ones_like(d)) if exact else d+1e-10
         alpha=(residual.gather(1,tok)/denom).clamp(max=1)*valid
         alphas.append(alpha[:,0]);pres.append(reject[:,0]);reject=reject*(1-alpha)
-        newer=(residual-draft).clamp_min(0)
-        z=newer.sum(-1,keepdim=True)
-        newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
-        residual=torch.where(valid,newer,residual)
+        if overlap_mix:
+            avg=torch.minimum(residual,draft).sum(-1,keepdim=True).clamp(0,1)*valid
+            avg_alphas.append(avg[:,0]);avg_pres.append(avg_reject[:,0])
+            avg_reject=avg_reject*(1-avg)
+        if need_residual or s<child.shape[1]-1:
+            newer=(residual-draft).clamp_min(0)
+            z=newer.sum(-1,keepdim=True)
+            newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
+            residual=torch.where(valid,newer,residual)
         if s<child.shape[1]-1:
             newer=draft.scatter(1,tok,0);z=newer.sum(-1,keepdim=True)
             newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
             draft=torch.where(valid,newer,draft)
-    residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
+    if need_residual:
+        residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
     alpha=torch.stack(alphas,-1)
     if exact:return alpha,None,residual
     pre=torch.stack(pres,-1)
@@ -76,20 +85,36 @@ def ladder(tokens,p,q,topo,depth,exact=False):
     reach=topo['root'].to(p.dtype)
     for _ in range(depth):
         reach=torch.where(topo['root'],torch.ones_like(reach),base*reach[topo['par']])*topo['valid']
-    return alpha,reach*reject[:,0],residual
+    terminal=reach*reject[:,0]
+    if overlap_mix:
+        aa=torch.stack(avg_alphas,-1);ap=torch.stack(avg_pres,-1)
+        ab=aa[topo['par'],topo['sib']]*ap[topo['par'],topo['sib']]
+        ar=topo['root'].to(p.dtype)
+        for _ in range(depth):
+            ar=torch.where(topo['root'],torch.ones_like(ar),ab*ar[topo['par']])*topo['valid']
+        terminal=(1-overlap_mix)*terminal+overlap_mix*ar*avg_reject[:,0]
+    return alpha,terminal,residual if need_residual else None
 
 
-def candidates(exit_logits,q_logits,tokens,topo,wire_n,depth,top_k,tt,dt):
+def candidates(exit_logits,q_logits,tokens,topo,wire_n,depth,top_k,tt,dt,
+               source='complement',normalization='full',overlap_mix=.25,
+               sampler_x=None,fan_out=1):
     t=torch.where(tt>0,tt,torch.ones_like(tt))[topo['req']]
     d=torch.where(dt>0,dt,torch.ones_like(dt))[topo['req']]
     p=(exit_logits.float()/t[:,None]).softmax(-1)
-    q=(q_logits.float()/d[:,None]).softmax(-1)
-    _,terminal,scores=ladder(tokens,p,q,topo,depth)
+    q=q_probs_from_logits(q_logits,d,sampler_x,fan_out)
+    _,terminal,scores=ladder(tokens,p,q,topo,depth,
+        overlap_mix=overlap_mix,need_residual=(source=='residual'))
+    if source!='residual':
+        from ssd.engine.helpers.root_policy import token_scores
+        scores=token_scores(p,q[topo['child'][:,0]],source)
+        scores=torch.where(topo['child_valid'][:,:1],scores,p)
     v=scores.shape[-1]
     exclude=torch.where(topo['child_valid'],tokens[topo['child']],v)
     scores=torch.cat([scores,scores.new_zeros(scores.shape[0],1)],1).scatter(1,exclude,0)[:,:v]
     values,ids=scores.topk(min(top_k,v),-1)
-    piv=values/values.sum(-1,keepdim=True).clamp_min(1e-10)*terminal[:,None]
+    denom=scores.sum(-1,keepdim=True) if normalization=='full' else values.sum(-1,keepdim=True)
+    piv=values/denom.clamp_min(1e-10)*terminal[:,None]
     piv=piv[topo['dense']]*topo['dense_valid'][...,None]
     ids=ids[topo['dense']]
     score,index=piv.flatten(1).topk(min(wire_n,piv[0].numel()),1)
@@ -140,6 +165,7 @@ class FlatProxy:
         self.dtype,self.q_dtype,self.device=dtype,q_dtype or dtype,device
         self.wire,self.depth,self.top_k,self.c_max=wire_n,depth,top_k,c_max
         self.pool=pool;self.cells={};self.topology={}
+        self.policy=kwargs.get("policy") or {}
         # Stable prefix views avoid one vocabulary-size input allocation per Q.
         max_q=b*(n+1)
         self.logit_buffer=torch.zeros(max_q,v,dtype=dtype,device=device)
@@ -168,7 +194,7 @@ class FlatProxy:
         self.current=cell;self.tokens=tokens
         if 'graph' not in cell:
             def run():return candidates(cell['logits'],cell['q'],cell['tokens'],cell['topo'],
-                                         self.wire,self.depth,self.top_k,cell['tt'],cell['dt'])
+                                         self.wire,self.depth,self.top_k,cell['tt'],cell['dt'],**self.policy)
             for _ in range(2):run()
             torch.cuda.synchronize(self.device);graph=torch.cuda.CUDAGraph()
             with torch.cuda.graph(graph,pool=self.pool):cell['out']=run()

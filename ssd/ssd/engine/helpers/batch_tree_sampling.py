@@ -98,32 +98,10 @@ def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0,
 
 def candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k,
                target_temps=1.0,draft_temps=1.0,**policy):
-    # Preserve ver01's residual/observed-position/top-m policy. Research
-    # complement, overlap mixing and full-vocabulary ranking are not ported.
-    if policy:
-        raise ValueError('This executor preserves the paper root policy')
-    from ssd.engine.helpers.proxy_temperature import probabilities
-    from ssd.engine.helpers.p2_tree import pack_piv
-    p = probabilities(exit_logits, target_temps)
-    q = probabilities(q_logits, draft_temps)
-    _, terminal, scores = ladder(tokens, p, q, topology, depth)
-    b, r, v = scores.shape
-    flat = torch.cat([scores.reshape(b, -1), scores.new_zeros(b, 1)], 1)
-    exclude = (topology['par'] + 1).clamp(0, r-1) * v + tokens
-    exclude = torch.where(topology['node_valid'], exclude,
-                          torch.full_like(exclude, r*v))
-    flat.scatter_(1, exclude, 0)
-    values, ids = flat[:, :-1].view(b, r, v).topk(min(top_k, v), -1)
-    piv = values / values.sum(-1, keepdim=True).clamp_min(1e-10) * terminal[..., None]
-    score, index = piv.flatten(1).topk(min(wire_n, piv[0].numel()), 1)
-    pos = index // values.shape[-1]
-    tok = ids.flatten(1).gather(1, index)
-    if pos.shape[1] < wire_n:
-        pad = wire_n - pos.shape[1]
-        pos = torch.cat([pos, pos.new_zeros(b, pad)], 1)
-        tok = torch.cat([tok, tok.new_zeros(b, pad)], 1)
-        score = torch.cat([score, score.new_zeros(b, pad)], 1)
-    return pos, pack_piv(tok, score)
+    from ssd.engine.helpers.root_policy import tree_candidates
+    pos, packed, _ = tree_candidates(exit_logits, q_logits, tokens, topology,
+        wire_n, depth, top_k, target_temps, draft_temps, **policy)
+    return pos, packed
 
 
 class BatchedTreeProxy:
