@@ -1,3 +1,4 @@
+from ssd.utils.debug import debug_tokens_enabled
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import os
@@ -34,12 +35,12 @@ class AutoRegressiveStep(InferenceStep):
         self.tokenizer = tokenizer
 
     def step(self, seqs: list[Sequence], is_prefill: bool) -> int:
-        if __debug__:
+        if debug_tokens_enabled():
             print(f'[auto_regressive_step] is_prefill={is_prefill}', flush=True)
 
         token_ids = self.model_runner.call("run", seqs, is_prefill)
 
-        if __debug__:
+        if debug_tokens_enabled():
             decoded_tokens = decode_tokens(token_ids, self.tokenizer)
             print(f"[auto_regressive_step] generated tokens: {decoded_tokens}", flush=True)
 
@@ -82,7 +83,8 @@ class SpecDecodeStep(InferenceStep):
             self.speculator.prefill(seqs, verify_result)
 
         for seq in seqs:
-            assert seq.recovery_token_id is not None
+            if not (seq.recovery_token_id is not None):
+                raise RuntimeError('Invalid engine/step.py contract: seq.recovery_token_id is not None')
             seq.num_cached_tokens = seq.num_prompt_tokens
             seq.num_draft_cached_tokens = seq.num_prompt_tokens
 
@@ -146,7 +148,7 @@ class SpecDecodeStep(InferenceStep):
             torch.cuda.synchronize()
             _t1 = perf_counter()
 
-        if __debug__:
+        if debug_tokens_enabled():
             speculations = speculate_result.speculations
             print(f"[SpecDecodeStep] speculations: {speculations}", flush=True)
             speculations_list = speculations.tolist()
@@ -163,7 +165,7 @@ class SpecDecodeStep(InferenceStep):
             torch.cuda.synchronize()
             _t2 = perf_counter()
 
-        if __debug__:
+        if debug_tokens_enabled():
             recovery_tokens = out_verify_result.recovery_tokens
             new_suffixes = out_verify_result.new_suffixes
             for i, new_suffix in enumerate(new_suffixes):

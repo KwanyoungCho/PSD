@@ -34,6 +34,26 @@ class TestModelPair(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside"):
             validate_speculative_vocab(tok, tok, 3, 3)
 
+    def test_duet_qwen_draft_keeps_llama_target_exit_contract(self):
+        from transformers import Qwen2Config
+        def load(path):
+            cls=LlamaConfig if path=='/target' else Qwen2Config
+            return cls(num_hidden_layers=32 if path=='/target' else 24,
+                hidden_size=512,num_attention_heads=8,num_key_value_heads=4,
+                max_position_embeddings=2048,vocab_size=128256,
+                torch_dtype=torch.bfloat16)
+        with patch('ssd.config.os.path.isdir',return_value=True), \
+             patch('ssd.config.AutoConfig.from_pretrained',side_effect=load):
+            cfg=Config(model='/target',draft='/draft',speculate=True,draft_async=True,
+                jit_speculate=True,duet_enabled=True,speculate_k=6,
+                duet_phase1_k=4,duet_phase2_k=2,duet_exit_layer=28)
+            draft=DraftRunner.create_draft_config(cfg)
+        self.assertEqual(draft.hf_config.model_type,'qwen2')
+        self.assertEqual(draft.target_hf_config.model_type,'llama')
+        self.assertEqual(draft.duet_exit_layer,28)
+        self.assertEqual(draft.hf_config.head_dim,64)
+        self.assertEqual(draft.hf_config.torch_dtype,torch.bfloat16)
+
     def test_float32_draft_checkpoint_uses_target_runtime_dtype(self):
         def config(path):
             return LlamaConfig(num_hidden_layers=32,

@@ -29,6 +29,7 @@ import triton
 import triton.language as tl
 
 import flashinfer
+from ssd.utils.workspace import workspace_bytes, planning_workspace
 
 from ssd.utils.context import set_context, reset_context
 from ssd.engine.helpers import p2_tree as PT
@@ -712,15 +713,10 @@ class P2TreeExecutor:
         # aliases in the failing all-bucket path.  Isolate it so every graph
         # remains self-contained regardless of backend implementation.
         #
-        # Keep one modest FA2 workspace per page bucket.  The production
-        # TinyLlama shape requests about 41 MiB for batch_prefill_tmp_v (the
-        # mini-model tests request much less), so retain a 64 MiB safety
-        # margin while avoiding 7*128 MiB.  The size remains overridable for
-        # future model shapes.
-        self._workspace_bytes = int(os.environ.get(
-            "SSD_TREE_EXEC_WORKSPACE_MB", "64")) * 2**20
-        if self._workspace_bytes <= 0:
-            raise ValueError("SSD_TREE_EXEC_WORKSPACE_MB must be positive")
+        # Blackwell TinyLlama shapes exceeded 64 MiB (82.25 MiB observed).
+        # This is an initial budget, not a guarantee for arbitrary shapes.
+        self._workspace_env = "SSD_TREE_EXEC_WORKSPACE_MB"
+        self._workspace_bytes = workspace_bytes(self._workspace_env, 128)
         self._float_ws_by_bucket = {}
 
     # ---------- 버킷 준비 ----------
@@ -752,11 +748,15 @@ class P2TreeExecutor:
         if int_workspace is not None:
             wr._int_workspace_buffer = int_workspace
             wr._pin_memory_int_workspace_buffer = pin_int_workspace
-        wr.plan(qo, kvp, kvi, lpl,
-                self.H, self.HKV, self.D, self.bs,
-                custom_mask=torch.zeros(W * canvas_cols,
-                                        dtype=torch.bool, device=d),
-                q_data_type=self.dtype, kv_data_type=self.dtype)
+        with planning_workspace(self._workspace_env, float_workspace,
+                phase=self.phase, width=W, pages=n_pages_r, page_size=self.bs,
+                q_heads=self.H, kv_heads=self.HKV, head_dim=self.D,
+                dtype=str(self.dtype)):
+            wr.plan(qo, kvp, kvi, lpl,
+                    self.H, self.HKV, self.D, self.bs,
+                    custom_mask=torch.zeros(W * canvas_cols,
+                                            dtype=torch.bool, device=d),
+                    q_data_type=self.dtype, kv_data_type=self.dtype)
         wr._canvas_cols = canvas_cols
         return wr
 

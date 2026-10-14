@@ -46,10 +46,21 @@ class TestAdmission(unittest.TestCase):
 
 @unittest.skipUnless(torch.cuda.is_available(), "requires CUDA")
 class TestCachedPrefill(unittest.TestCase):
-    def test_mixed_cached_uncached_rows_match_dense_attention(self):
+    def test_flashinfer(self):
+        self._check_backend("flashinfer")
+
+    def test_auto(self):
+        self._check_backend("auto")
+
+    def test_sgl(self):
+        if torch.cuda.get_device_capability()[0] >= 12:
+            self.skipTest("SGL Hopper kernels unsupported on SM120; auto/FlashInfer tested separately")
+        self._check_backend("sgl")
+
+    def _check_backend(self, backend):
         torch.manual_seed(9)
         for dtype in (torch.float16, torch.bfloat16):
-            with self.subTest(dtype=dtype), patch.dict(os.environ, {"SSD_ATTN_BACKEND": "sgl"}):
+            with self.subTest(dtype=dtype), patch.dict(os.environ, {"SSD_ATTN_BACKEND": backend}):
                 h, kvh, dim, page = 4, 2, 64, 256
                 q = torch.randn(8, h, dim, device="cuda", dtype=dtype)
                 keys = [torch.randn(n, kvh, dim, device="cuda", dtype=dtype)
@@ -69,6 +80,14 @@ class TestCachedPrefill(unittest.TestCase):
                     cu_seqlens_k=torch.tensor([0, 259, 264], device="cuda", dtype=torch.int32),
                     max_seqlen_q=5, max_seqlen_k=259, slot_mapping=slots,
                     block_tables=torch.tensor([[5, 2], [7, -1]], device="cuda", dtype=torch.int32))
+                from ssd.layers.fi_attn import attention_backend, get_fi_backend
+                from ssd.utils.context import get_context
+                if attention_backend(q.device) == "flashinfer":
+                    ctx = get_context()
+                    get_fi_backend(q.device).plan_paged(
+                        ctx.cu_seqlens_q, ctx.block_tables,
+                        torch.tensor([259, 5], device="cuda", dtype=torch.int32),
+                        page, h, kvh, dim, dim**-.5, dtype)
                 try:
                     actual = attn(q.flatten(1), new_k.flatten(1), new_v.flatten(1)).view(8, h, dim)
                 finally:

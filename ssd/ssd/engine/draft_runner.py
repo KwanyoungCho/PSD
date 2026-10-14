@@ -118,6 +118,8 @@ class DraftRunner(ModelRunner):
         draft_cfg = dataclasses.replace(
             cfg,
             model=cfg.draft,
+            runner_role="draft",
+            target_hf_config=cfg.target_hf_config or cfg.hf_config,
             gpu_memory_utilization=draft_memory_utilization,
             tokenizer_path=cfg.model if cfg.use_eagle else None,
             d_model_target=cfg.hf_config.hidden_size if cfg.use_eagle and cfg.hf_config else None,
@@ -1727,8 +1729,8 @@ class DraftRunner(ModelRunner):
         cache_hits = partial_tree_decode_args["cache_hits"]
 
         _layout = self.full_layout  # _construct_tree_decode_args is only used in non-DUET path
-        if __debug__:
-            assert N == B*_layout.MQ_LEN, f"ERROR in _construct_tree_decode_args: N should be B*MQ_LEN={B*_layout.MQ_LEN}, got {N}"
+        if N != B*_layout.MQ_LEN:
+            raise RuntimeError(f"N should be B*MQ_LEN={B*_layout.MQ_LEN}, got {N}")
 
         b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[:, None].expand(B, _layout.MQ_LEN).flatten()
         fkp1_flat = _layout.arange_mq.repeat(B)
@@ -5209,9 +5211,8 @@ class DraftRunner(ModelRunner):
         else:
             _j_idx_flat = torch.cat([layout.fan_idx_hit if int(h) else layout.fan_idx_miss for h in cache_hits_list])
         N = _b_flat.shape[0]
-        if __debug__:
-            assert _j_idx_flat.shape[0] == N, \
-                f"fan_idx length {_j_idx_flat.shape[0]} != N={N} (layout {layout.name})"
+        if _j_idx_flat.shape[0] != N:
+            raise RuntimeError(f"fan_idx length {_j_idx_flat.shape[0]} != N={N} (layout {layout.name})")
 
         _pos_offset = -1 if self.config.use_eagle else 0
         _positions = (partial_tree_decode_args["num_tokens"][_b_flat] - 1 + _pos_offset) + glue_offset + _fkp1_flat

@@ -26,11 +26,27 @@ class CompactGraphReuse(unittest.TestCase):
                     p.prepare(ps,ss,tokens,q,tt,tt);f.prepare(ps,ss,tokens,q,tt,tt)
                     top=f.current['topo'];packed=logits[top['req'],top['local']]
                     a=p.replay(logits);z=f.replay(packed)
+                    from ssd.engine.helpers.root_policy import tree_candidates
                     from ssd.engine.helpers.p2_tree import unpack_piv
-                    at,ascore=unpack_piv(a[1]);zt,zscore=unpack_piv(z[1]);positive=ascore>1.0001e-6
-                    torch.testing.assert_close(ascore,zscore,rtol=1e-5,atol=1e-7)
+                    dense_raw=tree_candidates(p.exit,p.q,p.tokens,p.topology,25,n,13,tt,tt)
+                    c=f.current
+                    flat_raw=flat.candidates(c['logits'],c['q'],c['tokens'],c['topo'],
+                                             25,n,13,c['tt'],c['dt'],return_scores=True)
+                    # Require the original strict *raw* contract before allowing
+                    # a rounding boundary in the 16-bit logarithmic wire score.
+                    torch.testing.assert_close(dense_raw[2],flat_raw[2],rtol=1e-5,atol=1e-7)
+                    positive=dense_raw[2]>0
+                    self.assertTrue(torch.equal(positive,flat_raw[2]>0))
+                    at,_=unpack_piv(a[1]);zt,_=unpack_piv(z[1])
                     self.assertTrue(torch.equal(a[0][positive],z[0][positive]))
                     self.assertTrue(torch.equal(at[positive],zt[positive]))
+                    bins_a=(a[1]>>32)&65535;bins_z=(z[1]>>32)&65535
+                    self.assertLessEqual(int((bins_a-bins_z).abs().max()),1)
+                    # No score tolerance is applied to topology/sibling order.
+                    for row,(parents,orders) in enumerate(zip(ps,ss)):
+                        for node,(parent,order) in enumerate(zip(parents,orders)):
+                            self.assertEqual(int(top['sib'][top['dense'][row,node+1]]),order)
+                            self.assertEqual(int(top['local'][top['par'][top['dense'][row,node+1]]]),parent+1)
                     greedy=temp==0
                     if greedy not in accepts:
                         accepts[greedy]=BatchedTreeAccept(p,None,1,greedy,stochastic_only=True)
@@ -39,8 +55,10 @@ class CompactGraphReuse(unittest.TestCase):
                     for seed in range(5):
                         torch.cuda.manual_seed(seed)
                         expected=tuple(x.clone() for x in accepts[greedy].replay(logits,tt,tt))
+                        expected_rng=torch.cuda.get_rng_state().clone()
                         torch.cuda.manual_seed(seed)
                         actual=fa[greedy].replay(packed,tt,tt)
+                        self.assertTrue(torch.equal(expected_rng,torch.cuda.get_rng_state()))
                         for x,y in zip(expected,actual):self.assertTrue(torch.equal(x,y))
                         count+=1
             self.assertEqual(f.logit_buffer.numel(),b*(n+1)*v)

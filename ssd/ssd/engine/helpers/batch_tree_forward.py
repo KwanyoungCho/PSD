@@ -5,6 +5,7 @@ import flashinfer
 from ssd.utils.context import set_context, reset_context
 from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
 from ssd.engine.helpers.batch_tree_common import capacity, build_forward_inputs
+from ssd.utils.workspace import workspace_bytes, planning_workspace
 
 DETAIL_TREE = os.getenv('SSD_PROFILE_DUET_DETAIL','0') == '1'
 
@@ -27,7 +28,7 @@ class BatchedTreeForward:
         r=self.r
         if not hasattr(r,'_batch_tree_float_workspace'):
             r._batch_tree_float_workspace=torch.empty(
-                int(os.getenv('SSD_BATCH_TREE_WORKSPACE_MB','128'))*2**20,
+                workspace_bytes('SSD_BATCH_TREE_WORKSPACE_MB', 256),
                 dtype=torch.uint8,device=r.device)
         return r._batch_tree_float_workspace
 
@@ -64,10 +65,16 @@ class BatchedTreeForward:
             custom_mask_buf=mask,
             mask_indptr_buf=torch.arange(batch+1,dtype=torch.int32,device=dev)*width*cols)
         tp = max(1,r.num_tp_gpus)
-        wr.plan(qo,kv,indices,last,hf.num_attention_heads//tp,
-                hf.num_key_value_heads//tp,hf.head_dim,r.block_size,
-                custom_mask=torch.ones(batch*width*cols,dtype=torch.bool,device=dev),
-                q_data_type=dtype,kv_data_type=dtype)
+        with planning_workspace('SSD_BATCH_TREE_WORKSPACE_MB', ws,
+                role='target' if self.split else 'draft_glue', batch=batch,
+                width=width, pages=pages, page_size=r.block_size,
+                q_heads=hf.num_attention_heads//tp,
+                kv_heads=hf.num_key_value_heads//tp, head_dim=hf.head_dim,
+                dtype=str(dtype), tp=tp):
+            wr.plan(qo,kv,indices,last,hf.num_attention_heads//tp,
+                    hf.num_key_value_heads//tp,hf.head_dim,r.block_size,
+                    custom_mask=torch.ones(batch*width*cols,dtype=torch.bool,device=dev),
+                    q_data_type=dtype,kv_data_type=dtype)
         g = dict(batch=batch,width=width,pages_count=pages,wrapper=wr,workspace=ws,
                  ids=torch.zeros(batch*width,dtype=torch.int64,device=dev),
                  rope=torch.zeros(batch*width,dtype=torch.int64,device=dev),
@@ -76,34 +83,36 @@ class BatchedTreeForward:
                  blocks=torch.zeros(batch,r.config.max_blocks,dtype=torch.int32,device=dev),
                  pages=wr._paged_kv_indices_buf,mask=wr._custom_mask_buf,
                  output=torch.zeros(batch*width,hf.hidden_size,dtype=dtype,device=dev))
-        self._context(g)
-        if self.split:
-            g['hidden'] = torch.zeros_like(g['output'])
-            g['residual'] = torch.zeros_like(g['output'])
-            def pre():
-                h,res = r.model(g['ids'],g['rope'],end_layer=r.config.duet_exit_layer+1)
-                g['hidden'].copy_(h)
-                g['residual'].copy_(res)
-            def post():
-                out = r.model(g['ids'],g['rope'],start_layer=r.config.duet_exit_layer+1,
-                              init_hidden_states=g['hidden'],init_residual=g['residual'])
-                g['output'].copy_(out[0] if isinstance(out,tuple) else out)
-            pre(); post()
-            torch.cuda.synchronize(dev)
-            g['pre'] = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(g['pre'],pool=self.pool): pre()
-            if self.pool is None: self.pool = g['pre'].pool()
-            g['post'] = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(g['post'],pool=self.pool): post()
-        else:
-            def full():
-                g['output'].copy_(r.model(g['ids'],g['rope']))
-            full()
-            torch.cuda.synchronize(dev)
-            g['full'] = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(g['full'],pool=self.pool): full()
-            if self.pool is None: self.pool = g['full'].pool()
-        reset_context()
+        try:
+            self._context(g)
+            if self.split:
+                g['hidden'] = torch.zeros_like(g['output'])
+                g['residual'] = torch.zeros_like(g['output'])
+                def pre():
+                    h,res = r.model(g['ids'],g['rope'],end_layer=r.config.duet_exit_layer+1)
+                    g['hidden'].copy_(h)
+                    g['residual'].copy_(res)
+                def post():
+                    out = r.model(g['ids'],g['rope'],start_layer=r.config.duet_exit_layer+1,
+                                  init_hidden_states=g['hidden'],init_residual=g['residual'])
+                    g['output'].copy_(out[0] if isinstance(out,tuple) else out)
+                pre(); post()
+                torch.cuda.synchronize(dev)
+                g['pre'] = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(g['pre'],pool=self.pool): pre()
+                if self.pool is None: self.pool = g['pre'].pool()
+                g['post'] = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(g['post'],pool=self.pool): post()
+            else:
+                def full():
+                    g['output'].copy_(r.model(g['ids'],g['rope']))
+                full()
+                torch.cuda.synchronize(dev)
+                g['full'] = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(g['full'],pool=self.pool): full()
+                if self.pool is None: self.pool = g['full'].pool()
+        finally:
+            reset_context()
         self.graphs[key] = g
         if DETAIL_TREE:duet_close(capture_label,capture_event)
         return g

@@ -1,6 +1,7 @@
 """Run every review suite in a fresh interpreter and retain source evidence.
 
-Zero discovered tests and any skip fail this CUDA release check.
+Zero discovered tests and unexpected skips fail this CUDA release check.
+An explicitly unsupported SGL/SM120 case is recorded, never counted as passed.
 """
 import argparse
 import hashlib
@@ -22,6 +23,7 @@ SUITES = (
     'test_tree_fused_math', 'test_tree_extension_review', 'test_mlsys_measurement',
     'test_flat_tree_review', 'test_flat_tree_runtime', 'test_tree_live_siblings',
     'test_tree_warmup_bounds', 'test_tree_proxy_defaults',
+    'test_runtime_manifest', 'test_fi_attn_backend', 'test_blackwell_review', 'test_blackwell_attention_shapes', 'test_job_status_review',
     'test_request_reporting', 'test_release_review', 'test_tree_payload_prepare', 'test_local_research_policy',
     'test_equal_budget_tree', 'test_equal_dataset',
 )
@@ -48,10 +50,15 @@ def main():
                                                     pattern=args.worker + '.py')
         with (args.output_dir / (args.worker + '.suite.log')).open('w') as log:
             result = unittest.TextTestRunner(stream=log, verbosity=2).run(suite)
+        allowed_skips = [(test.id(), reason) for test,reason in result.skipped
+            if test.id().endswith('TestCachedPrefill.test_sgl')
+            and reason.startswith('SGL Hopper kernels unsupported on SM120')]
+        unexpected_skips = len(result.skipped)-len(allowed_skips)
         row = dict(name=args.worker, tests=result.testsRun, failures=len(result.failures),
-                   errors=len(result.errors), skipped=len(result.skipped))
+                   errors=len(result.errors), skipped=len(result.skipped),
+                   unsupported=allowed_skips, unexpected_skips=unexpected_skips)
         (args.output_dir / (args.worker + '.result.json')).write_text(json.dumps(row, indent=2))
-        raise SystemExit(0 if result.testsRun and result.wasSuccessful() and not result.skipped else 1)
+        raise SystemExit(0 if result.testsRun and result.wasSuccessful() and not unexpected_skips else 1)
 
     before = source_hashes()
     started = time.time()

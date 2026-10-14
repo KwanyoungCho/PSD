@@ -319,16 +319,9 @@ class P1TreeExecutor(P2TreeExecutor):
             glue_width=int(context_bucket),
             materialize_backbone_logits=materialize_backbone_logits,
             round_widths=round_widths)
-        # Qwama-0.5B's widest P1 bucket needs 56 MiB for FA2 temporary V;
-        # the historical TinyLlama-specific 48 MiB limit fails at startup.
-        # Retain an explicit override for model/hardware-specific sizing.
-        # DraftRunner reserves graph headroom separately from KV capacity.
-        p1_workspace_mb = int(os.environ.get(
-            "SSD_P1_TREE_EXEC_WORKSPACE_MB", "64"))
-        if p1_workspace_mb <= 0:
-            raise ValueError(
-                "SSD_P1_TREE_EXEC_WORKSPACE_MB must be positive")
-        self._workspace_bytes = p1_workspace_mb * 2**20
+        from ssd.utils.workspace import workspace_bytes
+        self._workspace_env = "SSD_P1_TREE_EXEC_WORKSPACE_MB"
+        self._workspace_bytes = workspace_bytes(self._workspace_env, 128)
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
         self.forward_scale = scale

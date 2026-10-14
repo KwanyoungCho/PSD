@@ -2,6 +2,10 @@
 import os
 import sys
 import unittest
+import contextlib
+import io
+import json
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 os.environ.setdefault('SSD_HF_CACHE','/tmp')
@@ -24,10 +28,18 @@ class RootBudget(unittest.TestCase):
         self.assertEqual(select_roots(t[:,:1],s[:,:1],ci[:,:1],3)[1][:,1:].sum(),0)
 
     def test_no_calibration_default(self):
+        executor=SimpleNamespace(phase='p2',policy='dynamic',W=8,R=8,F=8,NV=192,C=3)
+        log=io.StringIO()
         with patch.dict(os.environ,clear=False):
             os.environ.pop('SSD_TREE_EXPANSION_POLICY',None)
-            p=TreeExpansionPolicy(None)
+            with contextlib.redirect_stdout(log):
+                p=TreeExpansionPolicy(executor)
         self.assertEqual(p.mode,'q_path');self.assertIsNone(p.alpha);self.assertIsNone(p.gain)
+        record=json.loads(log.getvalue().split('[tree-policy-resolved] ',1)[1])
+        self.assertEqual(record['requested'],'q_path')
+        self.assertEqual(record['resolved'],'q_path')
+        self.assertEqual(record['calibration_sha256'],{})
+        self.assertIsNone(record['fallback'])
 
     def test_nonbinding_generation_capacity(self):
         for c in (1,3,8):

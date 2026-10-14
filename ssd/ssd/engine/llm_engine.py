@@ -59,9 +59,10 @@ class LLMEngine:
             prepare_norms_for_colocation()
         Sequence.block_size = config.kvcache_block_size 
 
-        assert config.kvcache_block_size >= (
-            2 * config.speculate_k + 2), "ERROR: support for block size < 2*k+2 is not implemented"
-        assert config.num_gpus > 1 or not config.draft_async, "ERROR: draft_async requires at least 2 gpus"
+        if config.kvcache_block_size < 2 * config.speculate_k + 2:
+            raise ValueError("Support for block size < 2*k+2 is not implemented")
+        if config.num_gpus <= 1 and config.draft_async:
+            raise ValueError("draft_async requires at least 2 GPUs")
             
         self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
         # EAGLE uses the target's token IDs by construction and may not ship
@@ -93,120 +94,138 @@ class LLMEngine:
         if config.speculate and config.draft_async:
             self.draft_ps = None
 
-        for i in range(1, self.num_tp_gpus):
+        try:
+            for i in range(1, self.num_tp_gpus):
+                if self.config.verbose:
+                    print(f'creating ModelRunner process {i}', flush=True)
+                event = ctx.Event()
+                # can't pass kwargs through ctx.Process args
+                process = ctx.Process(target=ModelRunner, args=(
+                    config, i, event, False, self.num_tp_gpus))
+                process.start()
+                self.ps.append(process)
+                self.events.append(event)
+
             if self.config.verbose:
-                print(f'creating ModelRunner process {i}', flush=True)
-            event = ctx.Event()
-            # can't pass kwargs through ctx.Process args
-            process = ctx.Process(target=ModelRunner, args=(
-                config, i, event, False, self.num_tp_gpus))
-            process.start()
-            self.ps.append(process)
-            self.events.append(event)
+                print(
+                    f'config.speculate = {config.speculate} and config.draft_async = {config.draft_async} about to create draft runner', flush=True)
 
-        if self.config.verbose:
-            print(
-                f'config.speculate = {config.speculate} and config.draft_async = {config.draft_async} about to create draft runner', flush=True)
+            if config.speculate and config.draft_async:
+                init_q = ctx.Queue()
+                draft_rank = config.num_gpus - 1
+                self.draft_ps = ctx.Process(
+                    target=DraftRunner, args=(config, draft_rank, init_q))
+                self.draft_ps.start()
+                print(
+                    f'Draft runner created on rank {draft_rank} (async)!', flush=True)
 
-        if config.speculate and config.draft_async:
-            init_q = ctx.Queue()
-            draft_rank = config.num_gpus - 1
-            self.draft_ps = ctx.Process(
-                target=DraftRunner, args=(config, draft_rank, init_q))
-            self.draft_ps.start()
-            self._draft_watch_stop = threading.Event()
-            self._draft_watch_thread = threading.Thread(
-                target=self._watch_draft_process,
-                name="ssd-draft-watchdog", daemon=True)
-            self._draft_watch_thread.start()
-            print(
-                f'Draft runner created on rank {draft_rank} (async)!', flush=True)
+            if self.ps or getattr(self, "draft_ps", None) is not None:
+                self._draft_watch_stop = threading.Event()
+                self._draft_watch_thread = threading.Thread(
+                    target=self._watch_draft_process,
+                    name="ssd-worker-watchdog", daemon=True)
+                self._draft_watch_thread.start()
 
-        # modelRunner(0) will wait on all 5 processes, so other 4 need to have launched by now
-        self.model_runner = ModelRunner(
-            config, 0, self.events, is_draft=False, num_tp_gpus=self.num_tp_gpus)
+            # modelRunner(0) will wait on all 5 processes, so other 4 need to have launched by now
+            self.model_runner = ModelRunner(
+                config, 0, self.events, is_draft=False, num_tp_gpus=self.num_tp_gpus)
 
-        # do this after so we can launch model runner above so that the q is actually populated
-        if config.speculate and config.draft_async:
-            try:
-                num_blocks = init_q.get(timeout=180)  # seconds
-            except Exception as e:
-                raise RuntimeError(
-                    "ERROR: Timed out waiting for draft kv cache size") from e
+            # do this after so we can launch model runner above so that the q is actually populated
+            if config.speculate and config.draft_async:
+                try:
+                    num_blocks = init_q.get(timeout=180)  # seconds
+                except Exception as e:
+                    raise RuntimeError(
+                        "ERROR: Timed out waiting for draft kv cache size") from e
 
-            try:
-                draft_ready = init_q.get(timeout=300)
-            except Exception as e:
-                raise RuntimeError(
-                    "ERROR: Timed out waiting for draft CUDA graph warmup") from e
-            if not (isinstance(draft_ready, tuple)
-                    and len(draft_ready) == 2
-                    and draft_ready[0] == "draft_ready"):
-                raise RuntimeError(
-                    f"ERROR: Invalid draft readiness message: {draft_ready!r}")
+                try:
+                    draft_ready = init_q.get(timeout=300)
+                except Exception as e:
+                    raise RuntimeError(
+                        "ERROR: Timed out waiting for draft CUDA graph warmup") from e
+                if not (isinstance(draft_ready, tuple)
+                        and len(draft_ready) == 2
+                        and draft_ready[0] == "draft_ready"):
+                    raise RuntimeError(
+                        f"ERROR: Invalid draft readiness message: {draft_ready!r}")
 
-            init_q.close()
-            self.draft_cfg = DraftRunner.create_draft_config(config)
-            self.draft_cfg.num_kvcache_blocks = num_blocks  # set for block manager to knwo
+                init_q.close()
+                self.draft_cfg = DraftRunner.create_draft_config(config)
+                self.draft_cfg.num_kvcache_blocks = num_blocks  # set for block manager to knwo
 
-            self.prev_allocated_blocks = None
-            self.prev_blocks_per_fork = None
+                self.prev_allocated_blocks = None
+                self.prev_blocks_per_fork = None
 
-        if config.speculate and not config.draft_async:
-            # keep it colocated on rank 0, process/dist agnostic in this case
-            self.draft_runner = DraftRunner(config)
-            self.draft_cfg = self.draft_runner.draft_cfg
-            print(f'Draft runner created on rank 0 (no async)', flush=True)
+            if config.speculate and not config.draft_async:
+                # keep it colocated on rank 0, process/dist agnostic in this case
+                self.draft_runner = DraftRunner(config)
+                self.draft_cfg = self.draft_runner.draft_cfg
+                print(f'Draft runner created on rank 0 (no async)', flush=True)
 
-        if self.model_runner.batched_tree_enabled:
-            from ssd.engine.helpers.batch_tree_warmup import prewarm_target
-            prewarm_target(self.model_runner)
+            if self.model_runner.batched_tree_enabled:
+                from ssd.engine.helpers.batch_tree_warmup import prewarm_target
+                prewarm_target(self.model_runner)
 
-        config.eos = self.tokenizer.eos_token_id
-        self.scheduler = Scheduler(config, draft_cfg=self.draft_cfg if config.speculate else None)
-        assert config.max_model_len == self.scheduler.max_model_len
+            config.eos = self.tokenizer.eos_token_id
+            self.scheduler = Scheduler(config, draft_cfg=self.draft_cfg if config.speculate else None)
+            if config.max_model_len != self.scheduler.max_model_len:
+                raise RuntimeError("Engine/scheduler context limits disagree")
 
-        print(f"[LLMEngine] finished llm_engine init", flush=True)
+            print(f"[LLMEngine] finished llm_engine init", flush=True)
+
+        except BaseException:
+            # Rank 0 may fail before registration of normal shutdown, e.g.
+            # workspace prewarm. Never wait on NCCL in this failure path.
+            self._abort_workers()
+            raise
 
         atexit.register(lambda: self.exit(hard=True))
 
-    def _watch_draft_process(self):
-        """Fail the whole engine when the standalone draft worker dies.
+    def _abort_workers(self):
+        """Bounded teardown of only this engine's child processes."""
+        self._exiting = True
+        stop = getattr(self, "_draft_watch_stop", None)
+        if stop is not None and hasattr(stop, "set"):
+            stop.set()
+        workers = list(getattr(self, "ps", ()))
+        draft = getattr(self, "draft_ps", None)
+        if draft is not None:
+            workers.append(draft)
+        for worker in workers:
+            try:
+                if worker.is_alive():
+                    worker.terminate()
+            except Exception:
+                pass
+        for worker in workers:
+            try:
+                worker.join(timeout=1)
+                if worker.is_alive():
+                    worker.kill()
+                    worker.join(timeout=1)
+            except Exception:
+                pass
 
-        Rank 0 can be blocked inside NCCL when the draft process hits a CUDA
-        assert.  Waiting for normal exception propagation therefore leaves
-        the target workers spinning indefinitely.  A parent-side process
-        watcher does not depend on CUDA/NCCL progress and can tear the run
-        down promptly, matching the fail-fast worker supervision used by
-        high-throughput serving runtimes.
-        """
+    def _watch_draft_process(self):
+        """Supervise both TP and draft workers, including startup/prewarm."""
         stop = self._draft_watch_stop
         while not stop.wait(0.5):
-            proc = getattr(self, "draft_ps", None)
-            if proc is None or proc.is_alive():
-                continue
             if getattr(self, "_exiting", False):
                 return
-            code = proc.exitcode
-            print(
-                f"[LLMEngine] FATAL: draft runner exited unexpectedly "
-                f"(exitcode={code}); terminating target workers",
-                flush=True)
-            workers = list(getattr(self, "ps", ()))
-            for worker in workers:
-                try:
-                    if worker.is_alive():
-                        worker.terminate()
-                except Exception:
-                    pass
-            for worker in workers:
-                try:
-                    worker.join(timeout=1)
-                    if worker.is_alive():
-                        worker.kill()
-                except Exception:
-                    pass
-            os._exit(code if isinstance(code, int) and code > 0 else 1)
+            workers = [(f"target rank {i+1}", p)
+                       for i, p in enumerate(getattr(self, "ps", ()))]
+            draft = getattr(self, "draft_ps", None)
+            if draft is not None:
+                workers.append(("draft", draft))
+            for role, proc in workers:
+                if proc.is_alive():
+                    continue
+                code = proc.exitcode
+                print(f"[LLMEngine] FATAL: {role} exited unexpectedly "
+                      f"(exitcode={code}); stopping this engine's workers",
+                      flush=True)
+                self._abort_workers()
+                os._exit(code if isinstance(code, int) and code > 0 else 1)
 
     def exit(self, hard: bool = True):
         print(f"[LLMEngine] Exiting (hard={hard})", flush=True)

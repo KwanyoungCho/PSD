@@ -32,11 +32,23 @@ def token_scores(e, q, source):
     raise ValueError(f'Unknown cache-root source: {source}')
 
 
+def vocabulary_mass(scores):
+    """Canonical row reduction, independent of excluded-child padding stride.
+
+    Dense exclusion leaves one padding column per request; flat exclusion
+    leaves one per context. Summing those strided views directly produced
+    one-ULP denominator differences and changed near-tied candidate IDs.
+    Only the reduction layout changes, not the normalization formula.
+    """
+    v = scores.shape[-1]
+    return scores.reshape(-1, v).contiguous().sum(-1).reshape(*scores.shape[:-1], 1)
+
+
 def rank(scores, terminal, top_k, wire_n, normalization, pack_scores=True):
     from ssd.engine.helpers.p2_tree import pack_piv
     values, ids = scores.topk(min(top_k, scores.shape[-1]), -1)
-    denom = (scores.sum(-1, keepdim=True) if normalization == 'full'
-             else values.sum(-1, keepdim=True))
+    denom = (vocabulary_mass(scores) if normalization == 'full'
+             else vocabulary_mass(values))
     piv = values / denom.clamp_min(1e-10) * terminal[..., None]
     value, index = piv.flatten(1).topk(min(wire_n, piv[0].numel()), 1)
     pos = index // values.shape[-1]
