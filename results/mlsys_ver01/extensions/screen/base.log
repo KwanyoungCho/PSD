@@ -1,0 +1,412 @@
+[Config] duet_proxy_top_k raised 3 → 13 (K_max=4 K_min=2 p1_sum_full=18 p1_sum_short=6 p1_max=2 per_pos=9 total=13 wire_N=25)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+Draft runner created on rank 1 (async)!
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[model_runner about to wrapper.init()] graph_bs_list=[1, 2, 4, 8]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+`torch_dtype` is deprecated! Use `dtype` instead!
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00, 11.76it/s]
+Loading model files:  33%|███▎      | 1/3 [00:00<00:01,  1.86it/s]Loading model files:  67%|██████▋   | 2/3 [00:01<00:00,  1.52it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.41it/s]Loading model files: 100%|██████████| 3/3 [00:02<00:00,  1.46it/s]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 12, 1290, 256, 12, 64])
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 36, 256, 32, 128])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+[DUET split-K1K2] layouts: split_k1_long MQ=10 (K=K1=4, pos=5), split_k1_short MQ=6 (K=K1=4, pos=3), split_k2 MQ=5 (K=K2=2, pos=3)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+DraftRunner set up, starting draft_loop
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=13, draft_fan_out=2, proxy_fan_out=1, K1=4, K2=2, P2_W=5, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 917.02tok/s
+Final Decode Throughput: 51.24tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 51.24003890400784, 'al': 2.1666666666666665, 'cache_hit': 0.7738095238095238, 'emitted_tokens': 364, 'seconds': 7.103819743031636, 'included_steps': 21, 'included_events': 168, 'total_steps': 42, 'excluded_steps': 21, 'exclusion_reasons': {'cap_or_clip': 7, 'partial_batch': 20, 'both': 6}}
+[raw metrics] All decode throughput: 33.06tok/s
+[metrics] Prefill tokens/time: 429 / 0.467818s
+[metrics] Decode tokens/time: 512 / 15.486235s
+[metrics] Avg Tokens per step (incl recovery): 2.17
+[raw metrics] All-event accepted length: 2.24
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.31 (denom=4)
+[metrics] Avg target time per full step (ms): 371.08
+[metrics] Avg target verify time (ms): 139.08
+[metrics] Avg Cache Hits: 0.77
+[raw metrics] All-event cache hit: 0.78
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.370
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.410
+[metrics] Avg Phase 1 Accepted Len: 1.92
+[metrics] Avg Phase 1 Acceptance Ratio: 0.480
+[metrics] Avg Phase 2 Accepted Len: 0.87
+[metrics] Avg Phase 2 Acceptance Ratio: 0.435
+[metrics] Avg Tokens per step on Cache Hit: 2.38
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.270
+  1: 0.365
+  2: 0.208
+  3: 0.034
+  4: 0.124
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.79
+PAPER_GROUP base warm 0
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 8811.18tok/s
+Final Decode Throughput: 511.62tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 511.6231228833112, 'al': 1.9583333333333333, 'cache_hit': 0.6197916666666666, 'emitted_tokens': 376, 'seconds': 0.734915962908417, 'included_steps': 24, 'included_events': 192, 'total_steps': 39, 'excluded_steps': 15, 'exclusion_reasons': {'partial_batch': 15, 'cap_or_clip': 7, 'both': 7}}
+[raw metrics] All decode throughput: 93.40tok/s
+[metrics] Prefill tokens/time: 324 / 0.036771s
+[metrics] Decode tokens/time: 502 / 5.374957s
+[metrics] Avg Tokens per step (incl recovery): 1.96
+[raw metrics] All-event accepted length: 2.00
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.25 (denom=4)
+[metrics] Avg target time per full step (ms): 135.35
+[metrics] Avg target verify time (ms): 50.50
+[metrics] Avg Cache Hits: 0.62
+[raw metrics] All-event cache hit: 0.65
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.303
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.350
+[metrics] Avg Phase 1 Accepted Len: 1.60
+[metrics] Avg Phase 1 Acceptance Ratio: 0.401
+[metrics] Avg Phase 2 Accepted Len: 0.95
+[metrics] Avg Phase 2 Acceptance Ratio: 0.477
+[metrics] Avg Tokens per step on Cache Hit: 2.25
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.277
+  1: 0.384
+  2: 0.226
+  3: 0.038
+  4: 0.075
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.59
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 11552.02tok/s
+Final Decode Throughput: 26.77tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 26.773864943118973, 'al': 1.125, 'cache_hit': 0.0, 'emitted_tokens': 9, 'seconds': 0.33614870393648744, 'included_steps': 1, 'included_events': 8, 'total_steps': 51, 'excluded_steps': 50, 'exclusion_reasons': {'partial_batch': 50, 'cap_or_clip': 5, 'both': 5}}
+[raw metrics] All decode throughput: 38.07tok/s
+[metrics] Prefill tokens/time: 3731 / 0.322974s
+[metrics] Decode tokens/time: 428 / 11.242831s
+[metrics] Avg Tokens per step (incl recovery): 1.12
+[raw metrics] All-event accepted length: 1.49
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.12 (denom=4)
+[metrics] Avg target time per full step (ms): 222.47
+[metrics] Avg target verify time (ms): 70.41
+[metrics] Avg Cache Hits: 0.00
+[raw metrics] All-event cache hit: 0.78
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.143
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.634
+[metrics] Avg Phase 1 Accepted Len: 1.02
+[metrics] Avg Phase 1 Acceptance Ratio: 0.256
+[metrics] Avg Phase 2 Accepted Len: 0.41
+[metrics] Avg Phase 2 Acceptance Ratio: 0.203
+[metrics] Avg Tokens per step on Cache Hit: 1.53
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.634
+  1: 0.241
+  2: 0.108
+  3: 0.000
+  4: 0.017
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.35
+PAPER_GROUP base warm 16
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 5400.96tok/s
+Final Decode Throughput: 567.12tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 567.1224522645462, 'al': 2.173076923076923, 'cache_hit': 0.7211538461538461, 'emitted_tokens': 226, 'seconds': 0.3985030024778098, 'included_steps': 13, 'included_events': 104, 'total_steps': 34, 'excluded_steps': 21, 'exclusion_reasons': {'partial_batch': 21, 'cap_or_clip': 6, 'both': 6}}
+[raw metrics] All decode throughput: 489.32tok/s
+[metrics] Prefill tokens/time: 112 / 0.020737s
+[metrics] Decode tokens/time: 478 / 0.976876s
+[metrics] Avg Tokens per step (incl recovery): 2.17
+[raw metrics] All-event accepted length: 2.29
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.32 (denom=4)
+[metrics] Avg target time per full step (ms): 28.56
+[metrics] Avg target verify time (ms): 21.07
+[metrics] Avg Cache Hits: 0.72
+[raw metrics] All-event cache hit: 0.80
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.448
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.350
+[metrics] Avg Phase 1 Accepted Len: 1.91
+[metrics] Avg Phase 1 Acceptance Ratio: 0.476
+[metrics] Avg Phase 2 Accepted Len: 0.99
+[metrics] Avg Phase 2 Acceptance Ratio: 0.494
+[metrics] Avg Tokens per step on Cache Hit: 2.46
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.236
+  1: 0.315
+  2: 0.309
+  3: 0.030
+  4: 0.109
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.67
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 10340.81tok/s
+Final Decode Throughput: 550.63tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 550.6277601824286, 'al': 2.0625, 'cache_hit': 0.8942307692307693, 'emitted_tokens': 429, 'seconds': 0.7791107369121164, 'included_steps': 26, 'included_events': 208, 'total_steps': 35, 'excluded_steps': 9, 'exclusion_reasons': {'cap_or_clip': 6, 'partial_batch': 8, 'both': 5}}
+[raw metrics] All decode throughput: 515.85tok/s
+[metrics] Prefill tokens/time: 460 / 0.044484s
+[metrics] Decode tokens/time: 512 / 0.992538s
+[metrics] Avg Tokens per step (incl recovery): 2.06
+[raw metrics] All-event accepted length: 2.14
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.28 (denom=4)
+[metrics] Avg target time per full step (ms): 28.86
+[metrics] Avg target verify time (ms): 21.21
+[metrics] Avg Cache Hits: 0.89
+[raw metrics] All-event cache hit: 0.90
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.396
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.507
+[metrics] Avg Phase 1 Accepted Len: 1.58
+[metrics] Avg Phase 1 Acceptance Ratio: 0.395
+[metrics] Avg Phase 2 Accepted Len: 0.90
+[metrics] Avg Phase 2 Acceptance Ratio: 0.451
+[metrics] Avg Tokens per step on Cache Hit: 2.20
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.282
+  1: 0.395
+  2: 0.223
+  3: 0.036
+  4: 0.064
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.50
+PAPER_GROUP base warm 32
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 11380.96tok/s
+Final Decode Throughput: 744.68tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 744.6809974896171, 'al': 3.105769230769231, 'cache_hit': 0.7403846153846154, 'emitted_tokens': 323, 'seconds': 0.4337427718564868, 'included_steps': 13, 'included_events': 104, 'total_steps': 30, 'excluded_steps': 17, 'exclusion_reasons': {'cap_or_clip': 6, 'partial_batch': 16, 'both': 5}}
+[raw metrics] All decode throughput: 138.02tok/s
+[metrics] Prefill tokens/time: 4096 / 0.359899s
+[metrics] Decode tokens/time: 512 / 3.709644s
+[metrics] Avg Tokens per step (incl recovery): 3.11
+[raw metrics] All-event accepted length: 2.83
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.46 (denom=4)
+[metrics] Avg target time per full step (ms): 131.33
+[metrics] Avg target verify time (ms): 54.57
+[metrics] Avg Cache Hits: 0.74
+[raw metrics] All-event cache hit: 0.72
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.483
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.234
+[metrics] Avg Phase 1 Accepted Len: 2.40
+[metrics] Avg Phase 1 Acceptance Ratio: 0.601
+[metrics] Avg Phase 2 Accepted Len: 1.24
+[metrics] Avg Phase 2 Acceptance Ratio: 0.618
+[metrics] Avg Tokens per step on Cache Hit: 3.07
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.141
+  1: 0.281
+  2: 0.244
+  3: 0.030
+  4: 0.304
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.18
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 10093.50tok/s
+Final Decode Throughput: 259.96tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 259.9639531570002, 'al': 2.157608695652174, 'cache_hit': 0.7717391304347826, 'emitted_tokens': 397, 'seconds': 1.5271348014939576, 'included_steps': 23, 'included_events': 184, 'total_steps': 37, 'excluded_steps': 14, 'exclusion_reasons': {'cap_or_clip': 5, 'partial_batch': 13, 'both': 4}}
+[raw metrics] All decode throughput: 158.52tok/s
+[metrics] Prefill tokens/time: 429 / 0.042503s
+[metrics] Decode tokens/time: 512 / 3.229821s
+[metrics] Avg Tokens per step (incl recovery): 2.16
+[raw metrics] All-event accepted length: 2.15
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.29 (denom=4)
+[metrics] Avg target time per full step (ms): 86.17
+[metrics] Avg target verify time (ms): 28.89
+[metrics] Avg Cache Hits: 0.77
+[raw metrics] All-event cache hit: 0.78
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.404
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.380
+[metrics] Avg Phase 1 Accepted Len: 1.55
+[metrics] Avg Phase 1 Acceptance Ratio: 0.387
+[metrics] Avg Phase 2 Accepted Len: 1.04
+[metrics] Avg Phase 2 Acceptance Ratio: 0.521
+[metrics] Avg Tokens per step on Cache Hit: 2.29
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.265
+  1: 0.357
+  2: 0.281
+  3: 0.016
+  4: 0.081
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.70
+PAPER_GROUP base measured 0
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 8987.88tok/s
+Final Decode Throughput: 358.34tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 358.3398244820237, 'al': 1.0, 'cache_hit': 0.0, 'emitted_tokens': 8, 'seconds': 0.022325176978483796, 'included_steps': 1, 'included_events': 8, 'total_steps': 36, 'excluded_steps': 35, 'exclusion_reasons': {'partial_batch': 35, 'cap_or_clip': 6, 'both': 6}}
+[raw metrics] All decode throughput: 431.12tok/s
+[metrics] Prefill tokens/time: 324 / 0.036049s
+[metrics] Decode tokens/time: 449 / 1.041479s
+[metrics] Avg Tokens per step (incl recovery): 1.00
+[raw metrics] All-event accepted length: 2.06
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.27 (denom=4)
+[metrics] Avg target time per full step (ms): 29.17
+[metrics] Avg target verify time (ms): 20.83
+[metrics] Avg Cache Hits: 0.00
+[raw metrics] All-event cache hit: 0.70
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.328
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.375
+[metrics] Avg Phase 1 Accepted Len: 1.56
+[metrics] Avg Phase 1 Acceptance Ratio: 0.390
+[metrics] Avg Phase 2 Accepted Len: 0.97
+[metrics] Avg Phase 2 Acceptance Ratio: 0.487
+[metrics] Avg Tokens per step on Cache Hit: 2.26
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.257
+  1: 0.421
+  2: 0.211
+  3: 0.026
+  4: 0.086
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.61
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 11521.24tok/s
+Final Decode Throughput: 373.37tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 373.36552829881197, 'al': 1.5480769230769231, 'cache_hit': 0.8028846153846154, 'emitted_tokens': 322, 'seconds': 0.8624256274197251, 'included_steps': 26, 'included_events': 208, 'total_steps': 57, 'excluded_steps': 31, 'exclusion_reasons': {'cap_or_clip': 6, 'partial_batch': 30, 'both': 5}}
+[raw metrics] All decode throughput: 116.40tok/s
+[metrics] Prefill tokens/time: 3731 / 0.323837s
+[metrics] Decode tokens/time: 511 / 4.389925s
+[metrics] Avg Tokens per step (incl recovery): 1.55
+[raw metrics] All-event accepted length: 1.45
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.11 (denom=4)
+[metrics] Avg target time per full step (ms): 81.33
+[metrics] Avg target verify time (ms): 35.17
+[metrics] Avg Cache Hits: 0.80
+[raw metrics] All-event cache hit: 0.82
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.119
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.706
+[metrics] Avg Phase 1 Accepted Len: 0.71
+[metrics] Avg Phase 1 Acceptance Ratio: 0.177
+[metrics] Avg Phase 2 Accepted Len: 0.41
+[metrics] Avg Phase 2 Acceptance Ratio: 0.204
+[metrics] Avg Tokens per step on Cache Hit: 1.46
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.643
+  1: 0.271
+  2: 0.079
+  3: 0.000
+  4: 0.007
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.44
+PAPER_GROUP base measured 16
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 5549.22tok/s
+Final Decode Throughput: 617.57tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 617.5746872369524, 'al': 2.3369565217391304, 'cache_hit': 0.7771739130434783, 'emitted_tokens': 430, 'seconds': 0.6962720605079085, 'included_steps': 23, 'included_events': 184, 'total_steps': 31, 'excluded_steps': 8, 'exclusion_reasons': {'cap_or_clip': 5, 'partial_batch': 7, 'both': 4}}
+[raw metrics] All decode throughput: 572.46tok/s
+[metrics] Prefill tokens/time: 112 / 0.020183s
+[metrics] Decode tokens/time: 512 / 0.894389s
+[metrics] Avg Tokens per step (incl recovery): 2.34
+[raw metrics] All-event accepted length: 2.40
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.35 (denom=4)
+[metrics] Avg target time per full step (ms): 28.63
+[metrics] Avg target verify time (ms): 21.23
+[metrics] Avg Cache Hits: 0.78
+[raw metrics] All-event cache hit: 0.77
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.397
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.374
+[metrics] Avg Phase 1 Accepted Len: 2.10
+[metrics] Avg Phase 1 Acceptance Ratio: 0.526
+[metrics] Avg Phase 2 Accepted Len: 0.96
+[metrics] Avg Phase 2 Acceptance Ratio: 0.481
+[metrics] Avg Tokens per step on Cache Hit: 2.56
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.225
+  1: 0.290
+  2: 0.314
+  3: 0.047
+  4: 0.124
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.83
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 10381.43tok/s
+Final Decode Throughput: 560.59tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 560.5915327563681, 'al': 2.1354166666666665, 'cache_hit': 0.8229166666666666, 'emitted_tokens': 410, 'seconds': 0.7313703044783324, 'included_steps': 24, 'included_events': 192, 'total_steps': 35, 'excluded_steps': 11, 'exclusion_reasons': {'cap_or_clip': 6, 'partial_batch': 10, 'both': 5}}
+[raw metrics] All decode throughput: 504.30tok/s
+[metrics] Prefill tokens/time: 460 / 0.044310s
+[metrics] Decode tokens/time: 512 / 1.015275s
+[metrics] Avg Tokens per step (incl recovery): 2.14
+[raw metrics] All-event accepted length: 2.16
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.29 (denom=4)
+[metrics] Avg target time per full step (ms): 29.49
+[metrics] Avg target verify time (ms): 21.24
+[metrics] Avg Cache Hits: 0.82
+[raw metrics] All-event cache hit: 0.82
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.341
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.479
+[metrics] Avg Phase 1 Accepted Len: 1.82
+[metrics] Avg Phase 1 Acceptance Ratio: 0.455
+[metrics] Avg Phase 2 Accepted Len: 0.95
+[metrics] Avg Phase 2 Acceptance Ratio: 0.473
+[metrics] Avg Tokens per step on Cache Hit: 2.32
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.256
+  1: 0.359
+  2: 0.272
+  3: 0.036
+  4: 0.077
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.48
+PAPER_GROUP base measured 32
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 11381.60tok/s
+Final Decode Throughput: 647.88tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 8, 'tps': 647.8836592071108, 'al': 2.75, 'cache_hit': 0.75, 'emitted_tokens': 286, 'seconds': 0.4414372795727104, 'included_steps': 13, 'included_events': 104, 'total_steps': 30, 'excluded_steps': 17, 'exclusion_reasons': {'cap_or_clip': 6, 'partial_batch': 16, 'both': 5}}
+[raw metrics] All decode throughput: 214.11tok/s
+[metrics] Prefill tokens/time: 4096 / 0.359879s
+[metrics] Decode tokens/time: 512 / 2.391251s
+[metrics] Avg Tokens per step (incl recovery): 2.75
+[raw metrics] All-event accepted length: 2.77
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.44 (denom=4)
+[metrics] Avg target time per full step (ms): 88.80
+[metrics] Avg target verify time (ms): 41.93
+[metrics] Avg Cache Hits: 0.75
+[raw metrics] All-event cache hit: 0.82
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.471
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.346
+[metrics] Avg Phase 1 Accepted Len: 2.38
+[metrics] Avg Phase 1 Acceptance Ratio: 0.595
+[metrics] Avg Phase 2 Accepted Len: 1.26
+[metrics] Avg Phase 2 Acceptance Ratio: 0.629
+[metrics] Avg Tokens per step on Cache Hit: 2.95
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.163
+  1: 0.229
+  2: 0.340
+  3: 0.026
+  4: 0.242
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.05
+PAPER_COMPLETE {"steps": 110, "all_steps": 226, "tokens": 1853, "seconds": 4.280965250451118, "tps": 432.84630722118925, "verify_ms": 22.81876940872859, "step_ms": 38.91786591319198, "al": 2.105681818181818, "hit": 0.7818181818181819, "actual_output_tokens": 3008, "emitted_decode_tokens": 3008}
+[LLMEngine] Exiting (hard=False)
+[metrics] batched tree: {'steps': 457, 'tree_hits': 2234, 'phase1_replays': 457, 'phase2_replays': 457, 'captures': 52}
+[metrics] Avg draft step time (ms): 110.16
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1013 13:56:21.687191843 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

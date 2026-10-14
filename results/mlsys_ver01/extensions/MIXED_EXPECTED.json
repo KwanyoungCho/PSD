@@ -1,0 +1,97 @@
+{
+  "llama2": {
+    "scope": "fixed proposals; ordinary profiled step time; modeled one-step criterion, not measured AR TPS",
+    "matching_outputs": true,
+    "matching_events": true,
+    "ar_metadata_ms": 0.05939200147986412,
+    "zero_miss_steps": 28,
+    "miss_counts": {
+      "6": {
+        "steps": 1,
+        "expected_token_loss": 4.812222037694845,
+        "estimated_saved_ms": 2.145343992859125,
+        "break_even_saved_ms": 13.604357662415273,
+        "predicted_win_fraction": 0.0
+      },
+      "2": {
+        "steps": 29,
+        "expected_token_loss": 1.4122284843200532,
+        "estimated_saved_ms": 2.0746240355074406,
+        "break_even_saved_ms": 3.304007309958104,
+        "predicted_win_fraction": 0.20689655172413793
+      },
+      "1": {
+        "steps": 45,
+        "expected_token_loss": 0.79991253506957,
+        "estimated_saved_ms": 1.9824640490114689,
+        "break_even_saved_ms": 2.268882322805513,
+        "predicted_win_fraction": 0.4888888888888889
+      },
+      "4": {
+        "steps": 5,
+        "expected_token_loss": 2.762254063103795,
+        "estimated_saved_ms": 2.170880053192377,
+        "break_even_saved_ms": 9.367542404795417,
+        "predicted_win_fraction": 0.0
+      },
+      "3": {
+        "steps": 12,
+        "expected_token_loss": 2.1654620026287343,
+        "estimated_saved_ms": 2.126847956329584,
+        "break_even_saved_ms": 6.14721672843036,
+        "predicted_win_fraction": 0.16666666666666666
+      },
+      "7": {
+        "steps": 1,
+        "expected_token_loss": 5.704256942411249,
+        "estimated_saved_ms": 2.347264025360346,
+        "break_even_saved_ms": 17.473051212242947,
+        "predicted_win_fraction": 0.0
+      }
+    }
+  },
+  "llama3": {
+    "scope": "fixed proposals; ordinary profiled step time; modeled one-step criterion, not measured AR TPS",
+    "matching_outputs": true,
+    "matching_events": true,
+    "ar_metadata_ms": 0.05939200147986412,
+    "zero_miss_steps": 7,
+    "miss_counts": {
+      "2": {
+        "steps": 11,
+        "expected_token_loss": 2.2565756270594792,
+        "estimated_saved_ms": 5.5019521452486515,
+        "break_even_saved_ms": 6.427800889840866,
+        "predicted_win_fraction": 0.2727272727272727
+      },
+      "3": {
+        "steps": 4,
+        "expected_token_loss": 2.8235739294960145,
+        "estimated_saved_ms": 5.515775892883539,
+        "break_even_saved_ms": 8.513645069138725,
+        "predicted_win_fraction": 0.25
+      },
+      "1": {
+        "steps": 17,
+        "expected_token_loss": 1.2836664204992174,
+        "estimated_saved_ms": 4.414463970810175,
+        "break_even_saved_ms": 5.031084177678229,
+        "predicted_win_fraction": 0.47058823529411764
+      },
+      "4": {
+        "steps": 2,
+        "expected_token_loss": 5.68826493042956,
+        "estimated_saved_ms": 5.463344071060419,
+        "break_even_saved_ms": 19.15376563540081,
+        "predicted_win_fraction": 0.0
+      },
+      "5": {
+        "steps": 1,
+        "expected_token_loss": 5.8389858950924545,
+        "estimated_saved_ms": 5.424128029495478,
+        "break_even_saved_ms": 20.178765599716844,
+        "predicted_win_fraction": 0.0
+      }
+    }
+  }
+}

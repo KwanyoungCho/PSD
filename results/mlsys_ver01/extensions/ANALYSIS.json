@@ -1,0 +1,2360 @@
+{
+  "campaigns": {
+    "llama2_full_v2": {
+      "directory": "/data/chokwans99/duet-ver01-extensions-20261013/llama2_full_v2",
+      "cells": {
+        "base": {
+          "metrics": {
+            "steps": 996,
+            "all_steps": 2381,
+            "tokens": 15656,
+            "seconds": 37.9087135612499,
+            "tps": 412.9921205240657,
+            "verify_ms": 24.830216662976966,
+            "step_ms": 38.06095739081315,
+            "al": 1.964859437751004,
+            "hit": 0.7452309236947792,
+            "actual_output_tokens": 29111,
+            "emitted_decode_tokens": 29111,
+            "raw_decode_tps": 307.0349758152453,
+            "retained_step_fraction": 0.41831163376732466,
+            "events": 7968
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data/chokwans99/duet-ver01-extensions-20261013/llama2_full_v2/base.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "6,7",
+            "SSD_DIST_PORT": "30100",
+            "SSD_SHM_NAME": "ver01_30100",
+            "SSD_CUDA_ARCH": "8.9",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "24-31,56-63",
+            "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+            "SSD_TREE_FUSED_MATH": "0",
+            "SSD_BATCH_TREE_BULK_EXPORT": "0",
+            "SSD_TREE_LADDER_TRIM": "0",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "045e40bee3124b0b1a6948a6a8c46cc741e607d6a33293ddadf1b4d1cc052eb1"
+        },
+        "optimized": {
+          "metrics": {
+            "steps": 996,
+            "all_steps": 2381,
+            "tokens": 15656,
+            "seconds": 32.88286921265535,
+            "tps": 476.1141705351736,
+            "verify_ms": 24.723516740456567,
+            "step_ms": 33.014928928368825,
+            "al": 1.964859437751004,
+            "hit": 0.7452309236947792,
+            "actual_output_tokens": 29111,
+            "emitted_decode_tokens": 29111,
+            "raw_decode_tps": 351.08919177695816,
+            "retained_step_fraction": 0.41831163376732466,
+            "events": 7968
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data/chokwans99/duet-ver01-extensions-20261013/llama2_full_v2/optimized.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "6,7",
+            "SSD_DIST_PORT": "30101",
+            "SSD_SHM_NAME": "ver01_30101",
+            "SSD_CUDA_ARCH": "8.9",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "24-31,56-63",
+            "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+            "SSD_TREE_FUSED_MATH": "1",
+            "SSD_BATCH_TREE_BULK_EXPORT": "1",
+            "SSD_TREE_LADDER_TRIM": "1",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "427fb6a0ac7245134a1462c32c60c97260de9f0995ce00e45468919ce0d55f26"
+        },
+        "packed": {
+          "metrics": {
+            "steps": 806,
+            "all_steps": 2374,
+            "tokens": 13080,
+            "seconds": 30.61401887401007,
+            "tps": 427.2552406082278,
+            "verify_ms": 27.934926616896878,
+            "step_ms": 37.9826536898388,
+            "al": 2.0285359801488836,
+            "hit": 0.7355769230769231,
+            "actual_output_tokens": 28226,
+            "emitted_decode_tokens": 28226,
+            "raw_decode_tps": 306.79480573231046,
+            "retained_step_fraction": 0.33951137320977254,
+            "events": 6448
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data/chokwans99/duet-ver01-extensions-20261013/llama2_full_v2/packed.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "6,7",
+            "SSD_DIST_PORT": "30102",
+            "SSD_SHM_NAME": "ver01_30102",
+            "SSD_CUDA_ARCH": "8.9",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "24-31,56-63",
+            "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+            "SSD_TREE_FUSED_MATH": "1",
+            "SSD_BATCH_TREE_BULK_EXPORT": "1",
+            "SSD_TREE_LADDER_TRIM": "1",
+            "DUET_REVIEW_PACKED": "fixed",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "77c443e87133319c58d984886f0edc06afa34be473bf1b91a2f3162b5776c875"
+        },
+        "mixed": {
+          "metrics": {
+            "steps": 905,
+            "all_steps": 2480,
+            "tokens": 13786,
+            "seconds": 35.525032760575414,
+            "tps": 388.0643852719899,
+            "verify_ms": 28.49795375101639,
+            "step_ms": 39.25417984593968,
+            "al": 1.9041436464088397,
+            "hit": 0.7573204419889503,
+            "actual_output_tokens": 28519,
+            "emitted_decode_tokens": 28519,
+            "raw_decode_tps": 323.6719447030097,
+            "retained_step_fraction": 0.3649193548387097,
+            "events": 7240
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data/chokwans99/duet-ver01-extensions-20261013/llama2_full_v2/mixed.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "6,7",
+            "SSD_DIST_PORT": "30103",
+            "SSD_SHM_NAME": "ver01_30103",
+            "SSD_CUDA_ARCH": "8.9",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "24-31,56-63",
+            "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+            "SSD_TREE_FUSED_MATH": "1",
+            "SSD_BATCH_TREE_BULK_EXPORT": "1",
+            "SSD_TREE_LADDER_TRIM": "1",
+            "DUET_REVIEW_PACKED": "fixed",
+            "DUET_REVIEW_MIXED_MISS_AR": "1",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "c06b5f106be03a7659659cb6910fb0cf447a805cf3cbe54916291cabcd590833"
+        },
+        "stream": {
+          "metrics": {
+            "steps": 996,
+            "all_steps": 2381,
+            "tokens": 15656,
+            "seconds": 33.69172493903898,
+            "tps": 464.6838364116887,
+            "verify_ms": 24.688381606798963,
+            "step_ms": 33.82703307132427,
+            "al": 1.964859437751004,
+            "hit": 0.7452309236947792,
+            "actual_output_tokens": 29111,
+            "emitted_decode_tokens": 29111,
+            "raw_decode_tps": 341.8255979980506,
+            "retained_step_fraction": 0.41831163376732466,
+            "events": 7968
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data/chokwans99/duet-ver01-extensions-20261013/llama2_full_v2/stream.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "6,7",
+            "SSD_DIST_PORT": "30104",
+            "SSD_SHM_NAME": "ver01_30104",
+            "SSD_CUDA_ARCH": "8.9",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "24-31,56-63",
+            "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+            "SSD_TREE_FUSED_MATH": "1",
+            "SSD_BATCH_TREE_BULK_EXPORT": "1",
+            "SSD_TREE_LADDER_TRIM": "1",
+            "SSD_BATCH_TREE_PROXY_STREAM": "1",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "0ae99ca05902d00a4cbb492dc57e0332d17ec817424d209b5e74d48bfa43fb45"
+        }
+      },
+      "comparisons": {
+        "base->optimized": {
+          "tps_percent": 15.284080948326405,
+          "tps_percent_ci": [
+            10.292422287567476,
+            19.92657331970075
+          ],
+          "al_delta": 0.0,
+          "al_delta_ci": [
+            0.0,
+            0.0
+          ],
+          "hit_pp": 0.0,
+          "hit_pp_ci": [
+            0.0,
+            0.0
+          ],
+          "outputs_identical": true,
+          "events_identical": true,
+          "groups": 60
+        },
+        "optimized->packed": {
+          "tps_percent": -10.262019689946689,
+          "tps_percent_ci": [
+            -20.63616694864194,
+            1.0094522027753323
+          ],
+          "al_delta": 0.06367654239787957,
+          "al_delta_ci": [
+            -0.012739014321320949,
+            0.1436295021068663
+          ],
+          "hit_pp": -0.965400061785604,
+          "hit_pp_ci": [
+            -3.4380639706385585,
+            1.4675143348312107
+          ],
+          "outputs_identical": false,
+          "events_identical": false,
+          "groups": 60
+        },
+        "packed->mixed": {
+          "tps_percent": -9.172703248869906,
+          "tps_percent_ci": [
+            -20.022666284198078,
+            2.9110577607420693
+          ],
+          "al_delta": -0.12439233374004388,
+          "al_delta_ci": [
+            -0.21431712514982082,
+            -0.042247579026547896
+          ],
+          "hit_pp": 2.1743518912027193,
+          "hit_pp_ci": [
+            -0.3540300867696541,
+            4.936387757247858
+          ],
+          "outputs_identical": false,
+          "events_identical": false,
+          "groups": 60
+        },
+        "optimized->stream": {
+          "tps_percent": -2.400754867395938,
+          "tps_percent_ci": [
+            -5.336317920508132,
+            0.9135861579869576
+          ],
+          "al_delta": 0.0,
+          "al_delta_ci": [
+            0.0,
+            0.0
+          ],
+          "hit_pp": 0.0,
+          "hit_pp_ci": [
+            0.0,
+            0.0
+          ],
+          "outputs_identical": true,
+          "events_identical": true,
+          "groups": 60
+        }
+      }
+    },
+    "llama3_full_v2": {
+      "directory": "/data/chokwans99/duet-ver01-extensions-20261013/nova_latest/llama3_full_v2",
+      "cells": {
+        "base": {
+          "metrics": {
+            "steps": 503,
+            "all_steps": 1946,
+            "tokens": 9560,
+            "seconds": 47.856866390124196,
+            "tps": 199.76234804150934,
+            "verify_ms": 52.51702110520999,
+            "step_ms": 95.14287552708588,
+            "al": 2.375745526838966,
+            "hit": 0.7092445328031809,
+            "actual_output_tokens": 25504,
+            "emitted_decode_tokens": 25504,
+            "raw_decode_tps": 162.90079018149063,
+            "retained_step_fraction": 0.25847893114080167,
+            "events": 4024
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/llama3_full_v2/base.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "4,5",
+            "SSD_DIST_PORT": "30120",
+            "SSD_SHM_NAME": "ver01_30120",
+            "SSD_CUDA_ARCH": "8.6",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "8-15,40-47",
+            "PAPER_CHECKOUT": "/data2/chokwans99/PSD-MLSys-ver01-extensions",
+            "SSD_TREE_FUSED_MATH": "0",
+            "SSD_BATCH_TREE_BULK_EXPORT": "0",
+            "SSD_TREE_LADDER_TRIM": "0",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "236a4596ec2daa9fb998e5d0fe5bf99ee0d33135de8233c20240a01d4180c0aa"
+        },
+        "optimized": {
+          "metrics": {
+            "steps": 503,
+            "all_steps": 1946,
+            "tokens": 9560,
+            "seconds": 41.64903288736241,
+            "tps": 229.53714257554336,
+            "verify_ms": 51.3534578787791,
+            "step_ms": 82.80125822537258,
+            "al": 2.375745526838966,
+            "hit": 0.7092445328031809,
+            "actual_output_tokens": 25504,
+            "emitted_decode_tokens": 25504,
+            "raw_decode_tps": 184.37381666476466,
+            "retained_step_fraction": 0.25847893114080167,
+            "events": 4024
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/llama3_full_v2/optimized.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "4,5",
+            "SSD_DIST_PORT": "30121",
+            "SSD_SHM_NAME": "ver01_30121",
+            "SSD_CUDA_ARCH": "8.6",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "8-15,40-47",
+            "PAPER_CHECKOUT": "/data2/chokwans99/PSD-MLSys-ver01-extensions",
+            "SSD_TREE_FUSED_MATH": "1",
+            "SSD_BATCH_TREE_BULK_EXPORT": "1",
+            "SSD_TREE_LADDER_TRIM": "1",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "da8295e917779c7d1861c4dc7144cd9ffa85566f3c17ea0d03db0cbe671cb1ab"
+        },
+        "packed": {
+          "metrics": {
+            "steps": 425,
+            "all_steps": 1936,
+            "tokens": 7969,
+            "seconds": 35.36041973200918,
+            "tps": 225.36497192046204,
+            "verify_ms": 51.86279096472872,
+            "step_ms": 83.20098760472747,
+            "al": 2.3438235294117646,
+            "hit": 0.696764705882353,
+            "actual_output_tokens": 25445,
+            "emitted_decode_tokens": 25445,
+            "raw_decode_tps": 160.013229400065,
+            "retained_step_fraction": 0.21952479338842976,
+            "events": 3400
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/llama3_full_v2/packed.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "4,5",
+            "SSD_DIST_PORT": "30122",
+            "SSD_SHM_NAME": "ver01_30122",
+            "SSD_CUDA_ARCH": "8.6",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "8-15,40-47",
+            "PAPER_CHECKOUT": "/data2/chokwans99/PSD-MLSys-ver01-extensions",
+            "SSD_TREE_FUSED_MATH": "1",
+            "SSD_BATCH_TREE_BULK_EXPORT": "1",
+            "SSD_TREE_LADDER_TRIM": "1",
+            "DUET_REVIEW_PACKED": "fixed",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "08f45bb3141e8d367b1f9ebd60c8c58df829bbfb2fa0eb39d3baffd422fa1712"
+        },
+        "mixed": {
+          "metrics": {
+            "steps": 535,
+            "all_steps": 2123,
+            "tokens": 9417,
+            "seconds": 38.92693507196964,
+            "tps": 241.91475600607865,
+            "verify_ms": 47.21589288026939,
+            "step_ms": 72.76062630274699,
+            "al": 2.200233644859813,
+            "hit": 0.7266355140186916,
+            "actual_output_tokens": 25673,
+            "emitted_decode_tokens": 25673,
+            "raw_decode_tps": 165.80084697763232,
+            "retained_step_fraction": 0.2520018841262365,
+            "events": 4280
+          },
+          "external_pids": [],
+          "args": {
+            "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "mode": "tree",
+            "batch": 8,
+            "temperature": 0.7,
+            "prompts": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/questions.json",
+            "limit": 480,
+            "output_tokens": 64,
+            "input_cap": 512,
+            "seed": 11013,
+            "warm_prompts": 48,
+            "exit_layer": 21,
+            "output": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/llama3_full_v2/mixed.json",
+            "p1_verify": 8,
+            "p2_verify": 4
+          },
+          "kwargs": {
+            "num_gpus": 2,
+            "max_num_seqs": 8,
+            "max_model_len": 2048,
+            "max_num_batched_tokens": 16384,
+            "gpu_memory_utilization": 0.45,
+            "speculate": true,
+            "draft_async": true,
+            "jit_speculate": true,
+            "speculate_k": 6,
+            "async_fan_out": 3,
+            "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+            "duet_enabled": true,
+            "duet_exit_layer": 21,
+            "duet_phase1_k": 4,
+            "duet_phase2_k": 2,
+            "duet_draft_fan_out": 2,
+            "duet_p1_tree_policy": "on",
+            "duet_p2_tree_policy": "on",
+            "duet_p1_tree_max_nodes": 8,
+            "duet_p1_tree_verify_nodes": 8,
+            "duet_p2_tree_max_nodes": 4,
+            "duet_p2_tree_verify_nodes": 4,
+            "duet_tree_c_tensor": 3,
+            "duet_p1_roots_per_position": 2,
+            "stochastic_only": true
+          },
+          "env": {
+            "CUDA_VISIBLE_DEVICES": "4,5",
+            "SSD_DIST_PORT": "30123",
+            "SSD_SHM_NAME": "ver01_30123",
+            "SSD_CUDA_ARCH": "8.6",
+            "SSD_ATTN_BACKEND": "auto",
+            "SSD_SEED": "231",
+            "SSD_TREE_EXEC": "1",
+            "SSD_CHAIN_PROXY_GRAPH": "1",
+            "SSD_TREE_PROXY_GRAPH": "1",
+            "SSD_PROFILE_DUET": "0",
+            "SSD_ASYNC_PROXY_SEND": "1",
+            "SSD_PROXY_STREAM": "0",
+            "PAPER_ARM": "base",
+            "PAPER_COLD_PREFIX": "1",
+            "PAPER_CPUSET": "8-15,40-47",
+            "PAPER_CHECKOUT": "/data2/chokwans99/PSD-MLSys-ver01-extensions",
+            "SSD_TREE_FUSED_MATH": "1",
+            "SSD_BATCH_TREE_BULK_EXPORT": "1",
+            "SSD_TREE_LADDER_TRIM": "1",
+            "DUET_REVIEW_PACKED": "fixed",
+            "DUET_REVIEW_MIXED_MISS_AR": "1",
+            "SSD_HF_CACHE": "/tmp",
+            "SSD_DATASET_DIR": "/tmp"
+          },
+          "sha256": "bb74dee402425400d08f14f51ffd5359b7f4bd3af48e72b96f061f48bf7d3339"
+        }
+      },
+      "comparisons": {
+        "base->optimized": {
+          "tps_percent": 14.905108408040446,
+          "tps_percent_ci": [
+            13.925529487163072,
+            16.256695504689425
+          ],
+          "al_delta": 0.0,
+          "al_delta_ci": [
+            0.0,
+            0.0
+          ],
+          "hit_pp": 0.0,
+          "hit_pp_ci": [
+            0.0,
+            0.0
+          ],
+          "outputs_identical": true,
+          "events_identical": true,
+          "groups": 60
+        },
+        "optimized->packed": {
+          "tps_percent": -1.817645113234001,
+          "tps_percent_ci": [
+            -10.452575529498413,
+            7.460970425914561
+          ],
+          "al_delta": -0.031921997427201365,
+          "al_delta_ci": [
+            -0.09983487979299166,
+            0.037922954042471264
+          ],
+          "hit_pp": -1.247982692082794,
+          "hit_pp_ci": [
+            -3.4953674403297637,
+            0.888635435533024
+          ],
+          "outputs_identical": false,
+          "events_identical": false,
+          "groups": 60
+        },
+        "packed->mixed": {
+          "tps_percent": 7.343547643889181,
+          "tps_percent_ci": [
+            -1.0923804077780546,
+            16.908862399319638
+          ],
+          "al_delta": -0.14358988455195165,
+          "al_delta_ci": [
+            -0.22205743021656904,
+            -0.06871255670692654
+          ],
+          "hit_pp": 2.987080813633869,
+          "hit_pp_ci": [
+            0.6098780971108243,
+            5.280182972963268
+          ],
+          "outputs_identical": false,
+          "events_identical": false,
+          "groups": 60
+        }
+      }
+    }
+  },
+  "profiles": {
+    "llama2_packed": {
+      "status": "complete",
+      "groups": {
+        "target": 12,
+        "draft": 12
+      },
+      "allowed_steps": 116,
+      "excluded_capture_steps": 2,
+      "components": {
+        "target/target_send_request": {
+          "mean_ms": 0.3976084208279325,
+          "median_ms": 0.3829759955406189,
+          "count": 114
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 4.186794670004594,
+          "median_ms": 4.452863931655884,
+          "count": 114
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 4.836407301718729,
+          "median_ms": 5.104176044464111,
+          "count": 114
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 6.79080251225254,
+          "median_ms": 7.017552137374878,
+          "count": 114
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.2120932026913294,
+          "median_ms": 3.2865439653396606,
+          "count": 114
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 19.90004767869648,
+          "median_ms": 18.64192008972168,
+          "count": 114
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 1.6753448404763873,
+          "median_ms": 1.7776639461517334,
+          "count": 114
+        },
+        "target/batch_target_post": {
+          "mean_ms": 8.99449260193005,
+          "median_ms": 8.451071739196777,
+          "count": 114
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 0.4414517882100323,
+          "median_ms": 0.44441598653793335,
+          "count": 114
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 1.3606807040540796,
+          "median_ms": 1.4345120191574097,
+          "count": 114
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.329244911245871,
+          "median_ms": 0.3584960103034973,
+          "count": 114
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.04036631580572902,
+          "median_ms": 0.03425600007176399,
+          "count": 114
+        },
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.5793226669754898,
+          "median_ms": 0.6348799765110016,
+          "count": 114
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 1.7737661754679785,
+          "median_ms": 2.1329280138015747,
+          "count": 114
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 25.95246258116605,
+          "median_ms": 25.08134365081787,
+          "count": 114
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.12093080854729603,
+          "median_ms": 0.12697599828243256,
+          "count": 114
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 1.6528437890504535,
+          "median_ms": 1.3742079734802246,
+          "count": 114
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7010986643001895,
+          "median_ms": 0.7628799974918365,
+          "count": 114
+        },
+        "draft/batch_glue": {
+          "mean_ms": 2.4420693244850424,
+          "median_ms": 2.228224039077759,
+          "count": 114
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 19.293363654822635,
+          "median_ms": 18.52057647705078,
+          "count": 114
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 22.52460463841756,
+          "median_ms": 21.78611183166504,
+          "count": 114
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 0.9425650494450932,
+          "median_ms": 0.7628799974918365,
+          "count": 114
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 5.964225103980617,
+          "median_ms": 5.606400012969971,
+          "count": 114
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.531596631334539,
+          "median_ms": 0.541839987039566,
+          "count": 114
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 9.368622612534908,
+          "median_ms": 9.026047706604004,
+          "count": 114
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 3.1816741187582935,
+          "median_ms": 3.2391040325164795,
+          "count": 114
+        }
+      }
+    },
+    "llama3_optimized": {
+      "status": "complete",
+      "groups": {
+        "draft": 12,
+        "target": 12
+      },
+      "allowed_steps": 45,
+      "excluded_capture_steps": 0,
+      "components": {
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.7378368015918467,
+          "median_ms": 0.837664008140564,
+          "count": 45
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 4.342094218151437,
+          "median_ms": 4.669439792633057,
+          "count": 45
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 33.817622884114584,
+          "median_ms": 34.54975891113281,
+          "count": 45
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.445440000295639,
+          "median_ms": 0.4618239998817444,
+          "count": 45
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 3.9057635095384384,
+          "median_ms": 3.8492159843444824,
+          "count": 45
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7502734212929176,
+          "median_ms": 0.7936000227928162,
+          "count": 45
+        },
+        "draft/batch_glue": {
+          "mean_ms": 4.752019903394911,
+          "median_ms": 4.7472639083862305,
+          "count": 45
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 32.44434767829047,
+          "median_ms": 33.05984115600586,
+          "count": 45
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 35.738601472642685,
+          "median_ms": 36.355072021484375,
+          "count": 45
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 0.002685155610864361,
+          "median_ms": 0.002047999994829297,
+          "count": 45
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 12.002827411227756,
+          "median_ms": 11.978752136230469,
+          "count": 45
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.580563199520111,
+          "median_ms": 0.5885440111160278,
+          "count": 45
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 15.58228980170356,
+          "median_ms": 15.589376449584961,
+          "count": 45
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 0.2289685328801473,
+          "median_ms": 0.22889600694179535,
+          "count": 45
+        },
+        "target/target_send_request": {
+          "mean_ms": 0.43394844267103405,
+          "median_ms": 0.4362240135669708,
+          "count": 45
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 42.76333283318414,
+          "median_ms": 12.766207695007324,
+          "count": 45
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 44.750360827975804,
+          "median_ms": 14.743071556091309,
+          "count": 45
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 46.75877410040961,
+          "median_ms": 16.68943977355957,
+          "count": 45
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.5022400273217094,
+          "median_ms": 3.657536029815674,
+          "count": 45
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 21.52748374938965,
+          "median_ms": 21.809152603149414,
+          "count": 45
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 6.322517352634006,
+          "median_ms": 6.668288230895996,
+          "count": 45
+        },
+        "target/batch_target_post": {
+          "mean_ms": 9.840503448910184,
+          "median_ms": 10.0065279006958,
+          "count": 45
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 1.9217294216156007,
+          "median_ms": 1.99782395362854,
+          "count": 45
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 4.235089053048028,
+          "median_ms": 4.479648113250732,
+          "count": 45
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.3586382249991099,
+          "median_ms": 0.37273600697517395,
+          "count": 45
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.04064995563692517,
+          "median_ms": 0.03481600061058998,
+          "count": 45
+        }
+      }
+    },
+    "llama3_mixed": {
+      "status": "complete",
+      "groups": {
+        "draft": 12,
+        "target": 12
+      },
+      "allowed_steps": 54,
+      "excluded_capture_steps": 0,
+      "components": {
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.704489481255964,
+          "median_ms": 0.7749760150909424,
+          "count": 54
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 0.3832574811660581,
+          "median_ms": 0.05939200147986412,
+          "count": 54
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 29.109418833697283,
+          "median_ms": 29.38572883605957,
+          "count": 54
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.44985836965066417,
+          "median_ms": 0.4618239998817444,
+          "count": 54
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 3.9428171846601696,
+          "median_ms": 3.981824040412903,
+          "count": 54
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7324444453352718,
+          "median_ms": 0.7495680153369904,
+          "count": 54
+        },
+        "draft/batch_glue": {
+          "mean_ms": 4.7728639708624945,
+          "median_ms": 4.777983903884888,
+          "count": 54
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 32.38938525870994,
+          "median_ms": 32.97536087036133,
+          "count": 54
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 35.82674503326416,
+          "median_ms": 36.32691192626953,
+          "count": 54
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 0.0027875556110369937,
+          "median_ms": 0.0030720001086592674,
+          "count": 54
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 12.00285397635566,
+          "median_ms": 12.006912231445312,
+          "count": 54
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.5494767416406561,
+          "median_ms": 0.5543360114097595,
+          "count": 54
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 15.577621353997124,
+          "median_ms": 15.514384269714355,
+          "count": 54
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 0.23235022166260966,
+          "median_ms": 0.2189280018210411,
+          "count": 54
+        },
+        "target/target_send_request": {
+          "mean_ms": 0.4126151104768117,
+          "median_ms": 0.40857599675655365,
+          "count": 54
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 15.43259033450374,
+          "median_ms": 16.0501766204834,
+          "count": 54
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 17.410503140202277,
+          "median_ms": 17.94870376586914,
+          "count": 54
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 19.409792017053675,
+          "median_ms": 19.84700870513916,
+          "count": 54
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.3230595500380904,
+          "median_ms": 3.498128056526184,
+          "count": 54
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 17.446551729131627,
+          "median_ms": 17.085951805114746,
+          "count": 54
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 5.838582537792347,
+          "median_ms": 6.039552211761475,
+          "count": 54
+        },
+        "target/batch_target_post": {
+          "mean_ms": 7.910210379847774,
+          "median_ms": 7.781888008117676,
+          "count": 54
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 1.29854577338254,
+          "median_ms": 1.2989439964294434,
+          "count": 54
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 4.290907239472425,
+          "median_ms": 4.432543992996216,
+          "count": 54
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.35993126034736633,
+          "median_ms": 0.3638080060482025,
+          "count": 54
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.044657185328779395,
+          "median_ms": 0.048848001286387444,
+          "count": 54
+        }
+      }
+    },
+    "llama2_stream": {
+      "status": "complete",
+      "groups": {
+        "target": 12,
+        "draft": 12
+      },
+      "allowed_steps": 129,
+      "excluded_capture_steps": 1,
+      "components": {
+        "target/target_send_request": {
+          "mean_ms": 0.4063039997126907,
+          "median_ms": 0.4055039882659912,
+          "count": 128
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 19.40530440583825,
+          "median_ms": 4.560896158218384,
+          "count": 128
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 20.03091273084283,
+          "median_ms": 5.20964789390564,
+          "count": 128
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 21.95698346197605,
+          "median_ms": 7.1144959926605225,
+          "count": 128
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.2431937623769045,
+          "median_ms": 3.3280320167541504,
+          "count": 128
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 23.080216005444527,
+          "median_ms": 22.6375675201416,
+          "count": 128
+        },
+        "target/batch_proxy_side": {
+          "mean_ms": 3.5772399893030524,
+          "median_ms": 3.832832098007202,
+          "count": 128
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 0.012440000085916836,
+          "median_ms": 0.01228800043463707,
+          "count": 128
+        },
+        "target/batch_target_post": {
+          "mean_ms": 11.368719965219498,
+          "median_ms": 11.220479965209961,
+          "count": 128
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 0.54811199917458,
+          "median_ms": 0.5759999752044678,
+          "count": 128
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 1.3141542477533221,
+          "median_ms": 1.4151039719581604,
+          "count": 128
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.33882475018617697,
+          "median_ms": 0.37302400171756744,
+          "count": 128
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.04100425005890429,
+          "median_ms": 0.035840000957250595,
+          "count": 128
+        },
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.6116442489146721,
+          "median_ms": 0.6438239812850952,
+          "count": 128
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 1.7279027595068328,
+          "median_ms": 2.133504033088684,
+          "count": 128
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 31.010600045323372,
+          "median_ms": 31.00108814239502,
+          "count": 128
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.11942400282714516,
+          "median_ms": 0.12800000607967377,
+          "count": 128
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 1.6451360015198588,
+          "median_ms": 1.3767679929733276,
+          "count": 128
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7065520003852725,
+          "median_ms": 0.7813119888305664,
+          "count": 128
+        },
+        "draft/batch_glue": {
+          "mean_ms": 2.4423439987003803,
+          "median_ms": 2.275839924812317,
+          "count": 128
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 19.489079907536507,
+          "median_ms": 18.693631172180176,
+          "count": 128
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 22.761112041771412,
+          "median_ms": 21.995519638061523,
+          "count": 128
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 5.660424000825515,
+          "median_ms": 6.471680164337158,
+          "count": 128
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 5.977527998387814,
+          "median_ms": 5.6104960441589355,
+          "count": 128
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.5260042492300272,
+          "median_ms": 0.5481919944286346,
+          "count": 128
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 9.464839458465576,
+          "median_ms": 9.209280014038086,
+          "count": 128
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 2.1565622547641397,
+          "median_ms": 2.2511839866638184,
+          "count": 128
+        }
+      }
+    },
+    "llama3_base": {
+      "status": "complete",
+      "groups": {
+        "target": 12,
+        "draft": 12
+      },
+      "allowed_steps": 45,
+      "excluded_capture_steps": 0,
+      "components": {
+        "target/target_send_request": {
+          "mean_ms": 0.4201130661699507,
+          "median_ms": 0.4208639860153198,
+          "count": 45
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 53.034461688995364,
+          "median_ms": 21.750783920288086,
+          "count": 45
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 54.98796219295926,
+          "median_ms": 23.75119972229004,
+          "count": 45
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 56.97579735649957,
+          "median_ms": 25.6658878326416,
+          "count": 45
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.5339712089962427,
+          "median_ms": 3.657696008682251,
+          "count": 45
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 21.426517232259116,
+          "median_ms": 21.727231979370117,
+          "count": 45
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 6.920009968015883,
+          "median_ms": 7.3072638511657715,
+          "count": 45
+        },
+        "target/batch_target_post": {
+          "mean_ms": 9.825644143422444,
+          "median_ms": 9.982975959777832,
+          "count": 45
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 1.9214336024390326,
+          "median_ms": 1.9988479614257812,
+          "count": 45
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 4.847073443730673,
+          "median_ms": 5.134848117828369,
+          "count": 45
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.346970311138365,
+          "median_ms": 0.3606080114841461,
+          "count": 45
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.0411271112660567,
+          "median_ms": 0.03481600061058998,
+          "count": 45
+        },
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.7603427553342448,
+          "median_ms": 0.7822399735450745,
+          "count": 45
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 4.361887259864145,
+          "median_ms": 4.610047817230225,
+          "count": 45
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 34.31253335740831,
+          "median_ms": 35.21535873413086,
+          "count": 45
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.44334648648897806,
+          "median_ms": 0.4607999920845032,
+          "count": 45
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 3.893794139226278,
+          "median_ms": 3.8502399921417236,
+          "count": 45
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7023274695293771,
+          "median_ms": 0.7720959782600403,
+          "count": 45
+        },
+        "draft/batch_glue": {
+          "mean_ms": 4.697770680321588,
+          "median_ms": 4.746240139007568,
+          "count": 45
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 37.7479850769043,
+          "median_ms": 38.47884750366211,
+          "count": 45
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 42.49064458211263,
+          "median_ms": 43.17756652832031,
+          "count": 45
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 0.03628657778931989,
+          "median_ms": 0.03654399886727333,
+          "count": 45
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 14.655965868631998,
+          "median_ms": 14.638079643249512,
+          "count": 45
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 19.06118825276693,
+          "median_ms": 18.974912643432617,
+          "count": 45
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 0.22547128862804836,
+          "median_ms": 0.22044800221920013,
+          "count": 45
+        }
+      }
+    },
+    "llama2_optimized": {
+      "status": "complete",
+      "groups": {
+        "draft": 12,
+        "target": 12
+      },
+      "allowed_steps": 129,
+      "excluded_capture_steps": 1,
+      "components": {
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.6506539980764501,
+          "median_ms": 0.7161439955234528,
+          "count": 128
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 1.7888032509072218,
+          "median_ms": 2.1201919317245483,
+          "count": 128
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 28.883512020111084,
+          "median_ms": 28.77900791168213,
+          "count": 128
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.11872800171840936,
+          "median_ms": 0.12697599828243256,
+          "count": 128
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 1.6559760039672256,
+          "median_ms": 1.3834240436553955,
+          "count": 128
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7389360008237418,
+          "median_ms": 0.7741439938545227,
+          "count": 128
+        },
+        "draft/batch_glue": {
+          "mean_ms": 2.4951760033145547,
+          "median_ms": 2.269695997238159,
+          "count": 128
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 19.28768003731966,
+          "median_ms": 18.489855766296387,
+          "count": 128
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 22.771840013563633,
+          "median_ms": 21.80352020263672,
+          "count": 128
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 3.7789280066972424,
+          "median_ms": 4.371456146240234,
+          "count": 128
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 5.949767999351025,
+          "median_ms": 5.586431980133057,
+          "count": 128
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.5657097492367029,
+          "median_ms": 0.5515680015087128,
+          "count": 128
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 9.624418936669827,
+          "median_ms": 9.038847923278809,
+          "count": 128
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 4.541748248389922,
+          "median_ms": 5.116672039031982,
+          "count": 128
+        },
+        "target/target_send_request": {
+          "mean_ms": 0.40567200095392764,
+          "median_ms": 0.3814399987459183,
+          "count": 128
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 19.564704573713243,
+          "median_ms": 4.535808086395264,
+          "count": 128
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 20.20573541149497,
+          "median_ms": 5.206048011779785,
+          "count": 128
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 22.202038131654263,
+          "median_ms": 7.091856002807617,
+          "count": 128
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.2196445036679506,
+          "median_ms": 3.2747520208358765,
+          "count": 128
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 22.837719962000847,
+          "median_ms": 22.38259220123291,
+          "count": 128
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 1.7428720016032457,
+          "median_ms": 1.8836480379104614,
+          "count": 128
+        },
+        "target/batch_target_post": {
+          "mean_ms": 10.34658396244049,
+          "median_ms": 10.103807926177979,
+          "count": 128
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 0.5441519974265248,
+          "median_ms": 0.5724160075187683,
+          "count": 128
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 1.3159710001200438,
+          "median_ms": 1.3932479619979858,
+          "count": 128
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.3399674999236595,
+          "median_ms": 0.35630398988723755,
+          "count": 128
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.042107499903067946,
+          "median_ms": 0.03481600061058998,
+          "count": 128
+        }
+      }
+    },
+    "llama3_stream": {
+      "status": "complete",
+      "groups": {
+        "draft": 12,
+        "target": 12
+      },
+      "allowed_steps": 45,
+      "excluded_capture_steps": 0,
+      "components": {
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.7416170650886165,
+          "median_ms": 0.7971519827842712,
+          "count": 45
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 4.3723875457213985,
+          "median_ms": 4.637695789337158,
+          "count": 45
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 37.17479561699761,
+          "median_ms": 37.991424560546875,
+          "count": 45
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.4498318228456709,
+          "median_ms": 0.46694400906562805,
+          "count": 45
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 3.9338894314236112,
+          "median_ms": 3.8901760578155518,
+          "count": 45
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.719030043348256,
+          "median_ms": 0.7864320278167725,
+          "count": 45
+        },
+        "draft/batch_glue": {
+          "mean_ms": 4.7471274269951715,
+          "median_ms": 4.79641580581665,
+          "count": 45
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 32.6192924923367,
+          "median_ms": 33.318912506103516,
+          "count": 45
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 35.91916639539931,
+          "median_ms": 36.66124725341797,
+          "count": 45
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 0.0027989333857678703,
+          "median_ms": 0.0030720001086592674,
+          "count": 45
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 12.120359823438857,
+          "median_ms": 12.112895965576172,
+          "count": 45
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.5727871967686547,
+          "median_ms": 0.5913919806480408,
+          "count": 45
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 15.624718835618761,
+          "median_ms": 15.623744010925293,
+          "count": 45
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 0.2175943116346995,
+          "median_ms": 0.21398399770259857,
+          "count": 45
+        },
+        "target/target_send_request": {
+          "mean_ms": 0.39205546776453654,
+          "median_ms": 0.38707199692726135,
+          "count": 45
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 45.48612539503309,
+          "median_ms": 14.800895690917969,
+          "count": 45
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 47.57871746487088,
+          "median_ms": 16.941631317138672,
+          "count": 45
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 49.54644627041287,
+          "median_ms": 18.889984130859375,
+          "count": 45
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.5140266683366566,
+          "median_ms": 3.6439359188079834,
+          "count": 45
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 21.635162946912978,
+          "median_ms": 21.924863815307617,
+          "count": 45
+        },
+        "target/batch_proxy_side": {
+          "mean_ms": 9.456503465440537,
+          "median_ms": 9.918463706970215,
+          "count": 45
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 0.01372160009211964,
+          "median_ms": 0.01228800043463707,
+          "count": 45
+        },
+        "target/batch_target_post": {
+          "mean_ms": 14.486414210001628,
+          "median_ms": 14.844927787780762,
+          "count": 45
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 1.9266218609280057,
+          "median_ms": 2.007040023803711,
+          "count": 45
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 4.207032182481554,
+          "median_ms": 4.455935955047607,
+          "count": 45
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.34039893365568585,
+          "median_ms": 0.355679988861084,
+          "count": 45
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.03954915553331375,
+          "median_ms": 0.03379200026392937,
+          "count": 45
+        }
+      }
+    },
+    "llama3_packed": {
+      "status": "complete",
+      "groups": {
+        "draft": 12,
+        "target": 12
+      },
+      "allowed_steps": 66,
+      "excluded_capture_steps": 2,
+      "components": {
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.6779354961472563,
+          "median_ms": 0.7438560128211975,
+          "count": 64
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 4.40858798957197,
+          "median_ms": 5.394432067871094,
+          "count": 64
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 29.406640022993088,
+          "median_ms": 29.314559936523438,
+          "count": 64
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.44875199953094125,
+          "median_ms": 0.4607999920845032,
+          "count": 64
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 3.9232639707624912,
+          "median_ms": 3.866111993789673,
+          "count": 64
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.6845119970384985,
+          "median_ms": 0.7219200134277344,
+          "count": 64
+        },
+        "draft/batch_glue": {
+          "mean_ms": 4.702592007815838,
+          "median_ms": 4.71347188949585,
+          "count": 64
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 32.354992032051086,
+          "median_ms": 32.96409606933594,
+          "count": 64
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 35.62033596634865,
+          "median_ms": 36.2347526550293,
+          "count": 64
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 0.0026240000588586554,
+          "median_ms": 0.0030720001086592674,
+          "count": 64
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 11.996032074093819,
+          "median_ms": 11.992063999176025,
+          "count": 64
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.5556980017572641,
+          "median_ms": 0.5638400018215179,
+          "count": 64
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 15.467858016490936,
+          "median_ms": 15.3712158203125,
+          "count": 64
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 0.21381600061431527,
+          "median_ms": 0.20345599949359894,
+          "count": 64
+        },
+        "target/target_send_request": {
+          "mean_ms": 0.38774399971589446,
+          "median_ms": 0.3819520026445389,
+          "count": 64
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 39.55702397227287,
+          "median_ms": 19.461631774902344,
+          "count": 64
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 41.46046403050423,
+          "median_ms": 21.542943954467773,
+          "count": 64
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 43.38364890217781,
+          "median_ms": 23.43819236755371,
+          "count": 64
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.460487024858594,
+          "median_ms": 3.5782400369644165,
+          "count": 64
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 17.678223937749863,
+          "median_ms": 17.133055686950684,
+          "count": 64
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 5.840511992573738,
+          "median_ms": 6.055936098098755,
+          "count": 64
+        },
+        "target/batch_target_post": {
+          "mean_ms": 8.034895963966846,
+          "median_ms": 7.8054399490356445,
+          "count": 64
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 1.3026719968765974,
+          "median_ms": 1.30457603931427,
+          "count": 64
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 4.267483985051513,
+          "median_ms": 4.44595193862915,
+          "count": 64
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.33443049958441406,
+          "median_ms": 0.3458560109138489,
+          "count": 64
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.04181550024077296,
+          "median_ms": 0.03532800078392029,
+          "count": 64
+        }
+      }
+    },
+    "llama2_base": {
+      "status": "complete",
+      "groups": {
+        "draft": 12,
+        "target": 12
+      },
+      "allowed_steps": 129,
+      "excluded_capture_steps": 1,
+      "components": {
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.6213880022696685,
+          "median_ms": 0.6503840088844299,
+          "count": 128
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 1.7276067540515214,
+          "median_ms": 2.127359986305237,
+          "count": 128
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 29.037664085626602,
+          "median_ms": 29.015552520751953,
+          "count": 128
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.11976800177944824,
+          "median_ms": 0.12697599828243256,
+          "count": 128
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 1.6382479993626475,
+          "median_ms": 1.361407995223999,
+          "count": 128
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7488239988088026,
+          "median_ms": 0.7987200021743774,
+          "count": 128
+        },
+        "draft/batch_glue": {
+          "mean_ms": 2.478408000431955,
+          "median_ms": 2.3127039670944214,
+          "count": 128
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 24.971815958619118,
+          "median_ms": 24.1013765335083,
+          "count": 128
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 29.55382400751114,
+          "median_ms": 28.73303985595703,
+          "count": 128
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 0.03349700006947387,
+          "median_ms": 0.032607998698949814,
+          "count": 128
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 8.641584061086178,
+          "median_ms": 8.256511688232422,
+          "count": 128
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 12.841754995286465,
+          "median_ms": 12.549568176269531,
+          "count": 128
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 0.5546414981363341,
+          "median_ms": 0.21107200533151627,
+          "count": 128
+        },
+        "target/target_send_request": {
+          "mean_ms": 0.4120719993952662,
+          "median_ms": 0.407039999961853,
+          "count": 128
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 26.192463783547282,
+          "median_ms": 5.281791925430298,
+          "count": 128
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 26.849526688456535,
+          "median_ms": 5.969951868057251,
+          "count": 128
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 28.786646272987127,
+          "median_ms": 7.894847869873047,
+          "count": 128
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.287036499939859,
+          "median_ms": 3.3345439434051514,
+          "count": 128
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 22.735592007637024,
+          "median_ms": 22.28889560699463,
+          "count": 128
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 1.8975919880904257,
+          "median_ms": 2.0541439056396484,
+          "count": 128
+        },
+        "target/batch_target_post": {
+          "mean_ms": 10.312903977930546,
+          "median_ms": 10.071040153503418,
+          "count": 128
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 0.5431600022129714,
+          "median_ms": 0.5754879713058472,
+          "count": 128
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 1.4570052516646683,
+          "median_ms": 1.569216012954712,
+          "count": 128
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.33527850001701154,
+          "median_ms": 0.3643520027399063,
+          "count": 128
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.04201475021545775,
+          "median_ms": 0.03686400130391121,
+          "count": 128
+        }
+      }
+    },
+    "llama2_mixed": {
+      "status": "complete",
+      "groups": {
+        "draft": 12,
+        "target": 12
+      },
+      "allowed_steps": 77,
+      "excluded_capture_steps": 1,
+      "components": {
+        "draft/batch_kv_restore": {
+          "mean_ms": 0.6695006338781432,
+          "median_ms": 0.7426400184631348,
+          "count": 76
+        },
+        "draft/batch_miss_draft": {
+          "mean_ms": 0.3015423165144105,
+          "median_ms": 0.05734400078654289,
+          "count": 76
+        },
+        "draft/batch_proxy_receive": {
+          "mean_ms": 25.069621889214766,
+          "median_ms": 24.649215698242188,
+          "count": 76
+        },
+        "draft/batch_glue_logits": {
+          "mean_ms": 0.12212547581446798,
+          "median_ms": 0.12697599828243256,
+          "count": 76
+        },
+        "draft/batch_glue_forward": {
+          "mean_ms": 1.5123940988590843,
+          "median_ms": 1.3409279584884644,
+          "count": 76
+        },
+        "draft/batch_kv_stage": {
+          "mean_ms": 0.7170290533502243,
+          "median_ms": 0.7731199860572815,
+          "count": 76
+        },
+        "draft/batch_glue": {
+          "mean_ms": 2.3118416823838888,
+          "median_ms": 2.1964800357818604,
+          "count": 76
+        },
+        "draft/batch_p1_replay": {
+          "mean_ms": 18.522920520682085,
+          "median_ms": 18.44121551513672,
+          "count": 76
+        },
+        "draft/batch_p1_total": {
+          "mean_ms": 21.86702157321729,
+          "median_ms": 21.693952560424805,
+          "count": 76
+        },
+        "draft/batch_proxy_wait": {
+          "mean_ms": 1.0697431637335715,
+          "median_ms": 0.5263360142707825,
+          "count": 76
+        },
+        "draft/batch_p2_replay": {
+          "mean_ms": 5.778607098679793,
+          "median_ms": 5.578752040863037,
+          "count": 76
+        },
+        "draft/batch_bulk_export": {
+          "mean_ms": 0.5242442120062677,
+          "median_ms": 0.530208021402359,
+          "count": 76
+        },
+        "draft/batch_p2_total": {
+          "mean_ms": 9.270755027469836,
+          "median_ms": 9.062096118927002,
+          "count": 76
+        },
+        "draft/draft_recv_cmd": {
+          "mean_ms": 2.689067366680032,
+          "median_ms": 2.795232057571411,
+          "count": 76
+        },
+        "target/target_send_request": {
+          "mean_ms": 0.39424000092242895,
+          "median_ms": 0.3829759955406189,
+          "count": 76
+        },
+        "target/target_recv_fused": {
+          "mean_ms": 2.972402528712624,
+          "median_ms": 2.7284480333328247,
+          "count": 76
+        },
+        "target/target_recv_response_wait": {
+          "mean_ms": 3.648271151279148,
+          "median_ms": 3.4160959720611572,
+          "count": 76
+        },
+        "target/target_spec_wait": {
+          "mean_ms": 5.618642110573618,
+          "median_ms": 5.316816091537476,
+          "count": 76
+        },
+        "target/batch_tree_prepare": {
+          "mean_ms": 3.3062661180370734,
+          "median_ms": 3.268928050994873,
+          "count": 76
+        },
+        "target/batch_target_pre": {
+          "mean_ms": 18.88828622667413,
+          "median_ms": 18.345983505249023,
+          "count": 76
+        },
+        "target/batch_target_proxy": {
+          "mean_ms": 1.683199999363799,
+          "median_ms": 1.7766400575637817,
+          "count": 76
+        },
+        "target/batch_target_post": {
+          "mean_ms": 8.508645070226569,
+          "median_ms": 8.24064016342163,
+          "count": 76
+        },
+        "target/batch_target_final_logits": {
+          "mean_ms": 0.43320589394945846,
+          "median_ms": 0.44390399754047394,
+          "count": 76
+        },
+        "target/batch_tree_accept": {
+          "mean_ms": 1.3420631556134475,
+          "median_ms": 1.4038240313529968,
+          "count": 76
+        },
+        "target/batch_tree_commit": {
+          "mean_ms": 0.33818947445405156,
+          "median_ms": 0.3608800023794174,
+          "count": 76
+        },
+        "target/target_postprocess": {
+          "mean_ms": 0.03969894734358317,
+          "median_ms": 0.03481600061058998,
+          "count": 76
+        }
+      }
+    }
+  }
+}

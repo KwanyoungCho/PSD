@@ -1,0 +1,129 @@
+{
+  "scope": "Local source/CPU checks and three local raw files only; remote code, 9 tests, 15 runs and 27-job completion not verified",
+  "engine_head": "f12d0f1da6a2e4a26e9cb11ddcca54c189736d19",
+  "source_checks": {
+    "_model_length_block_reason": {
+      "paper_pushed_current_equal": true,
+      "ast_sha256": "a2f0abafe78a1a2de5fc75da382af356dda5f70e3f9e7a5bd71830982d01ec39"
+    },
+    "compute_megaspec_lookahead": {
+      "paper_pushed_current_equal": true,
+      "ast_sha256": "549b3797bd428ca19709e3394e4cff25eb1249e739a4fcfd0a7d5b3b9e70fefd"
+    }
+  },
+  "boundary_cases": [
+    {
+      "prompt": 1734,
+      "target": 13,
+      "draft": 325,
+      "reason": "draft needs position 2058 (lookahead=325)",
+      "passed": true
+    },
+    {
+      "prompt": 1723,
+      "target": 13,
+      "draft": 325,
+      "reason": null,
+      "passed": true
+    },
+    {
+      "prompt": 1724,
+      "target": 13,
+      "draft": 325,
+      "reason": "draft needs position 2048 (lookahead=325)",
+      "passed": true
+    },
+    {
+      "prompt": 2040,
+      "target": 13,
+      "draft": 1,
+      "reason": "target needs position 2052 (lookahead=13)",
+      "passed": true
+    }
+  ],
+  "local_raw": [
+    {
+      "path": "/data/chokwans99/duet-precommit-20261014/tp2_full/base.json",
+      "sha256": "33252e39159eba761d298f5f87a91e8375dbfa807b88419997f280d369159b1d",
+      "status": "complete",
+      "output_records": 960,
+      "empty_outputs": 0,
+      "max_prompt_tokens": 512,
+      "measured_groups": 120,
+      "empty_decode_groups": 0
+    },
+    {
+      "path": "/data/chokwans99/duet-precommit-20261014/tp2_full/auto.json",
+      "sha256": "65494cc19e642198487982c78d520eaf48d34d2d2fe423697d92a669ffc0cbbb",
+      "status": "complete",
+      "output_records": 960,
+      "empty_outputs": 0,
+      "max_prompt_tokens": 512,
+      "measured_groups": 120,
+      "empty_decode_groups": 0
+    },
+    {
+      "path": "/data/chokwans99/duet-precommit-20261014/tp2_final/final_default.json",
+      "sha256": "5e67a6896defa5c6e3de2503610c2f74571e446ca1063dce29dc23b3860d0c77",
+      "status": "complete",
+      "output_records": 960,
+      "empty_outputs": 0,
+      "max_prompt_tokens": 512,
+      "measured_groups": 120,
+      "empty_decode_groups": 0
+    }
+  ],
+  "empty_aggregation": {
+    "engine": {
+      "policy": "full_batch_without_cap_or_clip_v1",
+      "nominal_batch": 1,
+      "tps": null,
+      "al": null,
+      "cache_hit": null,
+      "emitted_tokens": 0,
+      "seconds": 0,
+      "included_steps": 0,
+      "included_events": 0,
+      "total_steps": 0,
+      "excluded_steps": 0,
+      "exclusion_reasons": {},
+      "included_step_indices": []
+    },
+    "benchmark": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 0,
+        "all_steps": 0,
+        "tokens": 0,
+        "seconds": 0,
+        "tps": null,
+        "al": null,
+        "hit": null,
+        "verify_ms": null,
+        "step_ms": null,
+        "actual_output_tokens": 0,
+        "emitted_decode_tokens": 0
+      },
+      "batch_metrics": null,
+      "batch_metrics_excluding_group_startup": null,
+      "preparation_full_batch": {
+        "steps": 0,
+        "seconds": 0,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0,
+        "interval_union_fraction": null
+      },
+      "preparation_all_decode": {
+        "steps": 0,
+        "seconds": 0,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0,
+        "interval_union_fraction": null
+      }
+    },
+    "note": "Empty-population arithmetic only; not validation of a termination reason."
+  },
+  "remaining_local_reporting_gap": "mlsys_tree_followup.py computes an intermediate TPS with an unguarded division before finalize_measurement. An entirely empty eligible population would fail there; a single zero-decode request does not cause that when other valid steps remain. The local schema also lacks per-request finish reasons needed for the remote strict classification. No engine or benchmark changes made by this audit."
+}

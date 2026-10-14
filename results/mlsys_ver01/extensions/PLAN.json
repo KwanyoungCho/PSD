@@ -1,0 +1,70 @@
+{
+  "base": "f12d0f1",
+  "approved": [
+    "formal model support",
+    "B>1 tree executor",
+    "B>1 execution optimizations",
+    "unused ladder work removal"
+  ],
+  "review_only": [
+    "packed tree",
+    "tree mixed-miss AR",
+    "B>1 proxy stream"
+  ],
+  "deferred": [
+    "miss draft construction",
+    "root formula",
+    "position formula",
+    "tree AL selection"
+  ],
+  "gpus": {
+    "requested": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "available": [
+      4,
+      6,
+      7
+    ],
+    "blocked": {
+      "5": "other user queue reused GPU; no kill performed"
+    },
+    "remote": "nova 2-7 authorized and used; 0-1 preserved",
+    "availability_note": "Availability entries above describe scheduling history, not current occupancy. All experiments launched for this review are complete."
+  },
+  "stages": [
+    "frozen B1 baseline",
+    "approved selective port",
+    "CPU/GPU correctness",
+    "two full model pairs smoke incl SSD",
+    "fixed-work component AB for packed and stream",
+    "full480 online AB for promising candidates"
+  ],
+  "metrics": [
+    "target forward/proxy/accept latency",
+    "draft P1/P2/metadata latency",
+    "fixed-shape correctness",
+    "mixed-miss conditional expected AL and critical-path latency",
+    "mixed-miss TPS/AL for K2=1,2,3"
+  ],
+  "status": "implementation_first_review_and_capture_reaudit_complete",
+  "primary_decision": "Paired latency on fixed work. TPS used only for mixed-miss policy, with AL and K2 sensitivity.",
+  "decision": {
+    "approved": "ported and validated",
+    "packed_tree": "review only; shape-dependent direct latency gains; forward packing implemented, dense proxy/accept remains",
+    "mixed_miss": "review only; initial sensitivity confounded by lazy graph setup. Llama3 second full480 pass: step -5.88%, AL -6.59%, eligible TPS -0.76% (group CI crosses zero); no universal conclusion",
+    "proxy_side_stream": "TP1 review adapter off: no fixed-input target latency benefit. Does not reject original paper TP2 full-head replica/gather-removal path; separate factorial validation required."
+  },
+  "followup": "FOLLOWUP_AUDIT.json and REPORT.md#extensions-followup-review",
+  "git_publication": {
+    "branch": "MLSys-ver0.1",
+    "commit": "f12d0f1da6a2e4a26e9cb11ddcca54c189736d19",
+    "extension_working_changes_included": false
+  },
+  "measurement_policy": "Benchmark summary excludes full steps overlapping observed graph/setup intervals, along with cap/clip and partial batches. Time, tokens, AL and hit use same population. Raw/in-engine metrics preserved.",
+  "measurement_followup": "MEASUREMENT_REVIEW.json and REPORT.md#measurement-and-layout-review",
+  "prewarm_completion": "Not complete. Need all target/draft/root/accept/JIT shapes within chosen operational bounds and no new plan/capture keys during validation."
+}

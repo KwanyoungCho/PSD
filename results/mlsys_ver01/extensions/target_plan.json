@@ -1,0 +1,14 @@
+[
+  {
+    "name": "llama2_target",
+    "arm": "base",
+    "bench": "mlsys_tree_component_review.py",
+    "env": {
+      "PAPER_CPUSET": "16-23,48-55"
+    },
+    "args": [
+      "--model",
+      "/home/chokwans99/models_mlsys/layerskip-llama2-7b"
+    ]
+  }
+]

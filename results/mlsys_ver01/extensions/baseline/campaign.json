@@ -1,0 +1,35 @@
+[
+  {
+    "name": "base_b1_t07_smoke",
+    "command": [
+      "/home/chokwans99/PSD/ssd/.venv/bin/python",
+      "-O",
+      "/home/chokwans99/PSD-MLSys-ver0.1/ssd/bench/mlsys_ver01_common.py",
+      "--mode",
+      "tree",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--output-tokens",
+      "96",
+      "--warm-prompts",
+      "16",
+      "--seed",
+      "11013",
+      "--temperature",
+      ".7",
+      "--batch",
+      "1",
+      "--limit",
+      "24",
+      "--output",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/extensions/baseline/base_b1_t07_smoke.json"
+    ],
+    "arm": "base",
+    "start": 1791866640.3747284,
+    "external_pids": [],
+    "gpu_pair": "6,7",
+    "exit_code": 0,
+    "end": 1791866714.0573823,
+    "status": "complete"
+  }
+]

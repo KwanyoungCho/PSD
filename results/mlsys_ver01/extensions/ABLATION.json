@@ -1,0 +1,1082 @@
+{
+  "llama2": {
+    "reference->fused": {
+      "target/batch_target_post": {
+        "steps": 128,
+        "before_ms": 10.334432035684586,
+        "after_ms": 10.359423995018005,
+        "delta_ms": 0.0249919593334198,
+        "percent": 0.24183195793558987
+      },
+      "target/batch_target_final_logits": {
+        "steps": 128,
+        "before_ms": 0.5440007525030524,
+        "after_ms": 0.5447520017623901,
+        "delta_ms": 0.0007512492593377829,
+        "percent": 0.1380970992928221
+      },
+      "target/target_spec_wait": {
+        "steps": 128,
+        "before_ms": 28.335451532155275,
+        "after_ms": 21.738590821623802,
+        "delta_ms": -6.596860710531473,
+        "percent": -23.281297293058156
+      },
+      "target/batch_tree_accept": {
+        "steps": 128,
+        "before_ms": 1.4957044986076653,
+        "after_ms": 1.4499599961563945,
+        "delta_ms": -0.04574450245127082,
+        "percent": -3.0583917139952344
+      },
+      "draft/batch_kv_restore": {
+        "steps": 128,
+        "before_ms": 0.6258200028387364,
+        "after_ms": 0.6113367472134996,
+        "delta_ms": -0.01448325562523678,
+        "percent": -2.314284548199219
+      },
+      "draft/batch_proxy_receive": {
+        "steps": 128,
+        "before_ms": 29.008903980255127,
+        "after_ms": 29.07983197271824,
+        "delta_ms": 0.07092799246311188,
+        "percent": 0.2445042132973585
+      },
+      "target/batch_target_pre": {
+        "steps": 128,
+        "before_ms": 22.73418402671814,
+        "after_ms": 22.835999980568886,
+        "delta_ms": 0.10181595385074615,
+        "percent": 0.4478540058050484
+      },
+      "draft/batch_kv_stage": {
+        "steps": 128,
+        "before_ms": 0.6918400011272752,
+        "after_ms": 0.6862000009678013,
+        "delta_ms": -0.005640000159473857,
+        "percent": -0.8152174130267253
+      },
+      "draft/batch_glue": {
+        "steps": 128,
+        "before_ms": 2.418296003714204,
+        "after_ms": 2.3785920003429055,
+        "delta_ms": -0.03970400337129831,
+        "percent": -1.6418173503292333
+      },
+      "target/batch_tree_commit": {
+        "steps": 128,
+        "before_ms": 0.34753675092360936,
+        "after_ms": 0.32993275101762265,
+        "delta_ms": -0.01760399990598671,
+        "percent": -5.065363550531721
+      },
+      "draft/batch_proxy_wait": {
+        "steps": 128,
+        "before_ms": 0.035976500061224215,
+        "after_ms": 3.228120746149216,
+        "delta_ms": 3.1921442460879916,
+        "percent": 8872.859340557456
+      },
+      "draft/batch_p1_replay": {
+        "steps": 128,
+        "before_ms": 24.75848026573658,
+        "after_ms": 19.09813594073057,
+        "delta_ms": -5.660344325006008,
+        "percent": -22.86224462993148
+      },
+      "draft/draft_recv_cmd": {
+        "steps": 128,
+        "before_ms": 0.6170994967687875,
+        "after_ms": 4.235974264098331,
+        "delta_ms": 3.618874767329544,
+        "percent": 586.4329474061215
+      },
+      "target/target_recv_response_wait": {
+        "steps": 128,
+        "before_ms": 26.397449523210526,
+        "after_ms": 19.8380612898618,
+        "delta_ms": -6.559388233348727,
+        "percent": -24.848568145120396
+      },
+      "draft/batch_miss_draft": {
+        "steps": 128,
+        "before_ms": 1.7311075021279976,
+        "after_ms": 1.7141944892937317,
+        "delta_ms": -0.016913012834265828,
+        "percent": -0.9770053456226835
+      },
+      "draft/batch_p1_total": {
+        "steps": 128,
+        "before_ms": 29.349255993962288,
+        "after_ms": 23.5850959867239,
+        "delta_ms": -5.764160007238388,
+        "percent": -19.639884596816316
+      },
+      "target/batch_tree_prepare": {
+        "steps": 128,
+        "before_ms": 3.3114522295072675,
+        "after_ms": 3.275891005061567,
+        "delta_ms": -0.035561224445700645,
+        "percent": -1.0738860771967729
+      },
+      "draft/batch_p2_replay": {
+        "steps": 128,
+        "before_ms": 8.579727940261364,
+        "after_ms": 5.91951197385788,
+        "delta_ms": -2.6602159664034843,
+        "percent": -31.005831244602923
+      },
+      "target/batch_target_proxy": {
+        "steps": 128,
+        "before_ms": 1.8974159751087427,
+        "after_ms": 1.9008639813400805,
+        "delta_ms": 0.0034480062313377857,
+        "percent": 0.18172115532759658
+      },
+      "target/target_postprocess": {
+        "steps": 128,
+        "before_ms": 0.0409130000625737,
+        "after_ms": 0.04077149984368589,
+        "delta_ms": -0.0001415002188878134,
+        "percent": -0.3458563749209276
+      },
+      "target/target_send_request": {
+        "steps": 128,
+        "before_ms": 0.4207917486783117,
+        "after_ms": 0.3879765011370182,
+        "delta_ms": -0.0328152475412935,
+        "percent": -7.798453188391818
+      },
+      "draft/batch_p2_total": {
+        "steps": 128,
+        "before_ms": 12.83499775826931,
+        "after_ms": 9.939606301486492,
+        "delta_ms": -2.895391456782818,
+        "percent": -22.558566127659663
+      },
+      "draft/batch_glue_logits": {
+        "steps": 128,
+        "before_ms": 0.11627199850045145,
+        "after_ms": 0.11690400016959757,
+        "delta_ms": 0.0006320016691461205,
+        "percent": 0.5435544905884271
+      },
+      "target/target_recv_fused": {
+        "steps": 128,
+        "before_ms": 25.79233555868268,
+        "after_ms": 19.20646369457245,
+        "delta_ms": -6.585871864110231,
+        "percent": -25.534220618082713
+      },
+      "draft/batch_glue_forward": {
+        "steps": 128,
+        "before_ms": 1.6379679972305894,
+        "after_ms": 1.611320004798472,
+        "delta_ms": -0.026647992432117462,
+        "percent": -1.6268933506132455
+      }
+    },
+    "fused->bulk": {
+      "target/batch_target_post": {
+        "steps": 128,
+        "before_ms": 10.359423995018005,
+        "after_ms": 10.361487954854965,
+        "delta_ms": 0.002063959836959839,
+        "percent": 0.01992349997406162
+      },
+      "target/batch_target_final_logits": {
+        "steps": 128,
+        "before_ms": 0.5447520017623901,
+        "after_ms": 0.5447760021779686,
+        "delta_ms": 2.4000415578484535e-05,
+        "percent": 0.0044057507821548825
+      },
+      "target/target_spec_wait": {
+        "steps": 128,
+        "before_ms": 21.738590821623802,
+        "after_ms": 21.51363843306899,
+        "delta_ms": -0.22495238855481148,
+        "percent": -1.0348066735358374
+      },
+      "target/batch_tree_accept": {
+        "steps": 128,
+        "before_ms": 1.4499599961563945,
+        "after_ms": 1.4518704968504608,
+        "delta_ms": 0.001910500694066286,
+        "percent": 0.1317623037277338
+      },
+      "draft/batch_kv_restore": {
+        "steps": 128,
+        "before_ms": 0.6113367472134996,
+        "after_ms": 0.6470517480629496,
+        "delta_ms": 0.03571500084945001,
+        "percent": 5.842115824419292
+      },
+      "draft/batch_proxy_receive": {
+        "steps": 128,
+        "before_ms": 29.07983197271824,
+        "after_ms": 29.12764808535576,
+        "delta_ms": 0.047816112637519836,
+        "percent": 0.16443049836869505
+      },
+      "target/batch_target_pre": {
+        "steps": 128,
+        "before_ms": 22.835999980568886,
+        "after_ms": 22.86011992394924,
+        "delta_ms": 0.024119943380355835,
+        "percent": 0.10562245314800212
+      },
+      "draft/batch_kv_stage": {
+        "steps": 128,
+        "before_ms": 0.6862000009678013,
+        "after_ms": 0.7300399989835569,
+        "delta_ms": 0.043839998015755555,
+        "percent": 6.388807629543081
+      },
+      "draft/batch_glue": {
+        "steps": 128,
+        "before_ms": 2.3785920003429055,
+        "after_ms": 2.4447040036320686,
+        "delta_ms": 0.06611200328916311,
+        "percent": 2.7794595827965507
+      },
+      "target/batch_tree_commit": {
+        "steps": 128,
+        "before_ms": 0.32993275101762265,
+        "after_ms": 0.33837850095005706,
+        "delta_ms": 0.00844574993243441,
+        "percent": 2.559839817776477
+      },
+      "draft/batch_proxy_wait": {
+        "steps": 128,
+        "before_ms": 3.228120746149216,
+        "after_ms": 4.176672010353286,
+        "delta_ms": 0.9485512642040703,
+        "percent": 29.384008182952414
+      },
+      "draft/batch_p1_replay": {
+        "steps": 128,
+        "before_ms": 19.09813594073057,
+        "after_ms": 19.094487957656384,
+        "delta_ms": -0.0036479830741882324,
+        "percent": -0.019101252004438685
+      },
+      "draft/draft_recv_cmd": {
+        "steps": 128,
+        "before_ms": 4.235974264098331,
+        "after_ms": 4.6848915020236745,
+        "delta_ms": 0.4489172379253432,
+        "percent": 10.597732892999524
+      },
+      "target/target_recv_response_wait": {
+        "steps": 128,
+        "before_ms": 19.8380612898618,
+        "after_ms": 19.604432374238968,
+        "delta_ms": -0.2336289156228304,
+        "percent": -1.177680178567786
+      },
+      "draft/batch_miss_draft": {
+        "steps": 128,
+        "before_ms": 1.7141944892937317,
+        "after_ms": 1.7623879975581076,
+        "delta_ms": 0.04819350826437585,
+        "percent": 2.8114375915554435
+      },
+      "draft/batch_p1_total": {
+        "steps": 128,
+        "before_ms": 23.5850959867239,
+        "after_ms": 22.476824030280113,
+        "delta_ms": -1.1082719564437866,
+        "percent": -4.6990351748733
+      },
+      "target/batch_tree_prepare": {
+        "steps": 128,
+        "before_ms": 3.275891005061567,
+        "after_ms": 3.300030746497214,
+        "delta_ms": 0.02413974143564701,
+        "percent": 0.7368908610924096
+      },
+      "draft/batch_p2_replay": {
+        "steps": 128,
+        "before_ms": 5.91951197385788,
+        "after_ms": 5.919791996479034,
+        "delta_ms": 0.00028002262115478516,
+        "percent": 0.004730501811489596
+      },
+      "target/batch_target_proxy": {
+        "steps": 128,
+        "before_ms": 1.9008639813400805,
+        "after_ms": 1.9014239939861,
+        "delta_ms": 0.0005600126460194588,
+        "percent": 0.029460953099058607
+      },
+      "target/target_postprocess": {
+        "steps": 128,
+        "before_ms": 0.04077149984368589,
+        "after_ms": 0.041859499979182146,
+        "delta_ms": 0.0010880001354962587,
+        "percent": 2.6685310564181997
+      },
+      "target/target_send_request": {
+        "steps": 128,
+        "before_ms": 0.3879765011370182,
+        "after_ms": 0.39571999944746494,
+        "delta_ms": 0.007743498310446739,
+        "percent": 1.995867865129286
+      },
+      "draft/batch_p2_total": {
+        "steps": 128,
+        "before_ms": 9.939606301486492,
+        "after_ms": 9.457714505493641,
+        "delta_ms": -0.48189179599285126,
+        "percent": -4.8481980208892494
+      },
+      "draft/batch_glue_logits": {
+        "steps": 128,
+        "before_ms": 0.11690400016959757,
+        "after_ms": 0.11667199980001897,
+        "delta_ms": -0.00023200036957859993,
+        "percent": -0.19845374772636815
+      },
+      "target/target_recv_fused": {
+        "steps": 128,
+        "before_ms": 19.20646369457245,
+        "after_ms": 18.98061577230692,
+        "delta_ms": -0.22584792226552963,
+        "percent": -1.1758953957221818
+      },
+      "draft/batch_glue_forward": {
+        "steps": 128,
+        "before_ms": 1.611320004798472,
+        "after_ms": 1.6258959975093603,
+        "delta_ms": 0.014575992710888386,
+        "percent": 0.9045995002533003
+      }
+    },
+    "bulk->trim": {
+      "target/batch_target_post": {
+        "steps": 128,
+        "before_ms": 10.361487954854965,
+        "after_ms": 10.363671962171793,
+        "delta_ms": 0.002184007316827774,
+        "percent": 0.02107812436151768
+      },
+      "target/batch_target_final_logits": {
+        "steps": 128,
+        "before_ms": 0.5447760021779686,
+        "after_ms": 0.5452240039594471,
+        "delta_ms": 0.0004480017814785242,
+        "percent": 0.0822359611450274
+      },
+      "target/target_spec_wait": {
+        "steps": 128,
+        "before_ms": 21.51363843306899,
+        "after_ms": 22.326605316251516,
+        "delta_ms": 0.8129668831825256,
+        "percent": 3.778844223452693
+      },
+      "target/batch_tree_accept": {
+        "steps": 128,
+        "before_ms": 1.4518704968504608,
+        "after_ms": 1.3272834988310933,
+        "delta_ms": -0.12458699801936746,
+        "percent": -8.581137111721304
+      },
+      "draft/batch_kv_restore": {
+        "steps": 128,
+        "before_ms": 0.6470517480629496,
+        "after_ms": 0.6476092493685428,
+        "delta_ms": 0.0005575013055931777,
+        "percent": 0.08616023482852508
+      },
+      "draft/batch_proxy_receive": {
+        "steps": 128,
+        "before_ms": 29.12764808535576,
+        "after_ms": 29.00442399084568,
+        "delta_ms": -0.12322409451007843,
+        "percent": -0.42304855561623445
+      },
+      "target/batch_target_pre": {
+        "steps": 128,
+        "before_ms": 22.86011992394924,
+        "after_ms": 22.83299195021391,
+        "delta_ms": -0.02712797373533249,
+        "percent": -0.11866942879381615
+      },
+      "draft/batch_kv_stage": {
+        "steps": 128,
+        "before_ms": 0.7300399989835569,
+        "after_ms": 0.7208559996070107,
+        "delta_ms": -0.009183999376546126,
+        "percent": -1.2580131758990087
+      },
+      "draft/batch_glue": {
+        "steps": 128,
+        "before_ms": 2.4447040036320686,
+        "after_ms": 2.497023744508624,
+        "delta_ms": 0.05231974087655544,
+        "percent": 2.1401257902316395
+      },
+      "target/batch_tree_commit": {
+        "steps": 128,
+        "before_ms": 0.33837850095005706,
+        "after_ms": 0.36100599996279925,
+        "delta_ms": 0.02262749901274219,
+        "percent": 6.6870380207996405
+      },
+      "draft/batch_proxy_wait": {
+        "steps": 128,
+        "before_ms": 4.176672010353286,
+        "after_ms": 4.1030560105809855,
+        "delta_ms": -0.07361599977230071,
+        "percent": -1.7625516102250494
+      },
+      "draft/batch_p1_replay": {
+        "steps": 128,
+        "before_ms": 19.094487957656384,
+        "after_ms": 19.056047961115837,
+        "delta_ms": -0.03843999654054642,
+        "percent": -0.20131462349652907
+      },
+      "draft/draft_recv_cmd": {
+        "steps": 128,
+        "before_ms": 4.6848915020236745,
+        "after_ms": 4.46764274884481,
+        "delta_ms": -0.21724875317886472,
+        "percent": -4.637220586325697
+      },
+      "target/target_recv_response_wait": {
+        "steps": 128,
+        "before_ms": 19.604432374238968,
+        "after_ms": 20.366026666015387,
+        "delta_ms": 0.7615942917764187,
+        "percent": 3.8848066459561625
+      },
+      "draft/batch_miss_draft": {
+        "steps": 128,
+        "before_ms": 1.7623879975581076,
+        "after_ms": 1.770188252296066,
+        "delta_ms": 0.007800254737958312,
+        "percent": 0.44259577055483224
+      },
+      "draft/batch_p1_total": {
+        "steps": 128,
+        "before_ms": 22.476824030280113,
+        "after_ms": 22.40295199304819,
+        "delta_ms": -0.07387203723192215,
+        "percent": -0.3286586980990047
+      },
+      "draft/batch_p2_replay": {
+        "steps": 128,
+        "before_ms": 5.919791996479034,
+        "after_ms": 5.915040206164122,
+        "delta_ms": -0.004751790314912796,
+        "percent": -0.08026954862162539
+      },
+      "target/batch_tree_prepare": {
+        "steps": 128,
+        "before_ms": 3.300030746497214,
+        "after_ms": 3.387073260731995,
+        "delta_ms": 0.08704251423478127,
+        "percent": 2.6376273714168175
+      },
+      "target/batch_target_proxy": {
+        "steps": 128,
+        "before_ms": 1.9014239939861,
+        "after_ms": 1.7444959981366992,
+        "delta_ms": -0.15692799584940076,
+        "percent": -8.253182685489346
+      },
+      "draft/batch_bulk_export": {
+        "steps": 128,
+        "before_ms": 0.5501395000610501,
+        "after_ms": 0.5604849997907877,
+        "delta_ms": 0.01034549972973764,
+        "percent": 1.8805229816418523
+      },
+      "target/target_postprocess": {
+        "steps": 128,
+        "before_ms": 0.041859499979182146,
+        "after_ms": 0.043735500250477344,
+        "delta_ms": 0.0018760002712951973,
+        "percent": 4.48165953302877
+      },
+      "target/target_send_request": {
+        "steps": 128,
+        "before_ms": 0.39571999944746494,
+        "after_ms": 0.4269995002541691,
+        "delta_ms": 0.031279500806704164,
+        "percent": 7.904452858177247
+      },
+      "draft/batch_p2_total": {
+        "steps": 128,
+        "before_ms": 9.457714505493641,
+        "after_ms": 9.603426717221737,
+        "delta_ms": 0.145712211728096,
+        "percent": 1.5406704404479221
+      },
+      "draft/batch_glue_logits": {
+        "steps": 128,
+        "before_ms": 0.11667199980001897,
+        "after_ms": 0.11632799793733284,
+        "delta_ms": -0.0003440018626861274,
+        "percent": -0.29484526131013933
+      },
+      "target/target_recv_fused": {
+        "steps": 128,
+        "before_ms": 18.98061577230692,
+        "after_ms": 19.786335029639304,
+        "delta_ms": 0.8057192573323846,
+        "percent": 4.24495847235864
+      },
+      "draft/batch_glue_forward": {
+        "steps": 128,
+        "before_ms": 1.6258959975093603,
+        "after_ms": 1.6779119987040758,
+        "delta_ms": 0.0520160011947155,
+        "percent": 3.199220692737814
+      }
+    }
+  },
+  "llama3": {
+    "reference->fused": {
+      "target/batch_target_post": {
+        "steps": 45,
+        "before_ms": 9.845213900672064,
+        "after_ms": 9.824551826053195,
+        "delta_ms": -0.020662074618869358,
+        "percent": -0.2098692301389038
+      },
+      "target/batch_target_final_logits": {
+        "steps": 45,
+        "before_ms": 1.9244601170221964,
+        "after_ms": 1.921001264784071,
+        "delta_ms": -0.0034588522381252713,
+        "percent": -0.17973104287957176
+      },
+      "target/target_spec_wait": {
+        "steps": 45,
+        "before_ms": 54.612180137634276,
+        "after_ms": 50.5216253068712,
+        "delta_ms": -4.090554830763075,
+        "percent": -7.490187757481959
+      },
+      "target/batch_tree_accept": {
+        "steps": 45,
+        "before_ms": 4.835076978471544,
+        "after_ms": 4.818801079856025,
+        "delta_ms": -0.016275898615519205,
+        "percent": -0.33662129244246275
+      },
+      "draft/batch_kv_restore": {
+        "steps": 45,
+        "before_ms": 0.731642309576273,
+        "after_ms": 0.7686371522645156,
+        "delta_ms": 0.036994842688242595,
+        "percent": 5.056411063716082
+      },
+      "draft/batch_proxy_receive": {
+        "steps": 45,
+        "before_ms": 34.15417734781901,
+        "after_ms": 34.153767861260306,
+        "delta_ms": -0.00040948655870225696,
+        "percent": -0.0011989355051089667
+      },
+      "target/batch_target_pre": {
+        "steps": 45,
+        "before_ms": 21.479037136501738,
+        "after_ms": 21.51722094217936,
+        "delta_ms": 0.038183805677625866,
+        "percent": 0.17777242729717369
+      },
+      "draft/batch_kv_stage": {
+        "steps": 45,
+        "before_ms": 0.6796174187523624,
+        "after_ms": 0.7622200895204312,
+        "delta_ms": 0.0826026707680689,
+        "percent": 12.154289823782083
+      },
+      "draft/batch_glue": {
+        "steps": 45,
+        "before_ms": 4.654557869169447,
+        "after_ms": 6.406826655069987,
+        "delta_ms": 1.75226878590054,
+        "percent": 37.646299286707816
+      },
+      "target/batch_tree_commit": {
+        "steps": 45,
+        "before_ms": 0.35890346633063425,
+        "after_ms": 0.3382399989498986,
+        "delta_ms": -0.020663467380735608,
+        "percent": -5.757388634887062
+      },
+      "draft/batch_proxy_wait": {
+        "steps": 45,
+        "before_ms": 0.03451022228433026,
+        "after_ms": 0.03237048892511262,
+        "delta_ms": -0.002139733359217644,
+        "percent": -6.20028854519783
+      },
+      "draft/batch_p1_replay": {
+        "steps": 45,
+        "before_ms": 37.62467286851671,
+        "after_ms": 32.25065299140083,
+        "delta_ms": -5.374019877115885,
+        "percent": -14.28323349387236
+      },
+      "draft/draft_recv_cmd": {
+        "steps": 45,
+        "before_ms": 0.21718186669879488,
+        "after_ms": 0.21204977697796293,
+        "delta_ms": -0.005132089720831977,
+        "percent": -2.3630378534086116
+      },
+      "target/target_recv_response_wait": {
+        "steps": 45,
+        "before_ms": 52.64395394855075,
+        "after_ms": 48.566688230302596,
+        "delta_ms": -4.077265718248156,
+        "percent": -7.744983825175622
+      },
+      "draft/batch_miss_draft": {
+        "steps": 45,
+        "before_ms": 4.315088372098075,
+        "after_ms": 4.3572337873280045,
+        "delta_ms": 0.04214541522992982,
+        "percent": 0.9766987740609689
+      },
+      "draft/batch_p1_total": {
+        "steps": 45,
+        "before_ms": 42.2298582288954,
+        "after_ms": 37.14223781161838,
+        "delta_ms": -5.0876204172770185,
+        "percent": -12.047448489409952
+      },
+      "draft/batch_p2_replay": {
+        "steps": 45,
+        "before_ms": 14.597097290886772,
+        "after_ms": 12.04428802066379,
+        "delta_ms": -2.5528092702229817,
+        "percent": -17.48847198419884
+      },
+      "target/batch_tree_prepare": {
+        "steps": 45,
+        "before_ms": 3.4672611739900376,
+        "after_ms": 3.5367182148827445,
+        "delta_ms": 0.06945704089270698,
+        "percent": 2.003224949240767
+      },
+      "target/batch_target_proxy": {
+        "steps": 45,
+        "before_ms": 6.927155213885837,
+        "after_ms": 6.930067915386624,
+        "delta_ms": 0.0029127015007866753,
+        "percent": 0.04204758534858133
+      },
+      "target/target_postprocess": {
+        "steps": 45,
+        "before_ms": 0.04358684511648284,
+        "after_ms": 0.03983786660763952,
+        "delta_ms": -0.003748978508843316,
+        "percent": -8.601169685083732
+      },
+      "target/target_send_request": {
+        "steps": 45,
+        "before_ms": 0.4319914672109816,
+        "after_ms": 0.40500337812635634,
+        "delta_ms": -0.026988089084625244,
+        "percent": -6.247366240556884
+      },
+      "draft/batch_p2_total": {
+        "steps": 45,
+        "before_ms": 18.871640989515516,
+        "after_ms": 16.409147707621255,
+        "delta_ms": -2.46249328189426,
+        "percent": -13.048644170702184
+      },
+      "draft/batch_glue_logits": {
+        "steps": 45,
+        "before_ms": 0.4402517338593801,
+        "after_ms": 0.4441201779577467,
+        "delta_ms": 0.003868444098366631,
+        "percent": 0.8786891228013349
+      },
+      "target/target_recv_fused": {
+        "steps": 45,
+        "before_ms": 50.82749028735691,
+        "after_ms": 46.81111318800185,
+        "delta_ms": -4.016377099355062,
+        "percent": -7.901977997827913
+      },
+      "draft/batch_glue_forward": {
+        "steps": 45,
+        "before_ms": 3.867534229490492,
+        "after_ms": 5.545437892278035,
+        "delta_ms": 1.6779036627875434,
+        "percent": 43.38432611645147
+      }
+    },
+    "fused->bulk": {
+      "target/batch_target_post": {
+        "steps": 45,
+        "before_ms": 9.824551826053195,
+        "after_ms": 9.796608045366074,
+        "delta_ms": -0.027943780687120227,
+        "percent": -0.2844280449823544
+      },
+      "target/batch_target_final_logits": {
+        "steps": 45,
+        "before_ms": 1.921001264784071,
+        "after_ms": 1.9182023286819458,
+        "delta_ms": -0.00279893610212538,
+        "percent": -0.14570193957887945
+      },
+      "target/target_spec_wait": {
+        "steps": 45,
+        "before_ms": 50.5216253068712,
+        "after_ms": 43.86804470486111,
+        "delta_ms": -6.653580602010091,
+        "percent": -13.169767523502784
+      },
+      "target/batch_tree_accept": {
+        "steps": 45,
+        "before_ms": 4.818801079856025,
+        "after_ms": 4.853351852628919,
+        "delta_ms": 0.034550772772894964,
+        "percent": 0.7169993573158173
+      },
+      "draft/batch_kv_restore": {
+        "steps": 45,
+        "before_ms": 0.7686371522645156,
+        "after_ms": 0.7182144039207035,
+        "delta_ms": -0.05042274834381209,
+        "percent": -6.560019665359585
+      },
+      "draft/batch_proxy_receive": {
+        "steps": 45,
+        "before_ms": 34.153767861260306,
+        "after_ms": 34.00353609720866,
+        "delta_ms": -0.1502317640516493,
+        "percent": -0.4398687859621164
+      },
+      "target/batch_target_pre": {
+        "steps": 45,
+        "before_ms": 21.51722094217936,
+        "after_ms": 21.45848871866862,
+        "delta_ms": -0.058732223510742185,
+        "percent": -0.27295450313293834
+      },
+      "draft/batch_kv_stage": {
+        "steps": 45,
+        "before_ms": 0.7622200895204312,
+        "after_ms": 0.6622094219653971,
+        "delta_ms": -0.10001066755503416,
+        "percent": -13.120969773698587
+      },
+      "draft/batch_glue": {
+        "steps": 45,
+        "before_ms": 6.406826655069987,
+        "after_ms": 4.630550781885783,
+        "delta_ms": -1.776275873184204,
+        "percent": -27.724737515390142
+      },
+      "target/batch_tree_commit": {
+        "steps": 45,
+        "before_ms": 0.3382399989498986,
+        "after_ms": 0.3511608903606733,
+        "delta_ms": 0.012920891410774654,
+        "percent": 3.8200364980158774
+      },
+      "draft/batch_proxy_wait": {
+        "steps": 45,
+        "before_ms": 0.03237048892511262,
+        "after_ms": 0.001956977772836884,
+        "delta_ms": -0.030413511152275734,
+        "percent": -93.95443863277985
+      },
+      "draft/batch_p1_replay": {
+        "steps": 45,
+        "before_ms": 32.25065299140083,
+        "after_ms": 32.07117924160428,
+        "delta_ms": -0.17947374979654948,
+        "percent": -0.5564964834802066
+      },
+      "draft/draft_recv_cmd": {
+        "steps": 45,
+        "before_ms": 0.21204977697796293,
+        "after_ms": 0.19991040064228904,
+        "delta_ms": -0.012139376335673862,
+        "percent": -5.724776752269567
+      },
+      "target/target_recv_response_wait": {
+        "steps": 45,
+        "before_ms": 48.566688230302596,
+        "after_ms": 41.88666317198012,
+        "delta_ms": -6.6800250583224825,
+        "percent": -13.754335125026207
+      },
+      "draft/batch_miss_draft": {
+        "steps": 45,
+        "before_ms": 4.3572337873280045,
+        "after_ms": 4.300380438317855,
+        "delta_ms": -0.056853349010149636,
+        "percent": -1.3048037306488736
+      },
+      "draft/batch_p1_total": {
+        "steps": 45,
+        "before_ms": 37.14223781161838,
+        "after_ms": 35.31534792582194,
+        "delta_ms": -1.826889885796441,
+        "percent": -4.91863170728225
+      },
+      "draft/batch_p2_replay": {
+        "steps": 45,
+        "before_ms": 12.04428802066379,
+        "after_ms": 12.003305244445801,
+        "delta_ms": -0.04098277621799045,
+        "percent": -0.340267321303489
+      },
+      "target/batch_tree_prepare": {
+        "steps": 45,
+        "before_ms": 3.5367182148827445,
+        "after_ms": 3.596301492055257,
+        "delta_ms": 0.05958327717251248,
+        "percent": 1.684705242328377
+      },
+      "target/batch_target_proxy": {
+        "steps": 45,
+        "before_ms": 6.930067915386624,
+        "after_ms": 6.920055484771728,
+        "delta_ms": -0.01001243061489529,
+        "percent": -0.1444781023381525
+      },
+      "target/target_postprocess": {
+        "steps": 45,
+        "before_ms": 0.03983786660763952,
+        "after_ms": 0.040986311352915236,
+        "delta_ms": 0.0011484447452757094,
+        "percent": 2.88279680382153
+      },
+      "target/target_send_request": {
+        "steps": 45,
+        "before_ms": 0.40500337812635634,
+        "after_ms": 0.43763413296805487,
+        "delta_ms": 0.03263075484169854,
+        "percent": 8.056909301017768
+      },
+      "draft/batch_p2_total": {
+        "steps": 45,
+        "before_ms": 16.409147707621255,
+        "after_ms": 15.482705794440376,
+        "delta_ms": -0.9264419131808811,
+        "percent": -5.645886853407944
+      },
+      "draft/batch_glue_logits": {
+        "steps": 45,
+        "before_ms": 0.4441201779577467,
+        "after_ms": 0.4423452436923981,
+        "delta_ms": -0.0017749342653486464,
+        "percent": -0.3996517954916068
+      },
+      "target/target_recv_fused": {
+        "steps": 45,
+        "before_ms": 46.81111318800185,
+        "after_ms": 40.296107228597,
+        "delta_ms": -6.5150059594048395,
+        "percent": -13.917648002172921
+      },
+      "draft/batch_glue_forward": {
+        "steps": 45,
+        "before_ms": 5.545437892278035,
+        "after_ms": 3.8835768911573623,
+        "delta_ms": -1.6618610011206734,
+        "percent": -29.968075261194382
+      }
+    },
+    "bulk->trim": {
+      "target/batch_target_post": {
+        "steps": 45,
+        "before_ms": 9.796608045366074,
+        "after_ms": 9.802797476450602,
+        "delta_ms": 0.006189431084526909,
+        "percent": 0.06317932753729938
+      },
+      "target/batch_target_final_logits": {
+        "steps": 45,
+        "before_ms": 1.9182023286819458,
+        "after_ms": 1.9141973363028633,
+        "delta_ms": -0.004004992379082574,
+        "percent": -0.20878883938351134
+      },
+      "target/target_spec_wait": {
+        "steps": 45,
+        "before_ms": 43.86804470486111,
+        "after_ms": 43.82902380625407,
+        "delta_ms": -0.0390208986070421,
+        "percent": -0.08895062196085934
+      },
+      "target/batch_tree_accept": {
+        "steps": 45,
+        "before_ms": 4.853351852628919,
+        "after_ms": 4.211103293630812,
+        "delta_ms": -0.642248558998108,
+        "percent": -13.23309289126071
+      },
+      "draft/batch_kv_restore": {
+        "steps": 45,
+        "before_ms": 0.7182144039207035,
+        "after_ms": 0.7151943124830723,
+        "delta_ms": -0.0030200914376311834,
+        "percent": -0.42049998178045334
+      },
+      "draft/batch_proxy_receive": {
+        "steps": 45,
+        "before_ms": 34.00353609720866,
+        "after_ms": 33.29672542148166,
+        "delta_ms": -0.7068106757269965,
+        "percent": -2.0786387442364274
+      },
+      "target/batch_target_pre": {
+        "steps": 45,
+        "before_ms": 21.45848871866862,
+        "after_ms": 21.456257332695856,
+        "delta_ms": -0.002231385972764757,
+        "percent": -0.010398616612838918
+      },
+      "draft/batch_kv_stage": {
+        "steps": 45,
+        "before_ms": 0.6622094219653971,
+        "after_ms": 0.6553372448413737,
+        "delta_ms": -0.0068721771240234375,
+        "percent": -1.0377649269361355
+      },
+      "draft/batch_glue": {
+        "steps": 45,
+        "before_ms": 4.630550781885783,
+        "after_ms": 4.618535825941298,
+        "delta_ms": -0.012014955944485135,
+        "percent": -0.2594714216608174
+      },
+      "target/batch_tree_commit": {
+        "steps": 45,
+        "before_ms": 0.3511608903606733,
+        "after_ms": 0.3317162681784895,
+        "delta_ms": -0.019444622182183794,
+        "percent": -5.537240255374809
+      },
+      "draft/batch_proxy_wait": {
+        "steps": 45,
+        "before_ms": 0.001956977772836884,
+        "after_ms": 0.002025244441918201,
+        "delta_ms": 6.826666908131706e-05,
+        "percent": 3.4883722252172733
+      },
+      "draft/batch_p1_replay": {
+        "steps": 45,
+        "before_ms": 32.07117924160428,
+        "after_ms": 32.0926377190484,
+        "delta_ms": 0.021458477444118922,
+        "percent": 0.06690891308507307
+      },
+      "draft/draft_recv_cmd": {
+        "steps": 45,
+        "before_ms": 0.19991040064228904,
+        "after_ms": 0.1995306670665741,
+        "delta_ms": -0.00037973357571495904,
+        "percent": -0.18995188569224108
+      },
+      "target/target_recv_response_wait": {
+        "steps": 45,
+        "before_ms": 41.88666317198012,
+        "after_ms": 41.93313389884101,
+        "delta_ms": 0.046470726860894096,
+        "percent": 0.11094396961173203
+      },
+      "draft/batch_miss_draft": {
+        "steps": 45,
+        "before_ms": 4.300380438317855,
+        "after_ms": 4.301809792386161,
+        "delta_ms": 0.0014293540683057574,
+        "percent": 0.033237851599565715
+      },
+      "draft/batch_p1_total": {
+        "steps": 45,
+        "before_ms": 35.31534792582194,
+        "after_ms": 35.32053595648871,
+        "delta_ms": 0.005188030666775174,
+        "percent": 0.014690583475696073
+      },
+      "draft/batch_p2_replay": {
+        "steps": 45,
+        "before_ms": 12.003305244445801,
+        "after_ms": 11.997047403123643,
+        "delta_ms": -0.006257841322157118,
+        "percent": -0.052134317962582166
+      },
+      "target/batch_tree_prepare": {
+        "steps": 45,
+        "before_ms": 3.596301492055257,
+        "after_ms": 3.4305763721466063,
+        "delta_ms": -0.16572511990865071,
+        "percent": -4.60820985878857
+      },
+      "target/batch_target_proxy": {
+        "steps": 45,
+        "before_ms": 6.920055484771728,
+        "after_ms": 6.31427985297309,
+        "delta_ms": -0.6057756317986382,
+        "percent": -8.753912929335716
+      },
+      "draft/batch_bulk_export": {
+        "steps": 45,
+        "before_ms": 0.541656889518102,
+        "after_ms": 0.5301248007350498,
+        "delta_ms": -0.011532088783052232,
+        "percent": -2.1290394355201525
+      },
+      "target/target_postprocess": {
+        "steps": 45,
+        "before_ms": 0.040986311352915236,
+        "after_ms": 0.038984533068206574,
+        "delta_ms": -0.002001778284708659,
+        "percent": -4.884016684185665
+      },
+      "target/target_send_request": {
+        "steps": 45,
+        "before_ms": 0.43763413296805487,
+        "after_ms": 0.399746134546068,
+        "delta_ms": -0.037887998421986896,
+        "percent": -8.657459637580988
+      },
+      "draft/batch_p2_total": {
+        "steps": 45,
+        "before_ms": 15.482705794440376,
+        "after_ms": 15.413352500067816,
+        "delta_ms": -0.06935329437255859,
+        "percent": -0.4479404006854093
+      },
+      "draft/batch_glue_logits": {
+        "steps": 45,
+        "before_ms": 0.4423452436923981,
+        "after_ms": 0.441867376698388,
+        "delta_ms": -0.00047786699401007756,
+        "percent": -0.10803032265502832
+      },
+      "target/target_recv_fused": {
+        "steps": 45,
+        "before_ms": 40.296107228597,
+        "after_ms": 40.26217710706923,
+        "delta_ms": -0.03393012152777778,
+        "percent": -0.08420198342060647
+      },
+      "draft/batch_glue_forward": {
+        "steps": 45,
+        "before_ms": 3.8835768911573623,
+        "after_ms": 3.8813240898980035,
+        "delta_ms": -0.0022528012593587238,
+        "percent": -0.05800841138199342
+      }
+    }
+  }
+}

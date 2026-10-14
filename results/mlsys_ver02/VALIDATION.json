@@ -1,0 +1,372 @@
+{
+  "suites": 24,
+  "tests": 261,
+  "errors": 0,
+  "failures": 0,
+  "skipped": 0,
+  "source_matches": true,
+  "model_runs": [
+    {
+      "name": "l2_b1_c4_t07",
+      "status": "complete",
+      "outputs": 16,
+      "output_tokens": 481,
+      "context_guard_no_decode_uids": [],
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 253,
+        "all_steps": 267,
+        "tokens": 460,
+        "seconds": 5.539251316804439,
+        "tps": 83.04371361604356,
+        "al": 1.8181818181818181,
+        "hit": 0.7233201581027668,
+        "verify_ms": 17.073944590161204,
+        "step_ms": 21.894273979464185,
+        "actual_output_tokens": 481,
+        "emitted_decode_tokens": 481
+      },
+      "request_population": {
+        "questions": 16,
+        "turn_records": 16,
+        "metrics": {
+          "request_decode_tps": 85.01628785996922,
+          "al": 1.895689007683493,
+          "hit": 0.7303793734859911,
+          "p1_al": 2.073227513227513,
+          "p2_al": 2.0479166666666666,
+          "step_ms": 21.837425194118655
+        },
+        "metric_questions": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 15,
+          "p2_al": 16,
+          "step_ms": 16
+        },
+        "metric_turn_records": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 15,
+          "p2_al": 16,
+          "step_ms": 16
+        },
+        "context_guard_no_decode_uids": [],
+        "policy": "mean of valid turns/passes within question, then mean across questions",
+        "time_definition": "shared batch decode time while request active; not aggregate TPS"
+      },
+      "preparation": {
+        "steps": 267,
+        "seconds": 5.8458391355816275,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "source_matches_final_tests": true,
+      "raw_sha256": "9dd91dd996e9f6f9031d1f36d03ef04d17d758e032d33368605653742e884d98"
+    },
+    {
+      "name": "l2_b1_c4_t0",
+      "status": "complete",
+      "outputs": 16,
+      "output_tokens": 512,
+      "context_guard_no_decode_uids": [],
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 253,
+        "all_steps": 269,
+        "tokens": 483,
+        "seconds": 6.231909006368369,
+        "tps": 77.50434088598273,
+        "al": 1.9090909090909092,
+        "hit": 0.7470355731225297,
+        "verify_ms": 16.303932183816027,
+        "step_ms": 24.63205140857063,
+        "actual_output_tokens": 512,
+        "emitted_decode_tokens": 512
+      },
+      "request_population": {
+        "questions": 16,
+        "turn_records": 16,
+        "metrics": {
+          "request_decode_tps": 79.40204799029294,
+          "al": 1.9943134586940743,
+          "hit": 0.7613443766691386,
+          "p1_al": 2.1229662698412697,
+          "p2_al": 2.021787067099567,
+          "step_ms": 24.63733542768669
+        },
+        "metric_questions": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 16,
+          "p2_al": 16,
+          "step_ms": 16
+        },
+        "metric_turn_records": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 16,
+          "p2_al": 16,
+          "step_ms": 16
+        },
+        "context_guard_no_decode_uids": [],
+        "policy": "mean of valid turns/passes within question, then mean across questions",
+        "time_definition": "shared batch decode time while request active; not aggregate TPS"
+      },
+      "preparation": {
+        "steps": 269,
+        "seconds": 6.632992803119123,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "source_matches_final_tests": true,
+      "raw_sha256": "676d512b9641c815968df5a52d9c99ee505e6dfd7f090d9c45786c7635d218c2"
+    },
+    {
+      "name": "l3_b8_c2_t07",
+      "status": "complete",
+      "outputs": 16,
+      "output_tokens": 445,
+      "context_guard_no_decode_uids": [],
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 8,
+        "all_steps": 35,
+        "tokens": 142,
+        "seconds": 0.2524752907920629,
+        "tps": 562.4312761637746,
+        "al": 2.21875,
+        "hit": 0.65625,
+        "verify_ms": 24.602355988463387,
+        "step_ms": 31.55941134900786,
+        "actual_output_tokens": 445,
+        "emitted_decode_tokens": 445
+      },
+      "request_population": {
+        "questions": 16,
+        "turn_records": 16,
+        "metrics": {
+          "request_decode_tps": 66.00407499158072,
+          "al": 2.196985992862057,
+          "hit": 0.6414449985536479,
+          "p1_al": 2.208838383838384,
+          "p2_al": 2.0693877551020408,
+          "step_ms": 31.329387762008313
+        },
+        "metric_questions": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 15,
+          "p2_al": 14,
+          "step_ms": 16
+        },
+        "metric_turn_records": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 15,
+          "p2_al": 14,
+          "step_ms": 16
+        },
+        "context_guard_no_decode_uids": [],
+        "policy": "mean of valid turns/passes within question, then mean across questions",
+        "time_definition": "shared batch decode time while request active; not aggregate TPS"
+      },
+      "preparation": {
+        "steps": 35,
+        "seconds": 1.072899564402178,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "source_matches_final_tests": true,
+      "raw_sha256": "2012dd4975bca0e6efbbc2afacffc249992627068d693464d51f5774f527b135"
+    },
+    {
+      "name": "l3_b8_c2_t0",
+      "status": "complete",
+      "outputs": 16,
+      "output_tokens": 326,
+      "context_guard_no_decode_uids": [],
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 0,
+        "all_steps": 34,
+        "tokens": 0,
+        "seconds": 0,
+        "tps": null,
+        "al": null,
+        "hit": null,
+        "verify_ms": null,
+        "step_ms": null,
+        "actual_output_tokens": 326,
+        "emitted_decode_tokens": 326
+      },
+      "request_population": {
+        "questions": 16,
+        "turn_records": 16,
+        "metrics": {
+          "request_decode_tps": 69.3029142631664,
+          "al": 2.1734649388601595,
+          "hit": 0.5096186748300718,
+          "p1_al": 2.6598881673881674,
+          "p2_al": 2.3476190476190477,
+          "step_ms": 27.32329482047015
+        },
+        "metric_questions": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 10,
+          "p2_al": 7,
+          "step_ms": 16
+        },
+        "metric_turn_records": {
+          "request_decode_tps": 16,
+          "al": 16,
+          "hit": 16,
+          "p1_al": 10,
+          "p2_al": 7,
+          "step_ms": 16
+        },
+        "context_guard_no_decode_uids": [],
+        "policy": "mean of valid turns/passes within question, then mean across questions",
+        "time_definition": "shared batch decode time while request active; not aggregate TPS"
+      },
+      "preparation": {
+        "steps": 34,
+        "seconds": 0.8527262613642961,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "source_matches_final_tests": true,
+      "raw_sha256": "09af55411435e229a636afe09921d20fe0f2e71287b194c4143550e972d54f12"
+    },
+    {
+      "name": "l2_context_guard",
+      "status": "complete",
+      "outputs": 1,
+      "output_tokens": 0,
+      "context_guard_no_decode_uids": [
+        "measured_0:0_t0"
+      ],
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 0,
+        "all_steps": 0,
+        "tokens": 0,
+        "seconds": 0,
+        "tps": null,
+        "al": null,
+        "hit": null,
+        "verify_ms": null,
+        "step_ms": null,
+        "actual_output_tokens": 0,
+        "emitted_decode_tokens": 0
+      },
+      "request_population": {
+        "questions": 1,
+        "turn_records": 1,
+        "metrics": {
+          "request_decode_tps": null,
+          "al": null,
+          "hit": null,
+          "p1_al": null,
+          "p2_al": null,
+          "step_ms": null
+        },
+        "metric_questions": {
+          "request_decode_tps": 0,
+          "al": 0,
+          "hit": 0,
+          "p1_al": 0,
+          "p2_al": 0,
+          "step_ms": 0
+        },
+        "metric_turn_records": {
+          "request_decode_tps": 0,
+          "al": 0,
+          "hit": 0,
+          "p1_al": 0,
+          "p2_al": 0,
+          "step_ms": 0
+        },
+        "context_guard_no_decode_uids": [
+          "measured_0:0_t0"
+        ],
+        "policy": "mean of valid turns/passes within question, then mean across questions",
+        "time_definition": "shared batch decode time while request active; not aggregate TPS"
+      },
+      "preparation": {
+        "steps": 0,
+        "seconds": 0,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0,
+        "interval_union_fraction": null
+      },
+      "source_matches_final_tests": true,
+      "raw_sha256": "46a7024a557cdcc93a2dc532d9413a323c741e8e5104bc2c5caeb9e96cd0906f"
+    },
+    {
+      "name": "l2_ar_baseline",
+      "status": "complete",
+      "outputs": 16,
+      "output_tokens": 256,
+      "context_guard_no_decode_uids": [],
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 224,
+        "all_steps": 240,
+        "tokens": 224,
+        "seconds": 3.3852543709799647,
+        "tps": 66.16932598041558,
+        "al": null,
+        "hit": null,
+        "verify_ms": null,
+        "step_ms": 15.112742727589128,
+        "actual_output_tokens": 256,
+        "emitted_decode_tokens": 240
+      },
+      "request_population": {
+        "status": "unavailable",
+        "reason": "AR prefill tokens / synchronous SD lack the async decode-event contract; raw and aggregate metrics retained"
+      },
+      "preparation": {
+        "steps": 240,
+        "seconds": 3.627137220231816,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "source_matches_final_tests": true,
+      "raw_sha256": "5524f89cd3ada336df01486b8dc565c9047295112a79da358e1d709224ebc9f5"
+    }
+  ],
+  "paper_parity": {
+    "status": "complete",
+    "device": "cpu",
+    "checks": {
+      "chain": 384,
+      "tree": 288,
+      "sampler": 12,
+      "q_probs": 12
+    },
+    "reference": "/home/chokwans99/PSD-paper-review",
+    "scope": "Exact output, recovery distribution and RNG equality on supplied tensors; not an end-to-end model or GPU timing test."
+  },
+  "scope": "Functional release checks; no new performance improvement claim"
+}

@@ -1,0 +1,34 @@
+test_batched_lookup_cannot_downgrade_tree_rows_to_chain (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_batched_lookup_cannot_downgrade_tree_rows_to_chain) ... ok
+test_logit_payloads_are_mutually_exclusive (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_logit_payloads_are_mutually_exclusive) ... ok
+test_token_envelope_widens_without_widening_logits (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_token_envelope_widens_without_widening_logits) ... ok
+test_zero_decode_context_stop_is_reported_without_division (test_p1_dynamic_tree.TestNativeContextMetrics.test_zero_decode_context_stop_is_reported_without_division) ... ok
+test_both_trees_reserve_draft_graph_headroom (test_p1_dynamic_tree.TestP1ShapeBuckets.test_both_trees_reserve_draft_graph_headroom) ... ok
+test_buckets_cover_chain_and_tree_contexts (test_p1_dynamic_tree.TestP1ShapeBuckets.test_buckets_cover_chain_and_tree_contexts) ... ok
+test_glue_positions_slice_wide_response_buffer (test_p1_dynamic_tree.TestP1ShapeBuckets.test_glue_positions_slice_wide_response_buffer)
+A response buffer wider than K must not widen a K-node glue. ... ok
+test_live_tree_cell_beyond_native_context_is_rejected (test_p1_dynamic_tree.TestP1ShapeBuckets.test_live_tree_cell_beyond_native_context_is_rejected) ... ok
+test_masked_canvas_tail_may_extend_past_native_block_table (test_p1_dynamic_tree.TestP1ShapeBuckets.test_masked_canvas_tail_may_extend_past_native_block_table) ... ok
+test_p1_only_never_dispatches_p2_tree (test_p1_dynamic_tree.TestP1ShapeBuckets.test_p1_only_never_dispatches_p2_tree) ... ok
+test_p2_masked_tail_may_alias_past_native_block_table (test_p1_dynamic_tree.TestP1ShapeBuckets.test_p2_masked_tail_may_alias_past_native_block_table) ... ok
+test_phase_switches_select_dynamic_for_p1_only (test_p1_dynamic_tree.TestP1ShapeBuckets.test_phase_switches_select_dynamic_for_p1_only) ... ok
+test_scheduler_reserves_common_tree_glue_and_p1_canvas (test_p1_dynamic_tree.TestP1ShapeBuckets.test_scheduler_reserves_common_tree_glue_and_p1_canvas) ... ok
+test_two_x_depth_budget_uses_nineteen_context_canvas (test_p1_dynamic_tree.TestP1ShapeBuckets.test_two_x_depth_budget_uses_nineteen_context_canvas) ... ok
+test_variable_width_p1_reserves_compact_cell_sum (test_p1_dynamic_tree.TestP1ShapeBuckets.test_variable_width_p1_reserves_compact_cell_sum) ... ok
+test_wide_p1_canvas_reservation_crosses_page_safely (test_p1_dynamic_tree.TestP1ShapeBuckets.test_wide_p1_canvas_reservation_crosses_page_safely) ... ok
+test_context_reach_discounts_late_roots (test_p1_dynamic_tree.TestP1UniformRoots.test_context_reach_discounts_late_roots) ... ok
+test_custom_tree_context_visibility_is_repeated_per_root (test_p1_dynamic_tree.TestP1UniformRoots.test_custom_tree_context_visibility_is_repeated_per_root) ... ok
+test_persistent_output_buffers_are_reused (test_p1_dynamic_tree.TestP1UniformRoots.test_persistent_output_buffers_are_reused) ... ok
+test_root_selection_excludes_returned_without_mutating_logits (test_p1_dynamic_tree.TestP1UniformRoots.test_root_selection_excludes_returned_without_mutating_logits) ... ok
+test_root_width_must_hold_every_uniform_candidate (test_p1_dynamic_tree.TestP1UniformRoots.test_root_width_must_hold_every_uniform_candidate) ... ok
+test_selected_q_matches_full_distribution (test_p1_dynamic_tree.TestP1UniformRoots.test_selected_q_matches_full_distribution) ... ok
+test_uniform_topk_scores_padding_and_glue_rows (test_p1_dynamic_tree.TestP1UniformRoots.test_uniform_topk_scores_padding_and_glue_rows) ... ok
+test_descendant_selection_is_parent_closed_and_remappable (test_p1_dynamic_tree.TestTreeHitRerank.test_descendant_selection_is_parent_closed_and_remappable) ... ok
+test_equal_or_larger_cap_is_exact_identity (test_p1_dynamic_tree.TestTreeHitRerank.test_equal_or_larger_cap_is_exact_identity) ... ok
+test_keeps_ancestors_and_prior_wor_siblings (test_p1_dynamic_tree.TestTreeHitRerank.test_keeps_ancestors_and_prior_wor_siblings) ... ok
+test_rejects_noncontiguous_sibling_order (test_p1_dynamic_tree.TestTreeHitRerank.test_rejects_noncontiguous_sibling_order) ... ok
+test_serving_compaction_remaps_parent_and_parent_q (test_p1_dynamic_tree.TestTreeHitRerank.test_serving_compaction_remaps_parent_and_parent_q) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 0.006s
+
+OK

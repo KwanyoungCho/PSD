@@ -1,0 +1,56 @@
+test_backbone_logit_gather_bounds_and_tail (test_p2_executor_parity.TestExecutorMandatoryParity.test_backbone_logit_gather_bounds_and_tail)
+Invalid parent cells must zero-fill without any out-of-bounds read. ... ok
+test_eager_equals_replay_with_fixed_noise (test_p2_executor_parity.TestExecutorMandatoryParity.test_eager_equals_replay_with_fixed_noise) ... ok
+test_executor_passes_sampler_rescaling_to_wor (test_p2_executor_parity.TestExecutorMandatoryParity.test_executor_passes_sampler_rescaling_to_wor)
+Captured sampling and target verification must use the same q. ... ok
+test_graph_eager_interleave_20 (test_p2_executor_parity.TestExecutorMandatoryParity.test_graph_eager_interleave_20) ... ok
+test_p1_backbone_expands_width_to_cover_overbooked_roots (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_backbone_expands_width_to_cover_overbooked_roots)
+Full backbone must not silently drop R-chain_width root tips. ... ok
+test_p1_backbone_preserves_every_root_depth_at_fixed_width (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_backbone_preserves_every_root_depth_at_fixed_width)
+Coverage policy keeps depth K1 while retaining free siblings. ... ok
+test_p1_c1_is_an_exact_chain_forest (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_c1_is_an_exact_chain_forest)
+With matched roots/width and C=1, every P1 view is one chain. ... ok
+test_p1_dynamic_executor_eager_equals_replay (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_dynamic_executor_eager_equals_replay)
+P1 evaluates every root, then reallocates lanes globally. ... ok
+test_p1_round_wrappers_separate_different_width_plans (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_round_wrappers_separate_different_width_plans) ... ok
+test_page_boundary_lpl (test_p2_executor_parity.TestExecutorMandatoryParity.test_page_boundary_lpl) ... ok
+test_page_swap_between_replays (test_p2_executor_parity.TestExecutorMandatoryParity.test_page_swap_between_replays) ... ok
+test_round_wrappers_share_only_same_page_plan_workspace (test_p2_executor_parity.TestExecutorMandatoryParity.test_round_wrappers_share_only_same_page_plan_workspace)
+Identical serial round plans should not allocate F private 8MiB buffers. ... ok
+test_sentinel_kv_replay_writes_only_slots (test_p2_executor_parity.TestExecutorMandatoryParity.test_sentinel_kv_replay_writes_only_slots) ... ok
+test_z_adaptive_executor_keeps_depth_and_varies_only_width (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_adaptive_executor_keeps_depth_and_varies_only_width) ... ok
+test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots) ... ok
+test_z_dynamic_executor_capture_and_dynamic_root_depths (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_dynamic_executor_capture_and_dynamic_root_depths) ... ok
+test_z_eagle_multiple_bucket_graphs_keep_live_local_index (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_eagle_multiple_bucket_graphs_keep_live_local_index)
+Later bucket capture must not orphan earlier graph state. ... ok
+test_z_hybrid_executor_depth_floor_and_capture_parity (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_hybrid_executor_depth_floor_and_capture_parity) ... ok
+test_z_prime_capture_inputs_are_finite_and_active (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_prime_capture_inputs_are_finite_and_active) ... ok
+test_backbone_logit_gather_bounds_and_tail (test_p2_executor_parity.TestExecutorModuleParity.test_backbone_logit_gather_bounds_and_tail)
+Invalid parent cells must zero-fill without any out-of-bounds read. ... ok
+test_eager_equals_replay_with_fixed_noise (test_p2_executor_parity.TestExecutorModuleParity.test_eager_equals_replay_with_fixed_noise) ... ok
+test_executor_passes_sampler_rescaling_to_wor (test_p2_executor_parity.TestExecutorModuleParity.test_executor_passes_sampler_rescaling_to_wor)
+Captured sampling and target verification must use the same q. ... ok
+test_p1_backbone_expands_width_to_cover_overbooked_roots (test_p2_executor_parity.TestExecutorModuleParity.test_p1_backbone_expands_width_to_cover_overbooked_roots)
+Full backbone must not silently drop R-chain_width root tips. ... ok
+test_p1_backbone_preserves_every_root_depth_at_fixed_width (test_p2_executor_parity.TestExecutorModuleParity.test_p1_backbone_preserves_every_root_depth_at_fixed_width)
+Coverage policy keeps depth K1 while retaining free siblings. ... ok
+test_p1_c1_is_an_exact_chain_forest (test_p2_executor_parity.TestExecutorModuleParity.test_p1_c1_is_an_exact_chain_forest)
+With matched roots/width and C=1, every P1 view is one chain. ... ok
+test_p1_dynamic_executor_eager_equals_replay (test_p2_executor_parity.TestExecutorModuleParity.test_p1_dynamic_executor_eager_equals_replay)
+P1 evaluates every root, then reallocates lanes globally. ... ok
+test_p1_round_wrappers_separate_different_width_plans (test_p2_executor_parity.TestExecutorModuleParity.test_p1_round_wrappers_separate_different_width_plans) ... ok
+test_round_wrappers_share_only_same_page_plan_workspace (test_p2_executor_parity.TestExecutorModuleParity.test_round_wrappers_share_only_same_page_plan_workspace)
+Identical serial round plans should not allocate F private 8MiB buffers. ... ok
+test_z_adaptive_executor_keeps_depth_and_varies_only_width (test_p2_executor_parity.TestExecutorModuleParity.test_z_adaptive_executor_keeps_depth_and_varies_only_width) ... ok
+test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots (test_p2_executor_parity.TestExecutorModuleParity.test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots) ... ok
+test_z_dynamic_executor_capture_and_dynamic_root_depths (test_p2_executor_parity.TestExecutorModuleParity.test_z_dynamic_executor_capture_and_dynamic_root_depths) ... ok
+test_z_eagle_multiple_bucket_graphs_keep_live_local_index (test_p2_executor_parity.TestExecutorModuleParity.test_z_eagle_multiple_bucket_graphs_keep_live_local_index)
+Later bucket capture must not orphan earlier graph state. ... ok
+test_z_hybrid_executor_depth_floor_and_capture_parity (test_p2_executor_parity.TestExecutorModuleParity.test_z_hybrid_executor_depth_floor_and_capture_parity) ... ok
+test_z_prime_capture_inputs_are_finite_and_active (test_p2_executor_parity.TestExecutorModuleParity.test_z_prime_capture_inputs_are_finite_and_active) ... ok
+test_same_noise_same_tree (test_p2_executor_parity.TestExecutorVsArenaSemantics.test_same_noise_same_tree) ... ok
+
+----------------------------------------------------------------------
+Ran 35 tests in 11.450s
+
+OK

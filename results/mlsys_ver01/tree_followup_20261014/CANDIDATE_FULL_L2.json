@@ -1,0 +1,183 @@
+{
+  "arms": {
+    "candidate": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1990,
+        "all_steps": 4776,
+        "tokens": 31095,
+        "seconds": 50.95818610675633,
+        "tps": 610.2061783529074,
+        "al": 1.9532035175879396,
+        "hit": 0.7146984924623115,
+        "verify_ms": 21.71779295368747,
+        "step_ms": 25.60712869686248,
+        "actual_output_tokens": 57304,
+        "emitted_decode_tokens": 57304
+      },
+      "source": {
+        "0": {
+          "requests": 4542,
+          "al": 1.6415675913694407,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 5344,
+          "al": 2.440494011976048,
+          "valid_k": 5.561002994011976
+        },
+        "2": {
+          "requests": 6034,
+          "al": 1.7562147828969175,
+          "valid_k": 3.948955916473318
+        }
+      },
+      "batch_metrics": {
+        "steps": 1990,
+        "request_hit": 0.7146984924623115,
+        "all_hit": 0.13668341708542714,
+        "any_miss": 0.8633165829145728,
+        "mixed": 0.7989949748743719,
+        "all_miss": 0.06432160804020101,
+        "actual_jit_step": 0.8633165829145728,
+        "actual_jit_request": 0.28530150753768846,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06432160804020101,
+        "miss_histogram": {
+          "0": 272,
+          "1": 549,
+          "2": 503,
+          "3": 320,
+          "4": 137,
+          "5": 47,
+          "6": 18,
+          "7": 16,
+          "8": 128
+        }
+      },
+      "preparation": {
+        "steps": 4776,
+        "seconds": 114.84828803804703,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 3,
+        "k2": 2,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "p1_verify": 6,
+        "p2_verify": 4,
+        "roots": 2,
+        "siblings": 3
+      }
+    },
+    "base": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1990,
+        "all_steps": 4776,
+        "tokens": 31095,
+        "seconds": 52.25948990532197,
+        "tps": 595.0115482629953,
+        "al": 1.9532035175879396,
+        "hit": 0.7146984924623115,
+        "verify_ms": 22.36517340801282,
+        "step_ms": 26.261050203679382,
+        "actual_output_tokens": 57304,
+        "emitted_decode_tokens": 57304
+      },
+      "source": {
+        "0": {
+          "requests": 4542,
+          "al": 1.6415675913694407,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 5344,
+          "al": 2.440494011976048,
+          "valid_k": 5.561002994011976
+        },
+        "2": {
+          "requests": 6034,
+          "al": 1.7562147828969175,
+          "valid_k": 3.948955916473318
+        }
+      },
+      "batch_metrics": {
+        "steps": 1990,
+        "request_hit": 0.7146984924623115,
+        "all_hit": 0.13668341708542714,
+        "any_miss": 0.8633165829145728,
+        "mixed": 0.7989949748743719,
+        "all_miss": 0.06432160804020101,
+        "actual_jit_step": 0.8633165829145728,
+        "actual_jit_request": 0.28530150753768846,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06432160804020101,
+        "miss_histogram": {
+          "0": 272,
+          "1": 549,
+          "2": 503,
+          "3": 320,
+          "4": 137,
+          "5": 47,
+          "6": 18,
+          "7": 16,
+          "8": 128
+        }
+      },
+      "preparation": {
+        "steps": 4776,
+        "seconds": 116.19338444527239,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 3,
+        "k2": 2,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "p1_verify": 6,
+        "p2_verify": 4,
+        "roots": 2,
+        "siblings": 3
+      }
+    }
+  },
+  "comparisons": {
+    "candidate": {
+      "prompt_group_clusters": 60,
+      "tps_change_ci95": [
+        0.023203016555686778,
+        0.027783499488294717
+      ],
+      "verify_change_ci95": [
+        -0.030513332220582202,
+        -0.02735046398862843
+      ],
+      "tps_change": 0.025536697790604856,
+      "verify_change": -0.028945917052152548,
+      "equal_output_sequences": 960,
+      "output_sequences": 960,
+      "same_all_outputs": true,
+      "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+    }
+  }
+}

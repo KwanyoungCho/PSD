@@ -1,0 +1,62 @@
+[
+  {
+    "name": "final_default",
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "8",
+      "--temperature",
+      ".7",
+      "--prompts",
+      "/home/chokwans99/PSD-MLSys-ver0.1/results/mlsys_ver01/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "64",
+      "--warm-prompts",
+      "48",
+      "--passes",
+      "2",
+      "--seed",
+      "10143",
+      "--target",
+      "/data/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+      "--k1",
+      "2",
+      "--k2",
+      "2",
+      "--exit-layer",
+      "17",
+      "--p1-nodes",
+      "4",
+      "--p1-verify",
+      "4",
+      "--p2-nodes",
+      "4",
+      "--p2-verify",
+      "4",
+      "--roots",
+      "2",
+      "--siblings",
+      "2",
+      "--target-tp",
+      "2"
+    ],
+    "env": {
+      "PAPER_CHECKOUT": "/home/chokwans99/PSD-MLSys-ver0.1",
+      "PAPER_CPUSET": "16-23,48-55",
+      "SSD_CUDA_ARCH": "8.9",
+      "SSD_BATCHED_TREE": "1",
+      "SSD_TREE_SHAPE_METRICS": "1",
+      "PAPER_COLD_PREFIX": "1",
+      "PAPER_ARM": "final_default"
+    },
+    "unset_env": [
+      "SSD_DUET_EXIT_REPLICA",
+      "SSD_BATCH_TREE_PROXY_STREAM"
+    ]
+  }
+]

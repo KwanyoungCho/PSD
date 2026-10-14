@@ -1,0 +1,568 @@
+--- a/ssd/ssd/config.py
++++ b/ssd/ssd/config.py
+@@ -439,6 +439,9 @@
+         exit-topm-gather null result: the exit cost is rendezvous-
+         dominated, not volume-dominated (docs/duet/09 WS3c)."""
+         import os as _os_cfg
++        # Fixed-input gains did not establish a full-serving gain for B>1.
++        # Preserve the paper default; the existing explicit override remains
++        # available for measured deployments and diagnostic comparisons.
+         return _os_cfg.environ.get("SSD_DUET_EXIT_REPLICA", "0") == "1"
+ 
+     @property
+@@ -628,11 +631,12 @@
+             # at config time instead of hitting the runtime B==1 asserts
+             # mid-run.
+             if self.max_num_seqs > 1 and (
+-                    self.duet_exit_topm_gather or self.duet_exit_replica
++                    self.duet_exit_topm_gather
++                    or (self.duet_exit_replica and not self.duet_tree_enabled)
+                     or self.duet_proxy_on_draft):
+                 raise ValueError(
+-                    "SSD_DUET_EXIT_TOPM_GATHER / SSD_DUET_EXIT_REPLICA / "
+-                    "SSD_DUET_PROXY_ON_DRAFT are B==1-only gates "
++                    "Top-M/proxy-on-draft and non-tree exit-replica modes "
++                    "are B==1-only gates "
+                     "(docs/duet/13 §6, out of scope v1); unset them or run "
+                     f"with max_num_seqs=1 (got max_num_seqs={self.max_num_seqs})."
+                 )
+--- a/ssd/ssd/engine/helpers/batch_tree_draft.py
++++ b/ssd/ssd/engine/helpers/batch_tree_draft.py
+@@ -33,6 +33,8 @@
+         self.graph_pool=None
+         self.glue=BatchedTreeForward(runner,split=False)
+         self.stats=dict(steps=0,tree_hits=0,phase1_replays=0,phase2_replays=0,captures=0)
++        from ssd.engine.helpers.batch_tree_warmup import prewarm_draft
++        prewarm_draft(self)
+ 
+     def invalidate(self,seq_ids):
+         ids=set(seq_ids)
+--- a/ssd/ssd/engine/helpers/batch_tree_forward.py
++++ b/ssd/ssd/engine/helpers/batch_tree_forward.py
+@@ -7,6 +7,11 @@
+ from ssd.engine.helpers.batch_tree_common import capacity, build_forward_inputs
+ 
+ DETAIL_TREE = os.getenv('SSD_PROFILE_DUET_DETAIL','0') == '1'
++
++def proxy_stream_enabled(config, num_tp_gpus):
++    """Resolve the existing override and the full-head TP default."""
++    default = getattr(config, 'duet_exit_replica', False) and num_tp_gpus > 1
++    return os.getenv('SSD_BATCH_TREE_PROXY_STREAM', '1' if default else '0') == '1'
+ 
+ class BatchedTreeForward:
+     def __init__(self, runner, split):
+@@ -107,11 +112,14 @@
+     def run(self, rows, width, proxy=None):
+         r = self.r
+         b = len(rows)
+-        if proxy is not None and os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1':
++        # Glue/full forwards have no proxy and do not require proxy config.
++        side_enabled = (self.split and proxy is not None
++                        and proxy_stream_enabled(r.config, r.num_tp_gpus))
++        if proxy is not None and side_enabled:
+             if self.proxy_side is None:
+                 from ssd.engine.helpers.tree_proxy_stream import TreeProxySideStream
+                 self.proxy_side=TreeProxySideStream(r.device)
+-        side=self.proxy_side if os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1' else None
++        side=self.proxy_side if side_enabled else None
+         pages = capacity(max((row['prefix']+len(row['tokens'])+r.block_size-1)//r.block_size
+                              for row in rows))
+         pages = min(pages,r.config.max_blocks)
+--- a/ssd/ssd/engine/helpers/batch_tree_inputs.py
++++ b/ssd/ssd/engine/helpers/batch_tree_inputs.py
+@@ -1,5 +1,6 @@
+ """Prepare all request arenas with one captured graph and one host upload."""
+ import torch
++import numpy as np
+ from ssd.engine.helpers.tree_host_topology import context_topology
+ 
+ 
+@@ -45,7 +46,7 @@
+     @torch.inference_mode()
+     def replay(self,rows,params,temps):
+         B=len(rows);ex=self.executor.first
+-        host=torch.zeros_like(self.meta,device='cpu');safe=[]
++        host=np.zeros(tuple(self.meta.shape),dtype=np.int64);safe=[]
+         self.tokens.zero_();self.scores.zero_();self.contexts.zero_()
+         for b in range(len(self.executor.executors)):
+             row=rows[min(b,B-1)];prefix=row['prefix'];n=len(row['tokens']);bt=row['blocks']
+@@ -53,16 +54,16 @@
+             okay=b<B and final<=self.max_model_len and (final-1)//ex.bs<len(bt) and all(x>=0 for x in bt[:(final+ex.bs-1)//ex.bs])
+             if b<B:safe.append(okay)
+             depths,_,vis=context_topology(row['parents'])
+-            host[b,:3]=torch.tensor([prefix,n,int(okay)])
+-            host[b,3:3+len(bt)]=torch.tensor(bt)
+-            host[b,3+self.M:3+self.M+n]=torch.tensor([0]+[d+1 for d in depths])
+-            host[b,3+self.M+self.G:3+self.M+self.G+self.G*self.G].view(self.G,self.G)[:n,:n]=torch.as_tensor(vis)
++            host[b,:3]=[prefix,n,int(okay)]
++            host[b,3:3+len(bt)]=bt
++            host[b,3+self.M:3+self.M+n]=[0]+[d+1 for d in depths]
++            host[b,3+self.M+self.G:3+self.M+self.G+self.G*self.G].reshape(self.G,self.G)[:n,:n]=vis
+             live=min((final+ex.bs-1)//ex.bs,len(bt)) if okay else (prefix+n+ex.bs-1)//ex.bs
+-            host[b,-self.P:]=torch.tensor([bt[j] if j<live else bt[0] for j in range(self.P)])
++            host[b,-self.P:]=[bt[j] if j<live else bt[0] for j in range(self.P)]
+             if b<B:
+                 tok,score,ctx=params[b];nr=len(tok)
+                 self.tokens[b,:nr].copy_(tok);self.scores[b,:nr].copy_(score);self.contexts[b,:nr].copy_(ctx)
+-        self.meta.copy_(host)
++        self.meta.copy_(torch.from_numpy(host))
+         self.temps[:B].copy_(torch.tensor(temps,dtype=torch.float32))
+         self.graph.replay()
+         return safe
+--- a/ssd/ssd/engine/helpers/batch_tree_verify.py
++++ b/ssd/ssd/engine/helpers/batch_tree_verify.py
+@@ -4,6 +4,7 @@
+ import torch
+ from ssd.engine.helpers.batch_tree_common import capacity
+ from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy, BatchedTreeAccept, verify_batch
++from ssd.engine.helpers.flat_tree_sampling import FlatProxy, FlatAccept, verify as verify_flat
+ from ssd.engine.helpers.p2_tree import parse_tree_ints, validate_tree_ints, commit_copy_plan
+ from ssd.engine.helpers.speculate_types import VerifyResult
+ from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
+@@ -53,15 +54,19 @@
+     if not hasattr(r,'_batch_tree_proxies'):
+         r._batch_tree_proxies={}; r._batch_tree_proxy_pool=None
+     cap=capacity(B)
+-    proxy_key=cap,N
++    # Preserve target GEMM/attention shapes; compact only vocabulary work.
++    flat_q=((sum(v+1 for v in valid)+7)//8)*8
++    compact=B==cap and flat_q<cap*(N+1)
++    proxy_type=FlatProxy if compact else BatchedTreeProxy
++    accept_type=FlatAccept if compact else BatchedTreeAccept
++    proxy_key=(cap,N,'flat') if compact else (cap,N)
+     if proxy_key not in r._batch_tree_proxies:
+         capture_event=duet_record('batch_proxy_capture') if DETAIL_TREE else None
+-        p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
++        p=proxy_type(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
+                            cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
+                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
+                            q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor)
+         r._batch_tree_proxies[proxy_key]=p
+-        if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
+         if DETAIL_TREE:duet_close('batch_proxy_capture',capture_event)
+     proxy=r._batch_tree_proxies[proxy_key]
+     tokens=torch.zeros(B,N,dtype=torch.int64,device=r.device)
+@@ -69,8 +74,11 @@
+     q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
+     q[:,:result.logits_q.shape[1]].copy_(result.logits_q)
+     proxy.prepare(parents,siblings,tokens,q,tt,dt)
++    if r._batch_tree_proxy_pool is None:r._batch_tree_proxy_pool=proxy.graph.pool()
++    flat_topology=proxy.current['topo'] if compact else None
+     if DETAIL_TREE:duet_close('batch_tree_prepare',prepare_event)
+     def callback(logits,b):
++        if compact:logits=logits[flat_topology['req'],flat_topology['local']]
+         pos,packed=proxy.replay(logits)
+         verifier._send_proxy_wire(cfg,r.async_pg,r.draft_rank,pos[:B],packed[:B])
+     r._duet_proxy_fn=callback
+@@ -78,22 +86,28 @@
+         logits=r.call('run_batched_tree',rows,N+1)
+     finally:
+         r._duet_proxy_fn=None
++    if compact:logits=logits[flat_topology['req'],flat_topology['local']]
+     topology={k:v[:B] for k,v in proxy.topology.items()}
+     accept_event=duet_record('batch_tree_accept') if DETAIL_TREE else None
+     greedy=all(t==0 for t in tt)
+     if os.getenv('SSD_BATCH_TREE_ACCEPT_GRAPH','1')=='1':
+         if not hasattr(r,'_batch_tree_accept'):
+             r._batch_tree_accept={};r._batch_tree_accept_pool=None
+-        key=cap,N,greedy,cfg.stochastic_only
++        key=(cap,N,greedy,cfg.stochastic_only,'flat') if compact else (cap,N,greedy,cfg.stochastic_only)
+         if key not in r._batch_tree_accept:
+             capture_event=duet_record('batch_accept_capture') if DETAIL_TREE else None
+-            graph=BatchedTreeAccept(proxy,verifier.sampler_x,verifier.async_fan_out,
++            graph=accept_type(proxy,verifier.sampler_x,verifier.async_fan_out,
+                                     greedy,pool=r._batch_tree_accept_pool,
+                                     stochastic_only=cfg.stochastic_only)
+             r._batch_tree_accept[key]=graph
+             if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=graph.graph.pool()
+             if DETAIL_TREE:duet_close('batch_accept_capture',capture_event)
+         paths,recoveries,terminal=r._batch_tree_accept[key].replay(logits,tt,dt)
++    elif compact:
++        c=proxy.current
++        paths,recoveries,terminal=verify_flat(logits,c['q'],c['tokens'],c['topo'],N,
++            c['tt'],c['dt'],verifier.sampler_x,verifier.async_fan_out,greedy,
++            stochastic_only=cfg.stochastic_only)
+     else:
+         paths,recoveries,terminal=verify_batch(logits,q,tokens,topology,tt,dt,
+                                               verifier.sampler_x,verifier.async_fan_out,greedy,
+@@ -126,6 +140,7 @@
+         m['phase_events'].append(dict(tree=is_tree[b],batch_size=B,verify_width=step_width,
+             physical_verify_width=N,
+             physical_batch_queries=physical_queries,
++            probability_queries=flat_q if compact else cap*(N+1),
+             step_id=result.step_id,source=phases[b],cache_hit=int(hits[b]),
+             accepted_len=length,accepted_spec_len=length-1,valid_k=valid[b]))
+         if os.getenv('SSD_TREE_SHAPE_METRICS','0')=='1':
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_warmup.py
+@@ -0,0 +1,111 @@
++"""Prepare finite batch/context/page graph shapes before serving requests."""
++import os
++
++
++def page_buckets(config, draft=False, extra=0):
++    from ssd.engine.helpers.batch_tree_common import capacity
++    setting=os.getenv('SSD_TREE_EXEC_WARMUP','all').strip().lower()
++    if setting in ('0','off','false','none'):return []
++    maximum=capacity((config.max_model_len+extra+config.kvcache_block_size-1)//config.kvcache_block_size)
++    buckets=[1<<i for i in range(maximum.bit_length())]
++    if not draft:buckets=sorted({min(x,config.max_blocks) for x in buckets})
++    if setting!='all':
++        requested={int(x) for x in setting.split(',') if x.strip()}
++        buckets=[x for x in buckets if x in requested]
++    return buckets
++
++
++def prewarm_draft(service):
++    """Finite serving envelope; done before the worker's draft_ready barrier."""
++    import torch,time
++    from ssd.engine.helpers.batch_tree_inputs import BatchedArenaInputs
++    from ssd.engine.helpers.batch_tree_roots import BatchedP1Roots
++    from ssd.engine.helpers.batch_tree_common import capacity
++    r=service.r;cfg=service.cfg;start=time.perf_counter()
++    widths=sorted({cfg.duet_phase1_k+1,cfg.duet_phase2_k+1,cfg.duet_response_token_width+1})
++    # The first forward evaluates roots across all contexts, not max_nodes
++    # of one root's tree. Include its full footprint even near a length cap,
++    # where execution is masked but the wrapper still needs a page bucket.
++    first_round=max(max(widths)*max(cfg.duet_p1_roots_per_position,cfg.duet_draft_fan_out),
++                    cfg.duet_proxy_total_budget)
++    pages=page_buckets(cfg,draft=True,extra=first_round)
++    if not pages:return
++    batches=[1<<i for i in range(capacity(cfg.max_num_seqs).bit_length())]
++    with torch.inference_mode():
++        rng=torch.cuda.get_rng_state(r.device);states={}
++        for width in widths:
++            for batch in batches:
++                root_key=batch,width
++                if root_key not in service.root_graphs:
++                    g=BatchedP1Roots(batch,width,r.hf_config.vocab_size,r.hf_config.torch_dtype,r.device,
++                        cfg.duet_p1_roots_per_position,cfg.sampler_x,cfg.async_fan_out,pool=service.root_graph_pool)
++                    service.root_graphs[root_key]=g
++                    if service.root_graph_pool is None:service.root_graph_pool=g.graph.pool()
++                for page in pages:
++                    if page<=cfg.max_blocks:service.glue.capture(batch,width,page)
++                    for phase in (1,2):
++                        ex,arenas=service._forest(phase,width,batch,page)
++                        for ar in arenas:
++                            if id(ar) not in states:states[id(ar)]=(ar,ar.gen.get_state())
++                            ar.prime_capture_inputs(page)
++                        ex.capture(page,graph_pool=service.graph_pool)
++                        if service.graph_pool is None:service.graph_pool=ex.graphs[page].pool()
++                        key=id(ex),page
++                        if key not in service.input_graphs:
++                            g=BatchedArenaInputs(ex,page,cfg.max_model_len,service.input_graph_pool)
++                            service.input_graphs[key]=g
++                            if service.input_graph_pool is None:service.input_graph_pool=g.graph.pool()
++        for ar,state in states.values():ar.gen.set_state(state)
++        torch.cuda.set_rng_state(rng,r.device);torch.cuda.synchronize(r.device)
++    print('[DUET prewarm] draft',len(service.executors),'executors',sum(len(x.graphs) for x in service.executors.values()),
++          'graphs',round(time.perf_counter()-start,3),'seconds',flush=True)
++
++
++def prewarm_target(r):
++    import torch,time
++    from ssd.engine.helpers.batch_tree_common import capacity
++    from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy,BatchedTreeAccept
++    cfg=r.config;start=time.perf_counter()
++    pages=page_buckets(cfg)
++    if not pages:return
++    batches=[1<<i for i in range(capacity(cfg.max_num_seqs).bit_length())]
++    widths=sorted({cfg.duet_phase1_k,cfg.duet_phase2_k,cfg.duet_response_token_width})
++    r._batch_tree_proxies={};r._batch_tree_proxy_pool=None
++    r._batch_tree_accept={};r._batch_tree_accept_pool=None
++    with torch.inference_mode():
++        rng=torch.cuda.get_rng_state(r.device)
++        for b in batches:
++            for n in widths:
++                p=BatchedTreeProxy(b,n,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
++                    cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),cfg.duet_proxy_top_k,
++                    pool=r._batch_tree_proxy_pool,q_dtype=cfg.draft_hf_config.torch_dtype,c_max=cfg.duet_tree_c_tensor)
++                r._batch_tree_proxies[b,n]=p
++                if r._batch_tree_proxy_pool is None:r._batch_tree_proxy_pool=p.graph.pool()
++                a=BatchedTreeAccept(p,cfg.sampler_x,cfg.async_fan_out,cfg.greedy_only,
++                    pool=r._batch_tree_accept_pool,stochastic_only=cfg.stochastic_only)
++                r._batch_tree_accept[b,n,cfg.greedy_only,cfg.stochastic_only]=a
++                if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=a.graph.pool()
++                for page in pages:r.call('warm_batched_tree_forward',b,n+1,page)
++                if b*(n+1)>8:
++                    from ssd.engine.helpers.flat_tree_sampling import FlatProxy,FlatAccept
++                    fp=None;fa=None
++                    for q in range(8,b*(n+1),8):
++                        if q<b:continue
++                        remaining=q-b;lengths=[]
++                        for _ in range(b):
++                            k=min(n,remaining);lengths.append(k);remaining-=k
++                        if fp is None:
++                            fp=FlatProxy(b,n,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
++                                cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),cfg.duet_proxy_top_k,
++                                pool=r._batch_tree_proxy_pool,q_dtype=cfg.draft_hf_config.torch_dtype,c_max=cfg.duet_tree_c_tensor)
++                            r._batch_tree_proxies[b,n,'flat']=fp
++                        fp.prepare([list(range(-1,k-1)) for k in lengths],[[0]*k for k in lengths],
++                            torch.zeros(b,n,device=r.device,dtype=torch.long),torch.zeros_like(p.q),[.7]*b,[.7]*b)
++                        if fa is None:
++                            fa=FlatAccept(fp,cfg.sampler_x,cfg.async_fan_out,cfg.greedy_only,
++                                pool=r._batch_tree_accept_pool,stochastic_only=cfg.stochastic_only)
++                            r._batch_tree_accept[b,n,cfg.greedy_only,cfg.stochastic_only,'flat']=fa
++                        else:fa._capture()
++        torch.cuda.set_rng_state(rng,r.device);torch.cuda.synchronize(r.device)
++    print('[DUET prewarm] target',len(r._batch_tree_proxies),'proxy/accept shapes',round(time.perf_counter()-start,3),'seconds',flush=True)
++
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/flat_tree_sampling.py
+@@ -0,0 +1,210 @@
++"""Compact proxy/accept vocabulary work; target attention keeps its layout.
++
++Each context retains its request and local node IDs. Ordered-WOR rejection,
++request-wise RNG shape, and recovery sampling match batch_tree_sampling.
++Uniform batches use that dense implementation instead.
++"""
++import torch
++import numpy as np
++from ssd.engine.helpers.p2_tree import pack_piv, q_probs_from_logits
++
++
++def topology(parents, siblings, n, c_max, device, query_capacity=None):
++    b=len(parents)
++    total=sum(len(p)+1 for p in parents)
++    q=total if query_capacity is None else query_capacity
++    if q<total: raise ValueError('Flat capacity too small')
++    child=np.zeros((q,c_max),dtype=np.int64)
++    valid=np.zeros((q,c_max),dtype=bool)
++    par=np.zeros(q,dtype=np.int64);sib=par.copy()
++    req=par.copy();local=par.copy();root=np.zeros(q,dtype=bool)
++    ctx_valid=root.copy();dense=np.zeros((b,n+1),dtype=np.int64)
++    dense_valid=np.zeros((b,n+1),dtype=bool)
++    roots=[];off=0
++    for i,(ps,ss) in enumerate(zip(parents,siblings)):
++        if len(ps)!=len(ss) or len(ps)>n: raise ValueError('Invalid tree size')
++        roots.append(off);root[off]=True
++        z=len(ps)+1
++        req[off:off+z]=i;local[off:off+z]=np.arange(z)
++        ctx_valid[off:off+z]=True
++        dense[i,:]=off;dense[i,:z]=np.arange(off,off+z);dense_valid[i,:z]=True
++        for j,(p,s) in enumerate(zip(ps,ss)):
++            if p>=j or p<-1 or s<0 or s>=c_max: raise ValueError('Invalid topology')
++            a=off+p+1;node=off+j+1
++            if valid[a,s]: raise ValueError('Duplicate sibling order')
++            child[a,s]=node;valid[a,s]=True;par[node]=a;sib[node]=s
++        off+=z
++    result=dict(child=child,child_valid=valid,par=par,sib=sib,req=req,
++                local=local,root=root,valid=ctx_valid,dense=dense,dense_valid=dense_valid,
++                roots=np.asarray(roots,dtype=np.int64))
++    return {k:torch.from_numpy(v).to(device) for k,v in result.items()}
++
++
++def pack_nodes(t, topo):
++    """Dense [B,N,...] proposal payload to flat context rows (root unused)."""
++    return t[topo['req'],(topo['local']-1).clamp_min(0)]
++
++
++def ladder(tokens,p,q,topo,depth,exact=False):
++    child=topo['child'];cv=topo['child_valid']
++    residual=p
++    draft=q[child[:,0]]
++    draft=torch.where(cv[:,:1],draft,torch.zeros_like(draft))
++    reject=p.new_ones(p.shape[0],1)
++    alphas=[];pres=[]
++    for s in range(child.shape[1]):
++        tok=tokens[child[:,s],None]
++        valid=cv[:,s:s+1]
++        d=draft.gather(1,tok)
++        if exact:valid=valid&(d>0)
++        denom=torch.where(d>0,d,torch.ones_like(d)) if exact else d+1e-10
++        alpha=(residual.gather(1,tok)/denom).clamp(max=1)*valid
++        alphas.append(alpha[:,0]);pres.append(reject[:,0]);reject=reject*(1-alpha)
++        newer=(residual-draft).clamp_min(0)
++        z=newer.sum(-1,keepdim=True)
++        newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
++        residual=torch.where(valid,newer,residual)
++        if s<child.shape[1]-1:
++            newer=draft.scatter(1,tok,0);z=newer.sum(-1,keepdim=True)
++            newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
++            draft=torch.where(valid,newer,draft)
++    residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
++    alpha=torch.stack(alphas,-1)
++    if exact:return alpha,None,residual
++    pre=torch.stack(pres,-1)
++    base=alpha[topo['par'],topo['sib']]*pre[topo['par'],topo['sib']]
++    reach=topo['root'].to(p.dtype)
++    for _ in range(depth):
++        reach=torch.where(topo['root'],torch.ones_like(reach),base*reach[topo['par']])*topo['valid']
++    return alpha,reach*reject[:,0],residual
++
++
++def candidates(exit_logits,q_logits,tokens,topo,wire_n,depth,top_k,tt,dt):
++    t=torch.where(tt>0,tt,torch.ones_like(tt))[topo['req']]
++    d=torch.where(dt>0,dt,torch.ones_like(dt))[topo['req']]
++    p=(exit_logits.float()/t[:,None]).softmax(-1)
++    q=(q_logits.float()/d[:,None]).softmax(-1)
++    _,terminal,scores=ladder(tokens,p,q,topo,depth)
++    v=scores.shape[-1]
++    exclude=torch.where(topo['child_valid'],tokens[topo['child']],v)
++    scores=torch.cat([scores,scores.new_zeros(scores.shape[0],1)],1).scatter(1,exclude,0)[:,:v]
++    values,ids=scores.topk(min(top_k,v),-1)
++    piv=values/values.sum(-1,keepdim=True).clamp_min(1e-10)*terminal[:,None]
++    piv=piv[topo['dense']]*topo['dense_valid'][...,None]
++    ids=ids[topo['dense']]
++    score,index=piv.flatten(1).topk(min(wire_n,piv[0].numel()),1)
++    pos=index//values.shape[-1];tok=ids.flatten(1).gather(1,index)
++    if pos.shape[1]<wire_n:
++        pad=wire_n-pos.shape[1];b=pos.shape[0]
++        pos=torch.cat([pos,pos.new_zeros(b,pad)],1)
++        tok=torch.cat([tok,tok.new_zeros(b,pad)],1)
++        score=torch.cat([score,score.new_zeros(b,pad)],1)
++    return pos,pack_piv(tok,score)
++
++
++def verify(logits_p,logits_q,tokens,topo,n,tt,dt,sampler_x=None,fan_out=1,
++           greedy=False,uniforms=None,stochastic_only=True):
++    b=topo['roots'].numel();q,v=logits_p.shape
++    child=topo['child'];cv=topo['child_valid']
++    if greedy:
++        argmax=logits_p.argmax(-1)
++        accepted=(tokens[child]==argmax[:,None])&cv
++    else:
++        t=tt[topo['req']]
++        p=(logits_p.float()/t.clamp_min(1e-10)[:,None]).softmax(-1)
++        if not stochastic_only:
++            gp=torch.zeros_like(p).scatter(1,logits_p.argmax(-1,keepdim=True),1)
++            p=torch.where((t==0)[:,None],gp,p)
++        draft=q_probs_from_logits(logits_q,dt[topo['req']],sampler_x,fan_out)
++        alpha,_,residual=ladder(tokens,p,draft,topo,n,exact=True)
++        u=torch.rand(b,n,device=logits_p.device) if uniforms is None else uniforms
++        coins=u[topo['req'],(topo['local']-1).clamp_min(0)][child]
++        accepted=(coins<alpha)&cv
++    order=torch.arange(child.shape[-1],device=child.device)
++    first=torch.where(accepted,order,child.shape[-1]).min(-1).values
++    selected=child.gather(1,first.clamp_max(child.shape[-1]-1)[:,None])[:,0]
++    selected=torch.where(first<child.shape[-1],selected,-1)
++    ctx=topo['roots'].clone();live=torch.ones_like(ctx,dtype=torch.bool);path=[]
++    for _ in range(n):
++        node=selected[ctx];live=live&(node>=0)
++        path.append(torch.where(live,topo['local'][node.clamp_min(0)]-1,-1))
++        ctx=torch.where(live,node,ctx)
++    recovery=argmax[ctx,None] if greedy else torch.multinomial(residual[ctx],1)
++    return torch.stack(path,1),recovery,topo['local'][ctx,None]
++
++
++class FlatProxy:
++    """Persistent graphs per Q, sharing one maximum-size input allocation."""
++    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None,q_dtype=None,c_max=3,**kwargs):
++        self.b,self.n,self.v=b,n,v
++        self.dtype,self.q_dtype,self.device=dtype,q_dtype or dtype,device
++        self.wire,self.depth,self.top_k,self.c_max=wire_n,depth,top_k,c_max
++        self.pool=pool;self.cells={};self.topology={}
++        # Stable prefix views avoid one vocabulary-size input allocation per Q.
++        max_q=b*(n+1)
++        self.logit_buffer=torch.zeros(max_q,v,dtype=dtype,device=device)
++        self.q_buffer=torch.zeros(max_q,v,dtype=self.q_dtype,device=device)
++        self.token_buffer=torch.zeros(max_q,dtype=torch.long,device=device)
++        self.tt=torch.ones(b,device=device,dtype=torch.float32)
++        self.dt=torch.ones(b,device=device,dtype=torch.float32)
++
++    @torch.inference_mode()
++    def prepare(self,parents,siblings,tokens,q,target_temps=1.,draft_temps=1.):
++        self.actual=len(parents)
++        if self.actual!=self.b: raise ValueError("Compact graphs require a full batch capacity")
++        size=((sum(len(p)+1 for p in parents)+7)//8)*8
++        if size>self.b*(self.n+1): raise ValueError("Compact capacity exceeds dense shape")
++        topo=topology(parents,siblings,self.n,self.c_max,self.device,size)
++        if size not in self.cells:
++            cell=dict(topo={k:torch.empty_like(v) for k,v in topo.items()},
++                logits=self.logit_buffer[:size],q=self.q_buffer[:size],
++                tokens=self.token_buffer[:size],tt=self.tt,dt=self.dt)
++            self.cells[size]=cell
++        cell=self.cells[size]
++        for k,v in topo.items():cell['topo'][k].copy_(v)
++        cell['q'].copy_(pack_nodes(q,topo));cell['tokens'].copy_(pack_nodes(tokens,topo))
++        cell['tt'].copy_(torch.as_tensor(target_temps,device=self.device,dtype=torch.float32))
++        cell['dt'].copy_(torch.as_tensor(draft_temps,device=self.device,dtype=torch.float32))
++        self.current=cell;self.tokens=tokens
++        if 'graph' not in cell:
++            def run():return candidates(cell['logits'],cell['q'],cell['tokens'],cell['topo'],
++                                         self.wire,self.depth,self.top_k,cell['tt'],cell['dt'])
++            for _ in range(2):run()
++            torch.cuda.synchronize(self.device);graph=torch.cuda.CUDAGraph()
++            with torch.cuda.graph(graph,pool=self.pool):cell['out']=run()
++            cell['graph']=graph
++            if self.pool is None:self.pool=graph.pool()
++        self.graph=cell['graph']
++
++    @torch.inference_mode()
++    def replay(self,logits):
++        self.current['logits'].copy_(logits);self.graph.replay()
++        return self.current['out']
++
++
++class FlatAccept:
++    def __init__(self,proxy,sampler_x,fan_out,greedy,pool=None,stochastic_only=False):
++        self.proxy=proxy;self.sampler_x=sampler_x;self.fan_out=fan_out
++        self.greedy=greedy;self.stochastic_only=stochastic_only;self.pool=pool;self.cells={}
++        self.logit_buffer=torch.zeros_like(proxy.logit_buffer)
++        self._capture()
++
++    @torch.inference_mode()
++    def _capture(self):
++        p=self.proxy;c=p.current;key=c['logits'].shape[0]
++        if key not in self.cells:
++            logits=self.logit_buffer[:key]
++            def run():return verify(logits,c['q'],c['tokens'],c['topo'],p.n,c['tt'],c['dt'],
++                self.sampler_x,self.fan_out,self.greedy,stochastic_only=self.stochastic_only)
++            for _ in range(2):run()
++            torch.cuda.synchronize(p.device);graph=torch.cuda.CUDAGraph()
++            with torch.cuda.graph(graph,pool=self.pool):out=run()
++            if self.pool is None:self.pool=graph.pool()
++            self.cells[key]=(logits,graph,out)
++        self.live=self.cells[key];self.graph=self.live[1]
++
++    @torch.inference_mode()
++    def replay(self,logits,tt,dt):
++        self._capture();self.live[0].copy_(logits);self.graph.replay()
++        return self.live[2]
++
+--- a/ssd/ssd/engine/llm_engine.py
++++ b/ssd/ssd/engine/llm_engine.py
+@@ -80,6 +80,16 @@
+         ctx = mp.get_context("spawn")
+         self.num_tp_gpus = config.num_gpus if not self.config.draft_async else config.num_gpus - 1
+ 
++        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
++        if batch_tree_enabled(config):
++            from ssd.engine.helpers.batch_tree_forward import proxy_stream_enabled
++            replica_source = 'default' if 'SSD_DUET_EXIT_REPLICA' not in os.environ else 'env'
++            stream_source = 'auto' if 'SSD_BATCH_TREE_PROXY_STREAM' not in os.environ else 'env'
++            print(f'[duet-tree-runtime] batch={config.max_num_seqs} target_tp={self.num_tp_gpus} '
++                  f'exit_replica={int(config.duet_exit_replica)} source={replica_source} '
++                  f'proxy_stream={int(proxy_stream_enabled(config, self.num_tp_gpus))} '
++                  f'stream_source={stream_source}', flush=True)
++
+         if config.speculate and config.draft_async:
+             self.draft_ps = None
+ 
+@@ -147,6 +157,10 @@
+             self.draft_runner = DraftRunner(config)
+             self.draft_cfg = self.draft_runner.draft_cfg
+             print(f'Draft runner created on rank 0 (no async)', flush=True)
++
++        if self.model_runner.batched_tree_enabled:
++            from ssd.engine.helpers.batch_tree_warmup import prewarm_target
++            prewarm_target(self.model_runner)
+ 
+         config.eos = self.tokenizer.eos_token_id
+         self.scheduler = Scheduler(config, draft_cfg=self.draft_cfg if config.speculate else None)
+--- a/ssd/ssd/engine/model_runner.py
++++ b/ssd/ssd/engine/model_runner.py
+@@ -1536,6 +1536,13 @@
+             duet_proxy_fn=self._duet_proxy_fn,
+             bucket=bucket,
+         )
++
++    @torch.inference_mode()
++    def warm_batched_tree_forward(self, batch, width, pages):
++        from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
++        if not hasattr(self, '_batched_tree_forward'):
++            self._batched_tree_forward=BatchedTreeForward(self, split=True)
++        self._batched_tree_forward.capture(batch,width,pages)
+ 
+     @torch.inference_mode()
+     def run_batched_tree(self, rows, width):

@@ -1,0 +1,474 @@
+{
+  "arms": {
+    "flat_all": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1253,
+        "all_steps": 4033,
+        "tokens": 22262,
+        "seconds": 59.35630172744277,
+        "tps": 375.0570596905534,
+        "al": 2.2208699122106945,
+        "hit": 0.6402633679169992,
+        "verify_ms": 35.71493752172153,
+        "step_ms": 47.37135014161434,
+        "actual_output_tokens": 52165,
+        "emitted_decode_tokens": 52165
+      },
+      "source": {
+        "0": {
+          "requests": 3606,
+          "al": 1.9536882972823073,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 3380,
+          "al": 2.6198224852071004,
+          "valid_k": 5.459467455621302
+        },
+        "2": {
+          "requests": 3038,
+          "al": 2.0941408821593153,
+          "valid_k": 3.9736668861092825
+        }
+      },
+      "batch_metrics": {
+        "steps": 1253,
+        "request_hit": 0.6402633679169992,
+        "all_hit": 0.04229848363926576,
+        "any_miss": 0.9577015163607342,
+        "mixed": 0.9010375099760575,
+        "all_miss": 0.05666400638467677,
+        "actual_jit_step": 0.9577015163607342,
+        "actual_jit_request": 0.3597366320830008,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05666400638467677,
+        "miss_histogram": {
+          "0": 53,
+          "1": 208,
+          "2": 320,
+          "3": 326,
+          "4": 184,
+          "5": 72,
+          "6": 17,
+          "7": 2,
+          "8": 71
+        }
+      },
+      "preparation": {
+        "steps": 4033,
+        "seconds": 180.7543178400374,
+        "affected_steps": 12,
+        "affected_step_seconds": 5.6909241099783685,
+        "interval_union_seconds": 5.195464361999999,
+        "interval_union_fraction": 0.0287432379158867
+      },
+      "parameters": {
+        "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 3,
+        "k2": 2,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "p1_verify": 6,
+        "p2_verify": 4,
+        "roots": 1,
+        "siblings": 3
+      }
+    },
+    "numpy": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1099,
+        "all_steps": 4049,
+        "tokens": 19863,
+        "seconds": 54.79933922359487,
+        "tps": 362.4678742740682,
+        "al": 2.2592129208371245,
+        "hit": 0.6429708826205641,
+        "verify_ms": 39.32772391169392,
+        "step_ms": 49.8629110314785,
+        "actual_output_tokens": 50946,
+        "emitted_decode_tokens": 50946
+      },
+      "source": {
+        "0": {
+          "requests": 3139,
+          "al": 1.9878942338324308,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 3100,
+          "al": 2.657741935483871,
+          "valid_k": 5.491935483870968
+        },
+        "2": {
+          "requests": 2553,
+          "al": 2.108891500195848,
+          "valid_k": 3.972581276929103
+        }
+      },
+      "batch_metrics": {
+        "steps": 1099,
+        "request_hit": 0.6429708826205641,
+        "all_hit": 0.04913557779799818,
+        "any_miss": 0.9508644222020018,
+        "mixed": 0.8926296633303002,
+        "all_miss": 0.05823475887170155,
+        "actual_jit_step": 0.9508644222020018,
+        "actual_jit_request": 0.3570291173794358,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05823475887170155,
+        "miss_histogram": {
+          "0": 54,
+          "1": 184,
+          "2": 285,
+          "3": 274,
+          "4": 157,
+          "5": 65,
+          "6": 14,
+          "7": 2,
+          "8": 64
+        }
+      },
+      "preparation": {
+        "steps": 4049,
+        "seconds": 178.02323939590133,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 3,
+        "k2": 2,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "p1_verify": 6,
+        "p2_verify": 4,
+        "roots": 1,
+        "siblings": 3
+      }
+    },
+    "mixed": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1096,
+        "all_steps": 4534,
+        "tokens": 17767,
+        "seconds": 49.493392085656524,
+        "tps": 358.9772139531528,
+        "al": 2.026345802919708,
+        "hit": 0.6905793795620438,
+        "verify_ms": 39.44388958964332,
+        "step_ms": 45.158204457715804,
+        "actual_output_tokens": 51170,
+        "emitted_decode_tokens": 51170
+      },
+      "source": {
+        "0": {
+          "requests": 2713,
+          "al": 1.1651308514559529,
+          "valid_k": 0.3597493549576115
+        },
+        "1": {
+          "requests": 3446,
+          "al": 2.62188044109112,
+          "valid_k": 5.500290191526408
+        },
+        "2": {
+          "requests": 2609,
+          "al": 2.1353008815638175,
+          "valid_k": 3.967420467612112
+        }
+      },
+      "batch_metrics": {
+        "steps": 1096,
+        "request_hit": 0.6905793795620438,
+        "all_hit": 0.06843065693430657,
+        "any_miss": 0.9315693430656934,
+        "mixed": 0.8759124087591241,
+        "all_miss": 0.055656934306569344,
+        "actual_jit_step": 0.05565693430656937,
+        "actual_jit_request": 0.055656934306569344,
+        "miss_ar_step": 0.8759124087591241,
+        "miss_ar_request": 0.25376368613138683,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.055656934306569344,
+        "miss_histogram": {
+          "0": 75,
+          "1": 287,
+          "2": 294,
+          "3": 220,
+          "4": 115,
+          "5": 36,
+          "6": 6,
+          "7": 2,
+          "8": 61
+        }
+      },
+      "preparation": {
+        "steps": 4534,
+        "seconds": 181.57489982544212,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 3,
+        "k2": 2,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "p1_verify": 6,
+        "p2_verify": 4,
+        "roots": 1,
+        "siblings": 3
+      }
+    },
+    "flat_prob": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1099,
+        "all_steps": 4049,
+        "tokens": 19863,
+        "seconds": 52.89323408619384,
+        "tps": 375.5300719111185,
+        "al": 2.2592129208371245,
+        "hit": 0.6429708826205641,
+        "verify_ms": 37.149057807238755,
+        "step_ms": 48.12851145240568,
+        "actual_output_tokens": 50946,
+        "emitted_decode_tokens": 50946
+      },
+      "source": {
+        "0": {
+          "requests": 3139,
+          "al": 1.9878942338324308,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 3100,
+          "al": 2.657741935483871,
+          "valid_k": 5.491935483870968
+        },
+        "2": {
+          "requests": 2553,
+          "al": 2.108891500195848,
+          "valid_k": 3.972581276929103
+        }
+      },
+      "batch_metrics": {
+        "steps": 1099,
+        "request_hit": 0.6429708826205641,
+        "all_hit": 0.04913557779799818,
+        "any_miss": 0.9508644222020018,
+        "mixed": 0.8926296633303002,
+        "all_miss": 0.05823475887170155,
+        "actual_jit_step": 0.9508644222020018,
+        "actual_jit_request": 0.3570291173794358,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05823475887170155,
+        "miss_histogram": {
+          "0": 54,
+          "1": 184,
+          "2": 285,
+          "3": 274,
+          "4": 157,
+          "5": 65,
+          "6": 14,
+          "7": 2,
+          "8": 64
+        }
+      },
+      "preparation": {
+        "steps": 4049,
+        "seconds": 176.42105796534452,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 3,
+        "k2": 2,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "p1_verify": 6,
+        "p2_verify": 4,
+        "roots": 1,
+        "siblings": 3
+      }
+    },
+    "base": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1099,
+        "all_steps": 4049,
+        "tokens": 19863,
+        "seconds": 55.26585216769308,
+        "tps": 359.4081918746088,
+        "al": 2.2592129208371245,
+        "hit": 0.6429708826205641,
+        "verify_ms": 39.34802729406566,
+        "step_ms": 50.28739960663611,
+        "actual_output_tokens": 50946,
+        "emitted_decode_tokens": 50946
+      },
+      "source": {
+        "0": {
+          "requests": 3139,
+          "al": 1.9878942338324308,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 3100,
+          "al": 2.657741935483871,
+          "valid_k": 5.491935483870968
+        },
+        "2": {
+          "requests": 2553,
+          "al": 2.108891500195848,
+          "valid_k": 3.972581276929103
+        }
+      },
+      "batch_metrics": {
+        "steps": 1099,
+        "request_hit": 0.6429708826205641,
+        "all_hit": 0.04913557779799818,
+        "any_miss": 0.9508644222020018,
+        "mixed": 0.8926296633303002,
+        "all_miss": 0.05823475887170155,
+        "actual_jit_step": 0.9508644222020018,
+        "actual_jit_request": 0.3570291173794358,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05823475887170155,
+        "miss_histogram": {
+          "0": 54,
+          "1": 184,
+          "2": 285,
+          "3": 274,
+          "4": 157,
+          "5": 65,
+          "6": 14,
+          "7": 2,
+          "8": 64
+        }
+      },
+      "preparation": {
+        "steps": 4049,
+        "seconds": 179.27876975182153,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/data2/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 3,
+        "k2": 2,
+        "exit_layer": 19,
+        "p1_nodes": 6,
+        "p2_nodes": 4,
+        "p1_verify": 6,
+        "p2_verify": 4,
+        "roots": 1,
+        "siblings": 3
+      }
+    }
+  },
+  "comparisons": {
+    "flat_all": {
+      "prompt_group_clusters": 60,
+      "tps_change_ci95": [
+        0.021944713938070293,
+        0.06353208133613542
+      ],
+      "verify_change_ci95": [
+        -0.09930191691868653,
+        -0.08552544633973898
+      ],
+      "tps_change": 0.04354065424698006,
+      "verify_change": -0.09233219610204091,
+      "equal_output_sequences": 67,
+      "output_sequences": 960,
+      "same_all_outputs": false,
+      "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+    },
+    "numpy": {
+      "prompt_group_clusters": 60,
+      "tps_change_ci95": [
+        0.004847221558431364,
+        0.012641191722448047
+      ],
+      "verify_change_ci95": [
+        -0.0012974063498610799,
+        0.0003569621024397665
+      ],
+      "tps_change": 0.008513112579600968,
+      "verify_change": -0.0005159949244722961,
+      "equal_output_sequences": 960,
+      "output_sequences": 960,
+      "same_all_outputs": true,
+      "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+    },
+    "mixed": {
+      "prompt_group_clusters": 60,
+      "tps_change_ci95": [
+        -0.02198066180388559,
+        0.020484708392455205
+      ],
+      "verify_change_ci95": [
+        -0.001759294318093696,
+        0.006766996709187237
+      ],
+      "tps_change": -0.0011991321600326454,
+      "verify_change": 0.002436266877148263,
+      "equal_output_sequences": 59,
+      "output_sequences": 960,
+      "same_all_outputs": false,
+      "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+    },
+    "flat_prob": {
+      "prompt_group_clusters": 60,
+      "tps_change_ci95": [
+        0.03897690559989767,
+        0.050060228060101374
+      ],
+      "verify_change_ci95": [
+        -0.05752887341460969,
+        -0.054091955477679456
+      ],
+      "tps_change": 0.04485674061133915,
+      "verify_change": -0.055885126600960344,
+      "equal_output_sequences": 960,
+      "output_sequences": 960,
+      "same_all_outputs": true,
+      "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+    }
+  }
+}

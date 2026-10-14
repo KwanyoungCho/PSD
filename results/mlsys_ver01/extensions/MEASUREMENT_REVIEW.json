@@ -1,0 +1,739 @@
+{
+  "scope": "Existing Llama3 B8 captured runs; no new GPU performance experiment.",
+  "policy": "Drop complete steps overlapping observed preparation; never subtract overlap duration from total time while retaining tokens.",
+  "caveat": "Old capture coverage is the labels present in the preserved runs; new harness additionally observes graph contexts and input/proxy/accept constructors.",
+  "cells": {
+    "wait": {
+      "measured_first": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 496,
+          "all_steps": 1946,
+          "tokens": 9440,
+          "seconds": 32.88909088014043,
+          "tps": 287.0252642252328,
+          "al": 2.379032258064516,
+          "hit": 0.7149697580645161,
+          "verify_ms": 50.147514330297604,
+          "step_ms": 66.30865096802506,
+          "actual_output_tokens": 25504,
+          "emitted_decode_tokens": 25504
+        },
+        "batch_metrics": {
+          "steps": 496,
+          "request_hit": 0.7149697580645161,
+          "all_hit": 0.09274193548387097,
+          "any_miss": 0.907258064516129,
+          "mixed": 0.8487903225806451,
+          "all_miss": 0.05846774193548387,
+          "actual_jit_step": 0.907258064516129,
+          "actual_jit_request": 0.2850302419354839,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05846774193548387,
+          "miss_histogram": {
+            "0": 46,
+            "1": 140,
+            "2": 143,
+            "3": 90,
+            "4": 38,
+            "5": 9,
+            "6": 1,
+            "7": 0,
+            "8": 29
+          }
+        },
+        "batch_metrics_excluding_group_startup": {
+          "steps": 467,
+          "request_hit": 0.7593683083511777,
+          "all_hit": 0.09850107066381156,
+          "any_miss": 0.9014989293361885,
+          "mixed": 0.9014989293361885,
+          "all_miss": 0.0,
+          "actual_jit_step": 0.9014989293361885,
+          "actual_jit_request": 0.24063169164882228,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.0,
+          "miss_histogram": {
+            "0": 46,
+            "1": 140,
+            "2": 143,
+            "3": 90,
+            "4": 38,
+            "5": 9,
+            "6": 1,
+            "7": 0,
+            "8": 0
+          }
+        },
+        "preparation_full_batch": {
+          "steps": 503,
+          "seconds": 43.14460498113476,
+          "affected_steps": 7,
+          "affected_step_seconds": 10.255514100994333,
+          "interval_union_seconds": 7.455682115,
+          "interval_union_fraction": 0.17280682296801747
+        },
+        "preparation_all_decode": {
+          "steps": 1946,
+          "seconds": 141.72822460070893,
+          "affected_steps": 23,
+          "affected_step_seconds": 29.853259019975667,
+          "interval_union_seconds": 22.694628944,
+          "interval_union_fraction": 0.1601278009933279
+        }
+      },
+      "measured_second": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 547,
+          "all_steps": 1914,
+          "tokens": 10438,
+          "seconds": 35.63208919484168,
+          "tps": 292.93819800807717,
+          "al": 2.3852833638025595,
+          "hit": 0.7038391224862889,
+          "verify_ms": 49.20898612558955,
+          "step_ms": 65.14093088636506,
+          "actual_output_tokens": 25528,
+          "emitted_decode_tokens": 25528
+        },
+        "batch_metrics": {
+          "steps": 547,
+          "request_hit": 0.7038391224862889,
+          "all_hit": 0.10054844606946983,
+          "any_miss": 0.8994515539305301,
+          "mixed": 0.8336380255941499,
+          "all_miss": 0.06581352833638025,
+          "actual_jit_step": 0.8994515539305301,
+          "actual_jit_request": 0.2961608775137112,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.06581352833638025,
+          "miss_histogram": {
+            "0": 55,
+            "1": 143,
+            "2": 143,
+            "3": 113,
+            "4": 46,
+            "5": 10,
+            "6": 1,
+            "7": 0,
+            "8": 36
+          }
+        },
+        "batch_metrics_excluding_group_startup": {
+          "steps": 511,
+          "request_hit": 0.7534246575342466,
+          "all_hit": 0.10763209393346379,
+          "any_miss": 0.8923679060665362,
+          "mixed": 0.8923679060665362,
+          "all_miss": 0.0,
+          "actual_jit_step": 0.8923679060665362,
+          "actual_jit_request": 0.2465753424657534,
+          "miss_ar_step": 0.0,
+          "miss_ar_request": 0.0,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.0,
+          "miss_histogram": {
+            "0": 55,
+            "1": 143,
+            "2": 143,
+            "3": 113,
+            "4": 46,
+            "5": 10,
+            "6": 1,
+            "7": 0,
+            "8": 0
+          }
+        },
+        "preparation_full_batch": {
+          "steps": 547,
+          "seconds": 35.63208919484168,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "preparation_all_decode": {
+          "steps": 1914,
+          "seconds": 117.69480588163424,
+          "affected_steps": 7,
+          "affected_step_seconds": 8.479228293013875,
+          "interval_union_seconds": 6.520897686,
+          "interval_union_fraction": 0.05540514415358373
+        }
+      }
+    },
+    "ar": {
+      "measured_first": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 494,
+          "all_steps": 2156,
+          "tokens": 8670,
+          "seconds": 30.564377687114757,
+          "tps": 283.6635539828142,
+          "al": 2.193825910931174,
+          "hit": 0.7325404858299596,
+          "verify_ms": 49.46705135389567,
+          "step_ms": 61.871209892944854,
+          "actual_output_tokens": 26036,
+          "emitted_decode_tokens": 26036
+        },
+        "batch_metrics": {
+          "steps": 494,
+          "request_hit": 0.7325404858299596,
+          "all_hit": 0.13157894736842105,
+          "any_miss": 0.868421052631579,
+          "mixed": 0.8117408906882592,
+          "all_miss": 0.05668016194331984,
+          "actual_jit_step": 0.05668016194331982,
+          "actual_jit_request": 0.05668016194331984,
+          "miss_ar_step": 0.811740890688259,
+          "miss_ar_request": 0.21077935222672065,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05668016194331984,
+          "miss_histogram": {
+            "0": 65,
+            "1": 133,
+            "2": 144,
+            "3": 92,
+            "4": 25,
+            "5": 6,
+            "6": 1,
+            "7": 0,
+            "8": 28
+          }
+        },
+        "batch_metrics_excluding_group_startup": {
+          "steps": 466,
+          "request_hit": 0.7765557939914163,
+          "all_hit": 0.13948497854077252,
+          "any_miss": 0.8605150214592274,
+          "mixed": 0.8605150214592274,
+          "all_miss": 0.0,
+          "actual_jit_step": 0.0,
+          "actual_jit_request": 0.0,
+          "miss_ar_step": 0.8605150214592274,
+          "miss_ar_request": 0.2234442060085837,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.0,
+          "miss_histogram": {
+            "0": 65,
+            "1": 133,
+            "2": 144,
+            "3": 92,
+            "4": 25,
+            "5": 6,
+            "6": 1,
+            "7": 0,
+            "8": 0
+          }
+        },
+        "preparation_full_batch": {
+          "steps": 501,
+          "seconds": 39.21904587809695,
+          "affected_steps": 7,
+          "affected_step_seconds": 8.654668190982193,
+          "interval_union_seconds": 6.558144338,
+          "interval_union_fraction": 0.1672183550406715
+        },
+        "preparation_all_decode": {
+          "steps": 2156,
+          "seconds": 161.76150673579832,
+          "affected_steps": 36,
+          "affected_step_seconds": 46.056512535971706,
+          "interval_union_seconds": 35.126163326,
+          "interval_union_fraction": 0.21714784953982175
+        }
+      },
+      "measured_second": {
+        "summary": {
+          "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+          "steps": 518,
+          "all_steps": 2160,
+          "tokens": 9233,
+          "seconds": 31.759362979981233,
+          "tps": 290.7174179097926,
+          "al": 2.2280405405405403,
+          "hit": 0.7372104247104247,
+          "verify_ms": 49.842928350910064,
+          "step_ms": 61.31151154436532,
+          "actual_output_tokens": 25586,
+          "emitted_decode_tokens": 25586
+        },
+        "batch_metrics": {
+          "steps": 518,
+          "request_hit": 0.7372104247104247,
+          "all_hit": 0.10038610038610038,
+          "any_miss": 0.8996138996138996,
+          "mixed": 0.8397683397683398,
+          "all_miss": 0.059845559845559844,
+          "actual_jit_step": 0.05984555984555984,
+          "actual_jit_request": 0.059845559845559844,
+          "miss_ar_step": 0.8397683397683398,
+          "miss_ar_request": 0.20294401544401544,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.059845559845559844,
+          "miss_histogram": {
+            "0": 52,
+            "1": 172,
+            "2": 157,
+            "3": 75,
+            "4": 25,
+            "5": 6,
+            "6": 0,
+            "7": 0,
+            "8": 31
+          }
+        },
+        "batch_metrics_excluding_group_startup": {
+          "steps": 487,
+          "request_hit": 0.7841375770020534,
+          "all_hit": 0.10677618069815195,
+          "any_miss": 0.893223819301848,
+          "mixed": 0.893223819301848,
+          "all_miss": 0.0,
+          "actual_jit_step": 0.0,
+          "actual_jit_request": 0.0,
+          "miss_ar_step": 0.893223819301848,
+          "miss_ar_request": 0.2158624229979466,
+          "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.0,
+          "miss_histogram": {
+            "0": 52,
+            "1": 172,
+            "2": 157,
+            "3": 75,
+            "4": 25,
+            "5": 6,
+            "6": 0,
+            "7": 0,
+            "8": 0
+          }
+        },
+        "preparation_full_batch": {
+          "steps": 518,
+          "seconds": 31.759362979981233,
+          "affected_steps": 0,
+          "affected_step_seconds": 0,
+          "interval_union_seconds": 0.0,
+          "interval_union_fraction": 0.0
+        },
+        "preparation_all_decode": {
+          "steps": 2160,
+          "seconds": 117.12196111606318,
+          "affected_steps": 2,
+          "affected_step_seconds": 2.211272436019499,
+          "interval_union_seconds": 1.70774968,
+          "interval_union_fraction": 0.014580951887474703
+        }
+      }
+    }
+  },
+  "packed_components": {
+    "llama2": [
+      {
+        "batch": 8,
+        "shape": "half_short",
+        "lengths": [
+          8,
+          8,
+          8,
+          8,
+          2,
+          2,
+          2,
+          2
+        ],
+        "implementation": "padded",
+        "stream": false,
+        "wall_ms": 19.26297345198691,
+        "samples_ms": [
+          19.35844891704619,
+          19.265163922682405,
+          19.23982589505613,
+          19.271882949396968,
+          19.211536971852183,
+          19.21252883039415,
+          19.266268936917186,
+          19.249320030212402,
+          19.255000166594982,
+          19.240538822486997,
+          19.224368035793304,
+          19.260782981291413,
+          19.260762026533484,
+          19.23382980749011,
+          19.2905948497355,
+          19.2680349573493,
+          19.29171080701053,
+          19.288480980321765,
+          19.283443922176957,
+          19.265383016318083
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 12.274687767028809,
+          "batch_target_proxy": 0.822272002696991,
+          "batch_target_post": 5.631999969482422,
+          "batch_target_final_logits": 0.3184640109539032
+        },
+        "max_logit_diff": 0.0,
+        "argmax_agreement": 1.0,
+        "physical_queries": 72
+      },
+      {
+        "batch": 8,
+        "shape": "half_short",
+        "lengths": [
+          8,
+          8,
+          8,
+          8,
+          2,
+          2,
+          2,
+          2
+        ],
+        "implementation": "fixed",
+        "stream": false,
+        "wall_ms": 19.381627906113863,
+        "samples_ms": [
+          19.42705805413425,
+          19.38789803534746,
+          19.38033802434802,
+          19.398107193410397,
+          19.404249964281917,
+          19.385147839784622,
+          19.392836838960648,
+          19.386383006349206,
+          19.378846045583487,
+          19.367150962352753,
+          19.406388979405165,
+          19.37552005983889,
+          19.35538207180798,
+          19.38174501992762,
+          19.362315069884062,
+          19.369778921827674,
+          19.400655990466475,
+          19.381510792300105,
+          19.370514899492264,
+          19.34707909822464
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 12.362719535827637,
+          "batch_target_proxy": 0.8171520233154297,
+          "batch_target_post": 5.656576156616211,
+          "batch_target_final_logits": 0.31539198756217957
+        },
+        "max_logit_diff": 0.15234375,
+        "argmax_agreement": 1.0,
+        "physical_queries": 48
+      },
+      {
+        "batch": 8,
+        "shape": "one_hit",
+        "lengths": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "implementation": "padded",
+        "stream": false,
+        "wall_ms": 19.225719501264393,
+        "samples_ms": [
+          19.258343148976564,
+          19.24275793135166,
+          19.2284369841218,
+          19.19771102257073,
+          19.21706204302609,
+          19.208960933610797,
+          19.21287691220641,
+          19.25012399442494,
+          19.221908878535032,
+          19.23181116580963,
+          19.20329383574426,
+          19.247564021497965,
+          19.238137872889638,
+          19.20137507840991,
+          19.21332278288901,
+          19.201439106836915,
+          19.260744098573923,
+          19.276218954473734,
+          19.236193038523197,
+          19.223002018406987
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 12.26956844329834,
+          "batch_target_proxy": 0.822272002696991,
+          "batch_target_post": 5.6299519538879395,
+          "batch_target_final_logits": 0.3184640109539032
+        },
+        "max_logit_diff": 0.0,
+        "argmax_agreement": 1.0,
+        "physical_queries": 72
+      },
+      {
+        "batch": 8,
+        "shape": "one_hit",
+        "lengths": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "implementation": "fixed",
+        "stream": false,
+        "wall_ms": 17.07680441904813,
+        "samples_ms": [
+          17.15747290290892,
+          17.134134890511632,
+          17.097944859415293,
+          17.132463864982128,
+          17.120002070441842,
+          17.090786946937442,
+          17.07594096660614,
+          17.05068815499544,
+          17.046415945515037,
+          17.118327086791396,
+          17.186190001666546,
+          17.07766787149012,
+          17.0694119296968,
+          17.053058138117194,
+          17.05888588912785,
+          17.046436201781034,
+          17.042944906279445,
+          17.097252886742353,
+          17.060826998203993,
+          17.04587903805077
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 10.82367992401123,
+          "batch_target_proxy": 0.7864320278167725,
+          "batch_target_post": 4.95308780670166,
+          "batch_target_final_logits": 0.28569599986076355
+        },
+        "max_logit_diff": 0.109375,
+        "argmax_agreement": 1.0,
+        "physical_queries": 16
+      }
+    ],
+    "llama3": [
+      {
+        "batch": 8,
+        "shape": "half_short",
+        "lengths": [
+          8,
+          8,
+          8,
+          8,
+          2,
+          2,
+          2,
+          2
+        ],
+        "implementation": "padded",
+        "stream": false,
+        "wall_ms": 24.319779477082193,
+        "samples_ms": [
+          24.394612992182374,
+          24.35307390987873,
+          24.336043978109956,
+          24.284332059323788,
+          24.322136072441936,
+          24.318536976352334,
+          24.29066295735538,
+          24.29590607061982,
+          24.29255680181086,
+          24.315116927027702,
+          24.30886193178594,
+          24.34150082990527,
+          24.439331144094467,
+          24.342553922906518,
+          24.317508097738028,
+          24.29794380441308,
+          24.32102197781205,
+          24.3622160051018,
+          24.405603064224124,
+          24.31295905262232
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 13.007871627807617,
+          "batch_target_proxy": 3.9137279987335205,
+          "batch_target_post": 5.948416233062744,
+          "batch_target_final_logits": 1.2072960138320923
+        },
+        "max_logit_diff": 0.0,
+        "argmax_agreement": 1.0,
+        "physical_queries": 72
+      },
+      {
+        "batch": 8,
+        "shape": "half_short",
+        "lengths": [
+          8,
+          8,
+          8,
+          8,
+          2,
+          2,
+          2,
+          2
+        ],
+        "implementation": "fixed",
+        "stream": false,
+        "wall_ms": 23.2364913681522,
+        "samples_ms": [
+          23.282369133085012,
+          23.21163797751069,
+          23.180373944342136,
+          23.200820200145245,
+          23.19056703709066,
+          23.19928305223584,
+          23.170233936980367,
+          23.230604827404022,
+          23.367644054815173,
+          23.18882499821484,
+          23.507905192673206,
+          23.608983028680086,
+          23.49522989243269,
+          23.381321923807263,
+          23.24971300549805,
+          23.245011921972036,
+          23.24237790890038,
+          23.206133861094713,
+          23.27010896988213,
+          23.20773690007627
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 12.209152221679688,
+          "batch_target_proxy": 3.92192006111145,
+          "batch_target_post": 5.571584224700928,
+          "batch_target_final_logits": 1.2216320037841797
+        },
+        "max_logit_diff": 0.21875,
+        "argmax_agreement": 0.9583333730697632,
+        "physical_queries": 48
+      },
+      {
+        "batch": 8,
+        "shape": "one_hit",
+        "lengths": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "implementation": "padded",
+        "stream": false,
+        "wall_ms": 24.240247905254364,
+        "samples_ms": [
+          24.304438149556518,
+          24.26252607256174,
+          24.233211996033788,
+          24.229475995525718,
+          24.225818924605846,
+          24.219708051532507,
+          24.267808999866247,
+          24.239963851869106,
+          24.259498808532953,
+          24.229964008554816,
+          24.224448017776012,
+          24.24272196367383,
+          24.271997855976224,
+          24.25004285760224,
+          24.24559206701815,
+          24.252260103821754,
+          24.24053195863962,
+          24.235057877376676,
+          24.2341379635036,
+          24.23394611105323
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 13.011967658996582,
+          "batch_target_proxy": 3.8645761013031006,
+          "batch_target_post": 5.946368217468262,
+          "batch_target_final_logits": 1.2052479982376099
+        },
+        "max_logit_diff": 0.0,
+        "argmax_agreement": 1.0,
+        "physical_queries": 72
+      },
+      {
+        "batch": 8,
+        "shape": "one_hit",
+        "lengths": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "implementation": "fixed",
+        "stream": false,
+        "wall_ms": 21.142862970009446,
+        "samples_ms": [
+          21.164739038795233,
+          21.128820022568107,
+          21.13323099911213,
+          21.13164681941271,
+          21.13083191215992,
+          21.119670942425728,
+          21.122781094163656,
+          21.122602047398686,
+          21.144161000847816,
+          21.164054982364178,
+          21.166431019082665,
+          21.215176908299327,
+          21.15966798737645,
+          21.175652043893933,
+          21.146934013813734,
+          21.15507493726909,
+          21.129253087565303,
+          21.1326468270272,
+          21.159613970667124,
+          21.141564939171076
+        ],
+        "cuda_components_ms": {
+          "batch_target_pre": 10.983424186706543,
+          "batch_target_proxy": 3.7416958808898926,
+          "batch_target_post": 5.041152000427246,
+          "batch_target_final_logits": 1.1263999938964844
+        },
+        "max_logit_diff": 0.1484375,
+        "argmax_agreement": 1.0,
+        "physical_queries": 16
+      }
+    ]
+  },
+  "model_configs": {
+    "llama2": {
+      "hidden_size": 4096,
+      "intermediate_size": 11008,
+      "num_attention_heads": 32,
+      "num_key_value_heads": 32,
+      "torch_dtype": "float16",
+      "vocab_size": 32000
+    },
+    "llama3": {
+      "hidden_size": 4096,
+      "intermediate_size": 14336,
+      "num_attention_heads": 32,
+      "num_key_value_heads": 8,
+      "torch_dtype": "bfloat16",
+      "vocab_size": 128256
+    }
+  }
+}

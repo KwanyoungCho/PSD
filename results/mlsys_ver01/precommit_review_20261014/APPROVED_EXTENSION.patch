@@ -1,0 +1,2088 @@
+--- a/ssd/ssd/config.py
++++ b/ssd/ssd/config.py
+@@ -181,7 +181,8 @@
+     duet_p1_tree_conf_threshold: float = 0.0
+     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
+     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
+-    # Constraint: K1 + K2 == speculate_k, K2 <= K1.
++    # K1 + K2 == speculate_k. Legacy split-chain graphs require K2 <= K1;
++    # the unified tree service has independent phase/verification capacities.
+     # REQUIRED when duet_enabled (the hybrid / legacy two-pass paths that
+     # allowed None were removed 2026-07; __post_init__ hard-errors on None).
+     duet_phase1_k: int | None = None
+@@ -248,8 +249,9 @@
+     @property
+     def duet_tree_enabled(self) -> bool:
+         """Whether either phase may serve a dynamic tree response."""
+-        return (self.duet_p1_tree_policy == "on"
+-                or self.duet_p2_tree_policy == "on")
++        return (self.duet_enabled and
++                (self.duet_p1_tree_policy == "on"
++                 or self.duet_p2_tree_policy == "on"))
+ 
+     @property
+     def duet_tree_wire_nodes(self) -> int:
+@@ -676,7 +678,9 @@
+                         "bench.py derives it, or set --k to K1+K2.")
+                 # Tier-3: early fail (moved up from DraftRunner init; the
+                 # runner check stays as defense). -O 생존형 raise.
+-                if self.duet_phase2_k > self.duet_phase1_k:
++                from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
++                if (self.duet_phase2_k > self.duet_phase1_k
++                        and not batch_tree_enabled(self)):
+                     raise ValueError(
+                         f"DUET split requires K2 <= K1 (short/long CG bucket "
+                         f"invariant); got K1={self.duet_phase1_k}, "
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -111,6 +111,10 @@
+         draft_memory_utilization = (
+             0.75 if (not cfg.draft_async or both_dynamic_trees) else 0.8
+         )
++        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
++        if batch_tree_enabled(cfg):
++            # Batch forests retain separate arenas and captured page plans.
++            draft_memory_utilization = 0.55
+         draft_cfg = dataclasses.replace(
+             cfg,
+             model=cfg.draft,
+@@ -119,6 +123,15 @@
+             d_model_target=cfg.hf_config.hidden_size if cfg.use_eagle and cfg.hf_config else None,
+             enforce_eager=cfg.enforce_eager,
+         )
++        # replace() reloads BOTH configs from the draft checkpoint. AMD's
++        # checkpoint advertises float32, which FlashAttention cannot run.
++        # Preserve the target runtime dtype before constructing draft layers,
++        # graphs and communication buffers (also matches verifier q logits).
++        runtime_dtype = getattr(cfg.hf_config, "torch_dtype", None)
++        if runtime_dtype is not None:
++            draft_cfg.hf_config.torch_dtype = runtime_dtype
++            draft_cfg.draft_hf_config.torch_dtype = runtime_dtype
++            cfg.draft_hf_config.torch_dtype = runtime_dtype
+         if getattr(cfg, "extend_draft_rope", False):
+             # dataclasses.replace() re-enters Config.__post_init__ with the
+             # draft as `model`, where its native max_position_embeddings
+@@ -152,11 +165,12 @@
+             # The target ranks are still loading/capturing their own graphs at
+             # this point, so most of this one-time work overlaps engine start
+             # instead of extending the first generation.
+-            self._warmup_p2_tree_executor()
+-            self._warmup_p1_tree_executors()
++            if not self.batched_tree_enabled:
++                self._warmup_p2_tree_executor()
++                self._warmup_p1_tree_executors()
+             # DUET: capture split-K1/K2 layout CudaGraphs
+             # (split_k1_{long,short} + split_k2).
+-            if self.config.duet_enabled and not self.enforce_eager:
++            if self.config.duet_enabled and not self.enforce_eager and not self.batched_tree_enabled:
+                 from ssd.engine.helpers.cudagraph_helpers import (
+                     capture_fi_tree_decode_cudagraph,
+                 )
+@@ -192,6 +206,9 @@
+                 "capture cache before service",
+                 flush=True,
+             )
++            if self.batched_tree_enabled:
++                from ssd.engine.helpers.batch_tree_draft import BatchedDuetDraft
++                self.batch_tree = BatchedDuetDraft(self)
+             if init_q is not None:
+                 # The parent must not expose the engine until every draft
+                 # graph (including the P2 warmup buckets) is ready.  The first
+@@ -391,6 +408,11 @@
+         draft_block_table = fused[off:off + batch_size * max_blocks].view(batch_size, max_blocks).to(torch.int32); off += batch_size * max_blocks
+         assert off == fused_total
+ 
++        if self.batched_tree_enabled:
++            seq_ids = torch.empty(batch_size,dtype=torch.int64,device=self.device)
++            dist.recv(seq_ids,src=0,group=self.async_pg)
++            self.batch_tree.invalidate(seq_ids.cpu().tolist())
++
+         eagle_acts = None
+         if use_eagle:
+             eagle_acts = torch.zeros(
+@@ -544,7 +566,7 @@
+             K1 = self.config.duet_phase1_k
+             K2 = self.config.duet_phase2_k
+             # Hard check (assert is stripped under python -O).
+-            if K2 > K1:
++            if K2 > K1 and not getattr(self, 'batched_tree_enabled', False):
+                 raise ValueError(
+                     f"split-K1K2 mode requires K2 <= K1, got K1={K1}, K2={K2}. "
+                     f"K2>K1 is not supported (proxy_horizon tail source undefined). "
+@@ -617,7 +639,9 @@
+                 f'split_k1_short MQ={self.split_k1_short_layout.MQ_LEN} '
+                 f'(K=K1={K1}, pos={K2+1}), '
+                 if self.split_k1_short_layout is not None else
+-                'split_k1_short SKIPPED (K1==K2, long bucket reused), '
++                ('split_k1_short SKIPPED (unified tree owns context buckets), '
++                 if getattr(self, 'batched_tree_enabled', False) else
++                 'split_k1_short SKIPPED (K1==K2, long bucket reused), ')
+             )
+             print(f'[DUET split-K1K2] layouts: '
+                   f'split_k1_long MQ={self.split_k1_long_layout.MQ_LEN} (K=K1={K1}, pos={K1+1}), '
+@@ -5664,6 +5688,10 @@
+             # SPECULATE request: serve out-of-cache or random speculations
+             elif cmd == 0:
+                 _ds0 = time.perf_counter()
++                if self.batched_tree_enabled:
++                    self.batch_tree.serve()
++                    self._draft_step_times.append(time.perf_counter()-_ds0)
++                    continue
+                 _prof = os.environ.get("SSD_PROFILE", "0") == "1"
+                 if _prof or PROFILE_DRAFT:
+                     torch.cuda.synchronize()
+@@ -5713,6 +5741,8 @@
+ 
+             # EXIT: clean up and break out of the loop
+             elif cmd == 2:
++                if self.batched_tree_enabled:
++                    print(f'[metrics] batched tree: {self.batch_tree.stats}',flush=True)
+                 if self._draft_step_times:
+                     avg_ms = sum(self._draft_step_times) * 1000 / len(self._draft_step_times)
+                     print(f"[metrics] Avg draft step time (ms): {avg_ms:.2f}", flush=True)
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_common.py
+@@ -0,0 +1,86 @@
++"""Request-local contracts for batched DUET trees."""
++import os
++import numpy as np
++from ssd.engine.helpers.tree_host_topology import context_topology
++
++
++def enabled(config):
++    return (getattr(config, 'duet_enabled', False)
++            and getattr(config, 'duet_tree_enabled', False)
++            and (int(config.max_num_seqs) > 1
++                 or os.environ.get('SSD_BATCHED_TREE', '0') == '1'))
++
++
++def capacity(n):
++    return 1 << max(0, int(n-1).bit_length())
++
++
++def build_forward_inputs(rows, width, batch_capacity, pages, block_size):
++    """CPU packing for one ancestor-masked forward, including chain rows.
++
++    rows contain tokens=[recovery]+nodes, parent indices (root=-1), prefix
++    length (excluding recovery), and a physical page table. Padding writes
++    no KV and sees only a finite, real prefix. Logical slots and RoPE depth
++    are intentionally independent.
++    """
++    cols = pages * block_size
++    ids = np.zeros((batch_capacity,width),dtype=np.int64)
++    rope = np.zeros_like(ids)
++    slots = np.full((batch_capacity,width),-1,dtype=np.int32)
++    indices = np.zeros((batch_capacity,pages),dtype=np.int32)
++    mask = np.zeros((batch_capacity,width,cols),dtype=np.uint8)
++    for b in range(batch_capacity):
++        row = rows[b] if b < len(rows) else rows[0]
++        prefix = int(row['prefix'])
++        tokens, parents = row['tokens'], row['parents']
++        n = len(tokens)
++        if n != len(parents)+1 or n > width or prefix+n > cols:
++            raise ValueError('Tree forward row exceeds its captured canvas')
++        depth, _, visible = context_topology(parents)
++        bt = row['blocks']
++        live_pages = (prefix+n+block_size-1)//block_size
++        if len(bt)<live_pages or any(p<0 for p in bt[:live_pages]):
++            raise ValueError('Tree forward references an unallocated page')
++        indices[b,:live_pages] = bt[:live_pages]
++        indices[b,live_pages:] = bt[0]
++        # Padding rows must not read an unwritten slot when prefix==0.
++        mask[b,:,:max(prefix,1)] = 1
++        if b >= len(rows):
++            continue
++        ids[b,:n] = tokens
++        rope[b,:n] = prefix+np.asarray([0]+[d+1 for d in depth])
++        positions = prefix+np.arange(n)
++        slots[b,:n] = np.asarray(bt)[positions//block_size]*block_size+positions%block_size
++        mask[b,:n,prefix:prefix+n] = visible
++    packed = np.packbits(mask.reshape(-1),bitorder='little')
++    return dict(ids=ids.reshape(-1),rope=rope.reshape(-1),
++                slots=slots.reshape(-1),pages=indices.reshape(-1),mask=packed)
++
++
++def restore_plan(previous, current_length, terminal, blocks, block_size):
++    """Staged tree rows -> canonical slots after EOS/output truncation.
++
++    A snapshot is looked up by sequence identity before calling this helper.
++    Terminal identifies the untruncated verified path; length determines the
++    committed prefix of that path, so later truncation cannot copy extra KV.
++    """
++    parents = previous['parents']
++    accepted = int(current_length)-int(previous['length'])-1
++    if accepted <= 0 or terminal <= 0:
++        return [], []
++    node = int(terminal)-1
++    path = []
++    while node >= 0:
++        if node >= len(parents):
++            raise ValueError('Terminal node is outside its sequence snapshot')
++        path.append(node)
++        node = parents[node]
++    path.reverse()
++    if accepted > len(path):
++        raise ValueError('Committed tree length exceeds its terminal path')
++    start = int(previous['length'])
++    dst = [blocks[(start+j)//block_size]*block_size+(start+j)%block_size
++           for j in range(accepted)]
++    if any(s<0 for s in dst):
++        raise ValueError('Accepted path references an unallocated page')
++    return [j+1 for j in path[:accepted]], dst
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_draft.py
+@@ -0,0 +1,439 @@
++"""Batched DUET service: request-owned cache, staged KV and phase forests."""
++from copy import copy
++import os
++import torch
++import torch.distributed as dist
++from ssd.engine.helpers.batch_tree_common import capacity, restore_plan
++from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
++from ssd.engine.helpers.tree_host_topology import context_topology
++from ssd.engine.helpers.batched_tree_executor import BatchedTreeExecutor
++from ssd.engine.helpers.p1_tree import P1TreeExecutor, build_uniform_p1_roots
++from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
++from ssd.engine.helpers.p2_tree import tree_wire_ints_len
++from ssd.utils.async_helpers.nccl_pack import recv_int64
++from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close, PROFILE_DUET
++
++
++class BatchedDuetDraft:
++    def __init__(self,runner):
++        self.r=runner
++        self.cfg=runner.config
++        if self.cfg.use_eagle or self.cfg.duet_proxy_on_draft or self.cfg.duet_exit_topm_gather:
++            raise NotImplementedError('Batched DUET tree currently uses dense full-vocabulary models')
++        if not self.cfg.jit_speculate:
++            raise ValueError('Batched tree service requires jit_speculate')
++        self.entries={}
++        self.staged={}
++        self.forests={}
++        self.executors={}
++        self.root_graphs={}
++        self.root_graph_pool=None
++        self.input_graphs={}
++        self.input_graph_pool=None
++        self.graph_pool=None
++        self.glue=BatchedTreeForward(runner,split=False)
++        self.stats=dict(steps=0,tree_hits=0,phase1_replays=0,phase2_replays=0,captures=0)
++
++    def invalidate(self,seq_ids):
++        ids=set(seq_ids)
++        self.entries={k:v for k,v in self.entries.items() if k[0] not in ids}
++        for seq in ids: self.staged.pop(seq,None)
++
++    def _flat_kv(self):
++        k=self.r.kv_cache
++        return k.view(k.shape[0],k.shape[1],-1,k.shape[4],k.shape[5])
++
++    def _forest(self,phase,contexts,batch,pages):
++        key=phase,contexts
++        if key not in self.forests:
++            cfg=copy(self.cfg)
++            on=getattr(cfg,f'duet_p{phase}_tree_policy')=='on'
++            if not on:
++                cfg.duet_tree_c_tensor=1
++                if phase==1:
++                    cfg.duet_p1_tree_allocation_policy='backbone'
++                    cfg.duet_p1_tree_max_nodes=cfg.duet_phase1_k
++                    cfg.duet_p1_roots_per_position=cfg.duet_draft_fan_out
++                else:
++                    cfg.duet_tree_policy='backbone'
++                    cfg.duet_p2_tree_max_nodes=cfg.duet_phase2_k
++            hf=self.r.hf_config
++            arenas=[]
++            for b in range(capacity(self.cfg.max_num_seqs)):
++                args=(self.r.model,self.r.model.compute_logits,cfg,self.r.device,
++                      self.r.block_size,cfg.max_blocks,hf.vocab_size,
++                      hf.num_attention_heads,hf.num_key_value_heads,hf.head_dim)
++                if phase==1:
++                    ex=P1TreeExecutor(*args,context_bucket=contexts,dtype=hf.torch_dtype,
++                                      materialize_backbone_logits=False)
++                else:
++                    ex=P2TreeExecutor(*args,dtype=hf.torch_dtype,
++                                      glue_width=contexts,materialize_backbone_logits=False)
++                ex.gen.manual_seed((torch.initial_seed()+100003*phase+1009*contexts+b)%(2**63-1))
++                arenas.append(ex)
++            self.forests[key]=arenas
++        arenas=self.forests[key][:batch]
++        graph_key=phase,contexts,batch
++        if graph_key not in self.executors:
++            self.executors[graph_key]=BatchedTreeExecutor(arenas,staging_only=True,
++                                                        workspace=self.glue.workspace())
++        executor=self.executors[graph_key]
++        if pages is not None:executor.prepare(pages)
++        return executor,arenas
++
++    def _prepare_arena(self,ex,row,page_bucket,tokens,scores,context_ids,temp,active=True):
++        r=self.r
++        dev=r.device
++        n=len(row['tokens'])
++        prefix=row['prefix']
++        _,_,visible=context_topology(row['parents'])
++        depths=[0]+[d+1 for d in context_topology(row['parents'])[0]]
++        ex.in_root_tok.zero_(); ex.in_root_piv.zero_(); ex.in_glue.zero_()
++        nr=len(tokens)
++        ex.in_root_tok[:nr].copy_(tokens)
++        ex.in_root_piv[:nr].copy_(scores)
++        ci=context_ids.to(torch.int64).clamp(0,n-1)
++        ex.in_glue[:nr,:n].copy_(torch.as_tensor(visible,device=dev)[ci])
++        ex.in_rope_base.zero_()
++        ex.in_rope_base[:nr].copy_(prefix+1+torch.tensor(depths,device=dev)[ci])
++        ex.in_glue_w.fill_(n)
++        ex.in_prefix_len.fill_(prefix)
++        ex.in_temps.fill_(temp)
++        bt=row['blocks']
++        ex.in_block_tables.zero_()
++        ex.in_block_tables[0,:len(bt)].copy_(torch.tensor(bt,dtype=torch.int32,device=dev))
++        first=prefix+n
++        final=first+ex.total_cells
++        safe=(active and final<=r.config.max_model_len and (final-1)//r.block_size<len(bt)
++              and all(p>=0 for p in bt[:(final+r.block_size-1)//r.block_size]))
++        if not safe:
++            # Near the model limit, emit no future cache entries. The next
++            # request uses JIT. Never direct masked queries to negative pages.
++            ex.in_root_piv.zero_()
++        for f,w in enumerate(ex.round_widths):
++            ex.in_slot[f].fill_(-1)
++            if safe:
++                pos=first+ex.round_offsets[f]+torch.arange(w,device=dev)
++                blocks=torch.tensor(bt,dtype=torch.int32,device=dev)
++                ex.in_slot[f][:w].copy_(blocks[pos//r.block_size]*r.block_size+pos%r.block_size)
++            ex.in_ctx_len[f].fill_(min(final,r.config.max_model_len))
++            count=page_bucket+ex.canvas_extra_pages
++            live=min((final+r.block_size-1)//r.block_size,len(bt)) if safe else (prefix+n+r.block_size-1)//r.block_size
++            pages=[bt[j] if j<live else bt[0] for j in range(count)]
++            ex.wrappers[page_bucket][f]._paged_kv_indices_buf.copy_(
++                torch.tensor(pages,dtype=torch.int32,device=dev))
++        return safe
++
++    def _save_entries(self,arena,seq,contexts,tokens,phase,safe):
++        if not safe: return
++        R=len(tokens)
++        meta=torch.cat([arena.out_valid[:R,None],arena.view_tok[:R],arena.view_par[:R],
++                        arena.view_sib[:R],arena.view_pcell[:R]],1).cpu().tolist()
++        roots=torch.stack([contexts,tokens],1).cpu().tolist()
++        N=arena.NV
++        is_tree=getattr(self.cfg,f'duet_p{phase}_tree_policy')=='on'
++        cap=(getattr(self.cfg,f'duet_p{phase}_tree_verify_nodes') if is_tree else
++             getattr(self.cfg,f'duet_phase{phase}_k'))
++        for root,(ctx,token) in enumerate(roots):
++            n=meta[root][0]
++            if n<=0: continue
++            a=meta[root]
++            toks=a[1:1+N][:n]; par=a[1+N:1+2*N][:n]
++            sib=a[1+2*N:1+3*N][:n]; cells=a[1+3*N:1+4*N][:n]
++            if n>cap:
++                # A generation-order prefix preserves ancestry and ordered
++                # WOR prefixes without selecting a child by its sampled
++                # value. Post-sampling score re-ranking would require the
++                # conditional proposal law, not the original parent q.
++                toks=toks[:cap];par=par[:cap];sib=sib[:cap];cells=cells[:cap]
++            self.entries.setdefault((seq,int(ctx),int(token)),dict(
++                tokens=toks,parents=par,siblings=sib,cells=cells,
++                logits=arena.cell_logits,phase=phase,tree=is_tree))
++
++    def _prepare_batch(self,executor,pages,rows,params,temps):
++        from ssd.engine.helpers.batch_tree_inputs import BatchedArenaInputs
++        key=id(executor),pages
++        if key not in self.input_graphs:
++            g=BatchedArenaInputs(executor,pages,self.cfg.max_model_len,self.input_graph_pool)
++            self.input_graphs[key]=g
++            if self.input_graph_pool is None:self.input_graph_pool=g.graph.pool()
++        return self.input_graphs[key].replay(rows,params,temps)
++
++    def _save_entries_bulk(self, records):
++        """Export all request/phase metadata with one D2H synchronization.
++
++        P1 and P2 arenas have separate storage. Keeping the P1 views until
++        P2 finishes is safe and avoids serializing P2 behind P1 CPU export.
++        Preserve P1-first insertion order for duplicate cache roots.
++        """
++        pieces=[]; shapes=[]
++        for arena,seq,contexts,tokens,phase,safe in records:
++            if not safe: continue
++            R=len(tokens); N=arena.NV
++            value=torch.cat([contexts[:,None],tokens[:,None],arena.out_valid[:R,None],
++                arena.view_tok[:R],arena.view_par[:R],arena.view_sib[:R],arena.view_pcell[:R]],1)
++            pieces.append(value.reshape(-1)); shapes.append((arena,seq,phase,R,N))
++        if not pieces: return
++        host=torch.cat(pieces).cpu().tolist()
++        offset=0
++        for arena,seq,phase,R,N in shapes:
++            is_tree=getattr(self.cfg,f'duet_p{phase}_tree_policy')=='on'
++            cap=(getattr(self.cfg,f'duet_p{phase}_tree_verify_nodes') if is_tree else
++                 getattr(self.cfg,f'duet_phase{phase}_k'))
++            for root in range(R):
++                a=host[offset:offset+3+4*N]; offset+=3+4*N
++                ctx,token,n=a[:3]; n=min(n,cap)
++                if n<=0: continue
++                self.entries.setdefault((seq,int(ctx),int(token)),dict(
++                    tokens=a[3:3+N][:n],parents=a[3+N:3+2*N][:n],
++                    siblings=a[3+2*N:3+3*N][:n],cells=a[3+3*N:3+4*N][:n],
++                    logits=arena.cell_logits,phase=phase,tree=is_tree))
++
++    @torch.inference_mode()
++    def serve(self):
++        r,cfg=self.r,self.cfg
++        B,K,F,step=r.recv_tensor((4,),torch.int64).tolist()
++        r._request_step_id=int(step)
++        from ssd.engine.helpers.cudagraph_helpers import duet_set_context
++        duet_set_context(step_id=step,proc='draft')
++        raw=recv_int64(r.async_pg,src=0,total_length=B*(5+cfg.max_blocks),device=r.device)
++        keys=raw[:3*B].view(B,3)
++        lengths=raw[3*B:4*B]
++        bt=raw[4*B:4*B+B*cfg.max_blocks].view(B,cfg.max_blocks).int()
++        temps=raw[-B:].int().view(torch.float32)
++        host=raw.cpu().tolist()
++        key_cpu=[host[j*3:j*3+3] for j in range(B)]
++        length_cpu=host[3*B:4*B]
++        block_cpu=[host[4*B+j*cfg.max_blocks:4*B+(j+1)*cfg.max_blocks] for j in range(B)]
++        temp_cpu=temps.cpu().tolist()
++        # Restore by identity, never by the current batch row. Prefill
++        # explicitly invalidates the resumed sequence's old generation.
++        restore_event=duet_record('batch_kv_restore')
++        flat=self._flat_kv()
++        for b,(seq,terminal,_) in enumerate(key_cpu):
++            previous=self.staged.pop(seq,None)
++            if previous is not None:
++                src,dst=restore_plan(previous,length_cpu[b],terminal,block_cpu[b],r.block_size)
++                if src:
++                    flat[:,:,torch.tensor(dst,device=r.device)]=previous['kv'][:,:,src]
++        self.staged={}
++        duet_close('batch_kv_restore',restore_event)
++        hits=[self.entries.get(tuple(k)) for k in key_cpu]
++        miss=[b for b,e in enumerate(hits) if e is None]
++        _miss_event=duet_record("batch_miss_draft")
++        default_k=cfg.duet_phase2_k if cfg.duet_jit_short else max(cfg.duet_phase1_k,cfg.duet_phase2_k)
++        miss_depth=default_k
++        miss_width=1
++        miss_k=miss_depth*miss_width
++        if not (1<=miss_width<=cfg.duet_tree_c_tensor and 1<=miss_k<=cfg.duet_response_token_width):
++            raise ValueError('Miss tree/chain exceeds node or sibling capacity')
++        miss_q=torch.zeros(len(miss),cfg.duet_response_token_width,r.hf_config.vocab_size,dtype=r.hf_config.torch_dtype,device=r.device)
++        miss_t=torch.zeros(len(miss),cfg.duet_response_token_width,dtype=torch.int64,device=r.device)
++        if miss:
++            idx=torch.tensor(miss,dtype=torch.int64,device=r.device)
++            r.jit_speculate(keys[idx],lengths[idx],miss_q,miss_t,temps[idx],bt[idx],None)
++        duet_close("batch_miss_draft",_miss_event)
++        width=cfg.duet_response_token_width
++        nv=cfg.duet_tree_wire_nodes
++        tokens=torch.zeros(B,width,dtype=torch.int64,device=r.device)
++        topology=torch.zeros(B,tree_wire_ints_len(nv),dtype=torch.int64,device='cpu')
++        phases=[]; valid=[]; rows=[]; qrows=[]
++        mi=0
++        for b,entry in enumerate(hits):
++            if entry is None:
++                ts=miss_t[mi,:miss_k].cpu().tolist()
++                parent=[(j//miss_width-1)*miss_width if j>=miss_width else -1 for j in range(miss_k)]
++                sibling=[j%miss_width for j in range(miss_k)]
++                q=miss_q[mi,:miss_k]; phase=0; tree=miss_width>1; mi+=1
++            else:
++                ts=entry['tokens']; parent=entry['parents']; sibling=entry['siblings']
++                q=entry['logits'].index_select(0,torch.tensor(entry['cells'],device=r.device)).to(r.hf_config.torch_dtype)
++                phase=entry['phase']; tree=entry['tree']
++            n=len(ts)
++            tokens[b,:n]=torch.tensor(ts,device=r.device)
++            valid.append(n); phases.append(phase); qrows.append(q)
++            if tree:
++                topology[b,:3]=torch.tensor([n,n,2]) # v2: q row is node-local
++                topology[b,3:3+n]=torch.tensor(ts)
++                topology[b,3+nv:3+nv+n]=torch.tensor(parent)
++                topology[b,3+2*nv:3+2*nv+n]=torch.tensor(sibling)
++                first_child={}
++                refs=[first_child.setdefault(p,j) for j,p in enumerate(parent)]
++                topology[b,3+3*nv:3+3*nv+n]=torch.tensor(refs)
++                self.stats['tree_hits']+=1
++            rows.append(dict(tokens=[key_cpu[b][2]]+ts,parents=parent,siblings=sibling,
++                             prefix=length_cpu[b]-1,blocks=block_cpu[b],tree=tree))
++        max_valid=max(valid)
++        q=torch.zeros(B,max_valid,r.hf_config.vocab_size,dtype=r.hf_config.torch_dtype,device=r.device)
++        for b,qr in enumerate(qrows): q[b,:valid[b]].copy_(qr)
++        fused=torch.cat([torch.tensor([int(e is not None) for e in hits],device=r.device),
++                         torch.tensor(phases,device=r.device),torch.tensor(valid,device=r.device),
++                         tokens.flatten(),topology.to(r.device).flatten()])
++        dist.send(fused,dst=0,group=r.async_pg)
++        dist.send(q,dst=0,group=r.async_pg)
++        work,proxy_buf=r._irecv_duet_proxy(B,K)
++        if PROFILE_DUET:
++            # Observe recv completion without serializing the draft compute
++            # stream behind it. Work.wait installs a CUDA stream dependency.
++            if not hasattr(self,'profile_proxy_stream'):
++                self.profile_proxy_stream=torch.cuda.Stream(device=r.device)
++            with torch.cuda.stream(self.profile_proxy_stream):
++                _ready=duet_record('batch_proxy_receive')
++                work.wait()
++                duet_close('batch_proxy_receive',_ready)
++        _glue=duet_record('batch_glue')
++        # One ancestor-masked draft forward covers both tree and chain rows.
++        glue_width=next(x for x in sorted({cfg.duet_phase1_k+1,cfg.duet_phase2_k+1,
++                                           cfg.duet_response_token_width+1}) if x>=max_valid+1)
++        glue_forward_event=duet_record('batch_glue_forward',parent='batch_glue')
++        glue=self.glue.run(rows,glue_width)
++        duet_close('batch_glue_forward',glue_forward_event)
++        stage_event=duet_record('batch_kv_stage',parent='batch_glue')
++        for b,entry in enumerate(hits):
++            if not rows[b]['tree']: continue
++            row=rows[b]; start=row['prefix']; n=len(row['tokens'])
++            slots=[row['blocks'][j//r.block_size]*r.block_size+j%r.block_size for j in range(start,start+n)]
++            self.staged[key_cpu[b][0]]=dict(parents=row['parents'],length=length_cpu[b],
++                                          kv=flat[:,:,torch.tensor(slots,device=r.device)].clone())
++        duet_close('batch_kv_stage',stage_event)
++        # No view from the previous generation is retained after q and KV
++        # have been copied, so arena reuse cannot mutate a served snapshot.
++        self.entries={}
++        duet_close("batch_glue",_glue)
++        self._build(rows,glue,key_cpu,temp_cpu,work,proxy_buf,B,K)
++        self.stats['steps']+=1
++
++    def _build(self,rows,glue,keys,temps,proxy_work,proxy_buf,B,K):
++        cfg,r=self.cfg,self.r
++        bulk_export=os.getenv('SSD_BATCH_TREE_BULK_EXPORT','1')=='1'
++        export_records=[]
++        contexts=max(len(row['tokens']) for row in rows)
++        cb=next(x for x in sorted({cfg.duet_phase2_k+1,cfg.duet_phase1_k+1,
++                                 cfg.duet_response_token_width+1}) if x>=contexts)
++        bc=capacity(B)
++        padded=[]
++        _p1=duet_record("batch_p1_total")
++        if not cfg.duet_only_proxy:
++            # Discover round-zero width before selecting the shared page
++            # canvas. All arenas use the same context bucket and top-W budget.
++            exs,_=self._forest(1,cb,bc,None)
++            sample=exs.first
++            pages=capacity(max((row['prefix']+len(row['tokens'])+sample.round_ends[0]+r.block_size-1)//r.block_size for row in rows))
++            exs,arenas=self._forest(1,cb,bc,pages)
++            batched_roots=None
++            if os.getenv('SSD_BATCH_TREE_ROOT_GRAPH','1')=='1':
++                from ssd.engine.helpers.batch_tree_roots import BatchedP1Roots
++                key=bc,cb
++                if key not in self.root_graphs:
++                    g=BatchedP1Roots(bc,cb,r.hf_config.vocab_size,r.hf_config.torch_dtype,
++                        r.device,arenas[0].roots_per_position,cfg.sampler_x,cfg.async_fan_out,
++                        pool=self.root_graph_pool)
++                    self.root_graphs[key]=g
++                    if self.root_graph_pool is None:self.root_graph_pool=g.graph.pool()
++                roots_graph=self.root_graphs[key]
++                batched_roots=roots_graph.replay(rows,glue,temps)
++            params=[]
++            inputs=[]
++            capture_inputs=os.getenv('SSD_BATCH_TREE_INPUT_GRAPH','1')=='1'
++            for b in range(bc):
++                row=rows[min(b,B-1)]
++                n=len(row['tokens']); pfo=arenas[b].roots_per_position
++                _,_,visible=context_topology(row['parents'])
++                nr=n*pfo
++                if batched_roots is not None:
++                    rt=batched_roots[0][b,:nr];sc=batched_roots[1][b,:nr]
++                    ci=roots_graph.context_ids[:nr]
++                else:
++                    roots=build_uniform_p1_roots(glue[min(b,B-1),:n],
++                        torch.tensor(row['tokens'],device=r.device),pfo,
++                        torch.full((n,),temps[min(b,B-1)],device=r.device),
++                        sampler_x=cfg.sampler_x,async_fan_out=cfg.async_fan_out,
++                        context_glue_rows=torch.as_tensor(visible,device=r.device),root_width=arenas[b].R)
++                    rt=roots['tokens'][:nr]; sc=roots['scores'][:nr]; ci=roots['context_ids'][:nr]
++                if b>=B: sc=torch.zeros_like(sc)
++                safe=True
++                if not capture_inputs:
++                    safe=self._prepare_arena(arenas[b],row,pages,rt,sc,ci,temps[min(b,B-1)],active=b<B)
++                if b<B:
++                    p=torch.full((cb,pfo),-1,dtype=torch.int64,device=r.device)
++                    p[:n]=rt.view(n,pfo); padded.append(p)
++                params.append((rt,ci,safe))
++                inputs.append((rt,sc,ci))
++            if capture_inputs:
++                safe=self._prepare_batch(exs,pages,rows,inputs[:B],temps)
++                params=[(rt,ci,safe[b] if b<B else False) for b,(rt,ci,_) in enumerate(params)]
++            self._execute(exs,pages,1)
++            for b in range(B):
++                rt,ci,safe=params[b]
++                record=(arenas[b],keys[b][0],ci,rt,1,safe)
++                if bulk_export: export_records.append(record)
++                else: self._save_entries(*record)
++        duet_close("batch_p1_total",_p1)
++        _wait=duet_record("batch_proxy_wait")
++        proxy_work.wait()
++        duet_close("batch_proxy_wait",_wait)
++        _p2=duet_record("batch_p2_total")
++        proxy=r._unpack_duet_proxy(proxy_buf,B,K)
++        pos,tok,score=proxy['chosen_pos'],proxy['chosen_tok'],proxy['chosen_piv']
++        valid=(pos>=0)&(pos<torch.tensor([len(row['tokens']) for row in rows],device=r.device)[:,None])
++        if padded:
++            roots=torch.stack(padded)
++            bi=torch.arange(B,device=r.device)[:,None]
++            in_draft=(roots[bi,pos.clamp(0,cb-1)]==tok[:,:,None]).any(-1)
++            valid&=~in_draft
++        count=cfg.duet_p2_seed_count
++        pick=(~valid).int().argsort(dim=1,stable=True)[:,:count]
++        ci=pos.gather(1,pick).clamp(0,contexts-1)
++        rt=tok.gather(1,pick)
++        sc=torch.where(valid.gather(1,pick),score.gather(1,pick),0)
++        exs,_=self._forest(2,cb,bc,None)
++        sample=exs.first
++        pages=capacity(max((row['prefix']+len(row['tokens'])+sample.round_ends[0]+r.block_size-1)//r.block_size for row in rows))
++        exs,arenas=self._forest(2,cb,bc,pages)
++        safe=[]
++        if os.getenv('SSD_BATCH_TREE_INPUT_GRAPH','1')=='1':
++            safe=self._prepare_batch(exs,pages,rows,[(rt[b],sc[b],ci[b]) for b in range(B)],temps)
++        else:
++            for b in range(bc):
++                i=min(b,B-1)
++                scores=sc[i] if b<B else torch.zeros_like(sc[i])
++                safe.append(self._prepare_arena(arenas[b],rows[i],pages,rt[i],scores,ci[i],temps[i],active=b<B))
++        self._execute(exs,pages,2)
++        for b in range(B):
++            record=(arenas[b],keys[b][0],ci[b],rt[b],2,safe[b])
++            if bulk_export: export_records.append(record)
++            else: self._save_entries(*record)
++        if bulk_export:
++            _export=duet_record('batch_bulk_export')
++            self._save_entries_bulk(export_records)
++            duet_close('batch_bulk_export',_export)
++        duet_close("batch_p2_total",_p2)
++
++    def _execute(self,executor,pages,phase):
++        if pages not in executor.graphs:
++            _capture=duet_record(f"batch_p{phase}_capture")
++            executor.capture(pages,graph_pool=self.graph_pool)
++            duet_close(f"batch_p{phase}_capture",_capture)
++            if self.graph_pool is None: self.graph_pool=executor.graphs[pages].pool()
++            self.stats['captures']+=1
++        _replay=duet_record(f"batch_p{phase}_replay")
++        trace_dir=os.getenv('SSD_BATCH_TREE_KERNEL_TRACE','')
++        if trace_dir and self.stats['steps']>=20 and not getattr(self,f'_traced_{phase}',False):
++            from pathlib import Path
++            import json
++            path=Path(trace_dir);path.mkdir(parents=True,exist_ok=True)
++            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU,
++                                                    torch.profiler.ProfilerActivity.CUDA]) as prof:
++                executor.replay(pages)
++            prof.export_chrome_trace(str(path/f'p{phase}.trace.json'))
++            kernels={}
++            for event in prof.events():
++                if event.device_type==torch.autograd.DeviceType.CUDA:
++                    row=kernels.setdefault(event.name,dict(count=0,microseconds=0.))
++                    row['count']+=1;row['microseconds']+=event.time_range.elapsed_us()
++            (path/f'p{phase}.kernels.json').write_text(json.dumps(kernels,indent=2))
++            setattr(self,f'_traced_{phase}',True)
++        else:
++            executor.replay(pages)
++        duet_close(f"batch_p{phase}_replay",_replay)
++        self.stats[f'phase{phase}_replays']+=1
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_forward.py
+@@ -0,0 +1,166 @@
++"""Captured ancestor attention shared by batched target verify and draft glue."""
++import os
++import torch
++import flashinfer
++from ssd.utils.context import set_context, reset_context
++from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
++from ssd.engine.helpers.batch_tree_common import capacity, build_forward_inputs
++
++DETAIL_TREE = os.getenv('SSD_PROFILE_DUET_DETAIL','0') == '1'
++
++class BatchedTreeForward:
++    def __init__(self, runner, split):
++        self.r = runner
++        self.split = split
++        self.graphs = {}
++        self.pool = None
++        self.proxy_side = None
++
++    def workspace(self):
++        # All ancestor forwards and forest rounds run on this runner's
++        # compute stream. Float scratch contains no persistent plan state.
++        r=self.r
++        if not hasattr(r,'_batch_tree_float_workspace'):
++            r._batch_tree_float_workspace=torch.empty(
++                int(os.getenv('SSD_BATCH_TREE_WORKSPACE_MB','128'))*2**20,
++                dtype=torch.uint8,device=r.device)
++        return r._batch_tree_float_workspace
++
++    def _context(self, g):
++        kwargs = dict(is_prefill=False, slot_mapping=g['slots'],
++                      context_lens=g['lens'], block_tables=g['blocks'])
++        if self.split:
++            kwargs['tree_verify_wrapper'] = g['wrapper']
++        else:
++            kwargs.update(active_mq_len=g['width'],
++                          active_wrappers={g['batch']:g['wrapper']})
++        set_context(**kwargs)
++
++    @torch.inference_mode()
++    def capture(self, batch, width, pages):
++        key = batch,width,pages
++        if key in self.graphs:
++            return self.graphs[key]
++        capture_label='batch_target_forward_capture' if self.split else 'batch_glue_forward_capture'
++        capture_event=duet_record(capture_label) if DETAIL_TREE else None
++        r = self.r
++        dev,dtype,hf = r.device,r.hf_config.torch_dtype,r.hf_config
++        cols = pages*r.block_size
++        ws = self.workspace()
++        qo = torch.arange(batch+1,dtype=torch.int32,device=dev)*width
++        kv = torch.arange(batch+1,dtype=torch.int32,device=dev)*pages
++        indices = torch.zeros(batch*pages,dtype=torch.int32,device=dev)
++        last = torch.full((batch,),r.block_size,dtype=torch.int32,device=dev)
++        mask = torch.empty(batch*width*cols//8,dtype=torch.uint8,device=dev)
++        wr = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
++            ws,'NHD',backend='fa2',use_cuda_graph=True,
++            qo_indptr_buf=qo,paged_kv_indptr_buf=kv,
++            paged_kv_indices_buf=indices,paged_kv_last_page_len_buf=last,
++            custom_mask_buf=mask,
++            mask_indptr_buf=torch.arange(batch+1,dtype=torch.int32,device=dev)*width*cols)
++        tp = max(1,r.num_tp_gpus)
++        wr.plan(qo,kv,indices,last,hf.num_attention_heads//tp,
++                hf.num_key_value_heads//tp,hf.head_dim,r.block_size,
++                custom_mask=torch.ones(batch*width*cols,dtype=torch.bool,device=dev),
++                q_data_type=dtype,kv_data_type=dtype)
++        g = dict(batch=batch,width=width,pages_count=pages,wrapper=wr,workspace=ws,
++                 ids=torch.zeros(batch*width,dtype=torch.int64,device=dev),
++                 rope=torch.zeros(batch*width,dtype=torch.int64,device=dev),
++                 slots=torch.full((batch*width,),-1,dtype=torch.int32,device=dev),
++                 lens=torch.full((batch,),cols,dtype=torch.int32,device=dev),
++                 blocks=torch.zeros(batch,r.config.max_blocks,dtype=torch.int32,device=dev),
++                 pages=wr._paged_kv_indices_buf,mask=wr._custom_mask_buf,
++                 output=torch.zeros(batch*width,hf.hidden_size,dtype=dtype,device=dev))
++        self._context(g)
++        if self.split:
++            g['hidden'] = torch.zeros_like(g['output'])
++            g['residual'] = torch.zeros_like(g['output'])
++            def pre():
++                h,res = r.model(g['ids'],g['rope'],end_layer=r.config.duet_exit_layer+1)
++                g['hidden'].copy_(h)
++                g['residual'].copy_(res)
++            def post():
++                out = r.model(g['ids'],g['rope'],start_layer=r.config.duet_exit_layer+1,
++                              init_hidden_states=g['hidden'],init_residual=g['residual'])
++                g['output'].copy_(out[0] if isinstance(out,tuple) else out)
++            pre(); post()
++            torch.cuda.synchronize(dev)
++            g['pre'] = torch.cuda.CUDAGraph()
++            with torch.cuda.graph(g['pre'],pool=self.pool): pre()
++            if self.pool is None: self.pool = g['pre'].pool()
++            g['post'] = torch.cuda.CUDAGraph()
++            with torch.cuda.graph(g['post'],pool=self.pool): post()
++        else:
++            def full():
++                g['output'].copy_(r.model(g['ids'],g['rope']))
++            full()
++            torch.cuda.synchronize(dev)
++            g['full'] = torch.cuda.CUDAGraph()
++            with torch.cuda.graph(g['full'],pool=self.pool): full()
++            if self.pool is None: self.pool = g['full'].pool()
++        reset_context()
++        self.graphs[key] = g
++        if DETAIL_TREE:duet_close(capture_label,capture_event)
++        return g
++
++    @torch.inference_mode()
++    def run(self, rows, width, proxy=None):
++        r = self.r
++        b = len(rows)
++        if proxy is not None and os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1':
++            if self.proxy_side is None:
++                from ssd.engine.helpers.tree_proxy_stream import TreeProxySideStream
++                self.proxy_side=TreeProxySideStream(r.device)
++        side=self.proxy_side if os.getenv('SSD_BATCH_TREE_PROXY_STREAM','0')=='1' else None
++        pages = capacity(max((row['prefix']+len(row['tokens'])+r.block_size-1)//r.block_size
++                             for row in rows))
++        pages = min(pages,r.config.max_blocks)
++        g = self.capture(capacity(b),width,pages)
++        packed = build_forward_inputs(rows,width,g['batch'],pages,r.block_size)
++        for name, array in packed.items():
++            g[name].copy_(torch.from_numpy(array),non_blocking=True)
++        self._context(g)
++        try:
++            if self.split:
++                _pre=duet_record('batch_target_pre')
++                g['pre'].replay()
++                duet_close('batch_target_pre',_pre)
++                _proxy=duet_record('batch_target_proxy')
++                hs = g['hidden'][:b*width]
++                res = g['residual'][:b*width]
++                if r.config.duet_exit_replica:
++                    replica = getattr(r,'_duet_lm_head_replica',None)
++                    if proxy is not None and replica is not None:
++                        normed = r.model.model.norm(hs+res,None)
++                        def project(x,batch):
++                            proxy(torch.nn.functional.linear(x,replica).view(batch,width,-1),batch)
++                        if side is not None:side.launch(normed,b,project)
++                        else:project(normed,b)
++                else:
++                    normed = r.model.model.norm(hs+res,None)
++                    if side is not None and r.num_tp_gpus==1:
++                        # normed owns fresh storage. Do not move hs+res/norm
++                        # itself: graph-post may mutate its residual inputs.
++                        def project(x,batch):
++                            proxy(r.model.compute_logits(x,False).view(batch,width,-1),batch)
++                        side.launch(normed,b,project)
++                    else:
++                        # TP gather stays on the collective stream on every
++                        # rank; only rank0's scoring may run independently.
++                        exit_logits = r.model.compute_logits(normed,False)
++                        if proxy is not None:
++                            if side is not None:side.launch(exit_logits.view(b,width,-1),b,proxy)
++                            else:proxy(exit_logits.view(b,width,-1),b)
++                duet_close('batch_target_proxy',_proxy)
++                _post=duet_record('batch_target_post')
++                g['post'].replay()
++                duet_close('batch_target_post',_post)
++            else:
++                g['full'].replay()
++            _logits=duet_record('batch_target_final_logits' if self.split else 'batch_glue_logits')
++            logits = r.model.compute_logits(g['output'][:b*width],False)
++            duet_close('batch_target_final_logits' if self.split else 'batch_glue_logits',_logits)
++            return None if logits is None else logits.reshape(b,width,-1)
++        finally:
++            if self.proxy_side is not None:self.proxy_side.finish()
++            reset_context()
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_inputs.py
+@@ -0,0 +1,68 @@
++"""Prepare all request arenas with one captured graph and one host upload."""
++import torch
++from ssd.engine.helpers.tree_host_topology import context_topology
++
++
++class BatchedArenaInputs:
++    @torch.inference_mode()
++    def __init__(self,executor,pages,max_model_len,pool=None):
++        self.executor=executor;self.pages=pages;self.max_model_len=max_model_len
++        ex=executor.first;B=len(executor.executors);G=ex.in_glue.shape[1]
++        # Prefix, width, safe, physical pages, depths, visibility, FA page IDs.
++        self.G=G;self.M=ex.max_blocks;self.P=pages+ex.canvas_extra_pages
++        self.stride=3+self.M+G+G*G+self.P
++        self.meta=torch.zeros(B,self.stride,dtype=torch.int64,device=ex.dev)
++        self.tokens=torch.zeros(B,ex.R,dtype=torch.int64,device=ex.dev)
++        self.scores=torch.zeros(B,ex.R,device=ex.dev)
++        self.contexts=torch.zeros_like(self.tokens)
++        self.temps=torch.ones(B,dtype=torch.float32,device=ex.dev)
++        def run():
++            for b,ar in enumerate(executor.executors):
++                row=self.meta[b];prefix,n,safe=row[0],row[1],row[2]
++                bt=row[3:3+self.M]
++                depth=row[3+self.M:3+self.M+G]
++                visible=row[3+self.M+G:3+self.M+G+G*G].view(G,G)
++                ci=self.contexts[b].clamp_min(0).minimum((n-1).clamp_min(0))
++                ar.in_root_tok.copy_(self.tokens[b]);ar.in_root_piv.copy_(self.scores[b]*safe)
++                ar.in_glue.copy_(visible[ci])
++                ar.in_rope_base.copy_(prefix+1+depth[ci])
++                ar.in_glue_w.copy_(n);ar.in_prefix_len.copy_(prefix)
++                ar.in_temps.copy_(self.temps[b].expand_as(ar.in_temps))
++                ar.in_block_tables[0].copy_(bt)
++                final=prefix+n+ar.total_cells
++                for f,w in enumerate(ar.round_widths):
++                    pos=prefix+n+ar.round_offsets[f]+torch.arange(w,device=ar.dev)
++                    slots=bt[(pos//ar.bs).clamp(0,self.M-1)]*ar.bs+pos%ar.bs
++                    ar.in_slot[f].fill_(-1)
++                    ar.in_slot[f][:w].copy_(torch.where(safe.bool(),slots,-1))
++                    ar.in_ctx_len[f].copy_(final.clamp_max(max_model_len).expand_as(ar.in_ctx_len[f]))
++                    ar.wrappers[pages][f]._paged_kv_indices_buf.copy_(row[-self.P:])
++        for _ in range(2):run()
++        torch.cuda.synchronize(ex.dev)
++        self.graph=torch.cuda.CUDAGraph()
++        with torch.cuda.graph(self.graph,pool=pool):run()
++
++    @torch.inference_mode()
++    def replay(self,rows,params,temps):
++        B=len(rows);ex=self.executor.first
++        host=torch.zeros_like(self.meta,device='cpu');safe=[]
++        self.tokens.zero_();self.scores.zero_();self.contexts.zero_()
++        for b in range(len(self.executor.executors)):
++            row=rows[min(b,B-1)];prefix=row['prefix'];n=len(row['tokens']);bt=row['blocks']
++            final=prefix+n+ex.total_cells
++            okay=b<B and final<=self.max_model_len and (final-1)//ex.bs<len(bt) and all(x>=0 for x in bt[:(final+ex.bs-1)//ex.bs])
++            if b<B:safe.append(okay)
++            depths,_,vis=context_topology(row['parents'])
++            host[b,:3]=torch.tensor([prefix,n,int(okay)])
++            host[b,3:3+len(bt)]=torch.tensor(bt)
++            host[b,3+self.M:3+self.M+n]=torch.tensor([0]+[d+1 for d in depths])
++            host[b,3+self.M+self.G:3+self.M+self.G+self.G*self.G].view(self.G,self.G)[:n,:n]=torch.as_tensor(vis)
++            live=min((final+ex.bs-1)//ex.bs,len(bt)) if okay else (prefix+n+ex.bs-1)//ex.bs
++            host[b,-self.P:]=torch.tensor([bt[j] if j<live else bt[0] for j in range(self.P)])
++            if b<B:
++                tok,score,ctx=params[b];nr=len(tok)
++                self.tokens[b,:nr].copy_(tok);self.scores[b,:nr].copy_(score);self.contexts[b,:nr].copy_(ctx)
++        self.meta.copy_(host)
++        self.temps[:B].copy_(torch.tensor(temps,dtype=torch.float32))
++        self.graph.replay()
++        return safe
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_roots.py
+@@ -0,0 +1,61 @@
++"""Batched P1 root preparation preserving the existing ranking policy."""
++import torch
++from ssd.engine.helpers.p2_tree import selected_q_probs_from_logits
++from ssd.engine.helpers.tree_host_topology import context_topology
++
++
++def root_candidates(logits,tokens,visibility,lengths,temps,roots_per_position,sampler_x,fan_out):
++    B,P,V=logits.shape
++    U=roots_per_position
++    dev=logits.device
++    idx=torch.arange(P,device=dev)
++    candidates=logits.topk(U+1,-1).indices
++    excluded=torch.cat([tokens[:,1:],tokens.new_full((B,1),-1)],1)
++    excluded=torch.where(idx[None]<lengths[:,None]-1,excluded,-1)
++    rank=torch.arange(U+1,device=dev).expand(B,P,U+1)
++    keep=torch.where(candidates!=excluded[:,:,None],rank,U+1).topk(U,-1,largest=False).values
++    chosen=candidates.gather(2,keep)
++    parent=torch.where(visibility.bool()&(idx[None,:]<idx[:,None]),idx,0).amax(-1)
++    offset=torch.arange(B,device=dev)[:,None]*P
++    sources=(idx+offset)[:,:,None].expand(B,P,U+1).clone()
++    sources[:,:,-1]=parent+offset
++    ids=torch.cat([chosen,tokens[:,:,None]],2)
++    probs=selected_q_probs_from_logits(logits.reshape(B*P,V),temps[:,None].expand(B,P).reshape(-1),
++        ids.reshape(B*P,U+1),sampler_x,fan_out,source_rows=sources.reshape(B*P,U+1)).view(B,P,U+1)
++    edge=probs[:,:,-1].clone();edge[:,0]=1
++    reach=torch.exp(torch.bmm(visibility.float(),edge.clamp_min(1e-30).log()[:,:,None])).squeeze(-1)
++    scores=probs[:,:,:U]*reach[:,:,None]*(idx[None,:,None]<lengths[:,None,None])
++    return chosen.reshape(B,P*U),scores.reshape(B,P*U)
++
++
++class BatchedP1Roots:
++    @torch.inference_mode()
++    def __init__(self,b,p,v,dtype,device,u,sampler_x,fan_out,pool=None):
++        self.logits=torch.zeros(b,p,v,dtype=dtype,device=device)
++        self.tokens=torch.zeros(b,p,dtype=torch.int64,device=device)
++        self.visibility=torch.zeros(b,p,p,dtype=torch.uint8,device=device)
++        self.lengths=torch.zeros(b,dtype=torch.int64,device=device)
++        self.temps=torch.ones(b,dtype=torch.float32,device=device)
++        self.context_ids=torch.arange(p,device=device).repeat_interleave(u)
++        def run():return root_candidates(self.logits,self.tokens,self.visibility,self.lengths,self.temps,u,sampler_x,fan_out)
++        for _ in range(2):run()
++        torch.cuda.synchronize(device)
++        self.graph=torch.cuda.CUDAGraph()
++        with torch.cuda.graph(self.graph,pool=pool):self.out=run()
++
++    @torch.inference_mode()
++    def replay(self,rows,glue,temps):
++        b=len(rows);p=self.tokens.shape[1]
++        host_tokens=torch.zeros_like(self.tokens,device='cpu')
++        host_vis=torch.zeros_like(self.visibility,device='cpu')
++        lengths=[0]*self.tokens.shape[0]
++        for i,row in enumerate(rows):
++            n=len(row['tokens']);lengths[i]=n
++            host_tokens[i,:n]=torch.tensor(row['tokens'])
++            host_vis[i,:n,:n]=torch.as_tensor(context_topology(row['parents'])[2])
++        self.logits.zero_();self.logits[:b,:glue.shape[1]].copy_(glue)
++        self.tokens.copy_(host_tokens);self.visibility.copy_(host_vis)
++        self.lengths.copy_(torch.tensor(lengths))
++        self.temps[:b].copy_(torch.tensor(temps,dtype=torch.float32))
++        self.graph.replay()
++        return self.out
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_sampling.py
+@@ -0,0 +1,249 @@
++"""Exact ordered-sibling residual ladders for independent batched trees."""
++import os
++import torch
++from ssd.engine.helpers.p2_tree import pack_piv, pack_tree_proxy_topology, q_probs_from_logits
++
++
++def pack_topologies(parents, siblings, n, device,c_max=3):
++    entries=[pack_tree_proxy_topology(p,s,n,c_max=c_max) for p,s in zip(parents,siblings)]
++    return {k:torch.stack([e[k] for e in entries]).to(device) for k in entries[0]}
++
++
++def ladder(tokens,p,q,topology,depth,exact=False,overlap_mix=0.0,
++           need_residual=True,trim=None):
++    """All contexts in parallel; siblings remain sequential within context.
++
++    q[b,j] is the ORIGINAL parent proposal law for node j. Later siblings
++    require conditioning that law on previous sibling tokens being removed.
++    Returned residual is the target law after all children were rejected.
++    Proxy/complement ranking may request only acceptance/terminal masses.
++    The optional trim removes unused copies and final normalizations; exact
++    verification always retains its final correction distribution.
++    """
++    if trim is None:trim=os.getenv('SSD_TREE_LADDER_TRIM','1')=='1'
++    if exact and not need_residual:
++        raise ValueError('Exact verification requires the final residual')
++    B,N=tokens.shape
++    R=N+1
++    dev=p.device
++    bi=torch.arange(B,device=dev)[:,None]
++    child=topology['child']
++    cv=topology['child_valid']
++    tok_ext=torch.cat([tokens,tokens.new_zeros(B,1)],1)
++    q_ext=torch.cat([q,q.new_zeros(B,1,q.shape[-1])],1)
++    residual=p if trim else p.clone()
++    draft=q_ext[bi,child[:,:,0]]
++    if not trim:draft=draft.clone()
++    draft=torch.where(cv[:,:,:1],draft,torch.zeros_like(draft))
++    all_reject=p.new_ones(B,R,1)
++    alphas=[]
++    pre=[]
++    avg_alphas=[]; avg_pre=[]; avg_reject=all_reject.clone()
++    for s in range(child.shape[-1]):
++        tj=tok_ext.gather(1,child[:,:,s]).unsqueeze(-1)
++        valid=cv[:,:,s:s+1]
++        d=draft.gather(2,tj)
++        if exact:
++            # Finite-precision softmax may have fewer than C nonzero atoms.
++            # WOR top-k then contains zero-mass padding after exhaustion;
++            # those entries cannot be accepted as genuine proposals.
++            valid=valid&(d>0)
++        denom=torch.where(d>0,d,torch.ones_like(d)) if exact else d+1e-10
++        alpha=(residual.gather(2,tj)/denom).clamp(max=1)*valid
++        alphas.append(alpha.squeeze(-1))
++        pre.append(all_reject.squeeze(-1))
++        all_reject=all_reject*(1-alpha)
++        if overlap_mix:
++            avg=torch.minimum(residual,draft).sum(-1,keepdim=True).clamp(0,1)*valid
++            avg_alphas.append(avg.squeeze(-1)); avg_pre.append(avg_reject.squeeze(-1))
++            avg_reject=avg_reject*(1-avg)
++        if not trim or s < child.shape[-1]-1 or need_residual:
++            newer=(residual-draft).clamp_min(0)
++            z=newer.sum(-1,keepdim=True)
++            newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
++            residual=torch.where(valid,newer,residual)
++        if not trim or s < child.shape[-1]-1:
++            newer=draft.scatter(2,tj,0)
++            z=newer.sum(-1,keepdim=True)
++            newer=torch.where(z>1e-12,newer/z.clamp_min(1e-30),torch.zeros_like(newer))
++            draft=torch.where(valid,newer,draft)
++    alpha=torch.stack(alphas,-1)
++    if need_residual or not trim:
++        residual=torch.where(residual.sum(-1,keepdim=True)>1e-12,residual,p)
++    if exact:
++        # Verification consumes conditional accept probabilities and the
++        # terminal residual; proxy reach scores would be discarded.
++        return alpha,None,residual
++    presib=torch.stack(pre,-1)
++    par=(topology['par']+1).clamp(0,N)
++    sib=topology['sib']
++    base=alpha[bi,par,sib]*presib[bi,par,sib]*topology['node_valid']
++    reach=base
++    one=p.new_ones(B,1)
++    for _ in range(max(0,depth-1)):
++        reach=base*torch.cat([one,reach],1).gather(1,par)
++    valid_ctx=torch.cat([torch.ones(B,1,dtype=torch.bool,device=dev),topology['node_valid']],1)
++    term=torch.cat([one,reach],1)*all_reject.squeeze(-1)*valid_ctx
++    if overlap_mix:
++        avg_alpha=torch.stack(avg_alphas,-1)
++        avg_presib=torch.stack(avg_pre,-1)
++        avg_base=avg_alpha[bi,par,sib]*avg_presib[bi,par,sib]*topology['node_valid']
++        avg_reach=avg_base
++        for _ in range(max(0,depth-1)):
++            avg_reach=avg_base*torch.cat([one,avg_reach],1).gather(1,par)
++        avg_term=torch.cat([one,avg_reach],1)*avg_reject.squeeze(-1)*valid_ctx
++        term=(1-overlap_mix)*term+overlap_mix*avg_term
++    return alpha,term,residual if need_residual or not trim else None
++
++
++def candidates(exit_logits,q_logits,tokens,topology,wire_n,depth,top_k,
++               target_temps=1.0,draft_temps=1.0,**policy):
++    # Preserve ver01's residual/observed-position/top-m policy. Research
++    # complement, overlap mixing and full-vocabulary ranking are not ported.
++    if policy:
++        raise ValueError('This executor preserves the paper root policy')
++    from ssd.engine.helpers.proxy_temperature import probabilities
++    from ssd.engine.helpers.p2_tree import pack_piv
++    p = probabilities(exit_logits, target_temps)
++    q = probabilities(q_logits, draft_temps)
++    _, terminal, scores = ladder(tokens, p, q, topology, depth)
++    b, r, v = scores.shape
++    flat = torch.cat([scores.reshape(b, -1), scores.new_zeros(b, 1)], 1)
++    exclude = (topology['par'] + 1).clamp(0, r-1) * v + tokens
++    exclude = torch.where(topology['node_valid'], exclude,
++                          torch.full_like(exclude, r*v))
++    flat.scatter_(1, exclude, 0)
++    values, ids = flat[:, :-1].view(b, r, v).topk(min(top_k, v), -1)
++    piv = values / values.sum(-1, keepdim=True).clamp_min(1e-10) * terminal[..., None]
++    score, index = piv.flatten(1).topk(min(wire_n, piv[0].numel()), 1)
++    pos = index // values.shape[-1]
++    tok = ids.flatten(1).gather(1, index)
++    if pos.shape[1] < wire_n:
++        pad = wire_n - pos.shape[1]
++        pos = torch.cat([pos, pos.new_zeros(b, pad)], 1)
++        tok = torch.cat([tok, tok.new_zeros(b, pad)], 1)
++        score = torch.cat([score, score.new_zeros(b, pad)], 1)
++    return pos, pack_piv(tok, score)
++
++
++class BatchedTreeProxy:
++    @torch.inference_mode()
++    def __init__(self,b,n,v,dtype,device,wire_n,depth,top_k,pool=None,q_dtype=None,c_max=3,policy=None):
++        self.exit=torch.zeros(b,n+1,v,dtype=dtype,device=device)
++        self.q=torch.zeros(b,n,v,dtype=q_dtype or dtype,device=device)
++        self.tokens=torch.zeros(b,n,dtype=torch.int64,device=device)
++        self.c_max=c_max
++        self.topology=pack_topologies([[]]*b,[[]]*b,n,device,c_max)
++        self.tt=torch.ones(b,dtype=torch.float32,device=device); self.dt=torch.ones_like(self.tt)
++        def run(): return candidates(self.exit,self.q,self.tokens,self.topology,wire_n,depth,top_k,
++                                     self.tt,self.dt,**(policy or {}))
++        for _ in range(2): run()
++        torch.cuda.synchronize(device)
++        self.graph=torch.cuda.CUDAGraph()
++        with torch.cuda.graph(self.graph,pool=pool): self.positions,self.packed=run()
++
++    @torch.inference_mode()
++    def prepare(self,parents,siblings,tokens,q,target_temps=1.0,draft_temps=1.0):
++        B=len(parents)
++        self.tt[:B].copy_(torch.as_tensor(target_temps,dtype=torch.float32,device=self.tt.device))
++        self.dt[:B].copy_(torch.as_tensor(draft_temps,dtype=torch.float32,device=self.dt.device))
++        N=self.tokens.shape[1]
++        pad=self.tokens.shape[0]-B
++        topo=pack_topologies(parents+[[]]*pad,siblings+[[]]*pad,N,self.tokens.device,self.c_max)
++        for name in self.topology: self.topology[name].copy_(topo[name])
++        self.tokens.zero_(); self.q.zero_()
++        self.tokens[:B,:tokens.shape[1]].copy_(tokens)
++        self.q[:B,:q.shape[1]].copy_(q)
++
++    @torch.inference_mode()
++    def replay(self,logits):
++        self.exit.zero_()
++        self.exit[:logits.shape[0]].copy_(logits)
++        self.graph.replay()
++        return self.positions,self.packed
++
++
++@torch.inference_mode()
++def verify_batch(logits_p,logits_q,tokens,topology,target_temps,draft_temps,
++                 sampler_x=None,fan_out=1,greedy=False,uniforms=None,stochastic_only=False):
++    """Return path nodes and recovery, without a host sync at each sibling.
++
++    Independent accept coins may be drawn before the walk. Unvisited nodes'
++    coins are ignored. This is the same conditional residual ladder as the
++    scalar verifier, with one final bounded result readback by the caller.
++    """
++    B,R,V=logits_p.shape
++    N=R-1
++    dev=logits_p.device
++    bi=torch.arange(B,device=dev)[:,None]
++    child=topology['child']
++    ext=torch.cat([tokens,tokens.new_zeros(B,1)],1)
++    child_tokens=ext.gather(1,child.reshape(B,-1)).reshape_as(child)
++    if greedy:
++        argmax=logits_p.argmax(-1)
++        accepted=(child_tokens==argmax[:,:,None])&topology['child_valid']
++        residual=None
++    else:
++        tt=torch.as_tensor(target_temps,dtype=torch.float32,device=dev)
++        dt=torch.as_tensor(draft_temps,dtype=torch.float32,device=dev)
++        p=(logits_p.float()/tt.clamp_min(1e-10)[:,None,None]).softmax(-1)
++        # Mixed batches may include T=0 requests. Dividing by a tiny
++        # temperature gives a uniform distribution over tied maxima;
++        # greedy instead selects torch.argmax's first index deterministically.
++        if not stochastic_only:
++            argmax=logits_p.argmax(-1,keepdim=True)
++            greedy_p=torch.zeros_like(p).scatter(2,argmax,1)
++            p=torch.where((tt==0)[:,None,None],greedy_p,p)
++        q=q_probs_from_logits(logits_q.reshape(B*N,V),
++                             dt[:,None].expand(B,N).reshape(-1),sampler_x,fan_out).view(B,N,V)
++        alpha,_,residual=ladder(tokens,p,q,topology,N,exact=True)
++        u=torch.rand(B,N,device=dev) if uniforms is None else uniforms
++        ue=torch.cat([u,torch.ones(B,1,device=dev)],1)
++        coins=ue.gather(1,child.reshape(B,-1)).reshape_as(child)
++        accepted=(coins<alpha)&topology['child_valid']
++    order=torch.arange(child.shape[-1],device=dev)
++    first=torch.where(accepted,order,child.shape[-1]).min(-1).values
++    selected=child.gather(2,first.clamp_max(child.shape[-1]-1)[:,:,None]).squeeze(-1)
++    selected=torch.where(first<child.shape[-1],selected,-1)
++    ctx=torch.zeros(B,1,dtype=torch.int64,device=dev)
++    live=torch.ones(B,1,dtype=torch.bool,device=dev)
++    path=[]
++    for _ in range(N):
++        node=selected.gather(1,ctx)
++        live=live&(node>=0)
++        path.append(torch.where(live,node,-1))
++        ctx=torch.where(live,node+1,ctx)
++    path=torch.cat(path,1)
++    if greedy:
++        recovery=argmax.gather(1,ctx)
++    else:
++        recovery=torch.multinomial(residual[bi[:,0],ctx[:,0]],1)
++    return path,recovery,ctx
++
++
++class BatchedTreeAccept:
++    """Capture the entire exact walk, including independent CUDA RNG draws."""
++    @torch.inference_mode()
++    def __init__(self, proxy, sampler_x, fan_out, greedy, pool=None, stochastic_only=False):
++        self.proxy=proxy
++        self.logits=torch.zeros_like(proxy.exit)
++        b=proxy.tokens.shape[0]
++        self.tt=torch.ones(b,dtype=torch.float32,device=proxy.tokens.device)
++        self.dt=torch.ones_like(self.tt)
++        def run():
++            return verify_batch(self.logits,proxy.q,proxy.tokens,proxy.topology,
++                                self.tt,self.dt,sampler_x,fan_out,greedy,
++                                stochastic_only=stochastic_only)
++        for _ in range(2): run()
++        torch.cuda.synchronize(proxy.tokens.device)
++        self.graph=torch.cuda.CUDAGraph()
++        with torch.cuda.graph(self.graph,pool=pool): self.out=run()
++
++    @torch.inference_mode()
++    def replay(self,logits,tt,dt):
++        b=logits.shape[0]
++        self.logits[:b].copy_(logits)
++        self.tt[:b].copy_(torch.as_tensor(tt,dtype=torch.float32,device=self.tt.device))
++        self.dt[:b].copy_(torch.as_tensor(dt,dtype=torch.float32,device=self.dt.device))
++        self.graph.replay()
++        return tuple(x[:b] for x in self.out)
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batch_tree_verify.py
+@@ -0,0 +1,143 @@
++"""Batched target tree verification and request-specific KV commits."""
++from time import perf_counter
++import os
++import torch
++from ssd.engine.helpers.batch_tree_common import capacity
++from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy, BatchedTreeAccept, verify_batch
++from ssd.engine.helpers.p2_tree import parse_tree_ints, validate_tree_ints, commit_copy_plan
++from ssd.engine.helpers.speculate_types import VerifyResult
++from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
++
++DETAIL_TREE = os.getenv('SSD_PROFILE_DUET_DETAIL', '0') == '1'
++
++
++@torch.inference_mode()
++def verify(verifier,seqs,result):
++    t0=perf_counter()
++    prepare_event=duet_record('batch_tree_prepare') if DETAIL_TREE else None
++    r=verifier.target_model_runner
++    cfg=r.config
++    B=len(seqs)
++    step_width=result.speculations.shape[1]-1
++    N=cfg.duet_response_token_width
++    if os.getenv('SSD_BATCH_TREE_FIXED_VERIFY','0')!='1':
++        widths={cfg.duet_phase1_k,cfg.duet_phase2_k,N}
++        N=next(n for n in sorted(widths) if n>=step_width)
++    valid=[s.verify_valid_k for s in seqs]
++    wire=result.tree_ints.cpu()
++    spec=result.speculations.cpu().tolist()
++    phases=result.phase_source.cpu().tolist()
++    hits=result.cache_hits.cpu().tolist()
++    parents=[]; siblings=[]; is_tree=[]; rows=[]
++    for b,s in enumerate(seqs):
++        tree=int(wire[b,0])>0
++        if tree:
++            ti=parse_tree_ints(wire[b],cfg.duet_tree_wire_nodes)
++            validate_tree_ints(ti,cfg.duet_tree_wire_nodes,cfg.hf_config.vocab_size,
++                               sibling_capacity=cfg.duet_tree_c_tensor)
++            n=ti['valid']
++            if n!=valid[b] or ti['epoch']!=2:
++                raise RuntimeError('Batched tree wire version/length mismatch')
++            par=ti['parent_local'][:n].tolist(); sib=ti['sib_order'][:n].tolist()
++            if ti['tok'][:n].tolist()!=spec[b][1:n+1]:
++                raise RuntimeError('Tree topology token payload mismatch')
++        else:
++            n=valid[b]; par=list(range(-1,n-1)); sib=[0]*n
++        parents.append(par); siblings.append(sib); is_tree.append(tree)
++        rows.append(dict(tokens=spec[b][:n+1],parents=par,
++                         prefix=s.num_tokens-(step_width+1),blocks=list(s.block_table)))
++    tt=[s.temperature for s in seqs]
++    dt=[s.draft_temperature if s.draft_temperature is not None else s.temperature for s in seqs]
++    if any(t>0 and d<=0 for t,d in zip(tt,dt)):
++        raise NotImplementedError('Stochastic target with deterministic tree proposals requires a different law')
++    if not hasattr(r,'_batch_tree_proxies'):
++        r._batch_tree_proxies={}; r._batch_tree_proxy_pool=None
++    cap=capacity(B)
++    proxy_key=cap,N
++    if proxy_key not in r._batch_tree_proxies:
++        capture_event=duet_record('batch_proxy_capture') if DETAIL_TREE else None
++        p=BatchedTreeProxy(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
++                           cfg.duet_proxy_wire_N,max(cfg.duet_phase1_k,cfg.duet_phase2_k),
++                           cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
++                           q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor)
++        r._batch_tree_proxies[proxy_key]=p
++        if r._batch_tree_proxy_pool is None: r._batch_tree_proxy_pool=p.graph.pool()
++        if DETAIL_TREE:duet_close('batch_proxy_capture',capture_event)
++    proxy=r._batch_tree_proxies[proxy_key]
++    tokens=torch.zeros(B,N,dtype=torch.int64,device=r.device)
++    tokens[:,:step_width].copy_(result.speculations[:,1:])
++    q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
++    q[:,:result.logits_q.shape[1]].copy_(result.logits_q)
++    proxy.prepare(parents,siblings,tokens,q,tt,dt)
++    if DETAIL_TREE:duet_close('batch_tree_prepare',prepare_event)
++    def callback(logits,b):
++        pos,packed=proxy.replay(logits)
++        verifier._send_proxy_wire(cfg,r.async_pg,r.draft_rank,pos[:B],packed[:B])
++    r._duet_proxy_fn=callback
++    try:
++        logits=r.call('run_batched_tree',rows,N+1)
++    finally:
++        r._duet_proxy_fn=None
++    topology={k:v[:B] for k,v in proxy.topology.items()}
++    accept_event=duet_record('batch_tree_accept') if DETAIL_TREE else None
++    greedy=all(t==0 for t in tt)
++    if os.getenv('SSD_BATCH_TREE_ACCEPT_GRAPH','1')=='1':
++        if not hasattr(r,'_batch_tree_accept'):
++            r._batch_tree_accept={};r._batch_tree_accept_pool=None
++        key=cap,N,greedy,cfg.stochastic_only
++        if key not in r._batch_tree_accept:
++            capture_event=duet_record('batch_accept_capture') if DETAIL_TREE else None
++            graph=BatchedTreeAccept(proxy,verifier.sampler_x,verifier.async_fan_out,
++                                    greedy,pool=r._batch_tree_accept_pool,
++                                    stochastic_only=cfg.stochastic_only)
++            r._batch_tree_accept[key]=graph
++            if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=graph.graph.pool()
++            if DETAIL_TREE:duet_close('batch_accept_capture',capture_event)
++        paths,recoveries,terminal=r._batch_tree_accept[key].replay(logits,tt,dt)
++    else:
++        paths,recoveries,terminal=verify_batch(logits,q,tokens,topology,tt,dt,
++                                              verifier.sampler_x,verifier.async_fan_out,greedy,
++                                              stochastic_only=cfg.stochastic_only)
++    result_cpu=torch.cat([paths,recoveries,terminal],1).cpu().tolist()
++    if DETAIL_TREE:duet_close('batch_tree_accept',accept_event)
++    commit_event=duet_record('batch_tree_commit') if DETAIL_TREE else None
++    suffixes=[]; recovery=[]; src=[]; dst=[]
++    for b,s in enumerate(seqs):
++        path=[j for j in result_cpu[b][:N] if j>=0]
++        suffixes.append([spec[b][0]]+[spec[b][1+j] for j in path])
++        recovery.append(result_cpu[b][N])
++        s.tree_terminal_node=result_cpu[b][N+1] if is_tree[b] else None
++        s.num_cached_tokens+=step_width+1
++        if is_tree[b]:
++            for a,z in commit_copy_plan(path,rows[b]['prefix'],s.block_table,r.block_size):
++                src.append(a); dst.append(z)
++    if src: r.call('commit_tree_kv',src,dst)
++    m=verifier.metrics
++    m['target_verify_times'].append(perf_counter()-t0)
++    m['accepted_suffix_lens_with_recovery'].extend(map(len,suffixes))
++    m['cache_hits'].append(sum(hits)/B)
++    m['phase1_hits'].append(sum(p==1 for p in phases)/B)
++    m['phase2_hits'].append(sum(p==2 for p in phases)/B)
++    for b,suffix in enumerate(suffixes):
++        length=len(suffix)
++        physical_queries=(((sum(v+1 for v in valid)+7)//8)*8
++                          if os.getenv('SSD_PACKED_TREE_VERIFY','0')=='1'
++                          else cap*(N+1))
++        m['phase_events'].append(dict(tree=is_tree[b],batch_size=B,verify_width=step_width,
++            physical_verify_width=N,
++            physical_batch_queries=physical_queries,
++            step_id=result.step_id,source=phases[b],cache_hit=int(hits[b]),
++            accepted_len=length,accepted_spec_len=length-1,valid_k=valid[b]))
++        if os.getenv('SSD_TREE_SHAPE_METRICS','0')=='1':
++            depths=[]
++            for parent in parents[b]:depths.append(1 if parent<0 else depths[parent]+1)
++            maximum=max(depths,default=0)
++            m['phase_events'][-1].update(tree_max_depth=maximum,
++                tree_sibling_width=max(siblings[b],default=-1)+1,
++                reached_depth_ceiling=(length-1==maximum),
++                node_utilization=(length-1)/valid[b] if valid[b] else 0.)
++        m['accepted_suffix_lens_on_hit' if hits[b] else 'accepted_suffix_lens_on_miss'].append(length)
++        if hits[b] and phases[b] in (1,2):
++            m[f'accepted_lens_phase{phases[b]}_hit'].append(length-1)
++    if DETAIL_TREE:duet_close('batch_tree_commit',commit_event)
++    return VerifyResult(suffixes,recovery)
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/batched_tree_executor.py
+@@ -0,0 +1,158 @@
++"""Batch independent dynamic-tree arenas into one draft forward per round.
++
++This primitive preserves each request's top-W budget and node namespace.
++``batch_tree_draft`` binds these arenas to request-owned cache, wire, and
++accepted KV state. Timings of this primitive alone are not serving TPS.
++"""
++import torch
++import flashinfer
++from ssd.utils.context import set_context, reset_context
++
++
++class BatchedTreeExecutor:
++    def __init__(self, executors, staging_only=False, workspace=None):
++        if not executors:
++            raise ValueError("empty tree batch")
++        self.executors = tuple(executors)
++        self.first = executors[0]
++        a = self.first
++        for ex in executors:
++            if (ex.round_widths, ex.F, ex.V, ex.bs, ex.H, ex.HKV, ex.D,
++                ex.dtype, ex.dev) != (
++                    a.round_widths, a.F, a.V, a.bs, a.H, a.HKV, a.D,
++                    a.dtype, a.dev):
++                raise ValueError("batched arenas require matching model and round shapes")
++            if ex.model is not a.model:
++                raise ValueError("batched arenas must share the same model instance")
++        self.wrappers = {}
++        self.graphs = {}
++        self.workspaces = {}
++        self.staging_only = staging_only
++        # Serving batches use fused mask/fanout arithmetic by default.
++        # Standalone B1 executors retain the paper execution path.
++        for ex in self.executors:
++            ex.batched_fused_math = staging_only
++        self.shared_workspace=workspace
++
++    def prepare(self, page_bucket):
++        if page_bucket in self.wrappers:
++            return
++        a, B = self.first, len(self.executors)
++        for ex in self.executors:
++            if page_bucket not in ex.wrappers:
++                if self.staging_only:
++                    # Only the combined wrapper performs attention. Per-arena
++                    # generators need mask/page buffers, not B private FA2
++                    # workspaces and plans for each shape.
++                    from types import SimpleNamespace
++                    cols=(page_bucket+ex.canvas_extra_pages)*ex.bs
++                    ex.wrappers[page_bucket]=[SimpleNamespace(
++                        _canvas_cols=cols,
++                        _paged_kv_indices_buf=torch.zeros(page_bucket+ex.canvas_extra_pages,
++                            device=ex.dev,dtype=torch.int32),
++                        _custom_mask_buf=torch.zeros(w*cols//8,device=ex.dev,dtype=torch.uint8))
++                        for w in ex.round_widths]
++                else:
++                    ex.prepare_bucket(page_bucket)
++            if page_bucket not in ex._local_idx_by_bucket:
++                ex._local_idx_by_bucket[page_bucket] = torch.full_like(ex._local_idx, -1)
++            ex._local_idx = ex._local_idx_by_bucket[page_bucket]
++        workspace = self.shared_workspace
++        if workspace is None:
++            workspace = torch.empty(a._workspace_bytes, dtype=torch.uint8, device=a.dev)
++        elif workspace.numel()<a._workspace_bytes:
++            raise ValueError('Shared attention workspace is smaller than the forest requirement')
++        self.workspaces[page_bucket] = workspace
++        pages = page_bucket + a.canvas_extra_pages
++        canvas = pages * a.bs
++        wrappers, by_width = [], {}
++        for W in a.round_widths:
++            qo = torch.arange(B + 1, device=a.dev, dtype=torch.int32) * W
++            kv = torch.arange(B + 1, device=a.dev, dtype=torch.int32) * pages
++            ids = torch.zeros(B * pages, device=a.dev, dtype=torch.int32)
++            last = torch.full((B,), a.bs, device=a.dev, dtype=torch.int32)
++            # Each sequence starts on a byte boundary (page size is a
++            # multiple of eight), so independent packed masks concatenate.
++            if (W * canvas) % 8:
++                raise ValueError("tree mask rows must end on a byte boundary")
++            mask = torch.zeros(B * W * canvas // 8, device=a.dev, dtype=torch.uint8)
++            mi = torch.arange(B + 1, device=a.dev, dtype=torch.int32) * W * canvas
++            wr = flashinfer.BatchPrefillWithPagedKVCacheWrapper(
++                workspace, "NHD", backend="fa2", use_cuda_graph=True,
++                qo_indptr_buf=qo, paged_kv_indptr_buf=kv,
++                paged_kv_indices_buf=ids, paged_kv_last_page_len_buf=last,
++                custom_mask_buf=mask, mask_indptr_buf=mi)
++            if W in by_width:
++                old = by_width[W]
++                wr._int_workspace_buffer = old._int_workspace_buffer
++                wr._pin_memory_int_workspace_buffer = old._pin_memory_int_workspace_buffer
++            else:
++                by_width[W] = wr
++            wr.plan(qo, kv, ids, last, a.H, a.HKV, a.D, a.bs,
++                    custom_mask=torch.zeros(B * W * canvas,
++                                            device=a.dev, dtype=torch.bool),
++                    q_data_type=a.dtype, kv_data_type=a.dtype)
++            wrappers.append(wr)
++        self.wrappers[page_bucket] = wrappers
++
++    @torch.inference_mode()
++    def run_once(self, page_bucket, finalize=True):
++        a, B = self.first, len(self.executors)
++        if page_bucket not in self.wrappers:
++            self.prepare(page_bucket)
++        for ex in self.executors:
++            ex._local_idx = ex._local_idx_by_bucket[page_bucket]
++        streams = [ex.iter_rounds(page_bucket, finalize=False) for ex in self.executors]
++        requests = [next(stream) for stream in streams]
++        for f, W in enumerate(a.round_widths):
++            wr = self.wrappers[page_bucket][f]
++            # These copies remain inside the graph: page IDs and masks vary
++            # on every replay even when the capacity bucket is unchanged.
++            torch.cat([ex.wrappers[page_bucket][f]._paged_kv_indices_buf
++                       for ex in self.executors], out=wr._paged_kv_indices_buf)
++            mask = torch.cat([ex.wrappers[page_bucket][f]._custom_mask_buf
++                              for ex in self.executors])
++            wr._custom_mask_buf[:mask.numel()].copy_(mask)
++            ids = torch.cat([r[0] for r in requests])
++            rope = torch.cat([r[1] for r in requests])
++            slot = torch.cat([r[2]["slot_mapping"] for r in requests])
++            lens = torch.cat([r[2]["context_lens"] for r in requests])
++            bt = torch.cat([r[2]["block_tables"] for r in requests])
++            set_context(is_prefill=False, slot_mapping=slot,
++                        context_lens=lens, block_tables=bt,
++                        active_mq_len=W, active_wrappers={B: wr})
++            try:
++                hidden = a.model(ids, rope)
++                logits = a.compute_logits(hidden, False).reshape(B, W, a.V).float()
++            finally:
++                reset_context()
++            new_requests = []
++            for b, stream in enumerate(streams):
++                try:
++                    new_requests.append(stream.send(logits[b]))
++                except StopIteration:
++                    if f != a.F - 1:
++                        raise RuntimeError("tree arena terminated before the final round")
++            requests = new_requests
++        if finalize:
++            for ex in self.executors:
++                ex._finalize_outputs()
++
++    @torch.inference_mode()
++    def capture(self, page_bucket, graph_pool=None):
++        self.prepare(page_bucket)
++        for _ in range(2):
++            self.run_once(page_bucket, finalize=False)
++        torch.cuda.synchronize()
++        g = torch.cuda.CUDAGraph()
++        for ex in self.executors:
++            g.register_generator_state(ex.gen)
++        with torch.cuda.graph(g, pool=graph_pool):
++            self.run_once(page_bucket, finalize=False)
++        self.graphs[page_bucket] = g
++
++    @torch.inference_mode()
++    def replay(self, page_bucket):
++        self.graphs[page_bucket].replay()
++        for ex in self.executors:
++            ex._finalize_outputs()
+--- a/ssd/ssd/engine/helpers/p1_tree.py
++++ b/ssd/ssd/engine/helpers/p1_tree.py
+@@ -319,14 +319,12 @@
+             glue_width=int(context_bucket),
+             materialize_backbone_logits=materialize_backbone_logits,
+             round_widths=round_widths)
+-        # Three context buckets remove substantial live-lane padding, but a
+-        # generic 64 MiB FlashInfer workspace for every one of seven page
+-        # shapes would exhaust the 24 GiB production draft GPU.  The real
+-        # TinyLlama/FA2 P1 shape requests about 41 MiB; keep a 48 MiB P1-only
+-        # margin (the generic/P2 executor retains its conservative 64 MiB).
+-        # This is set before prepare_bucket() allocates any workspace.
++        # Qwama-0.5B's widest P1 bucket needs 56 MiB for FA2 temporary V;
++        # the historical TinyLlama-specific 48 MiB limit fails at startup.
++        # Retain an explicit override for model/hardware-specific sizing.
++        # DraftRunner reserves graph headroom separately from KV capacity.
+         p1_workspace_mb = int(os.environ.get(
+-            "SSD_P1_TREE_EXEC_WORKSPACE_MB", "48"))
++            "SSD_P1_TREE_EXEC_WORKSPACE_MB", "64"))
+         if p1_workspace_mb <= 0:
+             raise ValueError(
+                 "SSD_P1_TREE_EXEC_WORKSPACE_MB must be positive")
+--- a/ssd/ssd/engine/helpers/p2_tree_executor.py
++++ b/ssd/ssd/engine/helpers/p2_tree_executor.py
+@@ -12,8 +12,10 @@
+ - RNG: 전용 generator + register_generator_state (기본 RNG 무오염
+   참증명 통과 패턴).
+ - set_context는 라운드당 capture 시 1회 (replay 중 파이썬 0).
+-- 미지원 조건(비-Llama draft/EAGLE/B>1/temp0/페이지 초과)은 호출측
+-  arena fallback.
++- 이 실행기는 한 요청의 arena를 유지한다. BatchedTreeExecutor는
++  iter_rounds 프로토콜로 여러 요청의 model forward를 합친다.
++- T=0은 greedy WOR 경로를 사용한다. 비-Llama draft/EAGLE 및
++  페이지 용량 초과 처리는 호출측 지원 범위를 확인한다.
+ 
+ 최종 범위: [W,Nv] tok/par/sib/raw_q/parent_cell/valid, parent-q
+ uniq(U-slot) 매핑, chain 호환 backbone token/logits까지 graph가 직접
+@@ -825,6 +827,10 @@
+         """행별 [prefix 1s | glue | 조상셀 | self] canvas — 열 배치가
+         prefix 길이(요청별 상이)에 의존하므로 전부 버퍼-구동 텐서
+         연산 (python int 슬라이싱은 캡처에 박힘 — 금지)."""
++        if os.getenv('SSD_TREE_FUSED_MATH',str(int(getattr(self,'batched_fused_math',False))))=='1':
++            from ssd.engine.helpers.tree_fused_math import pack_mask
++            pack_mask(self,wr,f)
++            return
+         W = self.round_widths[f]
+         canvas = wr._canvas_cols
+         ar = self.arena
+@@ -886,7 +892,7 @@
+             1, dtype=torch.int64).to(torch.uint8)
+         wr._custom_mask_buf[:packed.numel()].copy_(packed)
+ 
+-    def run_once(self, n_pages0, finalize=True):
++    def iter_rounds(self, n_pages0, finalize=True):
+         """Execute the fixed-shape P2 body once.
+ 
+         ``finalize=False`` is used for CUDA graph capture.  The four draft
+@@ -977,7 +983,10 @@
+                 sel, sel_valid = PT._arena_select(
+                     ar, "level", wf, f, F, tip_idx, remaining)
+             self._sel[f] = (sel, sel_valid)
+-            if _global:
++            if _global and os.getenv('SSD_TREE_FUSED_MATH',str(int(getattr(self,'batched_fused_math',False))))=='1':
++                from ssd.engine.helpers.tree_fused_math import fanout
++                fan = fanout(ar,sel,sel_valid,remaining,C,F-f-1)
++            elif _global:
+                 fan = PT._arena_fanout_global(
+                     ar, sel, sel_valid, remaining, C, R,
+                     future_rounds=F - f - 1)
+@@ -1013,7 +1022,7 @@
+                 self.dbg_fan[f, :wf].copy_(fan)
+             self._pack_row_mask(wrappers[f], f)
+             # ── raw draft forward (capture-시 context 1회 bake)
+-            set_context(
++            logits = yield ids, rope, dict(
+                 is_prefill=False,
+                 slot_mapping=self.in_slot[f][:wf],
+                 context_lens=self.in_ctx_len[f],
+@@ -1021,11 +1030,6 @@
+                 active_mq_len=wf,
+                 active_wrappers={1: wrappers[f]},
+             )
+-            try:
+-                hidden = self.model(ids, rope)
+-                logits = self.compute_logits(hidden, False)[:wf].float()
+-            finally:
+-                reset_context()
+             cell_base = self.round_offsets[f]
+             self.cell_logits[cell_base:cell_base + wf] = logits
+             toks, raws = PT.tree_sample_wor(
+@@ -1046,7 +1050,8 @@
+             par = sel.unsqueeze(1).expand(wf, C).reshape(-1)
+             rq = raws.double().reshape(-1)
+             lp = ar.logpri.gather(0, par) + rq.clamp_min(1e-9).log()
+-            if wf > 10 or ar.anc_words > 1:
++            if (wf > 10 or ar.anc_words > 1
++                    or os.getenv("SSD_TREE_PARALLEL_INSERT", "0") == "1"):
+                 _mark_selected_parents_kernel[(triton.cdiv(wf, 32),)](
+                     sel, sel_valid, ar.cell, ar.state,
+                     CELL_BASE=cell_base, W=wf, BLOCK=32)
+@@ -1089,6 +1094,23 @@
+         else:
+             self._finalize_outputs()
+ 
++    def run_once(self, n_pages0, finalize=True):
++        """Drive one arena, sharing the round protocol with batched execution."""
++        rounds = self.iter_rounds(n_pages0, finalize=finalize)
++        request = next(rounds)
++        while True:
++            ids, rope, context = request
++            set_context(**context)
++            try:
++                hidden = self.model(ids, rope)
++                logits = self.compute_logits(hidden, False).reshape(-1, self.V).float()
++            finally:
++                reset_context()
++            try:
++                request = rounds.send(logits)
++            except StopIteration:
++                break
++
+     def _finalize_outputs(self):
+         """Build parent-q and backbone outputs using fixed-shape GPU ops.
+ 
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/tree_fused_math.py
+@@ -0,0 +1,66 @@
++"""Exact fixed-shape fusion of mask construction and round-robin fanout."""
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit
++def _mask_kernel(Sel, Valid, Root, Anc, Glue, Prefix, GlueWidth, Out,
++                 CANVAS:tl.constexpr, GW:tl.constexpr, WORDS:tl.constexpr,
++                 PRIOR:tl.constexpr, BLOCK:tl.constexpr):
++    row=tl.program_id(0)
++    byte=tl.program_id(1)*BLOCK+tl.arange(0,BLOCK)
++    bit=tl.arange(0,8)
++    col=byte[:,None]*8+bit[None,:]
++    live=tl.load(Valid+row)
++    selected=tl.maximum(tl.load(Sel+row),0)
++    root=tl.where(live,tl.load(Root+selected),0)
++    prefix=tl.load(Prefix);gw=tl.load(GlueWidth)
++    off=col-prefix
++    glue=tl.load(Glue+root*GW+tl.minimum(tl.maximum(off,0),GW-1))
++    value=tl.where((off>=0)&(off<gw),glue*live,col<prefix)
++    spec=off-gw
++    if PRIOR>0:
++        safe=tl.minimum(tl.maximum(spec,0),PRIOR-1)
++        word=tl.load(Anc+selected*WORDS+safe//63)
++        ancestral=((word>>(safe%63))&1)*live
++        value=tl.where((spec>=0)&(spec<PRIOR),ancestral,value)
++    value=tl.where(col==prefix+gw+PRIOR+row,live,value)
++    packed=tl.sum(value.to(tl.int32)*(1<<bit[None,:]),axis=1)
++    tl.store(Out+row*(CANVAS//8)+byte,packed,byte<CANVAS//8)
++
++
++def pack_mask(executor, wrapper, round_index):
++    ex=executor;ar=ex.arena;sel,valid=ex._sel[round_index]
++    canvas=wrapper._canvas_cols
++    if canvas%8:raise ValueError('Mask canvas must be byte aligned')
++    _mask_kernel[(sel.numel(),triton.cdiv(canvas//8,32))](
++        sel,valid,ar.root,ar.anc_bits,ex.in_glue,ex.in_prefix_len,ex.in_glue_w,
++        wrapper._custom_mask_buf,CANVAS=canvas,GW=ex.in_glue.shape[1],
++        WORDS=ar.anc_words,PRIOR=ex.round_offsets[round_index],BLOCK=32)
++
++
++@triton.jit
++def _fan_kernel(Root, Pri, Sel, Valid, Remaining, Out,
++                W:tl.constexpr, C:tl.constexpr, FUTURE:tl.constexpr, BLOCK:tl.constexpr):
++    i=tl.arange(0,BLOCK)
++    valid=tl.load(Valid+i,i<W,False)
++    selected=tl.maximum(tl.load(Sel+i,i<W,0),0)
++    root=tl.load(Root+selected)
++    pri=tl.load(Pri+selected).to(tl.float32)
++    same=root[:,None]==root[None,:]
++    earlier=(pri[None,:]>pri[:,None])|((pri[None,:]==pri[:,None])&(i[None,:]<i[:,None]))
++    rank=tl.sum((same&earlier&valid[None,:]).to(tl.int32),1)
++    count=tl.maximum(1,tl.sum((same&valid[None,:]).to(tl.int32),1))
++    left=tl.load(Remaining+root)
++    now=tl.where(left>0,tl.maximum(1,left-FUTURE),0)
++    fan=tl.minimum(C,now//count+(rank<now%count))
++    tl.store(Out+i,tl.where(valid,fan,0),i<W)
++
++
++def fanout(arena, selected, valid, remaining, c_tensor, future_rounds):
++    out=torch.empty_like(selected)
++    _fan_kernel[(1,)](arena.root,arena.logpri,selected,valid,remaining,out,
++        W=selected.numel(),C=int(c_tensor),FUTURE=max(0,int(future_rounds)),
++        BLOCK=triton.next_power_of_2(selected.numel()))
++    return out
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/tree_host_topology.py
+@@ -0,0 +1,20 @@
++"""Reuse already validated CPU topology for draft glue inputs."""
++import numpy as np
++
++
++def context_topology(parents):
++    n = len(parents)
++    depth = [0] * n
++    ancestors = [[] for _ in range(n)]
++    rows = np.zeros((n + 1, n + 1), dtype=np.uint8)
++    rows[0, 0] = 1
++    for j, parent in enumerate(parents):
++        parent = int(parent)
++        if parent < -1 or parent >= j:
++            raise ValueError(f'Invalid tree parent {parent} for node {j}')
++        if parent >= 0:
++            depth[j] = depth[parent] + 1
++            ancestors[j] = ancestors[parent] + [parent]
++        rows[j+1, 0] = rows[j+1, j+1] = 1
++        for a in ancestors[j]: rows[j+1, a+1] = 1
++    return depth, ancestors, rows
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/tree_proxy_stream.py
+@@ -0,0 +1,29 @@
++"""Optional tree proxy head/scoring overlap with remaining target layers."""
++import torch
++from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
++
++
++class TreeProxySideStream:
++    def __init__(self, device):
++        self.stream=torch.cuda.Stream(device=device)
++        self.done=torch.cuda.Event()
++        self.pending=False
++
++    def launch(self, logits, batch, callback):
++        # Fresh normalized hidden/logits and topology/q preparation belong to
++        # the calling stream. Never pass residual storage mutated by graph-post.
++        self.stream.wait_stream(torch.cuda.current_stream(logits.device))
++        logits.record_stream(self.stream)
++        with torch.cuda.stream(self.stream):
++            event=duet_record('batch_proxy_side')
++            callback(logits,batch)
++            duet_close('batch_proxy_side',event)
++            self.done.record(self.stream)
++            self.pending=True
++
++    def finish(self):
++        # Enqueue after final target logits, before acceptance or graph-pool
++        # reuse. This does not block the CPU or serialize the target post layers.
++        if self.pending:
++            torch.cuda.current_stream(self.stream.device).wait_event(self.done)
++            self.pending=False
+--- a/ssd/ssd/engine/llm_engine.py
++++ b/ssd/ssd/engine/llm_engine.py
+@@ -3,7 +3,7 @@
+ 
+ from ssd.config import Config
+ from ssd.sampling_params import SamplingParams
+-from ssd.utils.misc import infer_model_family
++from ssd.utils.misc import validate_speculative_vocab
+ from ssd.engine.sequence import Sequence
+ from ssd.engine.scheduler import Scheduler
+ from ssd.engine.model_runner import ModelRunner
+@@ -54,37 +54,24 @@
+         config_kwargs = {k: v for k, v in kwargs.items() if k in config_fields}
+         config = Config(model, **config_kwargs)
+         self.config = config
++        if config.speculate and not config.draft_async:
++            from ssd.layers.layernorm import prepare_norms_for_colocation
++            prepare_norms_for_colocation()
+         Sequence.block_size = config.kvcache_block_size 
+ 
+         assert config.kvcache_block_size >= (
+             2 * config.speculate_k + 2), "ERROR: support for block size < 2*k+2 is not implemented"
+         assert config.num_gpus > 1 or not config.draft_async, "ERROR: draft_async requires at least 2 gpus"
+             
+-        # Check that target and draft are from the same family.
+-        # Cross-family draft (e.g. Qwama = Qwen2 arch with Llama-3 vocab,
+-        # paired against a Llama-3 target) is allowed *iff* vocab_size
+-        # matches — token-id-level speculation is well-defined whenever
+-        # the two tokenizers share an id-space. The same-family check was
+-        # always a proxy for that.
+-        if config.speculate:
+-            target_family = infer_model_family(config.model)
+-            draft_family = infer_model_family(config.draft)
+-            if target_family != draft_family:
+-                from transformers import AutoConfig
+-                target_vocab = AutoConfig.from_pretrained(config.model).vocab_size
+-                draft_vocab = AutoConfig.from_pretrained(config.draft).vocab_size
+-                assert target_vocab == draft_vocab, (
+-                    f"ERROR: target/draft family mismatch "
+-                    f"({target_family} vs {draft_family}) and vocab_size "
+-                    f"mismatch ({target_vocab} vs {draft_vocab}). "
+-                    f"Cross-family SD requires vocab equality."
+-                )
+-                print(
+-                    f"[LLMEngine] cross-family draft allowed: "
+-                    f"target_family={target_family} draft_family={draft_family} "
+-                    f"vocab_size={target_vocab} (equal)",
+-                    flush=True,
+-                )
++        self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
++        # EAGLE uses the target's token IDs by construction and may not ship
++        # a separate tokenizer. Independent draft models must prove the map.
++        if config.speculate and not config.use_eagle:
++            validate_speculative_vocab(
++                self.tokenizer,
++                AutoTokenizer.from_pretrained(config.draft, use_fast=True),
++                config.hf_config.vocab_size, config.draft_hf_config.vocab_size)
++        os.environ.setdefault("SSD_SHM_NAME", f"ssd_{os.getpid()}")
+ 
+         self.ps = []
+         self.events = []
+@@ -161,7 +148,6 @@
+             self.draft_cfg = self.draft_runner.draft_cfg
+             print(f'Draft runner created on rank 0 (no async)', flush=True)
+ 
+-        self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
+         config.eos = self.tokenizer.eos_token_id
+         self.scheduler = Scheduler(config, draft_cfg=self.draft_cfg if config.speculate else None)
+         assert config.max_model_len == self.scheduler.max_model_len
+@@ -266,25 +252,7 @@
+                     self.draft_ps.join(timeout=2)
+         except Exception:
+             pass
+-        # 5) Kill resource tracker so it doesn't print spurious warnings,
+-        #    then clean up POSIX semaphores ourselves before hard exit.
+-        try:
+-            import signal
+-            from multiprocessing.resource_tracker import _resource_tracker
+-            if _resource_tracker._pid is not None:
+-                os.kill(_resource_tracker._pid, signal.SIGKILL)
+-                os.waitpid(_resource_tracker._pid, 0)
+-        except Exception:
+-            pass
+-        try:
+-            from pathlib import Path
+-            for sem in Path("/dev/shm").glob("sem.*"):
+-                try:
+-                    sem.unlink()
+-                except OSError:
+-                    pass
+-        except Exception:
+-            pass
++        # Multiprocessing owns its own semaphores; preserve other engines.
+         # 6) Force-exit current process if requested
+         if hard:
+             os._exit(0)
+--- a/ssd/ssd/engine/model_runner.py
++++ b/ssd/ssd/engine/model_runner.py
+@@ -166,8 +166,10 @@
+         # FlashInfer wrapper/workspace 필요 (기존엔 draft 전용 — 리뷰4
+         # 확인). tree policy 게이트 — off면 무할당 (OFF 경로 불변).
+         self.tree_verify_wrappers = None
++        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
++        self.batched_tree_enabled = batch_tree_enabled(config)
+         if (not is_draft) and getattr(config, "duet_enabled", False) \
+-                and getattr(config, "duet_tree_enabled", False):
++                and getattr(config, "duet_tree_enabled", False) and not self.batched_tree_enabled:
+             self._init_tree_verify_wrappers()
+         
+         if self.verbose: print(f'INSIDE MODEL RUNNER INIT, DRAFT={is_draft}', flush=True)
+@@ -214,23 +216,26 @@
+             print(f'F={self.config.async_fan_out}, fan_out_list={self.config.fan_out_list}, fan_out_list_miss={self.config.fan_out_list_miss}, MQ_LEN={self.config.MQ_LEN}', flush=True)
+ 
+         if should_use_dist: # (draft model when async=False or just single gpu logic) doesn't even enter this loop 
++            # One namespace per engine, inherited by spawned TP workers.
++            # Never unlink another experiment's shared-memory segment.
++            shm_name = os.environ.get("SSD_SHM_NAME", "ssd")
+             if self.is_draft and self.draft_async: 
+                 pass # handled on draft runner after this init, includes doing draft_loop
+             elif self.rank == 0: # target in a distributed setup 
+                 # Try to clean up any existing shared memory first
+                 try:
+-                    existing_shm = SharedMemory(name="ssd")
++                    existing_shm = SharedMemory(name=shm_name)
+                     existing_shm.close() # here we bind it 
+                     existing_shm.unlink()
+                 except FileNotFoundError:
+                     # can proceed, nothing to clean up 
+                     pass
+                 
+-                self.shm = SharedMemory(name="ssd", create=True, size=2**28)
++                self.shm = SharedMemory(name=shm_name, create=True, size=2**28)
+                 dist.barrier(group=self.tp_pg, device_ids=[self.rank]) # leader on tp_group 
+             else: 
+                 dist.barrier(group=self.tp_pg, device_ids=[self.rank]) # follower on tp_group, don't want them hooking onto shm before its been created 
+-                self.shm = SharedMemory(name="ssd")
++                self.shm = SharedMemory(name=shm_name)
+                 self.loop()
+                 
+         if self.verbose: print(f'-----{model_type}MODEL RUNNER INITIALIZED----', flush=True)
+@@ -725,7 +730,7 @@
+             self.graph_pools["decode"] = decode_graph_pool
+             self.graphs["decode"] = decode_graphs
+             self.graph_bs_list["decode"] = decode_graph_bs_list
+-            if self.config.speculate and not (self.is_draft and self.config.use_eagle):  # verify CG: target always, non-EAGLE draft for fan-out; EAGLE draft uses glue_decode CG instead
++            if self.config.speculate and not self.batched_tree_enabled and not (self.is_draft and self.config.use_eagle):  # verify CG: target always, non-EAGLE draft for fan-out; EAGLE draft uses glue_decode CG instead
+                 if self.config.duet_enabled and not self.is_draft:
+                     # DUET target: split verify CudaGraph (skip full verify → VRAM saving).
+                     # Split-only K1/K2 mode: target verify per-bucket
+@@ -811,7 +816,7 @@
+                                   + (f' + glue_k2 CG (K2+1={K2 + 1})' if K2 < K1
+                                      else ' (K2==K1, k2 SKIPPED)'),
+                                   flush=True)
+-            if self.config.speculate and self.is_draft and self.config.draft_async:
++            if self.config.speculate and self.is_draft and self.config.draft_async and not self.batched_tree_enabled:
+                 fi_tree_decode_graph_vars, fi_tree_decode_graph_pool, fi_tree_decode_graphs, fi_tree_decode_graph_bs_list = capture_fi_tree_decode_cudagraph(self)  # fi tree decode cudagraph, draft only
+                 self.graph_vars["fi_tree_decode"] = fi_tree_decode_graph_vars
+                 self.graph_pools["fi_tree_decode"] = fi_tree_decode_graph_pool
+@@ -1116,6 +1121,8 @@
+         """
+         self._tree_proxy_graphs_prebuilt = {}
+         self._chain_proxy_graphs_prebuilt = {}
++        if self.batched_tree_enabled:
++            return
+         cfg = self.config
+         if (self.is_draft or self.rank != 0
+                 or self.device.type != "cuda"
+@@ -1529,6 +1536,13 @@
+             duet_proxy_fn=self._duet_proxy_fn,
+             bucket=bucket,
+         )
++
++    @torch.inference_mode()
++    def run_batched_tree(self, rows, width):
++        from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
++        if not hasattr(self, '_batched_tree_forward'):
++            self._batched_tree_forward = BatchedTreeForward(self, split=True)
++        return self._batched_tree_forward.run(rows, width, self._duet_proxy_fn)
+ 
+     @torch.inference_mode()
+     def commit_tree_kv(self, src_slots, dst_slots):
+--- a/ssd/ssd/engine/speculator_async.py
++++ b/ssd/ssd/engine/speculator_async.py
+@@ -40,6 +40,7 @@
+     spec_ext = speculations_tokens[:, :ext_w].tolist()
+     for i, seq in enumerate(seqs):
+         vk_i = vk_list[i] if vk_list is not None else K
++        seq.verify_valid_k = vk_i
+         seq.token_ids.extend(spec_ext[i])
+         seq.num_tokens = len(seq.token_ids)
+         seq.last_token = seq.token_ids[-1]
+@@ -67,6 +68,8 @@
+     ):
+         super().__init__(lookahead, device)
+         self.config = config          # T3.4-b2: tree wire 게이트/크기 참조
++        from ssd.engine.helpers.batch_tree_common import enabled as batch_tree_enabled
++        self.batched_tree_enabled = config is not None and batch_tree_enabled(config)
+         self.async_fan_out = async_fan_out
+         self.max_blocks = max_blocks
+         self.vocab_size = vocab_size
+@@ -158,6 +161,13 @@
+         dist.send(metadata, dst=self.draft_runner_rank, group=self.async_pg)
+         send_int64(self.async_pg, self.draft_runner_rank,
+                    input_ids, num_tokens, draft_block_table.to(torch.int64))
++        if self.batched_tree_enabled:
++            # Re-prefill starts a new KV generation for only these requests.
++            # Other live sequences may still need their staged tree paths.
++            dist.send(torch.tensor([s.seq_id for s in seqs], dtype=torch.int64,
++                                   device=self.device),dst=self.draft_runner_rank,group=self.async_pg)
++            for seq in seqs:
++                seq.tree_terminal_node = None
+         if eagle_acts is not None:
+             dist.send(eagle_acts, dst=self.draft_runner_rank, group=self.async_pg)
+         return SpeculateResult([], [])
+@@ -350,6 +360,15 @@
+         # 읽도록 self에 스태시 (recv 헬퍼와 함수 스코프가 다름)
+         self._tree_ints_step = (self._fused_response[_spec_end:].view(B, -1)
+                                 if self._tree_wire_extra else None)
++        if self.batched_tree_enabled:
++            # One node-aligned q payload handles mixed chain/tree rows. Its
++            # width comes from the preceding metadata on both peers.
++            width = int(valid_k.max())
++            self._logits_q = torch.empty(B,width,self.vocab_size,
++                                         dtype=self.draft_dtype,device=self.device)
++            dist.recv(self._logits_q,src=self.draft_runner_rank,group=self.async_pg)
++            _mc('target_recv_response_wait',_mev_recv)
++            return speculations,self._logits_q,cache_hits,phase_source,valid_k
+         # The fused block tells us whether the mutually exclusive next
+         # payload is ordinary chain q or dynamic-tree parent q.  Reading two
+         # tiny metadata scalars here replaces transferring unused ordinary q
+--- a/ssd/ssd/engine/verifier.py
++++ b/ssd/ssd/engine/verifier.py
+@@ -223,6 +223,9 @@
+ 
+     def verify(self, seqs: list[Sequence], speculate_result: SpeculateResult, eagle: bool = False) -> VerifyResult:
+         """Verify speculative tokens using the target model."""
++        if getattr(self.target_model_runner, 'batched_tree_enabled', False):
++            from ssd.engine.helpers.batch_tree_verify import verify as verify_batched_tree
++            return verify_batched_tree(self, seqs, speculate_result)
+         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
+         batch_size = len(seqs)
+         config = self.target_model_runner.config
+@@ -572,6 +575,9 @@
+             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
+                 _src = int(_ps_cpu[i].item()) if _ps_cpu is not None else 0
+                 self.metrics["phase_events"].append({
++                    "tree": _tree_meta_arg is not None,
++                    "batch_size": batch_size,
++                    "verify_width": _step_lookahead,
+                     "step_id": (int(speculate_result.step_id)
+                                 if speculate_result.step_id is not None else None),
+                     "source": _src,
+--- a/ssd/ssd/layers/attention.py
++++ b/ssd/ssd/layers/attention.py
+@@ -177,7 +177,7 @@
+                     )
+ 
+             elif tree_decode:
+-                if self.only_prefill_wrapper is not None:
++                if context.active_wrappers is None and self.only_prefill_wrapper is not None:
+                     prefill_wrapper = self.only_prefill_wrapper
+                 else:
+                     # Layout-aware: use context.active_mq_len/active_wrappers if set
+--- a/ssd/ssd/layers/layernorm.py
++++ b/ssd/ssd/layers/layernorm.py
+@@ -1,5 +1,14 @@
+ import torch
+ from torch import nn
++
++
++def prepare_norms_for_colocation():
++    # Two colocated models may have different eps values. Dynamo can otherwise
++    # generalize self.eps into a scalar graph input and create its CUDA tensor
++    # inside a surrounding CUDA Graph capture. Keep Python float inputs as
++    # guarded constants. mark_static(module_class) alone only fixes integer
++    # attributes and does not prevent this float-to-tensor conversion.
++    torch._dynamo.config.specialize_float = True
+ 
+ 
+ class RMSHeadNorm(nn.Module):
+--- a/ssd/ssd/utils/misc.py
++++ b/ssd/ssd/utils/misc.py
+@@ -1,4 +1,21 @@
+ from transformers import AutoTokenizer
++
++
++def validate_speculative_vocab(target_tokenizer, draft_tokenizer,
++                               target_vocab_size, draft_vocab_size):
++    """Token-level verification needs identical IDs, not only equal sizes."""
++    if target_vocab_size != draft_vocab_size:
++        raise ValueError(
++            "Speculative decoding requires equal target/draft vocabulary "
++            f"dimensions; got {target_vocab_size} and {draft_vocab_size}")
++    target_vocab = target_tokenizer.get_vocab()
++    draft_vocab = draft_tokenizer.get_vocab()
++    if target_vocab != draft_vocab:
++        raise ValueError(
++            "Speculative decoding requires identical token-to-ID mappings; "
++            "equal vocab_size or model family alone is insufficient")
++    if any(i < 0 or i >= target_vocab_size for i in target_vocab.values()):
++        raise ValueError("Tokenizer contains IDs outside the model vocabulary")
+ 
+ 
+ # Infer model family based on model path name

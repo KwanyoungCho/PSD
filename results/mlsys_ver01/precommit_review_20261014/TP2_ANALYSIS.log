@@ -1,0 +1,81 @@
+{
+  "comparison": {
+    "prompt_group_clusters": 60,
+    "tps_change_ci95": [
+      -0.030149875976976936,
+      0.003813352351898503
+    ],
+    "verify_change_ci95": [
+      -0.0060176831600564475,
+      0.002172328501675907
+    ],
+    "tps_change": -0.013330403471416119,
+    "verify_change": -0.0017702234254959315,
+    "equal_output_sequences": 63,
+    "output_sequences": 960,
+    "same_all_outputs": false,
+    "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+  },
+  "resolved": {
+    "base": {
+      "target_tp": 2,
+      "batch": 8,
+      "exit_replica": false,
+      "replica_source": "env",
+      "proxy_stream": false,
+      "stream_source": "auto"
+    },
+    "auto": {
+      "target_tp": 2,
+      "batch": 8,
+      "exit_replica": true,
+      "replica_source": "auto",
+      "proxy_stream": true,
+      "stream_source": "auto"
+    }
+  },
+  "telemetry": {
+    "base": {
+      "samples": 57,
+      "external_pids": [],
+      "gpus": {
+        "4": {
+          "active_mean_clock_mhz": 2697.3684210526317,
+          "max_temperature": 62.0,
+          "max_memory_mib": 17225.0
+        },
+        "5": {
+          "active_mean_clock_mhz": 2735.3571428571427,
+          "max_temperature": 57.0,
+          "max_memory_mib": 16763.0
+        },
+        "6": {
+          "active_mean_clock_mhz": 2747.3684210526317,
+          "max_temperature": 47.0,
+          "max_memory_mib": 18361.0
+        }
+      }
+    },
+    "auto": {
+      "samples": 56,
+      "external_pids": [],
+      "gpus": {
+        "4": {
+          "active_mean_clock_mhz": 2685.8035714285716,
+          "max_temperature": 66.0,
+          "max_memory_mib": 17357.0
+        },
+        "5": {
+          "active_mean_clock_mhz": 2732.4545454545455,
+          "max_temperature": 57.0,
+          "max_memory_mib": 16763.0
+        },
+        "6": {
+          "active_mean_clock_mhz": 2745.0,
+          "max_temperature": 51.0,
+          "max_memory_mib": 18361.0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+test_captured_ancestor_attention_matches_independent_dense (test_tree_extension_review.FixedPlanAttention.test_captured_ancestor_attention_matches_independent_dense) ... ok
+test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.ForwardAttention.test_captured_ancestor_attention_matches_independent_dense) ... ERROR
+
+======================================================================
+ERROR: test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.ForwardAttention.test_captured_ancestor_attention_matches_independent_dense)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/tests/test_batch_tree_serving.py", line 194, in test_captured_ancestor_attention_matches_independent_dense
+    expected=reference();out=forward.run(rows,5)
+                             ^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD/ssd/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/ssd/engine/helpers/batch_tree_forward.py", line 111, in run
+    '1' if r.config.duet_exit_replica and r.num_tp_gpus>1 else '0')=='1'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'types.SimpleNamespace' object has no attribute 'duet_exit_replica'
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.134s
+
+FAILED (errors=1)

@@ -1,0 +1,257 @@
+{
+  "implementation": [
+    {
+      "model": "llama2",
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0135499945966682,
+      "returned_tps_ratio": 1.0138634325568872
+    },
+    {
+      "model": "llama3",
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0378819528464192,
+      "returned_tps_ratio": 1.0374751882187716
+    }
+  ],
+  "ladder_trim": [
+    {
+      "model": "llama2",
+      "batch": 1,
+      "role": "duet_fast",
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0038315853327189,
+      "returned_tps_ratio": 1.0038188511411816
+    },
+    {
+      "model": "llama2",
+      "batch": 8,
+      "role": "duet_fast",
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0044312244491278,
+      "returned_tps_ratio": 1.004395120519549
+    },
+    {
+      "model": "llama2",
+      "batch": 1,
+      "role": "duet_fast",
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0032425512125762,
+      "returned_tps_ratio": 1.0032433523028086
+    },
+    {
+      "model": "llama2",
+      "batch": 8,
+      "role": "duet_fast",
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0044825213809956,
+      "returned_tps_ratio": 1.0045826353449234
+    },
+    {
+      "model": "llama2",
+      "batch": 8,
+      "role": "duet_al",
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0048287058272942,
+      "returned_tps_ratio": 1.004889766661704
+    },
+    {
+      "model": "llama3",
+      "batch": 1,
+      "role": "duet_fast",
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0029569382794643,
+      "returned_tps_ratio": 1.0029564011475043
+    },
+    {
+      "model": "llama3",
+      "batch": 8,
+      "role": "duet_fast",
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0051754716145627,
+      "returned_tps_ratio": 1.0057991365901273
+    },
+    {
+      "model": "llama3",
+      "batch": 1,
+      "role": "duet_fast",
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0073037818454273,
+      "returned_tps_ratio": 1.0072991623223428
+    },
+    {
+      "model": "llama3",
+      "batch": 8,
+      "role": "duet_fast",
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0134683426539428,
+      "returned_tps_ratio": 1.0128616506044938
+    },
+    {
+      "model": "llama3",
+      "batch": 8,
+      "role": "duet_al",
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0075270550391497,
+      "returned_tps_ratio": 1.0081646428465847
+    }
+  ],
+  "proxy_stream": [
+    {
+      "model": "llama2",
+      "batch": 1,
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.003011629771695,
+      "returned_tps_ratio": 1.0030486463922175
+    },
+    {
+      "model": "llama2",
+      "batch": 8,
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 0.9274367602430971,
+      "returned_tps_ratio": 0.9274979398622847
+    },
+    {
+      "model": "llama2",
+      "batch": 1,
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0107434547275362,
+      "returned_tps_ratio": 1.0107475898512266
+    },
+    {
+      "model": "llama2",
+      "batch": 8,
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 0.9385771826276396,
+      "returned_tps_ratio": 0.9382635128937712
+    },
+    {
+      "model": "llama3",
+      "batch": 1,
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0141021009536697,
+      "returned_tps_ratio": 1.0140949046322907
+    },
+    {
+      "model": "llama3",
+      "batch": 8,
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 0.9744164952164168,
+      "returned_tps_ratio": 0.974195078947338
+    },
+    {
+      "model": "llama3",
+      "batch": 1,
+      "replicate": 1,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 1.0145047078049882,
+      "returned_tps_ratio": 1.0145032461971768
+    },
+    {
+      "model": "llama3",
+      "batch": 8,
+      "replicate": 0,
+      "parity": {
+        "token_outputs_equal": true,
+        "proposal_acceptance_events_equal": true,
+        "passes": 2
+      },
+      "boundary_tps_ratio": 0.9502394725621365,
+      "returned_tps_ratio": 0.9506684948417169
+    }
+  ],
+  "scope": "Existing saved comparisons only; no new model or regression runs. Ratios use each campaign metric definition.",
+  "source": "/home/chokwans99/PSD-mlsys-coverage/results/mlsys_coverage/round5/FOLLOWUP_RESULTS.json",
+  "source_sha256": "501e169ef53f2ff9666bcb8996ba0db1fe302985586e36e25340fb63fbb5605f"
+}

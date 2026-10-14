@@ -1,0 +1,26 @@
+llama2 component latency (ms)
+draft/batch_p1_replay: 24.9718 -> 19.2877 (-22.76%), n=128
+draft/batch_p1_total: 29.5538 -> 22.7718 (-22.95%), n=128
+draft/batch_p2_replay: 8.6416 -> 5.9498 (-31.15%), n=128
+draft/batch_p2_total: 12.8418 -> 9.6244 (-25.05%), n=128
+target/batch_target_pre: 22.7356 -> 22.8377 (+0.45%), n=128
+target/batch_target_post: 10.3129 -> 10.3466 (+0.33%), n=128
+target/batch_target_proxy: 1.8976 -> 1.7429 (-8.15%), n=128
+target/batch_tree_accept: 1.4570 -> 1.3160 (-9.68%), n=128
+llama3 component latency (ms)
+draft/batch_p1_replay: 37.7480 -> 32.4443 (-14.05%), n=45
+draft/batch_p1_total: 42.4906 -> 35.7386 (-15.89%), n=45
+draft/batch_p2_replay: 14.6560 -> 12.0028 (-18.10%), n=45
+draft/batch_p2_total: 19.0612 -> 15.5823 (-18.25%), n=45
+target/batch_target_pre: 21.4265 -> 21.5275 (+0.47%), n=45
+target/batch_target_post: 9.8256 -> 9.8405 (+0.15%), n=45
+target/batch_target_proxy: 6.9200 -> 6.3225 (-8.63%), n=45
+target/batch_tree_accept: 4.8471 -> 4.2351 (-12.63%), n=45
+
+Mixed-miss: same parameters per pair; wait -> AR
+llama2 K2=1: TPS 535.59->522.61 (-2.42%, CI[-9.77,+4.95]); AL 1.8874->1.8515; hit 77.07->77.24%; raw TPS 326.41->333.52; retained 38.0->36.3%
+llama2 K2=2: TPS 484.06->437.41 (-9.64%, CI[-26.76,+4.44]); AL 1.9649->1.8577; hit 74.52->75.61%; raw TPS 354.03->331.40; retained 41.8->40.6%
+llama2 K2=3: TPS 518.68->480.76 (-7.31%, CI[-13.87,-1.09]); AL 2.0750->1.8938; hit 75.20->75.70%; raw TPS 350.19->351.35; retained 40.2->41.2%
+llama3 K2=1: TPS 240.11->233.40 (-2.80%, CI[-12.50,+7.46]); AL 2.2157->2.0736; hit 72.85->72.85%; raw TPS 175.53->176.58; retained 23.6->22.6%
+llama3 K2=2: TPS 229.02->228.77 (-0.11%, CI[-18.94,+17.95]); AL 2.3757->2.1906; hit 70.92->72.88%; raw TPS 184.42->165.35; retained 25.8->23.2%
+llama3 K2=3: TPS 222.90->223.03 (+0.06%, CI[-11.35,+12.96]); AL 2.5017->2.2261; hit 69.06->72.39%; raw TPS 157.42->163.28; retained 23.5->26.6%

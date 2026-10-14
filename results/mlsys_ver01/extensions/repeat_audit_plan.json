@@ -1,0 +1,79 @@
+[
+  {
+    "arm": "base",
+    "bench": "mlsys_ver01_extensions_repeat_audit.py",
+    "draft_seed": 231,
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/data2/chokwans99/PSD-MLSys-ver01-extensions",
+      "SSD_TREE_FUSED_MATH": "1",
+      "SSD_BATCH_TREE_BULK_EXPORT": "1",
+      "SSD_TREE_LADDER_TRIM": "1",
+      "SSD_CUDA_ARCH": "8.6",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "DUET_REVIEW_CAPTURE_AUDIT": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/review_followup/wait_captures"
+    },
+    "name": "wait",
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "8",
+      "--temperature",
+      "0.7",
+      "--prompts",
+      "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "64",
+      "--warm-prompts",
+      "48",
+      "--seed",
+      "11013",
+      "--target",
+      "/data2/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179"
+    ]
+  },
+  {
+    "arm": "base",
+    "bench": "mlsys_ver01_extensions_repeat_audit.py",
+    "draft_seed": 231,
+    "env": {
+      "PAPER_CPUSET": "0-7,32-39",
+      "PAPER_CHECKOUT": "/data2/chokwans99/PSD-MLSys-ver01-extensions",
+      "SSD_TREE_FUSED_MATH": "1",
+      "SSD_BATCH_TREE_BULK_EXPORT": "1",
+      "SSD_TREE_LADDER_TRIM": "1",
+      "SSD_CUDA_ARCH": "8.6",
+      "SSD_PROFILE_DUET_DETAIL": "1",
+      "DUET_REVIEW_CAPTURE_AUDIT": "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/review_followup/ar_captures",
+      "DUET_REVIEW_MIXED_MISS_AR": "1"
+    },
+    "name": "ar",
+    "args": [
+      "--mode",
+      "tree",
+      "--batch",
+      "8",
+      "--temperature",
+      "0.7",
+      "--prompts",
+      "/data2/chokwans99/PSD-MLSys-ver01-extensions/results/questions.json",
+      "--limit",
+      "480",
+      "--output-tokens",
+      "64",
+      "--warm-prompts",
+      "48",
+      "--seed",
+      "11013",
+      "--target",
+      "/data2/chokwans99/models/layerskip-llama3-8B",
+      "--draft",
+      "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179"
+    ]
+  }
+]

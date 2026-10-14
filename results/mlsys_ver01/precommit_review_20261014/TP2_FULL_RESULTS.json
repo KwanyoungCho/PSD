@@ -1,0 +1,265 @@
+{
+  "arms": {
+    "base": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1166,
+        "all_steps": 4081,
+        "tokens": 20089,
+        "seconds": 31.871879467740655,
+        "tps": 630.3048435010938,
+        "al": 2.153623499142367,
+        "hit": 0.6500857632933105,
+        "verify_ms": 19.500927034546628,
+        "step_ms": 27.33437347147569,
+        "actual_output_tokens": 51562,
+        "emitted_decode_tokens": 51562
+      },
+      "source": {
+        "0": {
+          "requests": 3264,
+          "al": 1.9803921568627452,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 4311,
+          "al": 2.292971468336813,
+          "valid_k": 3.690559035026676
+        },
+        "2": {
+          "requests": 1753,
+          "al": 2.1334854535082717,
+          "valid_k": 3.7900741585852824
+        }
+      },
+      "batch_metrics": {
+        "steps": 1166,
+        "request_hit": 0.6500857632933105,
+        "all_hit": 0.0548885077186964,
+        "any_miss": 0.9451114922813036,
+        "mixed": 0.885934819897084,
+        "all_miss": 0.05917667238421955,
+        "actual_jit_step": 0.9451114922813036,
+        "actual_jit_request": 0.34991423670668953,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05917667238421955,
+        "miss_histogram": {
+          "0": 64,
+          "1": 203,
+          "2": 299,
+          "3": 297,
+          "4": 165,
+          "5": 56,
+          "6": 11,
+          "7": 2,
+          "8": 69
+        }
+      },
+      "preparation": {
+        "steps": 4081,
+        "seconds": 101.92844850965776,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 2,
+        "k2": 2,
+        "exit_layer": 17,
+        "p1_nodes": 4,
+        "p2_nodes": 4,
+        "p1_verify": 4,
+        "p2_verify": 4,
+        "roots": 2,
+        "siblings": 2
+      }
+    },
+    "auto": {
+      "summary": {
+        "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+        "steps": 1197,
+        "all_steps": 4098,
+        "tokens": 20456,
+        "seconds": 32.892609159462154,
+        "tps": 621.9026256272365,
+        "al": 2.136173767752715,
+        "hit": 0.6517335004177109,
+        "verify_ms": 19.466406036691186,
+        "step_ms": 27.479205647002633,
+        "actual_output_tokens": 50582,
+        "emitted_decode_tokens": 50582
+      },
+      "source": {
+        "0": {
+          "requests": 3335,
+          "al": 1.952023988005997,
+          "valid_k": 2.0
+        },
+        "1": {
+          "requests": 4440,
+          "al": 2.293918918918919,
+          "valid_k": 3.693243243243243
+        },
+        "2": {
+          "requests": 1801,
+          "al": 2.0882842865074958,
+          "valid_k": 3.7890061077179347
+        }
+      },
+      "batch_metrics": {
+        "steps": 1197,
+        "request_hit": 0.6517335004177109,
+        "all_hit": 0.06015037593984962,
+        "any_miss": 0.9398496240601504,
+        "mixed": 0.8872180451127819,
+        "all_miss": 0.05263157894736842,
+        "actual_jit_step": 0.9398496240601504,
+        "actual_jit_request": 0.34826649958228906,
+        "miss_ar_step": 0.0,
+        "miss_ar_request": 0.0,
+        "hypothetical_jit_step_if_all_partial_misses_use_ar": 0.05263157894736842,
+        "miss_histogram": {
+          "0": 72,
+          "1": 199,
+          "2": 330,
+          "3": 270,
+          "4": 170,
+          "5": 78,
+          "6": 13,
+          "7": 2,
+          "8": 63
+        }
+      },
+      "preparation": {
+        "steps": 4098,
+        "seconds": 101.75553505984135,
+        "affected_steps": 0,
+        "affected_step_seconds": 0,
+        "interval_union_seconds": 0.0,
+        "interval_union_fraction": 0.0
+      },
+      "parameters": {
+        "target": "/data/chokwans99/models/layerskip-llama3-8B",
+        "draft": "/home/chokwans99/models_mlsys/Qwama-0.5B-Instruct",
+        "batch": 8,
+        "temperature": 0.7,
+        "k1": 2,
+        "k2": 2,
+        "exit_layer": 17,
+        "p1_nodes": 4,
+        "p2_nodes": 4,
+        "p1_verify": 4,
+        "p2_verify": 4,
+        "roots": 2,
+        "siblings": 2
+      }
+    }
+  },
+  "comparison": {
+    "prompt_group_clusters": 60,
+    "tps_change_ci95": [
+      -0.030149875976976936,
+      0.003813352351898503
+    ],
+    "verify_change_ci95": [
+      -0.0060176831600564475,
+      0.002172328501675907
+    ],
+    "tps_change": -0.013330403471416119,
+    "verify_change": -0.0017702234254959315,
+    "equal_output_sequences": 63,
+    "output_sequences": 960,
+    "same_all_outputs": false,
+    "caveat": "Online verify means also depend on reached shapes. Component controls establish execution-cost causality."
+  },
+  "resolved": {
+    "base": {
+      "target_tp": 2,
+      "batch": 8,
+      "exit_replica": false,
+      "replica_source": "env",
+      "proxy_stream": false,
+      "stream_source": "auto"
+    },
+    "auto": {
+      "target_tp": 2,
+      "batch": 8,
+      "exit_replica": true,
+      "replica_source": "auto",
+      "proxy_stream": true,
+      "stream_source": "auto"
+    }
+  },
+  "same_runtime_as_pre_policy_regression": true,
+  "telemetry": {
+    "base": {
+      "samples": 57,
+      "external_pids": [],
+      "gpus": {
+        "4": {
+          "active_mean_clock_mhz": 2697.3684210526317,
+          "max_temperature": 62.0,
+          "max_memory_mib": 17225.0
+        },
+        "5": {
+          "active_mean_clock_mhz": 2735.3571428571427,
+          "max_temperature": 57.0,
+          "max_memory_mib": 16763.0
+        },
+        "6": {
+          "active_mean_clock_mhz": 2747.3684210526317,
+          "max_temperature": 47.0,
+          "max_memory_mib": 18361.0
+        }
+      }
+    },
+    "auto": {
+      "samples": 56,
+      "external_pids": [],
+      "gpus": {
+        "4": {
+          "active_mean_clock_mhz": 2685.8035714285716,
+          "max_temperature": 66.0,
+          "max_memory_mib": 17357.0
+        },
+        "5": {
+          "active_mean_clock_mhz": 2732.4545454545455,
+          "max_temperature": 57.0,
+          "max_memory_mib": 16763.0
+        },
+        "6": {
+          "active_mean_clock_mhz": 2745.0,
+          "max_temperature": 51.0,
+          "max_memory_mib": 18361.0
+        }
+      }
+    }
+  },
+  "clock_alignment_offset_seconds": 1789970045.620544,
+  "checks": {
+    "suites": 22,
+    "tests": 248
+  },
+  "raw_sha256": {
+    "campaign.json": "981ffd242b8fb04413d2cce44b10544bc75870da4a63041fe6774cde0f34b3ad",
+    "auto.telemetry.jsonl": "01262fbf92b5c8aae35574a86654e3b1ac5b0f4f08ab98eee648e907f57b8d00",
+    "plan.json": "0223e30e6b1acf760ed6273c77f3089384914e2c073c0da371a3a1bfdfbc6031",
+    "auto.json": "65494cc19e642198487982c78d520eaf48d34d2d2fe423697d92a669ffc0cbbb",
+    "base.json": "33252e39159eba761d298f5f87a91e8375dbfa807b88419997f280d369159b1d",
+    "auto.log": "9022516bb73d9692382f83310b1ec87ef0dcbf3ad4ff6ac4b9e478167f80aa37",
+    "base.log": "f53db2ba5c5bee406714f7550ce2662103b0309a566d55ca1779c321d9e0282a",
+    "base.telemetry.jsonl": "c673efff50fc608e71002f02b0130267e0f3caf7877ce7c8c423f4e4196b7b46",
+    "capture_2553009.jsonl": "c8661eae2bc8a669da41c36fa34349fd6b4e24357d1e3dd39e4747071a69f7bb",
+    "capture_2553102.jsonl": "65245868f5c6a04fee2e197707713846dffa4c70644adec0768c97015b7f4763",
+    "capture_2553103.jsonl": "325c9e08346c45ea71bae4b5710b43d630fe0051c2191ae0357d135223a71a50",
+    "capture_2549372.jsonl": "5a74bffdff11b9e11fcbbb04ae6729ef0a296d154e1680c895a747ed0d403d57",
+    "capture_2549371.jsonl": "4b74e8f7a31f14bf0b610b41e11721a6b894cf2a2d72c1801d2312d0c5e9d9ce",
+    "capture_2549137.jsonl": "fc50624b8bf5fa64b293467189aa5d0a0131560171e7055a0883aa815d7009e0"
+  }
+}

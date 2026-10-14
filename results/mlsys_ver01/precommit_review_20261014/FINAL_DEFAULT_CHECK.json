@@ -1,0 +1,56 @@
+{
+  "status": "complete",
+  "source_matches": true,
+  "same_all_outputs": true,
+  "equal_output_sequences": 960,
+  "output_sequences": 960,
+  "resolved": {
+    "target_tp": 2,
+    "batch": 8,
+    "exit_replica": false,
+    "replica_source": "default",
+    "proxy_stream": false,
+    "stream_source": "auto"
+  },
+  "baseline_summary": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 1166,
+    "all_steps": 4081,
+    "tokens": 20089,
+    "seconds": 31.871879467740655,
+    "tps": 630.3048435010938,
+    "al": 2.153623499142367,
+    "hit": 0.6500857632933105,
+    "verify_ms": 19.500927034546628,
+    "step_ms": 27.33437347147569,
+    "actual_output_tokens": 51562,
+    "emitted_decode_tokens": 51562
+  },
+  "final_summary": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 1166,
+    "all_steps": 4081,
+    "tokens": 20089,
+    "seconds": 31.958924112608656,
+    "tps": 628.5881192125097,
+    "al": 2.153623499142367,
+    "hit": 0.6500857632933105,
+    "verify_ms": 19.525663662816864,
+    "step_ms": 27.409025825564886,
+    "actual_output_tokens": 51562,
+    "emitted_decode_tokens": 51562
+  },
+  "preparation": {
+    "steps": 4081,
+    "seconds": 102.23356797662564,
+    "affected_steps": 0,
+    "affected_step_seconds": 0,
+    "interval_union_seconds": 0.0,
+    "interval_union_fraction": 0.0
+  },
+  "changed_runtime_files": [
+    "ssd/ssd/config.py",
+    "ssd/ssd/engine/llm_engine.py"
+  ],
+  "scope": "Functional full-model check only; some regression tests ran concurrently on separate GPU7. Do not claim latency improvement from this run."
+}

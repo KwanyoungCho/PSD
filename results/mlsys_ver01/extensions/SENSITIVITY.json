@@ -1,0 +1,492 @@
+{
+  "llama2": {
+    "1": {
+      "wait": {
+        "steps": 938,
+        "all_steps": 2468,
+        "tokens": 14163,
+        "seconds": 26.44381088251248,
+        "tps": 535.5884620006156,
+        "verify_ms": 24.051943477411974,
+        "step_ms": 28.19169603679369,
+        "al": 1.8873933901918976,
+        "hit": 0.7706556503198294,
+        "actual_output_tokens": 28376,
+        "emitted_decode_tokens": 28376,
+        "raw_decode_tps": 326.41344936908274,
+        "retained_step_fraction": 0.38006482982171796,
+        "events": 7504
+      },
+      "ar": {
+        "steps": 932,
+        "all_steps": 2567,
+        "tokens": 13805,
+        "seconds": 26.415707784704864,
+        "tps": 522.6057205248661,
+        "verify_ms": 23.8344055628444,
+        "step_ms": 28.343034103760584,
+        "al": 1.8515289699570816,
+        "hit": 0.7723980686695279,
+        "actual_output_tokens": 28332,
+        "emitted_decode_tokens": 28332,
+        "raw_decode_tps": 333.5235654795383,
+        "retained_step_fraction": 0.36306973120373975,
+        "events": 7456
+      },
+      "comparison": {
+        "tps_percent": -2.4240144059963886,
+        "tps_percent_ci": [
+          -9.76799112468177,
+          4.953981349406299
+        ],
+        "al_delta": -0.03586442023481595,
+        "al_delta_ci": [
+          -0.12072617851862719,
+          0.045519066221255435
+        ],
+        "hit_pp": 0.17424183496984602,
+        "hit_pp_ci": [
+          -1.7546023410094498,
+          2.0150369702759963
+        ],
+        "outputs_identical": false,
+        "events_identical": false,
+        "groups": 60
+      },
+      "kwargs": {
+        "num_gpus": 2,
+        "max_num_seqs": 8,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 5,
+        "async_fan_out": 3,
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "duet_enabled": true,
+        "duet_exit_layer": 21,
+        "duet_phase1_k": 4,
+        "duet_phase2_k": 1,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 8,
+        "duet_p1_tree_verify_nodes": 8,
+        "duet_p2_tree_max_nodes": 4,
+        "duet_p2_tree_verify_nodes": 4,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "stochastic_only": true
+      }
+    },
+    "2": {
+      "wait": {
+        "steps": 996,
+        "all_steps": 2381,
+        "tokens": 15656,
+        "seconds": 32.34330582781695,
+        "tps": 484.05688903126946,
+        "verify_ms": 24.65812663405565,
+        "step_ms": 32.47319862230617,
+        "al": 1.964859437751004,
+        "hit": 0.7452309236947792,
+        "actual_output_tokens": 29111,
+        "emitted_decode_tokens": 29111,
+        "raw_decode_tps": 354.0321311089135,
+        "retained_step_fraction": 0.41831163376732466,
+        "events": 7968
+      },
+      "ar": {
+        "steps": 998,
+        "all_steps": 2461,
+        "tokens": 14832,
+        "seconds": 33.908344777533785,
+        "tps": 437.4144505522147,
+        "verify_ms": 24.77751581631937,
+        "step_ms": 33.97629737227834,
+        "al": 1.8577154308617234,
+        "hit": 0.7561372745490982,
+        "actual_output_tokens": 28811,
+        "emitted_decode_tokens": 28811,
+        "raw_decode_tps": 331.4049196456081,
+        "retained_step_fraction": 0.40552620885818774,
+        "events": 7984
+      },
+      "comparison": {
+        "tps_percent": -9.635734876617308,
+        "tps_percent_ci": [
+          -26.762395155180563,
+          4.444220450456972
+        ],
+        "al_delta": -0.10714400688928061,
+        "al_delta_ci": [
+          -0.176147584908727,
+          -0.03957272282013574
+        ],
+        "hit_pp": 1.0906350854319014,
+        "hit_pp_ci": [
+          -1.108952109916664,
+          3.3972843994197017
+        ],
+        "outputs_identical": false,
+        "events_identical": false,
+        "groups": 60
+      },
+      "kwargs": {
+        "num_gpus": 2,
+        "max_num_seqs": 8,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 6,
+        "async_fan_out": 3,
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "duet_enabled": true,
+        "duet_exit_layer": 21,
+        "duet_phase1_k": 4,
+        "duet_phase2_k": 2,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 8,
+        "duet_p1_tree_verify_nodes": 8,
+        "duet_p2_tree_max_nodes": 4,
+        "duet_p2_tree_verify_nodes": 4,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "stochastic_only": true
+      }
+    },
+    "3": {
+      "wait": {
+        "steps": 947,
+        "all_steps": 2353,
+        "tokens": 15720,
+        "seconds": 30.307451986242086,
+        "tps": 518.6843158948503,
+        "verify_ms": 24.09504008884596,
+        "step_ms": 32.003645180825856,
+        "al": 2.074973600844773,
+        "hit": 0.7519799366420274,
+        "actual_output_tokens": 28883,
+        "emitted_decode_tokens": 28883,
+        "raw_decode_tps": 350.1948862590575,
+        "retained_step_fraction": 0.40246493837654057,
+        "events": 7576
+      },
+      "ar": {
+        "steps": 1023,
+        "all_steps": 2483,
+        "tokens": 15499,
+        "seconds": 32.23834417690523,
+        "tps": 480.7629050347787,
+        "verify_ms": 24.273737976218293,
+        "step_ms": 31.513532919750958,
+        "al": 1.8938172043010753,
+        "hit": 0.7569648093841642,
+        "actual_output_tokens": 28780,
+        "emitted_decode_tokens": 28780,
+        "raw_decode_tps": 351.3539652359699,
+        "retained_step_fraction": 0.41200161095449056,
+        "events": 8184
+      },
+      "comparison": {
+        "tps_percent": -7.311077219415896,
+        "tps_percent_ci": [
+          -13.871532725799474,
+          -1.0855329833348102
+        ],
+        "al_delta": -0.18115639654369775,
+        "al_delta_ci": [
+          -0.281549522395269,
+          -0.08937612272974262
+        ],
+        "hit_pp": 0.498487274213677,
+        "hit_pp_ci": [
+          -1.2187330463786732,
+          2.4104182674496863
+        ],
+        "outputs_identical": false,
+        "events_identical": false,
+        "groups": 60
+      },
+      "kwargs": {
+        "num_gpus": 2,
+        "max_num_seqs": 8,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 7,
+        "async_fan_out": 3,
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "duet_enabled": true,
+        "duet_exit_layer": 21,
+        "duet_phase1_k": 4,
+        "duet_phase2_k": 3,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 8,
+        "duet_p1_tree_verify_nodes": 8,
+        "duet_p2_tree_max_nodes": 4,
+        "duet_p2_tree_verify_nodes": 4,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "stochastic_only": true
+      }
+    }
+  },
+  "llama3": {
+    "1": {
+      "wait": {
+        "steps": 499,
+        "all_steps": 2117,
+        "tokens": 8845,
+        "seconds": 36.837097574869404,
+        "tps": 240.11120805657984,
+        "verify_ms": 51.20335426627736,
+        "step_ms": 73.82183882739359,
+        "al": 2.215681362725451,
+        "hit": 0.7284569138276553,
+        "actual_output_tokens": 25298,
+        "emitted_decode_tokens": 25298,
+        "raw_decode_tps": 175.52922628055563,
+        "retained_step_fraction": 0.23571091166745395,
+        "events": 3992
+      },
+      "ar": {
+        "steps": 499,
+        "all_steps": 2204,
+        "tokens": 8278,
+        "seconds": 35.46764284999517,
+        "tps": 233.39583166015575,
+        "verify_ms": 52.072612585066885,
+        "step_ms": 71.07744058115264,
+        "al": 2.073647294589178,
+        "hit": 0.7284569138276553,
+        "actual_output_tokens": 25460,
+        "emitted_decode_tokens": 25460,
+        "raw_decode_tps": 176.58131067786815,
+        "retained_step_fraction": 0.2264065335753176,
+        "events": 3992
+      },
+      "comparison": {
+        "tps_percent": -2.796777564353292,
+        "tps_percent_ci": [
+          -12.504631783973528,
+          7.458774595547644
+        ],
+        "al_delta": -0.14203406813627284,
+        "al_delta_ci": [
+          -0.2163092926390877,
+          -0.07180593439424993
+        ],
+        "hit_pp": 0.0,
+        "hit_pp_ci": [
+          -2.319201196051619,
+          2.243823635415925
+        ],
+        "outputs_identical": false,
+        "events_identical": false,
+        "groups": 60
+      },
+      "kwargs": {
+        "num_gpus": 2,
+        "max_num_seqs": 8,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 5,
+        "async_fan_out": 3,
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "duet_enabled": true,
+        "duet_exit_layer": 21,
+        "duet_phase1_k": 4,
+        "duet_phase2_k": 1,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 8,
+        "duet_p1_tree_verify_nodes": 8,
+        "duet_p2_tree_max_nodes": 4,
+        "duet_p2_tree_verify_nodes": 4,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "stochastic_only": true
+      }
+    },
+    "2": {
+      "wait": {
+        "steps": 503,
+        "all_steps": 1946,
+        "tokens": 9560,
+        "seconds": 41.74372548700194,
+        "tps": 229.01645429267614,
+        "verify_ms": 51.80746262847834,
+        "step_ms": 82.98951389065992,
+        "al": 2.375745526838966,
+        "hit": 0.7092445328031809,
+        "actual_output_tokens": 25504,
+        "emitted_decode_tokens": 25504,
+        "raw_decode_tps": 184.4247658129131,
+        "retained_step_fraction": 0.25847893114080167,
+        "events": 4024
+      },
+      "ar": {
+        "steps": 501,
+        "all_steps": 2156,
+        "tokens": 8780,
+        "seconds": 38.37836785813852,
+        "tps": 228.7747105988019,
+        "verify_ms": 53.415563265177724,
+        "step_ms": 76.60352865895912,
+        "al": 2.19061876247505,
+        "hit": 0.7287924151696606,
+        "actual_output_tokens": 26036,
+        "emitted_decode_tokens": 26036,
+        "raw_decode_tps": 165.34736904051667,
+        "retained_step_fraction": 0.2323747680890538,
+        "events": 4008
+      },
+      "comparison": {
+        "tps_percent": -0.10555734723117771,
+        "tps_percent_ci": [
+          -18.938136855145817,
+          17.948859638105763
+        ],
+        "al_delta": -0.18512676436391606,
+        "al_delta_ci": [
+          -0.2711782332002266,
+          -0.09948084618421409
+        ],
+        "hit_pp": 1.9547882366479752,
+        "hit_pp_ci": [
+          0.0042854477574502765,
+          3.8350804001581853
+        ],
+        "outputs_identical": false,
+        "events_identical": false,
+        "groups": 60
+      },
+      "kwargs": {
+        "num_gpus": 2,
+        "max_num_seqs": 8,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 6,
+        "async_fan_out": 3,
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "duet_enabled": true,
+        "duet_exit_layer": 21,
+        "duet_phase1_k": 4,
+        "duet_phase2_k": 2,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 8,
+        "duet_p1_tree_verify_nodes": 8,
+        "duet_p2_tree_max_nodes": 4,
+        "duet_p2_tree_verify_nodes": 4,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "stochastic_only": true
+      }
+    },
+    "3": {
+      "wait": {
+        "steps": 444,
+        "all_steps": 1892,
+        "tokens": 8886,
+        "seconds": 39.864723239064915,
+        "tps": 222.90384274616713,
+        "verify_ms": 50.665727747990466,
+        "step_ms": 89.78541270059665,
+        "al": 2.501689189189189,
+        "hit": 0.6905968468468469,
+        "actual_output_tokens": 25361,
+        "emitted_decode_tokens": 25361,
+        "raw_decode_tps": 157.4166411419604,
+        "retained_step_fraction": 0.2346723044397463,
+        "events": 3552
+      },
+      "ar": {
+        "steps": 560,
+        "all_steps": 2108,
+        "tokens": 9973,
+        "seconds": 44.7166658451024,
+        "tps": 223.02646701223802,
+        "verify_ms": 50.772935877128994,
+        "step_ms": 79.85118900911142,
+        "al": 2.2261160714285713,
+        "hit": 0.7238839285714286,
+        "actual_output_tokens": 25849,
+        "emitted_decode_tokens": 25849,
+        "raw_decode_tps": 163.28287330604294,
+        "retained_step_fraction": 0.2656546489563567,
+        "events": 4480
+      },
+      "comparison": {
+        "tps_percent": 0.05501218128864949,
+        "tps_percent_ci": [
+          -11.351796831717117,
+          12.957128104483944
+        ],
+        "al_delta": -0.27557311776061777,
+        "al_delta_ci": [
+          -0.3635955729805862,
+          -0.18524670159362078
+        ],
+        "hit_pp": 3.3287081724581724,
+        "hit_pp_ci": [
+          1.4614137028149266,
+          5.277144781424932
+        ],
+        "outputs_identical": false,
+        "events_identical": false,
+        "groups": 60
+      },
+      "kwargs": {
+        "num_gpus": 2,
+        "max_num_seqs": 8,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 7,
+        "async_fan_out": 3,
+        "draft": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+        "duet_enabled": true,
+        "duet_exit_layer": 21,
+        "duet_phase1_k": 4,
+        "duet_phase2_k": 3,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 8,
+        "duet_p1_tree_verify_nodes": 8,
+        "duet_p2_tree_max_nodes": 4,
+        "duet_p2_tree_verify_nodes": 4,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "stochastic_only": true
+      }
+    }
+  }
+}
