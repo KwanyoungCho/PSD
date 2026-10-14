@@ -1,0 +1,46 @@
+{
+  "pdf": "/home/chokwans99/PSD/(KCC2026 우수논문) DUET 조기 종료 프록시 기반 캐시 구성을 활용한 비동기 추측 디코딩 기법.pdf",
+  "pdf_conditions": {
+    "temperature": 0.7,
+    "max_new_tokens": 1024,
+    "batch": 1,
+    "input_truncation": "not specified"
+  },
+  "paper_script": "a82f7d2:ssd/experiments/proxy_async_overlap/tree_sweep/tree_param_postmortem_20260814/run_full_arm.sh",
+  "script_conditions": {
+    "template": "raw",
+    "max_model_len": 2048,
+    "top_p": 1.0,
+    "max_new_tokens": 1024,
+    "data_turns": 560
+  },
+  "raw_input_match": {
+    "source": "/home/chokwans99/PSD/ssd/experiments/proxy_async_overlap/tree_sweep/p1_p2_tree_full_specbench_seed42_20260811/p1_backbone_s42_o1024.jsonl",
+    "source_sha256": "1b0714587ad3648818ae1701283dd4984af0ba2f9db9e73fa3e01b3f81dd8b92",
+    "turns": 560,
+    "uid_prompt_group_mismatches": 0,
+    "input_token_length_mismatches": 0
+  },
+  "dataset": {
+    "questions": 480,
+    "turns": 560,
+    "group_turn_counts": {
+      "mt_bench": 160,
+      "translation": 80,
+      "summarization": 80,
+      "qa": 80,
+      "math_reasoning": 80,
+      "rag": 80
+    },
+    "max_input_tokens": 1734,
+    "inputs_over_512": 141,
+    "sha256": "41c5cd09b717d0045a4d6b0746ae724e474aa6f28060630135fd49ff7f3b363e"
+  },
+  "tokenizer": {
+    "vocab_equal": true,
+    "vocab_sha256": "93342b2cfb6fc37c19acd3b1cc2e27ac95086ecde957cf6c7d6f65b79eeff779",
+    "default_7b_tokenization_different_turns": 560,
+    "policy": "freeze paper-tokenizer input IDs; same vocabulary/ID mapping as selected 7B model"
+  },
+  "mt_note": "Historical input is flattened: each MT turn is an independent raw prompt, without generated conversation history. Match this protocol; do not describe it as conversation-history evaluation."
+}

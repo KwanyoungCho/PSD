@@ -1,0 +1,1441 @@
+{
+  "state": "complete",
+  "replicas": 2,
+  "unique_questions": 480,
+  "total_runs": 14,
+  "total_turns": 7840,
+  "interval_method": "5000 paired question bootstrap draws; replicas averaged within each question; unadjusted exploratory 95% intervals; not a seed-generalization interval",
+  "comparisons": {
+    "chain_m32 -> last_c3_m32": {
+      "local": {
+        "questions": 480,
+        "before": 3.489873672060402,
+        "after": 3.6510023467265897,
+        "delta": 0.16112867466618738,
+        "relative_percent": 4.617034592288216,
+        "ci95": [
+          0.016711352280226802,
+          0.3071397735054552
+        ],
+        "positive_questions": 261,
+        "negative_questions": 212,
+        "equal_questions": 7
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.383861684644866,
+        "after": 3.62923238322364,
+        "delta": 0.24537069857877317,
+        "relative_percent": 7.251203549252794,
+        "ci95": [
+          0.09007251768413001,
+          0.40120161628259143
+        ],
+        "positive_questions": 271,
+        "negative_questions": 205,
+        "equal_questions": 4
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.4368676783526344,
+        "after": 3.640117364975114,
+        "delta": 0.20324968662248027,
+        "relative_percent": 5.913805989758147,
+        "ci95": [
+          0.09644034525182352,
+          0.311523118983737
+        ],
+        "positive_questions": 286,
+        "negative_questions": 193,
+        "equal_questions": 1
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.5255745965956793,
+        "after": 3.72911478251378,
+        "delta": 0.20354018591810036,
+        "relative_percent": 5.773248596544822,
+        "ci95": [
+          0.09107833309851342,
+          0.31316234824715766
+        ],
+        "positive_questions": 265,
+        "negative_questions": 180,
+        "equal_questions": 1
+      }
+    },
+    "chain_m32 -> frontier_c3_m32": {
+      "local": {
+        "questions": 480,
+        "before": 3.489873672060402,
+        "after": 3.676114639218352,
+        "delta": 0.18624096715794977,
+        "relative_percent": 5.336610566994948,
+        "ci95": [
+          0.03418720057829584,
+          0.340772318115512
+        ],
+        "positive_questions": 267,
+        "negative_questions": 209,
+        "equal_questions": 4
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.383861684644866,
+        "after": 3.7089251192922164,
+        "delta": 0.32506343464734966,
+        "relative_percent": 9.60628609976608,
+        "ci95": [
+          0.17457264746567014,
+          0.4751164218198764
+        ],
+        "positive_questions": 285,
+        "negative_questions": 192,
+        "equal_questions": 3
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.4368676783526344,
+        "after": 3.692519879255284,
+        "delta": 0.25565220090264973,
+        "relative_percent": 7.438523237682215,
+        "ci95": [
+          0.15071828935190357,
+          0.3641021115394556
+        ],
+        "positive_questions": 295,
+        "negative_questions": 184,
+        "equal_questions": 1
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.5255745965956793,
+        "after": 3.777846735078867,
+        "delta": 0.2522721384831875,
+        "relative_percent": 7.1554900221593165,
+        "ci95": [
+          0.13830623402751785,
+          0.3608558543475992
+        ],
+        "positive_questions": 270,
+        "negative_questions": 175,
+        "equal_questions": 1
+      }
+    },
+    "chain_m32 -> last_c8_m32": {
+      "local": {
+        "questions": 480,
+        "before": 3.489873672060402,
+        "after": 2.9007768223981447,
+        "delta": -0.5890968496622573,
+        "relative_percent": -16.88017690664596,
+        "ci95": [
+          -0.7124077232079278,
+          -0.46983647769376763
+        ],
+        "positive_questions": 169,
+        "negative_questions": 308,
+        "equal_questions": 3
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.383861684644866,
+        "after": 2.90736422419103,
+        "delta": -0.4764974604538367,
+        "relative_percent": -14.08146977803687,
+        "ci95": [
+          -0.6018879330464738,
+          -0.34849081887800293
+        ],
+        "positive_questions": 196,
+        "negative_questions": 281,
+        "equal_questions": 3
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.4368676783526344,
+        "after": 2.9040705232945876,
+        "delta": -0.532797155058047,
+        "relative_percent": -15.502405239919748,
+        "ci95": [
+          -0.6253262146677259,
+          -0.43984706614169067
+        ],
+        "positive_questions": 153,
+        "negative_questions": 326,
+        "equal_questions": 1
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.5255745965956793,
+        "after": 2.949175168192728,
+        "delta": -0.5763994284029513,
+        "relative_percent": -16.34909183199603,
+        "ci95": [
+          -0.6730062246956796,
+          -0.482574358227885
+        ],
+        "positive_questions": 134,
+        "negative_questions": 311,
+        "equal_questions": 1
+      }
+    },
+    "chain_m32 -> frontier_c8_m32": {
+      "local": {
+        "questions": 480,
+        "before": 3.489873672060402,
+        "after": 2.9395837412187973,
+        "delta": -0.5502899308416047,
+        "relative_percent": -15.768190557932627,
+        "ci95": [
+          -0.6806906211939063,
+          -0.4220253303478894
+        ],
+        "positive_questions": 186,
+        "negative_questions": 292,
+        "equal_questions": 2
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.383861684644866,
+        "after": 2.9099199263099234,
+        "delta": -0.4739417583349434,
+        "relative_percent": -14.00594357876902,
+        "ci95": [
+          -0.604122503308123,
+          -0.34415042746131835
+        ],
+        "positive_questions": 180,
+        "negative_questions": 299,
+        "equal_questions": 1
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.4368676783526344,
+        "after": 2.9247518337643603,
+        "delta": -0.5121158445882741,
+        "relative_percent": -14.900656426602444,
+        "ci95": [
+          -0.6076642078376874,
+          -0.4186641560702771
+        ],
+        "positive_questions": 168,
+        "negative_questions": 312,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.5255745965956793,
+        "after": 2.979057755404686,
+        "delta": -0.5465168411909932,
+        "relative_percent": -15.501497024590371,
+        "ci95": [
+          -0.6477726724383267,
+          -0.4466843462125669
+        ],
+        "positive_questions": 148,
+        "negative_questions": 298,
+        "equal_questions": 0
+      }
+    },
+    "chain_m32 -> last_c8_m64": {
+      "local": {
+        "questions": 480,
+        "before": 3.489873672060402,
+        "after": 3.5868293792448247,
+        "delta": 0.09695570718442284,
+        "relative_percent": 2.778201055259988,
+        "ci95": [
+          -0.05513338201198256,
+          0.2502749592507767
+        ],
+        "positive_questions": 254,
+        "negative_questions": 224,
+        "equal_questions": 2
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.383861684644866,
+        "after": 3.63258399494548,
+        "delta": 0.24872231030061373,
+        "relative_percent": 7.35025049721314,
+        "ci95": [
+          0.09167588506744964,
+          0.4006419941598963
+        ],
+        "positive_questions": 270,
+        "negative_questions": 205,
+        "equal_questions": 5
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.4368676783526344,
+        "after": 3.609706687095153,
+        "delta": 0.1728390087425183,
+        "relative_percent": 5.028968960055047,
+        "ci95": [
+          0.06469772999248947,
+          0.2820173967516986
+        ],
+        "positive_questions": 272,
+        "negative_questions": 208,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.5255745965956793,
+        "after": 3.6806561515764247,
+        "delta": 0.15508155498074544,
+        "relative_percent": 4.398759712260603,
+        "ci95": [
+          0.04109588000823384,
+          0.263022698541416
+        ],
+        "positive_questions": 249,
+        "negative_questions": 197,
+        "equal_questions": 0
+      }
+    },
+    "chain_m32 -> frontier_c8_m64": {
+      "local": {
+        "questions": 480,
+        "before": 3.489873672060402,
+        "after": 3.710141251032789,
+        "delta": 0.2202675789723867,
+        "relative_percent": 6.311620410097585,
+        "ci95": [
+          0.06755713720594818,
+          0.3687753671040239
+        ],
+        "positive_questions": 272,
+        "negative_questions": 205,
+        "equal_questions": 3
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.383861684644866,
+        "after": 3.6785364877717304,
+        "delta": 0.29467480312686417,
+        "relative_percent": 8.708240187949357,
+        "ci95": [
+          0.145733048630532,
+          0.45122411471433704
+        ],
+        "positive_questions": 287,
+        "negative_questions": 189,
+        "equal_questions": 4
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.4368676783526344,
+        "after": 3.6943388694022596,
+        "delta": 0.25747119104962546,
+        "relative_percent": 7.491449050288623,
+        "ci95": [
+          0.14812129539395388,
+          0.3657788270981183
+        ],
+        "positive_questions": 288,
+        "negative_questions": 192,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.5255745965956793,
+        "after": 3.792938561761316,
+        "delta": 0.26736396516563593,
+        "relative_percent": 7.583557171753097,
+        "ci95": [
+          0.15300025501916162,
+          0.38094721195548886
+        ],
+        "positive_questions": 269,
+        "negative_questions": 177,
+        "equal_questions": 0
+      }
+    },
+    "last_c3_m32 -> frontier_c3_m32": {
+      "local": {
+        "questions": 480,
+        "before": 3.6510023467265897,
+        "after": 3.676114639218352,
+        "delta": 0.025112292491762393,
+        "relative_percent": 0.687819127650724,
+        "ci95": [
+          -0.13067048149811764,
+          0.17826654294441038
+        ],
+        "positive_questions": 246,
+        "negative_questions": 231,
+        "equal_questions": 3
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.62923238322364,
+        "after": 3.7089251192922164,
+        "delta": 0.07969273606857653,
+        "relative_percent": 2.1958565242876427,
+        "ci95": [
+          -0.07867621124676644,
+          0.23160321633323672
+        ],
+        "positive_questions": 248,
+        "negative_questions": 227,
+        "equal_questions": 5
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.640117364975114,
+        "after": 3.692519879255284,
+        "delta": 0.05240251428016946,
+        "relative_percent": 1.4395830965337142,
+        "ci95": [
+          -0.058644928183858934,
+          0.16123877841821624
+        ],
+        "positive_questions": 264,
+        "negative_questions": 215,
+        "equal_questions": 1
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.72911478251378,
+        "after": 3.777846735078867,
+        "delta": 0.04873195256508717,
+        "relative_percent": 1.3067967978244166,
+        "ci95": [
+          -0.06288324880652338,
+          0.16162996304543134
+        ],
+        "positive_questions": 244,
+        "negative_questions": 201,
+        "equal_questions": 1
+      }
+    },
+    "last_c8_m32 -> frontier_c8_m32": {
+      "local": {
+        "questions": 480,
+        "before": 2.9007768223981447,
+        "after": 2.9395837412187973,
+        "delta": 0.03880691882065254,
+        "relative_percent": 1.337811255281962,
+        "ci95": [
+          -0.03823030047723539,
+          0.12076484836476299
+        ],
+        "positive_questions": 263,
+        "negative_questions": 214,
+        "equal_questions": 3
+      },
+      "remote": {
+        "questions": 480,
+        "before": 2.90736422419103,
+        "after": 2.9099199263099234,
+        "delta": 0.002555702118893229,
+        "relative_percent": 0.08790443583326368,
+        "ci95": [
+          -0.0793970834586359,
+          0.08126272176434353
+        ],
+        "positive_questions": 243,
+        "negative_questions": 234,
+        "equal_questions": 3
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 2.9040705232945876,
+        "after": 2.9247518337643603,
+        "delta": 0.02068131046977288,
+        "relative_percent": 0.712149044035959,
+        "ci95": [
+          -0.0353903896346601,
+          0.07915686182410325
+        ],
+        "positive_questions": 247,
+        "negative_questions": 233,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 2.949175168192728,
+        "after": 2.979057755404686,
+        "delta": 0.029882587211958064,
+        "relative_percent": 1.0132523674499128,
+        "ci95": [
+          -0.03128968479620662,
+          0.09289151956731836
+        ],
+        "positive_questions": 232,
+        "negative_questions": 214,
+        "equal_questions": 0
+      }
+    },
+    "last_c8_m64 -> frontier_c8_m64": {
+      "local": {
+        "questions": 480,
+        "before": 3.5868293792448247,
+        "after": 3.710141251032789,
+        "delta": 0.12331187178796389,
+        "relative_percent": 3.4379073758430856,
+        "ci95": [
+          -0.02712481449414502,
+          0.2760290802518703
+        ],
+        "positive_questions": 257,
+        "negative_questions": 219,
+        "equal_questions": 4
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.63258399494548,
+        "after": 3.6785364877717304,
+        "delta": 0.045952492826250364,
+        "relative_percent": 1.265008404215573,
+        "ci95": [
+          -0.1056078573371255,
+          0.20062873007193535
+        ],
+        "positive_questions": 252,
+        "negative_questions": 226,
+        "equal_questions": 2
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.609706687095153,
+        "after": 3.6943388694022596,
+        "delta": 0.08463218230710715,
+        "relative_percent": 2.344572278120838,
+        "ci95": [
+          -0.01903226585975676,
+          0.1913525091332216
+        ],
+        "positive_questions": 258,
+        "negative_questions": 222,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.6806561515764247,
+        "after": 3.792938561761316,
+        "delta": 0.11228241018489044,
+        "relative_percent": 3.0506085208964917,
+        "ci95": [
+          -0.00033342376240605583,
+          0.223648105369305
+        ],
+        "positive_questions": 246,
+        "negative_questions": 200,
+        "equal_questions": 0
+      }
+    },
+    "last_c3_m32 -> last_c8_m32": {
+      "local": {
+        "questions": 480,
+        "before": 3.6510023467265897,
+        "after": 2.9007768223981447,
+        "delta": -0.7502255243284447,
+        "relative_percent": -20.548481021960473,
+        "ci95": [
+          -0.8770874224365507,
+          -0.6227359062474337
+        ],
+        "positive_questions": 135,
+        "negative_questions": 339,
+        "equal_questions": 6
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.62923238322364,
+        "after": 2.90736422419103,
+        "delta": -0.7218681590326098,
+        "relative_percent": -19.89038129301094,
+        "ci95": [
+          -0.8527255293965211,
+          -0.5899899414065242
+        ],
+        "positive_questions": 150,
+        "negative_questions": 326,
+        "equal_questions": 4
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.640117364975114,
+        "after": 2.9040705232945876,
+        "delta": -0.7360468416805274,
+        "relative_percent": -20.22041510976278,
+        "ci95": [
+          -0.8281374593494916,
+          -0.6440464763582564
+        ],
+        "positive_questions": 112,
+        "negative_questions": 367,
+        "equal_questions": 1
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.72911478251378,
+        "after": 2.949175168192728,
+        "delta": -0.7799396143210517,
+        "relative_percent": -20.91487282660949,
+        "ci95": [
+          -0.8732888935435761,
+          -0.6833634813992115
+        ],
+        "positive_questions": 97,
+        "negative_questions": 348,
+        "equal_questions": 1
+      }
+    },
+    "frontier_c3_m32 -> frontier_c8_m32": {
+      "local": {
+        "questions": 480,
+        "before": 3.676114639218352,
+        "after": 2.9395837412187973,
+        "delta": -0.7365308979995544,
+        "relative_percent": -20.035580233051775,
+        "ci95": [
+          -0.8667210742857355,
+          -0.6063815369210585
+        ],
+        "positive_questions": 154,
+        "negative_questions": 324,
+        "equal_questions": 2
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.7089251192922164,
+        "after": 2.9099199263099234,
+        "delta": -0.7990051929822931,
+        "relative_percent": -21.54276959721336,
+        "ci95": [
+          -0.9320162496270167,
+          -0.6640738922594851
+        ],
+        "positive_questions": 141,
+        "negative_questions": 336,
+        "equal_questions": 3
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.692519879255284,
+        "after": 2.9247518337643603,
+        "delta": -0.7677680454909237,
+        "relative_percent": -20.792523008590248,
+        "ci95": [
+          -0.8652639216483982,
+          -0.6739876125761797
+        ],
+        "positive_questions": 118,
+        "negative_questions": 361,
+        "equal_questions": 1
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.777846735078867,
+        "after": 2.979057755404686,
+        "delta": -0.7987889796741808,
+        "relative_percent": -21.144028217373023,
+        "ci95": [
+          -0.9003639477033374,
+          -0.6963764200383972
+        ],
+        "positive_questions": 107,
+        "negative_questions": 338,
+        "equal_questions": 1
+      }
+    },
+    "last_c8_m32 -> last_c8_m64": {
+      "local": {
+        "questions": 480,
+        "before": 2.9007768223981447,
+        "after": 3.5868293792448247,
+        "delta": 0.6860525568466802,
+        "relative_percent": 23.65064942429811,
+        "ci95": [
+          0.5573663187486138,
+          0.8141216663173582
+        ],
+        "positive_questions": 334,
+        "negative_questions": 144,
+        "equal_questions": 2
+      },
+      "remote": {
+        "questions": 480,
+        "before": 2.90736422419103,
+        "after": 3.63258399494548,
+        "delta": 0.7252197707544504,
+        "relative_percent": 24.944235218971976,
+        "ci95": [
+          0.5874940916420219,
+          0.8554785605319573
+        ],
+        "positive_questions": 320,
+        "negative_questions": 155,
+        "equal_questions": 5
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 2.9040705232945876,
+        "after": 3.609706687095153,
+        "delta": 0.7056361638005654,
+        "relative_percent": 24.298175892782403,
+        "ci95": [
+          0.6115287993817142,
+          0.7978040288460764
+        ],
+        "positive_questions": 355,
+        "negative_questions": 125,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 2.949175168192728,
+        "after": 3.6806561515764247,
+        "delta": 0.7314809833836968,
+        "relative_percent": 24.802900528690962,
+        "ci95": [
+          0.6366157626621157,
+          0.8273485422266869
+        ],
+        "positive_questions": 333,
+        "negative_questions": 113,
+        "equal_questions": 0
+      }
+    },
+    "frontier_c8_m32 -> frontier_c8_m64": {
+      "local": {
+        "questions": 480,
+        "before": 2.9395837412187973,
+        "after": 3.710141251032789,
+        "delta": 0.7705575098139915,
+        "relative_percent": 26.213150488256076,
+        "ci95": [
+          0.6536496808956465,
+          0.8874657180355884
+        ],
+        "positive_questions": 338,
+        "negative_questions": 134,
+        "equal_questions": 8
+      },
+      "remote": {
+        "questions": 480,
+        "before": 2.9099199263099234,
+        "after": 3.6785364877717304,
+        "delta": 0.7686165614618077,
+        "relative_percent": 26.413667074217106,
+        "ci95": [
+          0.6418384084890497,
+          0.897691497250941
+        ],
+        "positive_questions": 340,
+        "negative_questions": 135,
+        "equal_questions": 5
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 2.9247518337643603,
+        "after": 3.6943388694022596,
+        "delta": 0.7695870356378995,
+        "relative_percent": 26.312900354605027,
+        "ci95": [
+          0.680835227387077,
+          0.8580382752678466
+        ],
+        "positive_questions": 378,
+        "negative_questions": 102,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 2.979057755404686,
+        "after": 3.792938561761316,
+        "delta": 0.8138808063566292,
+        "relative_percent": 27.320074774652014,
+        "ci95": [
+          0.7206171855194874,
+          0.9073246445776846
+        ],
+        "positive_questions": 359,
+        "negative_questions": 87,
+        "equal_questions": 0
+      }
+    },
+    "last_c3_m32 -> last_c8_m64": {
+      "local": {
+        "questions": 480,
+        "before": 3.6510023467265897,
+        "after": 3.5868293792448247,
+        "delta": -0.06417296748176451,
+        "relative_percent": -1.7576808061846694,
+        "ci95": [
+          -0.22060277626541885,
+          0.08550779484298397
+        ],
+        "positive_questions": 226,
+        "negative_questions": 251,
+        "equal_questions": 3
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.62923238322364,
+        "after": 3.63258399494548,
+        "delta": 0.003351611721840649,
+        "relative_percent": 0.09235043028199552,
+        "ci95": [
+          -0.15984171354678436,
+          0.15192299356440858
+        ],
+        "positive_questions": 233,
+        "negative_questions": 244,
+        "equal_questions": 3
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.640117364975114,
+        "after": 3.609706687095153,
+        "delta": -0.03041067787996195,
+        "relative_percent": -0.8354312466012814,
+        "ci95": [
+          -0.13834164169149504,
+          0.07630716666178318
+        ],
+        "positive_questions": 232,
+        "negative_questions": 248,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.72911478251378,
+        "after": 3.6806561515764247,
+        "delta": -0.04845863093735494,
+        "relative_percent": -1.299467400804688,
+        "ci95": [
+          -0.15701577067588593,
+          0.0626917372381452
+        ],
+        "positive_questions": 210,
+        "negative_questions": 236,
+        "equal_questions": 0
+      }
+    },
+    "frontier_c3_m32 -> frontier_c8_m64": {
+      "local": {
+        "questions": 480,
+        "before": 3.676114639218352,
+        "after": 3.710141251032789,
+        "delta": 0.03402661181443694,
+        "relative_percent": 0.9256134575191588,
+        "ci95": [
+          -0.11149820527055287,
+          0.17757192780540157
+        ],
+        "positive_questions": 247,
+        "negative_questions": 231,
+        "equal_questions": 2
+      },
+      "remote": {
+        "questions": 480,
+        "before": 3.7089251192922164,
+        "after": 3.6785364877717304,
+        "delta": -0.03038863152048553,
+        "relative_percent": -0.8193379629698572,
+        "ci95": [
+          -0.1789832637982973,
+          0.1250211684796649
+        ],
+        "positive_questions": 242,
+        "negative_questions": 235,
+        "equal_questions": 3
+      },
+      "paired_question_average_over_replicas": {
+        "questions": 480,
+        "before": 3.692519879255284,
+        "after": 3.6943388694022596,
+        "delta": 0.0018189901469757223,
+        "relative_percent": 0.049261485556106877,
+        "ci95": [
+          -0.09941558539009565,
+          0.10595851069882856
+        ],
+        "positive_questions": 237,
+        "negative_questions": 243,
+        "equal_questions": 0
+      },
+      "without_any_context_guard_question": {
+        "questions": 446,
+        "before": 3.777846735078867,
+        "after": 3.792938561761316,
+        "delta": 0.015091826682448349,
+        "relative_percent": 0.3994822379191687,
+        "ci95": [
+          -0.09298940477351389,
+          0.1291889866669287
+        ],
+        "positive_questions": 220,
+        "negative_questions": 226,
+        "equal_questions": 0
+      }
+    }
+  },
+  "phase_contributions": {
+    "local": {
+      "chain_m32": [
+        0.374199284489067,
+        2.250210353153008,
+        0.8654640344183285
+      ],
+      "last_c3_m32": [
+        0.4986660377457487,
+        1.5209480723971027,
+        1.6313882365837382
+      ],
+      "frontier_c3_m32": [
+        0.5272290305705599,
+        1.469823902947655,
+        1.6790617057001376
+      ],
+      "last_c8_m32": [
+        0.41594162149185154,
+        1.481294717724214,
+        1.0035404831820798
+      ],
+      "frontier_c8_m32": [
+        0.4407878048140797,
+        1.4828850180547306,
+        1.015910918349986
+      ],
+      "last_c8_m64": [
+        0.5290137715313243,
+        1.5263920568601972,
+        1.5314235508533023
+      ],
+      "frontier_c8_m64": [
+        0.5235134157303214,
+        1.5952403500493602,
+        1.5913874852531087
+      ]
+    },
+    "remote": {
+      "chain_m32": [
+        0.4151883423491369,
+        2.0809022706335223,
+        0.8877710716622076
+      ],
+      "last_c3_m32": [
+        0.5214217245463512,
+        1.489372546788238,
+        1.6184381118890507
+      ],
+      "frontier_c3_m32": [
+        0.525503795584846,
+        1.4748747632925328,
+        1.708546560414838
+      ],
+      "last_c8_m32": [
+        0.4145536471604567,
+        1.492931673174302,
+        0.9998789038562715
+      ],
+      "frontier_c8_m32": [
+        0.4333038258811446,
+        1.4632678302270767,
+        1.0133482702017016
+      ],
+      "last_c8_m64": [
+        0.5166188936093069,
+        1.6625871683895186,
+        1.453377932946657
+      ],
+      "frontier_c8_m64": [
+        0.5401918224650992,
+        1.5575762911814317,
+        1.5807683741252005
+      ]
+    }
+  },
+  "guard_sensitivity": {
+    "excluded_questions": [
+      "244",
+      "248",
+      "253",
+      "256",
+      "257",
+      "258",
+      "260",
+      "264",
+      "266",
+      "267",
+      "269",
+      "273",
+      "274",
+      "278",
+      "279",
+      "280",
+      "282",
+      "285",
+      "288",
+      "295",
+      "296",
+      "297",
+      "298",
+      "306",
+      "311",
+      "316",
+      "317",
+      "318",
+      "320",
+      "483",
+      "494",
+      "510",
+      "519",
+      "543"
+    ],
+    "remaining": 446,
+    "arms": {
+      "local": {
+        "chain_m32": {
+          "questions": 446,
+          "al": 3.5785160051956653
+        },
+        "last_c3_m32": {
+          "questions": 446,
+          "al": 3.7525291463246764
+        },
+        "frontier_c3_m32": {
+          "questions": 446,
+          "al": 3.764447077156154
+        },
+        "last_c8_m32": {
+          "questions": 446,
+          "al": 2.9474313183573804
+        },
+        "frontier_c8_m32": {
+          "questions": 446,
+          "al": 2.984523295286714
+        },
+        "last_c8_m64": {
+          "questions": 446,
+          "al": 3.6350574490023853
+        },
+        "frontier_c8_m64": {
+          "questions": 446,
+          "al": 3.805678299948102
+        }
+      },
+      "remote": {
+        "chain_m32": {
+          "questions": 446,
+          "al": 3.4726331879956946
+        },
+        "last_c3_m32": {
+          "questions": 446,
+          "al": 3.705700418702884
+        },
+        "frontier_c3_m32": {
+          "questions": 446,
+          "al": 3.79124639300158
+        },
+        "last_c8_m32": {
+          "questions": 446,
+          "al": 2.9509190180280758
+        },
+        "frontier_c8_m32": {
+          "questions": 446,
+          "al": 2.973592215522659
+        },
+        "last_c8_m64": {
+          "questions": 446,
+          "al": 3.726254854150465
+        },
+        "frontier_c8_m64": {
+          "questions": 446,
+          "al": 3.7801988235745294
+        }
+      }
+    }
+  },
+  "raw_manifest": [
+    {
+      "host": "local",
+      "name": "chain_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/local_45_paper/chain_m32.json",
+      "sha256": "e9034b1ee602769cbdc1e991de13d5e8f5db95c3cee198999384aca9331c6248",
+      "seed": 16101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 329477,
+      "context_guard_questions": 11,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 79925,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "local",
+      "name": "last_c3_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/local_45_paper/last_c3_m32.json",
+      "sha256": "5c8f5e5b3193f75a26cb1ddce17e0ca0cea50ed3ae8c35a97998a1cf1a962a23",
+      "seed": 16101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 321320,
+      "context_guard_questions": 12,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 71421,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "local",
+      "name": "frontier_c3_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/local_45_paper/frontier_c3_m32.json",
+      "sha256": "47dd4ee3cddfd41cca46d0b55aa867cc0177455984d0f877378b0a3828a9de63",
+      "seed": 16101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 322621,
+      "context_guard_questions": 16,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 69160,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "local",
+      "name": "last_c8_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/local_45_retry_external/last_c8_m32.json",
+      "sha256": "74982ec8bdfdb8de00d1a20f267c9cefe1219a7f7beaa12cd4a672382d8f7ba9",
+      "seed": 16101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 329566,
+      "context_guard_questions": 18,
+      "depth_bound": 4,
+      "depth_checks": {
+        "events": 92611,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 4,
+        "maximum_al": 5
+      }
+    },
+    {
+      "host": "local",
+      "name": "frontier_c8_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/local_67_paper/frontier_c8_m32.json",
+      "sha256": "d620160a92e645a10565e6a995b23ecb0f5eac72395ce6b005502c20bf7850cf",
+      "seed": 16101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 322645,
+      "context_guard_questions": 18,
+      "depth_bound": 4,
+      "depth_checks": {
+        "events": 87892,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 4,
+        "maximum_al": 5
+      }
+    },
+    {
+      "host": "local",
+      "name": "last_c8_m64",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/local_67_paper/last_c8_m64.json",
+      "sha256": "1e96b6b222beec5f6f2e6c3fa51af4202715a4ceafa49d6882571f6fcdc40f5c",
+      "seed": 16101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 323292,
+      "context_guard_questions": 24,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 70481,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "local",
+      "name": "frontier_c8_m64",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/local_67_paper/frontier_c8_m64.json",
+      "sha256": "8359c1fd39c2eef349f30975d87740065c443af6024364758962d1aa466b7749",
+      "seed": 16101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 343375,
+      "context_guard_questions": 21,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 73357,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "remote",
+      "name": "chain_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/remote_mirror/nova_23_retry_disk/chain_m32.json",
+      "sha256": "6ce469683d63a54429f4c12c384bb6f59a37856f7135d6413cdb9e0253f5d173",
+      "seed": 26101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 319393,
+      "context_guard_questions": 19,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 78610,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "remote",
+      "name": "last_c3_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/remote_mirror/nova_23_paper/last_c3_m32.json",
+      "sha256": "0584ef44914deb3d1d089a85203b12c96aedf08f01c37ab7aa083d6012d2f3df",
+      "seed": 26101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 326217,
+      "context_guard_questions": 17,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 69593,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "remote",
+      "name": "frontier_c3_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/remote_mirror/nova_23_paper/frontier_c3_m32.json",
+      "sha256": "259d0325de3a2643e94b75755718023afe86a9cdb70dfb79469646c59ce32cb1",
+      "seed": 26101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 325302,
+      "context_guard_questions": 17,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 70197,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "remote",
+      "name": "last_c8_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/remote_mirror/nova_45_paper/last_c8_m32.json",
+      "sha256": "cf00a219ba32cfb24b2056e5b750cd56533f5ac2dea8f996c1d75c2fa077a880",
+      "seed": 26101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 326087,
+      "context_guard_questions": 15,
+      "depth_bound": 4,
+      "depth_checks": {
+        "events": 90335,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 4,
+        "maximum_al": 5
+      }
+    },
+    {
+      "host": "remote",
+      "name": "frontier_c8_m32",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/remote_mirror/nova_45_paper/frontier_c8_m32.json",
+      "sha256": "303dab5d32b3076754f5376dd4467300ace720ab3aa694369a61020f2bb92bcb",
+      "seed": 26101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 325947,
+      "context_guard_questions": 12,
+      "depth_bound": 4,
+      "depth_checks": {
+        "events": 88363,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 4,
+        "maximum_al": 5
+      }
+    },
+    {
+      "host": "remote",
+      "name": "last_c8_m64",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/remote_mirror/nova_67_retry_disk/last_c8_m64.json",
+      "sha256": "19dacd06d684a522654a0562e5cd53246223167a8ac4c3222eb8d28d75d72f5b",
+      "seed": 26101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 325301,
+      "context_guard_questions": 17,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 70178,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    },
+    {
+      "host": "remote",
+      "name": "frontier_c8_m64",
+      "path": "/data/chokwans99/equal-tree-paper-full-20261014/remote_mirror/nova_67_paper/frontier_c8_m64.json",
+      "sha256": "cc35aa9505c80f48c81416a166c2ec4f54e74f594c8dee18a3664e0e658d7224",
+      "seed": 26101,
+      "turns": 560,
+      "questions": 480,
+      "output_tokens": 335606,
+      "context_guard_questions": 19,
+      "depth_bound": 8,
+      "depth_checks": {
+        "events": 70664,
+        "violations": 0,
+        "al_violations": 0,
+        "observed_max_depth": 8,
+        "maximum_al": 9
+      }
+    }
+  ],
+  "source_hashes": {
+    "ssd/ssd/__init__.py": "f1a221b38f55b42ef0619cba48a411acbbd1965c4845b4643f77443b7ce77950",
+    "ssd/ssd/paths.py": "72c52420daaf6d457c60235617efc3f8b1e3ae208a35f3bc45438adc9d7e01ac",
+    "ssd/ssd/llm.py": "496950f31428f674b70e8e137e029aa16dd82fdc8d8b8cc76f9ebdce86f7f653",
+    "ssd/ssd/sampling_params.py": "7f79868c4ca115bb18e017411a6c5545f354aa858aa0b8076aafb756d0785032",
+    "ssd/ssd/config.py": "43206b471881dc503336eddf5a492f1d8bacc29d34f6c263567c5e96328d5b12",
+    "ssd/ssd/layers/embed_head.py": "b896a56b908d75c8f30462b0b1a4ce634276ddb41165fdaa0220c55a2ddf7257",
+    "ssd/ssd/layers/linear.py": "82c096262013516c5f0a43f7c28f23aa6db6b14f52cbe1ce1dacc5f9d5c4b0b6",
+    "ssd/ssd/layers/rotary_embedding.py": "1bcca21cf5e4d81c11a5c55d59a6033874c4e6a0003cc4ae8e1aa6165976a723",
+    "ssd/ssd/layers/sampler.py": "d234ed3bd825d25214874b93399d00d48dbf62a10fe8ce97e1c5555558f6aae0",
+    "ssd/ssd/layers/activation.py": "13d88b460e7610df28c6a7c719dd8bf21c5c59ae0f85c94d505d499215618a82",
+    "ssd/ssd/layers/fi_attn.py": "4b0a275d020c1c3ce37f4e2a6c04bff12577d6f11feec7d79959652300fc9a0c",
+    "ssd/ssd/layers/attention.py": "bbafa69d9b52dedf81542f2c3227b7f061de11c679a6681a16b0c137ccfc672b",
+    "ssd/ssd/layers/layernorm.py": "a076c8d2e31d2597119d8504a69afd8711b41a29b5ccb7e1bf111a6c7277400e",
+    "ssd/ssd/models/eagle3_draft_llama3.py": "0d6e713a419cf884fc85984f9a2a6de520119032075a7c99158e0df7e2faca84",
+    "ssd/ssd/models/llama3.py": "ac801bd73e999f04a6fc862ca1d49bc94c88315456cfb6cb1215a503bcc5e07d",
+    "ssd/ssd/models/qwen2.py": "6804e3662a173368632e5f05b9893cc0cd28a61ac9bd25dbe8cd6f387ca0d1ca",
+    "ssd/ssd/models/qwen3.py": "535495bf69933fd9c677275453b801189e2c3c78a94fcc5133fc65b88c9f69c7",
+    "ssd/ssd/utils/misc.py": "1084b630f174d651b78b01c4ba2dff147f18d3cf52a200704b4b9eab2b72b66c",
+    "ssd/ssd/utils/loader.py": "c008eac34810772e8d9f51da896c00867481f3e1a0e6f725e0d06599c0aab59e",
+    "ssd/ssd/utils/verify.py": "c239996bc5aef88b9bcbd9550775b31a539a869ebd75cdad28d5bee7f7c66797",
+    "ssd/ssd/utils/int8_debug.py": "9a71dbf2b997a9c8d9b776cc3659c8dbf32ce5411eb5cedb4a73368cee60d3d7",
+    "ssd/ssd/utils/verify_fast.py": "23b05b7e5032fe72c8f2ef5bd7a69aa874818b08b52ea7fc0344a54c76ea28d9",
+    "ssd/ssd/utils/performance.py": "6faea7efc84c02d2fbaac5f2ed4e6d6f993e64ba37eac1021b572e05eda1f22a",
+    "ssd/ssd/utils/context.py": "ce55eb45f00c91412946dd1c96f5c8f972372dd4c8069770c48e120773f301fc",
+    "ssd/ssd/utils/quantize.py": "c0ee73d55f3781eba88007325d5e9e53e66ad952e0e8f19143aa8c50bc39f406",
+    "ssd/ssd/quant/adapter.py": "fbb1ce4a198a585c31b0102555d1f84d18b09b0de1b90a5808d93ec8ff7ac271",
+    "ssd/ssd/quant/loader.py": "14f901b1f53a3650be7eff497f626469e2b1fbc487202c639d33c8dd4c9047fb",
+    "ssd/ssd/quant/__init__.py": "a69f0de0a516ba2bf9e13680b75b8f5d538c2eb281b095662ed1515f8b0f8698",
+    "ssd/ssd/quant/marlin.py": "4f1996e9f63d7109e92a3a7ec5350069ba67d7659f2149e99b84ca3c6626b241",
+    "ssd/ssd/quant/state.py": "82cb1050a3b1776765df7ad8f6c59c23a86ac8d1d4cc3c974cded7f8e762f806",
+    "ssd/ssd/quant/init_context.py": "6aa3dc3f6e95d8902fa7244d0010110b6fcf1ffdccedd6eaa389204339fc214f",
+    "ssd/ssd/quant/io.py": "f44f98a57351ff1063b7423d2f8390a565a30796fd6c3beaeaa8825f906e66b5",
+    "ssd/ssd/quant/build.py": "37f9c72ac69af213f2720c86faf380b8a46baaad0b98bf5f2e3c7fa9b3fbc43c",
+    "ssd/ssd/quant/awq_calibrate.py": "116807eca0a3e4e001aa24a3344031416e4060a6c1b2e39f59829fba09484126",
+    "ssd/ssd/quant/importer.py": "c8990b69bc9e4e152e7e80b7f08f273c6a4652c1f7e95a8247f85e50030f4f92",
+    "ssd/ssd/quant/config.py": "080c327b2297d0905f8fddc8d994aa7b9dc1086d7703d951471d48cea8723a1d",
+    "ssd/ssd/quant/pack.py": "b7dd683b7cdbfbb6f4ce1e13a51a72240a8dc3a35b7ed652dc664d26bb384711",
+    "ssd/ssd/quant/marlin_utils.py": "f64ec8d7ec8260556abd21e229567971a928882f14b93d288a6732d55c12fc90",
+    "ssd/ssd/quant/naming.py": "7ba73900af5e6d6fa2d1907bd2611625fc72f28a1fb9ea4834cd9a45901632d6",
+    "ssd/ssd/engine/verifier.py": "7b723255589cf932e0336dd79a3399815a507629f3c4076a17f174b667ca3481",
+    "ssd/ssd/engine/sequence.py": "6894715ef142074b118bfa3018b10826d2748518e9c8b71291064eb99fae9bd9",
+    "ssd/ssd/engine/draft_runner.py": "c29645fb94bdec392b70debb19de5d6cdb13c6b84766e4871e6bbd6803a05f18",
+    "ssd/ssd/engine/scheduler.py": "bba2c8a504b8f8f3060ade16c01d687298e0cc3c92d64c23f2a1d3598714701c",
+    "ssd/ssd/engine/speculator_sync.py": "30487afa7f5027735ebd752ca1a53003f1d56350f503ea91931ef64e7aab115e",
+    "ssd/ssd/engine/model_runner.py": "6be86c9ac7fce07e421b8e064707d1466d25457c0ab836e9e38e66b97b96a6b1",
+    "ssd/ssd/engine/step.py": "67062061489b828ae4aa0981cfa9ea518ddf8741a795121c2b1465f56faa0a6f",
+    "ssd/ssd/engine/speculator_async.py": "cd16395d5e5d7380d29f5a27e1495b6a40758c0452ce2cb40d996e2c3271c114",
+    "ssd/ssd/engine/block_manager.py": "05d873619b419d31f47b4be4025bc7c9f11759f5f0bc3f65fbff3a1e8f94660a",
+    "ssd/ssd/engine/llm_engine.py": "7dfb29d996a48ee73bf30076594bd220f80014d40dfbc3833ad7a622501af366",
+    "ssd/ssd/utils/async_helpers/duet_policy.py": "1fb3e1ec1c41a9cda5f531f8c732b09145c7d87ea79d74c331b8176f11f22aaf",
+    "ssd/ssd/utils/async_helpers/tests.py": "6491ced36a2a6f06d8cf411204b1190d2ca0bc700cd0becf79c3f4cd8abcd87e",
+    "ssd/ssd/utils/async_helpers/async_spec_helpers.py": "0d70779098c5051fcba5d3add5ff0b7896139f1b7789babe701a8df6eaa40f24",
+    "ssd/ssd/utils/async_helpers/nccl_pack.py": "6330e785f3e81acffe25a82061d3098f7834ad3c2d07bb071d79ed9923b18dc1",
+    "ssd/ssd/engine/helpers/p1_tree.py": "f48ae6b01e593d2598262b34007a6b58dde9e57e94138dde62f81d5526637398",
+    "ssd/ssd/engine/helpers/tree_proxy_stream.py": "05d35738afa93627ba2dd56cd6bf4ca000938a9d02762dac5fde39f5c06009d0",
+    "ssd/ssd/engine/helpers/tree_host_topology.py": "86d0deab4da2932540a108c4c2b3560b8634837e71ba23783375c2001e4cf81c",
+    "ssd/ssd/engine/helpers/tree_expansion_policy.py": "e7ad394b72e3cc6cc442b4c037fc3b56c90ddcd6e9f24c59e0ff020142a268f3",
+    "ssd/ssd/engine/helpers/e0_trace.py": "23ecd9bce2587cbef3f99c8894964c0d9642d33d372bd7be4954a5a2840a142e",
+    "ssd/ssd/engine/helpers/p2_tree_executor.py": "6a466b366b533561334bed6d2f82ecc2786842d3e137af8a88d76b6ca15bc398",
+    "ssd/ssd/engine/helpers/batch_tree_sampling.py": "5c36826beac52aa1b55b6045d417b68088e601a9d96d4da65bb5e7dd71d27270",
+    "ssd/ssd/engine/helpers/batch_tree_roots.py": "ad3c4e772392c1043284ac4912d606543f3fd76167135b73e4f72a700e6820c7",
+    "ssd/ssd/engine/helpers/batch_tree_warmup.py": "38a4daed473d84e35a11bf4ad9ed2c739cc8bf98ae6156e03c00bfc948cfba8f",
+    "ssd/ssd/engine/helpers/tree_gain_allocation.py": "d28638dc9c8154350fecfd1764d8363fe133fe6fe9ba782abcf9aff6449f7579",
+    "ssd/ssd/engine/helpers/packed_tree_forward.py": "b903d6fe4d1fe18f95f6540f488acf40d469154100239429256eace61b1d7e76",
+    "ssd/ssd/engine/helpers/batch_tree_forward.py": "c6b4ea928b38f6ef944b3089648031715b4b61db7513b8beb7d57ec5100495a1",
+    "ssd/ssd/engine/helpers/flat_tree_sampling.py": "97feb92f96853c228d836d5769df8b811a1e045eee25ca3fbfcfb8428ba01efd",
+    "ssd/ssd/engine/helpers/tree_topology_gpu.py": "3a6cf8796faabbe8adef56deedf8956c1cf252a31e0491f3b71a8544bdcf89af",
+    "ssd/ssd/engine/helpers/tree_rerank_gpu.py": "a70f460a926671d85114772577d8d02d5e349c55ad995b10ba96ebd202bbb18a",
+    "ssd/ssd/engine/helpers/mask_helpers.py": "8ada4e709a6ab310ee920a7176b3684f89860022fc659442f6cb02ed5fb87d88",
+    "ssd/ssd/engine/helpers/batch_tree_draft.py": "7ae23dac236edb4e0cc545803cdbc9ab8fb717d05cde4cf2f51f3a9a2908ff28",
+    "ssd/ssd/engine/helpers/p2_tree.py": "ed8bc5e14fe3a57b46a7c734ed15aabaca9e37948b6b4ffc6a84d30285488a38",
+    "ssd/ssd/engine/helpers/runner_helpers.py": "bfb570d8e018ee296a6c2a8c3c9e75919fd0eb1beb288ceb80121ad116419bf2",
+    "ssd/ssd/engine/helpers/batched_tree_executor.py": "dd7f5219d50d73e5c10a9e23c15b50a549881542e1a87c60a105db373c26d22f",
+    "ssd/ssd/engine/helpers/batch_tree_verify.py": "5affc4c15f16d3d7c2d7a80b1ec773109ca273ba0ba12f2e20635166a0227ece",
+    "ssd/ssd/engine/helpers/batch_tree_inputs.py": "ed4f8b2ef0c2f93be9b70d8ba4514ae73259328794f130fb5689c0a2fdfdbae5",
+    "ssd/ssd/engine/helpers/root_policy.py": "c76dc117700d3f2c6586b6e0354561446dc8906c2a654410e848db848c6effbd",
+    "ssd/ssd/engine/helpers/batch_tree_common.py": "739feeb975c20d0adbdae51735b8983aa6cae8b59d6237b285db0c766d558f27",
+    "ssd/ssd/engine/helpers/speculate_types.py": "2929b5f3a176d04b6a4b01f092b224ad733dfda10a647bb73801cd346441ae91",
+    "ssd/ssd/engine/helpers/tree_layout.py": "4e5e47c54a4efd5a30ae8c528e1d2d9493d12aa5605c0e65c2f86ba874805be1",
+    "ssd/ssd/engine/helpers/cudagraph_helpers.py": "9c8a453a5477c1a4d9ff3d9041a1a40ec870ec1804938dbbac62ef8d0a292511",
+    "ssd/ssd/engine/helpers/proxy_temperature.py": "cfc4574455adeb54c418511058c8ebb6b03a3f3a6df82f6ce67b7d3bf806205f",
+    "ssd/ssd/engine/helpers/tree_fused_math.py": "930a1215363a3b6f878cbc4a71c3f59293f46aa2eab3c4938e5bb51e95868d2e"
+  },
+  "adapter_hashes": {
+    "mlsys_ver01_chain_check.py": "5d0f72c06722cafca17bde5454652cb49d5dfcbf332e6697d9ae0530e6dd383c",
+    "mlsys_ver01.py": "49e7fe27596e6eedf8dc5cf682ef6ad361d6ffac42ea785d48af9a28b0e6335d",
+    "mlsys_ver01_bulk.py": "6833a874d786b7842a25e73da5f15585ea6562bd9c1a1122c81cd0577ab99030",
+    "mlsys_ver01_extensions_sensitivity.py": "a460f85ab0384b7039cebe25e7560585e0848041bc8df85d14d97c85bd2da792",
+    "mlsys_ver01_review.py": "c3f648ed57f9c232d72b74c5e0297765ea4a71c6c8c20fbedda254004dacf9d8",
+    "mlsys_ver01_common.py": "898d9e2b4ff4dd9667b6ac074b09e946a55490b47fd959f1a4f1b6e1a7ce26e4",
+    "mlsys_ver01_extensions_warm.py": "bef80728a838362fa92673e7cd64e4f1281b27693f3712e8859a0c37148c3a43",
+    "mlsys_ver01_greedy_trace.py": "d4e582d1a07711a68f5c91a7a8688565c6112b2907ab8638c15d6bf6f1727047",
+    "mlsys_ver01_cache.py": "3f92524ea97ea7bfa7fe920475be8b993c5159932bea3989a3c89aba20f857dc",
+    "mlsys_ver01_hooks.py": "5d87157c68ee1ab6e6f31e6e84affa62d5c72d08f7ee9cae420f28fd7dbb000a",
+    "mlsys_ver01_extensions.py": "c9344bb4785d86638133fb8048ce253d5ed297ab593fa2473268aee8f35107f6",
+    "mlsys_ver01_extensions_repeat_audit.py": "dfc2fc1e3ade0dbca7d8324c88414927494bd8c627c9d70bb01fb6f32481b9d5",
+    "mlsys_ver01_extensions_expected.py": "ceba7a4737fdd994895a2ed96f938a04419bf62cf12058dffca85f9a2fc1d6ad",
+    "mlsys_tree_followup.py": "94b3d7e62819d6675a66bc952ca738170ce3d0528ed19df81b1114956edc9c06",
+    "mlsys_tree_systems.py": "eba12e80b160e8543a8af2e993043b7eff13c12923edda5283277ecef5877874",
+    "mlsys_flat_tree.py": "4a9207a41c0c950232e05daca384715701f2280186ced421acef439e1dacdc8b",
+    "mlsys_tree_candidates.py": "d76683636df2218f242a3090107d5972b8671fe80cd6fbda61b07ff7aed9d13f",
+    "mlsys_capture_audit.py": "27e65ac8becc88abaa1f9d305db673ca4772009500a4c4ba2134236b1b43e9ec",
+    "mlsys_measurement.py": "aac87d0563215dfbdc46a56fa3b019a67f563fde57cc14a8d1cdb38b115fdddd",
+    "mlsys_request_reporting.py": "31adaf17110a8f22eab6573aa9a7f955e1e171ba94dc086af87a961f2cea4055",
+    "mlsys_equal_dataset.py": "cb129bd9840e6b04eee3226790bb7dff2ecb5a4bfdf50838a9b07dbdc8e4c2e4",
+    "mlsys_equal_budget.py": "f52faa0eda1fc2a5f521263e00927cad1c850a9bbf3684581005baa8577b1300",
+    "mlsys_equal_budget_adapter.py": "42fe9485697e5067a6fb456f45cde400a82e60e4f9581d8b2f99046a55d8ade0"
+  },
+  "limitations": [
+    "Online contexts differ across methods.",
+    "No uniform-root-weighting or C3 protected-backbone ablation.",
+    "No target oracle for discarded nodes and no valid rerank replay.",
+    "Hardware and seed are confounded; one seed per server.",
+    "Forest trace records all exports, not hit-root identities."
+  ]
+}

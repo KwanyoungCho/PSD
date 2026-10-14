@@ -1,0 +1,24 @@
+{
+  "launch": [
+    {
+      "name": "nova_23_retry_disk",
+      "pid": 2888642,
+      "gpus": "2,3",
+      "source_failed_directory": "nova_23_paper",
+      "arm": "chain_m32",
+      "started": 1791974376.717771
+    },
+    {
+      "name": "nova_67_retry_disk",
+      "pid": 2888643,
+      "gpus": "6,7",
+      "source_failed_directory": "nova_67_paper",
+      "arm": "last_c8_m64",
+      "started": 1791974376.718583
+    }
+  ],
+  "free_bytes_before": 4410290176,
+  "reason": "ENOSPC during raw/trace writing",
+  "policy": "Restart complete 560-turn run; preserve all failed raw; no resume from partial RNG state",
+  "runtime_modified": false
+}
