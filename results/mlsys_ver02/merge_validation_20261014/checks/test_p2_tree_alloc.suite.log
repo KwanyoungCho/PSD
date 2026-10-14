@@ -1,0 +1,118 @@
+test_cuda_parity_live_shape (test_p2_tree_alloc.TestArenaCudaParity.test_cuda_parity_live_shape) ... ok
+test_zero_q_support_exhaustion_cpu (test_p2_tree_alloc.TestArenaCudaParity.test_zero_q_support_exhaustion_cpu) ... ok
+test_budgets_gpu_matches_cpu (test_p2_tree_alloc.TestArenaParity.test_budgets_gpu_matches_cpu) ... ok
+test_rollout_arena_full_parity (test_p2_tree_alloc.TestArenaParity.test_rollout_arena_full_parity) ... ok
+test_rollout_arena_parity_fuzz_seeds (test_p2_tree_alloc.TestArenaParity.test_rollout_arena_parity_fuzz_seeds) ... ok
+test_cuda_full_parity_deterministic_sampler (test_p2_tree_alloc.TestArenaParityHardening.test_cuda_full_parity_deterministic_sampler) ... ok
+test_mandatory_backbones_keep_root_lane_order (test_p2_tree_alloc.TestArenaParityHardening.test_mandatory_backbones_keep_root_lane_order)
+C=1,R=W must keep root r in lane r on every round. ... ok
+test_near_tie_mandatory_ordering (test_p2_tree_alloc.TestArenaParityHardening.test_near_tie_mandatory_ordering) ... ok
+test_overbooked_backbone_prioritizes_likely_root_tips (test_p2_tree_alloc.TestArenaParityHardening.test_overbooked_backbone_prioritizes_likely_root_tips)
+R>W must spend depth on likely roots, not root-id prefix. ... ok
+test_true_zero_q_support_exhaustion (test_p2_tree_alloc.TestArenaParityHardening.test_true_zero_q_support_exhaustion) ... ok
+test_workspace_reuse_parity (test_p2_tree_alloc.TestArenaParityHardening.test_workspace_reuse_parity) ... ok
+test_budget2_partial_backbone (test_p2_tree_alloc.TestBackboneFanout.test_budget2_partial_backbone) ... ok
+test_budget4_pure_chain (test_p2_tree_alloc.TestBackboneFanout.test_budget4_pure_chain) ... ok
+test_budget8_full_depth_plus_siblings (test_p2_tree_alloc.TestBackboneFanout.test_budget8_full_depth_plus_siblings) ... ok
+test_ctensor_policy_unchanged (test_p2_tree_alloc.TestBackboneFanout.test_ctensor_policy_unchanged) ... ok
+test_multi_root_each_backboned (test_p2_tree_alloc.TestBackboneFanout.test_multi_root_each_backboned) ... ok
+test_cap_binds_total (test_p2_tree_alloc.TestBudgetExhaustion.test_cap_binds_total) ... ok
+test_skewed_piv_full_exhaustion (test_p2_tree_alloc.TestBudgetExhaustion.test_skewed_piv_full_exhaustion) ... ok
+test_zero_piv_excluded (test_p2_tree_alloc.TestBudgetExhaustion.test_zero_piv_excluded) ... ok
+test_plan_and_identity_skip (test_p2_tree_alloc.TestCommitPlan.test_plan_and_identity_skip) ... ok
+test_exhausted_root_zero (test_p2_tree_alloc.TestFanouts.test_exhausted_root_zero) ... ok
+test_global_fanout_reserves_depth_only_for_selected_roots (test_p2_tree_alloc.TestFanouts.test_global_fanout_reserves_depth_only_for_selected_roots) ... ok
+test_input_not_mutated (test_p2_tree_alloc.TestFanouts.test_input_not_mutated) ... ok
+test_multi_root_independent (test_p2_tree_alloc.TestFanouts.test_multi_root_independent) ... ok
+test_prefix_no_overdraw (test_p2_tree_alloc.TestFanouts.test_prefix_no_overdraw) ... ok
+test_priority_order_wins (test_p2_tree_alloc.TestFanouts.test_priority_order_wins) ... ok
+test_exhaustive_first_token_equals_p (test_p2_tree_alloc.TestLosslessExhaustive.test_exhaustive_first_token_equals_p) ... ok
+test_walk_mc_matches_analytic (test_p2_tree_alloc.TestLosslessExhaustive.test_walk_mc_matches_analytic) ... ok
+test_mask_pack_crosses_63_bit_boundaries (test_p2_tree_alloc.TestMultiwordAncestry.test_mask_pack_crosses_63_bit_boundaries) ... ok
+test_batch_precompute_matches_hit_time_policy_and_wire (test_p2_tree_alloc.TestP1RerankPrecompute.test_batch_precompute_matches_hit_time_policy_and_wire) ... ok
+test_capture_does_not_consume_production_rng (test_p2_tree_alloc.TestP2ExecutorWarmup.test_capture_does_not_consume_production_rng)
+Startup capture may execute sampling, but must be RNG-neutral. ... ok
+test_parent_q_matches_cell_logits (test_p2_tree_alloc.TestParentQRefs.test_parent_q_matches_cell_logits) ... ok
+test_extreme_piv_clamped (test_p2_tree_alloc.TestPivPack.test_extreme_piv_clamped) ... ok
+test_packed_differs_from_clean (test_p2_tree_alloc.TestPivPack.test_packed_differs_from_clean) ... ok
+test_roundtrip_accuracy (test_p2_tree_alloc.TestPivPack.test_roundtrip_accuracy) ... ok
+test_version_bit_enforced (test_p2_tree_alloc.TestPivPack.test_version_bit_enforced) ... ok
+test_backbone_r_gt_w_raises (test_p2_tree_alloc.TestReview2Fixes.test_backbone_r_gt_w_raises) ... ok
+test_chain_proxy_cudagraph_matches_fixed (test_p2_tree_alloc.TestReview2Fixes.test_chain_proxy_cudagraph_matches_fixed) ... ok
+test_chain_proxy_fixed_matches_policy_b_formula (test_p2_tree_alloc.TestReview2Fixes.test_chain_proxy_fixed_matches_policy_b_formula) ... ok
+test_chain_shaped_tree_proxy_matches_chain_policy (test_p2_tree_alloc.TestReview2Fixes.test_chain_shaped_tree_proxy_matches_chain_policy)
+C=1 tree must preserve the established chain root ranking. ... ok
+test_chain_tree_walk_matches_standard_speculative_verify (test_p2_tree_alloc.TestReview2Fixes.test_chain_tree_walk_matches_standard_speculative_verify)
+A one-child tree must make the ordinary SD accept/reject choices. ... ok
+test_fixed_proxy_candidates_are_exact_at_real_width (test_p2_tree_alloc.TestReview2Fixes.test_fixed_proxy_candidates_are_exact_at_real_width) ... ok
+test_ladder_chain_degenerate_matches_dp (test_p2_tree_alloc.TestReview2Fixes.test_ladder_chain_degenerate_matches_dp) ... ok
+test_ladder_counterexample_vs_independent (test_p2_tree_alloc.TestReview2Fixes.test_ladder_counterexample_vs_independent) ... ok
+test_ladder_dtype_does_not_depend_on_global_default (test_p2_tree_alloc.TestReview2Fixes.test_ladder_dtype_does_not_depend_on_global_default) ... ok
+test_ladder_gpu_parity (test_p2_tree_alloc.TestReview2Fixes.test_ladder_gpu_parity) ... ok
+test_ladder_matches_walk_monte_carlo (test_p2_tree_alloc.TestReview2Fixes.test_ladder_matches_walk_monte_carlo) ... ok
+test_ladder_terminal_mass_sums_to_one (test_p2_tree_alloc.TestReview2Fixes.test_ladder_terminal_mass_sums_to_one) ... ok
+test_proportional_after_cap (test_p2_tree_alloc.TestReview2Fixes.test_proportional_after_cap) ... ok
+test_proxy_cudagraph_matches_dynamic_all_valid_widths (test_p2_tree_alloc.TestReview2Fixes.test_proxy_cudagraph_matches_dynamic_all_valid_widths) ... ok
+test_tip_lane_under_w_contention (test_p2_tree_alloc.TestReview2Fixes.test_tip_lane_under_w_contention) ... ok
+test_ancestor_cells_chain (test_p2_tree_alloc.TestRolloutReference.test_ancestor_cells_chain) ... ok
+test_budget_conserved (test_p2_tree_alloc.TestRolloutReference.test_budget_conserved) ... ok
+test_cell_addressing (test_p2_tree_alloc.TestRolloutReference.test_cell_addressing) ... ok
+test_d11_single_shot (test_p2_tree_alloc.TestRolloutReference.test_d11_single_shot) ... ok
+test_frontier_mixes_depths_level_cannot (test_p2_tree_alloc.TestRolloutReference.test_frontier_mixes_depths_level_cannot) ... ok
+test_level_depth_sync (test_p2_tree_alloc.TestRolloutReference.test_level_depth_sync) ... ok
+test_priority_is_logpiv_plus_lograwq (test_p2_tree_alloc.TestRolloutReference.test_priority_is_logpiv_plus_lograwq) ... ok
+test_adaptive_preserves_every_backbone_and_only_varies_siblings (test_p2_tree_alloc.TestRootBudgets.test_adaptive_preserves_every_backbone_and_only_varies_siblings) ... ok
+test_beta_one_proportional (test_p2_tree_alloc.TestRootBudgets.test_beta_one_proportional) ... ok
+test_beta_zero_uniform (test_p2_tree_alloc.TestRootBudgets.test_beta_zero_uniform) ... ok
+test_calibrated_floors_only_block_later_expansion (test_p2_tree_alloc.TestRootBudgets.test_calibrated_floors_only_block_later_expansion) ... ok
+test_canonical_confidence_root_count_is_derived (test_p2_tree_alloc.TestRootBudgets.test_canonical_confidence_root_count_is_derived) ... ok
+test_confidence_policy_fixes_beta_and_matches_level (test_p2_tree_alloc.TestRootBudgets.test_confidence_policy_fixes_beta_and_matches_level) ... ok
+test_coverage_policy_keeps_every_live_root (test_p2_tree_alloc.TestRootBudgets.test_coverage_policy_keeps_every_live_root) ... ok
+test_coverage_tree_is_chain_superset_for_all_ten_roots (test_p2_tree_alloc.TestRootBudgets.test_coverage_tree_is_chain_superset_for_all_ten_roots) ... ok
+test_d10_signature (test_p2_tree_alloc.TestRootBudgets.test_d10_signature) ... ok
+test_deterministic (test_p2_tree_alloc.TestRootBudgets.test_deterministic) ... ok
+test_dynamic_is_the_same_global_selector_as_legacy_eagle (test_p2_tree_alloc.TestRootBudgets.test_dynamic_is_the_same_global_selector_as_legacy_eagle) ... ok
+test_eagle_expands_global_confidence_not_every_root_backbone (test_p2_tree_alloc.TestRootBudgets.test_eagle_expands_global_confidence_not_every_root_backbone) ... ok
+test_eagle_rejects_more_roots_than_forward_width (test_p2_tree_alloc.TestRootBudgets.test_eagle_rejects_more_roots_than_forward_width) ... ok
+test_global_root_count_defaults_to_width_and_honors_arg (test_p2_tree_alloc.TestRootBudgets.test_global_root_count_defaults_to_width_and_honors_arg) ... ok
+test_hybrid_guarantees_depth_two_then_expands_globally (test_p2_tree_alloc.TestRootBudgets.test_hybrid_guarantees_depth_two_then_expands_globally) ... ok
+test_single_root (test_p2_tree_alloc.TestRootBudgets.test_single_root) ... ok
+test_sum_and_cap (test_p2_tree_alloc.TestRootBudgets.test_sum_and_cap) ... ok
+test_views_invariants (test_p2_tree_alloc.TestRootViews.test_views_invariants) ... ok
+test_rope_uses_depth_not_forward (test_p2_tree_alloc.TestRunRollout.test_rope_uses_depth_not_forward) ... ok
+test_topology_matches_reference (test_p2_tree_alloc.TestRunRollout.test_topology_matches_reference) ... ok
+test_no_piv_keeps_two_tuple (test_p2_tree_alloc.TestSelectorPivPassthrough.test_no_piv_keeps_two_tuple) ... ok
+test_out_of_range_wire_positions_are_excluded_without_oob (test_p2_tree_alloc.TestSelectorPivPassthrough.test_out_of_range_wire_positions_are_excluded_without_oob) ... ok
+test_piv_follows_token_indexing (test_p2_tree_alloc.TestSelectorPivPassthrough.test_piv_follows_token_indexing) ... ok
+test_same_coins_same_outcome (test_p2_tree_alloc.TestTensorWalkEquivalence.test_same_coins_same_outcome) ... ok
+test_chain_degenerate_equals_first_reject (test_p2_tree_alloc.TestTerminalMassDP.test_chain_degenerate_equals_first_reject) ... ok
+test_sibling_mass_and_total (test_p2_tree_alloc.TestTerminalMassDP.test_sibling_mass_and_total) ... ok
+test_chain_degenerate_bit_identical (test_p2_tree_alloc.TestTreeMask.test_chain_degenerate_bit_identical) ... ok
+test_tree_cross_row_bits (test_p2_tree_alloc.TestTreeMask.test_tree_cross_row_bits) ... ok
+test_chain_backbone_floor_is_preserved (test_p2_tree_alloc.TestTreeP1Allocation.test_chain_backbone_floor_is_preserved) ... ok
+test_confidence_breaks_surplus_ties (test_p2_tree_alloc.TestTreeP1Allocation.test_confidence_breaks_surplus_ties) ... ok
+test_invalid_shape_rejected (test_p2_tree_alloc.TestTreeP1Allocation.test_invalid_shape_rejected) ... ok
+test_flat_little_endian_layout (test_p2_tree_alloc.TestTreeVerifyMaskPacking.test_flat_little_endian_layout) ... ok
+test_requires_two_dimensional_cpu_mask (test_p2_tree_alloc.TestTreeVerifyMaskPacking.test_requires_two_dimensional_cpu_mask) ... ok
+test_roundtrip (test_p2_tree_alloc.TestTreeWire.test_roundtrip) ... ok
+test_forward_parent_is_rejected (test_p2_tree_alloc.TestTreeWireValidation.test_forward_parent_is_rejected) ... ok
+test_invalid_qref_is_rejected (test_p2_tree_alloc.TestTreeWireValidation.test_invalid_qref_is_rejected) ... ok
+test_parent_path_is_bounded_and_root_ordered (test_p2_tree_alloc.TestTreeWireValidation.test_parent_path_is_bounded_and_root_ordered) ... ok
+test_parent_path_rejects_cycle_even_without_wire_validation (test_p2_tree_alloc.TestTreeWireValidation.test_parent_path_rejects_cycle_even_without_wire_validation) ... ok
+test_parse_and_validate_accepts_shm_list_without_tensor_copy (test_p2_tree_alloc.TestTreeWireValidation.test_parse_and_validate_accepts_shm_list_without_tensor_copy) ... ok
+test_self_parent_is_rejected (test_p2_tree_alloc.TestTreeWireValidation.test_self_parent_is_rejected) ... ok
+test_sibling_capacity_is_rejected_before_gpu_pack (test_p2_tree_alloc.TestTreeWireValidation.test_sibling_capacity_is_rejected_before_gpu_pack) ... ok
+test_sibling_gap_is_rejected (test_p2_tree_alloc.TestTreeWireValidation.test_sibling_gap_is_rejected) ... ok
+test_siblings_must_share_qref (test_p2_tree_alloc.TestTreeWireValidation.test_siblings_must_share_qref) ... ok
+test_token_range_is_rejected (test_p2_tree_alloc.TestTreeWireValidation.test_token_range_is_rejected) ... ok
+test_valid_topology (test_p2_tree_alloc.TestTreeWireValidation.test_valid_topology) ... ok
+test_rows_and_mask (test_p2_tree_alloc.TestVerifyRows.test_rows_and_mask) ... ok
+test_c1_bit_identical_to_sampler (test_p2_tree_alloc.TestWorSampler.test_c1_bit_identical_to_sampler) ... ok
+test_raw_q_is_unrenormalized (test_p2_tree_alloc.TestWorSampler.test_raw_q_is_unrenormalized) ... ok
+test_temp0_gated (test_p2_tree_alloc.TestWorSampler.test_temp0_gated) ... ok
+test_wor_no_duplicates_and_order (test_p2_tree_alloc.TestWorSampler.test_wor_no_duplicates_and_order) ... ok
+
+----------------------------------------------------------------------
+Ran 108 tests in 38.020s
+
+OK

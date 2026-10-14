@@ -1,0 +1,39 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "sgl", "capability": [8, 9], "debug_tokens": false, "device": "cuda:0", "device_name": "NVIDIA GeForce RTX 4090", "draft": "/tmp/models--meta-llama--Llama-3.2-1B-Instruct/snapshots/9213176726f574b556790deb65791e0c5aa438b6", "dtype": "torch.float16", "exit_layer": null, "fan_out_list": null, "head_dim": 128, "k1": null, "k2": null, "local_kv_heads": 32, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/chokwans99/models_mlsys/layerskip-llama2-7b", "model_tp": 1, "mq_len": null, "optimize": 0, "p2_budget": null, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": "0.2.1", "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "python": "3.12.7", "python_abi": "cpython-312", "rank": 0, "role": "target", "speculate_k": 1, "target_tp": 1, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=False, spec_k=1
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=False, speculate=False, spec_k=1
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files:  33%|███▎      | 1/3 [00:01<00:03,  1.63s/it]Loading model files:  67%|██████▋   | 2/3 [00:04<00:02,  2.07s/it]Loading model files: 100%|██████████| 3/3 [00:06<00:00,  2.45s/it]Loading model files: 100%|██████████| 3/3 [00:06<00:00,  2.31s/it]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 37, 256, 32, 128])
+[LLMEngine] finished llm_engine init
+Final Prefill Throughput: 6.05tok/s
+Final Decode Throughput: 58.46tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 58.459853907281655, 'al': None, 'cache_hit': None, 'emitted_tokens': 30, 'seconds': 0.5131726816762239, 'included_steps': 30, 'included_events': 0, 'total_steps': 31, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 58.65tok/s
+[metrics] Prefill tokens/time: 7 / 1.157061s
+[metrics] Decode tokens/time: 31 / 0.528518s
+Final Prefill Throughput: 360.35tok/s
+Final Decode Throughput: 52.48tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 52.476402434490275, 'al': None, 'cache_hit': None, 'emitted_tokens': 30, 'seconds': 0.5716855311766267, 'included_steps': 30, 'included_events': 0, 'total_steps': 31, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 52.69tok/s
+[metrics] Prefill tokens/time: 12 / 0.033301s
+[metrics] Decode tokens/time: 31 / 0.588327s
+Final Prefill Throughput: 295.21tok/s
+Final Decode Throughput: 58.10tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 58.0998416934773, 'al': None, 'cache_hit': None, 'emitted_tokens': 30, 'seconds': 0.5163525256793946, 'included_steps': 30, 'included_events': 0, 'total_steps': 31, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 58.32tok/s
+[metrics] Prefill tokens/time: 14 / 0.047424s
+[metrics] Decode tokens/time: 31 / 0.531514s
+Final Prefill Throughput: 679.63tok/s
+Final Decode Throughput: 56.66tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 56.6554532014883, 'al': None, 'cache_hit': None, 'emitted_tokens': 30, 'seconds': 0.5295165479183197, 'included_steps': 30, 'included_events': 0, 'total_steps': 31, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 56.23tok/s
+[metrics] Prefill tokens/time: 14 / 0.020599s
+[metrics] Decode tokens/time: 31 / 0.551301s
+[LLMEngine] Exiting (hard=False)
+[LLMEngine] Exiting (hard=True)

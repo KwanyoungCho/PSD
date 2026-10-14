@@ -1,0 +1,39 @@
+{
+  "state": "complete_local_merge_validation",
+  "runtime_commit": "f6494f63e3fbbd35ce28848fb6530798ee3e9f2a",
+  "suites": 33,
+  "tests": 312,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "native_model_runs": 6,
+  "greedy_parity": [
+    {
+      "batch": 1,
+      "prompts": 4,
+      "exact": 4,
+      "same_count": true
+    },
+    {
+      "batch": 2,
+      "prompts": 4,
+      "exact": 4,
+      "same_count": true
+    }
+  ],
+  "adapter_runs": 2,
+  "adapter_phase_forests": {
+    "last": 174,
+    "frontier": 120
+  },
+  "analysis_tests": 5,
+  "original_tree_runs": 14,
+  "original_tree_raw_hashes_checked": 14,
+  "original_tree_source_commit": "091fa64",
+  "source_unchanged": true,
+  "limitations": [
+    "RTX4090, Llama2-7B/AMD135M functional checks; not Blackwell70B certification.",
+    "Original full AL runs predate review normalization fixes; not rerun on merged runtime.",
+    "No new performance or B>1 AL claim from these short functional runs."
+  ]
+}

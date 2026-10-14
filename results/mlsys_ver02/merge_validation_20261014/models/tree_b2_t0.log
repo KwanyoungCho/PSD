@@ -1,0 +1,125 @@
+[Config] duet_proxy_top_k raised 3 → 12 (K_max=4 K_min=2 p1_sum_full=15 p1_sum_short=9 p1_max=3 per_pos=11 total=12 wire_N=23)
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=12, draft_fan_out=3, proxy_fan_out=0, K1=4, K2=2, P2_W=6, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[duet-tree-runtime] batch=2 target_tp=1 exit_replica=0 source=default proxy_stream=0 stream_source=auto
+Draft runner created on rank 1 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "sgl", "capability": [8, 9], "debug_tokens": false, "device": "cuda:0", "device_name": "NVIDIA GeForce RTX 4090", "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m", "dtype": "torch.float16", "exit_layer": 21, "fan_out_list": [3, 3, 3, 3, 3, 3, 3], "head_dim": 128, "k1": 4, "k2": 2, "local_kv_heads": 32, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 2, "model": "/home/chokwans99/models_mlsys/layerskip-llama2-7b", "model_tp": 1, "mq_len": 21, "optimize": 0, "p2_budget": 6, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": "0.2.1", "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.12.7", "python_abi": "cpython-312", "rank": 0, "role": "target", "speculate_k": 6, "target_tp": 1, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=12, draft_fan_out=3, proxy_fan_out=0, K1=4, K2=2, P2_W=6, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+`torch_dtype` is deprecated! Use `dtype` instead!
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[runtime-manifest] {"async_fan_out": 3, "attention_backend": "sgl", "capability": [8, 9], "debug_tokens": false, "device": "cuda:1", "device_name": "NVIDIA GeForce RTX 4090", "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m", "dtype": "torch.float16", "exit_layer": 21, "fan_out_list": [3, 3, 3, 3, 3, 3, 3], "head_dim": 64, "k1": 4, "k2": 2, "local_kv_heads": 12, "local_q_heads": 12, "max_model_len": 2048, "max_num_seqs": 2, "model": "/home/chokwans99/models_mlsys/AMD-Llama-135m", "model_tp": 1, "mq_len": 21, "optimize": 0, "p2_budget": 6, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": "0.2.1", "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.12.7", "python_abi": "cpython-312", "rank": 1, "role": "draft", "speculate_k": 6, "target_tp": 1, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[model_runner about to wrapper.init()] graph_bs_list=[1, 2]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=6
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.49it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  1.49it/s]
+Loading model files:  33%|███▎      | 1/3 [00:01<00:03,  1.84s/it]Loading model files:  67%|██████▋   | 2/3 [00:05<00:02,  2.89s/it]Loading model files: 100%|██████████| 3/3 [00:08<00:00,  3.07s/it]Loading model files: 100%|██████████| 3/3 [00:08<00:00,  2.91s/it]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 36, 256, 32, 128])
+[load_model] finished loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 12, 1341, 256, 12, 64])
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+F=3, fan_out_list=[3, 3, 3, 3, 3, 3, 3], fan_out_list_miss=[3, 3, 3, 3, 3, 3, 3], MQ_LEN=21
+[DUET split-K1K2] layouts: split_k1_long MQ=15 (K=K1=4, pos=5), split_k1_short MQ=9 (K=K1=4, pos=3), split_k2 MQ=6 (K=K2=2, pos=3)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3, 3], "siblings": 2, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3, 3], "siblings": 2, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 4, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6], "siblings": 2, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 4, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6], "siblings": 2, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 5, "round_widths": [5, 5, 5, 5], "siblings": 2, "width": 5}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 5, "round_widths": [5, 5, 5, 5], "siblings": 2, "width": 5}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 4, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6], "siblings": 2, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 4, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6], "siblings": 2, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 9, "round_widths": [9, 9, 9, 9], "siblings": 2, "width": 9}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 9, "round_widths": [9, 9, 9, 9], "siblings": 2, "width": 9}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 4, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6], "siblings": 2, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 4, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6], "siblings": 2, "width": 6}
+[DUET prewarm] draft 12 executors 60 graphs 82.356 seconds
+DraftRunner set up, starting draft_loop
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=12, draft_fan_out=3, proxy_fan_out=0, K1=4, K2=2, P2_W=6, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=None, P1_tree_nodes=8/8(gen/verify), P2_tree_nodes=4/4(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.01, tree_conf_thr=0.03
+[DUET prewarm] target 9 proxy/accept shapes 31.926 seconds
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 16.67tok/s
+Final Decode Throughput: 27.64tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 2, 'tps': 27.638965356532058, 'al': 1.9, 'cache_hit': 0.85, 'emitted_tokens': 38, 'seconds': 1.374870568048209, 'included_steps': 10, 'included_events': 20, 'total_steps': 30, 'excluded_steps': 20, 'exclusion_reasons': {'cap_or_clip': 2, 'partial_batch': 19, 'both': 1}}
+[raw metrics] All decode throughput: 33.32tok/s
+[metrics] Prefill tokens/time: 17 / 1.019606s
+[metrics] Decode tokens/time: 64 / 1.920808s
+[metrics] Avg Tokens per step (incl recovery): 1.90
+[raw metrics] All-event accepted length: 1.59
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.15 (denom=4)
+[metrics] Avg target time per full step (ms): 94.86
+[metrics] Avg target verify time (ms): 21.18
+[metrics] Avg Cache Hits: 0.85
+[raw metrics] All-event cache hit: 0.92
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.067
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.850
+[metrics] Avg Phase 1 Accepted Len: 2.25
+[metrics] Avg Phase 1 Acceptance Ratio: 0.562
+[metrics] Avg Phase 2 Accepted Len: 0.39
+[metrics] Avg Phase 2 Acceptance Ratio: 0.197
+[metrics] Avg Tokens per step on Cache Hit: 1.59
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.703
+  1: 0.108
+  2: 0.135
+  3: 0.000
+  4: 0.054
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.50
+[DUET] warmed acceptance kernels (K=[2, 4])
+Final Prefill Throughput: 507.93tok/s
+Final Decode Throughput: 143.62tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 2, 'tps': 143.6164051844546, 'al': 2.5, 'cache_hit': 0.8125, 'emitted_tokens': 40, 'seconds': 0.27851971331983805, 'included_steps': 8, 'included_events': 16, 'total_steps': 15, 'excluded_steps': 7, 'exclusion_reasons': {'cap_or_clip': 2, 'partial_batch': 6, 'both': 1}}
+[raw metrics] All decode throughput: 114.99tok/s
+[metrics] Prefill tokens/time: 26 / 0.051188s
+[metrics] Decode tokens/time: 64 / 0.556579s
+[metrics] Avg Tokens per step (incl recovery): 2.50
+[raw metrics] All-event accepted length: 2.88
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.47 (denom=4)
+[metrics] Avg target time per full step (ms): 37.99
+[metrics] Avg target verify time (ms): 23.83
+[metrics] Avg Cache Hits: 0.81
+[raw metrics] All-event cache hit: 0.83
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.533
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.300
+[metrics] Avg Phase 1 Accepted Len: 3.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.750
+[metrics] Avg Phase 2 Accepted Len: 1.00
+[metrics] Avg Phase 2 Acceptance Ratio: 0.500
+[metrics] Avg Tokens per step on Cache Hit: 3.10
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.150
+  1: 0.300
+  2: 0.200
+  3: 0.000
+  4: 0.350
+  5: 0.000
+  6: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.75
+[LLMEngine] Exiting (hard=False)
+[metrics] batched tree: {'steps': 45, 'tree_hits': 57, 'phase1_replays': 45, 'phase2_replays': 45, 'captures': 0}
+[metrics] Avg draft step time (ms): 49.24
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1014 23:12:57.537978771 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

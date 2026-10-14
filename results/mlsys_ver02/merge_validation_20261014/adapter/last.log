@@ -1,0 +1,265 @@
+[equal budget] {"roots": 8, "selection": "last", "root_weighting": "weighted", "score": "root_prior * product(raw_draft_q)", "calibration": false, "thresholds": false, "rerank": false, "generation_cap": "R * K_phase * C per root, nonbinding", "control": "C=1 chain shape, same tree executor", "generation_cost": "equal physical query rows; measured latency may differ"}
+[Config] duet_proxy_top_k raised 3 → 137 (K_max=8 K_min=8 p1_sum_full=264 p1_sum_short=9 p1_max=8 per_pos=18 total=137 wire_N=274)
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=137, draft_fan_out=1, proxy_fan_out=1, K1=8, K2=8, P2_W=8, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=8, P1_tree_nodes=192/32(gen/verify), P2_tree_nodes=192/32(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[duet-tree-runtime] batch=1 target_tp=1 exit_replica=0 source=env proxy_stream=0 stream_source=env
+Draft runner created on rank 1 (async)!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[runtime-manifest] {"async_fan_out": 2, "attention_backend": "sgl", "capability": [8, 9], "debug_tokens": false, "device": "cuda:0", "device_name": "NVIDIA GeForce RTX 4090", "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m", "dtype": "torch.float16", "exit_layer": 21, "fan_out_list": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], "head_dim": 128, "k1": 8, "k2": 8, "local_kv_heads": 32, "local_q_heads": 32, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/chokwans99/models_mlsys/layerskip-llama2-7b", "model_tp": 1, "mq_len": 34, "optimize": 0, "p2_budget": 8, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": "0.2.1", "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.12.7", "python_abi": "cpython-312", "rank": 0, "role": "target", "speculate_k": 16, "target_tp": 1, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=137, draft_fan_out=1, proxy_fan_out=1, K1=8, K2=8, P2_W=8, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=8, P1_tree_nodes=192/32(gen/verify), P2_tree_nodes=192/32(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+`torch_dtype` is deprecated! Use `dtype` instead!
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF file you can ignore this message.
+[runtime-manifest] {"async_fan_out": 2, "attention_backend": "sgl", "capability": [8, 9], "debug_tokens": false, "device": "cuda:1", "device_name": "NVIDIA GeForce RTX 4090", "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m", "dtype": "torch.float16", "exit_layer": 21, "fan_out_list": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], "head_dim": 64, "k1": 8, "k2": 8, "local_kv_heads": 12, "local_q_heads": 12, "max_model_len": 2048, "max_num_seqs": 1, "model": "/home/chokwans99/models_mlsys/AMD-Llama-135m", "model_tp": 1, "mq_len": 34, "optimize": 0, "p2_budget": 8, "packages": {"flashinfer-python": "0.5.2", "sentencepiece": "0.2.1", "sgl-kernel": "0.3.17.post1", "torch": "2.8.0", "transformers": "4.57.1"}, "policy": {"candidate_temperature": "request temperature; T0 soft score", "normalization": "full", "overlap_mix": 0.25, "p1_allocation": "dynamic", "physical_width": "reported per executor in [tree-policy-resolved]", "requested_expansion": "q_path", "root": "complement"}, "python": "3.12.7", "python_abi": "cpython-312", "rank": 1, "role": "draft", "speculate_k": 16, "target_tp": 1, "vocab_size": 32000, "workspace_mib": {"SSD_BATCH_TREE_WORKSPACE_MB": "256", "SSD_P1_TREE_EXEC_WORKSPACE_MB": "128", "SSD_TREE_EXEC_WORKSPACE_MB": "128"}}
+[model_runner about to wrapper.init()] graph_bs_list=[1]
+wrapper backend is auto
+[DUET] Created FlashInfer wrappers for split-K1/K2 layouts
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=True, speculate=True, spec_k=16
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+[model_runner] about to setup and warmup model and cudagraphs, is use_eagle=False
+Starting LlamaForCausalLM init, draft=False, speculate=True, spec_k=16
+[LlamaForCausalLM] use_eagle=False, eagle_layers=None
+[LlamaModel] use_eagle=False, eagle_layers=None
+Finishing LlamaForCausalLM init, draft=True, speculate=True, spec_k=16
+[load_model] loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+Loading model files:   0%|          | 0/1 [00:00<?, ?it/s]Finishing LlamaForCausalLM init, draft=False, speculate=True, spec_k=16
+[load_model] loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+Loading model files:   0%|          | 0/3 [00:00<?, ?it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.37it/s]Loading model files: 100%|██████████| 1/1 [00:00<00:00,  2.37it/s]
+Loading model files:  33%|███▎      | 1/3 [00:01<00:03,  1.86s/it]Loading model files:  67%|██████▋   | 2/3 [00:04<00:02,  2.56s/it]Loading model files: 100%|██████████| 3/3 [00:08<00:00,  2.85s/it]Loading model files: 100%|██████████| 3/3 [00:08<00:00,  2.70s/it]
+[load_model] finished loading model from /home/chokwans99/models_mlsys/AMD-Llama-135m
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 12, 1366, 256, 12, 64])
+[load_model] finished loading model from /home/chokwans99/models_mlsys/layerskip-llama2-7b
+inside allocate_kv_cache -- 
+allocate_kv_cache(): kv_cache shape = torch.Size([2, 32, 36, 256, 32, 128])
+F=2, fan_out_list=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], fan_out_list_miss=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], MQ_LEN=34
+F=2, fan_out_list=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], fan_out_list_miss=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], MQ_LEN=34
+[DUET split-K1K2] layouts: split_k1_long MQ=9 (K=K1=8, pos=9), split_k1_short SKIPPED (unified tree owns context buckets), split_k2 MQ=8 (K=K2=8, pos=9)
+[DUET tree] released 0.0 MiB of unused capture cache before service
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 192, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8, 8], "siblings": 3, "width": 8}
+[equal forest] {'phase': 1, 'contexts': 9, 'R': 8, 'round_widths': (8, 8, 8, 8, 8, 8, 8, 8), 'C': 3, 'generation_cap': 192, 'selection': 'last'}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 192, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8, 8], "siblings": 3, "width": 8}
+[equal forest] {'phase': 2, 'contexts': 9, 'R': 8, 'round_widths': (8, 8, 8, 8, 8, 8, 8, 8), 'C': 3, 'generation_cap': 192, 'selection': 'last'}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 192, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8, 8], "siblings": 3, "width": 8}
+[equal forest] {'phase': 1, 'contexts': 33, 'R': 8, 'round_widths': (8, 8, 8, 8, 8, 8, 8, 8), 'C': 3, 'generation_cap': 192, 'selection': 'last'}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 192, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8, 8], "siblings": 3, "width": 8}
+[equal forest] {'phase': 2, 'contexts': 33, 'R': 8, 'round_widths': (8, 8, 8, 8, 8, 8, 8, 8), 'C': 3, 'generation_cap': 192, 'selection': 'last'}
+[DUET prewarm] draft 4 executors 16 graphs 47.91 seconds
+DraftRunner set up, starting draft_loop
+[DUET policy] root=complement normalization=full position=0.75 observed + 0.25 overlap; tree_requested=q_path (resolved per executor)
+[Config] DUET-SSD enabled: exit_layer=21, only_proxy=False, proxy_top_k=137, draft_fan_out=1, proxy_fan_out=1, K1=8, K2=8, P2_W=8, P1_tree=on, P1_alloc=dynamic, P2_tree=on, tree_selector=dynamic, tree_R=8, P1_tree_nodes=192/32(gen/verify), P2_tree_nodes=192/32(gen/verify), P1_start_thr=0.0, P1_conf_thr=0.0, tree_proxy_thr=0.0, tree_conf_thr=0.0
+[DUET prewarm] target 4 proxy/accept shapes 13.889 seconds
+[LLMEngine] finished llm_engine init
+[DUET] warmed acceptance kernels (K=[8])
+Final Prefill Throughput: 35.40tok/s
+Final Decode Throughput: 16.13tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 16.13105064652268, 'al': 1.588235294117647, 'cache_hit': 0.7058823529411765, 'emitted_tokens': 27, 'seconds': 1.673790541710332, 'included_steps': 17, 'included_events': 17, 'total_steps': 18, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 18.52tok/s
+[metrics] Prefill tokens/time: 28 / 0.790949s
+[metrics] Decode tokens/time: 32 / 1.727648s
+[metrics] Avg Tokens per step (incl recovery): 1.59
+[raw metrics] All-event accepted length: 2.00
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.12 (denom=8)
+[metrics] Avg target time per full step (ms): 132.60
+[metrics] Avg target verify time (ms): 21.59
+[metrics] Avg Cache Hits: 0.71
+[raw metrics] All-event cache hit: 0.67
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.222
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.444
+[metrics] Avg Phase 1 Accepted Len: 0.50
+[metrics] Avg Phase 1 Acceptance Ratio: 0.062
+[metrics] Avg Phase 2 Accepted Len: 0.75
+[metrics] Avg Phase 2 Acceptance Ratio: 0.094
+[metrics] Avg Tokens per step on Cache Hit: 1.67
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.500
+  1: 0.333
+  2: 0.167
+  3: 0.000
+  4: 0.000
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+  15: 0.000
+  16: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.67
+PAPER_GROUP last_c3 warm 0
+[DUET] warmed acceptance kernels (K=[8])
+Final Prefill Throughput: 1019.28tok/s
+Final Decode Throughput: 21.93tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 21.92823501654588, 'al': 2.0, 'cache_hit': 0.6428571428571429, 'emitted_tokens': 28, 'seconds': 1.2768925533164293, 'included_steps': 14, 'included_events': 14, 'total_steps': 15, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 23.48tok/s
+[metrics] Prefill tokens/time: 28 / 0.027470s
+[metrics] Decode tokens/time: 32 / 1.362787s
+[metrics] Avg Tokens per step (incl recovery): 2.00
+[raw metrics] All-event accepted length: 2.20
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.15 (denom=8)
+[metrics] Avg target time per full step (ms): 86.93
+[metrics] Avg target verify time (ms): 20.35
+[metrics] Avg Cache Hits: 0.64
+[raw metrics] All-event cache hit: 0.67
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.133
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.533
+[metrics] Avg Phase 1 Accepted Len: 0.50
+[metrics] Avg Phase 1 Acceptance Ratio: 0.062
+[metrics] Avg Phase 2 Accepted Len: 1.50
+[metrics] Avg Phase 2 Acceptance Ratio: 0.188
+[metrics] Avg Tokens per step on Cache Hit: 2.30
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.500
+  1: 0.100
+  2: 0.100
+  3: 0.200
+  4: 0.100
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+  15: 0.000
+  16: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 2.00
+PAPER_GROUP last_c3 measured_0 0
+[DUET] warmed acceptance kernels (K=[8])
+Final Prefill Throughput: 1850.38tok/s
+Final Decode Throughput: 29.15tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 29.15321359662776, 'al': 1.8125, 'cache_hit': 0.6875, 'emitted_tokens': 29, 'seconds': 0.9947445383295417, 'included_steps': 16, 'included_events': 16, 'total_steps': 17, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 30.74tok/s
+[metrics] Prefill tokens/time: 42 / 0.022698s
+[metrics] Decode tokens/time: 32 / 1.041151s
+[metrics] Avg Tokens per step (incl recovery): 1.81
+[raw metrics] All-event accepted length: 1.88
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.11 (denom=8)
+[metrics] Avg target time per full step (ms): 59.15
+[metrics] Avg target verify time (ms): 22.16
+[metrics] Avg Cache Hits: 0.69
+[raw metrics] All-event cache hit: 0.71
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.176
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.529
+[metrics] Avg Phase 1 Accepted Len: 1.00
+[metrics] Avg Phase 1 Acceptance Ratio: 0.125
+[metrics] Avg Phase 2 Accepted Len: 1.00
+[metrics] Avg Phase 2 Acceptance Ratio: 0.125
+[metrics] Avg Tokens per step on Cache Hit: 2.00
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.417
+  1: 0.250
+  2: 0.250
+  3: 0.083
+  4: 0.000
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+  15: 0.000
+  16: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.60
+[DUET] warmed acceptance kernels (K=[8])
+Final Prefill Throughput: 8403.88tok/s
+Final Decode Throughput: 18.75tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 18.74883124491418, 'al': 1.12, 'cache_hit': 0.88, 'emitted_tokens': 28, 'seconds': 1.493426423985511, 'included_steps': 25, 'included_events': 25, 'total_steps': 25, 'excluded_steps': 0, 'exclusion_reasons': {}}
+[raw metrics] All decode throughput: 18.75tok/s
+[metrics] Prefill tokens/time: 779 / 0.092695s
+[metrics] Decode tokens/time: 28 / 1.493426s
+[metrics] Avg Tokens per step (incl recovery): 1.12
+[raw metrics] All-event accepted length: 1.12
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.01 (denom=8)
+[metrics] Avg target time per full step (ms): 61.05
+[metrics] Avg target verify time (ms): 29.11
+[metrics] Avg Cache Hits: 0.88
+[raw metrics] All-event cache hit: 0.88
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.080
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.800
+[metrics] Avg Phase 1 Accepted Len: 0.50
+[metrics] Avg Phase 1 Acceptance Ratio: 0.062
+[metrics] Avg Phase 2 Accepted Len: 0.10
+[metrics] Avg Phase 2 Acceptance Ratio: 0.013
+[metrics] Avg Tokens per step on Cache Hit: 1.14
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.864
+  1: 0.136
+  2: 0.000
+  3: 0.000
+  4: 0.000
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.000
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+  15: 0.000
+  16: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.00
+[DUET] warmed acceptance kernels (K=[8])
+Final Prefill Throughput: 741.91tok/s
+Final Decode Throughput: 46.92tok/s
+[metrics] Performance population: {'policy': 'full_batch_without_cap_or_clip_v1', 'nominal_batch': 1, 'tps': 46.922497557933426, 'al': 2.090909090909091, 'cache_hit': 0.7272727272727273, 'emitted_tokens': 23, 'seconds': 0.4901699866168201, 'included_steps': 11, 'included_events': 11, 'total_steps': 12, 'excluded_steps': 1, 'exclusion_reasons': {'cap_or_clip': 1}}
+[raw metrics] All decode throughput: 60.68tok/s
+[metrics] Prefill tokens/time: 45 / 0.060654s
+[metrics] Decode tokens/time: 32 / 0.527314s
+[metrics] Avg Tokens per step (incl recovery): 2.09
+[raw metrics] All-event accepted length: 2.67
+[metrics] Avg Fraction of Speculated Tokens Accepted: 0.21 (denom=8)
+[metrics] Avg target time per full step (ms): 45.27
+[metrics] Avg target verify time (ms): 18.96
+[metrics] Avg Cache Hits: 0.73
+[raw metrics] All-event cache hit: 0.75
+[metrics] Avg Phase 1 (draft) Hit Rate: 0.083
+[metrics] Avg Phase 2 (proxy) Hit Rate: 0.667
+[metrics] Avg Phase 1 Accepted Len: 8.00
+[metrics] Avg Phase 1 Acceptance Ratio: 1.000
+[metrics] Avg Phase 2 Accepted Len: 1.25
+[metrics] Avg Phase 2 Acceptance Ratio: 0.156
+[metrics] Avg Tokens per step on Cache Hit: 3.00
+[metrics] Empirical frequencies of accepted_suffix_lens_on_hit - 1:
+  0: 0.333
+  1: 0.222
+  2: 0.222
+  3: 0.000
+  4: 0.111
+  5: 0.000
+  6: 0.000
+  7: 0.000
+  8: 0.111
+  9: 0.000
+  10: 0.000
+  11: 0.000
+  12: 0.000
+  13: 0.000
+  14: 0.000
+  15: 0.000
+  16: 0.000
+[metrics] Avg Tokens per step on Cache Miss: 1.67
+PAPER_COMPLETE {"policy": "full_batch_without_cap_clip_or_observed_preparation_v2", "steps": 66, "all_steps": 69, "tokens": 108, "seconds": 4.255233502248302, "tps": 25.38051083282197, "al": 1.6363636363636365, "hit": 0.7575757575757576, "verify_ms": 23.880876509021178, "step_ms": 64.47323488255003, "actual_output_tokens": 124, "emitted_decode_tokens": 124}
+[LLMEngine] Exiting (hard=False)
+[metrics] batched tree: {'steps': 87, 'tree_hits': 65, 'phase1_replays': 87, 'phase2_replays': 87, 'captures': 0}
+[metrics] Avg draft step time (ms): 63.99
+[LLMEngine] Exiting (hard=True)
+[rank0]:[W1014 23:18:09.759870006 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+/home/chokwans99/anaconda3/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
