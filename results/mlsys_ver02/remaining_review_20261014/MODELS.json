@@ -1,0 +1,50 @@
+{
+  "l2--target": {
+    "path": "/data2/chokwans99/models/layerskip-llama2-7B",
+    "config_sha256": "f884817531e2589b45a2d00993d3cf1f67253866a343f4c574c510ee82b1697f",
+    "config": {
+      "model_type": "llama",
+      "torch_dtype": "float16",
+      "num_hidden_layers": 32,
+      "hidden_size": 4096,
+      "vocab_size": 32000,
+      "quantization_config": null
+    }
+  },
+  "l2--draft": {
+    "path": "/data2/chokwans99/models/AMD-Llama-135m-fp16",
+    "config_sha256": "62f174fd80f0dc6adb3b2968cf6debd435fd94809297882554b82e9c24ff151e",
+    "config": {
+      "model_type": "llama",
+      "torch_dtype": "float16",
+      "num_hidden_layers": 12,
+      "hidden_size": 768,
+      "vocab_size": 32000,
+      "quantization_config": null
+    }
+  },
+  "l3--target": {
+    "path": "/data2/chokwans99/models/layerskip-llama3-8B",
+    "config_sha256": "c92f22fa69edca3cc1cb3bcdd5903b1aeace4bca74e37bbf0028b29a7b1c8fa7",
+    "config": {
+      "model_type": "llama",
+      "torch_dtype": "bfloat16",
+      "num_hidden_layers": 32,
+      "hidden_size": 4096,
+      "vocab_size": 128256,
+      "quantization_config": null
+    }
+  },
+  "l3--draft": {
+    "path": "/data2/chokwans99/models/models--turboderp--Qwama-0.5B-Instruct/snapshots/fa73d1257f7681af595c86521b332fe26981f179",
+    "config_sha256": "07a2043fac9678773a95a62843837f636e4be122c9d3606513e16c412459f1d1",
+    "config": {
+      "model_type": "qwen2",
+      "torch_dtype": "bfloat16",
+      "num_hidden_layers": 24,
+      "hidden_size": 896,
+      "vocab_size": 128256,
+      "quantization_config": null
+    }
+  }
+}
