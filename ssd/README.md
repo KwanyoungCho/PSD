@@ -1,6 +1,7 @@
 ## DUET — MLSys ver1.0
 
 This checkout includes DUET integration on `MLSys-ver0.2@1b93104b`.
+For another server, start with the [defaults and handover instructions](../MLSYS_VER1_HANDOVER.md).
 Start with the [integration decisions and 70B preset](../MLSYS_VER1_INTEGRATION.md),
 [calibration-free tree algorithm](../TREE_EXPANSION_FINAL.md), and
 [validation report](../results/ver10_integration_20261015/REPORT.md).
