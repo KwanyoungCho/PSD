@@ -1,0 +1,140 @@
+{
+  "state": "complete_local_review",
+  "scope": "SM86 local review, not actual SM120/70B release certification",
+  "regression": {
+    "suites": 31,
+    "tests": 302,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source_unchanged": true,
+    "local_source_mismatch": [],
+    "passed": true
+  },
+  "model_functional": [
+    {
+      "name": "ar_b2_t0",
+      "status": "complete",
+      "returncode": 0,
+      "output_count": 4,
+      "output_lengths": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "source_mismatch": [],
+      "passed": true
+    },
+    {
+      "name": "tree_b2_t0",
+      "status": "complete",
+      "returncode": 0,
+      "output_count": 4,
+      "output_lengths": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "source_mismatch": [],
+      "passed": true
+    },
+    {
+      "name": "ar_b1_t0",
+      "status": "complete",
+      "returncode": 0,
+      "output_count": 4,
+      "output_lengths": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "source_mismatch": [],
+      "passed": true
+    },
+    {
+      "name": "tree_b1_t0",
+      "status": "complete",
+      "returncode": 0,
+      "output_count": 4,
+      "output_lengths": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "source_mismatch": [],
+      "passed": true
+    },
+    {
+      "name": "tree_b1_t0.7",
+      "status": "complete",
+      "returncode": 0,
+      "output_count": 4,
+      "output_lengths": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "source_mismatch": [],
+      "passed": true
+    },
+    {
+      "name": "tree_b2_t0.7",
+      "status": "complete",
+      "returncode": 0,
+      "output_count": 4,
+      "output_lengths": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "source_mismatch": [],
+      "passed": true
+    }
+  ],
+  "greedy_ar_parity": [
+    {
+      "batch": 1,
+      "matched": 4,
+      "pairs": 4,
+      "passed": true
+    },
+    {
+      "batch": 2,
+      "matched": 4,
+      "pairs": 4,
+      "passed": true
+    }
+  ],
+  "normalization_component": [
+    {
+      "vocab": 32000,
+      "before_dense_ms": 1.1305984115600585,
+      "before_flat_ms": 0.8386867141723633,
+      "after_dense_ms": 1.1574784088134766,
+      "after_flat_ms": 0.8526745605468751,
+      "flat_additional_ms": 0.013987846374511781,
+      "flat_vs_dense_after_percent": 26.33343705988036
+    },
+    {
+      "vocab": 128256,
+      "before_dense_ms": 3.8668798828125004,
+      "before_flat_ms": 2.652876739501953,
+      "after_dense_ms": 3.9521586608886716,
+      "after_flat_ms": 2.711910400390625,
+      "flat_additional_ms": 0.059033660888672124,
+      "flat_vs_dense_after_percent": 31.381540239560312
+    }
+  ],
+  "pending": [
+    "Actual SM120 70B B1/B2/B8 and maximum warmup geometry",
+    "Server-specific Blackwell report/adapter integration",
+    "Qwama full generation on its declared target model",
+    "Merge into ongoing AL worktree after source-frozen campaign completes"
+  ]
+}
