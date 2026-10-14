@@ -69,10 +69,17 @@ def verify(verifier,seqs,result):
         r._batch_tree_proxies[proxy_key]=p
         if DETAIL_TREE:duet_close('batch_proxy_capture',capture_event)
     proxy=r._batch_tree_proxies[proxy_key]
-    tokens=torch.zeros(B,N,dtype=torch.int64,device=r.device)
-    tokens[:,:step_width].copy_(result.speculations[:,1:])
-    q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
-    q[:,:result.logits_q.shape[1]].copy_(result.logits_q)
+    # prepare() already owns padded persistent buffers. Avoid allocating and
+    # copying a second vocabulary-sized staging tensor on every verification.
+    # Compact topology only indexes actual nodes; empty/mismatched payloads
+    # retain the old padding path (also used by experimental AR-miss adapters).
+    tokens=result.speculations[:,1:]
+    q=result.logits_q
+    if step_width == 0 or q.shape[1] != step_width:
+        tokens=torch.zeros(B,N,dtype=torch.int64,device=r.device)
+        tokens[:,:step_width].copy_(result.speculations[:,1:])
+        q=torch.zeros(B,N,cfg.hf_config.vocab_size,dtype=result.logits_q.dtype,device=r.device)
+        q[:,:result.logits_q.shape[1]].copy_(result.logits_q)
     proxy.prepare(parents,siblings,tokens,q,tt,dt)
     if r._batch_tree_proxy_pool is None:r._batch_tree_proxy_pool=proxy.graph.pool()
     flat_topology=proxy.current['topo'] if compact else None
@@ -109,7 +116,7 @@ def verify(verifier,seqs,result):
             c['tt'],c['dt'],verifier.sampler_x,verifier.async_fan_out,greedy,
             stochastic_only=cfg.stochastic_only)
     else:
-        paths,recoveries,terminal=verify_batch(logits,q,tokens,topology,tt,dt,
+        paths,recoveries,terminal=verify_batch(logits,proxy.q[:B],proxy.tokens[:B],topology,tt,dt,
                                               verifier.sampler_x,verifier.async_fan_out,greedy,
                                               stochastic_only=cfg.stochastic_only)
     result_cpu=torch.cat([paths,recoveries,terminal],1).cpu().tolist()
