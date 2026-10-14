@@ -26,7 +26,8 @@ def test_flat_reference(lengths,temperature):
     torch.testing.assert_close(ft[valid],term[f['req'][valid],f['local'][valid]])
     torch.testing.assert_close(fr[valid],r[f['req'][valid],f['local'][valid]])
     # Compare positive candidates; zero-score padding has no ranking contract.
-    x=candidates(lp,lq,tokens,dense,7,n,5,t,t)
+    x=candidates(lp,lq,tokens,dense,7,n,5,t,t,
+        source="residual",normalization="topm",overlap_mix=0.)
     y=flat.candidates(qlp,qlq,qt,f,7,n,5,t,t)
     from ssd.engine.helpers.p2_tree import unpack_piv
     tx,sx=unpack_piv(x[1]);ty,sy=unpack_piv(y[1]);positive=sx>1.0001e-6

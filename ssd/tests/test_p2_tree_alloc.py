@@ -1818,6 +1818,8 @@ class TestReview2Fixes(unittest.TestCase):
                                 f"tok nv={nv} seed={seed}")
 
     def test_chain_proxy_fixed_matches_policy_b_formula(self):
+        # Preserve an explicit old-policy reference; the default is tested
+        # independently against scalar local formulas in test_local_research_policy.
         K, V, top_k, wire = 4, 257, 6, 24
         for seed in range(8):
             torch.manual_seed(seed)
@@ -1851,7 +1853,8 @@ class TestReview2Fixes(unittest.TestCase):
                 ids.flatten().gather(0, top_i), top_v)
 
             got_pos, got_tok, got_v = PT.chain_proxy_candidates_fixed(
-                exit_logits, q_logits, tokens, top_k, wire, True)
+                exit_logits, q_logits, tokens, top_k, wire, True,
+                source="residual",normalization="topm",overlap_mix=0.)
             self.assertTrue(torch.equal(expected_pos, got_pos))
             self.assertTrue(torch.equal(expected_tok, got_tok))
             self.assertTrue(torch.equal(top_v, got_v))

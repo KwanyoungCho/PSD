@@ -22,7 +22,7 @@ SUITES = (
     'test_tree_fused_math', 'test_tree_extension_review', 'test_mlsys_measurement',
     'test_flat_tree_review', 'test_flat_tree_runtime', 'test_tree_live_siblings',
     'test_tree_warmup_bounds', 'test_tree_proxy_defaults',
-    'test_request_reporting', 'test_release_review', 'test_tree_payload_prepare',
+    'test_request_reporting', 'test_release_review', 'test_tree_payload_prepare', 'test_local_research_policy',
 )
 
 
