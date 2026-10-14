@@ -13,7 +13,9 @@ from ssd.engine.helpers.tree_gain_allocation import allocate, make_constants
 
 class TreeExpansionPolicy:
     def __init__(self, executor):
-        self.mode = os.getenv('SSD_TREE_EXPANSION_POLICY', 'reach_gain_frontier')
+        # The serving default uses draft path scores without fitted tables.
+        # Historical calibrated modes remain explicit reproduction inputs.
+        self.mode = os.getenv('SSD_TREE_EXPANSION_POLICY', 'q_path')
         modes = ('q_path', 'reach', 'q_gain', 'reach_gain',
                  'reach_frontier', 'reach_gain_frontier')
         if self.mode not in modes:

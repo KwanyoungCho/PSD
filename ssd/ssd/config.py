@@ -966,7 +966,7 @@ class Config:
                 raise ValueError('Local root policy requires full-vocabulary exit logits; raw/top-M proxy gates are unsupported')
             print('[DUET policy] root=complement normalization=full '
                   'position=0.75 observed + 0.25 overlap; '
-                  'tree=historical reach/gain/frontier (resolved per executor)',flush=True)
+                  f'tree={os.getenv("SSD_TREE_EXPANSION_POLICY", "q_path")} (resolved per executor)',flush=True)
             # Raw-proxy wire (SSD_DUET_PROXY_ON_DRAFT=1): the draft-side
             # residual topk(top_k) runs over M wire candidates — M must
             # cover the (auto-raised) top_k.

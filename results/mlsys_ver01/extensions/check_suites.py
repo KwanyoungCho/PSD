@@ -23,6 +23,7 @@ SUITES = (
     'test_flat_tree_review', 'test_flat_tree_runtime', 'test_tree_live_siblings',
     'test_tree_warmup_bounds', 'test_tree_proxy_defaults',
     'test_request_reporting', 'test_release_review', 'test_tree_payload_prepare', 'test_local_research_policy',
+    'test_equal_budget_tree', 'test_equal_dataset',
 )
 
 

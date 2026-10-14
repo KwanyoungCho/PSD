@@ -178,6 +178,7 @@ class LocalGraphs(unittest.TestCase):
             for x,y in zip(a,c[:2]):self.assertTrue(torch.equal(x[0],y))
 
     @torch.inference_mode()
+    @patch.dict(os.environ, {'SSD_TREE_EXPANSION_POLICY':'reach_gain_frontier'})
     def test_research_executor_eager_graph_and_proposal_q(self):
         if __package__:
             from . import test_p2_executor_parity as fixture

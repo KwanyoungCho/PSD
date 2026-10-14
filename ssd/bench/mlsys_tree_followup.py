@@ -83,10 +83,8 @@ def main():
     from ssd.engine.llm_engine import METRICS
     from transformers import AutoTokenizer
     token = AutoTokenizer.from_pretrained(args.target)
-    src = json.loads(args.prompts.read_text())
-    indexes = list(range(len(src)))
-    if 0 < args.limit < len(src): indexes = [i*len(src)//args.limit for i in range(args.limit)]
-    prompts = [token.encode(src[i] if isinstance(src[i], str) else src[i]['turns'][0])[:args.input_cap] for i in indexes]
+    from mlsys_equal_dataset import load as load_inputs, attach as attach_input_identity
+    prompts, indexes, input_metadata = load_inputs(args.prompts, token, args.limit, args.input_cap)
     tree, spec = args.mode == 'tree', args.mode != 'ar'
     report_requests = request_reporting_supported(args.mode)
     kwargs = dict(num_gpus=args.target_tp+1 if spec else args.target_tp, max_num_seqs=args.batch,
@@ -101,6 +99,11 @@ def main():
         duet_tree_c_tensor=args.siblings, duet_p1_roots_per_position=args.roots)
     if args.exit_replica:
         os.environ['SSD_DUET_EXIT_REPLICA']='1'
+    if os.getenv('DUET_EQUAL_ROOTS'):
+        # Benchmark-only equal forward budget. The paired adapter installs
+        # fixed-width forests; this is not a production runtime option.
+        from mlsys_equal_budget_adapter import configure
+        configure(kwargs)
     if os.getenv('PAPER_BASELINE', '0') != '1':
         kwargs['greedy_only' if args.temperature == 0 else 'stochastic_only'] = True
     arm = os.environ.get('PAPER_ARM', 'base')
@@ -113,9 +116,18 @@ def main():
         env={k:v for k,v in os.environ.items() if k.startswith(('SSD_','PAPER_','DUET_REVIEW_')) or k=='CUDA_VISIBLE_DEVICES'},
         groups=[], warm_groups=[], steps=[], prefill=[], outputs=[],
         request_records=[] if report_requests else None,
-        request_scope='first turn of each question; repeated passes are not independent questions')
+        input_metadata=input_metadata,
+        request_scope=('paper flattened raw turns; no generated conversation history'
+                       if input_metadata else 'first turn of each question; repeated passes are not independent questions'))
     reporting_source = Path(__file__).with_name('mlsys_request_reporting.py')
     report['adapter_hashes'][reporting_source.name] = hashlib.sha256(reporting_source.read_bytes()).hexdigest()
+    data_source=Path(__file__).with_name('mlsys_equal_dataset.py')
+    report['adapter_hashes'][data_source.name]=hashlib.sha256(data_source.read_bytes()).hexdigest()
+    if os.getenv('DUET_EQUAL_ROOTS'):
+        from mlsys_equal_budget_adapter import specification
+        report['equal_budget'] = specification()
+        for name in ('mlsys_equal_budget.py', 'mlsys_equal_budget_adapter.py'):
+            report['adapter_hashes'][name] = hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
     def save():
         temp=args.output.with_suffix('.tmp');temp.write_text(json.dumps(report));temp.replace(args.output)
     args.output.parent.mkdir(parents=True,exist_ok=True);save()
@@ -198,6 +210,10 @@ def main():
                 records['request_records'] = build_requests(group_sequences, group_steps,
                     terminal_reasons, indexes[start:start+len(outputs)],
                     records['outputs'], phase, llm.config.max_model_len, spec) if report_requests else None
+                if report_requests:
+                    attach_input_identity(records['request_records'], input_metadata[start:start+len(outputs)], phase)
+                    for request, sid in zip(records['request_records'], sorted(group_sequences)):
+                        request['seq_id']=sid
                 report['warm_groups' if phase=='warm' else 'groups'].append(records)
                 if phase.startswith('measured'):
                     report['steps'].extend(records['steps']);report['prefill'].extend(records['prefill']);report['outputs'].extend(records['outputs'])
