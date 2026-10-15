@@ -106,14 +106,15 @@ def display_rows(window):
     return sorted(target, key=order), sorted(shown, key=order), gaps
 
 
-def render(window, pdf, png):
+def render(window, pdf, png, phase_summary=None):
     require(window['schema'] == SCHEMA, 'Unsupported window schema')
     target, draft, gaps = display_rows(window)
     native.COLORS.update(DETAIL_STYLES); native.COLORS.update(GAP_STYLES)
     origin = min(e['wall_start_ns'] for e in target+draft)
     ms = lambda ns:(ns-origin)/1e6
     end = max([e['wall_end_ns'] for e in target+draft] + [t['deadline_ns'] for t in window['transitions']])
-    fig = plt.figure(figsize=(20, 9.5)); ax = fig.add_axes([.065, .48, .91, .35])
+    fig = plt.figure(figsize=(20, 9.5))
+    ax = fig.add_axes([.065, .515, .91, .315] if phase_summary is not None else [.065, .48, .91, .35])
     for rows, y in ((target, 1), (draft, 0)):
         native._draw_row(ax, rows, y, y, origin, .53, .38, min_width_ms=0)
     divisions = native.draw_draft_forward_dividers(ax, window['draft_events'], window['forward_counts'], origin)
@@ -146,6 +147,11 @@ def render(window, pdf, png):
     fig.text(.5,.94,window['metadata'].get('description',''),ha='center',fontsize=10)
     fig.text(.5,.908,'Red dashed line = next target request starts (observed deadline reference).  Green circle = PS cache ready; triangle = draft ready to receive.',ha='center',fontsize=10)
     fig.text(.5,.883,'Both target steps and their DS/PS work share one time axis. Only the following request boundary is used for the second deadline.',ha='center',fontsize=9)
+    if phase_summary is not None and phase_summary.get('proxy_overlap', {}).get('overlapping_steps') == 0:
+        fig.text(.5,.858,'In this measurement: no observed proxy computation / target graph_post overlap. Send enqueue does not measure transfer completion.',ha='center',fontsize=9,color='#8c510a')
+    elif phase_summary is not None and phase_summary.get('proxy_overlap'):
+        overlap=phase_summary['proxy_overlap']
+        fig.text(.5,.858,f'Observed proxy / target graph_post overlap: {overlap["overlapping_steps"]}/{overlap["steps"]} steps; mean {overlap["mean_overlap_ms"]:.3f} ms over all steps. Send completion not measured.',ha='center',fontsize=9,color='#01665e')
     rows=[]; metrics=[]
     for tr in window['transitions']:
         item={k:v for k,v in tr.items() if not isinstance(v,dict)}
@@ -154,19 +160,32 @@ def render(window, pdf, png):
         rows.append([str(tr['step_id']), f"{ms(tr['cache_ready_ns']):.3f}",f"{ms(tr['draft_receive_ready_ns']):.3f}",
                      f"{ms(tr['deadline_ns']):.3f}",f"{tr['cache_margin_ms']:+.3f}",f"{tr['ready_margin_ms']:+.3f}",
                      f"{tr['next_send_ms']:.3f}",f"{tr['next_response_wait_ms']:.3f}"])
-    tab=fig.add_axes([.065,.315,.91,.105]);tab.axis('off')
-    table=tab.table(cellText=rows,colLabels=['Prepared in step','Cache ready (ms)','Receive-ready (ms)','Next send (ms)',
-                 'Cache margin (ms)','Ready margin (ms)','Next send span (ms)','Next response wait (ms)'],loc='center',cellLoc='center')
-    table.auto_set_font_size(False);table.set_fontsize(9);table.scale(1,1.6)
-    fig.text(.065,.29,'Margin = next send start minus readiness. Positive means ready before the observed request; negative means preparation ran past it.',fontsize=9)
-    fig.text(.065,.266,'This is not a causal stall estimate or a promise that all margin can be used for more forwards. The second next-response wait is outside the two-step view.',fontsize=9)
+    if phase_summary is None:
+        tab=fig.add_axes([.065,.315,.91,.105]);tab.axis('off')
+        table=tab.table(cellText=rows,colLabels=['Prepared in step','Cache ready (ms)','Receive-ready (ms)','Next send (ms)',
+                     'Cache margin (ms)','Ready margin (ms)','Next send span (ms)','Next response wait (ms)'],loc='center',cellLoc='center')
+        table.auto_set_font_size(False);table.set_fontsize(9);table.scale(1,1.6)
+        fig.text(.065,.29,'Margin = next send start minus readiness. Positive means ready before the observed request; negative means preparation ran past it.',fontsize=9)
+        fig.text(.065,.266,'This is not a causal stall estimate or a promise that all margin can be used for more forwards. The second next-response wait is outside the two-step view.',fontsize=9)
+    else:
+        from phase_averages import HEADERS, table_cells
+        tab=fig.add_axes([.065,.285,.91,.145]);tab.axis('off')
+        table=tab.table(cellText=table_cells(phase_summary['rows']),colLabels=HEADERS,
+                        loc='center',cellLoc='center')
+        table.auto_set_font_size(False);table.set_fontsize(9);table.scale(1,1.55)
+        for (r,c),cell in table.get_celld().items():
+            if r==0:cell.set_facecolor('#e1eaf0');cell.set_text_props(weight='bold')
+            elif r==4:cell.set_facecolor('#edf4ec');cell.set_text_props(weight='bold')
+        fig.text(.065,.437,'MEANS OVER ALL ELIGIBLE STEPS FOR THIS SETTING (not the two example steps above); Overall is step-weighted.',fontsize=10,weight='bold')
+        fig.text(.065,.267,'Step = current target request start -> next request start. *DS spare = proxy send-ready - DS end; PS spare = next request start - draft receive-ready.',fontsize=9)
+        fig.text(.065,.245,'Positive spare = finishes early; negative = late. Graph/K is an average per forward round INCLUDING sampling/selection, not isolated transformer latency.',fontsize=9)
     labels=sorted({e['label'] for e in target+draft})
     handles=[Patch(facecolor=native._style(l)[0],hatch=native._style(l)[1],edgecolor='black',linewidth=.3,label=l) for l in labels]
     fig.legend(handles=handles,loc='lower center',bbox_to_anchor=(.51,.047),ncol=6,fontsize=6.8,columnspacing=1.0)
     fig.text(.065,.025,'Hatched gaps = unprofiled elapsed intervals, NOT proven GPU idle. Nested spans are not additive. White graph dividers show counts, NOT per-forward measurements.',fontsize=8)
     fig.text(.065,.009,'Raw intervals retained, no 0.02 ms visibility floor. Cross-device margins inherit CUDA-to-host clock alignment uncertainty; exact raw events and source hashes accompany this figure.',fontsize=8)
     pdf.savefig(fig);fig.savefig(png,dpi=155);plt.close(fig)
-    return dict(metrics=metrics,derived_gaps=gaps,forward_dividers=divisions,
+    return dict(metrics=metrics,derived_gaps=gaps,forward_dividers=divisions,phase_summary=phase_summary,
                 minimum_bar_width_ms=0,clock_shift_ns=0)
 
 

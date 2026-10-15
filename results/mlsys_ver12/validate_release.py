@@ -59,6 +59,21 @@ def main():
     assert index['builder_sha256']==sha(ROOT/'ssd/tools/duet_timeline/build_model_timelines.py')
     assert index['renderer_sha256']==sha(ROOT/'ssd/tools/duet_timeline/plot_consecutive_steps.py')
     assert index['manifest_sha256']==sha(figures/'SOURCES.json')
+    sys.path.insert(0,str(ROOT/'ssd/tools/duet_timeline'))
+    from phase_averages import read_samples, summarize, overlap_summary
+    manifest=json.loads((figures/'SOURCES.json').read_text())
+    sample_path=figures/manifest['phase_samples']['path']
+    assert sha(sample_path)==manifest['phase_samples']['sha256']==index['phase_samples_sha256']
+    assert index['phase_averages_tool_sha256']==sha(ROOT/'ssd/tools/duet_timeline/phase_averages.py')
+    averages_path=figures/'PHASE_AVERAGES.json'
+    assert sha(averages_path)==index['phase_averages_sha256']
+    averages=json.loads(averages_path.read_text())
+    samples=read_samples(sample_path)
+    keyed={(x['model'],x['setting']):x for x in averages['sets']}
+    for item in samples['sets']:
+        summary=keyed[(item['model'],item['setting'])]
+        assert summarize(item['samples'])==summary['rows']
+        assert overlap_summary(item['samples'])==summary['proxy_overlap']
     assert len(PdfReader(figures/'ALL_MODELS.pdf').pages)==index['pages']
     assert sha(figures/'ALL_MODELS.pdf')==index['all_models_pdf_sha256']
     for model in index['models']:
@@ -70,6 +85,7 @@ def main():
         for panel in audit['panels']:
             window=path.parent/panel['window'];assert sha(window)==panel['window_sha256']
             w=json.loads(window.read_text());assert w['step_ids'][1]==w['step_ids'][0]+1
+            assert panel['phase_summary']==keyed[(model['id'],panel['setting'])]
             assert panel['clock_shift_ns']==panel['minimum_bar_width_ms']==0
             for tr in w['transitions']:
                 assert abs(tr['ready_margin_ms']-(tr['deadline_ns']-tr['draft_receive_ready_ns'])/1e6)<1e-9

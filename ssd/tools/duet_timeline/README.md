@@ -15,10 +15,19 @@ python ssd/tools/duet_timeline/build_model_timelines.py \
   --output results/mlsys_ver12/model_timelines
 ```
 
-`SOURCES.json`과 `data/`의 portable window JSON만 있으면 다른 서버에서도 다시 그릴 수 있다.
+`SOURCES.json`과 `data/`의 portable window JSON 및 `PHASE_SAMPLES.json.gz`가 있으면 다른 서버에서도 다시 그릴 수 있다.
 이전 서버의 원시 profile 경로를 읽지 않는다. 출력은5개 모델 PDF/전체17쪽이며,
 CodeLlama의 두 설정은 같은 PDF 안에 묶는다. 제목과 설명에 실제 측정 버전을 보존한다.
 이것은 기존 기록의 재시각화이며1.2에서 모든 모델을 새로 측정했다는 뜻이 아니다.
+
+다른 서버에서 저장된 그림만 확인할 때는 `ALL_MODELS.pdf` 또는 `index.html`을 열면 된다.
+Python은 재생성할 때만 필요하다. 도구는 torch/CUDA/모델을 import하지 않는다.
+별도 분석 환경이 필요하면 아래처럼 설치한다(추론용 환경을 바꿀 필요 없음).
+
+```bash
+python3 -m venv /tmp/duet-timeline-venv
+/tmp/duet-timeline-venv/bin/python -m pip install numpy matplotlib pypdf
+```
 
 페이지마다 다음을 표시한다.
 
@@ -28,12 +37,98 @@ CodeLlama의 두 설정은 같은 PDF 안에 묶는다. 제목과 설명에 실�
 - **초록 원 / 삼각형:** PS cache 완성 / 후처리까지 끝낸 draft 수신 준비.
 - **Ready margin:** deadline−수신 준비. 음수도 그대로 표시한다.
 - **흰 점선:** DS/PS forward 횟수. 실측 개별 forward 시간 경계가 아니다.
+- **하단 표:** 현재 P1 hit / P2 hit / Miss / Overall별 모든 유효 step의 평균.
+  대표 두 step의 평균이 아니다. Step 길이는 현재 target 요청 시작부터 다음 시작까지다.
+  DS spare는 proxy 전송 준비 완료−DS 완료, PS spare는 다음 target 요청 시작−draft 수신 준비다.
+  Graph/K1·K2는 샘플링·선택을 포함한 round당 평균이고 순수 transformer latency가 아니다.
+
+평균은 `PHASE_AVERAGES.csv/json`으로도 저장한다. Overall은 실제 step 수로 가중하고
+빈 source는 N/A로 표시한다. 원시 시각이 담긴 `data/PHASE_SAMPLES.json.gz`로 재계산하며,
+원본 profile 경로 없이도 그림과 평균을 모두 재생성할 수 있다.
+
+현재 동봉된 모델별 trace의 `exit_proxy_side`와 `graph_post`는 겹치지 않는다. 새 기록에서는
+중첩 건수·시간을 다시 계산해 표시한다. 이벤트 이름은 별도 stream 사용을 보장하지 않는다.
+비동기 전송 enqueue는 실제 통신 완료 계측이 아니다.
 
 미계측 간격은 GPU idle의 증거가 아니며, 다음 응답 대기 전체를 이전 PS 지연으로 귀속하지 않는다.
 여유 시간을 전부 추가 forward에 쓸 수 있다는 보장도 아니다. 시간축 이동과 최소 막대 폭 없이
 원시 시각을 사용하고, GPU 간 시각 정렬 오차를 인정한다. 중첩 부모/자식 구간은 합산하지 않는다.
 
-## 새 profile에서 두 step 추출
+## 새 실험에서 평균 표와 모델별 그림 만들기 — 권장
+
+**현재 지원 범위는 B=1, DS와 PS가 모두 실행되는 tree profile이다.**
+B>1의 request별 hit가 섞인 batch를 임의로 P1/P2/miss 하나로 분류하지 않는다.
+추론을 먼저 완료하고 profile flush가 끝난 뒤 다음 후처리를 실행한다. 기존 그림 재생성과
+새 profile의 평균 계산은 서로 다른 작업이며, 새 실험에는 이 exporter를 사용한다.
+
+`timeline_inputs.json`을 만든다. 아래 상대 경로는 이 JSON이 있는 디렉터리 기준이다.
+같은 모델·설정의 반복은 `runs`에 추가하고, 다른 K1/K2·tree 예산·온도·하드웨어는
+별도 dataset으로 작성한다. `measurement`에 실제 commit·GPU·입력 수·온도 등을 적는다.
+
+```json
+{
+  "schema": "duet-timeline-inputs-v1",
+  "datasets": [{
+    "model_id": "llama2_7b_amd135m",
+    "model_name": "LayerSkip Llama2-7B + AMD-Llama-135M",
+    "setting": "exit20 K1/K2=6/3 DS/PS M=12/8 C=3",
+    "measurement": "실제 측정 commit / GPU / B1 BF16 T0.7 / 입력 범위",
+    "runs": [{"outcomes": "run1/run.json", "profile_dir": "run1"}]
+  }]
+}
+```
+
+```bash
+python ssd/tools/duet_timeline/export_profile_timelines.py \
+  --spec /path/to/timeline_inputs.json \
+  --output /path/to/new_timeline_bundle
+```
+
+이 명령 하나로 유효 step 집계 → source별 대표 선택 → 연속 두 step 추출 → 평균 표·PDF·HTML까지 생성한다.
+출력은 새/빈 디렉터리를 지정한다. 이미 export한 묶음은 위의 `build_model_timelines.py`로 재생성한다.
+
+입력 형식:
+
+- 기존 benchmark의 `run.json` (`status=complete`, `args`, `warm_groups`, `groups`)를 직접 읽는다.
+  `args.k1/k2`, group의 단일 request, step별 `events[0].source` 및 `cap/clipped`를 사용한다.
+- 다른 실행기로 측정했다면 아래 **표준 outcome JSON**으로 변환한다. source는 반드시 실제
+  verification의 `0=miss, 1=P1 hit, 2=P2 hit`다. 파일명·막대 길이로 추정하지 않는다.
+
+```json
+{
+  "schema": "duet-timeline-outcomes-v1", "status": "complete",
+  "batch_size": 1, "k1": 6, "k2": 3,
+  "requests": [{
+    "epoch": 0, "uid": "warmup_or_measured_uid", "warmup": true,
+    "steps": [
+      {"step_id": 1, "source": 0, "cap": false, "clipped": false},
+      {"step_id": 2, "source": 1, "cap": false, "clipped": false}
+    ]
+  }]
+}
+```
+
+예시는 필드 설명용이다. 실제로는 **warmup까지 포함한 모든 decode 요청·step**을 순서대로
+기록해야 한다. epoch는 target/draft profile에서 step ID가 1로 재시작하는 순서(0부터)다.
+생성 없이 끝나 profile anchor가 없는 요청에는 epoch를 부여하지 않는다. Target rank0와
+draft의 anchor 집합이 outcome JSON과 완전히 일치하지 않으면 중단한다.
+
+평균에서는 warmup, 요청마다 처음 두 step, 마지막 step, 출력 상한/cap·clipped step을 제외한다.
+대표 그림은 그 중 같은 요청의 후속 두 anchor가 있는 step에서 source별 step 길이 중앙값에
+해당하는 실제 step을 고른다. **평균 표는 그 대표만이 아니라 모든 유효 step을 사용한다.**
+표본이 없는 source는 N/A, 그림만 선택할 수 없는 source는 평균 표에 남고 페이지는 없다.
+제외 수와 대표 선택 가능 표본 수는 `data/PHASE_SAMPLES.json.gz`의 `eligibility`에 보존한다.
+
+출력에는 `SOURCES.json`, `data/`, `PHASE_AVERAGES.csv/json`, 모델별 PDF/PNG,
+`ALL_MODELS.pdf`, `index.html`, `REPORT.md`, hash를 기록한 `INDEX.json`이 포함된다.
+**다른 서버에는 출력 디렉터리를 통째로 복사하면 된다.** 새 서버에서는 원래 profile 경로에
+접근하지 않고 `SOURCES.json` + `data/`로 평균과 그림을 모두 재생성한다. 각 window의 원본
+파일 경로는 provenance이며 재생성 시 읽지 않는다.
+
+`phase_averages.py --historical-source ... --accepted-runs ...`는 동봉된 과거 캠페인의
+최초 변환용 adapter다. 새 실험에서는 모델명·반복 수가 고정된 그 adapter를 사용하지 않는다.
+
+## 단일 대표 step만 빠르게 확인 — 전체 평균 표 없음
 
 ```bash
 python ssd/tools/duet_timeline/plot_consecutive_steps.py \
@@ -56,7 +151,7 @@ python ssd/tools/duet_timeline/plot_consecutive_steps.py \
 ```
 
 출력은 임시 분석용으로 사용한다. 모델별 정본을 갱신할 때는 `SOURCES.json`에 선택 근거·state·window hash를
-반영하고 `build_model_timelines.py`를 사용한다. 옛 `plot_model_*` adapter는 내부 함수와 과거 분석
+반영하고 평균 입력도 함께 제공해야 한다. 권장 exporter가 이를 자동으로 생성한다. 옛 `plot_model_*` adapter는 내부 함수와 과거 분석
 재현을 위해 남겨 뒀지만 현재 모델별 그림을 만드는 진입점은 `build_model_timelines.py` 하나다.
 
 ## 프로파일 수집
@@ -76,3 +171,13 @@ DS/PS graph replay에는 forward 외 tree 선택·sampling도 포함된다.
 PS가 없는 chain 등의 기존 trace는 `plot.sh`/`plot_representatives.py`로 따로 탐색할 수 있다.
 모델별 정본을 다른 형식으로 덮어쓰지 않는다. Proxy 구간 수치만 확인하려면
 `python ssd/tools/duet_timeline/summarize_proxy.py PROFILE_DIR`를 사용한다.
+
+## 도구 검사
+
+```bash
+python -B -m unittest discover -s ssd/tests -p test_consecutive_timeline.py -v
+```
+
+음수 여유, 경우별 가중 평균, 빈 표본, 요청 경계, 중첩 판별 및 **원본 profile 삭제 후 다른
+경로로 옮긴 bundle 재생성**을 검사한다. 이번 전달의 전체 검사 기록은
+`results/mlsys_ver12/model_timelines/checks/CHECKS.json`에 있다.
