@@ -1,0 +1,395 @@
+{
+  "definitions": {
+    "grouping": "Current step cache source; DS/PS prepare future outcomes.",
+    "weighting": "Arithmetic mean over eligible steps, including all repetitions; overall is step-weighted.",
+    "step_ms": "Next target_send_request.start minus current target_send_request.start, same request.",
+    "ds_total_ms": "P1 root/phase preparation start to proxy_wait.start; excludes glue and proxy wait.",
+    "ds_margin_ms": "Target proxy_send_enqueue.end minus proxy_wait.start (DS complete). Send-side reference, not measured arrival.",
+    "ds_round_ms": "P1 graph replay elapsed / K1; includes sampling/selection inside graph.",
+    "ps_total_ms": "proxy_wait.end to merge_cache.end.",
+    "ps_margin_ms": "Next target_send_request.start minus next draft_recv_cmd.start; includes post-cache cleanup.",
+    "ps_round_ms": "P2 graph replay elapsed / K2; includes sampling/selection inside graph.",
+    "limitations": "Cross-device clocks have alignment uncertainty. Signed spare time is not guaranteed usable compute budget. No per-forward timings exist."
+  },
+  "sets": [
+    {
+      "model": "llama2_7b_llama68m",
+      "setting": "Selected setting",
+      "measurement": "Historical v1.0 / RTX3090 / 4 profiled turns",
+      "k1": 6,
+      "k2": 3,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 115,
+          "step_ms": 25.753732182608694,
+          "ds_total_ms": 7.1040590521739135,
+          "ds_margin_ms": 3.588319956521739,
+          "ds_round_ms": 0.8295703797101449,
+          "ps_total_ms": 6.378343669565217,
+          "ps_margin_ms": 1.6375004869565217,
+          "ps_round_ms": 0.679100136231884
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 164,
+          "step_ms": 25.189677902439026,
+          "ds_total_ms": 6.93863875,
+          "ds_margin_ms": 4.203728445121952,
+          "ds_round_ms": 0.8017391971544716,
+          "ps_total_ms": 6.42759893902439,
+          "ps_margin_ms": 1.368893969512195,
+          "ps_round_ms": 0.6813875487804878
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 42,
+          "step_ms": 25.339849547619046,
+          "ds_total_ms": 6.326729880952381,
+          "ds_margin_ms": 5.750644214285714,
+          "ds_round_ms": 0.6885027063492064,
+          "ps_total_ms": 6.21098980952381,
+          "ps_margin_ms": 1.6872665000000002,
+          "ps_round_ms": 0.6804683333333333
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 321,
+          "step_ms": 25.411402049844238,
+          "ds_total_ms": 6.917838632398754,
+          "ds_margin_ms": 4.185655193146418,
+          "ds_round_ms": 0.7968938805815161,
+          "ps_total_ms": 6.381611588785047,
+          "ps_margin_ms": 1.506779937694704,
+          "ps_round_ms": 0.6804477995846313
+        }
+      ],
+      "proxy_overlap": {
+        "steps": 321,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    },
+    {
+      "model": "llama2_13b_amd135m",
+      "setting": "Selected setting",
+      "measurement": "Historical v1.0 / RTX3090 / 4 profiled turns",
+      "k1": 6,
+      "k2": 3,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 139,
+          "step_ms": 35.96879917985611,
+          "ds_total_ms": 12.058446215827338,
+          "ds_margin_ms": 2.3886411079136693,
+          "ds_round_ms": 1.584285896882494,
+          "ps_total_ms": 9.352047258992807,
+          "ps_margin_ms": 1.8387310575539568,
+          "ps_round_ms": 1.2080792446043165
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 225,
+          "step_ms": 33.36512151555556,
+          "ds_total_ms": 11.973680528888888,
+          "ds_margin_ms": 1.955098528888889,
+          "ds_round_ms": 1.592751008148148,
+          "ps_total_ms": 9.390197511111111,
+          "ps_margin_ms": 1.0827547466666667,
+          "ps_round_ms": 1.2084671422222222
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 80,
+          "step_ms": 31.9456055,
+          "ds_total_ms": 9.6336486625,
+          "ds_margin_ms": 4.1981886625,
+          "ds_round_ms": 1.210506175,
+          "ps_total_ms": 9.0945374375,
+          "ps_margin_ms": 0.991065875,
+          "ps_round_ms": 1.2092915791666665
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 444,
+          "step_ms": 33.92446816891892,
+          "ds_total_ms": 11.57859017117117,
+          "ds_margin_ms": 2.494985081081081,
+          "ds_round_ms": 1.5212279515765768,
+          "ps_total_ms": 9.32498199099099,
+          "ps_margin_ms": 1.3029024887387386,
+          "ps_round_ms": 1.2084942530030032
+        }
+      ],
+      "proxy_overlap": {
+        "steps": 444,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    },
+    {
+      "model": "llama3_8b_drafter340m",
+      "setting": "Selected setting",
+      "measurement": "Historical v1.0 / RTX3090 / 4 profiled turns",
+      "k1": 4,
+      "k2": 1,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 65,
+          "step_ms": 29.23405953846154,
+          "ds_total_ms": 11.203064876923076,
+          "ds_margin_ms": 1.5027944615384616,
+          "ds_round_ms": 2.418567846153846,
+          "ps_total_ms": 6.236651107692308,
+          "ps_margin_ms": 3.107684753846154,
+          "ps_round_ms": 2.1205077846153846
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 295,
+          "step_ms": 28.19363082033898,
+          "ds_total_ms": 10.178878105084745,
+          "ds_margin_ms": 2.676776359322034,
+          "ds_round_ms": 2.1683287576271186,
+          "ps_total_ms": 6.256983237288135,
+          "ps_margin_ms": 2.941593654237288,
+          "ps_round_ms": 2.1221977830508476
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 27,
+          "step_ms": 28.076696296296294,
+          "ds_total_ms": 9.294795222222222,
+          "ds_margin_ms": 3.628369,
+          "ds_round_ms": 1.953595175925926,
+          "ps_total_ms": 6.069173148148148,
+          "ps_margin_ms": 3.196981666666667,
+          "ps_round_ms": 2.12556062962963
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 387,
+          "step_ms": 28.360221607235143,
+          "ds_total_ms": 10.289218937984495,
+          "ds_margin_ms": 2.5459861214470285,
+          "ds_round_ms": 2.195377166020672,
+          "ps_total_ms": 6.240465250645994,
+          "ps_margin_ms": 2.9873078604651164,
+          "ps_round_ms": 2.122148550387597
+        }
+      ],
+      "proxy_overlap": {
+        "steps": 387,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    },
+    {
+      "model": "codellama34b_amd135m_code",
+      "setting": "Selected setting",
+      "measurement": "Historical v1.0 / RTX3090 / 4 profiled turns",
+      "k1": 12,
+      "k2": 6,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 62,
+          "step_ms": 65.23391822580645,
+          "ds_total_ms": 22.847900306451614,
+          "ds_margin_ms": 14.976120983870967,
+          "ds_round_ms": 1.7467251008064515,
+          "ps_total_ms": 11.966844112903226,
+          "ps_margin_ms": 7.769129112903226,
+          "ps_round_ms": 1.226330193548387
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 11,
+          "step_ms": 55.32816927272727,
+          "ds_total_ms": 22.743119727272727,
+          "ds_margin_ms": 8.651013818181818,
+          "ds_round_ms": 1.742535212121212,
+          "ps_total_ms": 11.866521636363636,
+          "ps_margin_ms": 5.449708636363637,
+          "ps_round_ms": 1.2259262575757575
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 0,
+          "step_ms": null,
+          "ds_total_ms": null,
+          "ds_margin_ms": null,
+          "ds_round_ms": null,
+          "ps_total_ms": null,
+          "ps_margin_ms": null,
+          "ps_round_ms": null
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 73,
+          "step_ms": 63.74127112328767,
+          "ds_total_ms": 22.832111452054797,
+          "ds_margin_ms": 14.023022643835617,
+          "ds_round_ms": 1.746093747716895,
+          "ps_total_ms": 11.951727027397261,
+          "ps_margin_ms": 7.419627397260274,
+          "ps_round_ms": 1.2262693264840183
+        }
+      ],
+      "proxy_overlap": {
+        "steps": 73,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    },
+    {
+      "model": "codellama34b_amd135m_code",
+      "setting": "K1/K2 16/6 (throughput alternative)",
+      "measurement": "Historical v1.0 / RTX3090 / 4 profiled turns",
+      "k1": 16,
+      "k2": 6,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 63,
+          "step_ms": 64.90839695238095,
+          "ds_total_ms": 36.25825046031746,
+          "ds_margin_ms": -5.478931666666666,
+          "ds_round_ms": 2.0586339533730156,
+          "ps_total_ms": 14.165306365079365,
+          "ps_margin_ms": -0.3645264761904762,
+          "ps_round_ms": 1.2357629788359787
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 19,
+          "step_ms": 59.838398052631575,
+          "ds_total_ms": 35.96895563157895,
+          "ds_margin_ms": -6.511361894736842,
+          "ds_round_ms": 2.0580669243421053,
+          "ps_total_ms": 14.52613594736842,
+          "ps_margin_ms": -3.6909016842105267,
+          "ps_round_ms": 1.2341223245614035
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 2,
+          "step_ms": 66.2045895,
+          "ds_total_ms": 35.800537,
+          "ds_margin_ms": -8.284265999999999,
+          "ds_round_ms": 1.8669738749999998,
+          "ps_total_ms": 13.1982425,
+          "ps_margin_ms": -5.5882215,
+          "ps_round_ms": 1.2317708333333335
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 84,
+          "step_ms": 63.792473214285714,
+          "ds_total_ms": 36.181916785714286,
+          "ds_margin_ms": -5.7792512261904765,
+          "ds_round_ms": 2.0539423616071426,
+          "ps_total_ms": 14.223897249999998,
+          "ps_margin_ms": -1.2412945595238096,
+          "ps_round_ms": 1.2352968273809524
+        }
+      ],
+      "proxy_overlap": {
+        "steps": 84,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    },
+    {
+      "model": "llama2_7b_amd135m",
+      "setting": "PS preparation validation (fixed parameters)",
+      "measurement": "Accepted optimization / RTX4090 / same 24 turns repeated 3 times; fixed parameters",
+      "k1": 6,
+      "k2": 3,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 813,
+          "step_ms": 19.875210601476013,
+          "ds_total_ms": 7.71489887699877,
+          "ds_margin_ms": 1.5291517060270603,
+          "ds_round_ms": 1.1369186859368594,
+          "ps_total_ms": 4.913566466174662,
+          "ps_margin_ms": 1.4821331439114391,
+          "ps_round_ms": 0.9529049659696597
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 1245,
+          "step_ms": 19.655829943775103,
+          "ds_total_ms": 7.566691466666668,
+          "ds_margin_ms": 1.9251287638554218,
+          "ds_round_ms": 1.10922831686747,
+          "ps_total_ms": 4.943300332530121,
+          "ps_margin_ms": 1.3909969718875503,
+          "ps_round_ms": 0.9528382064257027
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 333,
+          "step_ms": 20.912563024024024,
+          "ds_total_ms": 6.60436063063063,
+          "ds_margin_ms": 3.477871174174174,
+          "ds_round_ms": 0.9521061791791792,
+          "ps_total_ms": 4.904855117117117,
+          "ps_margin_ms": 1.6384164294294294,
+          "ps_round_ms": 0.9466594064064063
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 2391,
+          "step_ms": 19.905452942701796,
+          "ds_total_ms": 7.483059704307821,
+          "ds_margin_ms": 2.006740589293183,
+          "ds_round_ms": 1.096760980273247,
+          "ps_total_ms": 4.927835719364283,
+          "ps_margin_ms": 1.4564442271016311,
+          "ps_round_ms": 0.9520003708350759
+        }
+      ],
+      "proxy_overlap": {
+        "steps": 2391,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    }
+  ],
+  "samples_sha256": "b6ae910919a72047b49fc625605ca3760501e11ebc208f51c8096a3f035b733e"
+}

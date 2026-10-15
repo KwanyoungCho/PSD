@@ -143,6 +143,69 @@
           "measured_boundaries": false
         }
       ],
+      "phase_summary": {
+        "model": "llama2_7b_amd135m",
+        "setting": "PS preparation validation (fixed parameters)",
+        "measurement": "Accepted optimization / RTX4090 / same 24 turns repeated 3 times; fixed parameters",
+        "k1": 6,
+        "k2": 3,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 813,
+            "step_ms": 19.875210601476013,
+            "ds_total_ms": 7.71489887699877,
+            "ds_margin_ms": 1.5291517060270603,
+            "ds_round_ms": 1.1369186859368594,
+            "ps_total_ms": 4.913566466174662,
+            "ps_margin_ms": 1.4821331439114391,
+            "ps_round_ms": 0.9529049659696597
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 1245,
+            "step_ms": 19.655829943775103,
+            "ds_total_ms": 7.566691466666668,
+            "ds_margin_ms": 1.9251287638554218,
+            "ds_round_ms": 1.10922831686747,
+            "ps_total_ms": 4.943300332530121,
+            "ps_margin_ms": 1.3909969718875503,
+            "ps_round_ms": 0.9528382064257027
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 333,
+            "step_ms": 20.912563024024024,
+            "ds_total_ms": 6.60436063063063,
+            "ds_margin_ms": 3.477871174174174,
+            "ds_round_ms": 0.9521061791791792,
+            "ps_total_ms": 4.904855117117117,
+            "ps_margin_ms": 1.6384164294294294,
+            "ps_round_ms": 0.9466594064064063
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 2391,
+            "step_ms": 19.905452942701796,
+            "ds_total_ms": 7.483059704307821,
+            "ds_margin_ms": 2.006740589293183,
+            "ds_round_ms": 1.096760980273247,
+            "ps_total_ms": 4.927835719364283,
+            "ps_margin_ms": 1.4564442271016311,
+            "ps_round_ms": 0.9520003708350759
+          }
+        ],
+        "proxy_overlap": {
+          "steps": 2391,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
       "minimum_bar_width_ms": 0,
       "clock_shift_ns": 0,
       "window": "../data/accepted_source1_req26_step7.json",
@@ -290,6 +353,69 @@
           "measured_boundaries": false
         }
       ],
+      "phase_summary": {
+        "model": "llama2_7b_amd135m",
+        "setting": "PS preparation validation (fixed parameters)",
+        "measurement": "Accepted optimization / RTX4090 / same 24 turns repeated 3 times; fixed parameters",
+        "k1": 6,
+        "k2": 3,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 813,
+            "step_ms": 19.875210601476013,
+            "ds_total_ms": 7.71489887699877,
+            "ds_margin_ms": 1.5291517060270603,
+            "ds_round_ms": 1.1369186859368594,
+            "ps_total_ms": 4.913566466174662,
+            "ps_margin_ms": 1.4821331439114391,
+            "ps_round_ms": 0.9529049659696597
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 1245,
+            "step_ms": 19.655829943775103,
+            "ds_total_ms": 7.566691466666668,
+            "ds_margin_ms": 1.9251287638554218,
+            "ds_round_ms": 1.10922831686747,
+            "ps_total_ms": 4.943300332530121,
+            "ps_margin_ms": 1.3909969718875503,
+            "ps_round_ms": 0.9528382064257027
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 333,
+            "step_ms": 20.912563024024024,
+            "ds_total_ms": 6.60436063063063,
+            "ds_margin_ms": 3.477871174174174,
+            "ds_round_ms": 0.9521061791791792,
+            "ps_total_ms": 4.904855117117117,
+            "ps_margin_ms": 1.6384164294294294,
+            "ps_round_ms": 0.9466594064064063
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 2391,
+            "step_ms": 19.905452942701796,
+            "ds_total_ms": 7.483059704307821,
+            "ds_margin_ms": 2.006740589293183,
+            "ds_round_ms": 1.096760980273247,
+            "ps_total_ms": 4.927835719364283,
+            "ps_margin_ms": 1.4564442271016311,
+            "ps_round_ms": 0.9520003708350759
+          }
+        ],
+        "proxy_overlap": {
+          "steps": 2391,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
       "minimum_bar_width_ms": 0,
       "clock_shift_ns": 0,
       "window": "../data/accepted_source2_req21_step15.json",
@@ -437,6 +563,69 @@
           "measured_boundaries": false
         }
       ],
+      "phase_summary": {
+        "model": "llama2_7b_amd135m",
+        "setting": "PS preparation validation (fixed parameters)",
+        "measurement": "Accepted optimization / RTX4090 / same 24 turns repeated 3 times; fixed parameters",
+        "k1": 6,
+        "k2": 3,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 813,
+            "step_ms": 19.875210601476013,
+            "ds_total_ms": 7.71489887699877,
+            "ds_margin_ms": 1.5291517060270603,
+            "ds_round_ms": 1.1369186859368594,
+            "ps_total_ms": 4.913566466174662,
+            "ps_margin_ms": 1.4821331439114391,
+            "ps_round_ms": 0.9529049659696597
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 1245,
+            "step_ms": 19.655829943775103,
+            "ds_total_ms": 7.566691466666668,
+            "ds_margin_ms": 1.9251287638554218,
+            "ds_round_ms": 1.10922831686747,
+            "ps_total_ms": 4.943300332530121,
+            "ps_margin_ms": 1.3909969718875503,
+            "ps_round_ms": 0.9528382064257027
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 333,
+            "step_ms": 20.912563024024024,
+            "ds_total_ms": 6.60436063063063,
+            "ds_margin_ms": 3.477871174174174,
+            "ds_round_ms": 0.9521061791791792,
+            "ps_total_ms": 4.904855117117117,
+            "ps_margin_ms": 1.6384164294294294,
+            "ps_round_ms": 0.9466594064064063
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 2391,
+            "step_ms": 19.905452942701796,
+            "ds_total_ms": 7.483059704307821,
+            "ds_margin_ms": 2.006740589293183,
+            "ds_round_ms": 1.096760980273247,
+            "ps_total_ms": 4.927835719364283,
+            "ps_margin_ms": 1.4564442271016311,
+            "ps_round_ms": 0.9520003708350759
+          }
+        ],
+        "proxy_overlap": {
+          "steps": 2391,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
       "minimum_bar_width_ms": 0,
       "clock_shift_ns": 0,
       "window": "../data/accepted_source0_req14_step39.json",

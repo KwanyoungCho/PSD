@@ -1,12 +1,12 @@
 # 모델 조합별 timeline — 현재 확인 경로
 
-이 폴더가 모델별 timeline의 단일 확인 경로다. 이전 ALIGNED/NATIVE/WAITS 및 별도 예시 PDF는 삭제했다.
-원시 profile·수치·이벤트 JSON은 보존했으며 새로운 inference를 실행한 것은 아니다.
+이 폴더는 입력 manifest에 지정한 모델별 timeline 모음이다.
+원시 시각·평균 재현 입력을 함께 보존하며 새로운 inference를 실행한 것은 아니다.
 
 - [전체 PDF](ALL_MODELS.pdf), [브라우저에서 모델별 보기](index.html).
 - 모델당 PDF 하나, 페이지마다 **같은 요청의 연속 두 step**. P1 hit, P2 hit, miss 순서다.
-- CodeLlama 두 설정은 같은 PDF에 묶었으며, 12/6에서 유효한 miss 표본이 없어 그 페이지는 없다.
-- 그래프마다 측정 버전, 파라미터, 요청·step을 표시한다. 일부 모델의 과거 trace를1.2 측정으로 취급하지 않는다.
+- 같은 모델의 여러 설정은 같은 PDF에 묶는다. 유효한 연속 step 표본이 없는 source는 그림을 만들지 않는다.
+- 그래프마다 측정 설명, 설정, 요청·step을 표시한다. 도구 버전과 실제 측정 runtime 버전을 구분한다.
 
 | 모델 조합 | 쪽수 | 그림 | 측정 구분 |
 |---|---:|---|---|
@@ -27,25 +27,137 @@
 - 시간축 이동과 최소 막대 폭 없이 원시 시각을 사용한다. GPU 간 시각 정렬 오차가 있고,
   관측된 여유를 전부 추가 계산에 사용할 수 있다는 보장은 없다.
 
+## 경우별·전체 평균
+
+그래프 하단의 절대 시각 표를 **P1 hit / P2 hit / Miss / Overall** 평균 표로 교체했다.
+그림의 두 step은 실제 예시이며, 표는 같은 모델·설정의 유효 step 전체를 사용한다.
+분류는 현재 step에서 사용한 cache source다. 그 step의 DS/PS는 다음 결과를 대비하는 생성이다.
+전체 평균은 실제 step 수로 가중하며, 표본이 없는 경우는 N/A로 표시한다.
+
+- Step: 현재 `target_send_request.start`부터 같은 요청의 다음 `target_send_request.start`까지.
+  요청/응답·검증·후처리·다음 요청까지의 간격을 포함한다. `graph_pre` 간격이나 AL이 아니다.
+- DS total: root 준비 시작부터 `proxy_wait.start`까지. Glue와 proxy 대기는 제외한다.
+- DS spare*: target의 `proxy_send_enqueue.end` − DS 완료. 실제 수신 도착 시점은 계측되지
+  않았으므로 **전송 준비 시각 기준**을 사용한다. 과거 보고서의 transport를 더한 추정 gap1과 다르다.
+  `proxy_wait.end`로 계산하면 DS가 늦어 이미 도착한 proxy를 기다리게 한 경우를 숨기므로 사용하지 않는다.
+- PS total: `proxy_wait.end`부터 `merge_cache.end`까지.
+- PS spare: 다음 target 요청 시작 − 다음 draft 명령 수신 준비. Cache 완료 후 정리 시간까지 고려한다.
+- DS/PS graph ÷ K1/K2: forward round당 평균. Graph 안의 sampling·tree 선택을 포함하며,
+  개별 transformer forward를 분리 측정한 수치가 아니다. Source에 따라 입력 width도 다르다.
+- Spare는 음수를 유지한다. 추가 forward에 전부 사용할 수 있는 확정 예산이나 인과적 stall 측정값은 아니다.
+
+새 profile exporter는 warmup·요청의 처음 두 step·마지막 step·cap/clip step을 제외한다.
+기존 자료의 필터는 함께 보존된 `eligibility`를 따른다. 지연시간이 길다는 이유로 제외하지 않는다.
+입력 수·반복·실측 환경은 설정별 측정 설명을 따른다. 반복을 서로 다른 입력으로 세지 않는다.
+
+`PHASE_AVERAGES.csv/json`은 아래 평균과 일치한다. `data/PHASE_SAMPLES.json.gz`에는
+모든 대상 step의 원시 시각·현재/다음 source·K1/K2와 입력 hash를 보존했다.
+다른 서버에서도 이 파일로 평균을 다시 계산한다.
+
+### LayerSkip Llama2-7B + llama-68M — Selected setting
+
+Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
+|---|---|---|---|---|---|---|---|---|
+| P1 hit | 115 | 25.754 | 7.104 | +3.588 | 0.830 | 6.378 | +1.638 | 0.679 |
+| P2 hit | 164 | 25.190 | 6.939 | +4.204 | 0.802 | 6.428 | +1.369 | 0.681 |
+| Miss | 42 | 25.340 | 6.327 | +5.751 | 0.689 | 6.211 | +1.687 | 0.680 |
+| Overall | 321 | 25.411 | 6.918 | +4.186 | 0.797 | 6.382 | +1.507 | 0.680 |
+
+### LayerSkip Llama2-7B + AMD-Llama-135M — PS preparation validation (fixed parameters)
+
+Accepted optimization / RTX4090 / same 24 turns repeated 3 times; fixed parameters
+
+| Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
+|---|---|---|---|---|---|---|---|---|
+| P1 hit | 813 | 19.875 | 7.715 | +1.529 | 1.137 | 4.914 | +1.482 | 0.953 |
+| P2 hit | 1245 | 19.656 | 7.567 | +1.925 | 1.109 | 4.943 | +1.391 | 0.953 |
+| Miss | 333 | 20.913 | 6.604 | +3.478 | 0.952 | 4.905 | +1.638 | 0.947 |
+| Overall | 2391 | 19.905 | 7.483 | +2.007 | 1.097 | 4.928 | +1.456 | 0.952 |
+
+### LayerSkip Llama2-13B + AMD-Llama-135M — Selected setting
+
+Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
+|---|---|---|---|---|---|---|---|---|
+| P1 hit | 139 | 35.969 | 12.058 | +2.389 | 1.584 | 9.352 | +1.839 | 1.208 |
+| P2 hit | 225 | 33.365 | 11.974 | +1.955 | 1.593 | 9.390 | +1.083 | 1.208 |
+| Miss | 80 | 31.946 | 9.634 | +4.198 | 1.211 | 9.095 | +0.991 | 1.209 |
+| Overall | 444 | 33.924 | 11.579 | +2.495 | 1.521 | 9.325 | +1.303 | 1.208 |
+
+### LayerSkip Llama3-8B + Axcel Llama3.1 drafter-340M — Selected setting
+
+Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
+|---|---|---|---|---|---|---|---|---|
+| P1 hit | 65 | 29.234 | 11.203 | +1.503 | 2.419 | 6.237 | +3.108 | 2.121 |
+| P2 hit | 295 | 28.194 | 10.179 | +2.677 | 2.168 | 6.257 | +2.942 | 2.122 |
+| Miss | 27 | 28.077 | 9.295 | +3.628 | 1.954 | 6.069 | +3.197 | 2.126 |
+| Overall | 387 | 28.360 | 10.289 | +2.546 | 2.195 | 6.240 | +2.987 | 2.122 |
+
+### LayerSkip CodeLlama-34B + AMD-Llama-135M-code — Selected setting
+
+Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
+|---|---|---|---|---|---|---|---|---|
+| P1 hit | 62 | 65.234 | 22.848 | +14.976 | 1.747 | 11.967 | +7.769 | 1.226 |
+| P2 hit | 11 | 55.328 | 22.743 | +8.651 | 1.743 | 11.867 | +5.450 | 1.226 |
+| Miss | 0 | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| Overall | 73 | 63.741 | 22.832 | +14.023 | 1.746 | 11.952 | +7.420 | 1.226 |
+
+### LayerSkip CodeLlama-34B + AMD-Llama-135M-code — K1/K2 16/6 (throughput alternative)
+
+Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
+|---|---|---|---|---|---|---|---|---|
+| P1 hit | 63 | 64.908 | 36.258 | -5.479 | 2.059 | 14.165 | -0.365 | 1.236 |
+| P2 hit | 19 | 59.838 | 35.969 | -6.511 | 2.058 | 14.526 | -3.691 | 1.234 |
+| Miss | 2 | 66.205 | 35.801 | -8.284 | 1.867 | 13.198 | -5.588 | 1.232 |
+| Overall | 84 | 63.792 | 36.182 | -5.779 | 2.054 | 14.224 | -1.241 | 1.235 |
+
+
+## Proxy와 target 후반 forward의 중첩 여부
+
+`exit_proxy_side`와 `graph_post`의 원시 시간 구간이 실제로 겹치는지 계산했다.
+`PHASE_AVERAGES.json`의 설정별 `proxy_overlap`에 전체 대상 step의 중첩 건수와 평균을 저장했다.
+`exit_proxy_side`는 별도 stream을 사용하지 않는 분기에도 붙는 이벤트 이름이다.
+별도 stream 사용은 runtime의 `SSD_PROXY_STREAM=1` 또는 exit replica 경로에서 결정된다.
+전송 막대 `proxy_send_enqueue`는 비동기 전송 요청 구간이며 실제 통신 완료를 계측하지 않는다.
+따라서 통신이 겹치는지·얼마나 겹치는지를 이 막대만으로 판단하지 않는다.
+이는 별도 draft GPU의 DS/PS가 target verification과 병렬 실행되는 것과 다른 문제다.
+
+
+- LayerSkip Llama2-7B + llama-68M / Selected setting: Proxy 계산 ↔ target 후반 forward 중첩: 0/321 step, 전체 step 평균 중첩 0.000ms. 전송 완료 시간은 미계측.
+- LayerSkip Llama2-7B + AMD-Llama-135M / PS preparation validation (fixed parameters): Proxy 계산 ↔ target 후반 forward 중첩: 0/2391 step, 전체 step 평균 중첩 0.000ms. 전송 완료 시간은 미계측.
+- LayerSkip Llama2-13B + AMD-Llama-135M / Selected setting: Proxy 계산 ↔ target 후반 forward 중첩: 0/444 step, 전체 step 평균 중첩 0.000ms. 전송 완료 시간은 미계측.
+- LayerSkip Llama3-8B + Axcel Llama3.1 drafter-340M / Selected setting: Proxy 계산 ↔ target 후반 forward 중첩: 0/387 step, 전체 step 평균 중첩 0.000ms. 전송 완료 시간은 미계측.
+- LayerSkip CodeLlama-34B + AMD-Llama-135M-code / Selected setting: Proxy 계산 ↔ target 후반 forward 중첩: 0/73 step, 전체 step 평균 중첩 0.000ms. 전송 완료 시간은 미계측.
+- LayerSkip CodeLlama-34B + AMD-Llama-135M-code / K1/K2 16/6 (throughput alternative): Proxy 계산 ↔ target 후반 forward 중첩: 0/84 step, 전체 step 평균 중첩 0.000ms. 전송 완료 시간은 미계측.
+
 ## 측정 조건과 대표 선택
 
-3090 모델별 자료는 설정별4턴의 ver1.0 계열 profile이다. 같은 source에서 후속 두 anchor가
-있는 step의 target 구간 길이 중앙값을 선택했다. CodeLlama는 별도 code 입력이다.
-7B+135M/4090은1.2 채택 소스의24턴 PS 최적화 비교 기록에서 기존 A/B 대표를 사용했다.
-이는 파라미터 최적화나 전체 데이터셋 성능 평가가 아니다. 서로 다른 환경의 절대 시간을
-직접 비교하여 모델/버전의 우열을 판단하지 않는다.
+측정 버전·모델·입력 범위는 위 설정별 설명을 확인한다. 각 window의 `metadata.selection`에
+대표 선택 근거가 있다. 새 exporter는 같은 source에서 후속 두 anchor가 있는 유효 step 중
+현재 target 요청 시작→다음 요청 시작 시간의 중앙값에 해당하는 실제 step을 선택한다.
+표는 대표 step만이 아닌 모든 유효 step의 평균이다. 이 도구는 파라미터 최적화나
+전체 데이터셋 평가를 수행하지 않는다. 서로 다른 환경의 절대 시간을 직접 비교하지 않는다.
 
-`SOURCES.json`과 `data/`의 window JSON은 새 그림의 재현 입력이다. 원본 interval과
+`SOURCES.json`과 `data/`의 window JSON 및 PHASE_SAMPLES.json.gz는 새 그림의 재현 입력이다. 원본 interval과
 source hash를 포함한다. `INDEX.json`, 모델별 `AUDIT.json`, `DEADLINES.csv`에서
 페이지별 source·step·정확한 시각을 확인할 수 있다.
 
 저장소 루트에서 재생성:
 
 ```bash
-python ssd/tools/duet_timeline/build_model_timelines.py \
-  --manifest results/mlsys_ver12/model_timelines/SOURCES.json \
-  --output results/mlsys_ver12/model_timelines
+python /path/to/repo/ssd/tools/duet_timeline/build_model_timelines.py \
+  --manifest /path/to/this_bundle/SOURCES.json \
+  --output /path/to/redrawn_bundle
 ```
 
 필요 패키지는 numpy, matplotlib, pypdf다. GPU·모델·이전 서버의 파일 경로는 필요 없다.
-이전 그림은 Git 커밋 `1f87514`에서 복구할 수 있다. 현재 확인에는 이 폴더만 사용한다.
+새 실험에서 만드는 명령과 지원 입력 형식은 도구의 README를 참고한다.
