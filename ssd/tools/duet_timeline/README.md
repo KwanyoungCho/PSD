@@ -41,6 +41,10 @@ python3 -m venv /tmp/duet-timeline-venv
   대표 두 step의 평균이 아니다. Step 길이는 현재 target 요청 시작부터 다음 시작까지다.
   DS spare는 proxy 전송 준비 완료−DS 완료, PS spare는 다음 target 요청 시작−draft 수신 준비다.
   Graph/K1·K2는 샘플링·선택을 포함한 round당 평균이고 순수 transformer latency가 아니다.
+- **Rate·AL·TPS 표:** P1/P2/Miss의 Rate는 전체 유효 step 중 발생 비율이다.
+  Overall 행은 전체 hit rate `(P1+P2)/전체`를 표시한다. AL은 recovery/bonus token을
+  포함한 `accepted_len` 평균이다. Profile TPS는 같은 유효 step의 **실제 반환 토큰 합 / 시간 합**이다.
+  Per-step TPS의 평균이나 full dataset의 비계측 TPS가 아니다.
 
 평균은 `PHASE_AVERAGES.csv/json`으로도 저장한다. Overall은 실제 step 수로 가중하고
 빈 source는 N/A로 표시한다. 원시 시각이 담긴 `data/PHASE_SAMPLES.json.gz`로 재계산하며,
@@ -101,8 +105,10 @@ python ssd/tools/duet_timeline/export_profile_timelines.py \
   "requests": [{
     "epoch": 0, "uid": "warmup_or_measured_uid", "warmup": true,
     "steps": [
-      {"step_id": 1, "source": 0, "cap": false, "clipped": false},
-      {"step_id": 2, "source": 1, "cap": false, "clipped": false}
+      {"step_id": 1, "source": 0, "cap": false, "clipped": false,
+       "accepted_len": 2, "emitted_len": 2, "context_tokens": 128, "verify_width": 3},
+      {"step_id": 2, "source": 1, "cap": false, "clipped": false,
+       "accepted_len": 4, "emitted_len": 4, "context_tokens": 130, "verify_width": 12}
     ]
   }]
 }
@@ -112,6 +118,14 @@ python ssd/tools/duet_timeline/export_profile_timelines.py \
 기록해야 한다. epoch는 target/draft profile에서 step ID가 1로 재시작하는 순서(0부터)다.
 생성 없이 끝나 profile anchor가 없는 요청에는 epoch를 부여하지 않는다. Target rank0와
 draft의 anchor 집합이 outcome JSON과 완전히 일치하지 않으면 중단한다.
+
+AL/TPS를 표시하려면 각 step의 `accepted_len`과 `emitted_len`을 제공한다.
+`emitted_len`은 scheduler가 실제 추가한 토큰 수이며 `accepted_len`에서 추측하지 않는다.
+필드가 없는 과거 기록도 latency·rate는 표시하지만 AL/TPS는 N/A로 남긴다.
+선택 필드 `context_tokens`는 step 시작 전 확정된 KV 문맥 길이(이전 생성 토큰 포함),
+`verify_width`는 root를 제외한 실제 검증 proposal 수다. 논리적 target query 수는
+`verify_width+1`이며 CUDA graph bucket의 padding 후 행 수와 구분한다.
+기존 benchmark `run.json` adapter는 이 필드들을 자동으로 가져온다.
 
 평균에서는 warmup, 요청마다 처음 두 step, 마지막 step, 출력 상한/cap·clipped step을 제외한다.
 대표 그림은 그 중 같은 요청의 후속 두 anchor가 있는 step에서 source별 step 길이 중앙값에
@@ -178,6 +192,6 @@ PS가 없는 chain 등의 기존 trace는 `plot.sh`/`plot_representatives.py`로
 python -B -m unittest discover -s ssd/tests -p test_consecutive_timeline.py -v
 ```
 
-음수 여유, 경우별 가중 평균, 빈 표본, 요청 경계, 중첩 판별 및 **원본 profile 삭제 후 다른
+음수 여유, 경우별 가중 평균, hit/AL/TPS의 분모·누락 토큰 처리, 빈 표본, 요청 경계, 중첩 판별 및 **원본 profile 삭제 후 다른
 경로로 옮긴 bundle 재생성**을 검사한다. 이번 전달의 전체 검사 기록은
 `results/mlsys_ver12/model_timelines/checks/CHECKS.json`에 있다.

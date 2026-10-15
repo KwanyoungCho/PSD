@@ -29,12 +29,20 @@ def normalize_outcomes(data):
         for epoch, group in enumerate(data['warm_groups'] + data['groups']):
             require(group['n'] == 1 and len(group['request_records']) == 1, 'Expected one request per group')
             steps = []
+            record = group['request_records'][0]
+            context = record.get('input_tokens')
             for i, step in enumerate(group['steps'], 1):
                 require(len(step['events']) == 1 and step['events'][0]['batch_size'] == 1, 'Expected B=1 event')
                 ev = step['events'][0]
                 require(ev['step_id'] == i, 'Noncontiguous outcome steps')
-                steps.append(dict(step_id=i, source=ev['source'], cap=step['cap'], clipped=step['clipped']))
-            record = group['request_records'][0]
+                item=dict(step_id=i, source=ev['source'], cap=step['cap'], clipped=step['clipped'])
+                for key in ('accepted_len', 'verify_width'):
+                    if key in ev:item[key]=ev[key]
+                if 'emitted' in step:item['emitted_len']=step['emitted']
+                if context is not None:
+                    item['context_tokens']=context
+                    context=context+step['emitted'] if 'emitted' in step else None
+                steps.append(item)
             requests.append(dict(epoch=epoch, uid=record['paper_uid'], warmup=group['phase'] == 'warm', steps=steps))
         result = dict(schema='duet-timeline-outcomes-v1', status='complete', batch_size=1,
                       k1=data['args']['k1'], k2=data['args']['k2'], requests=requests)
@@ -48,6 +56,8 @@ def normalize_outcomes(data):
         for sid, step in enumerate(request['steps'], 1):
             require(step['step_id'] == sid and step['source'] in STATES, 'Invalid step/source')
             require(type(step['cap']) is bool and type(step['clipped']) is bool, 'Explicit cap/clipped flags required')
+            for field in ('accepted_len', 'emitted_len', 'context_tokens', 'verify_width'):
+                require(field not in step or (type(step[field]) is int and step[field] >= 0), 'Invalid '+field)
     return result
 
 
@@ -97,6 +107,7 @@ def export(spec_path, output):
                         continue
                     sid = step['step_id']; state = step['source']
                     row = dict(epoch=ep, step_id=sid, uid=request['uid'], state=state, next_state=steps[i+1]['source'])
+                    row.update({k:step[k] for k in ('accepted_len','emitted_len','context_tokens','verify_width') if k in step})
                     record = sample(groups, index, row, *counts, run_id)
                     samples.append(record)
                     if (ep, sid+2) in groups['target'] and (ep, sid+2) in groups['draft']:

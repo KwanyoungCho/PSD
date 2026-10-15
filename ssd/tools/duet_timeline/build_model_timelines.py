@@ -17,7 +17,7 @@ from pypdf import PdfReader, PdfWriter
 from plot_consecutive_steps import render
 from plot_model_breakdowns import load, require, sha, write_csv, STATES
 from phase_averages import (read_samples, summarize, table_cells, HEADERS,
-                            DEFINITIONS, overlap_summary)
+                            DEFINITIONS, overlap_summary, PERFORMANCE_HEADERS, performance_cells, workload_summary)
 
 
 def main(argv=None):
@@ -54,6 +54,7 @@ def main(argv=None):
         require(key not in summaries,'Duplicate setting')
         summaries[key]=dict(model=item['model'],setting=item['setting'],measurement=item['measurement'],
                             k1=item['k1'],k2=item['k2'],rows=summarize(item['samples']),
+                            workload=workload_summary(item['samples']),
                             proxy_overlap=overlap_summary(item['samples']))
     write_csv(out/'PHASE_AVERAGES.csv',[dict(model=s['model'],setting=s['setting'],**r)
                                       for s in summaries.values() for r in s['rows']])
@@ -79,15 +80,25 @@ def main(argv=None):
                     cells=table_cells(summary['rows'])
                     th=''.join('<th>'+html.escape(v)+'</th>' for v in HEADERS)
                     trs=''.join('<tr>'+''.join('<td>'+html.escape(v)+'</td>' for v in r)+'</tr>' for r in cells)
+                    perf_cells=performance_cells(summary['rows'])
+                    perf_th=''.join('<th>'+html.escape(v)+'</th>' for v in PERFORMANCE_HEADERS)
+                    perf_trs=''.join('<tr>'+''.join('<td>'+html.escape(v)+'</td>' for v in r)+'</tr>' for r in perf_cells)
                     overlap=summary['proxy_overlap']
                     overlap_note=(f'Proxy 계산 ↔ target 후반 forward 중첩: {overlap["overlapping_steps"]}/{overlap["steps"]} step, '
                                   f'전체 step 평균 중첩 {overlap["mean_overlap_ms"]:.3f}ms. 전송 완료 시간은 미계측.')
-                    mean_cards.append(f'<h3>{html.escape(entry["setting"])} — K1/K2 {summary["k1"]}/{summary["k2"]}</h3><p>{html.escape(summary["measurement"])}</p><table><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table><p>{overlap_note}</p>')
+                    workload=summary['workload']['rows'][-1]
+                    workload_note=''
+                    if workload['mean_context_tokens'] is not None and workload['mean_logical_query_rows'] is not None:
+                        workload_note=(f'유효 step 평균 target query: {workload["mean_logical_query_rows"]:.3f}개(padding 전), '
+                                       f'기존 KV 문맥: {workload["mean_context_tokens"]:.3f} tokens. Query 수와 문맥 길이는 다른 양이다.')
+                    mean_cards.append(f'<h3>{html.escape(entry["setting"])} — K1/K2 {summary["k1"]}/{summary["k2"]}</h3><p>{html.escape(summary["measurement"])}</p><table><thead><tr>{perf_th}</tr></thead><tbody>{perf_trs}</tbody></table><p>Rate: 전체 step 중 해당 경우의 비율. Overall 행은 전체 hit rate(P1+P2 비율). AL은 recovery/bonus 포함. TPS는 같은 유효 profile step의 반환 토큰 합÷시간 합.</p><table><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table><p>{overlap_note}</p><p>{workload_note}</p>')
                     overlap_report.append(f'- {model["name"]} / {entry["setting"]}: {overlap_note}')
                     mean_report.append('\n### '+model['name']+' — '+entry['setting']+'\n\n'+
                         summary['measurement']+'\n\n'+
+                        '| '+' | '.join(PERFORMANCE_HEADERS)+' |\n|'+ '|'.join(['---']*len(PERFORMANCE_HEADERS))+'|\n'+
+                        '\n'.join('| '+' | '.join(r)+' |' for r in perf_cells)+'\n\n'+
                         '| '+' | '.join(HEADERS)+' |\n|'+ '|'.join(['---']*len(HEADERS))+'|\n'+
-                        '\n'.join('| '+' | '.join(r)+' |' for r in cells)+'\n')
+                        '\n'.join('| '+' | '.join(r)+' |' for r in cells)+'\n\n'+workload_note+'\n')
                 panel=render(window,pdf,images/name,phase_summary=summary)
                 panel.update(window=os.path.relpath(source,dest),window_sha256=entry['sha256'],
                              page=i,setting=entry['setting'],image=f'images/{name}')
@@ -129,6 +140,9 @@ Step: 현재 target 요청 시작→다음 요청 시작. DS/PS total: 준비·�
 DS spare*: proxy 전송 준비 완료−DS 완료(수신 도착 시점은 아님). PS spare: 다음 target 요청 시작−draft 수신 준비.
 양수는 여유, 음수는 초과입니다. Graph/K1·K2는 graph 시간을 forward 횟수로 나눈 값이며 sampling·tree 선택을 포함합니다.</p>
 <p>분류는 <b>현재 step에서 사용한 cache</b> 기준입니다. 전체 평균은 실제 step 수로 가중합니다. 표본이 없으면 0 대신 N/A입니다.</p>
+<p>Rate는 P1/P2 hit·miss의 발생 비율이며, Overall 행에서는 전체 cache hit rate를 표시합니다.
+AL은 recovery/bonus를 포함한 수락 길이입니다. Profile TPS는 같은 유효 step의 실제 반환 토큰 합÷시간 합으로,
+profile OFF 또는 전체 데이터셋 TPS와 구분합니다. 토큰 수 기록이 없으면 AL/TPS를 추정하지 않고 N/A로 표시합니다.</p>
 <p><b>Proxy 계산과 target 후반 forward의 중첩 여부는 설정별로 기록에서 계산합니다.</b> exit_proxy_side라는 이름만으로 별도 stream 실행을 뜻하지 않습니다.
 전송은 비동기 enqueue만 기록되어 실제 통신 완료·중첩 시간은 알 수 없습니다. Target와 별도 draft GPU의 병렬 실행과는 별개입니다.</p>
 <p>기존 raw 기록의 후처리입니다. 측정 버전·환경은 모델별 설명을 확인하세요. 다른 서버/설정의 절대 시간을 직접 비교하여 개선으로 해석하지 않습니다.</p>'''+''.join(cards)+'</html>')
@@ -163,6 +177,16 @@ DS spare*: proxy 전송 준비 완료−DS 완료(수신 도착 시점은 아님
 그림의 두 step은 실제 예시이며, 표는 같은 모델·설정의 유효 step 전체를 사용한다.
 분류는 현재 step에서 사용한 cache source다. 그 step의 DS/PS는 다음 결과를 대비하는 생성이다.
 전체 평균은 실제 step 수로 가중하며, 표본이 없는 경우는 N/A로 표시한다.
+
+성능 표와 latency 표는 **동일한 유효 step 집합**이다.
+
+- Rate: 해당 경우 step 수 / 전체 step 수. P1 hit·P2 hit·Miss 비율의 합은100%다.
+  **Overall 행의 Rate는 전체 hit rate, 즉 (P1+P2)/전체**다.
+  표본이 없는 source의 Rate는0%, 조건부 AL/TPS는N/A다.
+- AL: 원시 `accepted_len` 평균. Correction/recovery 또는 bonus token을 포함한다.
+- Profile TPS: **실제로 반환한 토큰 합 / 아래 Step 시간의 합**이다. Per-step TPS의 평균이 아니다.
+  Profile을 켠 제한된 표본의 값이며 full-dataset/비계측 TPS로 인용하지 않는다.
+- 반환 토큰 수가 없으면 AL로 대체하지 않는다. 일부 step의 기록이 빠진 행도 AL/TPS는N/A다.
 
 - Step: 현재 `target_send_request.start`부터 같은 요청의 다음 `target_send_request.start`까지.
   요청/응답·검증·후처리·다음 요청까지의 간격을 포함한다. `graph_pre` 간격이나 AL이 아니다.

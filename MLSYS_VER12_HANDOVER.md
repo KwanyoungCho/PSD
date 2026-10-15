@@ -12,7 +12,7 @@
 | 실행 코드로 미채택 | 추가 fan-out readback 지연·host 문맥 길이 재사용 | 추가 차이 -0.017ms의 CI가0 포함. 후보와386개 검사 기록은 연구 자료로만 보존 |
 | 분석 도구 | 기존 상세 이벤트/색/무늬, PS 준비 A/B, 미계측 간격, 명령 수신 | 새로운 runtime 계측을 추가한 것이 아닌 기존 profile 후처리 |
 | 두-step 그림 | 같은 요청의 연속 두 step, 다음 target 요청 시작 deadline, cache/receive-ready 여유 | 원시 시간 보존. 다른 서버에서 JSON만으로 재생 가능 |
-| 평균 표·새 profile 이식 | P1 hit/P2 hit/miss/전체의 step·DS/PS 시간·여유·graph/K, 새 profile exporter | 모든 유효 step 평균, 표본 수 공개. 원본 서버 없이 재생성 검사 |
+| 평균 표·새 profile 이식 | P1 hit/P2 hit/miss의 발생 비율·AL, 전체 hit·AL·Profile TPS, step·DS/PS 시간·여유·graph/K, 새 profile exporter | 동일한 유효 step 모집단, 표본 수 공개. 원본 서버 없이 재생성 검사 |
 
 이번1.2는 **후보 수식, 위치 수식, tree 확장 정책, K1/K2, 입력 폭, G=M 계약을 바꾸지 않는다.**
 기존1.1에 들어 있던 알고리즘을 유지한다. 새 사용자 옵션도 없다. 파라미터는
@@ -55,8 +55,8 @@ git diff 0916871..HEAD -- ssd/ssd
 
 이미 GPU 회귀 **40 suites/382개, 오류·실패·skip0**을 통과한 runtime과 동일하다.
 최초 전달의 timeline 검사는31개다. 평균 표·서버 이동 기능을 추가한 이번 전달에서는
-동일성 해시 확인 및 timeline 관련 **39개 CPU 검사가 모두 통과했다**(오류·실패·skip 0).
-실제 797 step의 새 exporter 재집계도 기존 네 행의 평균과 일치했다.
+동일성 해시 확인 및 timeline 관련 **42개 CPU 검사가 모두 통과했다**(오류·실패·skip 0).
+실제 797 step의 새 exporter 재집계도 기존 네 행의 평균·rate·AL·TPS와 일치했다.
 최종 기록은 `model_timelines/checks/CHECKS.json`과 `EXPORT_REPLAY.json`을 확인한다.
 GPU와 CPU 검사에는 중복 suite가 있으므로 합산해서 독립 검사 수로 쓰지 않는다.
 미채택 후보의386개 검사는 배포 runtime의 검사 수가 아니다.
@@ -99,6 +99,17 @@ CodeLlama의 두 설정은 같은 PDF에 묶었다. 이전 모델별 timeline/�
 전체는 실제 step 수로 가중한다. Step 길이, DS/PS 전체 latency, DS/PS 여유, graph/K1·K2와
 표본 수를 표시한다. DS 여유는 proxy 전송 준비 완료 기준, PS 여유는 다음 target 요청
 시작−draft 수신 준비 기준이다. Graph/K는 sampling·선택을 포함하고 개별 forward 실측은 아니다.
+Rate는 전체 step 중 P1/P2/Miss의 비율이며 Overall 행은 전체 hit rate다. AL은 recovery/bonus
+포함, Profile TPS는 같은 유효 step의 실제 반환 토큰 합÷step 시간 합이다. 전체 Spec-Bench나
+profile OFF TPS로 인용하지 않는다. 토큰 기록이 없는 새 입력은 해당 지표를 N/A로 표시한다.
+
+Llama2-7B의 두 draft 조합은 **draft만 바꾼 대조 실험이 아니다**. llama-68M은 RTX3090·과거 v1.0·
+4턴·출력 상한256, AMD135M은 RTX4090·채택 PS 최적화·24턴×3회·출력 상한96의 기록이다.
+유효 step 평균은 각각25.411/19.905ms, 논리적 query 수는9.657/9.620개, 기존 KV 문맥은
+466.676/203.325 tokens다. Query 수가 크게 늘어난 것은 아니며, 문맥·GPU·코드·입력 차이가
+함께 있다. `PHASE_AVERAGES.json`의 `workload`에 경우별 query 분포·문맥·target 구간 평균을
+보존했다. 이 자료만으로 latency 차이를 draft 모델이나 특정 최적화 하나의 효과로 귀속하지 않는다.
+
 동봉된 기존 trace 3,700 step에서는 proxy 계산과 target 후반 forward의 중첩이 없었다.
 새 profile은 중첩 건수와 시간을 다시 계산한다. `exit_proxy_side`라는 이름만으로 별도
 stream을 사용했다고 판단하지 않는다. 전송 enqueue는 통신 완료 계측도 아니다.

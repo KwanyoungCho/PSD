@@ -9,7 +9,7 @@ import gzip
 import json
 from pathlib import Path
 
-from plot_model_breakdowns import load, one, read_arm, require, sha, STATES
+from plot_model_breakdowns import load, one, read_arm, require, sha, STATES, union_ms
 from plot_consecutive_steps import read_profiles, transition
 from plot_model_wait_timelines import command_index
 
@@ -18,6 +18,8 @@ FIELDS = ('step_ms', 'ds_total_ms', 'ds_margin_ms', 'ds_round_ms',
 HEADERS = ['Current outcome', 'Steps', 'Step (ms)', 'DS total (ms)',
            'DS spare* (ms)', 'DS graph/K1 (ms)', 'PS total (ms)',
            'PS spare (ms)', 'PS graph/K2 (ms)']
+PERFORMANCE_HEADERS = ['Current outcome', 'Steps', 'Rate (%)',
+                       'AL (tokens/step)', 'Profile TPS (tokens/s)']
 DEFINITIONS = {
     'grouping': 'Current step cache source; DS/PS prepare future outcomes.',
     'weighting': 'Arithmetic mean over eligible steps, including all repetitions; overall is step-weighted.',
@@ -28,6 +30,10 @@ DEFINITIONS = {
     'ps_total_ms': 'proxy_wait.end to merge_cache.end.',
     'ps_margin_ms': 'Next target_send_request.start minus next draft_recv_cmd.start; includes post-cache cleanup.',
     'ps_round_ms': 'P2 graph replay elapsed / K2; includes sampling/selection inside graph.',
+    'share_pct': 'Number of steps in the source divided by all eligible steps; Overall = 100%.',
+    'hit_rate_pct': 'Hit fraction within the row. P1/P2 = 100%, miss = 0%; Overall = (P1+P2)/all.',
+    'al': 'Mean accepted_len including correction/recovery or bonus token, from recorded verification outcomes.',
+    'tps': 'Sum of actually emitted tokens / sum of target-request-start-to-next-start seconds on the same eligible profiled steps. Ratio of totals, not mean of per-step TPS; not full-dataset or unprofiled TPS.',
     'limitations': 'Cross-device clocks have alignment uncertainty. Signed spare time is not guaranteed usable compute budget. No per-forward timings exist.',
 }
 
@@ -37,7 +43,7 @@ def sample(groups, commands, row, k1, k2, run_id):
     d, t = groups['draft'][(epoch, sid)], groups['target'][(epoch, sid)]
     tr = transition(groups, commands, epoch, sid)
     p1 = 'phase1_build' if any(e['label'] == 'phase1_build' for e in d) else 'p1_root_build'
-    return dict(run=run_id, epoch=epoch, step_id=sid, uid=row['uid'],
+    result = dict(run=run_id, epoch=epoch, step_id=sid, uid=row['uid'],
                 state=row['state'], next_state=row['next_state'], k1=k1, k2=k2,
                 ds_start_ns=one(d, p1)['wall_start_ns'],
                 ds_end_ns=one(d, 'proxy_wait')['wall_start_ns'],
@@ -55,6 +61,14 @@ def sample(groups, commands, row, k1, k2, run_id):
                 ds_graph_end_ns=one(d, 'p1_graph_replay')['wall_end_ns'],
                 ps_graph_start_ns=one(d, 'p2_graph_replay')['wall_start_ns'],
                 ps_graph_end_ns=one(d, 'p2_graph_replay')['wall_end_ns'])
+    for field in ('accepted_len', 'emitted_len', 'context_tokens', 'verify_width'):
+        result[field] = row.get(field)
+    for field,label in [('target_pre_ms','graph_pre'), ('target_post_ms','graph_post'),
+                        ('target_head_ms','final_logits'), ('target_wait_ms','target_spec_wait'),
+                        ('target_setup_ms','verify_setup'), ('target_accept_ms','verify_sample_accept')]:
+        events = [e for e in t if e['label'] == label]
+        result[field] = union_ms(events) if events else None
+    return result
 
 
 def metrics(s):
@@ -78,12 +92,28 @@ def summarize(samples):
     keys = [(s['run'], s['epoch'], s['step_id']) for s in samples]
     require(len(set(keys)) == len(keys), 'Duplicate step')
     require(all(s['state'] in STATES for s in samples), 'Unknown cache source')
-    values = [dict(state=s['state'], **metrics(s)) for s in samples]
+    for s in samples:
+        for field in ('accepted_len', 'emitted_len'):
+            value=s.get(field)
+            require(value is None or (type(value) is int and value >= 0), 'Invalid token count')
+        require(s.get('accepted_len') is None or s.get('emitted_len') is None or
+                s['emitted_len'] <= s['accepted_len'], 'Emitted tokens exceed accepted length')
+    values = [dict(state=s['state'], accepted_len=s.get('accepted_len'),
+                   emitted_len=s.get('emitted_len'), **metrics(s)) for s in samples]
     rows = []
     for state in (1, 2, 0, 'all'):
         subset = [v for v in values if state == 'all' or v['state'] == state]
         n = len(subset)
+        al_n=sum(v['accepted_len'] is not None for v in subset)
+        emitted_n=sum(v['emitted_len'] is not None for v in subset)
+        elapsed_ms=sum(v['step_ms'] for v in subset)
         rows.append(dict(state=state, label='Overall' if state == 'all' else STATES[state], n=n,
+                         share_pct=100*n/len(values),
+                         hit_rate_pct=100*sum(v['state'] in (1,2) for v in subset)/n if n else None,
+                         al=sum(v['accepted_len'] for v in subset)/n if n and al_n==n else None,
+                         tps=sum(v['emitted_len'] for v in subset)*1000/elapsed_ms
+                             if n and emitted_n==n and elapsed_ms>0 else None,
+                         al_samples=al_n,emitted_samples=emitted_n,
                          **{k: sum(v[k] for v in subset) / n if n else None for k in FIELDS}))
     return rows
 
@@ -92,6 +122,34 @@ def table_cells(rows):
     return [[r['label'], str(r['n'])] +
             ['N/A' if r[k] is None else format(r[k], '+.3f' if 'margin' in k else '.3f')
              for k in FIELDS] for r in rows]
+
+
+def performance_cells(rows):
+    return [[r['label'], str(r['n'])] +
+            ['N/A' if value is None else format(value, '.3f')
+             for value in (r['hit_rate_pct'] if r['state']=='all' else r['share_pct'],
+                           r['al'], r['tps'])] for r in rows]
+
+
+def workload_summary(samples):
+    rows=[]
+    for state in (1,2,0,'all'):
+        group=[s for s in samples if state=='all' or s['state']==state]
+        n=len(group)
+        def mean(key):
+            vals=[s.get(key) for s in group]
+            return sum(vals)/n if n and all(v is not None for v in vals) else None
+        width=mean('verify_width')
+        counts={}
+        for s in group:
+            v=s.get('verify_width')
+            if v is not None:counts[str(v)]=counts.get(str(v),0)+1
+        rows.append(dict(state=state,n=n,mean_context_tokens=mean('context_tokens'),
+                         mean_logical_query_rows=width+1 if width is not None else None,
+                         verify_width_counts=counts,
+                         **{k:mean(k) for k in ('target_pre_ms','target_post_ms','target_head_ms',
+                                               'target_wait_ms','target_setup_ms','target_accept_ms')}))
+    return dict(rows=rows,note='Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation.')
 
 
 def overlap_summary(samples):
@@ -127,6 +185,12 @@ def main():
         raw = [e for f in sorted((arm['folder']/'profile').glob('*draft*.json')) for e in load(f)]
         index = command_index(raw)
         c = arm['result']['config']
+        records=[r for r in arm['result']['records'] if r['metrics']['phase_events']]
+        for row in arm['rows']:
+            ev=records[row['epoch']-1]['metrics']['phase_events'][row['step_id']-1]
+            require(ev['step_id']==row['step_id'],'Outcome alignment mismatch')
+            require(not ev['clipped'] and not ev['output_cap_reached'],'Historical eligible step reaches cap')
+            row.update(emitted_len=ev['emitted_len'],context_tokens=row['context'],verify_width=ev['verify_width'])
         samples = [sample(arm['grouped'], index, r, c['k1'], c['k2'], key) for r in arm['rows']]
         for r, s in zip(arm['rows'], samples):
             m = metrics(s)
@@ -149,14 +213,18 @@ def main():
         count = 0
         for ep, g in enumerate(request_groups):
             require(g['n'] == 1, 'Only B1 traces supported')
+            context=g['request_records'][0]['input_tokens']
             for i, step in enumerate(g['steps']):
+                prior_context=context; context+=step['emitted']
                 reason = ('warm' if g['phase'] == 'warm' else 'first_two' if i < 2 else
                           'terminal' if i == len(g['steps'])-1 else 'cap_clip' if step['cap'] or step['clipped'] else None)
                 if reason:
                     skipped[reason] = skipped.get(reason, 0) + 1
                     continue
                 r = dict(epoch=ep, step_id=i+1, uid=g['request_records'][0]['paper_uid'],
-                         state=step['events'][0]['source'], next_state=g['steps'][i+1]['events'][0]['source'])
+                         state=step['events'][0]['source'], next_state=g['steps'][i+1]['events'][0]['source'],
+                         accepted_len=step['events'][0]['accepted_len'],emitted_len=step['emitted'],
+                         context_tokens=prior_context,verify_width=step['events'][0]['verify_width'])
                 samples.append(sample(groups, index, r, run['args']['k1'], run['args']['k2'], folder.name))
                 count += 1
         runs.append(dict(run=folder.name, eligible_steps=count))

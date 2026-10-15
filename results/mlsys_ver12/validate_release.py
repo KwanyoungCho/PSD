@@ -60,7 +60,7 @@ def main():
     assert index['renderer_sha256']==sha(ROOT/'ssd/tools/duet_timeline/plot_consecutive_steps.py')
     assert index['manifest_sha256']==sha(figures/'SOURCES.json')
     sys.path.insert(0,str(ROOT/'ssd/tools/duet_timeline'))
-    from phase_averages import read_samples, summarize, overlap_summary
+    from phase_averages import read_samples, summarize, overlap_summary, workload_summary
     manifest=json.loads((figures/'SOURCES.json').read_text())
     sample_path=figures/manifest['phase_samples']['path']
     assert sha(sample_path)==manifest['phase_samples']['sha256']==index['phase_samples_sha256']
@@ -74,6 +74,7 @@ def main():
         summary=keyed[(item['model'],item['setting'])]
         assert summarize(item['samples'])==summary['rows']
         assert overlap_summary(item['samples'])==summary['proxy_overlap']
+        assert workload_summary(item['samples'])==summary['workload']
     assert len(PdfReader(figures/'ALL_MODELS.pdf').pages)==index['pages']
     assert sha(figures/'ALL_MODELS.pdf')==index['all_models_pdf_sha256']
     for model in index['models']:

@@ -113,8 +113,8 @@ def render(window, pdf, png, phase_summary=None):
     origin = min(e['wall_start_ns'] for e in target+draft)
     ms = lambda ns:(ns-origin)/1e6
     end = max([e['wall_end_ns'] for e in target+draft] + [t['deadline_ns'] for t in window['transitions']])
-    fig = plt.figure(figsize=(20, 9.5))
-    ax = fig.add_axes([.065, .515, .91, .315] if phase_summary is not None else [.065, .48, .91, .35])
+    fig = plt.figure(figsize=(20, 12) if phase_summary is not None else (20,9.5))
+    ax = fig.add_axes([.065, .59, .91, .24] if phase_summary is not None else [.065, .48, .91, .35])
     for rows, y in ((target, 1), (draft, 0)):
         native._draw_row(ax, rows, y, y, origin, .53, .38, min_width_ms=0)
     divisions = native.draw_draft_forward_dividers(ax, window['draft_events'], window['forward_counts'], origin)
@@ -168,17 +168,19 @@ def render(window, pdf, png, phase_summary=None):
         fig.text(.065,.29,'Margin = next send start minus readiness. Positive means ready before the observed request; negative means preparation ran past it.',fontsize=9)
         fig.text(.065,.266,'This is not a causal stall estimate or a promise that all margin can be used for more forwards. The second next-response wait is outside the two-step view.',fontsize=9)
     else:
-        from phase_averages import HEADERS, table_cells
-        tab=fig.add_axes([.065,.285,.91,.145]);tab.axis('off')
-        table=tab.table(cellText=table_cells(phase_summary['rows']),colLabels=HEADERS,
-                        loc='center',cellLoc='center')
-        table.auto_set_font_size(False);table.set_fontsize(9);table.scale(1,1.55)
-        for (r,c),cell in table.get_celld().items():
-            if r==0:cell.set_facecolor('#e1eaf0');cell.set_text_props(weight='bold')
-            elif r==4:cell.set_facecolor('#edf4ec');cell.set_text_props(weight='bold')
-        fig.text(.065,.437,'MEANS OVER ALL ELIGIBLE STEPS FOR THIS SETTING (not the two example steps above); Overall is step-weighted.',fontsize=10,weight='bold')
-        fig.text(.065,.267,'Step = current target request start -> next request start. *DS spare = proxy send-ready - DS end; PS spare = next request start - draft receive-ready.',fontsize=9)
-        fig.text(.065,.245,'Positive spare = finishes early; negative = late. Graph/K is an average per forward round INCLUDING sampling/selection, not isolated transformer latency.',fontsize=9)
+        from phase_averages import HEADERS, table_cells, PERFORMANCE_HEADERS, performance_cells
+        for y,headers,cells in ((.395,PERFORMANCE_HEADERS,performance_cells(phase_summary['rows'])),
+                                (.245,HEADERS,table_cells(phase_summary['rows']))):
+            tab=fig.add_axes([.065,y,.91,.12]);tab.axis('off')
+            table=tab.table(cellText=cells,colLabels=headers,loc='center',cellLoc='center')
+            table.auto_set_font_size(False);table.set_fontsize(9.5);table.scale(1,1.65)
+            for (r,c),cell in table.get_celld().items():
+                if r==0:cell.set_facecolor('#e1eaf0');cell.set_text_props(weight='bold')
+                elif r==4:cell.set_facecolor('#edf4ec');cell.set_text_props(weight='bold')
+        fig.text(.065,.532,'ALL ELIGIBLE STEPS FOR THIS SETTING (not the two example steps above); Overall is step-weighted.',fontsize=10,weight='bold')
+        fig.text(.065,.382,'Rate = source / all steps; Overall rate = total hit (P1 + P2) / all. AL includes recovery/bonus. Profile TPS = emitted tokens / summed step seconds.',fontsize=9)
+        fig.text(.065,.222,'Step = current target request start -> next request start. *DS spare = proxy send-ready - DS end; PS spare = next request start - draft receive-ready.',fontsize=9)
+        fig.text(.065,.202,'Positive spare = early; negative = late. Graph/K includes sampling/selection, not isolated transformer latency. These are profiled-subset TPS, not full evaluation TPS.',fontsize=9)
     labels=sorted({e['label'] for e in target+draft})
     handles=[Patch(facecolor=native._style(l)[0],hatch=native._style(l)[1],edgecolor='black',linewidth=.3,label=l) for l in labels]
     fig.legend(handles=handles,loc='lower center',bbox_to_anchor=(.51,.047),ncol=6,fontsize=6.8,columnspacing=1.0)

@@ -12,7 +12,7 @@ from plot_consecutive_steps import make_window, display_rows, render
 from duet_profile_analysis import ProfileAlignmentError
 from matplotlib.backends.backend_pdf import PdfPages
 from pypdf import PdfReader
-from phase_averages import metrics, summarize, table_cells, overlap_summary
+from phase_averages import metrics, summarize, table_cells, overlap_summary, performance_cells
 from export_profile_timelines import export, normalize_outcomes
 from build_model_timelines import main as build_bundle
 
@@ -144,6 +144,32 @@ class PhaseAverages(unittest.TestCase):
         self.assertEqual(m['ds_round_ms'],2)
         self.assertEqual(m['ps_round_ms'],4)
         self.assertEqual(m['ds_total_ms'],6)
+
+    def test_rates_al_and_tps_have_correct_denominators(self):
+        samples=[dict(self.sample(1,1,20),accepted_len=3,emitted_len=3),
+                 dict(self.sample(2,2,40),accepted_len=5,emitted_len=5),
+                 dict(self.sample(3,0,60),accepted_len=2,emitted_len=1)]
+        rows=summarize(samples)
+        self.assertEqual(rows[0]['hit_rate_pct'],100)
+        self.assertEqual(rows[2]['hit_rate_pct'],0)
+        self.assertAlmostEqual(rows[-1]['hit_rate_pct'],200/3)
+        self.assertAlmostEqual(rows[-1]['al'],10/3)
+        self.assertEqual(rows[-1]['tps'],75)  # emitted 9 tokens / 120 ms
+        self.assertAlmostEqual(sum(r['share_pct'] for r in rows[:3]),100)
+        self.assertEqual(performance_cells(rows)[0][2],'33.333')
+        self.assertEqual(performance_cells(rows)[-1][2],'66.667')  # overall hit, not 100% share
+
+    def test_missing_emitted_tokens_are_not_inferred_from_al(self):
+        a=dict(self.sample(),accepted_len=4)
+        rows=summarize([a])
+        self.assertEqual(rows[-1]['al'],4)
+        self.assertIsNone(rows[-1]['tps'])
+        b=dict(self.sample(2),accepted_len=2,emitted_len=2)
+        self.assertIsNone(summarize([a,b])[-1]['tps'])
+
+    def test_impossible_token_counts_rejected(self):
+        with self.assertRaises(ProfileAlignmentError):
+            summarize([dict(self.sample(),accepted_len=2,emitted_len=3)])
 
     def test_duplicate_step_rejected_but_separate_repeats_allowed(self):
         a=self.sample();b=deepcopy(a)
