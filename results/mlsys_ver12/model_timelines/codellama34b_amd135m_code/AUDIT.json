@@ -1,0 +1,878 @@
+{
+  "model": "codellama34b_amd135m_code",
+  "name": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code",
+  "note": "과거 ver1.0 계열 / RTX3090 / 설정별 profile 4턴. 1.2 신규 측정이 아님.",
+  "pages": 5,
+  "panels": [
+    {
+      "metrics": [
+        {
+          "step_id": 7,
+          "next_step_id": 8,
+          "cache_ready_ns": 224861552325905,
+          "draft_receive_ready_ns": 224861552599342,
+          "deadline_ns": 224861560186169,
+          "cache_margin_ms": 7.860264,
+          "ready_margin_ms": 7.586827,
+          "post_cache_cleanup_ms": 0.273437,
+          "next_send_ms": 0.319336,
+          "next_response_wait_ms": 2.927734,
+          "epoch": 4,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | Selected setting | P1 hit | UID humaneval_local_033_t0 | steps 7-8",
+          "origin_ns": 224861494633435
+        },
+        {
+          "step_id": 8,
+          "next_step_id": 9,
+          "cache_ready_ns": 224861617188209,
+          "draft_receive_ready_ns": 224861617492897,
+          "deadline_ns": 224861625548474,
+          "cache_margin_ms": 8.360265,
+          "ready_margin_ms": 8.055577,
+          "post_cache_cleanup_ms": 0.304688,
+          "next_send_ms": 0.325195,
+          "next_response_wait_ms": 3.104492,
+          "epoch": 4,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | Selected setting | P1 hit | UID humaneval_local_033_t0 | steps 7-8",
+          "origin_ns": 224861494633435
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224861542313209,
+          "wall_end_ns": 224861543504615,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224861607147194,
+          "wall_end_ns": 224861608320045,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224861552325905,
+          "wall_end_ns": 224861552599342,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224861560294655,
+          "wall_end_ns": 224861560318092,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224861617188209,
+          "wall_end_ns": 224861617492897,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224861625660865,
+          "wall_end_ns": 224861625684303,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 7,
+          "count": 12,
+          "start_ms": 9.34286,
+          "end_ms": 30.145595,
+          "schematic_boundaries_ms": [
+            11.07642125,
+            12.8099825,
+            14.54354375,
+            16.277105,
+            18.01066625,
+            19.7442275,
+            21.477788750000002,
+            23.21135,
+            24.944911249999997,
+            26.678472499999998,
+            28.41203375
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 7,
+          "count": 6,
+          "start_ms": 49.851649,
+          "end_ms": 57.210048,
+          "schematic_boundaries_ms": [
+            51.078048833333334,
+            52.304448666666666,
+            53.530848500000005,
+            54.75724833333334,
+            55.98364816666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 8,
+          "count": 12,
+          "start_ms": 74.559657,
+          "end_ms": 95.353602,
+          "schematic_boundaries_ms": [
+            76.29248575,
+            78.02531450000001,
+            79.75814325,
+            81.490972,
+            83.22380075,
+            84.95662949999999,
+            86.68945825,
+            88.422287,
+            90.15511575,
+            91.8879445,
+            93.62077325
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 8,
+          "count": 6,
+          "start_ms": 114.680751,
+          "end_ms": 122.063563,
+          "schematic_boundaries_ms": [
+            115.91121966666667,
+            117.14168833333333,
+            118.372157,
+            119.60262566666667,
+            120.83309433333334
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/code34b_source1_req4_step7.json",
+      "window_sha256": "7a46e4c27f84303efa85e83450528315fc09894dfe13008c67e52806308baa0d",
+      "page": 1,
+      "setting": "Selected setting",
+      "image": "images/01_p1_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 25,
+          "next_step_id": 26,
+          "cache_ready_ns": 224860382366920,
+          "draft_receive_ready_ns": 224860382641334,
+          "deadline_ns": 224860387507458,
+          "cache_margin_ms": 5.140538,
+          "ready_margin_ms": 4.866124,
+          "post_cache_cleanup_ms": 0.274414,
+          "next_send_ms": 0.318359,
+          "next_response_wait_ms": 2.804687,
+          "epoch": 3,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | Selected setting | P2 hit | UID humaneval_local_023_t0 | steps 25-26",
+          "origin_ns": 224860331913708
+        },
+        {
+          "step_id": 26,
+          "next_step_id": 27,
+          "cache_ready_ns": 224860444705787,
+          "draft_receive_ready_ns": 224860444975319,
+          "deadline_ns": 224860452234021,
+          "cache_margin_ms": 7.528234,
+          "ready_margin_ms": 7.258702,
+          "post_cache_cleanup_ms": 0.269532,
+          "next_send_ms": 0.321289,
+          "next_response_wait_ms": 2.240235,
+          "epoch": 3,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | Selected setting | P2 hit | UID humaneval_local_023_t0 | steps 25-26",
+          "origin_ns": 224860331913708
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224860372200905,
+          "wall_end_ns": 224860373405983,
+          "step_id": 25,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224860434623756,
+          "wall_end_ns": 224860435819069,
+          "step_id": 26,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224860382366920,
+          "wall_end_ns": 224860382641334,
+          "step_id": 25,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224860387610084,
+          "wall_end_ns": 224860387632545,
+          "step_id": 25,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224860444705787,
+          "wall_end_ns": 224860444975319,
+          "step_id": 26,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224860452337623,
+          "wall_end_ns": 224860452361061,
+          "step_id": 26,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 25,
+          "count": 12,
+          "start_ms": 8.508876,
+          "end_ms": 29.871181,
+          "schematic_boundaries_ms": [
+            10.289068083333333,
+            12.069260166666668,
+            13.849452250000002,
+            15.629644333333335,
+            17.409836416666664,
+            19.190028500000004,
+            20.970220583333337,
+            22.75041266666667,
+            24.53060475,
+            26.31079683333333,
+            28.090988916666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 25,
+          "count": 6,
+          "start_ms": 42.579189,
+          "end_ms": 49.959072,
+          "schematic_boundaries_ms": [
+            43.809169499999996,
+            45.03915,
+            46.2691305,
+            47.499111,
+            48.729091499999996
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 26,
+          "count": 12,
+          "start_ms": 64.510829,
+          "end_ms": 85.928798,
+          "schematic_boundaries_ms": [
+            66.29565975,
+            68.0804905,
+            69.86532125,
+            71.650152,
+            73.43498275,
+            75.2198135,
+            77.00464425,
+            78.789475,
+            80.57430575000001,
+            82.3591365,
+            84.14396725
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 26,
+          "count": 6,
+          "start_ms": 104.910243,
+          "end_ms": 112.311611,
+          "schematic_boundaries_ms": [
+            106.14380433333332,
+            107.37736566666666,
+            108.610927,
+            109.84448833333333,
+            111.07804966666666
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/code34b_source2_req3_step25.json",
+      "window_sha256": "d4e6d4dc5272410db64bc58992ea6bd2ee5b9c80e146b1a79d0985d6d6fd6ba5",
+      "page": 2,
+      "setting": "Selected setting",
+      "image": "images/02_p2_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 9,
+          "next_step_id": 10,
+          "cache_ready_ns": 224515191565173,
+          "draft_receive_ready_ns": 224515191890857,
+          "deadline_ns": 224515192889061,
+          "cache_margin_ms": 1.323888,
+          "ready_margin_ms": 0.998204,
+          "post_cache_cleanup_ms": 0.325684,
+          "next_send_ms": 0.329102,
+          "next_response_wait_ms": 3.258301,
+          "epoch": 3,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | K1/K2 16/6 (throughput alternative) | P1 hit | UID humaneval_local_023_t0 | steps 9-10",
+          "origin_ns": 224515124300525
+        },
+        {
+          "step_id": 10,
+          "next_step_id": 11,
+          "cache_ready_ns": 224515251335193,
+          "draft_receive_ready_ns": 224515251659900,
+          "deadline_ns": 224515252378319,
+          "cache_margin_ms": 1.043126,
+          "ready_margin_ms": 0.718419,
+          "post_cache_cleanup_ms": 0.324707,
+          "next_send_ms": 0.325684,
+          "next_response_wait_ms": 3.227539,
+          "epoch": 3,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | K1/K2 16/6 (throughput alternative) | P1 hit | UID humaneval_local_023_t0 | steps 9-10",
+          "origin_ns": 224515124300525
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224515180548572,
+          "wall_end_ns": 224515182093982,
+          "step_id": 9,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224515240237536,
+          "wall_end_ns": 224515241790271,
+          "step_id": 10,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224515191565173,
+          "wall_end_ns": 224515191890857,
+          "step_id": 9,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224515192991443,
+          "wall_end_ns": 224515193015857,
+          "step_id": 9,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224515251335193,
+          "wall_end_ns": 224515251659900,
+          "step_id": 10,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224515252487048,
+          "wall_end_ns": 224515252510974,
+          "step_id": 10,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 9,
+          "count": 16,
+          "start_ms": 21.180664,
+          "end_ms": 54.034668,
+          "schematic_boundaries_ms": [
+            23.234039250000002,
+            25.2874145,
+            27.34078975,
+            29.394165,
+            31.447540250000003,
+            33.500915500000005,
+            35.55429075,
+            37.607666,
+            39.661041250000004,
+            41.7144165,
+            43.76779175,
+            45.821167,
+            47.874542250000005,
+            49.92791750000001,
+            51.98129275
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 9,
+          "count": 6,
+          "start_ms": 59.256836,
+          "end_ms": 66.618652,
+          "schematic_boundaries_ms": [
+            60.483805333333336,
+            61.710774666666666,
+            62.937743999999995,
+            64.16471333333334,
+            65.39168266666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 10,
+          "count": 16,
+          "start_ms": 80.798828,
+          "end_ms": 113.66748,
+          "schematic_boundaries_ms": [
+            82.85311875,
+            84.9074095,
+            86.96170025,
+            89.015991,
+            91.07028174999999,
+            93.1245725,
+            95.17886325,
+            97.233154,
+            99.28744474999999,
+            101.3417355,
+            103.39602625,
+            105.450317,
+            107.50460774999999,
+            109.5588985,
+            111.61318925
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 10,
+          "count": 6,
+          "start_ms": 118.977539,
+          "end_ms": 126.339355,
+          "schematic_boundaries_ms": [
+            120.20450833333332,
+            121.43147766666667,
+            122.658447,
+            123.88541633333332,
+            125.11238566666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 8,
+          "count": 6,
+          "start_ms": 0.0,
+          "end_ms": 7.355469,
+          "schematic_boundaries_ms": [
+            1.2259115,
+            2.451823,
+            3.6777345,
+            4.903646,
+            6.129557500000001
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/code34b_throughput_source1_req3_step9.json",
+      "window_sha256": "d6c104c227f152d250b5e61d5722bad7539edc441f356d1c898c788811c915ee",
+      "page": 3,
+      "setting": "K1/K2 16/6 (throughput alternative)",
+      "image": "images/03_p1_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 8,
+          "next_step_id": 9,
+          "cache_ready_ns": 224512262601794,
+          "draft_receive_ready_ns": 224512262951892,
+          "deadline_ns": 224512260728661,
+          "cache_margin_ms": -1.873133,
+          "ready_margin_ms": -2.223231,
+          "post_cache_cleanup_ms": 0.350098,
+          "next_send_ms": 0.31543,
+          "next_response_wait_ms": 6.410522,
+          "epoch": 1,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | K1/K2 16/6 (throughput alternative) | P2 hit | UID humaneval_local_003_t0 | steps 8-9",
+          "origin_ns": 224512204336571
+        },
+        {
+          "step_id": 9,
+          "next_step_id": 10,
+          "cache_ready_ns": 224512322349109,
+          "draft_receive_ready_ns": 224512322712634,
+          "deadline_ns": 224512324643700,
+          "cache_margin_ms": 2.294591,
+          "ready_margin_ms": 1.931066,
+          "post_cache_cleanup_ms": 0.363525,
+          "next_send_ms": 0.327759,
+          "next_response_wait_ms": 4.405273,
+          "epoch": 1,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | K1/K2 16/6 (throughput alternative) | P2 hit | UID humaneval_local_003_t0 | steps 8-9",
+          "origin_ns": 224512204336571
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224512251383533,
+          "wall_end_ns": 224512253024158,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224512311317370,
+          "wall_end_ns": 224512312864490,
+          "step_id": 9,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224512262601794,
+          "wall_end_ns": 224512262951892,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224512263114490,
+          "wall_end_ns": 224512263140124,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224512322349109,
+          "wall_end_ns": 224512322712634,
+          "step_id": 9,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224512324756579,
+          "wall_end_ns": 224512324782702,
+          "step_id": 9,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 8,
+          "count": 16,
+          "start_ms": 11.771327,
+          "end_ms": 44.662196,
+          "schematic_boundaries_ms": [
+            13.8270063125,
+            15.882685625,
+            17.938364937499998,
+            19.99404425,
+            22.0497235625,
+            24.105402875,
+            26.1610821875,
+            28.2167615,
+            30.2724408125,
+            32.328120125,
+            34.3837994375,
+            36.43947875,
+            38.495158062499996,
+            40.550837375,
+            42.606516687500005
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 8,
+          "count": 6,
+          "start_ms": 50.213465,
+          "end_ms": 57.634364,
+          "schematic_boundaries_ms": [
+            51.4502815,
+            52.687098,
+            53.923914499999995,
+            55.160731,
+            56.3975475
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 9,
+          "count": 16,
+          "start_ms": 71.733729,
+          "end_ms": 104.65121,
+          "schematic_boundaries_ms": [
+            73.7910715625,
+            75.848414125,
+            77.9057566875,
+            79.96309925,
+            82.0204418125,
+            84.077784375,
+            86.1351269375,
+            88.1924695,
+            90.2498120625,
+            92.30715462500001,
+            94.3644971875,
+            96.42183975,
+            98.4791823125,
+            100.536524875,
+            102.59386743750001
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 9,
+          "count": 6,
+          "start_ms": 109.96371,
+          "end_ms": 117.377528,
+          "schematic_boundaries_ms": [
+            111.19934633333334,
+            112.43498266666667,
+            113.670619,
+            114.90625533333333,
+            116.14189166666667
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/code34b_throughput_source2_req1_step8.json",
+      "window_sha256": "26146dbae9a1350395195a0d38c9e8f9f5a39d1ccf091ff416962b27dd7d13c8",
+      "page": 4,
+      "setting": "K1/K2 16/6 (throughput alternative)",
+      "image": "images/04_p2_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 6,
+          "next_step_id": 7,
+          "cache_ready_ns": 224515011367908,
+          "draft_receive_ready_ns": 224515011703845,
+          "deadline_ns": 224515012912010,
+          "cache_margin_ms": 1.544102,
+          "ready_margin_ms": 1.208165,
+          "post_cache_cleanup_ms": 0.335937,
+          "next_send_ms": 0.295899,
+          "next_response_wait_ms": 3.23584,
+          "epoch": 3,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | K1/K2 16/6 (throughput alternative) | Miss | UID humaneval_local_023_t0 | steps 6-7",
+          "origin_ns": 224514958573143
+        },
+        {
+          "step_id": 7,
+          "next_step_id": 8,
+          "cache_ready_ns": 224515071292224,
+          "draft_receive_ready_ns": 224515071628161,
+          "deadline_ns": 224515074252831,
+          "cache_margin_ms": 2.960607,
+          "ready_margin_ms": 2.62467,
+          "post_cache_cleanup_ms": 0.335937,
+          "next_send_ms": 0.336914,
+          "next_response_wait_ms": 4.270508,
+          "epoch": 3,
+          "title": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code | K1/K2 16/6 (throughput alternative) | Miss | UID humaneval_local_023_t0 | steps 6-7",
+          "origin_ns": 224514958573143
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224515000265857,
+          "wall_end_ns": 224515001808337,
+          "step_id": 6,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 224515060248767,
+          "wall_end_ns": 224515061810290,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224515011367908,
+          "wall_end_ns": 224515011703845,
+          "step_id": 6,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224515013015857,
+          "wall_end_ns": 224515013039783,
+          "step_id": 6,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 224515071292224,
+          "wall_end_ns": 224515071628161,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 224515074359607,
+          "wall_end_ns": 224515074385486,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 6,
+          "count": 16,
+          "start_ms": 13.046229,
+          "end_ms": 39.683436,
+          "schematic_boundaries_ms": [
+            14.7110544375,
+            16.375879875,
+            18.040705312500002,
+            19.70553075,
+            21.3703561875,
+            23.035181625,
+            24.7000070625,
+            26.3648325,
+            28.029657937499998,
+            29.694483375,
+            31.3593088125,
+            33.02413425,
+            34.6889596875,
+            36.353785125,
+            38.0186105625
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 6,
+          "count": 6,
+          "start_ms": 44.775722,
+          "end_ms": 52.150722,
+          "schematic_boundaries_ms": [
+            46.004888666666666,
+            47.23405533333334,
+            48.463222,
+            49.692388666666666,
+            50.92155533333334
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 7,
+          "count": 16,
+          "start_ms": 66.513515,
+          "end_ms": 99.407069,
+          "schematic_boundaries_ms": [
+            68.569362125,
+            70.62520925,
+            72.681056375,
+            74.7369035,
+            76.792750625,
+            78.84859775,
+            80.904444875,
+            82.96029200000001,
+            85.016139125,
+            87.07198625000001,
+            89.12783337500001,
+            91.18368050000001,
+            93.23952762500001,
+            95.29537475000001,
+            97.35122187500001
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 7,
+          "count": 6,
+          "start_ms": 104.701503,
+          "end_ms": 112.063808,
+          "schematic_boundaries_ms": [
+            105.92855383333334,
+            107.15560466666666,
+            108.3826555,
+            109.60970633333334,
+            110.83675716666666
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/code34b_throughput_source0_req3_step6.json",
+      "window_sha256": "594044ae4cf930fcc7efd9c89656d5e1574111175f4f746d503e75152439f2af",
+      "page": 5,
+      "setting": "K1/K2 16/6 (throughput alternative)",
+      "image": "images/05_miss.png"
+    }
+  ],
+  "settings": [
+    "Historical v1.0 59f46511 | exit 30 (0-based) | K1/K2 12/6 | G=M DS/PS 12/8 | C=3 | last | target GPUs=4 + draft GPU=1 | B=1, BF16, T=0.7",
+    "Historical v1.0 59f46511 | exit 30 (0-based) | K1/K2 16/6 | G=M DS/PS 16/8 | C=3 | last | target GPUs=4 + draft GPU=1 | B=1, BF16, T=0.7"
+  ],
+  "source_window_hashes_verified": true,
+  "clock_shift_ns": 0
+}

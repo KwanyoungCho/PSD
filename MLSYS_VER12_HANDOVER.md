@@ -42,7 +42,7 @@ git diff 0916871..HEAD -- ssd/ssd
 1. [최종 반영 보고서](results/mlsys_ver12/REPORT.md): 변경, 측정 범위, 남은 비용, 그림 해석.
 2. [채택 근거](results/mlsys_ver11/ps_preparation_20261015/REPORT.md): 동일 step breakdown, 세 반복, profile OFF parity.
 3. [추가 후보 미채택 근거](results/mlsys_ver11/ps_device_20261015/REPORT.md): CI·후보 소스·복원 증거.
-4. [버전1.2 검사](results/mlsys_ver12/checks/CHECKS.json): runtime 동일성,31개 offline 검사,16쪽 두-step 그림 검증.
+4. [버전1.2 검사](results/mlsys_ver12/checks/CHECKS.json): runtime 동일성,31개 offline 검사,최초 전달의16쪽 두-step 그림 검증; 현재17쪽 모델별 모음은 `model_timelines/checks/CHECKS.json` 참조.
 5. [timeline 사용법](ssd/tools/duet_timeline/README.md): 과거 모델별 single-step, 두-step, 새 profile 재생 명령.
 
 과거 실험 보고서의 “작업 트리”, “새 커밋·push 없음”은 **측정·보고 당시 기록**이므로
@@ -76,10 +76,13 @@ export PYTHONDONTWRITEBYTECODE=1
 
 ## 그림부터 확인하기
 
-- [직전에 보던 Llama2-7B+68M의78→79 step](results/mlsys_ver12/timelines/discussed_example/CONSECUTIVE_STEPS.pdf).
-- [모델별14쪽 연속 두-step](results/mlsys_ver12/timelines/historical_models/CONSECUTIVE_STEPS.pdf).
-- [채택한 최적화 runtime의 두-step 예시](results/mlsys_ver12/timelines/accepted_runtime/CONSECUTIVE_STEPS.pdf).
-- [채택 전후 native timeline](results/mlsys_ver11/ps_preparation_20261015/native/NATIVE_BEFORE_AFTER.pdf).
+**[모델별 timeline 보고서](results/mlsys_ver12/model_timelines/REPORT.md)를 시작점으로 사용한다.**
+[전체 PDF](results/mlsys_ver12/model_timelines/ALL_MODELS.pdf)와 모델 조합별 PDF5개로 통일했다.
+CodeLlama의 두 설정은 같은 PDF에 묶었다. 이전 모델별 timeline/별도 예시의 중복 파일은 삭제했다.
+원시 JSON·CSV와 실험별 A/B 증거는 보존했다. 새 그림은 기존 profile의 재시각화다.
+최초 전달의 `EVIDENCE_MANIFEST.json`과 `checks/`는 Git `1f87514` 당시의 기록이다.
+그림 정리 이후에는 `model_timelines/INDEX.json`, `CLEANUP.json`, `checks/CHECKS.json`을
+사용한다. 삭제한 옛 그림이 최초 manifest에 남아 있다는 이유로 raw 손실로 판단하지 않는다.
 
 빨간 점선은 **다음 target 요청 시작**이다. 초록 원은 PS cache 완성, 삼각형은
 후처리를 끝내고 draft가 다음 명령을 받을 준비를 마친 시각이다. 두 시각을 구분한다.

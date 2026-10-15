@@ -1,5 +1,7 @@
 # PS 시작 준비·빈 구간·다음 명령 대기 분석
 
+> 그림은 [모델별 timeline 정본](../../mlsys_ver12/model_timelines/REPORT.md)으로 통일했다. 아래 해석과 수치는 과거 측정 기록이다.
+
 2026-10-15. 기존 원시 profile 재분석이며 신규 inference/런타임 수정은 없다.
 
 사용자가 첨부한 그림은 `l2_7b_final_profile`, UID `244_t0`, request epoch2,
@@ -7,9 +9,9 @@ step78(P1 hit)의 실제 이벤트를 그린 것이다. **막대가 잘못 늘�
 기존 그림은 계측되지 않은 준비 구간을 빈칸으로 남겼고, 다음 요청 대기를 생략했다.**
 따라서 이전 그림만 보고 빈칸을 GPU idle로 해석하면 안 된다.
 
-- [번호를 붙인 해당 step](l2_7b/with_waits/waits_1_p50_req2_step78.png)
-- [모델별 P1/P2/miss 대표 14쪽 PDF](NATIVE_EVENTS_WITH_WAITS.pdf)
-- [그림 모음](with_waits.html)
+- [번호를 붙인 해당 step](../../mlsys_ver12/model_timelines/llama2_7b_llama68m/TIMELINE.pdf)
+- [모델별 최신 timeline PDF](../../mlsys_ver12/model_timelines/ALL_MODELS.pdf)
+- [그림 모음](../../mlsys_ver12/model_timelines/index.html)
 - [1,309개 step별 수치](PS_GAPS_AND_WAITS.csv), [통계·근거·원본 해시](PS_GAPS_AND_WAITS.json)
 
 ## 1. 첨부 step에서 각 구간의 의미

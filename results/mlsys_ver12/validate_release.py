@@ -52,11 +52,21 @@ def main():
         rows.append(row);print(row,flush=True)
     from pypdf import PdfReader
     audits=[]
-    for path in sorted((ROOT/'results/mlsys_ver12/timelines').glob('*/AUDIT.json')):
-        audit=json.loads(path.read_text());pdf=path.parent/'CONSECUTIVE_STEPS.pdf'
+    figures=ROOT/'results/mlsys_ver12/model_timelines'
+    index=json.loads((figures/'INDEX.json').read_text())
+    assert index['model_count']==len(index['models'])==5
+    assert index['pages']==17
+    assert index['builder_sha256']==sha(ROOT/'ssd/tools/duet_timeline/build_model_timelines.py')
+    assert index['renderer_sha256']==sha(ROOT/'ssd/tools/duet_timeline/plot_consecutive_steps.py')
+    assert index['manifest_sha256']==sha(figures/'SOURCES.json')
+    assert len(PdfReader(figures/'ALL_MODELS.pdf').pages)==index['pages']
+    assert sha(figures/'ALL_MODELS.pdf')==index['all_models_pdf_sha256']
+    for model in index['models']:
+        path=figures/model['id']/'AUDIT.json'
+        audit=json.loads(path.read_text());pdf=path.parent/'TIMELINE.pdf'
+        assert sha(path)==model['audit_sha256']
+        assert sha(pdf)==model['pdf_sha256']
         assert len(PdfReader(pdf).pages)==audit['pages']==len(audit['panels'])
-        assert audit['tool_sha256']==sha(ROOT/'ssd/tools/duet_timeline/plot_consecutive_steps.py')
-        assert audit['renderer_sha256']==sha(ROOT/'ssd/bench/plot_duet_aligned_timeline.py')
         for panel in audit['panels']:
             window=path.parent/panel['window'];assert sha(window)==panel['window_sha256']
             w=json.loads(window.read_text());assert w['step_ids'][1]==w['step_ids'][0]+1

@@ -1,112 +1,9 @@
-# 모델 조합별 상세 latency breakdown — 2026-10-15
+# 과거 모델별 latency 수치·측정 조건
 
-18번 서버가 최종 선택한 **4개 모델 조합, 5개 설정**의 원시 profile을 재분석했다.
-용도는 target/draft 구간, DS/PS 시간 예산, cache 응답·준비·수락 비용을 직접 확인하는 것이다.
-**새로운 inference나 파라미터 탐색은 수행하지 않았다.**
-
-- **PS 준비 빈칸과 다음 요청 대기까지 표시한 최신본: [NATIVE_EVENTS_WITH_WAITS.pdf](NATIVE_EVENTS_WITH_WAITS.pdf) — 14쪽**
-- 연두색 박스·빈칸·PS 이후 대기 설명: [PS_GAPS.md](PS_GAPS.md), [그림 모음](with_waits.html)
-- 기존 최적화의 B1/B>1 적용 범위와 남은 개선 후보: [PS_GAPS.md §6](PS_GAPS.md#6-기존-최적화-시도와-지금-남은-b1-준비-비용)
-- **준비/변환/merge까지 구분한 기존 상세 timeline: [NATIVE_EVENTS_MODELS.pdf](NATIVE_EVENTS_MODELS.pdf) — 14쪽**
-- 상세 timeline 그림 모음: [native_events.html](native_events.html)
-- 상세 timeline p25/p50/p75 전체: [NATIVE_EVENTS_ALL.pdf](NATIVE_EVENTS_ALL.pdf) — 41쪽
-- Phase 요약: [ALIGNED_MODELS.pdf](ALIGNED_MODELS.pdf) — 모델당 한 페이지, 총5쪽
-- 두 줄 timeline 모음: [aligned.html](aligned.html)
-- 두 줄 p25/p50/p75 전체: [ALIGNED_REPRESENTATIVES.pdf](ALIGNED_REPRESENTATIVES.pdf) — 41쪽
-- 이벤트별 세부 확인: [index.html](index.html), [ALL_MODELS_DETAILED.pdf](ALL_MODELS_DETAILED.pdf) — 52쪽
-- 한 장 요약: [OVERVIEW.png](OVERVIEW.png)
-- 전체 수치와 근거: [SUMMARY.json](SUMMARY.json)
-
-### Forward 횟수 표시와 마지막 회색 구간 구분
-
-`NATIVE_EVENTS_MODELS.pdf`/`NATIVE_EVENTS_ALL.pdf` 및 `NATIVE_EVENTS_WITH_WAITS.pdf`의
-DS·PS graph 막대를 K1/K2 횟수만큼 흰 점선으로 등분하고 번호를 붙였다.
-**개별 forward 경계는 수집하지 않았으므로 점선은 횟수 안내이며 실측 시간 분할이 아니다.**
-전체 graph에는 forward 외에 선택·sampling 등도 포함된다.
-
-대기 포함 그림에서는 주황색 준비를 A(root·가시성)와 B(graph 입력 버퍼)로 구분했다.
-마지막 회색의 `draft_recv_cmd`와 다음 step의 `draft_recv_request`가 비슷해 보였으므로
-다음 요청 수신을 파란색으로 변경했다. 현재 target step 종료는 빨간 점선으로 표시한다.
-다음 요청 수신은 추가 draft에 쓸 수 있는 idle 시간이 아니다.
-
-`244_t0`/step78은 target 현재 step 종료25.673ms, 다음 요청 전송25.980ms,
-draft 다음 요청 수신26.126ms이다. 다음 target 응답 대기는26.326–29.723ms에 존재한다.
-따라서 마지막 회색 전체가 target 지연 없이 사용할 수 있는 예산이라는 해석은 잘못이다.
-상세 의미는 [PS_GAPS.md](PS_GAPS.md)를 따른다.
-
-변경 전 중앙 PDF·audit는 `before_forward_dividers/`에 보존했다.
-검증: [FORWARD_MARKERS_VALIDATION.json](FORWARD_MARKERS_VALIDATION.json).
-
-### 추가 수정: 기존 최신 renderer로 이벤트별 두 줄 상세 그림
-
-사용자가 DS/PS 내부 준비 과정도 구분하기를 요청하여, 이번에는 **기존
-`plot_duet_aligned_timeline.py:plot_aligned_step`을 직접 호출**했다.
-저장소의 관련 전체 branch 이력과 기존 PSD/coverage 작업 트리에서 확인한 마지막
-갱신은 `6073966`(2026-09-08)이다. `plot_representatives.py`가 이 renderer를 부르고,
-`plot_p1_p2_overview.py`와 `plot_paper_fig4_schematic_pct.py`는 별도의 요약/논문 도식이다.
-앞서 만든 두 줄 phase 요약이 준비 과정을 충분히 나누지 못했으므로, 위 14쪽 상세본을 우선 본다.
-
-상세본은 다음을 합치지 않고 원래 이름과 interval로 표시한다.
-
-- DS: `p1_root_build`, `p1_slot_prepare`, `p1_prepare`, `p1_graph_replay`.
-- PS: `phase2_build`, `p2_prepare`, `p2_graph_replay`, `p2_output_convert`, `merge_cache`, `p2_cache_merge`.
-- 응답/glue: KV restore, tree 선택/pack, parent-q 전송, glue, tree 준비/replay.
-- Target: 통신/검증 준비, exit 전후 graph, proxy, LM head, accept walk, KV commit.
-
-원래 palette에 없던 P1 executor/통신/KV label에는 서로 다른 색·무늬만 추가했다.
-구간을 phase 합계로 치환하지 않았고, parent span은 먼저 그려 그 안의 세부 구간이 보이게 했다.
-현재 cache wait와 겹친 직전 draft step도 포함한다. 대표 step 및 원시 시각은 앞선 자료와 동일하다.
-
-기존 renderer에는 **0.02ms 미만 이벤트의 최소 표시 폭**이 있다. 그대로 사용하되 그림
-제목에 명시했고, [NATIVE_EVENT_INTERVALS.csv](NATIVE_EVENT_INTERVALS.csv)에 실제 시작·종료·길이를 저장했다.
-겹친 부모/자식 막대는 합산하지 않는다. 공통 helper인 `p2_prepare`/`p2_output_convert`는
-DS에서도 쓰일 수 있으므로 이름만으로 phase를 결정하지 않는다.
-
-이 profile은 여러 forward를 묶은 **phase 전체 CUDA graph replay**를 기록한다.
-따라서 준비/실행/변환은 나눌 수 있지만, graph 안의 forward1/2/3 실측 시간은 알 수 없다.
-추가한 등분 점선은 횟수만 표시한다. 실제 경계를 확인하려면 별도 계측 실행이 필요하다.
-이번 작업은 기존 raw의 재시각화다.
-
-재현 adapter: `ssd/tools/duet_timeline/plot_model_native_events.py`.
-위 source/output을 그대로 넘겨 실행한다. 입력/도구 해시와41개 대표 선택 근거는
-[NATIVE_EVENTS_AUDIT.json](NATIVE_EVENTS_AUDIT.json)에 있다.
-
-검증은 [NATIVE_VALIDATION.json](NATIVE_VALIDATION.json), [NATIVE_CHECKS.log](NATIVE_CHECKS.log)를 따른다.
-19개 CPU 검사 통과,41개 대표 선택 동일, 표시한2,059개 원시 이벤트의 interval 일치,
-현재 step 이벤트 전부 보존, 겹치는 직전 step 보존, 입력 SHA256 불변을 확인했다.
-중앙 대표 PDF14쪽과 전체 PDF41쪽 및 PNG14장의 읽기 검사도 통과했다.
-
-### 가독성 수정: 기존 aligned timeline 형식
-
-사용자가 지정한 `ssd/bench/plot_duet_aligned_timeline.py`의 두 줄 Gantt 표현을
-기준으로 다시 만들었다. **위 target, 아래 draft**, proxy 별도 stream만 작은 보조 줄이다.
-한 모델 페이지에 P1 hit/P2 hit/miss를 세로로 배치하고, 세 상태의 x축 범위를 동일하게 맞췄다.
-
-- DS/PS 전체 막대: 준비부터 cache 정리까지의 phase elapsed.
-- DS/PS 아래 진한 띠: 그 안의 graph replay. graph 밖 준비/변환/merge 시간이 자연스럽게 보인다.
-- 세로 점선: exit layer와 final LM head 완료. PS가 점선을 넘는지 바로 확인한다.
-- 현재 요청 시점에 남은 직전 PS는 회색 가는 막대로 표시한다.
-- 내부 helper 이름과 CPU dispatch는 세부 PDF에 남기고, 이 그림에서는 phase 중심으로 묶었다.
-- 모든 막대는 **실제 한 step**이다. phase별 중앙값을 이어 붙인 가상 timeline이 아니다.
-  대표 step 선정은 앞선 상세 자료와 동일하다. 따라서 대표 그림의 각 구간 값이 아래 전체 step
-  중앙값 표와 정확히 같을 필요는 없다.
-- 원본 시간, 데이터, 설정, 시계 정렬은 바꾸지 않았다. 신규 inference도 수행하지 않았다.
-- Code34B 12/6은 miss 그림이 없고, 16/6은 miss 표본2개 중 하나가 대표이므로 일반화하지 않는다.
-
-사용한 renderer는 ver1.1 작업 트리의 `plot_duet_aligned_timeline.py:draw_phase_lanes`이며,
-기존 renderer/CLI 동작은 그대로다. Adapter는 `ssd/tools/duet_timeline/plot_model_aligned_timelines.py`다.
-`ALIGNED_INTERVALS.csv`에서 표시한 구간을, `ALIGNED_AUDIT.json`에서 선택한 UID·step과
-입력 및 도구 해시를 확인한다. 같은 source/output 인자로 adapter를 실행하면 재생성된다.
-
-재검증: 기존 aligned 도구5개, 요청 정렬4개, 상세/두 줄 표현8개로 **17개 검사 통과**.
-1,309개 step 모두에서 두 줄 그림의 DS/PS 길이가 기존 분석값과 일치하며,
-41개 대표 step 선택과 원본 SHA256도 동일하다. [ALIGNED_VALIDATION.json](ALIGNED_VALIDATION.json),
-[검사 로그](ALIGNED_CHECKS.log)를 보관했다. 검사는 `ssd/tests`에서 다음처럼 실행한다.
-
-```bash
-PYTHONPATH=.. /home/chokwans99/PSD/ssd/.venv/bin/python -B -m unittest -v \
-  test_plot_duet_aligned_timeline test_model_breakdowns test_ver10_profile_analysis
-```
+**현재 그림은 [모델별 timeline](../../mlsys_ver12/model_timelines/REPORT.md)에서만 확인한다.**
+중복된 ALIGNED/NATIVE/WAITS PDF·PNG·HTML은 사용자 요청으로 삭제했다.
+과거 그림은 Git `1f87514`에 남아 있다. 이 폴더의 JSON·CSV·검사 기록은 그대로 보존한다.
+아래는 원래4개 조합·5개 설정의 측정 조건과 수치이며, 새 inference 결과가 아니다.
 
 ## 1. 어떤 측정인가
 
@@ -131,11 +28,11 @@ Exit 숫자는 실제 config의 **0-based layer index**다. DS=P1, PS=P2다.
 
 | 모델 조합 | Exit | K1/K2 | DS 위치당 root | G=M, DS/PS | 확장 경쟁 | GPU 수 | PDF |
 |---|---:|---:|---:|---:|---|---|---|
-| LayerSkip Llama2-7B + llama-68M | 20 | 6/3 | 2 | 12/8 | frontier | 1+1 | [상세](l2_7b/DETAILED.pdf) |
-| LayerSkip Llama2-13B + AMD-Llama-135M | 23 | 6/3 | 3 | 12/8 | last | 2+1 | [상세](l2_13b/DETAILED.pdf) |
-| LayerSkip Llama3-8B + Axcel Llama3.1 drafter-340M | 20 | 4/1 | 3 | 8/4 | last | 1+1 | [상세](l3_8b/DETAILED.pdf) |
-| LayerSkip CodeLlama-34B + AMD-Llama-135M-code | 30 | 12/6 | 3 | 12/8 | last | 4+1 | [상세](code34b/DETAILED.pdf) |
-| 같은 CodeLlama 조합, 처리량 대안 | 30 | 16/6 | 3 | 16/8 | last | 4+1 | [상세](code34b_throughput/DETAILED.pdf) |
+| LayerSkip Llama2-7B + llama-68M | 20 | 6/3 | 2 | 12/8 | frontier | 1+1 | [상세](../../mlsys_ver12/model_timelines/llama2_7b_llama68m/TIMELINE.pdf) |
+| LayerSkip Llama2-13B + AMD-Llama-135M | 23 | 6/3 | 3 | 12/8 | last | 2+1 | [상세](../../mlsys_ver12/model_timelines/llama2_13b_amd135m/TIMELINE.pdf) |
+| LayerSkip Llama3-8B + Axcel Llama3.1 drafter-340M | 20 | 4/1 | 3 | 8/4 | last | 1+1 | [상세](../../mlsys_ver12/model_timelines/llama3_8b_drafter340m/TIMELINE.pdf) |
+| LayerSkip CodeLlama-34B + AMD-Llama-135M-code | 30 | 12/6 | 3 | 12/8 | last | 4+1 | [상세](../../mlsys_ver12/model_timelines/codellama34b_amd135m_code/TIMELINE.pdf) |
+| 같은 CodeLlama 조합, 처리량 대안 | 30 | 16/6 | 3 | 16/8 | last | 4+1 | [상세](../../mlsys_ver12/model_timelines/codellama34b_amd135m_code/TIMELINE.pdf) |
 
 실측 당시 공통 설정:
 

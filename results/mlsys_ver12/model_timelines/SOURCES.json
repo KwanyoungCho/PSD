@@ -1,0 +1,142 @@
+{
+  "schema": "duet-model-timelines-v1",
+  "models": [
+    {
+      "id": "llama2_7b_llama68m",
+      "name": "LayerSkip Llama2-7B + llama-68M",
+      "panels": [
+        {
+          "window": "data/l2_7b_source1_req4_step37.json",
+          "sha256": "676b3bd3367c5903c091238c89785b11479a178b814445f390f41277775f15ce",
+          "source": 1,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/l2_7b_source2_req2_step24.json",
+          "sha256": "7dffdddaaff6d0bd90a0dbb63005e24b5e4a27a1713635af6e4c7cb0f8285868",
+          "source": 2,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/l2_7b_source0_req4_step84.json",
+          "sha256": "2ee52b2bf89c23dbea78051a9eb30550cfc02d34f99845fa7774a03651103a09",
+          "source": 0,
+          "setting": "Selected setting"
+        }
+      ],
+      "note": "과거 ver1.0 계열 / RTX3090 / 설정별 profile 4턴. 1.2 신규 측정이 아님."
+    },
+    {
+      "id": "llama2_7b_amd135m",
+      "name": "LayerSkip Llama2-7B + AMD-Llama-135M",
+      "panels": [
+        {
+          "window": "data/accepted_source1_req26_step7.json",
+          "sha256": "ba7aae616404754560e53402fd98a37ebf3b239da29e93ec8b0589a5f8175368",
+          "source": 1,
+          "setting": "PS preparation validation (fixed parameters)"
+        },
+        {
+          "window": "data/accepted_source2_req21_step15.json",
+          "sha256": "7495b8e4e2abbb17779586dfd32da3db388160ae5b4fe00522a7258be3158403",
+          "source": 2,
+          "setting": "PS preparation validation (fixed parameters)"
+        },
+        {
+          "window": "data/accepted_source0_req14_step39.json",
+          "sha256": "275ba4da3ecd5f00a06df1937dfd69875e551bb7b793a2a47ca66ebfc8306e92",
+          "source": 0,
+          "setting": "PS preparation validation (fixed parameters)"
+        }
+      ],
+      "note": "1.2 채택 소스와 동일 / RTX4090 / PS 최적화 A/B의 고정 설정. 최적 파라미터 결과가 아님."
+    },
+    {
+      "id": "llama2_13b_amd135m",
+      "name": "LayerSkip Llama2-13B + AMD-Llama-135M",
+      "panels": [
+        {
+          "window": "data/l2_13b_source1_req1_step68.json",
+          "sha256": "057bdb4fc633810270c823e7df90572705a71efcc64987d6258c0514d059c0e6",
+          "source": 1,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/l2_13b_source2_req2_step88.json",
+          "sha256": "5f510bd4a70276f867e0437d3f7ab7d91bdc923588c7cdfae0650f8d0aa3b6c8",
+          "source": 2,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/l2_13b_source0_req3_step29.json",
+          "sha256": "b8c6e219762542809f2cd1ff590f4e69b7686cc99c68e408e39ae1dd9043ff6f",
+          "source": 0,
+          "setting": "Selected setting"
+        }
+      ],
+      "note": "과거 ver1.0 계열 / RTX3090 / 설정별 profile 4턴. 1.2 신규 측정이 아님."
+    },
+    {
+      "id": "llama3_8b_drafter340m",
+      "name": "LayerSkip Llama3-8B + Axcel Llama3.1 drafter-340M",
+      "panels": [
+        {
+          "window": "data/l3_8b_source1_req1_step170.json",
+          "sha256": "2f88b2e101cca7f2924c650419e33539e89a0b1bb9fc6dee8d02083e8e5a9250",
+          "source": 1,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/l3_8b_source2_req1_step103.json",
+          "sha256": "4b4bdfa8a8f0bae102c21cddb92ce75f1f5fd10ec61befeef6efbde0b40f0563",
+          "source": 2,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/l3_8b_source0_req2_step65.json",
+          "sha256": "24ec4723b488f86da0c4e262ebf640ded643c0925830ab0e8006c283a1e4a37b",
+          "source": 0,
+          "setting": "Selected setting"
+        }
+      ],
+      "note": "과거 ver1.0 계열 / RTX3090 / 설정별 profile 4턴. 1.2 신규 측정이 아님."
+    },
+    {
+      "id": "codellama34b_amd135m_code",
+      "name": "LayerSkip CodeLlama-34B + AMD-Llama-135M-code",
+      "panels": [
+        {
+          "window": "data/code34b_source1_req4_step7.json",
+          "sha256": "7a46e4c27f84303efa85e83450528315fc09894dfe13008c67e52806308baa0d",
+          "source": 1,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/code34b_source2_req3_step25.json",
+          "sha256": "d4e6d4dc5272410db64bc58992ea6bd2ee5b9c80e146b1a79d0985d6d6fd6ba5",
+          "source": 2,
+          "setting": "Selected setting"
+        },
+        {
+          "window": "data/code34b_throughput_source1_req3_step9.json",
+          "sha256": "d6c104c227f152d250b5e61d5722bad7539edc441f356d1c898c788811c915ee",
+          "source": 1,
+          "setting": "K1/K2 16/6 (throughput alternative)"
+        },
+        {
+          "window": "data/code34b_throughput_source2_req1_step8.json",
+          "sha256": "26146dbae9a1350395195a0d38c9e8f9f5a39d1ccf091ff416962b27dd7d13c8",
+          "source": 2,
+          "setting": "K1/K2 16/6 (throughput alternative)"
+        },
+        {
+          "window": "data/code34b_throughput_source0_req3_step6.json",
+          "sha256": "594044ae4cf930fcc7efd9c89656d5e1574111175f4f746d503e75152439f2af",
+          "source": 0,
+          "setting": "K1/K2 16/6 (throughput alternative)"
+        }
+      ],
+      "note": "과거 ver1.0 계열 / RTX3090 / 설정별 profile 4턴. 1.2 신규 측정이 아님."
+    }
+  ]
+}

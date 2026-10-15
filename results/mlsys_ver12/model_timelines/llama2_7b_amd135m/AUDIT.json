@@ -1,0 +1,454 @@
+{
+  "model": "llama2_7b_amd135m",
+  "name": "LayerSkip Llama2-7B + AMD-Llama-135M",
+  "note": "1.2 채택 소스와 동일 / RTX4090 / PS 최적화 A/B의 고정 설정. 최적 파라미터 결과가 아님.",
+  "pages": 3,
+  "panels": [
+    {
+      "metrics": [
+        {
+          "step_id": 7,
+          "next_step_id": 8,
+          "cache_ready_ns": 2093741476706085,
+          "draft_receive_ready_ns": 2093741476856613,
+          "deadline_ns": 2093741478556874,
+          "cache_margin_ms": 1.850789,
+          "ready_margin_ms": 1.700261,
+          "post_cache_cleanup_ms": 0.150528,
+          "next_send_ms": 0.189453,
+          "next_response_wait_ms": 1.85762,
+          "epoch": 26,
+          "title": "LayerSkip Llama2-7B + AMD-Llama-135M | Adopted PS optimization | P1 hit | UID 514_t0 | steps 7-8",
+          "origin_ns": 2093741458350483
+        },
+        {
+          "step_id": 8,
+          "next_step_id": 9,
+          "cache_ready_ns": 2093741497142059,
+          "draft_receive_ready_ns": 2093741497288498,
+          "deadline_ns": 2093741499009236,
+          "cache_margin_ms": 1.867177,
+          "ready_margin_ms": 1.720738,
+          "post_cache_cleanup_ms": 0.146439,
+          "next_send_ms": 0.184311,
+          "next_response_wait_ms": 1.536102,
+          "epoch": 26,
+          "title": "LayerSkip Llama2-7B + AMD-Llama-135M | Adopted PS optimization | P1 hit | UID 514_t0 | steps 7-8",
+          "origin_ns": 2093741458350483
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2093741472739120,
+          "wall_end_ns": 2093741473120010,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2093741493169967,
+          "wall_end_ns": 2093741493557266,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2093741476706085,
+          "wall_end_ns": 2093741476856613,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2093741478645355,
+          "wall_end_ns": 2093741478657104,
+          "step_id": 7,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2093741497142059,
+          "wall_end_ns": 2093741497288498,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2093741499093933,
+          "wall_end_ns": 2093741499105545,
+          "step_id": 8,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 7,
+          "count": 6,
+          "start_ms": 4.990368,
+          "end_ms": 11.857311,
+          "schematic_boundaries_ms": [
+            6.1348585,
+            7.279349,
+            8.4238395,
+            9.56833,
+            10.7128205
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 7,
+          "count": 3,
+          "start_ms": 15.186321,
+          "end_ms": 18.091411,
+          "schematic_boundaries_ms": [
+            16.154684333333332,
+            17.123047666666668
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 8,
+          "count": 6,
+          "start_ms": 25.454998,
+          "end_ms": 32.318874,
+          "schematic_boundaries_ms": [
+            26.598977333333334,
+            27.742956666666668,
+            28.886936,
+            30.030915333333333,
+            31.174894666666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 8,
+          "count": 3,
+          "start_ms": 35.628444,
+          "end_ms": 38.533535,
+          "schematic_boundaries_ms": [
+            36.59680766666667,
+            37.56517133333333
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/accepted_source1_req26_step7.json",
+      "window_sha256": "ba7aae616404754560e53402fd98a37ebf3b239da29e93ec8b0589a5f8175368",
+      "page": 1,
+      "setting": "PS preparation validation (fixed parameters)",
+      "image": "images/01_p1_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 15,
+          "next_step_id": 16,
+          "cache_ready_ns": 2093738165352093,
+          "draft_receive_ready_ns": 2093738165542554,
+          "deadline_ns": 2093738166613949,
+          "cache_margin_ms": 1.261856,
+          "ready_margin_ms": 1.071395,
+          "post_cache_cleanup_ms": 0.190461,
+          "next_send_ms": 0.240631,
+          "next_response_wait_ms": 1.93576,
+          "epoch": 21,
+          "title": "LayerSkip Llama2-7B + AMD-Llama-135M | Adopted PS optimization | P2 hit | UID 397_t0 | steps 15-16",
+          "origin_ns": 2093738146679714
+        },
+        {
+          "step_id": 16,
+          "next_step_id": 17,
+          "cache_ready_ns": 2093738185340558,
+          "draft_receive_ready_ns": 2093738185508496,
+          "deadline_ns": 2093738187047878,
+          "cache_margin_ms": 1.70732,
+          "ready_margin_ms": 1.539382,
+          "post_cache_cleanup_ms": 0.167938,
+          "next_send_ms": 0.203766,
+          "next_response_wait_ms": 1.588776,
+          "epoch": 21,
+          "title": "LayerSkip Llama2-7B + AMD-Llama-135M | Adopted PS optimization | P2 hit | UID 397_t0 | steps 15-16",
+          "origin_ns": 2093738146679714
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2093738161137311,
+          "wall_end_ns": 2093738161720532,
+          "step_id": 15,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2093738181318310,
+          "wall_end_ns": 2093738181752514,
+          "step_id": 16,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2093738165352093,
+          "wall_end_ns": 2093738165542554,
+          "step_id": 15,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2093738166709942,
+          "wall_end_ns": 2093738166722058,
+          "step_id": 15,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2093738185340558,
+          "wall_end_ns": 2093738185508496,
+          "step_id": 16,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2093738187122265,
+          "wall_end_ns": 2093738187135510,
+          "step_id": 16,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 15,
+          "count": 6,
+          "start_ms": 4.843247,
+          "end_ms": 11.471604,
+          "schematic_boundaries_ms": [
+            5.947973166666666,
+            7.052699333333333,
+            8.157425499999999,
+            9.262151666666666,
+            10.366877833333334
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 15,
+          "count": 3,
+          "start_ms": 15.521531,
+          "end_ms": 18.362107,
+          "schematic_boundaries_ms": [
+            16.468389666666667,
+            17.415248333333334
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 16,
+          "count": 6,
+          "start_ms": 25.504502,
+          "end_ms": 32.310014,
+          "schematic_boundaries_ms": [
+            26.638754,
+            27.773006,
+            28.907258,
+            30.041510000000002,
+            31.175762000000002
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 16,
+          "count": 3,
+          "start_ms": 35.53151,
+          "end_ms": 38.375169,
+          "schematic_boundaries_ms": [
+            36.479396333333334,
+            37.42728266666666
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/accepted_source2_req21_step15.json",
+      "window_sha256": "7495b8e4e2abbb17779586dfd32da3db388160ae5b4fe00522a7258be3158403",
+      "page": 2,
+      "setting": "PS preparation validation (fixed parameters)",
+      "image": "images/02_p2_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 39,
+          "next_step_id": 40,
+          "cache_ready_ns": 2093732783145369,
+          "draft_receive_ready_ns": 2093732783322493,
+          "deadline_ns": 2093732785040765,
+          "cache_margin_ms": 1.895396,
+          "ready_margin_ms": 1.718272,
+          "post_cache_cleanup_ms": 0.177124,
+          "next_send_ms": 0.21814,
+          "next_response_wait_ms": 1.261963,
+          "epoch": 14,
+          "title": "LayerSkip Llama2-7B + AMD-Llama-135M | Adopted PS optimization | Miss | UID 234_t0 | steps 39-40",
+          "origin_ns": 2093732764241449
+        },
+        {
+          "step_id": 40,
+          "next_step_id": 41,
+          "cache_ready_ns": 2093732803324324,
+          "draft_receive_ready_ns": 2093732803486067,
+          "deadline_ns": 2093732804588922,
+          "cache_margin_ms": 1.264598,
+          "ready_margin_ms": 1.102855,
+          "post_cache_cleanup_ms": 0.161743,
+          "next_send_ms": 0.205811,
+          "next_response_wait_ms": 2.628052,
+          "epoch": 14,
+          "title": "LayerSkip Llama2-7B + AMD-Llama-135M | Adopted PS optimization | Miss | UID 234_t0 | steps 39-40",
+          "origin_ns": 2093732764241449
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2093732779052412,
+          "wall_end_ns": 2093732779450972,
+          "step_id": 39,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2093732799146345,
+          "wall_end_ns": 2093732799670637,
+          "step_id": 40,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2093732783145369,
+          "wall_end_ns": 2093732783322493,
+          "step_id": 39,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2093732785119673,
+          "wall_end_ns": 2093732785133955,
+          "step_id": 39,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2093732803324324,
+          "wall_end_ns": 2093732803486067,
+          "step_id": 40,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2093732804657820,
+          "wall_end_ns": 2093732804670576,
+          "step_id": 40,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 39,
+          "count": 6,
+          "start_ms": 4.781911,
+          "end_ms": 10.494801,
+          "schematic_boundaries_ms": [
+            5.734059333333334,
+            6.686207666666667,
+            7.638356,
+            8.590504333333334,
+            9.542652666666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 39,
+          "count": 3,
+          "start_ms": 15.760243,
+          "end_ms": 18.590565,
+          "schematic_boundaries_ms": [
+            16.703683666666667,
+            17.647124333333334
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 40,
+          "count": 6,
+          "start_ms": 25.25475,
+          "end_ms": 31.884144,
+          "schematic_boundaries_ms": [
+            26.359649,
+            27.464548,
+            28.569447,
+            29.674346,
+            30.779245
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 40,
+          "count": 3,
+          "start_ms": 35.950551,
+          "end_ms": 38.791005,
+          "schematic_boundaries_ms": [
+            36.897369,
+            37.844187
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/accepted_source0_req14_step39.json",
+      "window_sha256": "275ba4da3ecd5f00a06df1937dfd69875e551bb7b793a2a47ca66ebfc8306e92",
+      "page": 3,
+      "setting": "PS preparation validation (fixed parameters)",
+      "image": "images/03_miss.png"
+    }
+  ],
+  "settings": [
+    "Runtime matches ver1.2 9390e21 | RTX4090 | B1 BF16 T0.7 | exit20 K1/K2 6/3 M1/M2 12/8 C3 | frontier"
+  ],
+  "source_window_hashes_verified": true,
+  "clock_shift_ns": 0
+}

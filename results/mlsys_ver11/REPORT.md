@@ -135,20 +135,11 @@ python results/mlsys_ver11/analyze_generated_nodes.py
 3. ver1.0에서 이미 G=M이었던 설정은 동일한 DS round 폭으로 맞춘다. 이 경우 우선 비교할 정책 차이는 자동 top-L이다.
 4. 과거 G>M이었던 설정은 생성 상한 변화가 함께 있으므로, 그 AL과 새 결과를 같은 설정으로 표시하지 않는다.
 
-## 모델별 latency 확인용 그림 (2026-10-15 추가)
+## 모델별 latency 확인용 그림
 
-18번 서버가 선택한 4개 모델 조합·5개 설정의 원시 profile을 최신 요청 정렬 분석기로
-재분석했다. [상세 보고서](model_breakdowns_20261015/REPORT.md),
-[PS 빈 구간·다음 명령 대기까지 표시한 timeline 모음](model_breakdowns_20261015/with_waits.html),
-[대기 구간 포함 상세 PDF](model_breakdowns_20261015/NATIVE_EVENTS_WITH_WAITS.pdf)를 먼저 확인한다.
-연두색 준비 박스와 미계측 구간의 코드·시간 해석은 [PS_GAPS.md](model_breakdowns_20261015/PS_GAPS.md)를 따른다.
-기존 [raw-event PDF](model_breakdowns_20261015/NATIVE_EVENTS_MODELS.pdf)는 보존했다.
-Phase 요약은 [모델당 한 페이지 PDF](model_breakdowns_20261015/ALIGNED_MODELS.pdf)에 있다.
-이벤트별 자세한 구간은 [상세 PDF](model_breakdowns_20261015/ALL_MODELS_DETAILED.pdf)에 있다.
-
-1,309개 유효 step, 41개 대표 timeline과 구간별 분포를 포함한다.
-이 그림은 **ver1.0 및 모델 지원 commit에서 측정한 profile용 4턴**을 분석한 것이며,
-위 ver1.1 런타임의 신규 성능 평가가 아니다. 파라미터와 데이터 출처를 각 그림에 표시했다.
+기존 여러 버전의 PDF·PNG·HTML은 삭제하고 [모델별 timeline](../mlsys_ver12/model_timelines/REPORT.md)으로 통일했다.
+모델당 PDF 하나에 연속 두 step과 draft deadline을 표시한다. 과거 측정 수치와 raw는
+[측정 조건](model_breakdowns_20261015/REPORT.md), [PS 구간 해석](model_breakdowns_20261015/PS_GAPS.md)에 남아 있다.
 
 ## 2026-10-15 B1 tree PS 준비 비용 후속 최적화
 

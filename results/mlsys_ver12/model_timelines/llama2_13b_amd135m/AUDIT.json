@@ -1,0 +1,454 @@
+{
+  "model": "llama2_13b_amd135m",
+  "name": "LayerSkip Llama2-13B + AMD-Llama-135M",
+  "note": "과거 ver1.0 계열 / RTX3090 / 설정별 profile 4턴. 1.2 신규 측정이 아님.",
+  "pages": 3,
+  "panels": [
+    {
+      "metrics": [
+        {
+          "step_id": 68,
+          "next_step_id": 69,
+          "cache_ready_ns": 222824066213386,
+          "draft_receive_ready_ns": 222824066543464,
+          "deadline_ns": 222824069216390,
+          "cache_margin_ms": 3.003004,
+          "ready_margin_ms": 2.672926,
+          "post_cache_cleanup_ms": 0.330078,
+          "next_send_ms": 0.314453,
+          "next_response_wait_ms": 5.276367,
+          "epoch": 1,
+          "title": "LayerSkip Llama2-13B + AMD-Llama-135M | Selected setting | P1 hit | UID 84_t0 | steps 68-69",
+          "origin_ns": 222824034045980
+        },
+        {
+          "step_id": 69,
+          "next_step_id": 70,
+          "cache_ready_ns": 222824099193366,
+          "draft_receive_ready_ns": 222824099524421,
+          "deadline_ns": 222824100490316,
+          "cache_margin_ms": 1.29695,
+          "ready_margin_ms": 0.965895,
+          "post_cache_cleanup_ms": 0.331055,
+          "next_send_ms": 0.320801,
+          "next_response_wait_ms": 2.855957,
+          "epoch": 1,
+          "title": "LayerSkip Llama2-13B + AMD-Llama-135M | Selected setting | P1 hit | UID 84_t0 | steps 68-69",
+          "origin_ns": 222824034045980
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 222824059296882,
+          "wall_end_ns": 222824060795417,
+          "step_id": 68,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 222824092174812,
+          "wall_end_ns": 222824093698738,
+          "step_id": 69,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 222824066213386,
+          "wall_end_ns": 222824066543464,
+          "step_id": 68,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 222824069342780,
+          "wall_end_ns": 222824069369636,
+          "step_id": 68,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 222824099193366,
+          "wall_end_ns": 222824099524421,
+          "step_id": 69,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 222824100623542,
+          "wall_end_ns": 222824100650398,
+          "step_id": 69,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 68,
+          "count": 6,
+          "start_ms": 10.925707,
+          "end_ms": 20.639574,
+          "schematic_boundaries_ms": [
+            12.544684833333333,
+            14.163662666666665,
+            15.7826405,
+            17.40161833333333,
+            19.020596166666664
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 68,
+          "count": 3,
+          "start_ms": 27.926195,
+          "end_ms": 31.52434,
+          "schematic_boundaries_ms": [
+            29.125576666666667,
+            30.32495833333333
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 69,
+          "count": 6,
+          "start_ms": 44.958422,
+          "end_ms": 52.101976,
+          "schematic_boundaries_ms": [
+            46.149014333333334,
+            47.33960666666667,
+            48.530198999999996,
+            49.72079133333333,
+            50.911383666666666
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 69,
+          "count": 3,
+          "start_ms": 60.904222,
+          "end_ms": 64.523851,
+          "schematic_boundaries_ms": [
+            62.110764999999994,
+            63.317308
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/l2_13b_source1_req1_step68.json",
+      "window_sha256": "057bdb4fc633810270c823e7df90572705a71efcc64987d6258c0514d059c0e6",
+      "page": 1,
+      "setting": "Selected setting",
+      "image": "images/01_p1_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 88,
+          "next_step_id": 89,
+          "cache_ready_ns": 222828281058113,
+          "draft_receive_ready_ns": 222828281396980,
+          "deadline_ns": 222828282654867,
+          "cache_margin_ms": 1.596754,
+          "ready_margin_ms": 1.257887,
+          "post_cache_cleanup_ms": 0.338867,
+          "next_send_ms": 0.322265,
+          "next_response_wait_ms": 3.002929,
+          "epoch": 2,
+          "title": "LayerSkip Llama2-13B + AMD-Llama-135M | Selected setting | P2 hit | UID 244_t0 | steps 88-89",
+          "origin_ns": 222828249663656
+        },
+        {
+          "step_id": 89,
+          "next_step_id": 90,
+          "cache_ready_ns": 222828313827644,
+          "draft_receive_ready_ns": 222828314171394,
+          "deadline_ns": 222828315462484,
+          "cache_margin_ms": 1.63484,
+          "ready_margin_ms": 1.29109,
+          "post_cache_cleanup_ms": 0.34375,
+          "next_send_ms": 0.345703,
+          "next_response_wait_ms": 2.953125,
+          "epoch": 2,
+          "title": "LayerSkip Llama2-13B + AMD-Llama-135M | Selected setting | P2 hit | UID 244_t0 | steps 88-89",
+          "origin_ns": 222828249663656
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 222828273998542,
+          "wall_end_ns": 222828275536628,
+          "step_id": 88,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 222828306779792,
+          "wall_end_ns": 222828308328620,
+          "step_id": 89,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 222828281058113,
+          "wall_end_ns": 222828281396980,
+          "step_id": 88,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 222828282789558,
+          "wall_end_ns": 222828282820808,
+          "step_id": 88,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 222828313827644,
+          "wall_end_ns": 222828314171394,
+          "step_id": 89,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 222828315601081,
+          "wall_end_ns": 222828315627448,
+          "step_id": 89,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 88,
+          "count": 6,
+          "start_ms": 10.201097,
+          "end_ms": 19.866136,
+          "schematic_boundaries_ms": [
+            11.811936833333334,
+            13.422776666666667,
+            15.0336165,
+            16.644456333333334,
+            18.255296166666668
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 88,
+          "count": 3,
+          "start_ms": 27.121996,
+          "end_ms": 30.742113,
+          "schematic_boundaries_ms": [
+            28.328701666666667,
+            29.535407333333332
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 89,
+          "count": 6,
+          "start_ms": 42.805589,
+          "end_ms": 52.477464,
+          "schematic_boundaries_ms": [
+            44.41756816666666,
+            46.02954733333333,
+            47.6415265,
+            49.25350566666666,
+            50.86548483333333
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 89,
+          "count": 3,
+          "start_ms": 59.917894,
+          "end_ms": 63.540941,
+          "schematic_boundaries_ms": [
+            61.12557633333333,
+            62.333258666666666
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/l2_13b_source2_req2_step88.json",
+      "window_sha256": "5f510bd4a70276f867e0437d3f7ab7d91bdc923588c7cdfae0650f8d0aa3b6c8",
+      "page": 2,
+      "setting": "Selected setting",
+      "image": "images/02_p2_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 29,
+          "next_step_id": 30,
+          "cache_ready_ns": 222831385527839,
+          "draft_receive_ready_ns": 222831385860847,
+          "deadline_ns": 222831386728109,
+          "cache_margin_ms": 1.20027,
+          "ready_margin_ms": 0.867262,
+          "post_cache_cleanup_ms": 0.333008,
+          "next_send_ms": 0.322266,
+          "next_response_wait_ms": 2.874023,
+          "epoch": 3,
+          "title": "LayerSkip Llama2-13B + AMD-Llama-135M | Selected setting | Miss | UID 128_t0 | steps 29-30",
+          "origin_ns": 222831355230062
+        },
+        {
+          "step_id": 30,
+          "next_step_id": 31,
+          "cache_ready_ns": 222831418162605,
+          "draft_receive_ready_ns": 222831418507331,
+          "deadline_ns": 222831419743734,
+          "cache_margin_ms": 1.581129,
+          "ready_margin_ms": 1.236403,
+          "post_cache_cleanup_ms": 0.344726,
+          "next_send_ms": 0.34668,
+          "next_response_wait_ms": 3.727539,
+          "epoch": 3,
+          "title": "LayerSkip Llama2-13B + AMD-Llama-135M | Selected setting | Miss | UID 128_t0 | steps 29-30",
+          "origin_ns": 222831355230062
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 222831378506355,
+          "wall_end_ns": 222831380057136,
+          "step_id": 29,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 222831410985847,
+          "wall_end_ns": 222831412560066,
+          "step_id": 30,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 222831385527839,
+          "wall_end_ns": 222831385860847,
+          "step_id": 29,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 222831386863777,
+          "wall_end_ns": 222831386891120,
+          "step_id": 29,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 222831418162605,
+          "wall_end_ns": 222831418507331,
+          "step_id": 30,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 222831419892097,
+          "wall_end_ns": 222831419918464,
+          "step_id": 30,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 29,
+          "count": 6,
+          "start_ms": 10.109301,
+          "end_ms": 17.266527,
+          "schematic_boundaries_ms": [
+            11.302172,
+            12.495043,
+            13.687914,
+            14.880785,
+            16.073656
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 29,
+          "count": 3,
+          "start_ms": 26.079027,
+          "end_ms": 29.681566,
+          "schematic_boundaries_ms": [
+            27.279873333333335,
+            28.480719666666666
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 30,
+          "count": 6,
+          "start_ms": 41.407152,
+          "end_ms": 50.787035,
+          "schematic_boundaries_ms": [
+            42.970465833333336,
+            44.53377966666667,
+            46.0970935,
+            47.66040733333334,
+            49.22372116666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 30,
+          "count": 3,
+          "start_ms": 58.669847,
+          "end_ms": 62.287035,
+          "schematic_boundaries_ms": [
+            59.875576333333335,
+            61.081305666666665
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/l2_13b_source0_req3_step29.json",
+      "window_sha256": "b8c6e219762542809f2cd1ff590f4e69b7686cc99c68e408e39ae1dd9043ff6f",
+      "page": 3,
+      "setting": "Selected setting",
+      "image": "images/03_miss.png"
+    }
+  ],
+  "settings": [
+    "Historical v1.0 59f46511 | exit 23 (0-based) | K1/K2 6/3 | G=M DS/PS 12/8 | C=3 | last | target GPUs=2 + draft GPU=1 | B=1, BF16, T=0.7"
+  ],
+  "source_window_hashes_verified": true,
+  "clock_shift_ns": 0
+}

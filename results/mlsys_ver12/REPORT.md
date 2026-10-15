@@ -55,60 +55,32 @@ PS4.965→4.948ms의 차이95% 구간−0.050~+0.028ms가0을 포함했다.
 
 ## 상세 timeline과 연속 두 step
 
-사용자가 보던 기존 raw-event 색/무늬와 세부 준비 구간을 유지했다.
-최신 도구는 [plot_consecutive_steps.py](../../ssd/tools/duet_timeline/plot_consecutive_steps.py),
-[사용법](../../ssd/tools/duet_timeline/README.md)이다.
+**[모델별 timeline 보고서](model_timelines/REPORT.md)**에서 확인한다. 기존 여러 형식의
+모델별 그림·HTML189개를 삭제하고, 모델 조합당 PDF 하나와 [전체17쪽 PDF](model_timelines/ALL_MODELS.pdf)로 통일했다.
+5개 모델 조합이며 CodeLlama의 두 설정은 같은 PDF 안에서 구분한다.
 
-| 그림 | 내용 |
-|---|---|
-| [이전에 질문한78→79 step](timelines/discussed_example/CONSECUTIVE_STEPS.pdf) | Llama2-7B+68M, 과거ver1.0 trace의 해당 실제 연속 구간 |
-| [모델별14쪽 PDF](timelines/historical_models/CONSECUTIVE_STEPS.pdf) / [브라우저](timelines/historical_models/index.html) | 4모델 조합·5설정, P1/P2/miss별 대표; 없는 source는 만들지 않음 |
-| [채택한 runtime의 두-step](timelines/accepted_runtime/CONSECUTIVE_STEPS.pdf) | Llama2-7B+135M, 채택 patch의 실제 profile; UID514_t0,7→8step |
-| [기존 한-step 상세 모음](../mlsys_ver11/model_breakdowns_20261015/NATIVE_EVENTS_WITH_WAITS.pdf) | 기존 모델별 색/무늬·준비 A/B·다음 명령 수신 |
+각 페이지는 같은 요청의 연속 두 step이다. 빨간 점선은 다음 target 요청 시작,
+초록 원은 PS cache 완성, 삼각형은 draft가 후처리를 끝내고 다음 명령을 받을 준비가 된 시점이다.
+Ready margin은 관측된 차이이고, 전부 추가 forward 예산으로 사용할 수 있다는 보장은 없다.
+다음 target response wait 전체를 이전 PS 지연으로 해석하지 않는다.
 
-과거 모델별 trace는3090/ver1.0 계열이고, 채택 runtime trace는4090/7B+135M다.
-그림을1.2에서 사용할 수 있도록 패키징한 것이며 과거 측정을1.2 실행 결과로 바꾸지 않는다.
-두-step의 대표 선택은 다음 두 anchor까지 있는 step 중 중앙값이므로 기존 single-step 대표와 다를 수 있다.
+흰 점선은 DS/PS forward 횟수이며 실측 개별 forward 경계가 아니다. 준비·변환·merge는
+기존 상세 색/무늬로 유지했다. 미계측 구간을 GPU idle이라고 단정하지 않는다.
+원시 시각을 이동하거나 최소 막대 폭으로 늘리지 않았다.
 
-**Deadline 정의와 표시**
-
-- 빨간 점선 D1/D2: 다음 target `target_send_request`의 시작.
-- 초록 원: 현재 PS의 `merge_cache` 종료, cache 완성.
-- 삼각형: 다음 `draft_recv_cmd` 시작, 후처리 이후 수신 준비.
-- Ready margin = deadline−수신 준비. 음수도 그대로 표시한다.
-- 마지막 D2 계산에 세 번째 step의 요청 경계를 사용하지만 세 번째 forward를 그림에 추가하지 않는다.
-- 두 번째 next response wait는 표에만 있고, 그 다음 target step은 그림 밖이다.
-
-예전에 보던78→79step의 첫 경계는 다음과 같다.
-
-| 사건 | 그림 시간 ms |
-|---|---:|
-| step78 PS cache 완성 | 24.665 |
-| 후처리 종료·draft 다음 명령 수신 준비 | 24.957 |
-| step79 target 요청 시작: D1 | 25.980 |
-| Cache margin | +1.316 |
-| Receive-ready margin | **+1.024** |
-| step79 target response wait 길이 | **3.396** |
-
-즉 이 예시는 PS 준비가 요청보다 먼저 끝났어도 다음 응답 대기가 존재한다.
-그3.396ms를 PS 지연이라고 부르면 안 된다. 회색 명령 수신 구간에는 실제 통신도 들어가며,
-1.024ms도 추가 forward를 넣어도 된다는 보장된 예산이 아니다.
-반대로 Code34B 처리량 대안의 대표8→9step에서는 ready margin이 **−2.223ms**로
-관측됐다. 마감을 넘긴 경우도 지우거나 시계를 이동시켜 숨기지 않았다.
-이는 대표 단일 구간의 관찰이며 그 모델 전체 평균 지연이 아니다.
-
-원시 clock을 이동하지 않고 최소 표시 폭도 두지 않는다. Cross-device margin에는
-CUDA→host 시각 정렬 오차가 있다. 흰 점선은 forward **횟수 표시**이며 실제 개별 forward
-경계를 계측한 것이 아니다. 미계측 구간을 GPU idle이라고 단정하지 않는다.
+자료는 기존 profile을 다시 그린 것이며 새로운 inference를 수행하지 않았다.
+3090/ver1.0 계열의 모델별 측정과4090/1.2 채택 runtime의 최적화 검증 설정을 구분했다.
+다른 서버에서는 [도구 사용법](../../ssd/tools/duet_timeline/README.md)에 따라 portable JSON으로 재생성한다.
+[삭제 목록](model_timelines/CLEANUP.json)에 이전 파일과 해시를 기록했으며 raw 데이터는 보존했다.
 
 ## 검증과 재현성
 
 - Runtime: 기존382개/40suites, 실패·오류·skip0의 소스와91개 파일 동일. 이번 릴리스에서 새 GPU 실행을 했다고 주장하지 않는다.
 - Timeline/분석: **31개 CPU 검사 통과**. 요청 경계 혼동, 누락된 다음 step, 잘못된 command 연결,
   마감 초과의 음수 값, cache/수신 준비 구분, 원시 이벤트 보존 및 PDF 생성을 검사한다.
-- 두-step16쪽의 PDF 페이지 수, raw window hash, 정확한 deadline 산식, forward 구간 보존을 확인한다.
+- 최초 전달의 두-step16쪽의 PDF 페이지 수, raw window hash, 정확한 deadline 산식, forward 구간 보존을 확인한다.
 - 새 최적화 예시는 portable JSON만으로 원본 경로 없는 재생도 확인했다.
-- [검사 요약·소스 해시](checks/CHECKS.json), 개별 로그는 같은 디렉터리에 있다.
+- [최초 전달 검사](checks/CHECKS.json)는 당시 기록이며 현재 그림은 [모델별 모음 검사](model_timelines/checks/CHECKS.json)를 따른다.
 
 다른 서버는 각 PNG 옆 JSON으로 다시 그릴 수 있다. 기존 원시 profile은 수정하지 않았다.
 채택/미채택 실험의 `RAW_RESULTS.tar.gz`와 SHA manifest도 함께 전달한다.
