@@ -34,6 +34,16 @@
 분류는 현재 step에서 사용한 cache source다. 그 step의 DS/PS는 다음 결과를 대비하는 생성이다.
 전체 평균은 실제 step 수로 가중하며, 표본이 없는 경우는 N/A로 표시한다.
 
+성능 표와 latency 표는 **동일한 유효 step 집합**이다.
+
+- Rate: 해당 경우 step 수 / 전체 step 수. P1 hit·P2 hit·Miss 비율의 합은100%다.
+  **Overall 행의 Rate는 전체 hit rate, 즉 (P1+P2)/전체**다.
+  표본이 없는 source의 Rate는0%, 조건부 AL/TPS는N/A다.
+- AL: 원시 `accepted_len` 평균. Correction/recovery 또는 bonus token을 포함한다.
+- Profile TPS: **실제로 반환한 토큰 합 / 아래 Step 시간의 합**이다. Per-step TPS의 평균이 아니다.
+  Profile을 켠 제한된 표본의 값이며 full-dataset/비계측 TPS로 인용하지 않는다.
+- 반환 토큰 수가 없으면 AL로 대체하지 않는다. 일부 step의 기록이 빠진 행도 AL/TPS는N/A다.
+
 - Step: 현재 `target_send_request.start`부터 같은 요청의 다음 `target_send_request.start`까지.
   요청/응답·검증·후처리·다음 요청까지의 간격을 포함한다. `graph_pre` 간격이나 AL이 아니다.
 - DS total: root 준비 시작부터 `proxy_wait.start`까지. Glue와 proxy 대기는 제외한다.
@@ -58,6 +68,13 @@
 
 Historical v1.0 / RTX3090 / 4 profiled turns
 
+| Current outcome | Steps | Rate (%) | AL (tokens/step) | Profile TPS (tokens/s) |
+|---|---|---|---|---|
+| P1 hit | 115 | 35.826 | 2.817 | 109.397 |
+| P2 hit | 164 | 51.090 | 2.366 | 93.922 |
+| Miss | 42 | 13.084 | 2.024 | 79.867 |
+| Overall | 321 | 86.916 | 2.483 | 97.707 |
+
 | Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
 |---|---|---|---|---|---|---|---|---|
 | P1 hit | 115 | 25.754 | 7.104 | +3.588 | 0.830 | 6.378 | +1.638 | 0.679 |
@@ -65,9 +82,18 @@ Historical v1.0 / RTX3090 / 4 profiled turns
 | Miss | 42 | 25.340 | 6.327 | +5.751 | 0.689 | 6.211 | +1.687 | 0.680 |
 | Overall | 321 | 25.411 | 6.918 | +4.186 | 0.797 | 6.382 | +1.507 | 0.680 |
 
+유효 step 평균 target query: 9.657개(padding 전), 기존 KV 문맥: 466.676 tokens. Query 수와 문맥 길이는 다른 양이다.
+
 ### LayerSkip Llama2-7B + AMD-Llama-135M — PS preparation validation (fixed parameters)
 
 Accepted optimization / RTX4090 / same 24 turns repeated 3 times; fixed parameters
+
+| Current outcome | Steps | Rate (%) | AL (tokens/step) | Profile TPS (tokens/s) |
+|---|---|---|---|---|
+| P1 hit | 813 | 34.003 | 3.399 | 170.993 |
+| P2 hit | 1245 | 52.070 | 2.010 | 102.241 |
+| Miss | 333 | 13.927 | 1.937 | 92.621 |
+| Overall | 2391 | 86.073 | 2.472 | 124.175 |
 
 | Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
 |---|---|---|---|---|---|---|---|---|
@@ -76,9 +102,18 @@ Accepted optimization / RTX4090 / same 24 turns repeated 3 times; fixed paramete
 | Miss | 333 | 20.913 | 6.604 | +3.478 | 0.952 | 4.905 | +1.638 | 0.947 |
 | Overall | 2391 | 19.905 | 7.483 | +2.007 | 1.097 | 4.928 | +1.456 | 0.952 |
 
+유효 step 평균 target query: 9.620개(padding 전), 기존 KV 문맥: 203.325 tokens. Query 수와 문맥 길이는 다른 양이다.
+
 ### LayerSkip Llama2-13B + AMD-Llama-135M — Selected setting
 
 Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Rate (%) | AL (tokens/step) | Profile TPS (tokens/s) |
+|---|---|---|---|---|
+| P1 hit | 139 | 31.306 | 2.914 | 81.005 |
+| P2 hit | 225 | 50.676 | 1.871 | 56.080 |
+| Miss | 80 | 18.018 | 1.675 | 52.433 |
+| Overall | 444 | 81.982 | 2.162 | 63.735 |
 
 | Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
 |---|---|---|---|---|---|---|---|---|
@@ -87,9 +122,18 @@ Historical v1.0 / RTX3090 / 4 profiled turns
 | Miss | 80 | 31.946 | 9.634 | +4.198 | 1.211 | 9.095 | +0.991 | 1.209 |
 | Overall | 444 | 33.924 | 11.579 | +2.495 | 1.521 | 9.325 | +1.303 | 1.208 |
 
+유효 step 평균 target query: 8.971개(padding 전), 기존 KV 문맥: 445.279 tokens. Query 수와 문맥 길이는 다른 양이다.
+
 ### LayerSkip Llama3-8B + Axcel Llama3.1 drafter-340M — Selected setting
 
 Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Rate (%) | AL (tokens/step) | Profile TPS (tokens/s) |
+|---|---|---|---|---|
+| P1 hit | 65 | 16.796 | 1.277 | 43.679 |
+| P2 hit | 295 | 76.227 | 1.227 | 43.525 |
+| Miss | 27 | 6.977 | 1.111 | 39.574 |
+| Overall | 387 | 93.023 | 1.227 | 43.279 |
 
 | Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
 |---|---|---|---|---|---|---|---|---|
@@ -98,9 +142,18 @@ Historical v1.0 / RTX3090 / 4 profiled turns
 | Miss | 27 | 28.077 | 9.295 | +3.628 | 1.954 | 6.069 | +3.197 | 2.126 |
 | Overall | 387 | 28.360 | 10.289 | +2.546 | 2.195 | 6.240 | +2.987 | 2.122 |
 
+유효 step 평균 target query: 4.610개(padding 전), 기존 KV 문맥: 360.111 tokens. Query 수와 문맥 길이는 다른 양이다.
+
 ### LayerSkip CodeLlama-34B + AMD-Llama-135M-code — Selected setting
 
 Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Rate (%) | AL (tokens/step) | Profile TPS (tokens/s) |
+|---|---|---|---|---|
+| P1 hit | 62 | 84.932 | 7.290 | 111.757 |
+| P2 hit | 11 | 15.068 | 5.091 | 92.013 |
+| Miss | 0 | 0.000 | N/A | N/A |
+| Overall | 73 | 100.000 | 6.959 | 109.174 |
 
 | Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
 |---|---|---|---|---|---|---|---|---|
@@ -109,9 +162,18 @@ Historical v1.0 / RTX3090 / 4 profiled turns
 | Miss | 0 | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | Overall | 73 | 63.741 | 22.832 | +14.023 | 1.746 | 11.952 | +7.420 | 1.226 |
 
+유효 step 평균 target query: 12.397개(padding 전), 기존 KV 문맥: 170.603 tokens. Query 수와 문맥 길이는 다른 양이다.
+
 ### LayerSkip CodeLlama-34B + AMD-Llama-135M-code — K1/K2 16/6 (throughput alternative)
 
 Historical v1.0 / RTX3090 / 4 profiled turns
+
+| Current outcome | Steps | Rate (%) | AL (tokens/step) | Profile TPS (tokens/s) |
+|---|---|---|---|---|
+| P1 hit | 63 | 75.000 | 6.508 | 100.263 |
+| P2 hit | 19 | 22.619 | 4.526 | 75.642 |
+| Miss | 2 | 2.381 | 1.500 | 22.657 |
+| Overall | 84 | 97.619 | 5.940 | 93.122 |
 
 | Current outcome | Steps | Step (ms) | DS total (ms) | DS spare* (ms) | DS graph/K1 (ms) | PS total (ms) | PS spare (ms) | PS graph/K2 (ms) |
 |---|---|---|---|---|---|---|---|---|
@@ -119,6 +181,8 @@ Historical v1.0 / RTX3090 / 4 profiled turns
 | P2 hit | 19 | 59.838 | 35.969 | -6.511 | 2.058 | 14.526 | -3.691 | 1.234 |
 | Miss | 2 | 66.205 | 35.801 | -8.284 | 1.867 | 13.198 | -5.588 | 1.232 |
 | Overall | 84 | 63.792 | 36.182 | -5.779 | 2.054 | 14.224 | -1.241 | 1.235 |
+
+유효 step 평균 target query: 14.952개(padding 전), 기존 KV 문맥: 170.071 tokens. Query 수와 문맥 길이는 다른 양이다.
 
 
 ## Proxy와 target 후반 forward의 중첩 여부

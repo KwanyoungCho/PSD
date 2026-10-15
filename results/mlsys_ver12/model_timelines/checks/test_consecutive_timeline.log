@@ -8,9 +8,12 @@ test_overlapping_tail_is_not_silently_clock_shifted (test_consecutive_timeline.C
 test_portable_render_and_forward_count_annotations (test_consecutive_timeline.ConsecutiveTimeline.test_portable_render_and_forward_count_annotations) ... ok
 test_two_steps_retained_and_third_only_supplies_boundary (test_consecutive_timeline.ConsecutiveTimeline.test_two_steps_retained_and_third_only_supplies_boundary) ... ok
 test_duplicate_step_rejected_but_separate_repeats_allowed (test_consecutive_timeline.PhaseAverages.test_duplicate_step_rejected_but_separate_repeats_allowed) ... ok
+test_impossible_token_counts_rejected (test_consecutive_timeline.PhaseAverages.test_impossible_token_counts_rejected) ... ok
+test_missing_emitted_tokens_are_not_inferred_from_al (test_consecutive_timeline.PhaseAverages.test_missing_emitted_tokens_are_not_inferred_from_al) ... ok
 test_negative_spare_and_graph_per_round_preserved (test_consecutive_timeline.PhaseAverages.test_negative_spare_and_graph_per_round_preserved) ... ok
 test_overall_uses_step_weights_and_empty_source_is_not_zero (test_consecutive_timeline.PhaseAverages.test_overall_uses_step_weights_and_empty_source_is_not_zero) ... ok
 test_overlap_comes_from_intervals_not_label (test_consecutive_timeline.PhaseAverages.test_overlap_comes_from_intervals_not_label) ... ok
+test_rates_al_and_tps_have_correct_denominators (test_consecutive_timeline.PhaseAverages.test_rates_al_and_tps_have_correct_denominators) ... ok
 test_render_shows_all_population_means_without_changing_windows (test_consecutive_timeline.PhaseAverages.test_render_shows_all_population_means_without_changing_windows) ... ok
 test_existing_benchmark_outcomes_adapter (test_consecutive_timeline.PortableExport.test_existing_benchmark_outcomes_adapter) ... ok
 test_export_redraw_without_original_server_files (test_consecutive_timeline.PortableExport.test_export_redraw_without_original_server_files) ... test_model test 2 eligible steps
@@ -19,6 +22,6 @@ ok
 test_rejects_ambiguous_sources_and_batched_outcomes (test_consecutive_timeline.PortableExport.test_rejects_ambiguous_sources_and_batched_outcomes) ... ok
 
 ----------------------------------------------------------------------
-Ran 17 tests in 3.246s
+Ran 20 tests in 3.700s
 
 OK

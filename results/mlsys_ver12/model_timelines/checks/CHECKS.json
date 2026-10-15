@@ -1,6 +1,6 @@
 {
   "status": "complete",
-  "git_commit": "3d1c5bf2c956b526024c0979e889728f99597fed",
+  "git_commit": "6b3c2b7bf50397e4f8597d9325676d523c4bf4c1",
   "runtime_commit": "9390e21",
   "runtime_file_count": 91,
   "runtime_matches_382_test_source": true,
@@ -9,7 +9,7 @@
   "new_cuda_run": false,
   "offline_suites": [
     {
-      "tests": 17,
+      "tests": 20,
       "errors": 0,
       "failures": 0,
       "skipped": 0,
@@ -41,7 +41,7 @@
       "returncode": 0
     }
   ],
-  "offline_tests": 39,
+  "offline_tests": 42,
   "source_unchanged": true,
   "source_hashes": {
     "ssd/ssd/__init__.py": "f1a221b38f55b42ef0619cba48a411acbbd1965c4845b4643f77443b7ce77950",
@@ -222,7 +222,7 @@
     "ssd/tests/test_blackwell_review.py": "5a008854e49d0b5f92b86cdf1bd7e9f2deb4a9a703bbc5f8a2aa663bd65627cc",
     "ssd/tests/test_cached_prefill.py": "ef30876f8543c88f7ea47c3c8a9ff5690584e4f5a621f4cea31301ea44d39ae7",
     "ssd/tests/test_common_port.py": "2ca91bb054107cfe1348ff4623259ef09408e9fd6b9db8beb1eeb4644f32b8fb",
-    "ssd/tests/test_consecutive_timeline.py": "c87acfe6d9f2b482a6200f6517bd7d9292d90d321203a2e98f30bc785fcc82b7",
+    "ssd/tests/test_consecutive_timeline.py": "018426e80c35dba2e993279396755e4b29acd5208dc38d38fa48d0b7a97404cb",
     "ssd/tests/test_context_length_contract.py": "aa07f2923ba2310589410025da9951c19a973e2320393f3760539dfb1a759b72",
     "ssd/tests/test_duet_parameters_v11.py": "75a0ddd531dc0babbbce8218984c7d1e0739d6736078c7b901724acd58c71003",
     "ssd/tests/test_duet_tps_summary.py": "3ec0079379e4c35479aab44e249adcb6c267d8af4b68ded97835483123a5cb37",
@@ -270,10 +270,10 @@
     "ssd/tests/test_ver10_checkpoint_rope.py": "15eaebce0772027cfdfb4b191048e1d38bff2f45afa4dbc65b414aacebf4a3f0",
     "ssd/tests/test_ver10_profile_analysis.py": "938658e5ca0b02f2d060e6f5027398617debdce644f15ce77fcccdd9d5eb7112",
     "ssd/tests/test_ver10_root_settings.py": "f8d778d0ebff40a98f98d6fea1ac6e5e637fd378eebbba139ddf5fc4488b2e3d",
-    "ssd/tools/duet_timeline/build_model_timelines.py": "2f61e4762c05e60954a97d753f7554a480c163a6cca25c48908e6dfd5c882aa3",
-    "ssd/tools/duet_timeline/export_profile_timelines.py": "7fdbc764263f57b1389bea303d6ceebb847f12c7df8b8df6e6f7a87767164823",
-    "ssd/tools/duet_timeline/phase_averages.py": "b346d60cb82d1e229bdc4557f078feee6eff7cc9a8f08e79a5171e5ead71c1b9",
-    "ssd/tools/duet_timeline/plot_consecutive_steps.py": "98cf483cfb469cf933719aed0fce9c80e10fb23c72fd63297ed1cd0a22fe9c7d",
+    "ssd/tools/duet_timeline/build_model_timelines.py": "11c35efa546880dfc05d3ef8023063f8cddd5ccb55ebe8d49ecbc400196583bd",
+    "ssd/tools/duet_timeline/export_profile_timelines.py": "e798bd3b0cad5b3477bffa22f70af251a039d24e89d2d868424282873a8e88a9",
+    "ssd/tools/duet_timeline/phase_averages.py": "f6d2e343884238298b9c50ea5350753285ac72808af9ce1050bc6879e5e0d2a1",
+    "ssd/tools/duet_timeline/plot_consecutive_steps.py": "e7aa593f853562419ee967838c462af11b6343a06ee92735b71b716c86703910",
     "ssd/tools/duet_timeline/plot_model_aligned_timelines.py": "6a140deb7efdb4c46a7794fd5e1a134a0da222bb52e301622f61cc56fd7e26a1",
     "ssd/tools/duet_timeline/plot_model_breakdowns.py": "f30419d88818a5b1d0c442871994b229e4be88cf38ddbc4825664f86fd3780a2",
     "ssd/tools/duet_timeline/plot_model_native_events.py": "2260395f08fdea370a3343a71d0f8445702e652ec24e46e90cf64f2ca886dc55",
@@ -284,27 +284,27 @@
     {
       "file": "results/mlsys_ver12/model_timelines/llama2_7b_llama68m/AUDIT.json",
       "pages": 3,
-      "sha256": "fa147d7d25b6c65ec435381f120bf5f9a11f92efbe40526f5c0a49ef772c0902"
+      "sha256": "5cad48f6f7c54b99c24e54abe3ec8661dac28435baa3bfa6ca1f459ff5356224"
     },
     {
       "file": "results/mlsys_ver12/model_timelines/llama2_7b_amd135m/AUDIT.json",
       "pages": 3,
-      "sha256": "1fa4c6bacf1d972a47efe683a80aebeb60755eb718665ba8ad81c588b55b5e4d"
+      "sha256": "ed3249ead66eef609ffbb34e2d7c12e03684759eebc2ff876a81d336a1775f76"
     },
     {
       "file": "results/mlsys_ver12/model_timelines/llama2_13b_amd135m/AUDIT.json",
       "pages": 3,
-      "sha256": "e382202f31427bc6a0bba970647bbef9b2e3eea1a962f3314551bba23c385471"
+      "sha256": "0e40206ca4cf12bb7afc3545f3a1646e7232ecefc705688c769cedcbc91c30dd"
     },
     {
       "file": "results/mlsys_ver12/model_timelines/llama3_8b_drafter340m/AUDIT.json",
       "pages": 3,
-      "sha256": "84cd8b37fffd65d5e479c7318958fbd5dffd6a633cbf8d2e259011ce4e628538"
+      "sha256": "4c3a549b943ba06a3d08067eb45508a662caa0fa03288cc78866f0a19ae7e643"
     },
     {
       "file": "results/mlsys_ver12/model_timelines/codellama34b_amd135m_code/AUDIT.json",
       "pages": 5,
-      "sha256": "438dcf7bd644f9cc4a08fa8173c0f37dde62397e7a584f4a24c05785cb8c764b"
+      "sha256": "41772bc64f9a4ece6579fef9cd12339c42accd06e53b055f96302f22b48bc472"
     }
   ],
   "python": "/home/chokwans99/PSD/ssd/.venv/bin/python",
