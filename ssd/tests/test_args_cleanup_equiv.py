@@ -1,16 +1,12 @@
-"""Equivalence tests for the args/config cleanup (docs/duet/16, Tier 1-3).
+"""CPU parameter migration and shape invariants for MLSys v1.1.
 
-Contract: the new interface (canonical aliases, env retirement,
-duet_p2_budget) must produce a Config identical to the old interface
-(env-driven, formula-derived) for the champion shape — field-for-field.
-
-CPU-only; needs the champion model dirs (AutoConfig reads config.json).
-Run from project root (/home/chokwans99/PSD/ssd):
-    python -m unittest tests.test_args_cleanup_equiv
+Synthetic HF configs avoid dependencies on a particular model mount.
 """
 import dataclasses
 import os
 import unittest
+from unittest.mock import patch
+from transformers import LlamaConfig
 
 _TM = "/data2/chokwans99/awq_calibrated/layerskip_llama2_70b"
 _DM = "/data2/chokwans99/awq_calibrated/tinyllama_1b"
@@ -38,7 +34,12 @@ def _mk(env, **overrides):
         for k in saved:
             os.environ.pop(k, None)
         os.environ.update(env)
-        cfg = Config(**{**_CHAMPION_KW, **overrides})
+        def hf(path):
+            return LlamaConfig(num_hidden_layers=80 if path==_TM else 22,
+                               max_position_embeddings=2048)
+        with patch('ssd.config.os.path.isdir', return_value=True), \
+             patch('ssd.config.AutoConfig.from_pretrained', side_effect=hf):
+            cfg = Config(**{**_CHAMPION_KW, **overrides})
         _LAST_EXPORTS.clear()
         _LAST_EXPORTS.update({k: os.environ.get(k) for k in saved})
         return cfg
@@ -55,7 +56,6 @@ def _diff(a, b):
             if k not in _SKIP_ATTRS and getattr(a, k) != getattr(b, k)]
 
 
-@unittest.skipUnless(_HAVE_MODELS, "champion model dirs not present")
 class TestOldNewEquivalence(unittest.TestCase):
     def test_dynamic_tree_is_the_duet_default_and_chain_is_explicit(self):
         dynamic = _mk({})
@@ -88,7 +88,10 @@ class TestOldNewEquivalence(unittest.TestCase):
     def test_normalized_config_is_dataclasses_replace_safe(self):
         original = _mk({}, duet_p1_tree_policy="on",
                        duet_p2_tree_policy="on")
-        copied = dataclasses.replace(original)
+        with patch('ssd.config.os.path.isdir', return_value=True), \
+             patch('ssd.config.AutoConfig.from_pretrained', side_effect=lambda path:
+                   original.hf_config if path == _TM else original.draft_hf_config):
+            copied = dataclasses.replace(original)
         self.assertEqual(copied.duet_p1_tree_policy, "on")
         self.assertEqual(copied.duet_p2_tree_policy, "on")
         self.assertEqual(copied.duet_tree_policy, "dynamic")
@@ -104,23 +107,12 @@ class TestOldNewEquivalence(unittest.TestCase):
         self.assertEqual(c.duet_tree_wire_nodes, 12)
         self.assertEqual(c.duet_response_token_width, 13)
 
-    def test_verify_cap_is_separate_from_generated_tree_width(self):
-        c = _mk({}, duet_p1_tree_policy="on",
-                duet_p1_tree_max_nodes=18,
-                duet_p2_tree_max_nodes=8,
-                duet_p1_tree_verify_nodes=12,
-                duet_p2_tree_verify_nodes=7)
-        self.assertEqual(c.duet_p1_tree_max_nodes, 18)
-        self.assertEqual(c.duet_p2_tree_max_nodes, 8)
-        self.assertEqual(c.duet_tree_wire_nodes, 12)
-        # Ordinary K1+K2 chain responses still need 13 token slots.
-        self.assertEqual(c.duet_response_token_width, 13)
-
-    def test_verify_cap_cannot_exceed_generated_nodes(self):
-        with self.assertRaisesRegex(ValueError, "verify nodes"):
-            _mk({}, duet_p1_tree_policy="on",
-                duet_p1_tree_max_nodes=12,
-                duet_p1_tree_verify_nodes=13)
+    def test_unequal_generation_and_verification_caps_are_rejected(self):
+        for generated, verify in ((18,12),(12,13)):
+            with self.assertRaisesRegex(ValueError, "G=M"):
+                _mk({}, duet_p1_tree_policy="on",
+                    duet_p1_tree_max_nodes=generated,
+                    duet_p1_tree_verify_nodes=verify)
 
     def test_tree_response_can_exceed_chain_depth(self):
         c = _mk({}, duet_p1_tree_policy="on",
@@ -137,7 +129,7 @@ class TestOldNewEquivalence(unittest.TestCase):
                    duet_p1_tree_max_nodes=28)
         self.assertEqual(shallow.duet_p1_tree_max_nodes, 8)
         self.assertEqual(wide.duet_p1_tree_max_nodes, 28)
-        self.assertEqual(shallow.duet_p1_tree_forward_scale, 1.0)
+        self.assertIsNone(shallow.duet_p1_forward_width)
 
     def test_env_free_equals_old_env_style(self):
         # Old style: champion scripts exported both envs.

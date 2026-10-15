@@ -39,6 +39,18 @@ def runtime_manifest(config, hf, rank, is_draft, target_tp, device):
             ('SSD_P1_TREE_EXEC_WORKSPACE_MB',128))})
     if config.duet_enabled:
         from ssd.engine.helpers.root_policy_config import options
+        result['duet_parameters'] = dict(
+            version='1.1', generation_equals_verification=True,
+            ds_roots_per_position=config.duet_p1_roots_per_position,
+            ps_roots=config.duet_p2_active_root_count,
+            ds_continuation_input_cap=config.duet_p1_forward_width,
+            ps_forward_inputs=config.duet_proxy_total_budget,
+            ds_nodes=config.duet_p1_tree_verify_nodes,
+            ps_nodes=config.duet_p2_tree_verify_nodes,
+            siblings=config.duet_tree_c_tensor,
+            local_top_L=config.duet_proxy_top_k,
+            transmitted_candidates=config.duet_proxy_wire_N,
+            expansion_thresholds=0)
         policy = options(config)
         result['policy'] = dict(root=policy['source'], normalization=policy['normalization'],
             overlap_mix=policy['overlap_mix'], candidate_temperature='request temperature; T0 soft score',

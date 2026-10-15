@@ -4,6 +4,7 @@ from transformers import AutoConfig
 import torch
 from ssd.paths import DEFAULT_TARGET, DEFAULT_DRAFT
 from ssd.engine.helpers.tree_expansion_config import resolve_tree_expansion, validate_tree_score_mode
+from ssd.engine.helpers.duet_parameters import canonical_config, positive_int
 
 
 def _normalize_tree_switches(p1_policy: str, p2_policy: str,
@@ -59,6 +60,7 @@ def _ensure_head_dim(hf_config: AutoConfig) -> None:
         hf_config.head_dim = hf_config.hidden_size // hf_config.num_attention_heads
 
 
+@canonical_config
 @dataclass
 class Config:
     model: str = DEFAULT_TARGET
@@ -117,7 +119,6 @@ class Config:
     duet_root_normalization: str = "topm"  # retained top-M (default) | full vocabulary
     duet_root_overlap_mix: float = 0.25  # weight of h_bar, not of h_hat
     duet_exit_layer: int | None = None      # None=auto: 2*L//3
-    duet_proxy_top_k: int = 3              # proxy correction token count
     duet_draft_fan_out: int | None = None   # draft-sourced branches per position (None=auto: fan_out//2)
     duet_policy: str = "b"                  # Phase-2 budget policy: "b" = unified K+1 P_iv (only option;
                                             # Policy "a" was removed 2026-07 — see git history).
@@ -127,12 +128,10 @@ class Config:
     # for old-script compat and the resolved value is re-exported for the
     # draft process import-time read.
     duet_jit_short: bool = True
-    # Direct Phase-2 seed budget (docs/duet/16 Tier-3). None → derived
-    # pfo*(K_max+1) (100% 재현). When set it is THE single source: layout
-    # MQ_LEN / scheduler reservation / wire sizing read
-    # duet_proxy_total_budget, and the verifier's per-step K-position
-    # allocation scales proportionally (duet_p2_budget_at).
-    duet_p2_budget: int | None = None
+    # Per-forward input widths. DS is a continuation-row cap; its first
+    # forward always evaluates all context roots. None uses all DS roots.
+    duet_p1_forward_width: int | None = None
+    duet_p2_forward_width: int | None = None
     # DUET dynamic trees.  Public policy names deliberately describe whether
     # *our* method is enabled; they do not expose the name of an external
     # baseline that inspired part of the selector.  P2 stays enabled by
@@ -150,23 +149,12 @@ class Config:
     duet_p1_tree_expansion: str | None = None
     duet_p2_tree_expansion: str | None = None
     duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
-    # Per-phase maximum number of nodes generated for each cache root.  The
-    # optional verify-node limits keep a generation-order prefix
-    # after the matching root is known.  Separating the two quantities
-    # lets the draft search a wider tree without forcing the target to verify
-    # every generated node.  ``duet_tree_nv`` is a legacy P2 generation alias.
-    duet_p1_tree_max_nodes: int = 18
-    duet_p2_tree_max_nodes: int = 8
-    duet_p1_tree_verify_nodes: int | None = None
-    duet_p2_tree_verify_nodes: int | None = None
-    duet_tree_nv: int | None = None
-    # P1 creates this many uniform root candidates at every glue context.
+    # One node cap per phase: generation G and verification M are identical.
+    duet_p1_tree_verify_nodes: int = 18
+    duet_p2_tree_verify_nodes: int = 8
+    # DS roots are per position; PS roots are total after DS deduplication.
     duet_p1_roots_per_position: int = 2
-    # P1 roots and forward cells are different quantities.  A scale above
-    # one is enough for the production dynamic policy: round zero evaluates
-    # every root, then the R*C sampled children compete for the next R lanes.
-    # Values above one remain an explicit compute/coverage experiment knob.
-    duet_p1_tree_forward_scale: float = 1.0
+    duet_p2_root_count: int | None = None
     # P1 is a future cache-key forest rather than one current-request tree.
     # ``dynamic`` uses the last/frontier choice above; ``backbone`` reserves
     # one continuation lane per root and therefore guarantees one full-depth
@@ -178,20 +166,6 @@ class Config:
     # Legacy fixed-backbone reproduction knob.  The production dynamic
     # selector decides fanout with its global allocation rule instead.
     duet_tree_fanout_policy: str = "backbone"   # backbone | ctensor
-    # 이슈 #24 (리뷰 2B): R(예산 받는 root 수)을 W와 분리 — W/CG/예약
-    # 불변, P_iv 상위 R root만 예산 (나머지는 뷰 없음 → #14 키 무효화
-    # = 명시적 miss). None = 전 seed (R=W, 종전 동작).
-    duet_tree_root_count: int | None = None
-    # Optional historical expansion floors (disabled in the q-path default).
-    # Round zero ignores them so every root/cache key is retained.
-    # P2 expansion floors.  P1 has a different score source and scale, so it
-    # must not silently inherit thresholds calibrated on early-exit proxy
-    # scores.  All variants keep round-zero roots/children and only suppress
-    # deeper expansion.
-    duet_tree_proxy_threshold: float = 0.0
-    duet_tree_conf_threshold: float = 0.0
-    duet_p1_tree_start_threshold: float = 0.0
-    duet_p1_tree_conf_threshold: float = 0.0
     # Split-K1/K2 mode (per docs/duet/04-split-k1k2-design.md).
     # K1 = Phase 1 forward depth, K2 = Phase 2 forward depth.
     # K1 + K2 == speculate_k. Legacy split-chain graphs require K2 <= K1;
@@ -256,6 +230,47 @@ class Config:
     max_steps: int | None = None
 
     @property
+    def duet_p1_tree_max_nodes(self):
+        return self.duet_p1_tree_verify_nodes
+
+    @property
+    def duet_p2_tree_max_nodes(self):
+        return self.duet_p2_tree_verify_nodes
+
+    @property
+    def duet_tree_nv(self):
+        return self.duet_p2_tree_verify_nodes
+
+    @property
+    def duet_p2_budget(self):
+        return self.duet_p2_forward_width
+
+    @property
+    def duet_tree_root_count(self):
+        return self.duet_p2_root_count
+
+    @property
+    def duet_proxy_top_k(self):
+        """Local top-L candidates; target sends only global wire_N entries."""
+        return self.duet_proxy_wire_N if self.duet_enabled else 3
+
+    @property
+    def duet_tree_proxy_threshold(self):
+        return 0.0
+
+    @property
+    def duet_tree_conf_threshold(self):
+        return 0.0
+
+    @property
+    def duet_p1_tree_start_threshold(self):
+        return 0.0
+
+    @property
+    def duet_p1_tree_conf_threshold(self):
+        return 0.0
+
+    @property
     def max_blocks(self):
         return (self.max_model_len + self.kvcache_block_size - 1) // self.kvcache_block_size
 
@@ -305,8 +320,8 @@ class Config:
             # supported experiment knob.  R>W is rejected in __post_init__
             # because round zero must evaluate every root in one W-wide
             # forward.
-            return (int(self.duet_tree_root_count)
-                    if self.duet_tree_root_count is not None
+            return (int(self.duet_p2_root_count)
+                    if self.duet_p2_root_count is not None
                     else self.duet_proxy_total_budget)
         if getattr(self, "duet_tree_policy", "off") == "coverage":
             # Legacy coverage always keeps every root retained by the chain
@@ -318,8 +333,8 @@ class Config:
             k2 = int(self.duet_phase2_k or self.speculate_k)
             return min(width, max(1, (width * k2) // (k2 + 2)))
         if getattr(self, "duet_tree_policy", "off") != "off" \
-                and self.duet_tree_root_count is not None:
-            return int(self.duet_tree_root_count)
+                and self.duet_p2_root_count is not None:
+            return int(self.duet_p2_root_count)
         return self.duet_proxy_total_budget
 
     @property
@@ -474,8 +489,8 @@ class Config:
 
         See docs/duet/05-policy-b-fix.md Section 3.5 / 3.7.
         """
-        if self.duet_p2_budget is not None:
-            return self.duet_p2_budget
+        if self.duet_p2_forward_width is not None:
+            return self.duet_p2_forward_width
         # Tier-3: field-based split detection — the property must not depend
         # on call-time environ (post-init the env is guaranteed set for DUET,
         # but a Config object's derived values should be self-contained).
@@ -492,10 +507,10 @@ class Config:
         quantity as duet_proxy_total_budget). Default path reproduces the
         historical pfo*(K+1) exactly; a direct duet_p2_budget scales
         proportionally by position count (== exact on full-K steps)."""
-        if self.duet_p2_budget is None:
+        if self.duet_p2_forward_width is None:
             return self.duet_proxy_fan_out * (K + 1)
         K_max = max(self.duet_phase1_k, self.duet_phase2_k)
-        return max(1, round(self.duet_p2_budget * (K + 1) / (K_max + 1)))
+        return max(1, round(self.duet_p2_forward_width * (K + 1) / (K_max + 1)))
 
     def __post_init__(self):
         if self.dtype not in (None, 'float16', 'bfloat16'):
@@ -522,37 +537,12 @@ class Config:
                     and _allocation not in ("dynamic", "eagle")):
                 raise ValueError(
                     f"{_phase} frontier requires dynamic allocation, not {_allocation!r}")
-        if self.duet_tree_nv is not None:
-            self.duet_p2_tree_max_nodes = int(self.duet_tree_nv)
-        self.duet_tree_nv = int(self.duet_p2_tree_max_nodes)
-        if self.duet_p1_tree_verify_nodes is None:
-            self.duet_p1_tree_verify_nodes = int(
-                self.duet_p1_tree_max_nodes)
-        if self.duet_p2_tree_verify_nodes is None:
-            self.duet_p2_tree_verify_nodes = int(
-                self.duet_p2_tree_max_nodes)
-        if self.duet_p1_roots_per_position < 1:
-            raise ValueError(
-                "duet_p1_roots_per_position must be >= 1; got "
-                f"{self.duet_p1_roots_per_position}")
-        if not (1.0 <= self.duet_p1_tree_forward_scale <= 2.0):
-            raise ValueError(
-                "duet_p1_tree_forward_scale must be in [1,2]; got "
-                f"{self.duet_p1_tree_forward_scale}")
-        if self.duet_p1_tree_max_nodes < 1 \
-                or self.duet_p2_tree_max_nodes < 1:
-            raise ValueError(
-                "duet_p1_tree_max_nodes and duet_p2_tree_max_nodes must be "
-                "positive")
-        for _phase, _verify, _generated in (
-                ("P1", self.duet_p1_tree_verify_nodes,
-                 self.duet_p1_tree_max_nodes),
-                ("P2", self.duet_p2_tree_verify_nodes,
-                 self.duet_p2_tree_max_nodes)):
-            if not (1 <= int(_verify) <= int(_generated)):
-                raise ValueError(
-                    f"{_phase} tree verify nodes must be in "
-                    f"[1, generated={int(_generated)}]; got {_verify}")
+        for name in ('duet_p1_tree_verify_nodes', 'duet_p2_tree_verify_nodes',
+                     'duet_p1_roots_per_position'):
+            positive_int(name, getattr(self, name))
+        for name in ('duet_p1_forward_width', 'duet_p2_forward_width',
+                     'duet_p2_root_count'):
+            positive_int(name, getattr(self, name), optional=True)
 
         model = self.model 
         if not (os.path.isdir(model)):
@@ -712,8 +702,8 @@ class Config:
                 self.duet_draft_fan_out = max(1, self.async_fan_out // 2)
             explicit_split = (self.duet_phase1_k is not None
                               and self.duet_phase2_k is not None
-                              and self.duet_p2_budget is not None
-                              and self.duet_p2_budget > 0)
+                              and self.duet_p2_forward_width is not None
+                              and self.duet_p2_forward_width > 0)
             limit = self.async_fan_out if explicit_split else self.async_fan_out - 1
             if not 1 <= self.duet_draft_fan_out <= limit:
                 raise ValueError(
@@ -760,9 +750,9 @@ class Config:
                         f"DUET split requires K2 <= K1 (short/long CG bucket "
                         f"invariant); got K1={self.duet_phase1_k}, "
                         f"K2={self.duet_phase2_k}")
-                if self.duet_p2_budget is not None and self.duet_p2_budget < 1:
+                if self.duet_p2_forward_width is not None and self.duet_p2_forward_width < 1:
                     raise ValueError(
-                        f"duet_p2_budget must be >= 1; got {self.duet_p2_budget}")
+                        f"duet_p2_forward_width must be >= 1; got {self.duet_p2_forward_width}")
                 # Dynamic-tree knobs — -O 생존형 raise.
                 if self.duet_tree_policy not in (
                         "off", "dynamic", "hybrid", "adaptive", "eagle",
@@ -811,32 +801,16 @@ class Config:
                                 f"[1,max_model_len={self.max_model_len}); "
                                 f"got {_nodes}")
                     if self.duet_p2_tree_policy == "on" \
-                            and self.duet_tree_root_count is not None and \
-                            self.duet_tree_root_count < 1:
+                            and self.duet_p2_root_count is not None and \
+                            self.duet_p2_root_count < 1:
                         raise ValueError(
-                            f"duet_tree_root_count must be >= 1; got "
-                            f"{self.duet_tree_root_count}")
-                    if not (0.0 <= self.duet_tree_proxy_threshold <= 1.0):
-                        raise ValueError(
-                            "duet_tree_proxy_threshold must be in [0,1]; "
-                            f"got {self.duet_tree_proxy_threshold}")
-                    if not (0.0 <= self.duet_tree_conf_threshold <= 1.0):
-                        raise ValueError(
-                            "duet_tree_conf_threshold must be in [0,1]; "
-                            f"got {self.duet_tree_conf_threshold}")
-                    if not (0.0 <= self.duet_p1_tree_start_threshold <= 1.0):
-                        raise ValueError(
-                            "duet_p1_tree_start_threshold must be in [0,1]; "
-                            f"got {self.duet_p1_tree_start_threshold}")
-                    if not (0.0 <= self.duet_p1_tree_conf_threshold <= 1.0):
-                        raise ValueError(
-                            "duet_p1_tree_conf_threshold must be in [0,1]; "
-                            f"got {self.duet_p1_tree_conf_threshold}")
+                            f"duet_p2_root_count must be >= 1; got "
+                            f"{self.duet_p2_root_count}")
                     if (self.duet_p2_tree_policy == "on"
                             and self.duet_tree_policy == "coverage"
-                            and self.duet_tree_root_count is not None):
+                            and self.duet_p2_root_count is not None):
                         raise ValueError(
-                            "duet_tree_root_count cannot be set with "
+                            "duet_p2_root_count cannot be set with "
                             "duet_tree_policy=coverage: coverage keeps all "
                             "chain roots by definition")
                     if (self.duet_p2_tree_policy == "on"
@@ -861,14 +835,14 @@ class Config:
                     # 이슈 #27: tip 의무 lane이 W(=P2 예산)를 초과하면
                     # rollout이 구조적으로 불가 — config에서 조기 차단.
                     if (self.duet_p2_tree_policy == "on"
-                            and self.duet_tree_root_count is not None
-                            and self.duet_tree_root_count
+                            and self.duet_p2_root_count is not None
+                            and self.duet_p2_root_count
                             > self.duet_proxy_total_budget):
                         # 리뷰9-2: p2_budget 명시 여부와 무관하게 유효
                         # W(파생값 포함)와 비교 (이슈 #27)
                         raise ValueError(
-                            f"duet_tree_root_count "
-                            f"({self.duet_tree_root_count}) must be <= "
+                            f"duet_p2_root_count "
+                            f"({self.duet_p2_root_count}) must be <= "
                             f"W ({self.duet_proxy_total_budget}) — "
                             f"tip 의무 lane > W (이슈 #27)")
                     # Tree-hit materialization now has its own common-width
@@ -956,84 +930,9 @@ class Config:
                     "(Phase 2 selection is uniform; would need policy-based "
                     "dynamic fan_out — separate design)."
                 )
-            # Auto-raise proxy_top_k. Two constraints (per docs/duet/05-policy-b-fix.md):
-            #   per-pos:  top_k ≥ total_budget + max(p1_fanout) + 2
-            #   total:    top_k ≥ ceil(wire_N / (K_min+1))
-            # buffer: max possible dedup loss across positions.
-            #   uniform: (K_max+1) * dfo
-            #   non-uniform: max(sum(p1_list), sum(p1_list[:K2+1]))
-            #     (long-hit + miss use full sum; short-hit uses prefix sum)
-            # split mode K_max = max(K1, K2) = K1 (K2 ≤ K1 invariant).
-            if _split_mode:
-                K_max = max(self.duet_phase1_k, self.duet_phase2_k)
-                K_min = min(self.duet_phase1_k, self.duet_phase2_k)
-            else:
-                K_max = self.speculate_k
-                K_min = self.speculate_k
-            K_plus_1 = K_max + 1
-            pfo = self.duet_proxy_fan_out
-            dfo = self.duet_draft_fan_out
-            # 리뷰10 원복: top_k는 W 기준 유지 — verifier가 top_k 절단
-            # 후 재정규화하므로 (truncated-dist) top_k 축소는 P_iv 값
-            # 자체를 바꾸는 '정책 변경' (동결 위반). wire_N/선택만 R.
-            total_budget = self.duet_proxy_total_budget
-
-            # List-aware Phase 1 fan-out stats — used in ALL cases when user
-            # provides list, otherwise fall back to uniform [dfo]*(K1+1).
-            if self.duet_only_proxy:
-                # Logical K1=0: P1 contributes no roots and therefore causes
-                # no proxy-candidate dedup loss.  Internal K1 remains positive
-                # solely to preserve the captured graph/buffer shape contract.
-                p1_sum_full = 0
-                p1_sum_short = 0
-                p1_max = 0
-            elif _split_mode and _p1_list is not None:
-                _p1_eff = list(_p1_list)
-                _K2p1 = self.duet_phase2_k + 1
-                p1_sum_full = sum(_p1_eff)
-                p1_sum_short = sum(_p1_eff[:_K2p1])
-                p1_max = max(_p1_eff) if _p1_eff else dfo
-            else:
-                # uniform fallback: list = [dfo] * (K1+1) when phase1_k set,
-                # else degenerate ([dfo] * (speculate_k+1) for legacy compat).
-                _K1p1 = (self.duet_phase1_k + 1) if self.duet_phase1_k is not None else self.speculate_k + 1
-                _K2p1 = (self.duet_phase2_k + 1) if self.duet_phase2_k is not None else self.speculate_k + 1
-                p1_sum_full = dfo * _K1p1
-                p1_sum_short = dfo * _K2p1
-                p1_max = dfo
-
-            if self.duet_p1_tree_policy == "on":
-                _ctx_max = max(
-                    self.duet_phase1_k + 1,
-                    self.duet_phase2_k + 1,
-                    self.duet_p1_tree_verify_nodes + 1,
-                    (self.duet_p2_tree_verify_nodes + 1
-                     if self.duet_p2_tree_policy == "on" else 0))
-                p1_sum_full = max(
-                    p1_sum_full,
-                    _ctx_max * self.duet_p1_roots_per_position)
-                p1_max = max(p1_max,
-                             self.duet_p1_roots_per_position)
-
-            buffer = max(p1_sum_full, p1_sum_short) + 2
-            wire_N = total_budget + buffer
-            per_pos_min = total_budget + p1_max + 2
-            total_min = -(-wire_N // (K_min + 1))                # ceil(wire_N / (K_min+1))
-            if getattr(self, "duet_tree_policy", "off") != "off":
-                # 이슈 #16: 트리 응답의 valid는 1까지 내려간다 (root 예산
-                # 1인 서브트리) — 위치축 (valid+1)=2 최악 기준으로 P_iv
-                # 후보가 wire_N을 덮도록 하한 상향.
-                total_min = max(total_min, -(-wire_N // 2))
-            required_top_k = max(per_pos_min, total_min)
-            if self.duet_proxy_top_k < required_top_k:
-                print(f'[Config] duet_proxy_top_k raised {self.duet_proxy_top_k} → {required_top_k} '
-                      f'(K_max={K_max} K_min={K_min} p1_sum_full={p1_sum_full} '
-                      f'p1_sum_short={p1_sum_short} p1_max={p1_max} '
-                      f'per_pos={per_pos_min} total={total_min} wire_N={wire_N})',
-                      flush=True)
-                self.duet_proxy_top_k = required_top_k
-            if not (self.duet_proxy_top_k >= 1):
-                raise ValueError("duet_proxy_top_k must be >= 1")
+            # Each position contributes top-L with L equal to the global
+            # wire count. Global top-N is then selected on target. The wire
+            # includes the derived DS dedup margin; L is not a tuning knob.
             if self.duet_proxy_on_draft or self.duet_exit_topm_gather:
                 raise ValueError('Local root policy requires full-vocabulary exit logits; raw/top-M proxy gates are unsupported')
             print(f'[DUET policy] root={self.duet_root_source} '
@@ -1080,26 +979,20 @@ class Config:
                     "only 'b' (unified K+1) remains. Policy A was removed "
                     "(2026-07); see git history."
                 )
-            print(f'[Config] DUET-SSD enabled: exit_layer={self.duet_exit_layer}, '
-                  f'only_proxy={self.duet_only_proxy}, '
-                  f'proxy_top_k={self.duet_proxy_top_k}, '
-                  f'draft_fan_out={self.duet_draft_fan_out}, proxy_fan_out={self.duet_proxy_fan_out}, '
-                  f'K1={self.duet_phase1_k}, K2={self.duet_phase2_k}, '
-                  f'P2_W={self.duet_proxy_total_budget}, '
-                  f'P1_tree={self.duet_p1_tree_policy}, '
-                  f'P1_alloc={self.duet_p1_tree_allocation_policy}, '
-                  f'P2_tree={self.duet_p2_tree_policy}, '
-                  f'tree_selector={self.duet_tree_policy}, '
-                  f'tree_R={self.duet_tree_root_count}, '
-                  f'P1_tree_nodes={self.duet_p1_tree_max_nodes}/'
-                  f'{self.duet_p1_tree_verify_nodes}(gen/verify), '
-                  f'P2_tree_nodes={self.duet_p2_tree_max_nodes}/'
-                  f'{self.duet_p2_tree_verify_nodes}(gen/verify), '
-                  f'P1_start_thr={self.duet_p1_tree_start_threshold}, '
-                  f'P1_conf_thr={self.duet_p1_tree_conf_threshold}, '
-                  f'tree_proxy_thr={self.duet_tree_proxy_threshold}, '
-                  f'tree_conf_thr={self.duet_tree_conf_threshold}',
+            print(f'[Config] DUET v1.1: exit={self.duet_exit_layer}, '
+                  f'K_DS/PS={self.duet_phase1_k}/{self.duet_phase2_k}, '
+                  f'DS_roots_per_position={self.duet_p1_roots_per_position}, '
+                  f'PS_roots={self.duet_p2_active_root_count}, '
+                  f'DS_continuation_input_cap={self.duet_p1_forward_width}, '
+                  f'PS_forward_inputs={self.duet_proxy_total_budget}, '
+                  f'DS/PS_G=M={self.duet_p1_tree_verify_nodes}/{self.duet_p2_tree_verify_nodes}, '
+                  f'C={self.duet_tree_c_tensor}, '
+                  f'auto_top_L={self.duet_proxy_top_k}, wire_N={self.duet_proxy_wire_N}, '
+                  f'normalization={self.duet_root_normalization}, '
+                  f'expansion={self.duet_tree_expansion}, '
+                  f'DS/PS_tree={self.duet_p1_tree_policy}/{self.duet_p2_tree_policy}',
                   flush=True)
+
 
         if not (self.max_num_batched_tokens >= self.max_model_len):
             raise ValueError('Invalid config.py contract: self.max_num_batched_tokens >= self.max_model_len')

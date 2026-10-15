@@ -21,8 +21,7 @@ import torch
 
 from ssd.engine.helpers.p2_tree import selected_q_probs_from_logits
 from ssd.engine.helpers.p2_tree_executor import P2TreeExecutor
-from ssd.utils.async_helpers.async_spec_helpers import (
-    compute_tree_forward_width)
+from ssd.engine.helpers.duet_parameters import p1_continuation_width
 
 
 def tree_node_buckets(max_nodes: int, first: int = 4) -> tuple[int, ...]:
@@ -257,54 +256,8 @@ class P1TreeExecutor(P2TreeExecutor):
                  materialize_backbone_logits=True):
         pfo = int(config.duet_p1_roots_per_position)
         root_count = int(context_bucket) * pfo
-        scale = float(config.duet_p1_tree_forward_scale)
-        allocation_policy = getattr(
-            config, "duet_p1_tree_allocation_policy", "dynamic")
-        # Every P1 cache-key root is evaluated once.  After that first round,
-        # only the globally best frontier nodes need model forwards.  The old
-        # executor replayed ``root_count`` rows for all K1 rounds, including
-        # up to 38 rows after a P1 tree hit, even when most lanes had already
-        # been rejected by the score thresholds.  Use the corresponding P1
-        # chain fanout sum as the continuation compute budget.  This keeps
-        # tree compute close to the established chain rather than silently
-        # shrinking it to the usually smaller P2 width.
-        fanout = getattr(config, "duet_split_phase1_fan_out_list", None)
-        if fanout is None:
-            default_fanout = int(getattr(
-                config, "duet_draft_fan_out",
-                config.duet_proxy_total_budget
-                // max(1, int(config.duet_phase1_k) + 1)))
-            fanout = [default_fanout] * (
-                int(config.duet_phase1_k) + 1)
-        else:
-            fanout = list(fanout)
-        if len(fanout) != int(config.duet_phase1_k) + 1:
-            raise ValueError(
-                "P1 executor fanout list must have K1+1 entries; got "
-                f"K1={config.duet_phase1_k}, fanout={fanout}")
-        short_contexts = int(config.duet_phase2_k) + 1
-        chain_width = sum(
-            fanout[:short_contexts]
-            if int(context_bucket) <= short_contexts else fanout)
-        if chain_width < 1:
-            raise ValueError(
-                f"P1 continuation width must be positive; fanout={fanout}")
-        # ``scale`` remains an explicit compute experiment multiplier, not a
-        # root-coverage knob.  It never forces more lanes than live roots.
-        # ``backbone`` is a semantic guarantee, not merely a selector hint.
-        # A tree hit can expose more contexts than the chain response, making
-        # R=context_count*pfo larger than the chain-sized continuation width.
-        # If we retained the smaller width, some roots would receive only the
-        # round-zero children and a later cache hit on those roots would have
-        # lower AL than the chain.  Full backbone therefore reserves one lane
-        # per root in every round.  Dynamic/hybrid remain compute-budgeted
-        # experiments and use the explicit chain-relative scale.
-        if allocation_policy == "backbone":
-            continuation_width = root_count
-        else:
-            continuation_width = min(
-                root_count,
-                compute_tree_forward_width(chain_width, scale))
+        allocation_policy = getattr(config, 'duet_p1_tree_allocation_policy', 'dynamic')
+        continuation_width = p1_continuation_width(config, root_count)
         round_widths = ((root_count,)
                         + (continuation_width,)
                         * max(0, int(config.duet_phase1_k) - 1))
@@ -324,9 +277,7 @@ class P1TreeExecutor(P2TreeExecutor):
         self._workspace_bytes = workspace_bytes(self._workspace_env, 128)
         self.context_bucket = int(context_bucket)
         self.roots_per_position = pfo
-        self.forward_scale = scale
         self.continuation_width = continuation_width
-        self.chain_forward_width = chain_width
         # Persistent root-preparation outputs.  They are populated on the
         # caller stream immediately before graph replay and are also the
         # executor's fixed graph inputs, removing a second set of allocations

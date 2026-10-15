@@ -91,43 +91,35 @@ def parse_arguments():
     parser.add_argument("--duet_root_source", choices=("complement", "residual", "proxy"),
                         default="complement", help="Cache token score; never changes target sampling.")
     parser.add_argument("--duet_root_normalization", choices=("full", "topm"), default="topm",
-                        help="Normalize over retained per-position top-M (default) or full vocabulary.")
+                        help="Normalize over automatically sized per-position top-L (default) or full vocabulary.")
     parser.add_argument("--duet_root_overlap_mix", type=float, default=.25,
                         help="Weight of h_bar in the terminal-position mixture (0=h_hat, 1=h_bar).")
     parser.add_argument("--duet_exit_layer", type=int, default=None,
                         help="Early-exit layer index (default: 2*L//3)")
-    parser.add_argument("--duet_proxy_top_k", type=int, default=3,
-                        help="Number of proxy correction tokens per position")
     parser.add_argument("--duet_draft_fan_out", type=int, default=None,
-                        help="Draft-sourced branches per position (default: fan_out//2)")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_policy", choices=("a", "b"), default="b",
-                        help="Phase-2 budget: 'b' = unified K+1 (default since 2026-04-29; "
-                             "see docs/duet/05-policy-b-fix.md). 'a' = legacy h_i proportional (dead branch).")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_phase1_k", type=int, default=None,
-                        help="v1 hybrid: Phase 1 forward depth K1 (must sum with --duet_phase2_k to --k). "
-                             "When set, enables hybrid v1 (proxy K2 + verify dispatch).")
+                        help='DS sequential forward count K1.')
     parser.add_argument("--duet_phase2_k", type=int, default=None,
-                        help="v1 hybrid: Phase 2 forward depth K2 = K_short. Required iff --duet_phase1_k is set.")
+                        help='PS sequential forward count K2.')
     parser.add_argument("--duet_split_phase1_fan_out_list", type=str, default=None,
-                        help="Split-only K1/K2: comma-separated per-position fan_out list "
-                             "for Phase 1 (length must be K1+1). E.g. '4,4,3,3,2,2,1,1,1' "
-                             "for K1=8. Default = uniform [draft_fo]*(K1+1).")
-    # Tier-1 canonical names (docs/duet/16). Old flags above still work and
-    # print a deprecation note; passing both with different values is an error.
+                        help=argparse.SUPPRESS)
+    # Historical short aliases remain hidden. Prefer names shared with Config.
     parser.add_argument("--duet_k1", type=int, default=None,
-                        help="Canonical alias for --duet_phase1_k (Phase 1 depth K1).")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_k2", type=int, default=None,
-                        help="Canonical alias for --duet_phase2_k (Phase 2 depth K2).")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_p1_fanout", type=int, default=None,
-                        help="Canonical alias for --duet_draft_fan_out.")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_p1_fanout_list", type=str, default=None,
-                        help="Canonical alias for --duet_split_phase1_fan_out_list "
-                             "(comma list, length K1+1).")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_no_jit_short", action="store_true",
                         help="Disable JIT-short (miss JIT at K2 depth). Default is ON "
                              "(champion standard; replaces SSD_DUET_JIT_SHORT=1).")
-    parser.add_argument("--duet_p2_budget", type=int, default=None,
-                        help="Direct Phase-2 seed budget (docs/duet/16 Tier-3). "
+    parser.add_argument("--duet_p2_forward_width", type=int, default=None,
+                        help="PS input rows per forward (separate from PS root count). "
                              "Default: derived pfo*(K1+1) where pfo = f - p1_fanout.")
     parser.add_argument("--duet_p1_tree_policy", choices=("off", "on"),
                         default="off",
@@ -150,58 +142,29 @@ def parse_arguments():
         parser.add_argument(f"--duet_{phase}_tree_expansion",
                             choices=("last", "frontier"), default=None,
                             help=f"Optional {phase.upper()} override of --duet_tree_expansion.")
-    parser.add_argument("--duet_p1_tree_max_nodes", type=int, default=18,
-                        help="Maximum P1 tree nodes generated per cache root.")
-    parser.add_argument("--duet_p2_tree_max_nodes", type=int, default=8,
-                        help="Maximum P2 tree nodes generated per cache root.")
-    parser.add_argument("--duet_p1_tree_verify_nodes", type=int, default=None,
-                        help="Maximum generation-order P1 prefix nodes sent on a hit. "
-                             "Default: all generated P1 nodes.")
-    parser.add_argument("--duet_p2_tree_verify_nodes", type=int, default=None,
-                        help="Maximum generation-order P2 prefix nodes sent on a hit. "
-                             "Default: all generated P2 nodes.")
+    parser.add_argument("--duet_p1_tree_verify_nodes", type=int, default=18,
+                        help="DS nodes per root: generation and verification share this cap (G=M).")
+    parser.add_argument("--duet_p2_tree_verify_nodes", type=int, default=8,
+                        help="PS nodes per root: generation and verification share this cap (G=M).")
     parser.add_argument("--duet_p1_roots_per_position", type=int, default=2,
                         help="Uniform number of P1 root candidates per glue position.")
-    parser.add_argument("--duet_p1_tree_forward_scale", type=float,
-                        default=1.0,
-                        help="P1 captured forward width / root count. The dynamic "
-                             "default is 1; values above 1 explicitly spend "
-                             "more compute on additional frontier lanes.")
+    parser.add_argument("--duet_p1_forward_width", type=int, default=None,
+                        help="DS continuation forward input cap. First forward evaluates all roots; "
+                             "smaller root buckets use fewer rows. Default: root count.")
     parser.add_argument(
         "--duet_p1_tree_allocation_policy", type=str, default="dynamic",
         choices=["dynamic", "backbone", "hybrid"],
         help=argparse.SUPPRESS)
-    parser.add_argument("--duet_tree_nv", type=int, default=None,
-                        help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_fanout_policy", type=str,
                         default="backbone", choices=["backbone", "ctensor"],
                         help=argparse.SUPPRESS)
-    parser.add_argument("--duet_tree_root_count", type=int, default=None,
-                        help="Number R of P2 roots. Dynamic P2 defaults to R=W; "
+    parser.add_argument("--duet_p2_root_count", type=int, default=None,
+                        help="Total PS roots after DS deduplication. Defaults to PS forward width; "
                              "R must not exceed the P2 forward width W. "
                              "Legacy level/frontier also honor this override; "
                              "confidence derives R and coverage keeps R=W.")
-    parser.add_argument("--duet_tree_proxy_threshold", type=float,
-                        default=0.0,
-                        help="Dynamic P2 tree: keep every root's first "
-                             "forward, but do not expand deeper below roots "
-                             "with a smaller root score (disabled by default).")
-    parser.add_argument("--duet_tree_conf_threshold", type=float,
-                        default=0.0,
-                        help="Dynamic P2 tree: keep the sampled child as a leaf, "
-                             "but do not expand deeper below children with "
-                             "smaller draft confidence (disabled by default).")
-    parser.add_argument("--duet_p1_tree_start_threshold", type=float,
-                        default=0.0,
-                        help="Dynamic P1 tree: minimum glue-reach*root-q start "
-                             "score for expansion after round zero. Default 0 "
-                             "keeps P1 unfiltered until phase-specific calibration.")
-    parser.add_argument("--duet_p1_tree_conf_threshold", type=float,
-                        default=0.0,
-                        help="Dynamic P1 tree: minimum local draft confidence "
-                             "for expansion after round zero. Default 0.")
     parser.add_argument("--duet_tree_beta", type=float, default=0.5,
-                        help="P2-tree: budget allocation exponent (E1 default 0.5).")
+                        help=argparse.SUPPRESS)
 
     # Weight-only quantization (target only) — AWQ Marlin is the supported path.
     # The legacy torchao backends (int4_wo_tile / int8_wo) remain in tree as an
@@ -244,24 +207,23 @@ def parse_arguments():
         assert args.temp == 0.0 and args.dtemp is None, "Eagle currently only supports greedy decoding (temp=0)"
         assert getattr(args, 'async', False), "Eagle currently only supports async speculative decoding"
 
-    # DUET Tier-1 alias normalization (docs/duet/16).
+    # Normalize historical aliases to the public Config names.
     if getattr(args, 'duet', False):
-        def _merge_alias(new_name, old_name):
-            new_v = getattr(args, new_name)
-            old_v = getattr(args, old_name)
-            if new_v is not None and old_v is not None and new_v != old_v:
+        def _merge_alias(canonical, alias):
+            value = getattr(args, canonical)
+            alias_value = getattr(args, alias)
+            if value is not None and alias_value is not None and value != alias_value:
                 raise SystemExit(
-                    f"[bench] --{new_name}={new_v} and --{old_name}={old_v} "
+                    f"[bench] --{canonical}={value} and --{alias}={alias_value} "
                     f"disagree; pass only one.")
-            if new_v is not None:
-                setattr(args, old_name, new_v)
-            elif old_v is not None:
-                print(f"[bench][deprecated] --{old_name} -> use --{new_name}",
+            if alias_value is not None:
+                setattr(args, canonical, alias_value)
+                print(f"[bench][deprecated] --{alias} -> use --{canonical}",
                       flush=True)
-        _merge_alias("duet_k1", "duet_phase1_k")
-        _merge_alias("duet_k2", "duet_phase2_k")
-        _merge_alias("duet_p1_fanout", "duet_draft_fan_out")
-        _merge_alias("duet_p1_fanout_list", "duet_split_phase1_fan_out_list")
+        _merge_alias("duet_phase1_k", "duet_k1")
+        _merge_alias("duet_phase2_k", "duet_k2")
+        _merge_alias("duet_draft_fan_out", "duet_p1_fanout")
+        _merge_alias("duet_split_phase1_fan_out_list", "duet_p1_fanout_list")
         # --k omission: derive k = K1 + K2 (Config asserts equality when
         # --k is passed explicitly).
         if (args.duet_phase1_k is not None and args.duet_phase2_k is not None
@@ -271,13 +233,13 @@ def parse_arguments():
                   flush=True)
         # --f omission with a direct budget: keeps the legacy pfo = f - dfo
         # derivation consistent (Config still computes pfo; the direct
-        # budget overrides the total via duet_p2_budget).
-        if (args.duet_p2_budget is not None and '--f' not in sys.argv
+        # budget overrides the total via duet_p2_forward_width).
+        if (args.duet_p2_forward_width is not None and '--f' not in sys.argv
                 and args.duet_draft_fan_out is not None
                 and args.duet_phase1_k is not None):
             import math
             args.f = args.duet_draft_fan_out + math.ceil(
-                args.duet_p2_budget / (args.duet_phase1_k + 1))
+                args.duet_p2_forward_width / (args.duet_phase1_k + 1))
             print(f"[bench] --f omitted -> derived f = p1_fanout + "
                   f"ceil(budget/(K1+1)) = {args.f}", flush=True)
     return args
@@ -390,13 +352,12 @@ def create_llm_kwargs(args, draft_path):
         llm_kwargs["jit_speculate"] = True  # DUET requires jit_speculate
         if args.duet_exit_layer is not None:
             llm_kwargs["duet_exit_layer"] = args.duet_exit_layer
-        llm_kwargs["duet_proxy_top_k"] = args.duet_proxy_top_k
         if args.duet_draft_fan_out is not None:
             llm_kwargs["duet_draft_fan_out"] = args.duet_draft_fan_out
         llm_kwargs["duet_policy"] = args.duet_policy
         llm_kwargs["duet_jit_short"] = not args.duet_no_jit_short
-        if args.duet_p2_budget is not None:
-            llm_kwargs["duet_p2_budget"] = args.duet_p2_budget
+        if args.duet_p2_forward_width is not None:
+            llm_kwargs["duet_p2_forward_width"] = args.duet_p2_forward_width
         llm_kwargs["duet_p1_tree_policy"] = args.duet_p1_tree_policy
         llm_kwargs["duet_p2_tree_policy"] = args.duet_p2_tree_policy
         if args.duet_tree_policy is not None:
@@ -413,10 +374,6 @@ def create_llm_kwargs(args, draft_path):
             llm_kwargs["duet_p1_tree_expansion"] = args.duet_p1_tree_expansion
             llm_kwargs["duet_p2_tree_expansion"] = args.duet_p2_tree_expansion
             llm_kwargs["duet_tree_c_tensor"] = args.duet_tree_c_tensor
-            llm_kwargs["duet_p1_tree_max_nodes"] = \
-                args.duet_p1_tree_max_nodes
-            llm_kwargs["duet_p2_tree_max_nodes"] = \
-                args.duet_p2_tree_max_nodes
             if args.duet_p1_tree_verify_nodes is not None:
                 llm_kwargs["duet_p1_tree_verify_nodes"] = \
                     args.duet_p1_tree_verify_nodes
@@ -425,24 +382,14 @@ def create_llm_kwargs(args, draft_path):
                     args.duet_p2_tree_verify_nodes
             llm_kwargs["duet_p1_roots_per_position"] = \
                 args.duet_p1_roots_per_position
-            llm_kwargs["duet_p1_tree_forward_scale"] = \
-                args.duet_p1_tree_forward_scale
+            llm_kwargs["duet_p1_forward_width"] = \
+                args.duet_p1_forward_width
             llm_kwargs["duet_p1_tree_allocation_policy"] = \
                 args.duet_p1_tree_allocation_policy
-            if args.duet_tree_nv is not None:
-                llm_kwargs["duet_tree_nv"] = args.duet_tree_nv
             llm_kwargs["duet_tree_beta"] = args.duet_tree_beta
             llm_kwargs["duet_tree_fanout_policy"] = args.duet_tree_fanout_policy
-            llm_kwargs["duet_tree_proxy_threshold"] = \
-                args.duet_tree_proxy_threshold
-            llm_kwargs["duet_tree_conf_threshold"] = \
-                args.duet_tree_conf_threshold
-            llm_kwargs["duet_p1_tree_start_threshold"] = \
-                args.duet_p1_tree_start_threshold
-            llm_kwargs["duet_p1_tree_conf_threshold"] = \
-                args.duet_p1_tree_conf_threshold
-            if args.duet_tree_root_count is not None:
-                llm_kwargs["duet_tree_root_count"] = args.duet_tree_root_count
+            if args.duet_p2_root_count is not None:
+                llm_kwargs["duet_p2_root_count"] = args.duet_p2_root_count
         if args.duet_phase1_k is not None:
             llm_kwargs["duet_phase1_k"] = args.duet_phase1_k
         if args.duet_phase2_k is not None:

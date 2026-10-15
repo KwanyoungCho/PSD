@@ -34,8 +34,9 @@ def make_config(**kwargs):
             draft_async=True, jit_speculate=True, duet_enabled=True,
             speculate_k=12, duet_phase1_k=8, duet_phase2_k=4,
             duet_exit_layer=56, async_fan_out=3, duet_draft_fan_out=3,
-            duet_p2_budget=15, max_model_len=2048)
-        values.update(kwargs)
+            duet_p2_forward_width=15, max_model_len=2048)
+        from ssd.engine.helpers.duet_parameters import normalize_duet_kwargs
+        values.update(normalize_duet_kwargs(kwargs))
         cfg=Config(**values)
         draft=DraftRunner.create_draft_config(cfg)
     return cfg,draft

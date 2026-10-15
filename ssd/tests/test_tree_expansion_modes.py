@@ -26,8 +26,8 @@ class Configuration(unittest.TestCase):
     def test_default_and_phase_overrides(self):
         self.assertEqual(Config.duet_tree_expansion, 'last')
         self.assertEqual(Config.duet_tree_c_tensor, 3)
-        self.assertEqual(Config.duet_tree_proxy_threshold, 0.)
-        self.assertEqual(Config.duet_tree_conf_threshold, 0.)
+        self.assertEqual(Config.__new__(Config).duet_tree_proxy_threshold, 0.)
+        self.assertEqual(Config.__new__(Config).duet_tree_conf_threshold, 0.)
         cfg = SimpleNamespace(duet_tree_expansion='frontier',
                               duet_p1_tree_expansion='last')
         self.assertEqual(resolve_tree_expansion(cfg, 'p1'), 'last')

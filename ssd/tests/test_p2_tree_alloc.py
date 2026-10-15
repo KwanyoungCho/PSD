@@ -323,20 +323,20 @@ class TestRootBudgets(unittest.TestCase):
     def test_global_root_count_defaults_to_width_and_honors_arg(self):
         cfg = object.__new__(Config)
         cfg.duet_tree_policy = "hybrid"
-        cfg.duet_tree_root_count = None
-        cfg.duet_p2_budget = 10
+        cfg.duet_p2_root_count = None
+        cfg.duet_p2_forward_width = 10
         cfg.duet_phase2_k = 4
         cfg.speculate_k = 13
         self.assertEqual(cfg.duet_p2_active_root_count, 10)
         self.assertEqual(cfg.duet_p2_seed_count, 10)
-        cfg.duet_tree_root_count = 7
+        cfg.duet_p2_root_count = 7
         self.assertEqual(cfg.duet_p2_active_root_count, 7)
         self.assertEqual(cfg.duet_p2_seed_count, 7)
 
     def test_canonical_confidence_root_count_is_derived(self):
         cfg = object.__new__(Config)
         cfg.duet_tree_policy = "confidence"
-        cfg.duet_p2_budget = 10
+        cfg.duet_p2_forward_width = 10
         cfg.duet_phase2_k = 4
         cfg.speculate_k = 13
         # 4 rounds x width 10, with 4 backbone + 2 rescue nodes/root.
@@ -347,7 +347,7 @@ class TestRootBudgets(unittest.TestCase):
             self.assertEqual(cfg.duet_p2_seed_count, 10)
         # Legacy policies keep their explicit reproduction knob.
         cfg.duet_tree_policy = "level"
-        cfg.duet_tree_root_count = 7
+        cfg.duet_p2_root_count = 7
         self.assertEqual(cfg.duet_p2_seed_count, 7)
 
     def test_coverage_policy_keeps_every_live_root(self):
@@ -355,8 +355,8 @@ class TestRootBudgets(unittest.TestCase):
         cfg.duet_tree_policy = "coverage"
         # Even a stale legacy override cannot silently violate the property;
         # Config validation rejects it in a fully initialized Config.
-        cfg.duet_tree_root_count = 3
-        cfg.duet_p2_budget = 10
+        cfg.duet_p2_root_count = 3
+        cfg.duet_p2_forward_width = 10
         cfg.duet_phase2_k = 4
         cfg.speculate_k = 13
         self.assertEqual(cfg.duet_p2_active_root_count, 10)

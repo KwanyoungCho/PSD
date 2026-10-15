@@ -31,7 +31,7 @@ class _MiniCfg:
     duet_phase1_k = 9
     duet_phase2_k = 4
     duet_p1_roots_per_position = 2
-    duet_p1_tree_forward_scale = 1.0
+    duet_p1_forward_width = None
     duet_draft_fan_out = 2
     duet_split_phase1_fan_out_list = [2, 2, 2, 2, 2, 2, 1, 1, 1, 1]
     duet_p1_tree_max_nodes = 13
@@ -254,6 +254,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         # shapes; eager and captured execution must remain identical.
         V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
         cfg = _MiniCfg()
+        cfg.duet_p1_forward_width = 16
         cfg.duet_tree_policy = "dynamic"
         cfg.duet_p1_tree_conf_threshold = 0.005
         max_blocks = 8
@@ -518,7 +519,6 @@ class TestExecutorModuleParity(unittest.TestCase):
             materialize_backbone_logits=False)
 
         self.assertEqual(ex.R, 39)
-        self.assertEqual(ex.chain_forward_width, 27)
         self.assertEqual(ex.continuation_width, 39)
         self.assertEqual(ex.round_widths, (39,) * 8)
 
@@ -546,6 +546,7 @@ class TestExecutorModuleParity(unittest.TestCase):
         dev = "cuda:0"
         V, H, HKV, D, PAGE = 128, 4, 2, 64, 64
         cfg = _MiniCfg()
+        cfg.duet_p1_forward_width = 16
         cfg.duet_tree_policy = "dynamic"
         cache = torch.zeros(8, 2, PAGE, HKV, D,
                             dtype=torch.float16, device=dev)

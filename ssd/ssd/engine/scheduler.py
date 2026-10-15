@@ -10,7 +10,8 @@ from ssd.engine.sequence import Sequence, SequenceStatus
 from ssd.engine.block_manager import BlockManager
 
 from ssd.utils.async_helpers.async_spec_helpers import (
-    compute_megaspec_lookahead, compute_tree_forward_width)
+    compute_megaspec_lookahead)
+from ssd.engine.helpers.duet_parameters import p1_continuation_width
 
 class Scheduler:
 
@@ -75,19 +76,7 @@ class Scheduler:
                 _p1_root_cap = (
                     _p1_context_cap
                     * int(config.duet_p1_roots_per_position))
-                if getattr(
-                        config, "duet_p1_tree_allocation_policy",
-                        "dynamic") == "backbone":
-                    # Full-root backbone is part of the public allocation
-                    # contract.  Mirror P1TreeExecutor exactly so every live
-                    # replay cell owns a scheduler-reserved KV slot.
-                    _p1_cont_width = _p1_root_cap
-                else:
-                    _p1_cont_width = min(
-                        _p1_root_cap,
-                        compute_tree_forward_width(
-                            self._sk_mq_p1,
-                            float(config.duet_p1_tree_forward_scale)))
+                _p1_cont_width = p1_continuation_width(config, _p1_root_cap)
                 self._sk_cells_p1 = (_p1_root_cap
                                      + max(0, self._sk_K1 - 1)
                                      * _p1_cont_width)

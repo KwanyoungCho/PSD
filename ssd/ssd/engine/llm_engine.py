@@ -2,6 +2,7 @@ import os
 import ssd.paths  # noqa: F401 — sets TORCH_CUDA_ARCH_LIST before flashinfer import
 
 from ssd.config import Config
+from ssd.engine.helpers.duet_parameters import normalize_duet_kwargs
 from ssd.sampling_params import SamplingParams
 from ssd.utils.misc import validate_speculative_vocab
 from ssd.engine.sequence import Sequence
@@ -50,7 +51,11 @@ METRICS = {
 class LLMEngine:
 
     def __init__(self, model, **kwargs):
+        kwargs = normalize_duet_kwargs(kwargs)
         config_fields = {field.name for field in fields(Config)}
+        unknown = sorted(k for k in kwargs if k.startswith('duet_') and k not in config_fields)
+        if unknown:
+            raise TypeError(f'Unknown DUET parameters: {unknown}')
         config_kwargs = {k: v for k, v in kwargs.items() if k in config_fields}
         config = Config(model, **config_kwargs)
         self.config = config

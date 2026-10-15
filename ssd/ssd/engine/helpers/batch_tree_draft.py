@@ -54,11 +54,12 @@ class BatchedDuetDraft:
                 cfg.duet_tree_c_tensor=1
                 if phase==1:
                     cfg.duet_p1_tree_allocation_policy='backbone'
-                    cfg.duet_p1_tree_max_nodes=cfg.duet_phase1_k
+                    cfg.duet_p1_tree_verify_nodes=cfg.duet_phase1_k
+                    cfg.duet_p1_forward_width=None
                     cfg.duet_p1_roots_per_position=cfg.duet_draft_fan_out
                 else:
                     cfg.duet_tree_policy='backbone'
-                    cfg.duet_p2_tree_max_nodes=cfg.duet_phase2_k
+                    cfg.duet_p2_tree_verify_nodes=cfg.duet_phase2_k
             hf=self.r.hf_config
             arenas=[]
             for b in range(capacity(self.cfg.max_num_seqs)):
