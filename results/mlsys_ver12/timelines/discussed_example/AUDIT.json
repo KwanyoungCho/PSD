@@ -1,0 +1,154 @@
+{
+  "schema": "duet-consecutive-window-v1",
+  "panels": [
+    {
+      "metrics": [
+        {
+          "step_id": 78,
+          "next_step_id": 79,
+          "cache_ready_ns": 218049468940729,
+          "draft_receive_ready_ns": 218049469232721,
+          "deadline_ns": 218049470256518,
+          "cache_margin_ms": 1.315789,
+          "ready_margin_ms": 1.023797,
+          "post_cache_cleanup_ms": 0.291992,
+          "next_send_ms": 0.328614,
+          "next_response_wait_ms": 3.396485,
+          "epoch": 2,
+          "title": "Previously discussed example | Llama2-7B + llama-68M | UID 244_t0 | steps 78-79",
+          "origin_ns": 218049444276049
+        },
+        {
+          "step_id": 79,
+          "next_step_id": 80,
+          "cache_ready_ns": 218049494767878,
+          "draft_receive_ready_ns": 218049495061823,
+          "deadline_ns": 218049496622241,
+          "cache_margin_ms": 1.854363,
+          "ready_margin_ms": 1.560418,
+          "post_cache_cleanup_ms": 0.293945,
+          "next_send_ms": 0.324707,
+          "next_response_wait_ms": 2.313477,
+          "epoch": 2,
+          "title": "Previously discussed example | Llama2-7B + llama-68M | UID 244_t0 | steps 78-79",
+          "origin_ns": 218049444276049
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 218049463837214,
+          "wall_end_ns": 218049465014460,
+          "step_id": 78,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 218049490180964,
+          "wall_end_ns": 218049491364557,
+          "step_id": 79,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 218049468940729,
+          "wall_end_ns": 218049469232721,
+          "step_id": 78,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 218049470378718,
+          "wall_end_ns": 218049470402155,
+          "step_id": 78,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 218049494767878,
+          "wall_end_ns": 218049495061823,
+          "step_id": 79,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 218049496739069,
+          "wall_end_ns": 218049496760553,
+          "step_id": 79,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 78,
+          "count": 6,
+          "start_ms": 9.274055,
+          "end_ms": 14.341926,
+          "schematic_boundaries_ms": [
+            10.118700166666667,
+            10.963345333333335,
+            11.8079905,
+            12.652635666666667,
+            13.497280833333335
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 78,
+          "count": 3,
+          "start_ms": 22.02259,
+          "end_ms": 24.074837,
+          "schematic_boundaries_ms": [
+            22.706672333333334,
+            23.390754666666666
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 79,
+          "count": 6,
+          "start_ms": 35.527473,
+          "end_ms": 40.438118,
+          "schematic_boundaries_ms": [
+            36.345913833333334,
+            37.16435466666667,
+            37.9827955,
+            38.801236333333335,
+            39.61967716666667
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 79,
+          "count": 3,
+          "start_ms": 47.918587,
+          "end_ms": 49.973762,
+          "schematic_boundaries_ms": [
+            48.60364533333333,
+            49.28870366666667
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "req2_step78.json",
+      "window_sha256": "036c1669a4af03e1d55b85e472a8114264927f25db313f5805bc97c0c390bb21"
+    }
+  ],
+  "tool_sha256": "a4855ea320150c86c421690d9fc6ae4577fe5c997f0239fb05ddae7d2550b92b",
+  "renderer_sha256": "b36388304aa62b720f628533698899cdf8d6aedb8590ff6255aba4f5911212f2",
+  "pages": 1,
+  "source_unchanged": true,
+  "portable_replay": false
+}

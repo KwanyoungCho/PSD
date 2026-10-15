@@ -1,0 +1,231 @@
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -2142,17 +2142,26 @@
+                             device=proxy_forked.device)], dim=1)
+             proxy_fan_out_tensor = proxy_fan_out_tensor.clone()
+             proxy_fan_out_tensor[:, -1] += pad
++        run_p2_tree = _should_run_p2_tree(
++            self.config, B, partial_tree_decode_args["temperatures"])
++        # This B1 tree-hit path already has a GPU ancestry mask. The captured
++        # executor needs no Python root positions. Eager/diagnostic fallback
++        # materializes them lazily in _p2tree_rollout.
++        defer_host_fanout = (run_p2_tree
++            and os.environ.get("SSD_TREE_EXEC", "0") == "1"
++            and os.environ.get("SSD_TREE_ARENA", "1") == "1")
+         layout_k2 = self._update_phase2_layout_inplace(
+-            proxy_fan_out_tensor, n_valid)
++            proxy_fan_out_tensor, n_valid,
++            defer_host_fanout=defer_host_fanout)
+         proxy_args = self._build_tree_decode_args_for_layout(
+             partial_tree_decode_args, proxy_forked,
+             layout_k2, cache_hits_list)
+ 
+         # B=1: layout already contains this exact position-to-root map.
+         seed_ctx = layout_k2.fan_idx_hit
+-        pos0 = int(partial_tree_decode_args["num_tokens"][0]) - 1
+         proxy_args["rope_positions"] = (
+-            pos0 + 1 + self._p1_context_depth.index_select(0, seed_ctx))
++            p1["num_tokens_host"]
++            + self._p1_context_depth.index_select(0, seed_ctx))
+         glue_rows = self._p1_context_glue_rows.index_select(
+             0, seed_ctx).to(dtype=torch.uint8)
+         proxy_args["glue_rows_override"] = glue_rows
+@@ -2160,7 +2169,7 @@
+         _mc("phase2_build", event)
+ 
+         temps_p2 = proxy_args["temps"]
+-        if _should_run_p2_tree(self.config, B, temps_p2):
++        if run_p2_tree:
+             proxy_tokens, proxy_logits = self._run_p2_tree_step(
+                 duet_proxy, proxy_forked, proxy_fan_out_tensor,
+                 proxy_piv, proxy_args, layout_k2, temps_p2)
+@@ -3264,6 +3273,8 @@
+         }
+         return {
+             "args": draft_args,
++            # Already read to prepare P1. Same request/prefix until PS ends.
++            "num_tokens_host": num_tokens0,
+             "tokens": ex.out_backbone_tok[:real_roots],
+             "logits": ex.out_backbone_logits[:real_roots],
+             "padded_roots": roots["tokens"][:real_roots].view(
+@@ -3290,7 +3301,7 @@
+     @torch.inference_mode()
+     def _try_p2_executor(self, toks, root_piv, glue_rows, rope_base,
+                          ctx_len, K_glue_used, step_slot_maps,
+-                         step_context_lens, dbt, temps, seeds):
++                         step_context_lens, dbt, temps, seeds, *, root_count=None):
+         """Try the full-P2 graph.
+ 
+         Unsupported, pre-classified shapes return ``None`` and may use the
+@@ -3299,7 +3310,7 @@
+         """
+         import numpy as _np
+         cfg = self.config
+-        R = len(seeds)
++        R = len(seeds) if root_count is None else root_count
+         W = cfg.duet_proxy_total_budget
+         F = cfg.duet_phase2_k
+         _s1_guard = None
+@@ -4667,21 +4678,27 @@
+         W = layout.MQ_LEN
+         K2 = cfg.duet_phase2_k
+         V = self.hf_config.vocab_size
+-        # _update_phase2_layout_inplace already paid the single fan-out
+-        # readback.  Reuse that host list instead of synchronizing again.
+-        _fol = layout.fan_out_list
+-        fo = _fol[0] if _fol and isinstance(_fol[0], list) else _fol
+-        seed_positions = [p for p, count in enumerate(fo)
+-                          for _ in range(count)]
++        from ssd.engine.helpers.p2_prepare import host_fanout
++        # On tree hits the GPU fan map/mask already encode root positions.
++        # Keep Python positions deferred until a backend actually needs them.
++        def host_seed_positions():
++            _fol = host_fanout(layout)
++            fo = _fol[0] if _fol and isinstance(_fol[0], list) else _fol
++            return [p for p, count in enumerate(fo) for _ in range(count)]
++
++        deferred = layout.fan_out_list is None
++        seed_positions = None if deferred else host_seed_positions()
+         toks = proxy_forked[0]
+         _use_arena = os.environ.get("SSD_TREE_ARENA", "1") == "1"
+         # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
+         seed_piv = tree_args.get("proxy_piv")
+         # 23번 단계1: fan 합은 layout 폭(pad 흡수)이지만 실제 seed는
+         # piv 폭 — pad 행은 root로 만들지 않는다 (빈 키는 #14 무효화).
+-        if seed_piv is not None and seed_piv.shape[1] < len(seed_positions):
+-            seed_positions = seed_positions[:seed_piv.shape[1]]
+-        R = len(seed_positions)
++        R = W if deferred else len(seed_positions)
++        if seed_piv is not None:
++            R = min(R, seed_piv.shape[1])
++        if seed_positions is not None:
++            seed_positions = seed_positions[:R]
+         toks = toks[:R]
+         root_piv = (seed_piv[0, :R].float() if seed_piv is not None
+                     else torch.full((R,), 1e-6, device=self.device))
+@@ -4711,8 +4728,11 @@
+                                    torch.zeros_like(root_piv))
+ 
+         if _use_arena:
+-            seeds = [(p, None) for p in seed_positions]
++            seeds = (None if deferred
++                     else [(p, None) for p in seed_positions])
+         else:
++            if seed_positions is None:
++                seed_positions = host_seed_positions()[:R]
+             seed_tokens = toks.cpu().tolist()
+             seeds = list(zip(seed_positions, seed_tokens))
+             root_piv = root_piv.cpu()
+@@ -4726,7 +4746,9 @@
+         else:
+             # 이슈 #7 수정: 글루 폭 = 위치축 길이 (vk+1) — K2+1로 자르면
+             # vk=K1 step에서 미래 토큰 누출/조기 절단 (stub은 vk=K2라 통과)
+-            _n_pos = len(fo)
++            if seeds is None:
++                seeds = [(p, None) for p in host_seed_positions()[:R]]
++            _n_pos = layout.position_count
+             glue_rows = _np.zeros((R, _n_pos), dtype=_np.uint8)
+             for r, (p, _t) in enumerate(seeds):
+                 glue_rows[r, :p + 1] = 1
+@@ -4773,6 +4795,8 @@
+         _mc_p2("p2_prepare", _mev_p2prep)
+         from ssd.engine.helpers.p2_prepare import host_glue_rows
+         if self._lab_active():
++            if seeds is None:
++                seeds = [(p, None) for p in host_seed_positions()[:R]]
+             try:
+                 self._lab_dump(toks, root_piv, host_glue_rows(glue_rows), rope_base,
+                                ctx_len, K_glue_used, step_slot_maps,
+@@ -4790,6 +4814,8 @@
+             _stage1 = False
+         _s1_art = None
+         if _stage1 and _use_arena:
++            if seeds is None:
++                seeds = [(p, None) for p in host_seed_positions()[:R]]
+             # The shadow executor must be observational only.  Keep a second
+             # set of sentinels around every live arena input so a bad graph or
+             # diagnostic restore is caught before the production CUDA graph
+@@ -4845,13 +4871,15 @@
+                 _r = self._try_p2_executor(
+                     toks, root_piv, glue_rows, rope_base, ctx_len,
+                     K_glue_used, step_slot_maps, step_context_lens, dbt,
+-                    temps, seeds)
++                    temps, seeds, root_count=R)
+             if _r is not None:
+                 _CH.cache.pop("_tree_mask_override", None)
+                 return _r
+         # Both the GPU arena and the CPU reference path end in the same view
+         # conversion stage.  Start its measurement before the branch so the
+         # diagnostic/reference path remains valid when SSD_TREE_ARENA=0.
++        if seeds is None:
++            seeds = [(p, None) for p in host_seed_positions()[:R]]
+         glue_rows = host_glue_rows(glue_rows)
+         _mev_cv2 = _mr_p2("p2_output_convert")
+         try:
+@@ -5047,7 +5075,8 @@
+             offset += fo
+         return flat, padded, mask
+ 
+-    def _update_phase2_layout_inplace(self, fan_out_tensor, K_rank):
++    def _update_phase2_layout_inplace(self, fan_out_tensor, K_rank, *,
++                                    defer_host_fanout=False):
+         """In-place update of self.split_k2_layout for unified Policy B.
+ 
+         Avoids per-step ``create_tree_layout(...)`` which allocates 6+ new
+@@ -5062,6 +5091,8 @@
+             fan_out_tensor: [B, K_rank+1] int64 GPU tensor; each row sums to
+                 total_budget (= layout MQ_LEN).
+             K_rank: int. position_count = K_rank+1 (uniform across the batch).
++            defer_host_fanout: internal B1 graph-only contract. Eager consumers
++                must materialize the counts with p2_prepare.host_fanout.
+ 
+         Returns:
+             self.split_k2_layout (mutated).
+@@ -5087,12 +5118,11 @@
+         # M3: fan_idx above already spans ALL seqs — consumers must not re-cat
+         # it per seq (see _build_tree_decode_args_for_layout / merge).
+         layout.fan_idx_per_seq = True
+-        # fan_out_list (Python list) — REQUIRED to match position_count by
+-        # cudagraph_helpers.run_fi_tree_decode_cudagraph (line 329:
+-        # np.repeat(_tril, _fol)). M3: list of per-seq lists [B][K_plus_1]
+-        # via ONE .tolist() (the same single allowed sync as pre-M3, now
+-        # B×(≤9) elements).
+-        layout.fan_out_list = fan_out_tensor.tolist()
++        # Legacy attention needs host counts; the full tree graph does not.
++        # Clear rather than keep an earlier request's stale counts. If the
++        # executor declines this shape, rollout materializes before fallback.
++        layout.fan_out_list = (None if defer_host_fanout
++                               else fan_out_tensor.tolist())
+         layout.fan_out_list_miss = layout.fan_out_list
+         return layout
+ 
+@@ -5258,7 +5288,10 @@
+         # metadata F: first-position fan_out as an int. M3: split_k2's
+         # fan_out_list is nested per-seq ([B][P]) — take seq 0's first entry
+         # (same value as the pre-M3 flat list at B=1).
+-        _f0 = layout.fan_out_list[0]
++        # F is unused by _run_p2_tree_step/_compute_step_positions_and_slot_maps.
++        # Only that path may have deferred host counts. The legacy chain path
++        # keeps the original F value and eager host lists.
++        _f0 = 0 if layout.fan_out_list is None else layout.fan_out_list[0]
+         if isinstance(_f0, list):
+             _f0 = _f0[0]
+         return {
+--- a/ssd/ssd/engine/helpers/p2_prepare.py
++++ b/ssd/ssd/engine/helpers/p2_prepare.py
+@@ -69,3 +69,15 @@
+     if torch.is_tensor(rows):
+         return rows.detach().cpu().numpy().astype(np.uint8, copy=False)
+     return rows
++
++
++def host_fanout(layout):
++    """Materialize deferred fan counts only for an eager/diagnostic consumer.
++
++    The captured tree executor needs the GPU fan map and the known root
++    count, not these Python counts. Never retain an earlier step's list.
++    """
++    if layout.fan_out_list is None:
++        layout.fan_out_list = layout.fan_out_t.tolist()
++        layout.fan_out_list_miss = layout.fan_out_list
++    return layout.fan_out_list

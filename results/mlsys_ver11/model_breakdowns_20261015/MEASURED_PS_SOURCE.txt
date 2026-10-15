@@ -1,0 +1,412 @@
+Measured source commit: 82d964e0260d4dd6bf01a311f8bd767f193ebfe7
+Path: ssd/ssd/engine/draft_runner.py
+Read-only excerpts; line numbers refer to this commit, not HEAD.
+
+
+2090:     def _tree_step_p1p2_dynamic(self, partial_tree_decode_args,
+2091:                                 glue_logits, gd_for_fork,
+2092:                                 cache_hits, cache_hits_list, dbt,
+2093:                                 proxy_recv_work, proxy_buf):
+2094:         """Continue a tree-hit request with captured dynamic P1 and P2."""
+2095:         from ssd.engine.helpers.cudagraph_helpers import (
+2096:             duet_record as _mr, duet_close as _mc)
+2097:         import numpy as _np
+2098: 
+2099:         p1 = self._run_p1_tree_step(
+2100:             partial_tree_decode_args, glue_logits, gd_for_fork,
+2101:             self._p1_context_glue_rows, self._p1_context_depth,
+2102:             cache_hits_list)
+2103:         if p1 is None:
+2104:             raise RuntimeError(
+2105:                 "P1 tree hit reached an unsupported dynamic-P1 shape; "
+2106:                 "the request should have been gated before tree serving: "
+2107:                 f"{getattr(self, '_p1_tree_fallback_reason', 'unknown')}")
+2108: 
+2109:         event = _mr("proxy_wait")
+2110:         proxy_recv_work.wait()
+2111:         _mc("proxy_wait", event)
+2112:         B = partial_tree_decode_args["num_tokens"].shape[0]
+2113:         K = self.config.speculate_k
+2114:         duet_proxy = self._unpack_duet_proxy(proxy_buf, B, K)
+2115:         if duet_proxy["chosen_pos"].dim() == 1:
+2116:             duet_proxy = {
+2117:                 "chosen_pos": duet_proxy["chosen_pos"].unsqueeze(0),
+2118:                 "chosen_tok": duet_proxy["chosen_tok"].unsqueeze(0),
+2119:                 **({"chosen_piv": duet_proxy["chosen_piv"].unsqueeze(0)}
+2120:                    if "chosen_piv" in duet_proxy else {}),
+2121:             }
+2122: 
+2123:         event = _mr("phase2_build")
+2124:         n_rows = glue_logits.shape[1]
+2125:         n_valid = n_rows - 1
+2126:         total_budget = self.config.duet_p2_seed_count
+2127:         selected = self._select_proxy_sourced_tokens_unified(
+2128:             duet_proxy, p1["padded_roots"], K_rank=n_valid,
+2129:             total_budget=total_budget,
+2130:             draft_forked_mask=p1["root_mask"])
+2131:         if len(selected) == 3:
+2132:             proxy_forked, proxy_fan_out_tensor, proxy_piv = selected
+2133:         else:
+2134:             proxy_forked, proxy_fan_out_tensor = selected
+2135:             proxy_piv = None
+2136:         W2 = self.split_k2_layout.MQ_LEN
+2137:         if proxy_forked.shape[1] < W2:
+2138:             pad = W2 - proxy_forked.shape[1]
+2139:             proxy_forked = torch.cat([
+2140:                 proxy_forked,
+2141:                 torch.zeros(1, pad, dtype=proxy_forked.dtype,
+2142:                             device=proxy_forked.device)], dim=1)
+2143:             proxy_fan_out_tensor = proxy_fan_out_tensor.clone()
+2144:             proxy_fan_out_tensor[:, -1] += pad
+2145:         layout_k2 = self._update_phase2_layout_inplace(
+2146:             proxy_fan_out_tensor, n_valid)
+2147:         proxy_args = self._build_tree_decode_args_for_layout(
+2148:             partial_tree_decode_args, proxy_forked,
+2149:             layout_k2, cache_hits_list)
+2150: 
+2151:         seed_ctx = torch.repeat_interleave(
+2152:             torch.arange(n_rows, dtype=torch.int64,
+2153:                          device=self.device),
+2154:             proxy_fan_out_tensor[0])
+2155:         pos0 = int(partial_tree_decode_args["num_tokens"][0]) - 1
+2156:         proxy_args["rope_positions"] = (
+2157:             pos0 + 1 + self._p1_context_depth.index_select(0, seed_ctx))
+2158:         glue_rows = self._p1_context_glue_rows.index_select(
+2159:             0, seed_ctx).detach().cpu().numpy().astype(_np.uint8, copy=False)
+2160:         proxy_args["glue_rows_override"] = glue_rows
+2161:         proxy_args["K_glue_override"] = n_valid
+2162:         _mc("phase2_build", event)
+2163: 
+2164:         temps_p2 = proxy_args["temps"]
+2165:         if _should_run_p2_tree(self.config, B, temps_p2):
+2166:             proxy_tokens, proxy_logits = self._run_p2_tree_step(
+2167:                 duet_proxy, proxy_forked, proxy_fan_out_tensor,
+2168:                 proxy_piv, proxy_args, layout_k2, temps_p2)
+2169:             proxy_acts = None
+2170:         else:
+2171:             self._tree_views = None
+2172:             proxy_tokens, proxy_logits, proxy_acts = self._decode_tree(
+2173:                 proxy_args, layout=layout_k2)
+2174: 
+2175:         self._merge_and_populate_cache(
+2176:             p1["args"], p1["tokens"], p1["logits"],
+2177:             proxy_args, proxy_tokens, proxy_logits,
+2178:             cache_hits_list, None, proxy_acts,
+2179:             proxy_layout=layout_k2,
+2180:             draft_layout=self.split_k1_long_layout,
+2181:             draft_fan_idx_override=p1["context_ids"])
+2182:         if getattr(self, "_p2_skip_step", None) is not None:
+2183:             self.tree_cache_keys[self._last_n_draft_keys:] = -1
+2184:             self._p2_skip_step = None
+2185:         self._invalidate_zero_valid_tree_keys()
+
+
+2607:     def _compute_step_positions_and_slot_maps(self, initial_positions, initial_rope_positions, dbt, B, K, F, N, MQ_LEN, layout=None):
+2608:         # PERFORMANCE: pre-allocated _step_pos_offsets/_step_rope_offsets avoid per-step torch.arange calls
+2609:         _layout = layout or self.full_layout
+2610:         step_positions = initial_positions[None, :] + _layout.step_pos_offsets
+2611:         step_rope_positions = initial_rope_positions[None, :] + _layout.step_rope_offsets
+2612:         step_context_lens = step_positions.view(K, B, _layout.MQ_LEN)[:, :, -1] + 1
+2613: 
+2614:         # Precompute slot_maps for all steps: [K, N]
+2615:         b_flat = torch.arange(B, device=self.device, dtype=torch.int64)[
+2616:             :, None].expand(B, _layout.MQ_LEN).flatten()
+2617:         batch_indices = torch.arange(N, device=self.device)
+2618:         dbt_expanded = dbt[b_flat]  # [N, M] - constant across steps
+2619: 
+2620:         step_offsets = (step_positions % self.block_size).to(torch.int32)  # [K, N]
+2621:         step_last_blks = (step_positions // self.block_size).to(torch.int64)  # [K, N]
+2622:         step_blk_ids = dbt_expanded[batch_indices[None, :], step_last_blks]  # [K, N]
+2623:         step_slot_maps = step_blk_ids * self.block_size + step_offsets  # [K, N]
+2624: 
+2625:         return step_positions, step_rope_positions, step_context_lens, step_slot_maps
+
+
+2857:     def _p2_step_state(self, rope0, step_slot_maps, step_context_lens,
+2858:                        dbt, F, W, root_count=None):
+2859:         """Classify one P2 step with exactly one device-to-host readback.
+2860: 
+2861:         ACTIVE inputs must have valid positions, slots, context lengths, and
+2862:         real prefix pages.  The extra attention-canvas page is deliberately
+2863:         excluded here: it is a masked read-only page and is filled with a
+2864:         known-valid page by the executor.  An IDLE/invalid step is skipped by
+2865:         both execution backends; it is never represented by ``-1`` inside a
+2866:         model forward.
+2867:         """
+2868:         ctx = step_context_lens[0].reshape(-1)[0].to(torch.int64)
+2869:         slots = torch.stack([m[:W] for m in step_slot_maps[:F]])
+2870:         ctxs = torch.stack(
+2871:             [c.reshape(-1)[0] for c in step_context_lens[:F]])
+2872:         # R (real roots) and W (captured forward width) are intentionally
+2873:         # different.  Padded root metadata may contain -1, while every one of
+2874:         # the W forward lanes still needs a safe KV slot.
+2875:         real_roots = W if root_count is None else min(int(root_count), W)
+2876:         if torch.is_tensor(rope0):
+2877:             roots_rope = rope0[:real_roots].to(torch.int64)
+2878:         else:
+2879:             roots_rope = torch.tensor(
+2880:                 list(rope0)[:real_roots], dtype=torch.int64,
+2881:                 device=self.device)
+2882: 
+2883:         max_pos = getattr(self, "_p2_rope_limit", None)
+2884:         if max_pos is None:
+2885:             max_pos = int(self.config.max_model_len)
+2886:             model = getattr(self, "model", None)
+2887:             if model is not None:
+2888:                 for module in model.modules():
+2889:                     cache = getattr(module, "cos_sin_cache", None)
+2890:                     if cache is not None:
+2891:                         max_pos = min(max_pos, int(cache.shape[0]))
+2892:                         break
+2893:             self._p2_rope_limit = max_pos
+2894:         n_slots = int(self.kv_cache.shape[2] * self.kv_cache.shape[3])
+2895:         n_blocks = int(self.kv_cache.shape[2])
+2896:         page_col = torch.arange(dbt.shape[1], device=dbt.device)
+2897:         need_pages = torch.div(
+2898:             ctx + self.block_size - 1, self.block_size,
+2899:             rounding_mode="floor")
+2900:         real_page = page_col < need_pages
+2901:         bad_page = real_page & ((dbt[0] < 0) | (dbt[0] >= n_blocks))
+2902: 
+2903:         flags = torch.stack((
+2904:             torch.tensor(real_roots <= 0, device=ctx.device),
+2905:             ctx <= 0,
+2906:             ((roots_rope < 0) | (roots_rope >= max_pos)).any(),
+2907:             ((slots < 0) | (slots >= n_slots)).any(),
+2908:             ((ctxs <= 0) | (ctxs > max_pos)).any(),
+2909:             bad_page.any(),
+2910:         )).to(torch.int64)
+2911:         snapshot = torch.cat((ctx.reshape(1), flags)).cpu().tolist()
+2912:         reasons = ("no_roots", "ctx", "rope", "slot", "ctxlen", "pages")
+2913:         reason = next((name for name, bad in zip(reasons, snapshot[1:])
+2914:                        if bad), None)
+2915:         return _P2StepState(ctx_len=int(snapshot[0]), reason=reason)
+
+
+2932:     def _p2_persistent_copy(self, name, value):
+2933:         """Copy small P2 metadata into a stable, runner-owned address.
+2934: 
+2935:         The scheduler reuses its request tensors and the executor replays a
+2936:         fixed-address CUDA graph.  Keeping positions/page tables/round
+2937:         metadata in ephemeral allocator blocks made the stage1 shadow path
+2938:         allocator-sensitive and could turn a valid context length into an
+2939:         unrelated token/slot value.  SGLang-style graph execution uses
+2940:         persistent input buffers; this helper applies the same ownership
+2941:         rule to the metadata shared by DUET's arena and executor.
+2942:         """
+2943:         if not torch.is_tensor(value):
+2944:             # Pure contract tests use lightweight list stand-ins.  Runtime
+2945:             # metadata is always a CUDA tensor.
+2946:             return value
+2947:         if not hasattr(self, "_p2_meta_buffers"):
+2948:             self._p2_meta_buffers = {}
+2949:         buf = self._p2_meta_buffers.get(name)
+2950:         if buf is None or buf.shape != value.shape \
+2951:                 or buf.dtype != value.dtype or buf.device != value.device:
+2952:             buf = torch.empty_like(value)
+2953:             self._p2_meta_buffers[name] = buf
+2954:         buf.copy_(value)
+2955:         return buf
+2956: 
+2957:     def _run_p2_tree_step(self, duet_proxy, proxy_forked,
+2958:                           proxy_fan_out_tensor, proxy_piv,
+2959:                           proxy_tree_args, layout, temps):
+2960:         """Single P2 tree dispatch shared by both DUET build paths.
+2961: 
+2962:         Keeping state classification, slot derivation, rollout, and output
+2963:         conversion in one place prevents the two call sites from drifting and
+2964:         guarantees exactly one rollout per request.
+2965:         """
+2966:         from ssd.engine.helpers.p2_tree import build_root_views
+2967:         from ssd.engine.helpers.cudagraph_helpers import (
+2968:             duet_record as _mr, duet_close as _mc)
+2969: 
+2970:         tree_args = dict(proxy_tree_args)
+2971:         tree_args["proxy_piv"] = proxy_piv
+2972:         # Shared request buffers are snapshotted into stable addresses before
+2973:         # any lazy GPU derivation.  The same stable metadata then feeds both
+2974:         # arena and executor; a diagnostic shadow cannot change the live
+2975:         # arena inputs through allocator reuse.
+2976:         for _kk in ("positions", "rope_positions", "block_tables"):
+2977:             if torch.is_tensor(tree_args.get(_kk)):
+2978:                 tree_args[_kk] = self._p2_persistent_copy(
+2979:                     f"input_{_kk}", tree_args[_kk])
+2980:         B, K, F, N = tree_args["metadata_ints"]
+2981:         _, _, step_context_lens, step_slot_maps = \
+2982:             self._compute_step_positions_and_slot_maps(
+2983:                 tree_args["positions"], tree_args["rope_positions"],
+2984:                 tree_args["block_tables"], B, K, F, N, layout.MQ_LEN,
+2985:                 layout=layout)
+2986:         step_context_lens = self._p2_persistent_copy(
+2987:             "step_context_lens", step_context_lens)
+2988:         step_slot_maps = self._p2_persistent_copy(
+2989:             "step_slot_maps", step_slot_maps)
+2990:         state = self._p2_step_state(
+2991:             tree_args["rope_positions"], step_slot_maps,
+2992:             step_context_lens, tree_args["block_tables"],
+2993:             self.config.duet_phase2_k, layout.MQ_LEN,
+2994:             root_count=(proxy_piv.shape[1]
+2995:                         if proxy_piv is not None else layout.MQ_LEN))
+2996:         tree_args["_p2_ctx_len"] = state.ctx_len
+2997: 
+2998:         rows = layout.MQ_LEN
+2999:         depth = self.config.duet_phase2_k
+3000:         if not state.active:
+3001:             self._p2exec_count(f"p2_skip_{state.reason}")
+3002:             self._p2_skip_step = state.reason
+3003:             self._tree_views = None
+3004:             return self._empty_p2_outputs(rows, depth)
+3005: 
+3006:         pool, exec_outputs, cell_logits = self._p2tree_rollout(
+3007:             duet_proxy, proxy_forked, proxy_fan_out_tensor,
+3008:             tree_args, layout, step_slot_maps, step_context_lens, temps)
+3009:         event = _mr("p2_output_convert")
+3010:         try:
+3011:             if pool is None:
+3012:                 self._p2exec_count("p2_skip_no_roots")
+3013:                 self._p2_skip_step = "no_roots"
+3014:                 self._tree_views = None
+3015:                 return self._empty_p2_outputs(rows, depth)
+3016:             if isinstance(pool, dict):
+3017:                 if proxy_piv is not None:
+3018:                     # Same grouped row order as proxy_forked/cache keys.
+3019:                     # Kept only for diagnostic serve traces.
+3020:                     pool["root_score"] = proxy_piv[0, :rows]
+3021:                 self._tree_views = pool
+3022:                 return exec_outputs
+3023:             self._tree_views = build_root_views(
+3024:                 pool, rows, self.config.duet_tree_nv,
+3025:                 cell_logits=cell_logits)
+3026:             return self._tree_backbone_project(
+3027:                 pool, rows, depth, cell_logits,
+3028:                 n_roots=(proxy_piv.shape[1]
+3029:                          if proxy_piv is not None else rows))
+3030:         finally:
+3031:             _mc("p2_output_convert", event)
+
+
+3335:             # ── 버퍼 채우기 (host→고정 버퍼; readback 없음)
+3336:             from ssd.engine.helpers.cudagraph_helpers import (
+3337:                 duet_record as _mr_x, duet_close as _mc_x)
+3338:             _mev_prep = _mr_x("p2_prepare")
+3339:             ex.in_root_tok[:R].copy_(toks[:R])
+3340:             if R < ex.R:
+3341:                 ex.in_root_tok[R:].zero_()
+3342:                 ex.in_root_piv[R:].zero_()
+3343:                 ex.in_rope_base[R:].zero_()
+3344:             ex.in_root_piv[:R].copy_(root_piv[:R])
+3345:             if torch.is_tensor(rope_base):
+3346:                 ex.in_rope_base[:R].copy_(rope_base[:R])
+3347:             else:
+3348:                 ex.in_rope_base[:R].copy_(
+3349:                     torch.tensor(rope_base[:R], dtype=torch.int64,
+3350:                                  device=self.device))
+3351:             _g_np = _np.ascontiguousarray(glue_rows[:R, :gw])
+3352:             _np.copyto(ex.in_glue_host[:R, :gw].numpy(), _g_np)
+3353:             ex.in_glue[:R, :gw].copy_(
+3354:                 ex.in_glue_host[:R, :gw], non_blocking=True)
+3355:             ex.in_glue_w.fill_(gw)
+3356:             ex.in_temps.copy_(temps[:1].expand(ex.W))
+3357:             ex.in_prefix_len.fill_(ctx0 - gw - ex.W)
+3358:             ex.in_block_tables[:, :dbt.shape[1]].copy_(dbt[:1])
+3359:             for f in range(F):
+3360:                 ex.in_slot[f].copy_(step_slot_maps[f][:ex.W])
+3361:                 ex.in_ctx_len[f].copy_(
+3362:                     step_context_lens[f][:1, 0]
+3363:                     if step_context_lens[f].dim() > 1
+3364:                     else step_context_lens[f][:1])
+3365:             _s1_check("input copies")
+3366:             # canvas 여분 페이지가 실제 block table 밖이면 유효 페이지로
+3367:             # 대체 — mask=0이라 내용 무영향(비연속 ID 전제 검증 완료).
+3368:             # 단계2: 이 -1 그대로 사용이 hit 하락 주범 클래스로 특정.
+3369:             # canvas 슬롯은 반드시 '유한값 보장' 유효 페이지여야 한다.
+3370:             # 실측(2026-08-06, tests/diag/test_canvas_nan_poison.py):
+3371:             # mask=0이어도 canvas 페이지에 Inf/NaN이 있으면 fa2 출력
+3372:             # 전체가 NaN (산술식 마스킹의 0×inf) — 페이지 -1(OOB
+3373:             # 읽기)은 메모리 내용에 따라 간헐적으로 트리 전체를
+3374:             # 오염 (tri-AB: e0 ΔP2AL −0.325·심저 1.04 vs e1 −0.065).
+3375:             _pages_fill = ex.in_page_ids[:need_pages]
+3376:             _pages_fill[:live_pages].copy_(dbt[0, :live_pages])
+3377:             if live_pages < need_pages:
+3378:                 _pages_fill[live_pages:need_pages].copy_(
+3379:                     _pages_fill[:1].expand(need_pages - live_pages))
+3380:             if p0 in ex.wrappers:
+3381:                 for f in range(F):
+3382:                     ex.wrappers[p0][f]._paged_kv_indices_buf[
+3383:                         :need_pages].copy_(_pages_fill)
+3384:             _mc_x("p2_prepare", _mev_prep)
+3385:             # ── capture(최초) 또는 replay
+3386:             _mev_rep = _mr_x("p2_graph_replay")
+3387:             if os.environ.get("SSD_TREE_EXEC_EAGER_DIAG", "0") == "1":
+3388:                 # Diagnostic only: execute the exact executor body without
+
+
+4637:         _mev_p2prep = _mr_p2("p2_prepare")
+4638:         cfg = self.config
+4639:         W = layout.MQ_LEN
+4640:         K2 = cfg.duet_phase2_k
+4641:         V = self.hf_config.vocab_size
+4642:         # _update_phase2_layout_inplace already paid the single fan-out
+4643:         # readback.  Reuse that host list instead of synchronizing again.
+4644:         _fol = layout.fan_out_list
+4645:         fo = _fol[0] if _fol and isinstance(_fol[0], list) else _fol
+4646:         seed_positions = [p for p, count in enumerate(fo)
+4647:                           for _ in range(count)]
+4648:         toks = proxy_forked[0]
+4649:         _use_arena = os.environ.get("SSD_TREE_ARENA", "1") == "1"
+4650:         # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
+4651:         seed_piv = tree_args.get("proxy_piv")
+4652:         # 23번 단계1: fan 합은 layout 폭(pad 흡수)이지만 실제 seed는
+4653:         # piv 폭 — pad 행은 root로 만들지 않는다 (빈 키는 #14 무효화).
+4654:         if seed_piv is not None and seed_piv.shape[1] < len(seed_positions):
+4655:             seed_positions = seed_positions[:seed_piv.shape[1]]
+4656:         R = len(seed_positions)
+4657:         toks = toks[:R]
+4658:         root_piv = (seed_piv[0, :R].float() if seed_piv is not None
+
+
+5685:         Runs the asynchronous draft model loop. 
+5686:         Handles three commands:
+5687:           1 = prefill, 0 = spec request, 2 = exit.
+5688:         """
+5689:         assert self.draft_async, "draft_loop only runs in async-draft mode"
+5690: 
+5691:         while True:
+5692:             # 1) Wait for the next command (may be PREFILL, SPEC_REQUEST, or EXIT)
+5693:             from ssd.engine.helpers.cudagraph_helpers import duet_record as _mr_c, duet_close as _mc_c
+5694:             _mev_rc = _mr_c("draft_recv_cmd")
+5695:             cmd = self.recv_cmd()
+5696:             _mc_c("draft_recv_cmd", _mev_rc)
+5697: 
+5698:             # PREFILL: run the draft prefill and then loop back
+5699:             if cmd == 1:
+5700:                 self.draft_async_prefill()
+5701:                 continue
+5702: 
+5703:             # SPECULATE request: serve out-of-cache or random speculations
+5704:             elif cmd == 0:
+5705:                 _ds0 = time.perf_counter()
+5706:                 if self.batched_tree_enabled:
+5707:                     self.batch_tree.serve()
+5708:                     self._draft_step_times.append(time.perf_counter()-_ds0)
+5709:                     continue
+5710:                 _prof = os.environ.get("SSD_PROFILE", "0") == "1"
+5711:                 if _prof or PROFILE_DRAFT:
+5712:                     torch.cuda.synchronize()
+5713:                     _d0 = time.perf_counter()
+5714: 
+5715:                 glue_decode_input_ids, partial_tree_decode_args = self._service_spec_request()
+5716: 
+5717:                 if _prof or PROFILE_DRAFT:
+5718:                     torch.cuda.synchronize()
+5719:                     _d1 = time.perf_counter()
+5720: 
+5721:                 self._reset_tree_cache_tensors()
+5722: 
+5723:                 if self.config.duet_enabled:
+5724:                     # DUET: 2-pass tree decode (draft-sourced → proxy-sourced)
+5725:                     self._build_tree_batch_duet(partial_tree_decode_args, glue_decode_input_ids)
+5726:                     # Set profiling vars to avoid NameError in shared print below
+5727:                     if _prof or PROFILE_DRAFT:
+5728:                         torch.cuda.synchronize()
+5729:                         _d2 = _d3 = time.perf_counter()

@@ -1,0 +1,38 @@
+{
+  "output_exact": 8,
+  "summary_before": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 242,
+    "all_steps": 250,
+    "tokens": 496,
+    "seconds": 5.610617476748303,
+    "tps": 88.40381688032356,
+    "al": 2.049586776859504,
+    "hit": 0.8140495867768595,
+    "verify_ms": 17.227080284063664,
+    "step_ms": 23.18436973862935,
+    "actual_output_tokens": 512,
+    "emitted_decode_tokens": 512
+  },
+  "summary_after": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 242,
+    "all_steps": 250,
+    "tokens": 496,
+    "seconds": 5.240790884708986,
+    "tps": 94.6422039939001,
+    "al": 2.049586776859504,
+    "hit": 0.8140495867768595,
+    "verify_ms": 17.183253661852547,
+    "step_ms": 21.656160680615642,
+    "actual_output_tokens": 512,
+    "emitted_decode_tokens": 512
+  },
+  "notes": "SSD_TREE_EXEC=1, ALT=2 declines every second attempt; actual eager-arena fallback, not only executor OFF.",
+  "before_fallback_counters": [
+    "{'replay': 148, 'alt_forced_fallback': 148}"
+  ],
+  "after_fallback_counters": [
+    "{'replay': 148, 'alt_forced_fallback': 148}"
+  ]
+}

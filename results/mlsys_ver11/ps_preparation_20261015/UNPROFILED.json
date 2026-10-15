@@ -1,0 +1,49 @@
+{
+  "outputs_exact": true,
+  "inputs": 48,
+  "before": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 2007,
+    "all_steps": 2051,
+    "tokens": 4327,
+    "seconds": 38.9259051901754,
+    "tps": 111.15990697865908,
+    "al": 2.1559541604384655,
+    "hit": 0.8305929247633284,
+    "verify_ms": 17.14746133731998,
+    "step_ms": 19.39506985061056,
+    "actual_output_tokens": 4435,
+    "emitted_decode_tokens": 4435
+  },
+  "after": {
+    "policy": "full_batch_without_cap_clip_or_observed_preparation_v2",
+    "steps": 2007,
+    "all_steps": 2051,
+    "tokens": 4327,
+    "seconds": 38.50242026033811,
+    "tps": 112.38254558395394,
+    "al": 2.1559541604384655,
+    "hit": 0.8305929247633284,
+    "verify_ms": 17.10815608847606,
+    "step_ms": 19.184065899520732,
+    "actual_output_tokens": 4435,
+    "emitted_decode_tokens": 4435
+  },
+  "before_preparation": {
+    "steps": 2007,
+    "seconds": 38.9259051901754,
+    "affected_steps": 0,
+    "affected_step_seconds": 0,
+    "interval_union_seconds": 0.0,
+    "interval_union_fraction": 0.0
+  },
+  "after_preparation": {
+    "steps": 2007,
+    "seconds": 38.50242026033811,
+    "affected_steps": 0,
+    "affected_step_seconds": 0,
+    "interval_union_seconds": 0.0,
+    "interval_union_fraction": 0.0
+  },
+  "note": "Secondary execution sanity comparison; one pair, not a model TPS recommendation."
+}

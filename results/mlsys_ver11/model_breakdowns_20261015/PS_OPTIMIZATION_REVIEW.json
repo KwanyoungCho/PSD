@@ -1,0 +1,77 @@
+{
+  "status": "reviewed",
+  "date": "2026-10-15",
+  "branch": "MLSys-ver1.1",
+  "head": "09168710a8698757cc534dfe47b23d139170c13f",
+  "measured_commit": "82d964e0260d4dd6bf01a311f8bd767f193ebfe7",
+  "runtime_file": "ssd/ssd/engine/draft_runner.py",
+  "runtime_sha256": "cc8aa9a4bdd4c20eb65592f242e388668ccb395ba8bc8043e336c897f9718a2d",
+  "unchanged_b1_methods": [
+    {
+      "method": "_tree_step_p1p2_dynamic",
+      "measured_line": 2090,
+      "current_line": 2090,
+      "same_ast": true
+    },
+    {
+      "method": "_run_p2_tree_step",
+      "measured_line": 2957,
+      "current_line": 2957,
+      "same_ast": true
+    },
+    {
+      "method": "_compute_step_positions_and_slot_maps",
+      "measured_line": 2607,
+      "current_line": 2607,
+      "same_ast": true
+    },
+    {
+      "method": "_p2_step_state",
+      "measured_line": 2857,
+      "current_line": 2857,
+      "same_ast": true
+    },
+    {
+      "method": "_p2_persistent_copy",
+      "measured_line": 2932,
+      "current_line": 2932,
+      "same_ast": true
+    },
+    {
+      "method": "_try_p2_executor",
+      "measured_line": 3261,
+      "current_line": 3261,
+      "same_ast": true
+    },
+    {
+      "method": "_update_phase2_layout_inplace",
+      "measured_line": 5019,
+      "current_line": 5019,
+      "same_ast": true
+    }
+  ],
+  "measured_batch": 1,
+  "batched_override": "not set in recorded environment",
+  "executor_log_lines": [
+    "[metrics] p2exec stats: {'replay': 426}",
+    "[metrics] p1exec stats: {'replay': 426}"
+  ],
+  "history": {
+    "numpy_input_optimization_commit": "703b3a7cfec9b4f90c1e32f8ca735ce6c1e49e6d",
+    "numpy_path": "ssd/ssd/engine/helpers/batch_tree_inputs.py:BatchedArenaInputs.replay",
+    "numpy_effect_scope": "Previously measured RTX3090 B8; not a new B1 measurement",
+    "b1_temperature_sync_removed_commit": "3d51664f108ef70c2597cece87743dd291520d61",
+    "p1_persistent_buffers_commit": "e1ddefd"
+  },
+  "findings": [
+    "B1 measured path is separate from BatchedArenaInputs, fused staging and bulk export defaults.",
+    "B1 PS root selection computes the position-to-root mapping again after layout.fan_idx_hit already exists.",
+    "B1 glue rows are gathered on GPU, copied to CPU NumPy, then uploaded to the executor.",
+    "P2 persistent copies and validity checks have correctness contracts; do not remove without an equivalent ownership/validation design."
+  ],
+  "limits": [
+    "No new GPU experiment or runtime edit in this review.",
+    "Historical B8 improvements do not quantify current B1 savings.",
+    "Observed elapsed includes CPU dispatch and synchronization, not only GPU compute."
+  ]
+}

@@ -1,0 +1,503 @@
+{
+  "status": "complete",
+  "main_pdf_pages": 5,
+  "representative_pdf_pages": 41,
+  "renderer": "ssd/bench/plot_duet_aligned_timeline.py:draw_phase_lanes",
+  "renderer_sha256": "355503cec8e40ac03192a85b37928f4e0ef44861cfdbf045aa3506e30fa055f2",
+  "adapter_sha256": "6a140deb7efdb4c46a7794fd5e1a134a0da222bb52e301622f61cc56fd7e26a1",
+  "source_unchanged": true,
+  "clock_shift_ms": 0,
+  "phase_lengths": "Unmodified raw start/end intervals; DS/PS graphs contained in measured phase envelopes",
+  "models": [
+    {
+      "model": "l2_7b",
+      "profile": "l2_7b_final_profile",
+      "rows": 321,
+      "representative_count": 9,
+      "source_counts": {
+        "2": 164,
+        "1": 115,
+        "0": 42
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/result.json": "6b7ed306129c9a6ce444de14b05e449a8d3f4f1792f2bbe44c1f85d07da81cb1",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/status.json": "35698fa5eb014773b249bb630fb090d3be8f097b40c7e1860f3532f1d24b6a63",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/timing.json": "4233767f1281e70b1a88495df3126a7e6dc66efe6be402c2d5d4446501881a12",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/physical_tree_shapes.json": "ed3aef67e9775c9cb728532505f1fd25e982208747634f1fe7998f2e681cafe4",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/process.log": "1e0297000562d3b8c4c841bc75eefe5af030aa20b1b64a3de6d3ade68d5ecc7a",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/profile/duet_profile_draft_180806.json": "bce089090573a9a64419534ebbd8972499868435c96e95489b6d65a99da885c1",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/profile/duet_profile_target_rank0_180806.json": "d6dbbf8f91b3af1db1ce481772175b656cc9cdd471eb725490ec1e63815b2919"
+      },
+      "representatives": [
+        {
+          "state": 1,
+          "quantile": 0.25,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 25
+        },
+        {
+          "state": 1,
+          "quantile": 0.5,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 78
+        },
+        {
+          "state": 1,
+          "quantile": 0.75,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 61
+        },
+        {
+          "state": 2,
+          "quantile": 0.25,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 3
+        },
+        {
+          "state": 2,
+          "quantile": 0.5,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 96
+        },
+        {
+          "state": 2,
+          "quantile": 0.75,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 9
+        },
+        {
+          "state": 0,
+          "quantile": 0.25,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 16
+        },
+        {
+          "state": 0,
+          "quantile": 0.5,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 84
+        },
+        {
+          "state": 0,
+          "quantile": 0.75,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 38
+        }
+      ],
+      "medians": [
+        {
+          "state": 1,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 78
+        },
+        {
+          "state": 2,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 96
+        },
+        {
+          "state": 0,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 84
+        }
+      ]
+    },
+    {
+      "model": "l2_13b",
+      "profile": "l2_13b_deadline_profile_e23_k6_3",
+      "rows": 444,
+      "representative_count": 9,
+      "source_counts": {
+        "1": 139,
+        "0": 80,
+        "2": 225
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_13b_deadline_profile_e23_k6_3/result.json": "bfae35baa31b2d0419d2d9449d67025ec06a986aea1320a6f8d898c1b0095002",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_13b_deadline_profile_e23_k6_3/status.json": "c694662f0e3b263f1a74a13c11eff30d9fcbf7e842d6fcb33120fb951cb4228e",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_13b_deadline_profile_e23_k6_3/timing.json": "9211e68b50a8d10fcf7c266dfc84de2e9b4f0478a784d8fdba86ac08e29d571f",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_13b_deadline_profile_e23_k6_3/physical_tree_shapes.json": "b4f174343892d541bdd017a67b96afb97c7c140d7b57235005b80b108465076c",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_13b_deadline_profile_e23_k6_3/process.log": "2ec6cea9aed86736634003aacb7454787ede9681360357d8555694cf0264c87b",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_13b_deadline_profile_e23_k6_3/profile/duet_profile_draft_192750.json": "b7a3c225d249593d76231f654ccade90e80d5dcc0aa3b452e1f8a5fabcfcf4bd",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_13b_deadline_profile_e23_k6_3/profile/duet_profile_target_rank0_192750.json": "bbb37996b79c335c5efc90dce904a6dbfa70ce67906f11c9ef1886a4a620530c"
+      },
+      "representatives": [
+        {
+          "state": 1,
+          "quantile": 0.25,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 20
+        },
+        {
+          "state": 1,
+          "quantile": 0.5,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 68
+        },
+        {
+          "state": 1,
+          "quantile": 0.75,
+          "uid": "128_t0",
+          "epoch": 3,
+          "step_id": 64
+        },
+        {
+          "state": 2,
+          "quantile": 0.25,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 109
+        },
+        {
+          "state": 2,
+          "quantile": 0.5,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 127
+        },
+        {
+          "state": 2,
+          "quantile": 0.75,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 55
+        },
+        {
+          "state": 0,
+          "quantile": 0.25,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 93
+        },
+        {
+          "state": 0,
+          "quantile": 0.5,
+          "uid": "128_t0",
+          "epoch": 3,
+          "step_id": 29
+        },
+        {
+          "state": 0,
+          "quantile": 0.75,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 108
+        }
+      ],
+      "medians": [
+        {
+          "state": 1,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 68
+        },
+        {
+          "state": 2,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 127
+        },
+        {
+          "state": 0,
+          "uid": "128_t0",
+          "epoch": 3,
+          "step_id": 29
+        }
+      ]
+    },
+    {
+      "model": "l3_8b",
+      "profile": "l3_8b_final_profile",
+      "rows": 387,
+      "representative_count": 9,
+      "source_counts": {
+        "1": 65,
+        "2": 295,
+        "0": 27
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l3_8b_final_profile/result.json": "11c8de279b1a3a6e66976a1f7dff94f0523fd25c8a5f0c51a8b4982b796ec3f9",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l3_8b_final_profile/status.json": "435622c828ac0037edaef3dc805a5a9fb54f843376249a5f743e5d19ebb2a91a",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l3_8b_final_profile/timing.json": "2bf02132f89adc2eb3916214ef40c002b50b62630a6f8f057ceb30a4565b0d9d",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l3_8b_final_profile/physical_tree_shapes.json": "fe115f192a63028bc19fbc031562a8362cb7a7f80ed774f21663580eba7325a3",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l3_8b_final_profile/process.log": "9032b62e9824bc5f01c7faaf570eb79ae317dc967b177a95383dec5a8aff62d8",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l3_8b_final_profile/profile/duet_profile_draft_191723.json": "ab0c0296805a721568c6c0e6f1acdc0daf1cb5322293f46029b942b3020f48e4",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l3_8b_final_profile/profile/duet_profile_target_rank0_191722.json": "9bd7df1c0f82b393377bb99b57d837680292a540382e9528d8b8e80c426b77ae"
+      },
+      "representatives": [
+        {
+          "state": 1,
+          "quantile": 0.25,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 113
+        },
+        {
+          "state": 1,
+          "quantile": 0.5,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 170
+        },
+        {
+          "state": 1,
+          "quantile": 0.75,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 48
+        },
+        {
+          "state": 2,
+          "quantile": 0.25,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 23
+        },
+        {
+          "state": 2,
+          "quantile": 0.5,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 92
+        },
+        {
+          "state": 2,
+          "quantile": 0.75,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 101
+        },
+        {
+          "state": 0,
+          "quantile": 0.25,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 26
+        },
+        {
+          "state": 0,
+          "quantile": 0.5,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 65
+        },
+        {
+          "state": 0,
+          "quantile": 0.75,
+          "uid": "288_t0",
+          "epoch": 4,
+          "step_id": 15
+        }
+      ],
+      "medians": [
+        {
+          "state": 1,
+          "uid": "84_t0",
+          "epoch": 1,
+          "step_id": 170
+        },
+        {
+          "state": 2,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 92
+        },
+        {
+          "state": 0,
+          "uid": "244_t0",
+          "epoch": 2,
+          "step_id": 65
+        }
+      ]
+    },
+    {
+      "model": "code34b",
+      "profile": "code34b_deadline_profile_e30_k12_6",
+      "rows": 73,
+      "representative_count": 6,
+      "source_counts": {
+        "1": 62,
+        "2": 11
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_deadline_profile_e30_k12_6/result.json": "5ae8ae0432eada9e8b53c303c41e3d74491490502549b6e0f9908ba761176035",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_deadline_profile_e30_k12_6/status.json": "86c2a1202c38a6b179780e8df32de604f4eaa560f7190dd783cf53fe5bcfff97",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_deadline_profile_e30_k12_6/timing.json": "f6cfda2baaf11ef2f685493a023a39d923af32929342895d8e303d7cff77af36",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_deadline_profile_e30_k12_6/physical_tree_shapes.json": "912490eef9d4a62ad56d9f6a85280846a80316683bf4ed3f3d7b2e0d95d4d1e8",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_deadline_profile_e30_k12_6/process.log": "b9dd9067cb8e329b865adb0fda590bfb9d1aadd41633bbbb2d284724f5ff83eb",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_deadline_profile_e30_k12_6/profile/duet_profile_draft_200135.json": "d9509831a8d64f03b1f585662eb994f72d11342df91ad91185268e6ab591fcb7",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_deadline_profile_e30_k12_6/profile/duet_profile_target_rank0_200135.json": "d81d9101893b1b7c37ee436e2bd3cf6d2a240fb9ba0da1b55bab355c482bcd91"
+      },
+      "representatives": [
+        {
+          "state": 1,
+          "quantile": 0.25,
+          "uid": "humaneval_local_033_t0",
+          "epoch": 4,
+          "step_id": 6
+        },
+        {
+          "state": 1,
+          "quantile": 0.5,
+          "uid": "humaneval_local_033_t0",
+          "epoch": 4,
+          "step_id": 7
+        },
+        {
+          "state": 1,
+          "quantile": 0.75,
+          "uid": "humaneval_local_033_t0",
+          "epoch": 4,
+          "step_id": 15
+        },
+        {
+          "state": 2,
+          "quantile": 0.25,
+          "uid": "humaneval_local_013_t0",
+          "epoch": 2,
+          "step_id": 3
+        },
+        {
+          "state": 2,
+          "quantile": 0.5,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 25
+        },
+        {
+          "state": 2,
+          "quantile": 0.75,
+          "uid": "humaneval_local_003_t0",
+          "epoch": 1,
+          "step_id": 8
+        }
+      ],
+      "medians": [
+        {
+          "state": 1,
+          "uid": "humaneval_local_033_t0",
+          "epoch": 4,
+          "step_id": 7
+        },
+        {
+          "state": 2,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 25
+        }
+      ]
+    },
+    {
+      "model": "code34b_throughput",
+      "profile": "code34b_final_profile",
+      "rows": 84,
+      "representative_count": 8,
+      "source_counts": {
+        "1": 63,
+        "2": 19,
+        "0": 2
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_final_profile/result.json": "fa55b6198fbd915c032b644c40066b1cfd75ae3144e57009baf59d1010634647",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_final_profile/status.json": "08fa3b6ea6d08f34d27e7c0b09e1afcb607ab2f9e994c5a45fabf5ae765cf83f",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_final_profile/timing.json": "3e48707c39d4715968c10f48cede7d715456ebbfbba531f292ad20c985e7f7e1",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_final_profile/physical_tree_shapes.json": "7f46ab60b853b8b10c49dfd7c242e9f5676befa13d30322ed27833d716ea9da2",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_final_profile/process.log": "1f1f653b2f3a86b77c51b84cbc2bc8a635def94d206487b12d36f193bb34e7f2",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_final_profile/profile/duet_profile_draft_195551.json": "1e934d56a27ff03721cdd92700065b07c64d784545c8ab617d9aa47e661e83e8",
+        "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/code34b_final_profile/profile/duet_profile_target_rank0_195551.json": "514575b816deef97b666d98a2229a4922c4f4760deebdba37f2c635edef262a3"
+      },
+      "representatives": [
+        {
+          "state": 1,
+          "quantile": 0.25,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 26
+        },
+        {
+          "state": 1,
+          "quantile": 0.5,
+          "uid": "humaneval_local_013_t0",
+          "epoch": 2,
+          "step_id": 30
+        },
+        {
+          "state": 1,
+          "quantile": 0.75,
+          "uid": "humaneval_local_013_t0",
+          "epoch": 2,
+          "step_id": 13
+        },
+        {
+          "state": 2,
+          "quantile": 0.25,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 12
+        },
+        {
+          "state": 2,
+          "quantile": 0.5,
+          "uid": "humaneval_local_033_t0",
+          "epoch": 4,
+          "step_id": 11
+        },
+        {
+          "state": 2,
+          "quantile": 0.75,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 4
+        },
+        {
+          "state": 0,
+          "quantile": 0.25,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 6
+        },
+        {
+          "state": 0,
+          "quantile": 0.75,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 38
+        }
+      ],
+      "medians": [
+        {
+          "state": 1,
+          "uid": "humaneval_local_013_t0",
+          "epoch": 2,
+          "step_id": 30
+        },
+        {
+          "state": 2,
+          "uid": "humaneval_local_033_t0",
+          "epoch": 4,
+          "step_id": 11
+        },
+        {
+          "state": 0,
+          "uid": "humaneval_local_023_t0",
+          "epoch": 3,
+          "step_id": 6
+        }
+      ]
+    }
+  ]
+}

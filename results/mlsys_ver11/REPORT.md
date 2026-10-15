@@ -134,3 +134,24 @@ python results/mlsys_ver11/analyze_generated_nodes.py
 2. 기존 모델·입력·온도에서 새 API로 실행한다. 로그의 root 수, 실제 round 폭, L/N, G=M을 보관한다.
 3. ver1.0에서 이미 G=M이었던 설정은 동일한 DS round 폭으로 맞춘다. 이 경우 우선 비교할 정책 차이는 자동 top-L이다.
 4. 과거 G>M이었던 설정은 생성 상한 변화가 함께 있으므로, 그 AL과 새 결과를 같은 설정으로 표시하지 않는다.
+
+## 모델별 latency 확인용 그림 (2026-10-15 추가)
+
+18번 서버가 선택한 4개 모델 조합·5개 설정의 원시 profile을 최신 요청 정렬 분석기로
+재분석했다. [상세 보고서](model_breakdowns_20261015/REPORT.md),
+[PS 빈 구간·다음 명령 대기까지 표시한 timeline 모음](model_breakdowns_20261015/with_waits.html),
+[대기 구간 포함 상세 PDF](model_breakdowns_20261015/NATIVE_EVENTS_WITH_WAITS.pdf)를 먼저 확인한다.
+연두색 준비 박스와 미계측 구간의 코드·시간 해석은 [PS_GAPS.md](model_breakdowns_20261015/PS_GAPS.md)를 따른다.
+기존 [raw-event PDF](model_breakdowns_20261015/NATIVE_EVENTS_MODELS.pdf)는 보존했다.
+Phase 요약은 [모델당 한 페이지 PDF](model_breakdowns_20261015/ALIGNED_MODELS.pdf)에 있다.
+이벤트별 자세한 구간은 [상세 PDF](model_breakdowns_20261015/ALL_MODELS_DETAILED.pdf)에 있다.
+
+1,309개 유효 step, 41개 대표 timeline과 구간별 분포를 포함한다.
+이 그림은 **ver1.0 및 모델 지원 commit에서 측정한 profile용 4턴**을 분석한 것이며,
+위 ver1.1 런타임의 신규 성능 평가가 아니다. 파라미터와 데이터 출처를 각 그림에 표시했다.
+
+## 2026-10-15 B1 tree PS 준비 비용 후속 최적화
+
+동일 runtime 설정에서 root 매핑 중복 계산, 조상 마스크 CPU 왕복, 다중 kernel 유효성 검사를 줄였다. 직접 native breakdown·역순 반복·동시 검사 종료 후 재확인·최종 회귀와 raw는 [PS 준비 최적화 보고서](ps_preparation_20261015/REPORT.md)에 모았다. 기존 3090/68M timeline 수치와 새 4090/135M 전후 수치를 섞지 않는다. 이 후속 변경은 `MLSys-ver1.2@9390e21`에 채택했다. 위 파라미터 정리 커밋과 구분하며 [ver1.2 전달 보고서](../mlsys_ver12/REPORT.md)에 최종 반영 상태를 기록한다.
+
+이어 B1 tree-hit의 fan-out 목록 readback과 문맥 길이 재조회까지 제거해 비교했으나, PS 전체 4.965→4.948ms의 차이는 확실하지 않았다(95% 구간 -0.050~+0.028ms). 이 추가 후보는 **미채택**, 직전 최적화 runtime과 테스트를 원래 해시대로 유지했다. [추가 실험 보고서](ps_device_20261015/REPORT.md)에 후보 코드·386개 회귀 검사·동일 출력·전후 native 그림·복원 증거를 보관했다. 후보 구현과 현재 적용된 코드를 구분한다.

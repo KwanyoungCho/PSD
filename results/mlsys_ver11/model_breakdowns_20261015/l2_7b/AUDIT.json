@@ -1,0 +1,41 @@
+{
+  "parser_version": "request-anchor-v2",
+  "requests": 4,
+  "profiled_steps": 426,
+  "eligible_steps": 321,
+  "rows": 321,
+  "coverage": 1.0,
+  "dropped": {},
+  "p1_span_labels": {
+    "p1_root_build": 279,
+    "phase1_build": 42
+  },
+  "transport_ms": 0.013799999999719148,
+  "transport_samples": 423,
+  "transport_p05_p95_ms": [
+    0.010444000000006781,
+    0.017706999999063555
+  ],
+  "estimated_arrival_reconstruction_mae_ms": 0.0,
+  "notes": "Warmup/first2/final excluded; no latency-outlier censoring. P1 deadline uses estimated arrival; gap2 is next-request readiness, gap2_verify is target forward completion including final LM head. GPU anchors have cross-process clock uncertainty; counts within 1ms need caution.",
+  "frozen_timing_equal": true,
+  "source_hashes": {
+    "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/result.json": "6b7ed306129c9a6ce444de14b05e449a8d3f4f1792f2bbe44c1f85d07da81cb1",
+    "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/status.json": "35698fa5eb014773b249bb630fb090d3be8f097b40c7e1860f3532f1d24b6a63",
+    "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/timing.json": "4233767f1281e70b1a88495df3126a7e6dc66efe6be402c2d5d4446501881a12",
+    "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/physical_tree_shapes.json": "ed3aef67e9775c9cb728532505f1fd25e982208747634f1fe7998f2e681cafe4",
+    "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/process.log": "1e0297000562d3b8c4c841bc75eefe5af030aa20b1b64a3de6d3ade68d5ecc7a",
+    "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/profile/duet_profile_draft_180806.json": "bce089090573a9a64419534ebbd8972499868435c96e95489b6d65a99da885c1",
+    "/data/chokwans99/duet-ver10-eslab18-review-20261015/received/duet_ver10_parameter_search_20261015/runs/l2_7b_final_profile/profile/duet_profile_target_rank0_180806.json": "d6dbbf8f91b3af1db1ce481772175b656cc9cdd471eb725490ec1e63815b2919"
+  },
+  "source_counts": {
+    "2": 164,
+    "1": 115,
+    "0": 42
+  },
+  "representative_count": 9,
+  "clock_shift_ms": 0,
+  "selection_criterion": "p25/p50/p75 of current target request-to-postprocess elapsed, within cache source",
+  "unprofiled_target_ranks": "Only target rank0 was recorded; other target ranks not synthesized",
+  "within_phase_remainder": "DS/PS envelope minus replay; elapsed stalls/host work, not pure CPU time"
+}

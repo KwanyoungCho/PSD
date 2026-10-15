@@ -1,0 +1,36 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/main.py", line 104, in __init__
+    self.parseArgs(argv)
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/main.py", line 153, in parseArgs
+    self.createTests()
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/main.py", line 164, in createTests
+    self.test = self.testLoader.loadTestsFromNames(self.testNames,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/loader.py", line 207, in loadTestsFromNames
+    suites = [self.loadTestsFromName(name, module) for name in names]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/loader.py", line 137, in loadTestsFromName
+    module = __import__(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/tests/test_plot_duet_aligned_timeline.py", line 3, in <module>
+    from bench.plot_duet_aligned_timeline import (
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/bench/bench.py", line 2, in <module>
+    import ssd.paths  # noqa: F401 — sets TORCH_CUDA_ARCH_LIST before flashinfer import
+    ^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/ssd/__init__.py", line 1, in <module>
+    from ssd.llm import LLM
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/ssd/llm.py", line 1, in <module>
+    from ssd.engine.llm_engine import LLMEngine
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/ssd/engine/llm_engine.py", line 2, in <module>
+    import ssd.paths  # noqa: F401 — sets TORCH_CUDA_ARCH_LIST before flashinfer import
+    ^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/ssd/paths.py", line 19, in <module>
+    HF_CACHE_DIR = _required_env(
+                   ^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver0.1/ssd/ssd/paths.py", line 13, in _required_env
+    raise RuntimeError(f"Missing required env var {var_name}. {note}")
+RuntimeError: Missing required env var SSD_HF_CACHE. Set it to your HuggingFace cache hub directory (for example: /path/to/huggingface/hub).

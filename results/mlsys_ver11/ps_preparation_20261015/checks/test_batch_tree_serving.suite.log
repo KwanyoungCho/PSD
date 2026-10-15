@@ -1,0 +1,24 @@
+test_captured_inputs_equal_eager_including_padding_and_limit (test_batch_tree_serving.ArenaInputs.test_captured_inputs_equal_eager_including_padding_and_limit) ... ok
+test_graph_uses_updated_topology_and_greedy_logits (test_batch_tree_serving.CapturedAcceptance.test_graph_uses_updated_topology_and_greedy_logits) ... ok
+test_stochastic_graph_refreshes_rng_and_recovers_target (test_batch_tree_serving.CapturedAcceptance.test_stochastic_graph_refreshes_rng_and_recovers_target) ... ok
+test_zero_mass_wor_padding_does_not_bias_target (test_batch_tree_serving.ExhaustedProposal.test_zero_mass_wor_padding_does_not_bias_target) ... ok
+test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.ForwardAttention.test_captured_ancestor_attention_matches_independent_dense) ... ok
+test_ancestors_positions_padding_and_pages (test_batch_tree_serving.Geometry.test_ancestors_positions_padding_and_pages) ... ok
+test_bad_parent_and_unallocated_page (test_batch_tree_serving.Geometry.test_bad_parent_and_unallocated_page) ... ok
+test_restore_truncated_and_reordered_path (test_batch_tree_serving.Geometry.test_restore_truncated_and_reordered_path) ... ok
+test_verification_cap_preserves_generation_prefix_and_request_identity (test_batch_tree_serving.Geometry.test_verification_cap_preserves_generation_prefix_and_request_identity) ... ok
+test_greedy_row_breaks_ties_deterministically_in_sampling_batch (test_batch_tree_serving.MixedTemperatures.test_greedy_row_breaks_ties_deterministically_in_sampling_batch) ... ok
+test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.PackedForwardAttention.test_captured_ancestor_attention_matches_independent_dense) ... ok
+test_batched_p1_matches_ragged_single_request_policy (test_batch_tree_serving.RootRanking.test_batched_p1_matches_ragged_single_request_policy) ... ok
+test_empty_proposal_recovery_follows_target_distribution (test_batch_tree_serving.Sampling.test_empty_proposal_recovery_follows_target_distribution) ... ok
+test_exact_ladder_against_independent_scalar_arithmetic (test_batch_tree_serving.Sampling.test_exact_ladder_against_independent_scalar_arithmetic) ... ok
+test_greedy_mixed_tree_chain_empty (test_batch_tree_serving.Sampling.test_greedy_mixed_tree_chain_empty) ... ok
+test_positive_temperature_specialization_preserves_walk_and_rng (test_batch_tree_serving.Sampling.test_positive_temperature_specialization_preserves_walk_and_rng) ... ok
+test_proxy_matches_existing_single_tree_per_row (test_batch_tree_serving.Sampling.test_proxy_matches_existing_single_tree_per_row) ... ok
+test_sampled_siblings_preserve_target_first_token (test_batch_tree_serving.Sampling.test_sampled_siblings_preserve_target_first_token) ... ok
+test_fixed_node_coins_match_scalar_walk_at_every_depth (test_batch_tree_serving.StochasticWalk.test_fixed_node_coins_match_scalar_walk_at_every_depth) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 1.961s
+
+OK

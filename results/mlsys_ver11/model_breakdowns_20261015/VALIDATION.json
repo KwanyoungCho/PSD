@@ -1,0 +1,49 @@
+{
+  "status": "pass",
+  "offline_tests": 10,
+  "eligible_steps": 1309,
+  "event_intervals": 66929,
+  "all_pdf_pages": 52,
+  "pngs": 52,
+  "models": [
+    {
+      "model": "l2_7b",
+      "steps": 321,
+      "pdf_pages": 11,
+      "raw_intervals": 16423
+    },
+    {
+      "model": "l2_13b",
+      "steps": 444,
+      "pdf_pages": 11,
+      "raw_intervals": 22452
+    },
+    {
+      "model": "l3_8b",
+      "steps": 387,
+      "pdf_pages": 11,
+      "raw_intervals": 19885
+    },
+    {
+      "model": "code34b",
+      "steps": 73,
+      "pdf_pages": 8,
+      "raw_intervals": 3804
+    },
+    {
+      "model": "code34b_throughput",
+      "steps": 84,
+      "pdf_pages": 10,
+      "raw_intervals": 4365
+    }
+  ],
+  "checks": [
+    "Recomputed timing/audit equal frozen source",
+    "Source SHA256 unchanged",
+    "Graph and remainder reconcile per step",
+    "Every PDF page and PNG readable",
+    "All HTML and report links resolve",
+    "Final tool hash matches SUMMARY"
+  ],
+  "inference_rerun": false
+}

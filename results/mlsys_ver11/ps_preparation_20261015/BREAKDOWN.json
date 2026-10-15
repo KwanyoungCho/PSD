@@ -1,0 +1,649 @@
+{
+  "pairs": [
+    {
+      "rep": 1,
+      "output_exact": 24,
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "tree",
+        "batch": 1,
+        "temperature": 0.7,
+        "prompts": "results/mlsys_ver02/equal_budget_20261014/SPEC_BENCH_FULL.json",
+        "limit": 24,
+        "output_tokens": 96,
+        "input_cap": 512,
+        "seed": 9101,
+        "warm_prompts": 4,
+        "exit_layer": 20,
+        "output": "/data/chokwans99/duet-ps-prep-20261015/runs/before_graph1/run.json",
+        "p1_verify": 12,
+        "p2_verify": 8,
+        "k1": 6,
+        "k2": 3,
+        "p1_nodes": 12,
+        "p2_nodes": 8,
+        "roots": 2,
+        "siblings": 3,
+        "passes": 1,
+        "target_tp": 1,
+        "exit_replica": false,
+        "component_repeats": 0,
+        "ds_width": 26,
+        "ps_width": 15,
+        "ps_roots": 10,
+        "expansion": "frontier"
+      },
+      "kwargs": {
+        "dtype": "bfloat16",
+        "num_gpus": 2,
+        "max_num_seqs": 1,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 2048,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 9,
+        "async_fan_out": 3,
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "duet_enabled": true,
+        "duet_exit_layer": 20,
+        "duet_phase1_k": 6,
+        "duet_phase2_k": 3,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 12,
+        "duet_p1_tree_verify_nodes": 12,
+        "duet_p2_tree_max_nodes": 8,
+        "duet_p2_tree_verify_nodes": 8,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "duet_p1_forward_width": 26,
+        "duet_p2_forward_width": 15,
+        "duet_p2_root_count": 10,
+        "duet_tree_expansion": "frontier",
+        "stochastic_only": true
+      },
+      "before": {
+        "skipped": {
+          "warm": 136,
+          "first_two": 46,
+          "terminal": 22
+        },
+        "total_steps": 1001,
+        "measured_steps": 797,
+        "covered_requests": 28,
+        "full_event_coverage": true
+      },
+      "after": {
+        "skipped": {
+          "warm": 136,
+          "first_two": 46,
+          "terminal": 22
+        },
+        "total_steps": 1001,
+        "measured_steps": 797,
+        "covered_requests": 28,
+        "full_event_coverage": true
+      },
+      "breakdown_ms": {
+        "build": {
+          "before": 0.8867974705144291,
+          "after": 0.8016831430363864
+        },
+        "dispatch": {
+          "before": 0.6517807079229032,
+          "after": 0.42962581480162654
+        },
+        "prepare1": {
+          "before": 0.1969359435382685,
+          "after": 0.20854739523212043
+        },
+        "prepare2": {
+          "before": 0.24626925846925973,
+          "after": 0.2232280577164366
+        },
+        "graph": {
+          "before": 2.8712560552070263,
+          "after": 2.8559257979924717
+        },
+        "other": {
+          "before": 0.47771643918053447,
+          "after": 0.49007565433914774
+        },
+        "ps_total": {
+          "before": 5.3307558748324215,
+          "after": 5.00908586311819
+        },
+        "target_forward": {
+          "before": 15.531979683814303,
+          "after": 15.51120064617315
+        },
+        "p1_graph": {
+          "before": 6.614178248431618,
+          "after": 6.581070523212046
+        }
+      },
+      "algorithms_same": {
+        "al_before": 2.4377224199288254,
+        "al_after": 2.4377224199288254,
+        "hit_before": 0.8291814946619217,
+        "hit_after": 0.8291814946619217
+      }
+    },
+    {
+      "rep": 2,
+      "output_exact": 24,
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "tree",
+        "batch": 1,
+        "temperature": 0.7,
+        "prompts": "results/mlsys_ver02/equal_budget_20261014/SPEC_BENCH_FULL.json",
+        "limit": 24,
+        "output_tokens": 96,
+        "input_cap": 512,
+        "seed": 9101,
+        "warm_prompts": 4,
+        "exit_layer": 20,
+        "output": "/data/chokwans99/duet-ps-prep-20261015/runs/before_graph2/run.json",
+        "p1_verify": 12,
+        "p2_verify": 8,
+        "k1": 6,
+        "k2": 3,
+        "p1_nodes": 12,
+        "p2_nodes": 8,
+        "roots": 2,
+        "siblings": 3,
+        "passes": 1,
+        "target_tp": 1,
+        "exit_replica": false,
+        "component_repeats": 0,
+        "ds_width": 26,
+        "ps_width": 15,
+        "ps_roots": 10,
+        "expansion": "frontier"
+      },
+      "kwargs": {
+        "dtype": "bfloat16",
+        "num_gpus": 2,
+        "max_num_seqs": 1,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 2048,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 9,
+        "async_fan_out": 3,
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "duet_enabled": true,
+        "duet_exit_layer": 20,
+        "duet_phase1_k": 6,
+        "duet_phase2_k": 3,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 12,
+        "duet_p1_tree_verify_nodes": 12,
+        "duet_p2_tree_max_nodes": 8,
+        "duet_p2_tree_verify_nodes": 8,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "duet_p1_forward_width": 26,
+        "duet_p2_forward_width": 15,
+        "duet_p2_root_count": 10,
+        "duet_tree_expansion": "frontier",
+        "stochastic_only": true
+      },
+      "before": {
+        "skipped": {
+          "warm": 136,
+          "first_two": 46,
+          "terminal": 22
+        },
+        "total_steps": 1001,
+        "measured_steps": 797,
+        "covered_requests": 28,
+        "full_event_coverage": true
+      },
+      "after": {
+        "skipped": {
+          "warm": 136,
+          "first_two": 46,
+          "terminal": 22
+        },
+        "total_steps": 1001,
+        "measured_steps": 797,
+        "covered_requests": 28,
+        "full_event_coverage": true
+      },
+      "breakdown_ms": {
+        "build": {
+          "before": 0.8987087628607278,
+          "after": 0.7876204404015056
+        },
+        "dispatch": {
+          "before": 0.6447601198701368,
+          "after": 0.42795046928386615
+        },
+        "prepare1": {
+          "before": 0.19394398870765367,
+          "after": 0.2051397227101631
+        },
+        "prepare2": {
+          "before": 0.24094224090338767,
+          "after": 0.2214422722710163
+        },
+        "graph": {
+          "before": 2.856906450439147,
+          "after": 2.8567695658720202
+        },
+        "other": {
+          "before": 0.46507427075767754,
+          "after": 0.4759892709718176
+        },
+        "ps_total": {
+          "before": 5.30033583353873,
+          "after": 4.974911741510389
+        },
+        "target_forward": {
+          "before": 15.515838608531997,
+          "after": 15.513323278544544
+        },
+        "p1_graph": {
+          "before": 6.579322225846926,
+          "after": 6.582664957340025
+        }
+      },
+      "algorithms_same": {
+        "al_before": 2.4377224199288254,
+        "al_after": 2.4377224199288254,
+        "hit_before": 0.8291814946619217,
+        "hit_after": 0.8291814946619217
+      }
+    },
+    {
+      "rep": 3,
+      "output_exact": 24,
+      "args": {
+        "target": "/home/chokwans99/models_mlsys/layerskip-llama2-7b",
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "mode": "tree",
+        "batch": 1,
+        "temperature": 0.7,
+        "prompts": "results/mlsys_ver02/equal_budget_20261014/SPEC_BENCH_FULL.json",
+        "limit": 24,
+        "output_tokens": 96,
+        "input_cap": 512,
+        "seed": 9101,
+        "warm_prompts": 4,
+        "exit_layer": 20,
+        "output": "/data/chokwans99/duet-ps-prep-20261015/runs/before_graph3/run.json",
+        "p1_verify": 12,
+        "p2_verify": 8,
+        "k1": 6,
+        "k2": 3,
+        "p1_nodes": 12,
+        "p2_nodes": 8,
+        "roots": 2,
+        "siblings": 3,
+        "passes": 1,
+        "target_tp": 1,
+        "exit_replica": false,
+        "component_repeats": 0,
+        "ds_width": 26,
+        "ps_width": 15,
+        "ps_roots": 10,
+        "expansion": "frontier"
+      },
+      "kwargs": {
+        "dtype": "bfloat16",
+        "num_gpus": 2,
+        "max_num_seqs": 1,
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 2048,
+        "gpu_memory_utilization": 0.45,
+        "speculate": true,
+        "draft_async": true,
+        "jit_speculate": true,
+        "speculate_k": 9,
+        "async_fan_out": 3,
+        "draft": "/home/chokwans99/models_mlsys/AMD-Llama-135m",
+        "duet_enabled": true,
+        "duet_exit_layer": 20,
+        "duet_phase1_k": 6,
+        "duet_phase2_k": 3,
+        "duet_draft_fan_out": 2,
+        "duet_p1_tree_policy": "on",
+        "duet_p2_tree_policy": "on",
+        "duet_p1_tree_max_nodes": 12,
+        "duet_p1_tree_verify_nodes": 12,
+        "duet_p2_tree_max_nodes": 8,
+        "duet_p2_tree_verify_nodes": 8,
+        "duet_tree_c_tensor": 3,
+        "duet_p1_roots_per_position": 2,
+        "duet_p1_forward_width": 26,
+        "duet_p2_forward_width": 15,
+        "duet_p2_root_count": 10,
+        "duet_tree_expansion": "frontier",
+        "stochastic_only": true
+      },
+      "before": {
+        "skipped": {
+          "warm": 136,
+          "first_two": 46,
+          "terminal": 22
+        },
+        "total_steps": 1001,
+        "measured_steps": 797,
+        "covered_requests": 28,
+        "full_event_coverage": true
+      },
+      "after": {
+        "skipped": {
+          "warm": 136,
+          "first_two": 46,
+          "terminal": 22
+        },
+        "total_steps": 1001,
+        "measured_steps": 797,
+        "covered_requests": 28,
+        "full_event_coverage": true
+      },
+      "breakdown_ms": {
+        "build": {
+          "before": 0.8445065207026349,
+          "after": 0.725123356336261
+        },
+        "dispatch": {
+          "before": 0.6185616103738285,
+          "after": 0.3939093921235394
+        },
+        "prepare1": {
+          "before": 0.18697154454203263,
+          "after": 0.19104373776662487
+        },
+        "prepare2": {
+          "before": 0.22974038143036385,
+          "after": 0.2045295470514429
+        },
+        "graph": {
+          "before": 2.856094543287327,
+          "after": 2.8553079736511924
+        },
+        "other": {
+          "before": 0.44024746947135585,
+          "after": 0.4295955569597194
+        },
+        "ps_total": {
+          "before": 5.176122069807543,
+          "after": 4.79950956388878
+        },
+        "target_forward": {
+          "before": 15.516698021329988,
+          "after": 15.516907780426601
+        },
+        "p1_graph": {
+          "before": 6.579563875784191,
+          "after": 6.577962164366375
+        }
+      },
+      "algorithms_same": {
+        "al_before": 2.4377224199288254,
+        "al_after": 2.4377224199288254,
+        "hit_before": 0.8291814946619217,
+        "hit_after": 0.8291814946619217
+      }
+    }
+  ],
+  "components": {
+    "build": {
+      "before_ms": 0.8766709180259307,
+      "after_ms": 0.7714756465913843,
+      "delta_ms": -0.10519527143454621,
+      "change_pct": -11.999402429297279,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.12725161877004967,
+        -0.08424337848153189
+      ],
+      "before_p50_ms": 0.85437,
+      "after_p50_ms": 0.743424
+    },
+    "dispatch": {
+      "before_ms": 0.6383674793889561,
+      "after_ms": 0.4171618920696774,
+      "delta_ms": -0.22120558731927875,
+      "change_pct": -34.65176320244512,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.23150988807884457,
+        -0.21020826519948685
+      ],
+      "before_p50_ms": 0.6185910701751709,
+      "after_p50_ms": 0.3971860408782959
+    },
+    "prepare1": {
+      "before_ms": 0.19261715892931827,
+      "after_ms": 0.20157695190296948,
+      "delta_ms": 0.00895979297365119,
+      "change_pct": 4.651606857590007,
+      "paired_question_bootstrap_delta_ci95": [
+        0.004710898236487792,
+        0.013477965781442116
+      ],
+      "before_p50_ms": 0.186111,
+      "after_p50_ms": 0.192322
+    },
+    "prepare2": {
+      "before_ms": 0.23898396026767044,
+      "after_ms": 0.21639995901296527,
+      "delta_ms": -0.022584001254705142,
+      "change_pct": -9.45000711738574,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.027989978240559026,
+        -0.016988350909544793
+      ],
+      "before_p50_ms": 0.231422,
+      "after_p50_ms": 0.203781
+    },
+    "graph": {
+      "before_ms": 2.861419016311167,
+      "after_ms": 2.856001112505228,
+      "delta_ms": -0.005417903805938939,
+      "change_pct": -0.18934325154948972,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.007127144795998009,
+        -0.003569575976513201
+      ],
+      "before_p50_ms": 2.842651,
+      "after_p50_ms": 2.83957
+    },
+    "other": {
+      "before_ms": 0.4610127264698561,
+      "after_ms": 0.46522016075689493,
+      "delta_ms": 0.004207434287038919,
+      "change_pct": 0.9126503555024756,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.007002359843795867,
+        0.01559445530410537
+      ],
+      "before_p50_ms": 0.4495240609588622,
+      "after_p50_ms": 0.4464410682220459
+    },
+    "ps_total": {
+      "before_ms": 5.2690712593928986,
+      "after_ms": 4.927835722839119,
+      "delta_ms": -0.3412355365537789,
+      "change_pct": -6.4761989306080565,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.38992708778301427,
+        -0.2901444419447979
+      ],
+      "before_p50_ms": 5.202942132949829,
+      "after_p50_ms": 4.849669933319092
+    },
+    "target_forward": {
+      "before_ms": 15.521505437892097,
+      "after_ms": 15.513810568381432,
+      "delta_ms": -0.0076948695106650285,
+      "change_pct": -0.049575535964963,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.024957865194137913,
+        0.00025762200388625996
+      ],
+      "before_p50_ms": 15.425506,
+      "after_p50_ms": 15.424560999999999
+    },
+    "p1_graph": {
+      "before_ms": 6.591021450020912,
+      "after_ms": 6.580565881639482,
+      "delta_ms": -0.010455568381430354,
+      "change_pct": -0.15863350560626488,
+      "paired_question_bootstrap_delta_ci95": [
+        -0.014501567149260952,
+        -0.006090554245721346
+      ],
+      "before_p50_ms": 6.697998,
+      "after_p50_ms": 6.659088
+    }
+  },
+  "per_source": {
+    "0": {
+      "n": 333,
+      "breakdown": {
+        "build": {
+          "before": 0.7675244774774774,
+          "after": 0.7315525615615617
+        },
+        "dispatch": {
+          "before": 0.6295722347122055,
+          "after": 0.4087170931670043
+        },
+        "prepare1": {
+          "before": 0.203792963963964,
+          "after": 0.21179385285285288
+        },
+        "prepare2": {
+          "before": 0.24275202402402404,
+          "after": 0.24617642042042043
+        },
+        "graph": {
+          "before": 2.8455226456456457,
+          "after": 2.839978219219219
+        },
+        "other": {
+          "before": 0.4641883264500157,
+          "after": 0.46663696519268594
+        },
+        "ps_total": {
+          "before": 5.153352672273332,
+          "after": 4.9048551124137445
+        },
+        "target_forward": {
+          "before": 15.774280501501503,
+          "after": 15.774235555555554
+        },
+        "p1_graph": {
+          "before": 5.722667372372372,
+          "after": 5.712637075075075
+        }
+      }
+    },
+    "1": {
+      "n": 813,
+      "breakdown": {
+        "build": {
+          "before": 0.8884655879458795,
+          "after": 0.7708857478474784
+        },
+        "dispatch": {
+          "before": 0.6382856078693347,
+          "after": 0.4142042467368338
+        },
+        "prepare1": {
+          "before": 0.19068425461254612,
+          "after": 0.1981218511685117
+        },
+        "prepare2": {
+          "before": 0.2297620467404674,
+          "after": 0.20880782902829026
+        },
+        "graph": {
+          "before": 2.863457623616236,
+          "after": 2.858714897908979
+        },
+        "other": {
+          "before": 0.4617400812235101,
+          "after": 0.4628319002420348
+        },
+        "ps_total": {
+          "before": 5.272395202007974,
+          "after": 4.9135664729321284
+        },
+        "target_forward": {
+          "before": 15.503909109471094,
+          "after": 15.48101659409594
+        },
+        "p1_graph": {
+          "before": 6.830829285362853,
+          "after": 6.821512115621156
+        }
+      }
+    },
+    "2": {
+      "n": 1245,
+      "breakdown": {
+        "build": {
+          "before": 0.8981622417670684,
+          "after": 0.782539080321285
+        },
+        "dispatch": {
+          "before": 0.6407734055116953,
+          "after": 0.42135199945135765
+        },
+        "prepare1": {
+          "before": 0.19089017751004017,
+          "after": 0.2011004610441767
+        },
+        "prepare2": {
+          "before": 0.24399813734939757,
+          "after": 0.2133934048192771
+        },
+        "graph": {
+          "before": 2.8643395815261044,
+          "after": 2.8585146192771087
+        },
+        "other": {
+          "before": 0.4596883777083186,
+          "after": 0.46640077113557993
+        },
+        "ps_total": {
+          "before": 5.297851921372624,
+          "after": 4.943300336048785
+        },
+        "target_forward": {
+          "before": 15.465386336546183,
+          "after": 15.465569588755022
+        },
+        "p1_graph": {
+          "before": 6.666682604819277,
+          "after": 6.65536990120482
+        }
+      }
+    }
+  },
+  "matched_step_pairs": 2391,
+  "questions": 22,
+  "notes": "CUDA event wall intervals; all measured requests covered. Exclude warm/first2/final/cap/clip only; no latency outlier censoring. PS graph includes selection. Bootstrap clusters by question over repeats.",
+  "run_sha256": {
+    "after_graph2": "20369c22fb23b0050cae6600a43868301c480ee9d9f9034af8d4803b4888fa91",
+    "before_graph1": "259661e4ae4ba7efbf671361a21d0674f30278aaf31271e01bcb3b349ac99540",
+    "after_graph3": "934d96eb0df9cb6c0bbe53f667a7a3db7c788c1d379fb8147f0295bd9354d079",
+    "before_graph3": "efad46e5ab1caa13d449c615f53e74ae1d1e1b1ef23a9df0e03f971f8806bdc1",
+    "before_graph2": "10279da41bf72bf89b4122ab714b19c172a6c63f8277320de9bf2d717cf837f8",
+    "after_graph1": "cd2a1a6196bc03a760aafb9264ddbfaee48b94718dfd49ce231667cfcee355ad"
+  }
+}

@@ -1,0 +1,223 @@
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 4e64ba0..89d2b64 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -2148,15 +2148,13 @@ class DraftRunner(ModelRunner):
+             partial_tree_decode_args, proxy_forked,
+             layout_k2, cache_hits_list)
+ 
+-        seed_ctx = torch.repeat_interleave(
+-            torch.arange(n_rows, dtype=torch.int64,
+-                         device=self.device),
+-            proxy_fan_out_tensor[0])
++        # B=1: layout already contains this exact position-to-root map.
++        seed_ctx = layout_k2.fan_idx_hit
+         pos0 = int(partial_tree_decode_args["num_tokens"][0]) - 1
+         proxy_args["rope_positions"] = (
+             pos0 + 1 + self._p1_context_depth.index_select(0, seed_ctx))
+         glue_rows = self._p1_context_glue_rows.index_select(
+-            0, seed_ctx).detach().cpu().numpy().astype(_np.uint8, copy=False)
++            0, seed_ctx).to(dtype=torch.uint8)
+         proxy_args["glue_rows_override"] = glue_rows
+         proxy_args["K_glue_override"] = n_valid
+         _mc("phase2_build", event)
+@@ -2865,6 +2863,51 @@ class DraftRunner(ModelRunner):
+         both execution backends; it is never represented by ``-1`` inside a
+         model forward.
+         """
++        max_pos = getattr(self, "_p2_rope_limit", None)
++        if max_pos is None:
++            max_pos = int(self.config.max_model_len)
++            model = getattr(self, "model", None)
++            if model is not None:
++                for module in model.modules():
++                    cache = getattr(module, "cos_sin_cache", None)
++                    if cache is not None:
++                        max_pos = min(max_pos, int(cache.shape[0]))
++                        break
++            self._p2_rope_limit = max_pos
++        n_slots = int(self.kv_cache.shape[2] * self.kv_cache.shape[3])
++        n_blocks = int(self.kv_cache.shape[2])
++        # The serving path owns dense metadata tensors. Fuse only integer
++        # validation; list/CPU diagnostics retain the reference below.
++        real_roots = W if root_count is None else min(int(root_count), W)
++        tensors = (rope0, step_slot_maps, step_context_lens, dbt)
++        if (F > 0 and W > 0 and real_roots >= 0
++                and all(torch.is_tensor(x) and x.is_cuda
++                        and x.dtype in (torch.int32, torch.int64)
++                        and x.device == rope0.device for x in tensors)
++                and rope0.ndim == 1 and rope0.numel() >= real_roots
++                and step_slot_maps.ndim == 2
++                and step_slot_maps.shape[0] >= F
++                and step_slot_maps.shape[1] >= W
++                and step_context_lens.ndim == 2
++                and step_context_lens.shape[0] >= F
++                and step_context_lens.shape[1] >= 1
++                and dbt.ndim == 2 and dbt.shape[0] >= 1
++                and dbt.shape[1] > 0):
++            from ssd.engine.helpers.p2_prepare import state_snapshot
++            snapshot_buf = getattr(self, "_p2_state_snapshot", None)
++            if snapshot_buf is None or snapshot_buf.device != rope0.device:
++                snapshot_buf = torch.empty(7, dtype=torch.int64,
++                                           device=rope0.device)
++                self._p2_state_snapshot = snapshot_buf
++            snapshot = state_snapshot(
++                rope0, step_slot_maps, step_context_lens, dbt, snapshot_buf,
++                F=F, W=W, R=real_roots, max_pos=max_pos, n_slots=n_slots,
++                n_blocks=n_blocks, block_size=self.block_size)
++            reasons = ("no_roots", "ctx", "rope", "slot", "ctxlen", "pages")
++            reason = next((name for name, bad in zip(reasons, snapshot[1:])
++                           if bad), None)
++            return _P2StepState(ctx_len=int(snapshot[0]), reason=reason)
++
+         ctx = step_context_lens[0].reshape(-1)[0].to(torch.int64)
+         slots = torch.stack([m[:W] for m in step_slot_maps[:F]])
+         ctxs = torch.stack(
+@@ -2880,19 +2923,6 @@ class DraftRunner(ModelRunner):
+                 list(rope0)[:real_roots], dtype=torch.int64,
+                 device=self.device)
+ 
+-        max_pos = getattr(self, "_p2_rope_limit", None)
+-        if max_pos is None:
+-            max_pos = int(self.config.max_model_len)
+-            model = getattr(self, "model", None)
+-            if model is not None:
+-                for module in model.modules():
+-                    cache = getattr(module, "cos_sin_cache", None)
+-                    if cache is not None:
+-                        max_pos = min(max_pos, int(cache.shape[0]))
+-                        break
+-            self._p2_rope_limit = max_pos
+-        n_slots = int(self.kv_cache.shape[2] * self.kv_cache.shape[3])
+-        n_blocks = int(self.kv_cache.shape[2])
+         page_col = torch.arange(dbt.shape[1], device=dbt.device)
+         need_pages = torch.div(
+             ctx + self.block_size - 1, self.block_size,
+@@ -3348,10 +3378,8 @@ class DraftRunner(ModelRunner):
+                 ex.in_rope_base[:R].copy_(
+                     torch.tensor(rope_base[:R], dtype=torch.int64,
+                                  device=self.device))
+-            _g_np = _np.ascontiguousarray(glue_rows[:R, :gw])
+-            _np.copyto(ex.in_glue_host[:R, :gw].numpy(), _g_np)
+-            ex.in_glue[:R, :gw].copy_(
+-                ex.in_glue_host[:R, :gw], non_blocking=True)
++            from ssd.engine.helpers.p2_prepare import copy_glue_rows
++            copy_glue_rows(ex, glue_rows, R, gw)
+             ex.in_glue_w.fill_(gw)
+             ex.in_temps.copy_(temps[:1].expand(ex.W))
+             ex.in_prefix_len.fill_(ctx0 - gw - ex.W)
+@@ -4743,9 +4771,10 @@ class DraftRunner(ModelRunner):
+             return logits.view(-1, V)[:W].float()   # GPU 상주 (CPU 왕복 제거)
+ 
+         _mc_p2("p2_prepare", _mev_p2prep)
++        from ssd.engine.helpers.p2_prepare import host_glue_rows
+         if self._lab_active():
+             try:
+-                self._lab_dump(toks, root_piv, glue_rows, rope_base,
++                self._lab_dump(toks, root_piv, host_glue_rows(glue_rows), rope_base,
+                                ctx_len, K_glue_used, step_slot_maps,
+                                step_context_lens, dbt, temps, seeds)
+             except Exception as _de:
+@@ -4775,6 +4804,7 @@ class DraftRunner(ModelRunner):
+                 "rope": (rope_base.clone() if torch.is_tensor(rope_base)
+                          else torch.tensor(rope_base, device=self.device)),
+             }
++            glue_rows = host_glue_rows(glue_rows)
+             _s1_art = self._stage1_exec_shadow(
+                 toks, root_piv, glue_rows, rope_base, ctx_len,
+                 K_glue_used, step_slot_maps, step_context_lens, dbt,
+@@ -4822,6 +4852,7 @@ class DraftRunner(ModelRunner):
+         # Both the GPU arena and the CPU reference path end in the same view
+         # conversion stage.  Start its measurement before the branch so the
+         # diagnostic/reference path remains valid when SSD_TREE_ARENA=0.
++        glue_rows = host_glue_rows(glue_rows)
+         _mev_cv2 = _mr_p2("p2_output_convert")
+         try:
+             if _use_arena:
+@@ -5050,7 +5081,8 @@ class DraftRunner(ModelRunner):
+         # arange(K_plus_1).repeat_interleave(fan_out_tensor).
+         layout.fan_idx_hit = torch.arange(
+             K_plus_1, device=device, dtype=torch.int64
+-        ).repeat(B).repeat_interleave(fan_out_tensor.reshape(-1))
++        ).repeat(B).repeat_interleave(
++            fan_out_tensor.reshape(-1), output_size=B * layout.MQ_LEN)
+         layout.fan_idx_miss = layout.fan_idx_hit
+         # M3: fan_idx above already spans ALL seqs — consumers must not re-cat
+         # it per seq (see _build_tree_decode_args_for_layout / merge).
+diff --git a/ssd/ssd/engine/helpers/p2_prepare.py b/ssd/ssd/engine/helpers/p2_prepare.py
+new file mode 100644
+index 0000000..1b4fca2
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/p2_prepare.py
+@@ -0,0 +1,71 @@
++"""Small, integer-only PS metadata operations; no tree selection or RNG."""
++import numpy as np
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit
++def _state_kernel(ROPE, SLOTS, CTXS, PAGES, OUT,
++                  SS0: tl.constexpr, SS1: tl.constexpr,
++                  CS0: tl.constexpr, RS: tl.constexpr, PS: tl.constexpr,
++                  F: tl.constexpr, W: tl.constexpr, R: tl.constexpr,
++                  P: tl.constexpr, MAX_POS: tl.constexpr,
++                  N_SLOTS: tl.constexpr, N_BLOCKS: tl.constexpr,
++                  PAGE_SIZE: tl.constexpr, BLOCK: tl.constexpr):
++    i = tl.arange(0, BLOCK)
++    ctx = tl.load(CTXS).to(tl.int64)
++    slot = tl.load(SLOTS + (i // W) * SS0 + (i % W) * SS1,
++                   i < F * W, other=0).to(tl.int64)
++    contexts = tl.load(CTXS + i * CS0, i < F, other=1).to(tl.int64)
++    rope = tl.load(ROPE + i * RS, i < R, other=0).to(tl.int64)
++    page = tl.load(PAGES + i * PS, i < P, other=0).to(tl.int64)
++    # Torch uses floor division, including invalid negative contexts.
++    need = (ctx + PAGE_SIZE - 1) // PAGE_SIZE
++    bad_rope = tl.sum(((i < R) & ((rope < 0) | (rope >= MAX_POS))).to(tl.int32), 0) > 0
++    bad_slot = tl.sum(((i < F * W) & ((slot < 0) | (slot >= N_SLOTS))).to(tl.int32), 0) > 0
++    bad_ctx = tl.sum(((i < F) & ((contexts <= 0) | (contexts > MAX_POS))).to(tl.int32), 0) > 0
++    bad_page = tl.sum(((i < P) & (i < need) & ((page < 0) | (page >= N_BLOCKS))).to(tl.int32), 0) > 0
++    tl.store(OUT, ctx)
++    tl.store(OUT + 1, R <= 0)
++    tl.store(OUT + 2, ctx <= 0)
++    tl.store(OUT + 3, bad_rope)
++    tl.store(OUT + 4, bad_slot)
++    tl.store(OUT + 5, bad_ctx)
++    tl.store(OUT + 6, bad_page)
++
++
++def state_snapshot(rope, slots, contexts, pages, out, *, F, W, R,
++                   max_pos, n_slots, n_blocks, block_size):
++    """Same six validity flags as DraftRunner's reference, one GPU launch.
++
++    The caller owns ``out`` and reads it once before dispatch. All W lanes
++    require valid slots; only the R real roots require valid RoPE positions.
++    Pages beyond the live prefix remain deliberately unchecked.
++    """
++    _state_kernel[(1,)](
++        rope, slots, contexts, pages, out,
++        slots.stride(0), slots.stride(1), contexts.stride(0),
++        rope.stride(0), pages.stride(1), F, W, R, pages.shape[1],
++        max_pos, n_slots, n_blocks, block_size,
++        triton.next_power_of_2(max(F * W, R, pages.shape[1])),
++        num_warps=4)
++    return out.cpu().tolist()
++
++
++def copy_glue_rows(executor, rows, roots, width):
++    """Keep a GPU-produced ancestry mask on GPU; retain host diagnostics."""
++    if torch.is_tensor(rows):
++        executor.in_glue[:roots, :width].copy_(rows[:roots, :width])
++    else:
++        np.copyto(executor.in_glue_host[:roots, :width].numpy(),
++                  np.ascontiguousarray(rows[:roots, :width]))
++        executor.in_glue[:roots, :width].copy_(
++            executor.in_glue_host[:roots, :width], non_blocking=True)
++
++
++def host_glue_rows(rows):
++    """Materialize only for reference/diagnostic backends requiring NumPy."""
++    if torch.is_tensor(rows):
++        return rows.detach().cpu().numpy().astype(np.uint8, copy=False)
++    return rows
