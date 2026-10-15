@@ -108,6 +108,62 @@ COLORS: dict[str, tuple[str, str]] = {
 _DEFAULT_COLOR = ("#d9d9d9", "")
 
 
+def draw_phase_lanes(ax, stages, *, origin_ns, xmax_ms, markers=()):
+    """Readable target/draft lanes for already aligned, measured phase spans.
+
+    ``stages`` are presentation records with start_ns/end_ns, lane, text,
+    color and optional graph intervals. The caller must assign request epochs
+    before grouping them. Durations are never widened or clock shifted.
+    The small proxy lane preserves overlap with target post-exit execution.
+    DS/PS background bars include preparation/export; their dark lower stripe
+    shows the measured graph replay, not an inferred per-forward subdivision.
+    """
+    from matplotlib.colors import to_rgb
+    ys = {"target": 1.65, "proxy": 1.08, "draft": .25, "previous": -.20}
+    records = []
+    for stage in stages:
+        x0 = (stage['start_ns'] - origin_ns) / 1e6
+        x1 = (stage['end_ns'] - origin_ns) / 1e6
+        if x1 < x0:
+            raise ValueError('Negative display interval')
+        y = ys[stage['lane']]
+        height = .18 if stage['lane'] in ('proxy', 'previous') else .48
+        left, right = max(0., x0), min(xmax_ms, x1)
+        if right <= left:
+            continue
+        ax.barh(y, right-left, left=left, height=height, color=stage['color'],
+                edgecolor='#34414b', linewidth=.45,
+                alpha=.55 if stage['lane']=='previous' else .93)
+        for start, end in stage.get('graphs', []):
+            a, b = (start-origin_ns)/1e6, (end-origin_ns)/1e6
+            if start < stage['start_ns'] or end > stage['end_ns']:
+                raise ValueError('Replay outside displayed phase')
+            a, b = max(a, 0.), min(b, xmax_ms)
+            if b > a:
+                color = tuple(v*.55 for v in to_rgb(stage['color']))
+                ax.barh(y-height*.30, b-a, left=a, height=height*.18,
+                        color=color, edgecolor='none')
+        # Small bars stay small. All phase lengths are in the companion CSV.
+        if right-left >= xmax_ms*.062 and stage['lane'] not in ('proxy', 'previous'):
+            rgb=to_rgb(stage['color'])
+            fg='white' if sum(rgb)/3 < .48 else '#16222b'
+            ax.text((left+right)/2, y+.025,
+                    f"{stage['text']}\n{x1-x0:.2f} ms",ha='center',va='center',
+                    color=fg,fontsize=9,fontweight='normal')
+        records.append(dict(lane=stage['lane'],text=stage['text'],
+                            start_ms=x0,end_ms=x1,duration_ms=x1-x0))
+    for ns,label,color in markers:
+        x=(ns-origin_ns)/1e6
+        ax.axvline(x,color=color,ls='--',lw=.9,alpha=.75)
+        ax.text(x,2.03,label,ha='center',va='bottom',fontsize=8,color=color)
+    ax.set_yticks([1.65,1.08,.25],['Target','Proxy\n(side stream)','Draft'],fontsize=10)
+    ax.set_ylim(-.40,2.38);ax.set_xlim(0,xmax_ms)
+    ax.grid(axis='x',ls=':',alpha=.3)
+    ax.set_xlabel('Time from current request / cache wait start (ms)',fontsize=9)
+    for side in ('top','right'):ax.spines[side].set_visible(False)
+    return records
+
+
 def _style(label: str) -> tuple[str, str]:
     return COLORS.get(label, _DEFAULT_COLOR)
 
@@ -604,6 +660,7 @@ def _draw_row(
     bar_h_parent: float,
     bar_h_child: float,
     shift_ns: int = 0,
+    min_width_ms: float = 0.02,
 ) -> None:
     """Draw one process row.  Parents go on bottom (translucent), children on top.
 
@@ -629,7 +686,7 @@ def _draw_row(
         cuda_ms = r.get("cuda_ms")
         if cuda_ms is None:
             cuda_ms = (int(we) - int(ws)) / 1e6
-        w = max(float(cuda_ms), 0.02)
+        w = max(float(cuda_ms), min_width_ms)
         color, hatch = _style(lbl)
 
         parent_label = r.get("parent_label")
@@ -730,6 +787,40 @@ def _draw_causality_arrow(
     )
 
 
+def draw_draft_forward_dividers(ax, rows, counts, origin, *, y=0.0,
+                                height=0.55, shift_ns=0):
+    """Show configured forward counts, NOT measured per-forward boundaries.
+
+    The trace captures an entire graph. Equal slots are only a count aid;
+    graph-internal selection/sampling is included in that measured envelope.
+    """
+    records = []
+    for event in rows:
+        label = event.get('label')
+        if label not in counts:
+            continue
+        count = int(counts[label])
+        if count < 1:
+            raise ValueError('forward count must be positive')
+        start = (event['wall_start_ns'] - shift_ns - origin) / 1e6
+        end = (event['wall_end_ns'] - shift_ns - origin) / 1e6
+        boundaries = [start + (end - start) * i / count for i in range(1, count)]
+        for x in boundaries:
+            ax.plot([x, x], [y-height/2, y+height/2], color='white',
+                    linestyle=(0, (2, 2)), linewidth=1.2, zorder=6)
+        for i in range(count):
+            ax.text(start+(end-start)*(i+.5)/count, y, str(i+1),
+                    ha='center', va='center', color='white', fontsize=7, zorder=7)
+        phase = 'DS' if label == 'p1_graph_replay' else 'PS'
+        ax.text((start+end)/2, y+height/2+.065, f'{phase}: {count} rounds',
+                ha='center', va='bottom', fontsize=8, color='#333333', zorder=7)
+        records.append(dict(label=label, event_step=event.get('step_id'),
+                            count=count, start_ms=start, end_ms=end,
+                            schematic_boundaries_ms=boundaries,
+                            measured_boundaries=False))
+    return records
+
+
 def plot_aligned_step(
     target_rows: list[dict],
     draft_rows: list[dict],
@@ -738,6 +829,7 @@ def plot_aligned_step(
     title_suffix: str = "",
     draft_shift_ns: int = 0,
     shift_n_pairs: int = 0,
+    draft_forward_counts: dict[str, int] | None = None,
 ) -> Path:
     """Render the two-row aligned timeline for one step_id.
 
@@ -752,6 +844,8 @@ def plot_aligned_step(
             modified.  When non-zero, the title annotates the shift.
         shift_n_pairs: number of response pairs used to compute the shift
             (for the title annotation).  0 means no shift information.
+        draft_forward_counts: optional graph-label -> forward-count mapping.
+            Dotted equal slots are a schematic count aid, not measured timing.
     """
     if not target_rows and not draft_rows:
         raise ValueError(f"no rows for step_id={step_id}")
@@ -789,6 +883,9 @@ def plot_aligned_step(
         ax, target_rows, draft_rows, y_target_parent, y_draft_parent, origin,
         draft_shift_ns=draft_shift_ns,
     )
+    if draft_forward_counts:
+        draw_draft_forward_dividers(ax, draft_rows, draft_forward_counts, origin,
+                                    height=0.65, shift_ns=draft_shift_ns)
 
     # X extent: account for the draft shift too so bars are not clipped
     all_ends = []

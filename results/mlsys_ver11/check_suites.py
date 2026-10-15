@@ -15,7 +15,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = (
-    'test_duet_parameters_v11', 'test_args_cleanup_equiv',
+    'test_p2_preparation', 'test_duet_parameters_v11', 'test_args_cleanup_equiv',
     'test_common_port', 'test_output_accounting', 'test_step_performance_metrics',
     'test_cached_prefill', 'test_ver01_review', 'test_tree_accept_port',
     'test_p1_dynamic_tree', 'test_p2_tree_alloc', 'test_p2_executor_parity',
