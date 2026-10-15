@@ -1,0 +1,32 @@
+{
+  "status": "complete",
+  "scope": "parameter contract, regression checks, historical trace reanalysis",
+  "branch": "MLSys-ver1.1",
+  "tested_commit": "fe699aa5b88e7e5b8cb11ce04715af84e02f31c6",
+  "suites": 39,
+  "tests": 370,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "source_unchanged": true,
+  "cuda_visible_devices": "2",
+  "cli_config_check": true,
+  "cli_weights_loaded": false,
+  "log_parser_compatibility": true,
+  "historical_tree_runs": 12,
+  "historical_root_records": 17691424,
+  "full_model_online_benchmark": false,
+  "performance_claim": false,
+  "policy_changes": [
+    "Automatic local top-L equals wire N; topm normalization changes with L.",
+    "G=M can change expansion versus old G>M experiments.",
+    "DS continuation input cap replaces scale; omitted cap uses all roots."
+  ],
+  "sha256": {
+    "checks/CHECKS.json": "4f0a353b50655d603840c7cba9ec6ca564273829c414fc9a2b9703f4d8940f41",
+    "checks/CHECKS_PROVENANCE.json": "6c1ce4994d752707f75b8395c5636ce7d2fbc010fdc2f6f05d137d0d90632b67",
+    "CLI_CHECKS.json": "2ec0cf4a86eccc4aca918ab1da40085aeea3ce027d1570443913a484d0a928c9",
+    "CLI_HELP.txt": "eaee1637fe0e1c02f0d87a3dba25a8eb6f1b1028623cc457f41a56cf9d34c548",
+    "GENERATED_NODES.json": "3f943e3f31a5f1372d8b9878317340c4b35e5aa405a446a9469234818e2cf3e2"
+  }
+}

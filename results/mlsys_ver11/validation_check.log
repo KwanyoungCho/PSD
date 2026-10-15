@@ -1,0 +1,25 @@
+{
+  "status": "complete",
+  "scope": "parameter contract, regression checks, historical trace reanalysis",
+  "branch": "MLSys-ver1.1",
+  "tested_commit": "fe699aa5b88e7e5b8cb11ce04715af84e02f31c6",
+  "suites": 39,
+  "tests": 370,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "source_unchanged": true,
+  "cuda_visible_devices": "2",
+  "cli_config_check": true,
+  "cli_weights_loaded": false,
+  "log_parser_compatibility": true,
+  "historical_tree_runs": 12,
+  "historical_root_records": 17691424,
+  "full_model_online_benchmark": false,
+  "performance_claim": false,
+  "policy_changes": [
+    "Automatic local top-L equals wire N; topm normalization changes with L.",
+    "G=M can change expansion versus old G>M experiments.",
+    "DS continuation input cap replaces scale; omitted cap uses all roots."
+  ]
+}

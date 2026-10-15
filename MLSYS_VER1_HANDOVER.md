@@ -1,5 +1,7 @@
 # MLSys ver1.0 다른 서버 작업자 인수인계
 
+> **ver1.1 작업 안내:** 현재 `MLSys-ver1.1`에서는 [파라미터 정리 보고서](results/mlsys_ver11/REPORT.md)를 따른다. G=M, 직접 입력 폭, 자동 top-L, threshold=0 계약을 적용했다. 아래 표는 ver1.0의 역사적 설정이며 새 API에 그대로 복사하지 않는다. 기존 tree 실험은 ver1.0 기준 결과로 유지한다.
+
 2026년 10월 15일 기준. 다른 서버에서는 **`MLSys-ver1.0`을 별도 worktree로 받아 아래 70B preset부터 검증**한다. 이 브랜치는 최신 ver0.2 위에 현재 서버의 확정된 후보 점수 설정과 calibration 없는 tree 확장을 통합한 버전이다. 기존 연구 브랜치의 파일이나 launcher를 통째로 덮어쓰지 않는다.
 
 ## 브랜치와 전달 상태

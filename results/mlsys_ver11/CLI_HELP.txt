@@ -1,0 +1,192 @@
+usage: bench.py [-h] [--size {0.6,1.7,4,8,14,32,1,3,70}] [--llama] [--qwen]
+                [--draft DRAFT] [--model_path MODEL_PATH]
+                [--draft_path DRAFT_PATH] [--dtype {float16,bfloat16}]
+                [--eager] [--gpus GPUS] [--spec] [--eagle] [--k K] [--async]
+                [--f F] [--flh FLH [FLH ...]] [--flm FLM [FLM ...]]
+                [--backup {jit,fast}] [--block_sz BLOCK_SZ] [--b B]
+                [--max_model_len MAX_MODEL_LEN] [--extend_draft_rope]
+                [--gpu_memory_utilization GPU_MEMORY_UTILIZATION]
+                [--input_len INPUT_LEN] [--output_len OUTPUT_LEN]
+                [--numseqs NUMSEQS] [--temp TEMP] [--dtemp DTEMP] [--x X]
+                [--example] [--humaneval] [--alpaca] [--c4] [--ultrafeedback]
+                [--random] [--seed SEED] [--prompt_offset PROMPT_OFFSET]
+                [--all] [--chat_template] [--verbose] [--debug]
+                [--max-steps MAX_STEPS] [--wandb] [--group GROUP]
+                [--name NAME] [--duet]
+                [--duet_root_source {complement,residual,proxy}]
+                [--duet_root_normalization {full,topm}]
+                [--duet_root_overlap_mix DUET_ROOT_OVERLAP_MIX]
+                [--duet_exit_layer DUET_EXIT_LAYER]
+                [--duet_phase1_k DUET_PHASE1_K]
+                [--duet_phase2_k DUET_PHASE2_K] [--duet_no_jit_short]
+                [--duet_p2_forward_width DUET_P2_FORWARD_WIDTH]
+                [--duet_p1_tree_policy {off,on}]
+                [--duet_p2_tree_policy {off,on}]
+                [--duet_tree_c_tensor DUET_TREE_C_TENSOR]
+                [--duet_tree_expansion {last,frontier}]
+                [--duet_p1_tree_expansion {last,frontier}]
+                [--duet_p2_tree_expansion {last,frontier}]
+                [--duet_p1_tree_verify_nodes DUET_P1_TREE_VERIFY_NODES]
+                [--duet_p2_tree_verify_nodes DUET_P2_TREE_VERIFY_NODES]
+                [--duet_p1_roots_per_position DUET_P1_ROOTS_PER_POSITION]
+                [--duet_p1_forward_width DUET_P1_FORWARD_WIDTH]
+                [--duet_p2_root_count DUET_P2_ROOT_COUNT] [--quant_lm_head]
+                [--quant_awq] [--quant_awq_artifact QUANT_AWQ_ARTIFACT]
+                [--quant_awq_external QUANT_AWQ_EXTERNAL]
+                [--quant_group_size QUANT_GROUP_SIZE] [--quant_awq_draft]
+                [--quant_awq_draft_artifact QUANT_AWQ_DRAFT_ARTIFACT]
+                [--quant_awq_draft_external QUANT_AWQ_DRAFT_EXTERNAL]
+                [--quant_awq_draft_group_size QUANT_AWQ_DRAFT_GROUP_SIZE]
+                [--sweep SWEEP]
+
+Benchmark SSD performance (API similar to example.py)
+
+options:
+  -h, --help            show this help message and exit
+  --size {0.6,1.7,4,8,14,32,1,3,70}
+                        Model size in billions of parameters (0.6, 1.7, 4, 8,
+                        14, 32, 1, 3, 70)
+  --llama               Use Llama models (default)
+  --qwen                Use Qwen models instead of Llama
+  --draft DRAFT         Draft model size (0.6 for Qwen-0.6B, 1 for Llama-1B)
+                        or path to draft model
+  --model_path MODEL_PATH
+                        Direct path to target model (overrides
+                        --size/--llama/--qwen)
+  --draft_path DRAFT_PATH
+                        Direct path to draft model (overrides --draft)
+  --dtype {float16,bfloat16}
+                        Explicit runtime dtype; omit to use checkpoint config.
+  --eager               Use eager execution (disable CUDA graphs)
+  --gpus GPUS           Total number of gpus
+  --spec                Enable speculative decoding
+  --eagle               Enable eagle speculative decoding (implies --spec,
+                        uses default eagle draft for model)
+  --k K                 Speculative decoding k value
+  --async               Enable async speculative decoding
+  --f F                 Async fan out value
+  --flh FLH [FLH ...]   Fan out list (e.g., --flh 1 3 4 becomes [1, 3, 4])
+  --flm FLM [FLM ...]   Fan out list miss (e.g., --flm 1 3 4 becomes [1, 3,
+                        4])
+  --backup {jit,fast}   Backup strategy (jit or fast)
+  --block_sz BLOCK_SZ   KV cache block size (see config.py:
+                        kvcache_block_size)
+  --b B                 Maximum number of sequences in batch
+  --max_model_len MAX_MODEL_LEN
+                        Maximum model length
+  --extend_draft_rope   Extend the draft model's analytic RoPE cache to the
+                        effective target context length instead of clamping to
+                        the draft's advertised window
+  --gpu_memory_utilization GPU_MEMORY_UTILIZATION
+                        Fraction of free GPU memory to reserve for KV cache.
+                        Useful for sync SD where target rank 0 also hosts the
+                        draft model.
+  --input_len INPUT_LEN
+                        Maximum input length
+  --output_len OUTPUT_LEN
+                        Maximum output length
+  --numseqs NUMSEQS     Number of sequences to generate
+  --temp TEMP           Temperature for generation
+  --dtemp DTEMP         Draft async temperature (overrides --temp)
+  --x X                 Sampler x for generation (Saguaro sampling
+                        coefficient)
+  --example             Use real prompts like in example.py and print
+                        generations (supports up to batch size 8)
+  --humaneval           Use HumanEval prompts
+  --alpaca              Use Alpaca prompts
+  --c4                  Use C4 prompts
+  --ultrafeedback       Use UltraFeedback prompts
+  --random              Use random tokens instead of dataset prompts
+  --seed SEED           Seed Python random + torch. Reproducible prompts (with
+                        --random) and sampling.
+  --prompt_offset PROMPT_OFFSET
+                        Skip first N prompts per dataset (for variance
+                        testing)
+  --all                 Use numseqs from each dataset (union dataset with
+                        numseqs*4 total)
+  --chat_template       Wrap dataset prompts in chat template before
+                        tokenizing
+  --verbose             Enable verbose output
+  --debug               Enable debug mode (saves draft inputs during prefill)
+  --max-steps MAX_STEPS
+                        Maximum number of steps to run
+  --wandb               Log metrics to wandb
+  --group GROUP         Wandb group name
+  --name NAME           Wandb run name
+  --duet                Enable DUET-SSD (early-exit proxy)
+  --duet_root_source {complement,residual,proxy}
+                        Cache token score; never changes target sampling.
+  --duet_root_normalization {full,topm}
+                        Normalize over automatically sized per-position top-L
+                        (default) or full vocabulary.
+  --duet_root_overlap_mix DUET_ROOT_OVERLAP_MIX
+                        Weight of h_bar in the terminal-position mixture
+                        (0=h_hat, 1=h_bar).
+  --duet_exit_layer DUET_EXIT_LAYER
+                        Early-exit layer index (default: 2*L//3)
+  --duet_phase1_k DUET_PHASE1_K
+                        DS sequential forward count K1.
+  --duet_phase2_k DUET_PHASE2_K
+                        PS sequential forward count K2.
+  --duet_no_jit_short   Disable JIT-short (miss JIT at K2 depth). Default is
+                        ON (champion standard; replaces SSD_DUET_JIT_SHORT=1).
+  --duet_p2_forward_width DUET_P2_FORWARD_WIDTH
+                        PS input rows per forward (separate from PS root
+                        count). Default: derived pfo*(K1+1) where pfo = f -
+                        p1_fanout.
+  --duet_p1_tree_policy {off,on}
+                        Enable DUET's dynamic Phase-1 tree.
+  --duet_p2_tree_policy {off,on}
+                        Enable DUET's dynamic Phase-2 tree.
+  --duet_tree_c_tensor DUET_TREE_C_TENSOR
+                        Dynamic tree: maximum ordered child samples per
+                        parent.
+  --duet_tree_expansion {last,frontier}
+                        Q-path expansion: last depth or all unexpanded leaves.
+  --duet_p1_tree_expansion {last,frontier}
+                        Optional P1 override of --duet_tree_expansion.
+  --duet_p2_tree_expansion {last,frontier}
+                        Optional P2 override of --duet_tree_expansion.
+  --duet_p1_tree_verify_nodes DUET_P1_TREE_VERIFY_NODES
+                        DS nodes per root: generation and verification share
+                        this cap (G=M).
+  --duet_p2_tree_verify_nodes DUET_P2_TREE_VERIFY_NODES
+                        PS nodes per root: generation and verification share
+                        this cap (G=M).
+  --duet_p1_roots_per_position DUET_P1_ROOTS_PER_POSITION
+                        Uniform number of P1 root candidates per glue
+                        position.
+  --duet_p1_forward_width DUET_P1_FORWARD_WIDTH
+                        DS continuation forward input cap. First forward
+                        evaluates all roots; smaller root buckets use fewer
+                        rows. Default: root count.
+  --duet_p2_root_count DUET_P2_ROOT_COUNT
+                        Total PS roots after DS deduplication. Defaults to PS
+                        forward width; R must not exceed the P2 forward width
+                        W. Legacy level/frontier also honor this override;
+                        confidence derives R and coverage keeps R=W.
+  --quant_lm_head       [ignored for AWQ — kept dense by default for
+                        throughput/accept]
+  --quant_awq           Enable AWQ-style W4A16 on TARGET via sgl-kernel Marlin
+                        (plan v2). Requires --quant_awq_artifact or
+                        --quant_awq_external.
+  --quant_awq_artifact QUANT_AWQ_ARTIFACT
+                        TARGET SSD-native AWQ artifact prefix (expects
+                        `<prefix>.rank{r}.awq.pt`).
+  --quant_awq_external QUANT_AWQ_EXTERNAL
+                        TARGET external AutoAWQ HF checkpoint directory (reads
+                        qweight/qzeros/scales).
+  --quant_group_size QUANT_GROUP_SIZE
+                        AWQ group size (default 128; must evenly divide every
+                        RowParallel in-shard).
+  --quant_awq_draft     Enable AWQ W4A16 on DRAFT model (plan v2 extension).
+                        Requires --quant_awq_draft_artifact. Llama-family,
+                        tp=1 only.
+  --quant_awq_draft_artifact QUANT_AWQ_DRAFT_ARTIFACT
+                        DRAFT SSD-native AWQ artifact prefix.
+  --quant_awq_draft_external QUANT_AWQ_DRAFT_EXTERNAL
+                        DRAFT external AutoAWQ HF checkpoint directory.
+  --quant_awq_draft_group_size QUANT_AWQ_DRAFT_GROUP_SIZE
+                        DRAFT AWQ group size.
+  --sweep SWEEP         JSON list of override dicts. Sweepable keys: temp, b.
+                        Each dict also supports 'name' for wandb run name.
