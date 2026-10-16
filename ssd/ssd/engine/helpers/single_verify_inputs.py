@@ -32,6 +32,13 @@ class SingleVerifyInputs:
                     torch.empty(max_pages,dtype=torch.int32,pin_memory=True)) for _ in range(2)]
         self.done=[torch.cuda.Event() for _ in range(2)]
         self.pending=[False,False];self.next_slot=0;self.page_key=None
+        # Constructor is first reached in the benchmark's warm requests.
+        # Compile every legal row count here rather than during a measured
+        # request that happens to hit a previously unseen tree size.
+        self.pages.zero_()
+        for rows in range(2,self.max_rows+1):
+            _geometry[(1,)](self.pages,self.positions,self.slots,self.length,self.cu,
+                0,rows,rows,self.block_size,triton.next_power_of_2(rows))
 
     def prepare(self,seq,k,source_ids=None):
         rows=int(k)+1
