@@ -1263,6 +1263,23 @@ class ModelRunner:
             verify_k = getattr(self, "_duet_step_lookahead", self.config.speculate_k)
         else:
             verify_k = -1
+        self._duet_verify_context_len_cpu = None
+        if (verify and len(seqs)==1 and not self.is_draft
+                and getattr(self.config,'duet_enabled',False)
+                and not self.config.use_eagle):
+            from ssd.engine.helpers.single_verify_inputs import SingleVerifyInputs
+            buffers=getattr(self,'_single_verify_inputs',None)
+            if buffers is None:
+                max_rows=max(self.config.speculate_k,self.config.duet_response_token_width)+1
+                buffers=self._single_verify_inputs=SingleVerifyInputs(
+                    self.device,max_rows,self.config.max_blocks,self.block_size)
+            source=getattr(self,'_duet_verify_input_ids',None)
+            ids,positions,slots,lengths,pages,cu=buffers.prepare(seqs[0],verify_k,source)
+            self._duet_verify_context_len_cpu=int(seqs[0].num_tokens)
+            set_context(is_prefill=False,cu_seqlens_q=cu,cu_seqlens_k=None,
+                max_seqlen_q=verify_k+1,max_seqlen_k=0,slot_mapping=slots,
+                context_lens=lengths,block_tables=pages)
+            return ids,positions
         input_ids, positions, slot_mapping, context_lens = \
             prepare_decode_tensors_from_seqs(seqs, self.block_size, self.is_draft, verify, verify_k)
 
@@ -1613,7 +1630,8 @@ class ModelRunner:
         assert input_ids.shape[0] == n_rows, (
             f"tree verify rows {input_ids.shape[0]} != valid+1 {n_rows}")
         context = get_context()
-        kv_len = int(context.context_lens[0])
+        _host_kv_len = getattr(self, '_duet_verify_context_len_cpu', None)
+        kv_len = _host_kv_len if _host_kv_len is not None else int(context.context_lens[0])
         # prepare_decode appends exactly valid speculative scratch rows.  Derive
         # the recovery position from that already materialised KV length and
         # avoid a separate GPU scalar read of positions[0].
@@ -1952,7 +1970,7 @@ class ModelRunner:
             input_ids, positions = self.prepare_prefill(seqs)
         else:
             input_ids, positions = self.prepare_decode(seqs, verify=not last_only)
-        temperatures = self.prepare_sample(seqs) if self.rank == 0 else None
+        temperatures = self.prepare_sample(seqs) if self.rank == 0 and last_only else None
 
         if _pt:
             torch.cuda.synchronize()

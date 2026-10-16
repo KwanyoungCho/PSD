@@ -432,9 +432,14 @@ class Verifier(VerifierBase):
         # existing SHM metadata and perform one bounded H2D copy.
         self.target_model_runner._duet_tree_wire_gpu_source = \
             _tree_wire_gpu_source
-        result = self.target_model_runner.call(
-            "run", seqs, False, False, True, None, _step_lh_arg,
-            _tree_meta_arg)
+        self.target_model_runner._duet_verify_input_ids = (
+            speculate_result.speculations.reshape(-1) if batch_size==1 else None)
+        try:
+            result = self.target_model_runner.call(
+                "run", seqs, False, False, True, None, _step_lh_arg,
+                _tree_meta_arg)
+        finally:
+            self.target_model_runner._duet_verify_input_ids = None
 
         # DUET: clear proxy function
         if config.duet_enabled:
