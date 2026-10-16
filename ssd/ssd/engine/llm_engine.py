@@ -367,7 +367,13 @@ class LLMEngine:
             f"Final Prefill Throughput: {avg_prefill_throughput:.2f}tok/s", flush=True)
         print(
             f"Final Decode Throughput: {selected['tps'] or 0.0:.2f}tok/s", flush=True)
-        print(f"[metrics] Performance population: { {k:v for k,v in selected.items() if k != 'included_step_indices'} }", flush=True)
+        _brief = {k:v for k,v in selected.items() if k not in
+                  ('included_step_indices', 'hit_lengths', 'miss_lengths', 'duration_filter')}
+        _brief['duration_filter'] = {k:v for k,v in selected['duration_filter'].items()
+                                     if k not in ('groups', 'excluded')}
+        print(f"[metrics] Performance population: {_brief}", flush=True)
+        if selected['duration_filter']['enabled']:
+            print(f"[metrics] Excluded long decode steps: {selected['duration_filter']['excluded_steps']}", flush=True)
         print(f"[raw metrics] All decode throughput: {avg_decode_throughput:.2f}tok/s", flush=True)
         print(
             f"[metrics] Prefill tokens/time: {METRICS['prefill_total_tokens']} / "
@@ -407,15 +413,18 @@ class LLMEngine:
                 _accept_denom = max(self.config.duet_phase1_k, self.config.duet_phase2_k)
             else:
                 _accept_denom = self.config.speculate_k
-            avg_acceptance_rate = (total_accepted / ttl_num_spec_steps) / _accept_denom
+            avg_acceptance_rate = ((selected['al'] - 1) / _accept_denom
+                                   if selected['al'] is not None else None)
+            _fraction = f"{avg_acceptance_rate:.2f}" if avg_acceptance_rate is not None else "N/A"
             print(
-                f"[metrics] Avg Fraction of Speculated Tokens Accepted: {avg_acceptance_rate:.2f} "
+                f"[metrics] Avg Fraction of Speculated Tokens Accepted: {_fraction} "
                 f"(denom={_accept_denom})", flush=True)
+            _step_ms = f"{selected['step_ms']:.2f}" if selected['step_ms'] is not None else "N/A"
             print(
-                f"[metrics] Avg target time per full step (ms): {sum(METRICS['target_step_times']) * 1000 / len(METRICS['target_step_times']):.2f}", flush=True)
+                f"[metrics] Avg target time per full step (ms): {_step_ms}", flush=True)
             if METRICS['target_verify_times']:
                 print(
-                    f"[metrics] Avg target verify time (ms): {sum(METRICS['target_verify_times']) * 1000 / len(METRICS['target_verify_times']):.2f}", flush=True)
+                    f"[raw metrics] Avg target verify time (ms): {sum(METRICS['target_verify_times']) * 1000 / len(METRICS['target_verify_times']):.2f}", flush=True)
             if self.config.draft_async:
                 selected_hit = f"{selected['cache_hit']:.2f}" if selected['cache_hit'] is not None else "N/A"
                 print(f"[metrics] Avg Cache Hits: {selected_hit}", flush=True)
@@ -423,29 +432,29 @@ class LLMEngine:
                 # DUET-only: phase 1 (draft-sourced) vs phase 2 (proxy-sourced) hit split.
                 # Non-DUET paths leave these zero.
                 if self.config.duet_enabled and METRICS['phase1_hits']:
-                    p1 = sum(METRICS['phase1_hits']) / len(METRICS['phase1_hits'])
-                    p2 = sum(METRICS['phase2_hits']) / len(METRICS['phase2_hits'])
-                    print(f"[metrics] Avg Phase 1 (draft) Hit Rate: {p1:.3f}", flush=True)
-                    print(f"[metrics] Avg Phase 2 (proxy) Hit Rate: {p2:.3f}", flush=True)
-                    if METRICS["accepted_lens_phase1_hit"]:
-                        p1_len = sum(METRICS["accepted_lens_phase1_hit"]) / len(METRICS["accepted_lens_phase1_hit"])
+                    p1 = selected['phase1']['rate']
+                    p2 = selected['phase2']['rate']
+                    print(f"[metrics] Avg Phase 1 (draft) Hit Rate: {f'{p1:.3f}' if p1 is not None else 'N/A'}", flush=True)
+                    print(f"[metrics] Avg Phase 2 (proxy) Hit Rate: {f'{p2:.3f}' if p2 is not None else 'N/A'}", flush=True)
+                    if selected['phase1']['accepted_spec_len'] is not None:
+                        p1_len = selected['phase1']['accepted_spec_len']
                         p1_denom = self.config.duet_phase1_k if self.config.duet_phase1_k is not None else self.config.speculate_k
                         print(f"[metrics] Avg Phase 1 Accepted Len: {p1_len:.2f}", flush=True)
                         print(f"[metrics] Avg Phase 1 Acceptance Ratio: {p1_len / p1_denom:.3f}", flush=True)
-                    if METRICS["accepted_lens_phase2_hit"]:
-                        p2_len = sum(METRICS["accepted_lens_phase2_hit"]) / len(METRICS["accepted_lens_phase2_hit"])
+                    if selected['phase2']['accepted_spec_len'] is not None:
+                        p2_len = selected['phase2']['accepted_spec_len']
                         p2_denom = self.config.duet_phase2_k if self.config.duet_phase2_k is not None else self.config.speculate_k
                         print(f"[metrics] Avg Phase 2 Accepted Len: {p2_len:.2f}", flush=True)
                         print(f"[metrics] Avg Phase 2 Acceptance Ratio: {p2_len / p2_denom:.3f}", flush=True)
                 # Log separate metrics for cache hits
-                if METRICS['accepted_suffix_lens_on_hit']:
+                if selected['hit_lengths']:
                     avg_suffix_len_on_hit = sum(
-                        METRICS['accepted_suffix_lens_on_hit']) / len(METRICS['accepted_suffix_lens_on_hit'])
+                        selected['hit_lengths']) / len(selected['hit_lengths'])
                     print(
                         f"[metrics] Avg Tokens per step on Cache Hit: {avg_suffix_len_on_hit:.2f}", flush=True)
                     
                     # Calculate empirical frequencies of accepted_suffix_lens_on_hit - 1
-                    adjusted_lens = [length - 1 for length in METRICS['accepted_suffix_lens_on_hit']]
+                    adjusted_lens = [length - 1 for length in selected['hit_lengths']]
                     total_count = len(adjusted_lens)
                     freq_counts = {}
                     for length in adjusted_lens:
@@ -456,9 +465,9 @@ class LLMEngine:
                     for k in range(self.config.speculate_k + 1):
                         prob = freq_counts.get(k, 0) / total_count
                         print(f"  {k}: {prob:.3f}", flush=True)
-                if METRICS['accepted_suffix_lens_on_miss']:
+                if selected['miss_lengths']:
                     avg_suffix_len_on_miss = sum(
-                        METRICS['accepted_suffix_lens_on_miss']) / len(METRICS['accepted_suffix_lens_on_miss'])
+                        selected['miss_lengths']) / len(selected['miss_lengths'])
                     print(
                         f"[metrics] Avg Tokens per step on Cache Miss: {avg_suffix_len_on_miss:.2f}", flush=True)
                 else:

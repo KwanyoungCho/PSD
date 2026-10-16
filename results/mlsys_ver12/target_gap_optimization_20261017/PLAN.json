@@ -1,0 +1,61 @@
+{
+  "status": "preparing",
+  "date": "2026-10-17",
+  "branch": "exp/duet-target-gap-20261017",
+  "original_branch_unchanged": true,
+  "server": "eslab18/nova",
+  "focus": "Reduce large target forward-to-forward gap components and verify complete decode-step latency",
+  "models": [
+    {
+      "target": "LayerSkip-Llama2-7B",
+      "draft": "llama-68m",
+      "target_tp": 1,
+      "gpus": [
+        2,
+        3
+      ]
+    },
+    {
+      "target": "LayerSkip-Llama2-13B",
+      "draft": "llama-68m",
+      "target_tp": 2,
+      "gpus": [
+        4,
+        5,
+        6
+      ]
+    }
+  ],
+  "fixed": {
+    "batch": 1,
+    "dtype": "bfloat16",
+    "temperature": 0.7,
+    "k1": 3,
+    "k2": 3,
+    "C": 3,
+    "M1": 40,
+    "M2": 40,
+    "DS_roots_per_position": 3,
+    "PS_roots": 9,
+    "DS_width": 9,
+    "PS_width": 9,
+    "exit_layer_0based": {
+      "7B": 21,
+      "13B": 26
+    },
+    "input_cap": 512,
+    "output_cap": 192,
+    "seed": 9101
+  },
+  "order": [
+    "freeze exact current runtime and accounting baseline",
+    "implement fused response host snapshot in isolated candidate",
+    "CPU contract tests and GPU parity tests",
+    "same-GPU alternating before/after runs with profiling OFF for whole-step evidence",
+    "short profiling ON runs to attribute changed components",
+    "add response-before-KV-restore candidate only after first change is verified",
+    "paired analysis with same outputs, sources, AL and hit; report raw and 2x-filtered steps"
+  ],
+  "adopt": "No automatic merge to MLSys-ver1.2. Only report validated experiment patches.",
+  "exclusion": "Same 2x median policy by request group and batch/source composition, raw preserved; count exclusions"
+}

@@ -6,7 +6,7 @@ import tempfile
 from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'bench'))
-from mlsys_measurement import overlap_ns,annotate,summarize,capture_intervals,finalize_measurement
+from mlsys_measurement import overlap_ns,annotate,summarize,capture_intervals,finalize_measurement,performance_eligible
 
 
 class MeasurementTests(unittest.TestCase):
@@ -59,7 +59,7 @@ class MeasurementTests(unittest.TestCase):
             self.assertEqual(len(rows),2)
             self.assertEqual(overlap_ns(0,12,rows),8)
 
-    def test_finalizer_preserves_raw_summary_and_updates_group_copies(self):
+    def test_finalizer_no_longer_requires_or_excludes_capture_intervals(self):
         rows=[self.step(0,10,[self.event(0,2)],10),
               self.step(10,20,[self.event(1,1)],1)]
         report=dict(steps=rows,groups=[dict(steps=rows)],args=dict(batch=1),
@@ -71,9 +71,47 @@ class MeasurementTests(unittest.TestCase):
             with patch.dict(os.environ,DUET_REVIEW_CAPTURE_AUDIT=folder,SSD_PROFILE_DUET='0'):
                 finalize_measurement(report)
         self.assertEqual(report['summary_with_preparation']['tps'],99)
-        self.assertEqual(report['summary']['tps'],2)
-        self.assertTrue(report['groups'][0]['steps'][0]['graph_preparation'])
+        self.assertEqual(report['summary']['tps'],5/11)
+        self.assertTrue(report['groups'][0]['steps'][0]['performance_included'])
+        self.assertNotIn('graph_preparation',report['steps'][0])
         self.assertEqual(report['steps'][0]['seconds'],10)
+
+    def test_long_step_excludes_all_metrics_without_profile_or_audit(self):
+        rows=[self.step(i,i+1,[self.event(1,1)],1) for i in range(6)]
+        rows[4]['seconds']=10;rows[4]['events'][0]['accepted_len']=9;rows[4]['emitted']=9
+        rows[1]['cap']=True
+        report=dict(steps=rows,groups=[dict(steps=rows)],args=dict(batch=1),outputs=[[1]],summary=dict(tps=99))
+        report=json.loads(json.dumps(report))
+        with patch.dict(os.environ,SSD_PROFILE_DUET='0',SSD_PROFILE='0',SSD_PROFILE_DRAFT='0'):
+            # An old baseline runtime cannot override the A/B adapter policy.
+            with patch.dict(sys.modules,{'ssd.utils.performance':None}):
+                finalize_measurement(report)
+        self.assertEqual(report['summary']['steps'],4)
+        self.assertEqual(report['summary']['seconds'],4)
+        self.assertEqual(report['summary']['tokens'],8)
+        self.assertEqual(report['summary']['al'],2)
+        self.assertEqual(report['summary']['excluded_long_steps'],1)
+        self.assertEqual(report['measurement']['duration_filter']['excluded'][0]['index'],4)
+        self.assertFalse(report['groups'][0]['steps'][4]['performance_included'])
+        self.assertEqual(report['steps'][4]['seconds'],10)
+        self.assertEqual(report['summary_unfiltered']['tps'],99)
+        # Adding audit metadata cannot change the new selection.
+        report['steps'][0]['graph_preparation']=True
+        self.assertTrue(performance_eligible(report['steps'][0],1))
+        self.assertFalse(performance_eligible(report['steps'][4],1))
+        self.assertFalse(performance_eligible(dict(rows[0],graph_preparation=True),1))
+
+    def test_profiled_report_stays_unfiltered_and_group_scope_is_separate(self):
+        rows=[self.step(i,i+1,[self.event(1,1)],1) for i in range(6)]
+        other=[self.step(i+10,i+11,[self.event(1,1)],10) for i in range(6)]
+        report=dict(steps=rows+other,groups=[dict(steps=rows),dict(steps=other)],args=dict(batch=1),outputs=[],summary=dict(tps=99))
+        with patch.dict(os.environ,SSD_PROFILE_DUET='1'):
+            finalize_measurement(report)
+        self.assertEqual(report['summary']['tps'],99)
+        with patch.dict(os.environ,SSD_PROFILE_DUET='0',SSD_PROFILE='0',SSD_PROFILE_DRAFT='0'):
+            finalize_measurement(report)
+        self.assertEqual(report['summary']['steps'],12)
+        self.assertEqual(report['measurement']['duration_filter']['excluded_steps'],0)
 
 
 if __name__=='__main__':unittest.main()

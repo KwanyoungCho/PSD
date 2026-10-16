@@ -61,6 +61,7 @@ class StepMetrics(unittest.TestCase):
             self.assertIn('Final Decode Throughput: 4.00tok/s',out.getvalue())
             self.assertIn('[metrics] Avg Tokens per step (incl recovery): 2.00',out.getvalue())
             self.assertIn('[metrics] Avg Cache Hits: 1.00',out.getvalue())
+            self.assertIn('[metrics] Excluded long decode steps: 0',out.getvalue())
             self.assertIn('[raw metrics] All-event accepted length: 3.75',out.getvalue())
         finally:METRICS.clear();METRICS.update(saved)
 

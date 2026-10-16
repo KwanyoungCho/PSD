@@ -1,26 +1,31 @@
-"""Benchmark-only steady-state population and per-batch fallback reporting.
+"""Performance population from complete decode-step durations.
 
 Never subtract preparation seconds while retaining the same tokens. Exclude
 the entire affected step from time, tokens, AL and hit metrics together.
-Raw summaries are retained. CPU capture intervals are evidence of exposure,
-not a counterfactual measure of time saved by removing preparation.
+Raw summaries are retained. Legacy capture helpers remain available for
+diagnostics, but ordinary performance measurement does not require them.
 """
 from collections import Counter
+import hashlib
+import importlib.util
 from pathlib import Path
 import json
 import os
-import sys
 from mlsys_request_reporting import safe_tps
+
+# A/B runs can import the engine from an older PAPER_CHECKOUT. Load the
+# aggregation policy beside this adapter so both arms use the current rule.
+_POLICY_FILE = Path(__file__).resolve().parents[1]/'ssd'/'utils'/'performance.py'
+_POLICY_SPEC = importlib.util.spec_from_file_location('_mlsys_measurement_policy', _POLICY_FILE)
+_POLICY = importlib.util.module_from_spec(_POLICY_SPEC)
+_POLICY_SPEC.loader.exec_module(_POLICY)
+_POLICY_SHA256 = hashlib.sha256(_POLICY_FILE.read_bytes()).hexdigest()
 
 
 def configure_capture_audit():
-    if os.getenv('SSD_PROFILE_DUET', '0') == '1':
-        return
-    if '--output' not in sys.argv:
-        return
-    output=Path(sys.argv[sys.argv.index('--output')+1]).resolve()
-    os.environ.setdefault('DUET_REVIEW_CAPTURE_AUDIT', str(output.with_suffix('.captures')))
-    os.environ.setdefault('SSD_PROFILE_DUET_DETAIL', '1')
+    # Performance uses existing step clocks. Explicit diagnostic audit env
+    # settings are still honored by the optional capture adapter itself.
+    return
 
 
 def capture_intervals(folder):
@@ -47,7 +52,16 @@ def overlap_ns(start,end,captures):
 
 
 def base_eligible(s,batch):
-    return s['batch']==batch and not s['cap'] and not s['clipped']
+    return (s['batch']==batch and not s['cap'] and not s['clipped']
+            and s.get('performance_included', True))
+
+
+def performance_eligible(s,batch):
+    if 'performance_included' in s:
+        return base_eligible(s,batch)
+    # Historical reports used capture-interval selection; do not silently
+    # reinterpret their recorded population when reading an old result.
+    return base_eligible(s,batch) and not s.get('graph_preparation',False)
 
 
 def annotate(steps,captures):
@@ -118,20 +132,53 @@ def summarize(steps,batch,outputs):
 
 def finalize_measurement(report):
     """Called at end of a benchmark; raw JSON rows remain available."""
-    folder=os.getenv('DUET_REVIEW_CAPTURE_AUDIT')
-    if os.getenv('SSD_PROFILE_DUET','0')=='1':
+    if _POLICY.profiling_enabled():
         report['measurement_status']='instrumented CUDA profile; not TPS evidence'
         return
-    if not folder:
-        raise ValueError('Missing capture audit; cannot label a run preparation-free')
-    captures=capture_intervals(folder)
-    annotate(report['steps'],captures)
-    # Loaded JSON duplicates group and flat step objects; handle both forms.
-    for g in report['groups']:annotate(g['steps'],captures)
-    out=summarize(report['steps'],report['args']['batch'],report['outputs'])
-    report['summary_with_preparation']=report['summary']
-    report['summary']=out.pop('summary')
-    report['measurement']=out
-    report['measurement_status']='excludes whole steps overlapping observed capture/setup intervals'
-    report['measurement_note']='No duration outlier filter; raw time preserved. Successful full prewarm still needs a no-new-capture check.'
-    report['capture_intervals']=captures
+    steps=report['steps'];batch=report['args']['batch']
+    scopes=[];copies=[]
+    for scope,g in enumerate(report['groups']):
+        for s in g['steps']:
+            scopes.append(scope);copies.append(s)
+    if len(copies)!=len(steps):
+        raise ValueError('Group/flat step population mismatch')
+    events=[];native=[]
+    for i,(s,copy) in enumerate(zip(steps,copies)):
+        if any(s[k]!=copy[k] for k in ('seconds','batch','emitted')):
+            raise ValueError('Group/flat step order mismatch')
+        start=len(events);events.extend(s['events'])
+        native.append(dict(seconds=s['seconds'],emitted_tokens=s['emitted'],batch_size=s['batch'],
+            event_start=start,event_end=len(events),output_cap_reached=s['cap'],clipped=s['clipped'],
+            duration_scope=scopes[i]))
+    selected=_POLICY.performance_summary(dict(decode_steps=native,phase_events=events),batch)
+    indices=set(selected['included_step_indices'])
+    long_indices={r['index'] for r in selected['duration_filter']['excluded']}
+    for i,(s,copy) in enumerate(zip(steps,copies)):
+        for row in (s,copy):
+            row['performance_included']=i in indices
+            row['long_step_outlier']=i in long_indices
+    kept=[steps[i] for i in selected['included_step_indices']]
+    es=[e for s in kept for e in s['events']]
+    mean=lambda xs:sum(xs)/len(xs) if xs else None
+    if 'summary_unfiltered' not in report:
+        report['summary_unfiltered']=report['summary']
+        # Compatibility alias: this is the original full-batch/cap-only row.
+        report['summary_with_preparation']=report['summary']
+    report['summary']=dict(policy=selected['policy'],steps=len(kept),all_steps=len(steps),
+        tokens=selected['emitted_tokens'],seconds=selected['seconds'],tps=selected['tps'],
+        excluded_long_steps=selected['duration_filter']['excluded_steps'],
+        al=selected['al'],hit=selected['cache_hit'],step_ms=selected['step_ms'],
+        verify_ms=mean([v*1000 for s in kept for v in s.get('verify',[])]),
+        actual_output_tokens=sum(map(len,report['outputs'])),emitted_decode_tokens=sum(s['emitted'] for s in steps))
+    after_startup=[s for s in kept if s['events'] and s['events'][0]['step_id']>1]
+    report['measurement']=dict(policy='complete_step_duration_filter_v1',
+        policy_source_sha256=_POLICY_SHA256,
+        included_step_indices=selected['included_step_indices'],
+        duration_filter=selected['duration_filter'],exclusion_reasons=selected['exclusion_reasons'],
+        included_steps=len(kept),excluded_steps=selected['excluded_steps'],
+        before_duration_filter=selected['before_duration_filter'],
+        batch_metrics=batch_metrics(kept,batch) if es else None,
+        batch_metrics_excluding_group_startup=batch_metrics(after_startup,batch) if es else None,
+        raw_request_population='Request records retain complete output/time; not duration-filtered aggregate performance')
+    report['measurement_status']='whole-step duration filtering; no CUDA profiling or capture inspection required'
+    report['measurement_note']='Same fixed rule for all methods. Raw steps, tokens and times retained; excluded steps leave both performance numerator and denominator. Long elapsed time alone does not identify its cause.'

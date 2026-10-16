@@ -491,6 +491,20 @@ def log_wandb_metrics(args, metrics, total_tokens, total_time, throughput, model
                             ("metrics_included_steps", "included_steps"),
                             ("metrics_excluded_steps", "excluded_steps")):
             wandb_metrics[metric] = population[key]
+        if "duration_filter" in population:
+            wandb_metrics["metrics_excluded_long_steps"] = population["duration_filter"]["excluded_steps"]
+            wandb_metrics["raw_avg_target_step_time_ms"] = wandb_metrics.get("metrics_avg_target_step_time_ms")
+            wandb_metrics["metrics_avg_target_step_time_ms"] = population["step_ms"]
+            hit_lengths = population["hit_lengths"]
+            wandb_metrics["raw_avg_accepted_suffix_lens_on_hit"] = wandb_metrics.get("metrics_avg_accepted_suffix_lens_on_hit")
+            wandb_metrics["metrics_avg_accepted_suffix_lens_on_hit"] = sum(hit_lengths)/len(hit_lengths) if hit_lengths else None
+            kept_events = [event for i in population["included_step_indices"]
+                           for event in metrics.get("phase_events", [])[metrics["decode_steps"][i]["event_start"]:metrics["decode_steps"][i]["event_end"]]]
+            lengths = [event["accepted_len"] for event in kept_events if event.get("accepted_len") is not None]
+            for key, values in (("metrics_accepted_suffix_lens_with_recovery_histogram", lengths),
+                                ("metrics_accepted_suffix_lens_on_hit_histogram", hit_lengths)):
+                wandb_metrics[f"raw_{key.removeprefix('metrics_')}"] = wandb_metrics.get(key)
+                wandb_metrics[key] = wandb.Histogram(values) if values else None
         wandb_metrics["performance_population"] = population["policy"]
     wandb.log(wandb_metrics)
 

@@ -1,0 +1,504 @@
+diff --git a/ssd/bench/bench.py b/ssd/bench/bench.py
+index 4f3b6e0..6d30eb2 100644
+--- a/ssd/bench/bench.py
++++ b/ssd/bench/bench.py
+@@ -491,6 +491,20 @@ def log_wandb_metrics(args, metrics, total_tokens, total_time, throughput, model
+                             ("metrics_included_steps", "included_steps"),
+                             ("metrics_excluded_steps", "excluded_steps")):
+             wandb_metrics[metric] = population[key]
++        if "duration_filter" in population:
++            wandb_metrics["metrics_excluded_long_steps"] = population["duration_filter"]["excluded_steps"]
++            wandb_metrics["raw_avg_target_step_time_ms"] = wandb_metrics.get("metrics_avg_target_step_time_ms")
++            wandb_metrics["metrics_avg_target_step_time_ms"] = population["step_ms"]
++            hit_lengths = population["hit_lengths"]
++            wandb_metrics["raw_avg_accepted_suffix_lens_on_hit"] = wandb_metrics.get("metrics_avg_accepted_suffix_lens_on_hit")
++            wandb_metrics["metrics_avg_accepted_suffix_lens_on_hit"] = sum(hit_lengths)/len(hit_lengths) if hit_lengths else None
++            kept_events = [event for i in population["included_step_indices"]
++                           for event in metrics.get("phase_events", [])[metrics["decode_steps"][i]["event_start"]:metrics["decode_steps"][i]["event_end"]]]
++            lengths = [event["accepted_len"] for event in kept_events if event.get("accepted_len") is not None]
++            for key, values in (("metrics_accepted_suffix_lens_with_recovery_histogram", lengths),
++                                ("metrics_accepted_suffix_lens_on_hit_histogram", hit_lengths)):
++                wandb_metrics[f"raw_{key.removeprefix('metrics_')}"] = wandb_metrics.get(key)
++                wandb_metrics[key] = wandb.Histogram(values) if values else None
+         wandb_metrics["performance_population"] = population["policy"]
+     wandb.log(wandb_metrics)
+ 
+diff --git a/ssd/bench/mlsys_measurement.py b/ssd/bench/mlsys_measurement.py
+index 8056392..aced8f4 100644
+--- a/ssd/bench/mlsys_measurement.py
++++ b/ssd/bench/mlsys_measurement.py
+@@ -1,26 +1,31 @@
+-"""Benchmark-only steady-state population and per-batch fallback reporting.
++"""Performance population from complete decode-step durations.
+ 
+ Never subtract preparation seconds while retaining the same tokens. Exclude
+ the entire affected step from time, tokens, AL and hit metrics together.
+-Raw summaries are retained. CPU capture intervals are evidence of exposure,
+-not a counterfactual measure of time saved by removing preparation.
++Raw summaries are retained. Legacy capture helpers remain available for
++diagnostics, but ordinary performance measurement does not require them.
+ """
+ from collections import Counter
++import hashlib
++import importlib.util
+ from pathlib import Path
+ import json
+ import os
+-import sys
+ from mlsys_request_reporting import safe_tps
+ 
++# A/B runs can import the engine from an older PAPER_CHECKOUT. Load the
++# aggregation policy beside this adapter so both arms use the current rule.
++_POLICY_FILE = Path(__file__).resolve().parents[1]/'ssd'/'utils'/'performance.py'
++_POLICY_SPEC = importlib.util.spec_from_file_location('_mlsys_measurement_policy', _POLICY_FILE)
++_POLICY = importlib.util.module_from_spec(_POLICY_SPEC)
++_POLICY_SPEC.loader.exec_module(_POLICY)
++_POLICY_SHA256 = hashlib.sha256(_POLICY_FILE.read_bytes()).hexdigest()
++
+ 
+ def configure_capture_audit():
+-    if os.getenv('SSD_PROFILE_DUET', '0') == '1':
+-        return
+-    if '--output' not in sys.argv:
+-        return
+-    output=Path(sys.argv[sys.argv.index('--output')+1]).resolve()
+-    os.environ.setdefault('DUET_REVIEW_CAPTURE_AUDIT', str(output.with_suffix('.captures')))
+-    os.environ.setdefault('SSD_PROFILE_DUET_DETAIL', '1')
++    # Performance uses existing step clocks. Explicit diagnostic audit env
++    # settings are still honored by the optional capture adapter itself.
++    return
+ 
+ 
+ def capture_intervals(folder):
+@@ -47,7 +52,16 @@ def overlap_ns(start,end,captures):
+ 
+ 
+ def base_eligible(s,batch):
+-    return s['batch']==batch and not s['cap'] and not s['clipped']
++    return (s['batch']==batch and not s['cap'] and not s['clipped']
++            and s.get('performance_included', True))
++
++
++def performance_eligible(s,batch):
++    if 'performance_included' in s:
++        return base_eligible(s,batch)
++    # Historical reports used capture-interval selection; do not silently
++    # reinterpret their recorded population when reading an old result.
++    return base_eligible(s,batch) and not s.get('graph_preparation',False)
+ 
+ 
+ def annotate(steps,captures):
+@@ -118,20 +132,53 @@ def summarize(steps,batch,outputs):
+ 
+ def finalize_measurement(report):
+     """Called at end of a benchmark; raw JSON rows remain available."""
+-    folder=os.getenv('DUET_REVIEW_CAPTURE_AUDIT')
+-    if os.getenv('SSD_PROFILE_DUET','0')=='1':
++    if _POLICY.profiling_enabled():
+         report['measurement_status']='instrumented CUDA profile; not TPS evidence'
+         return
+-    if not folder:
+-        raise ValueError('Missing capture audit; cannot label a run preparation-free')
+-    captures=capture_intervals(folder)
+-    annotate(report['steps'],captures)
+-    # Loaded JSON duplicates group and flat step objects; handle both forms.
+-    for g in report['groups']:annotate(g['steps'],captures)
+-    out=summarize(report['steps'],report['args']['batch'],report['outputs'])
+-    report['summary_with_preparation']=report['summary']
+-    report['summary']=out.pop('summary')
+-    report['measurement']=out
+-    report['measurement_status']='excludes whole steps overlapping observed capture/setup intervals'
+-    report['measurement_note']='No duration outlier filter; raw time preserved. Successful full prewarm still needs a no-new-capture check.'
+-    report['capture_intervals']=captures
++    steps=report['steps'];batch=report['args']['batch']
++    scopes=[];copies=[]
++    for scope,g in enumerate(report['groups']):
++        for s in g['steps']:
++            scopes.append(scope);copies.append(s)
++    if len(copies)!=len(steps):
++        raise ValueError('Group/flat step population mismatch')
++    events=[];native=[]
++    for i,(s,copy) in enumerate(zip(steps,copies)):
++        if any(s[k]!=copy[k] for k in ('seconds','batch','emitted')):
++            raise ValueError('Group/flat step order mismatch')
++        start=len(events);events.extend(s['events'])
++        native.append(dict(seconds=s['seconds'],emitted_tokens=s['emitted'],batch_size=s['batch'],
++            event_start=start,event_end=len(events),output_cap_reached=s['cap'],clipped=s['clipped'],
++            duration_scope=scopes[i]))
++    selected=_POLICY.performance_summary(dict(decode_steps=native,phase_events=events),batch)
++    indices=set(selected['included_step_indices'])
++    long_indices={r['index'] for r in selected['duration_filter']['excluded']}
++    for i,(s,copy) in enumerate(zip(steps,copies)):
++        for row in (s,copy):
++            row['performance_included']=i in indices
++            row['long_step_outlier']=i in long_indices
++    kept=[steps[i] for i in selected['included_step_indices']]
++    es=[e for s in kept for e in s['events']]
++    mean=lambda xs:sum(xs)/len(xs) if xs else None
++    if 'summary_unfiltered' not in report:
++        report['summary_unfiltered']=report['summary']
++        # Compatibility alias: this is the original full-batch/cap-only row.
++        report['summary_with_preparation']=report['summary']
++    report['summary']=dict(policy=selected['policy'],steps=len(kept),all_steps=len(steps),
++        tokens=selected['emitted_tokens'],seconds=selected['seconds'],tps=selected['tps'],
++        excluded_long_steps=selected['duration_filter']['excluded_steps'],
++        al=selected['al'],hit=selected['cache_hit'],step_ms=selected['step_ms'],
++        verify_ms=mean([v*1000 for s in kept for v in s.get('verify',[])]),
++        actual_output_tokens=sum(map(len,report['outputs'])),emitted_decode_tokens=sum(s['emitted'] for s in steps))
++    after_startup=[s for s in kept if s['events'] and s['events'][0]['step_id']>1]
++    report['measurement']=dict(policy='complete_step_duration_filter_v1',
++        policy_source_sha256=_POLICY_SHA256,
++        included_step_indices=selected['included_step_indices'],
++        duration_filter=selected['duration_filter'],exclusion_reasons=selected['exclusion_reasons'],
++        included_steps=len(kept),excluded_steps=selected['excluded_steps'],
++        before_duration_filter=selected['before_duration_filter'],
++        batch_metrics=batch_metrics(kept,batch) if es else None,
++        batch_metrics_excluding_group_startup=batch_metrics(after_startup,batch) if es else None,
++        raw_request_population='Request records retain complete output/time; not duration-filtered aggregate performance')
++    report['measurement_status']='whole-step duration filtering; no CUDA profiling or capture inspection required'
++    report['measurement_note']='Same fixed rule for all methods. Raw steps, tokens and times retained; excluded steps leave both performance numerator and denominator. Long elapsed time alone does not identify its cause.'
+diff --git a/ssd/bench/mlsys_tree_results.py b/ssd/bench/mlsys_tree_results.py
+index dee5e75..f191c79 100644
+--- a/ssd/bench/mlsys_tree_results.py
++++ b/ssd/bench/mlsys_tree_results.py
+@@ -2,7 +2,7 @@
+ import argparse,json
+ from pathlib import Path
+ import numpy as np
+-from mlsys_measurement import base_eligible,batch_metrics
++from mlsys_measurement import performance_eligible,batch_metrics
+ from mlsys_request_reporting import common_question_summary
+ 
+ 
+@@ -12,7 +12,7 @@ def groups(report):
+         if not g['phase'].startswith('measured'):continue
+         # Repeated passes over the same prompts are one bootstrap cluster.
+         row=by.setdefault(g['index'],np.zeros(4))
+-        kept=[s for s in g['steps'] if base_eligible(s,b) and not s.get('graph_preparation',False)]
++        kept=[s for s in g['steps'] if performance_eligible(s,b)]
+         row+=np.asarray([sum(s['emitted'] for s in kept),sum(s['seconds'] for s in kept),
+                          sum(sum(s['verify']) for s in kept),len(kept)])
+     return by
+@@ -44,7 +44,7 @@ def compare(a,b):
+ 
+ 
+ def summarize(j):
+-    b=j['args']['batch'];ss=[s for s in j['steps'] if base_eligible(s,b) and not s.get('graph_preparation',False)]
++    b=j['args']['batch'];ss=[s for s in j['steps'] if performance_eligible(s,b)]
+     source={}
+     for phase in (0,1,2):
+         es=[e for s in ss for e in s['events'] if e['source']==phase]
+diff --git a/ssd/ssd/engine/llm_engine.py b/ssd/ssd/engine/llm_engine.py
+index 3eb74b7..323fe43 100644
+--- a/ssd/ssd/engine/llm_engine.py
++++ b/ssd/ssd/engine/llm_engine.py
+@@ -367,7 +367,13 @@ class LLMEngine:
+             f"Final Prefill Throughput: {avg_prefill_throughput:.2f}tok/s", flush=True)
+         print(
+             f"Final Decode Throughput: {selected['tps'] or 0.0:.2f}tok/s", flush=True)
+-        print(f"[metrics] Performance population: { {k:v for k,v in selected.items() if k != 'included_step_indices'} }", flush=True)
++        _brief = {k:v for k,v in selected.items() if k not in
++                  ('included_step_indices', 'hit_lengths', 'miss_lengths', 'duration_filter')}
++        _brief['duration_filter'] = {k:v for k,v in selected['duration_filter'].items()
++                                     if k not in ('groups', 'excluded')}
++        print(f"[metrics] Performance population: {_brief}", flush=True)
++        if selected['duration_filter']['enabled']:
++            print(f"[metrics] Excluded long decode steps: {selected['duration_filter']['excluded_steps']}", flush=True)
+         print(f"[raw metrics] All decode throughput: {avg_decode_throughput:.2f}tok/s", flush=True)
+         print(
+             f"[metrics] Prefill tokens/time: {METRICS['prefill_total_tokens']} / "
+@@ -407,15 +413,18 @@ class LLMEngine:
+                 _accept_denom = max(self.config.duet_phase1_k, self.config.duet_phase2_k)
+             else:
+                 _accept_denom = self.config.speculate_k
+-            avg_acceptance_rate = (total_accepted / ttl_num_spec_steps) / _accept_denom
++            avg_acceptance_rate = ((selected['al'] - 1) / _accept_denom
++                                   if selected['al'] is not None else None)
++            _fraction = f"{avg_acceptance_rate:.2f}" if avg_acceptance_rate is not None else "N/A"
+             print(
+-                f"[metrics] Avg Fraction of Speculated Tokens Accepted: {avg_acceptance_rate:.2f} "
++                f"[metrics] Avg Fraction of Speculated Tokens Accepted: {_fraction} "
+                 f"(denom={_accept_denom})", flush=True)
++            _step_ms = f"{selected['step_ms']:.2f}" if selected['step_ms'] is not None else "N/A"
+             print(
+-                f"[metrics] Avg target time per full step (ms): {sum(METRICS['target_step_times']) * 1000 / len(METRICS['target_step_times']):.2f}", flush=True)
++                f"[metrics] Avg target time per full step (ms): {_step_ms}", flush=True)
+             if METRICS['target_verify_times']:
+                 print(
+-                    f"[metrics] Avg target verify time (ms): {sum(METRICS['target_verify_times']) * 1000 / len(METRICS['target_verify_times']):.2f}", flush=True)
++                    f"[raw metrics] Avg target verify time (ms): {sum(METRICS['target_verify_times']) * 1000 / len(METRICS['target_verify_times']):.2f}", flush=True)
+             if self.config.draft_async:
+                 selected_hit = f"{selected['cache_hit']:.2f}" if selected['cache_hit'] is not None else "N/A"
+                 print(f"[metrics] Avg Cache Hits: {selected_hit}", flush=True)
+@@ -423,29 +432,29 @@ class LLMEngine:
+                 # DUET-only: phase 1 (draft-sourced) vs phase 2 (proxy-sourced) hit split.
+                 # Non-DUET paths leave these zero.
+                 if self.config.duet_enabled and METRICS['phase1_hits']:
+-                    p1 = sum(METRICS['phase1_hits']) / len(METRICS['phase1_hits'])
+-                    p2 = sum(METRICS['phase2_hits']) / len(METRICS['phase2_hits'])
+-                    print(f"[metrics] Avg Phase 1 (draft) Hit Rate: {p1:.3f}", flush=True)
+-                    print(f"[metrics] Avg Phase 2 (proxy) Hit Rate: {p2:.3f}", flush=True)
+-                    if METRICS["accepted_lens_phase1_hit"]:
+-                        p1_len = sum(METRICS["accepted_lens_phase1_hit"]) / len(METRICS["accepted_lens_phase1_hit"])
++                    p1 = selected['phase1']['rate']
++                    p2 = selected['phase2']['rate']
++                    print(f"[metrics] Avg Phase 1 (draft) Hit Rate: {f'{p1:.3f}' if p1 is not None else 'N/A'}", flush=True)
++                    print(f"[metrics] Avg Phase 2 (proxy) Hit Rate: {f'{p2:.3f}' if p2 is not None else 'N/A'}", flush=True)
++                    if selected['phase1']['accepted_spec_len'] is not None:
++                        p1_len = selected['phase1']['accepted_spec_len']
+                         p1_denom = self.config.duet_phase1_k if self.config.duet_phase1_k is not None else self.config.speculate_k
+                         print(f"[metrics] Avg Phase 1 Accepted Len: {p1_len:.2f}", flush=True)
+                         print(f"[metrics] Avg Phase 1 Acceptance Ratio: {p1_len / p1_denom:.3f}", flush=True)
+-                    if METRICS["accepted_lens_phase2_hit"]:
+-                        p2_len = sum(METRICS["accepted_lens_phase2_hit"]) / len(METRICS["accepted_lens_phase2_hit"])
++                    if selected['phase2']['accepted_spec_len'] is not None:
++                        p2_len = selected['phase2']['accepted_spec_len']
+                         p2_denom = self.config.duet_phase2_k if self.config.duet_phase2_k is not None else self.config.speculate_k
+                         print(f"[metrics] Avg Phase 2 Accepted Len: {p2_len:.2f}", flush=True)
+                         print(f"[metrics] Avg Phase 2 Acceptance Ratio: {p2_len / p2_denom:.3f}", flush=True)
+                 # Log separate metrics for cache hits
+-                if METRICS['accepted_suffix_lens_on_hit']:
++                if selected['hit_lengths']:
+                     avg_suffix_len_on_hit = sum(
+-                        METRICS['accepted_suffix_lens_on_hit']) / len(METRICS['accepted_suffix_lens_on_hit'])
++                        selected['hit_lengths']) / len(selected['hit_lengths'])
+                     print(
+                         f"[metrics] Avg Tokens per step on Cache Hit: {avg_suffix_len_on_hit:.2f}", flush=True)
+                     
+                     # Calculate empirical frequencies of accepted_suffix_lens_on_hit - 1
+-                    adjusted_lens = [length - 1 for length in METRICS['accepted_suffix_lens_on_hit']]
++                    adjusted_lens = [length - 1 for length in selected['hit_lengths']]
+                     total_count = len(adjusted_lens)
+                     freq_counts = {}
+                     for length in adjusted_lens:
+@@ -456,9 +465,9 @@ class LLMEngine:
+                     for k in range(self.config.speculate_k + 1):
+                         prob = freq_counts.get(k, 0) / total_count
+                         print(f"  {k}: {prob:.3f}", flush=True)
+-                if METRICS['accepted_suffix_lens_on_miss']:
++                if selected['miss_lengths']:
+                     avg_suffix_len_on_miss = sum(
+-                        METRICS['accepted_suffix_lens_on_miss']) / len(METRICS['accepted_suffix_lens_on_miss'])
++                        selected['miss_lengths']) / len(selected['miss_lengths'])
+                     print(
+                         f"[metrics] Avg Tokens per step on Cache Miss: {avg_suffix_len_on_miss:.2f}", flush=True)
+                 else:
+diff --git a/ssd/ssd/utils/performance.py b/ssd/ssd/utils/performance.py
+index 67c4bce..defcd01 100644
+--- a/ssd/ssd/utils/performance.py
++++ b/ssd/ssd/utils/performance.py
+@@ -1,9 +1,66 @@
+-"""Performance population: complete nominal batches, excluding cap/clip steps.
++"""Whole-step performance selection without CUDA profiling.
+ 
+ This does not alter generation or discard raw counters. Every retained
+ event, emitted token and second belongs to exactly the same decode steps.
+ """
+ from collections import Counter
++from collections import defaultdict
++import math
++import os
++from statistics import median
++
++
++LONG_STEP_MEDIAN_FACTOR = 2.0
++LONG_STEP_MIN_SAMPLES = 5
++
++
++def profiling_enabled():
++    return any(os.getenv(name, '0') == '1' for name in
++               ('SSD_PROFILE_DUET', 'SSD_PROFILE', 'SSD_PROFILE_DRAFT'))
++
++
++def duration_step_filter(rows, *, enabled=True):
++    """One upper-tail pass, grouped by request scope, batch and cache mix.
++
++    Each row has seconds, batch_size and events (CPU records). No model
++    operation, GPU synchronization or mutation of input records occurs here.
++    Scope is optional: a native generate call already provides one scope;
++    benchmark campaigns assign a scope to each fixed request group.
++    """
++    groups = defaultdict(list)
++    for index, row in enumerate(rows):
++        seconds = row['seconds']
++        if not math.isfinite(seconds) or seconds <= 0:
++            raise ValueError('Decode step time must be finite and positive')
++        mix = Counter()
++        for event in row.get('events', []):
++            hit = event.get('cache_hit')
++            key = ('miss' if hit == 0 else
++                   f"hit_p{event.get('source', 0)}" if hit == 1 else
++                   'speculative_without_cache_source')
++            mix[key] += 1
++        key = (row.get('duration_scope'), row['batch_size'], tuple(sorted(mix.items())))
++        groups[key].append(index)
++    excluded = []; references = []
++    for (scope, batch, mix), indices in groups.items():
++        center = median(rows[i]['seconds'] for i in indices)
++        threshold = LONG_STEP_MEDIAN_FACTOR * center
++        sufficient = len(indices) >= LONG_STEP_MIN_SAMPLES
++        references.append(dict(scope=scope, batch_size=batch, cache_mix=dict(mix),
++            samples=len(indices), median_seconds=center, threshold_seconds=threshold,
++            applied=bool(enabled and sufficient)))
++        if enabled and sufficient:
++            excluded.extend(dict(index=i, seconds=rows[i]['seconds'],
++                threshold_seconds=threshold, scope=scope, batch_size=batch,
++                cache_mix=dict(mix)) for i in indices if rows[i]['seconds'] > threshold)
++    removed = {r['index'] for r in excluded}
++    return dict(policy='upper_step_duration_by_scope_batch_cache_mix_v1',
++        enabled=bool(enabled), median_factor=LONG_STEP_MEDIAN_FACTOR,
++        minimum_group_samples=LONG_STEP_MIN_SAMPLES, comparison='strictly_greater',
++        grouping='generate/request-group scope, actual batch, P1/P2/other-hit/miss counts',
++        excluded_steps=len(excluded), excluded_seconds=sum(r['seconds'] for r in excluded),
++        excluded=sorted(excluded, key=lambda r:r['index']), groups=references,
++        included_indices=[i for i in range(len(rows)) if i not in removed])
+ 
+ 
+ def performance_summary(metrics, expected_batch):
+@@ -12,9 +69,8 @@ def performance_summary(metrics, expected_batch):
+     events = metrics.get("phase_events", [])
+     steps = metrics.get("decode_steps", [])
+     reasons = Counter()
+-    kept = []
+-    kept_events = []
+-    for step in steps:
++    eligible = []
++    for index, step in enumerate(steps):
+         start, end = step["event_start"], step["event_end"]
+         row_events = events[start:end]
+         batch = step.get("batch_size", len(row_events) if row_events else None)
+@@ -29,20 +85,44 @@ def performance_summary(metrics, expected_batch):
+         if boundary and short: reasons["both"] += 1
+         if boundary or short:
+             continue
+-        kept.append(step)
+-        kept_events.extend(row_events)
++        eligible.append((index, step, row_events, batch))
++    selection = duration_step_filter([dict(seconds=s['seconds'], batch_size=b,
++        events=es, duration_scope=s.get('duration_scope')) for _,s,es,b in eligible],
++        enabled=not profiling_enabled())
++    # Expose original indices, not indices into the cap/partial-filtered list.
++    for row in selection['excluded']:
++        row['index'] = eligible[row['index']][0]
++    included = [eligible[i] for i in selection.pop('included_indices')]
++    indices = [i for i,_,_,_ in included]
++    selection['excluded_emitted_tokens'] = sum(
++        steps[r['index']]['emitted_tokens'] for r in selection['excluded'])
++    if selection['excluded_steps']:
++        reasons['long_step'] = selection['excluded_steps']
++    kept = [s for _,s,_,_ in included]
++    kept_events = [e for _,_,es,_ in included for e in es]
+     seconds = sum(s["seconds"] for s in kept)
+     tokens = sum(s["emitted_tokens"] for s in kept)
+     def mean(name):
+         values = [e[name] for e in kept_events if e.get(name) is not None]
+         return sum(values) / len(values) if values else None
++    def source_stats(source):
++        es = [e for e in kept_events if e.get('cache_hit') == 1 and e.get('source') == source]
++        return dict(events=len(es), rate=len(es)/len(kept_events) if kept_events else None,
++            accepted_spec_len=sum(e.get('accepted_spec_len',max(0,e['accepted_len']-1)) for e in es)/len(es) if es else None)
++    hit_lengths = [e['accepted_len'] for e in kept_events if e.get('cache_hit') == 1]
++    miss_lengths = [e['accepted_len'] for e in kept_events if e.get('cache_hit') == 0]
+     return dict(
+-        policy="full_batch_without_cap_or_clip_v1", nominal_batch=expected_batch,
++        policy="full_batch_without_cap_clip_or_long_step_v2", nominal_batch=expected_batch,
+         tps=tokens / seconds if seconds > 0 else None,
+         al=mean("accepted_len"), cache_hit=mean("cache_hit"),
+         emitted_tokens=tokens, seconds=seconds, included_steps=len(kept),
+         included_events=len(kept_events), total_steps=len(steps),
+         excluded_steps=len(steps)-len(kept), exclusion_reasons=dict(reasons),
+-        included_step_indices=[i for i,s in enumerate(steps)
+-                               if not(s.get("output_cap_reached") or s.get("clipped"))
+-                               and s.get("batch_size", s["event_end"]-s["event_start"])==expected_batch])
++        included_step_indices=indices,
++        step_ms=1000*seconds/len(kept) if kept else None,
++        duration_filter=selection,
++        before_duration_filter=dict(steps=len(eligible),
++            seconds=sum(s['seconds'] for _,s,_,_ in eligible),
++            emitted_tokens=sum(s['emitted_tokens'] for _,s,_,_ in eligible)),
++        phase1=source_stats(1), phase2=source_stats(2),
++        hit_lengths=hit_lengths, miss_lengths=miss_lengths)
+diff --git a/ssd/tests/test_mlsys_measurement.py b/ssd/tests/test_mlsys_measurement.py
+index 3738411..c6eb26f 100644
+--- a/ssd/tests/test_mlsys_measurement.py
++++ b/ssd/tests/test_mlsys_measurement.py
+@@ -6,7 +6,7 @@ import tempfile
+ from unittest.mock import patch
+ from pathlib import Path
+ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'bench'))
+-from mlsys_measurement import overlap_ns,annotate,summarize,capture_intervals,finalize_measurement
++from mlsys_measurement import overlap_ns,annotate,summarize,capture_intervals,finalize_measurement,performance_eligible
+ 
+ 
+ class MeasurementTests(unittest.TestCase):
+@@ -59,7 +59,7 @@ class MeasurementTests(unittest.TestCase):
+             self.assertEqual(len(rows),2)
+             self.assertEqual(overlap_ns(0,12,rows),8)
+ 
+-    def test_finalizer_preserves_raw_summary_and_updates_group_copies(self):
++    def test_finalizer_no_longer_requires_or_excludes_capture_intervals(self):
+         rows=[self.step(0,10,[self.event(0,2)],10),
+               self.step(10,20,[self.event(1,1)],1)]
+         report=dict(steps=rows,groups=[dict(steps=rows)],args=dict(batch=1),
+@@ -71,9 +71,47 @@ class MeasurementTests(unittest.TestCase):
+             with patch.dict(os.environ,DUET_REVIEW_CAPTURE_AUDIT=folder,SSD_PROFILE_DUET='0'):
+                 finalize_measurement(report)
+         self.assertEqual(report['summary_with_preparation']['tps'],99)
+-        self.assertEqual(report['summary']['tps'],2)
+-        self.assertTrue(report['groups'][0]['steps'][0]['graph_preparation'])
++        self.assertEqual(report['summary']['tps'],5/11)
++        self.assertTrue(report['groups'][0]['steps'][0]['performance_included'])
++        self.assertNotIn('graph_preparation',report['steps'][0])
+         self.assertEqual(report['steps'][0]['seconds'],10)
+ 
++    def test_long_step_excludes_all_metrics_without_profile_or_audit(self):
++        rows=[self.step(i,i+1,[self.event(1,1)],1) for i in range(6)]
++        rows[4]['seconds']=10;rows[4]['events'][0]['accepted_len']=9;rows[4]['emitted']=9
++        rows[1]['cap']=True
++        report=dict(steps=rows,groups=[dict(steps=rows)],args=dict(batch=1),outputs=[[1]],summary=dict(tps=99))
++        report=json.loads(json.dumps(report))
++        with patch.dict(os.environ,SSD_PROFILE_DUET='0',SSD_PROFILE='0',SSD_PROFILE_DRAFT='0'):
++            # An old baseline runtime cannot override the A/B adapter policy.
++            with patch.dict(sys.modules,{'ssd.utils.performance':None}):
++                finalize_measurement(report)
++        self.assertEqual(report['summary']['steps'],4)
++        self.assertEqual(report['summary']['seconds'],4)
++        self.assertEqual(report['summary']['tokens'],8)
++        self.assertEqual(report['summary']['al'],2)
++        self.assertEqual(report['summary']['excluded_long_steps'],1)
++        self.assertEqual(report['measurement']['duration_filter']['excluded'][0]['index'],4)
++        self.assertFalse(report['groups'][0]['steps'][4]['performance_included'])
++        self.assertEqual(report['steps'][4]['seconds'],10)
++        self.assertEqual(report['summary_unfiltered']['tps'],99)
++        # Adding audit metadata cannot change the new selection.
++        report['steps'][0]['graph_preparation']=True
++        self.assertTrue(performance_eligible(report['steps'][0],1))
++        self.assertFalse(performance_eligible(report['steps'][4],1))
++        self.assertFalse(performance_eligible(dict(rows[0],graph_preparation=True),1))
++
++    def test_profiled_report_stays_unfiltered_and_group_scope_is_separate(self):
++        rows=[self.step(i,i+1,[self.event(1,1)],1) for i in range(6)]
++        other=[self.step(i+10,i+11,[self.event(1,1)],10) for i in range(6)]
++        report=dict(steps=rows+other,groups=[dict(steps=rows),dict(steps=other)],args=dict(batch=1),outputs=[],summary=dict(tps=99))
++        with patch.dict(os.environ,SSD_PROFILE_DUET='1'):
++            finalize_measurement(report)
++        self.assertEqual(report['summary']['tps'],99)
++        with patch.dict(os.environ,SSD_PROFILE_DUET='0',SSD_PROFILE='0',SSD_PROFILE_DRAFT='0'):
++            finalize_measurement(report)
++        self.assertEqual(report['summary']['steps'],12)
++        self.assertEqual(report['measurement']['duration_filter']['excluded_steps'],0)
++
+ 
+ if __name__=='__main__':unittest.main()
+diff --git a/ssd/tests/test_step_performance_metrics.py b/ssd/tests/test_step_performance_metrics.py
+index c11f2b5..bc5c8d2 100644
+--- a/ssd/tests/test_step_performance_metrics.py
++++ b/ssd/tests/test_step_performance_metrics.py
+@@ -61,6 +61,7 @@ class StepMetrics(unittest.TestCase):
+             self.assertIn('Final Decode Throughput: 4.00tok/s',out.getvalue())
+             self.assertIn('[metrics] Avg Tokens per step (incl recovery): 2.00',out.getvalue())
+             self.assertIn('[metrics] Avg Cache Hits: 1.00',out.getvalue())
++            self.assertIn('[metrics] Excluded long decode steps: 0',out.getvalue())
+             self.assertIn('[raw metrics] All-event accepted length: 3.75',out.getvalue())
+         finally:METRICS.clear();METRICS.update(saved)
+ 

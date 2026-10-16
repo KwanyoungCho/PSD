@@ -2,7 +2,7 @@
 import argparse,json
 from pathlib import Path
 import numpy as np
-from mlsys_measurement import base_eligible,batch_metrics
+from mlsys_measurement import performance_eligible,batch_metrics
 from mlsys_request_reporting import common_question_summary
 
 
@@ -12,7 +12,7 @@ def groups(report):
         if not g['phase'].startswith('measured'):continue
         # Repeated passes over the same prompts are one bootstrap cluster.
         row=by.setdefault(g['index'],np.zeros(4))
-        kept=[s for s in g['steps'] if base_eligible(s,b) and not s.get('graph_preparation',False)]
+        kept=[s for s in g['steps'] if performance_eligible(s,b)]
         row+=np.asarray([sum(s['emitted'] for s in kept),sum(s['seconds'] for s in kept),
                          sum(sum(s['verify']) for s in kept),len(kept)])
     return by
@@ -44,7 +44,7 @@ def compare(a,b):
 
 
 def summarize(j):
-    b=j['args']['batch'];ss=[s for s in j['steps'] if base_eligible(s,b) and not s.get('graph_preparation',False)]
+    b=j['args']['batch'];ss=[s for s in j['steps'] if performance_eligible(s,b)]
     source={}
     for phase in (0,1,2):
         es=[e for s in ss for e in s['events'] if e['source']==phase]
