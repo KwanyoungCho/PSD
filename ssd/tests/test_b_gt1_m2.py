@@ -94,6 +94,9 @@ def _make_runner(jit_calls, empty_cache=False):
         (r.tree_cache_keys, r.tree_cache_tokens,
          r.tree_cache_logits, r.tree_cache_valid_k) = _make_cache()
     r.tree_cache_activations = None
+    # Real cache rows carry this flag since mixed chain/tree serving was
+    # added. These sentinel fixtures represent ordinary chain entries.
+    r.tree_cache_is_tree = torch.zeros(r.tree_cache_keys.shape[0], dtype=torch.bool)
     r._last_n_draft_keys = 2
 
     def _fake_jit(request_keys, num_tokens, out_logits, out_tokens,
