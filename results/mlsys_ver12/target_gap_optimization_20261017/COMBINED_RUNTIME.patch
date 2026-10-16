@@ -1,0 +1,742 @@
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 89d2b64..8321bd5 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -937,7 +937,7 @@ class DraftRunner(ModelRunner):
+         _mc_rerank(_served_label, _ev_served)
+         return out, 0, packed, packed_cpu, parsed, original_valid
+ 
+-    def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None):
++    def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None, before_jit=None):
+         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
+         # Draft model now returns full target vocab size logits (after d2t expansion)
+         V = self.hf_config.vocab_size
+@@ -1069,6 +1069,8 @@ class DraftRunner(ModelRunner):
+             # only evaluated on the JIT path, exactly as before).
+             _any_hit = bool(cache_hits.any())
+             if self.config.jit_speculate and not (_any_hit and bool(cache_hits.all())):
++                if before_jit is not None:
++                    before_jit()
+                 # print(f'[hit_cache_and_respond] found a cache miss, running jit speculate', flush=True)
+                 if self.config.verbose:
+                     print(f"[hit_cache_and_respond] Running JIT speculate for cache misses", flush=True)
+@@ -1249,6 +1251,8 @@ class DraftRunner(ModelRunner):
+                         # 이슈 #35: staging 소비 가드용 seq 정체 기록
+                         self._tree_served_seq = int(request_keys[0, 0])
+         elif self.config.jit_speculate:
++            if before_jit is not None:
++                before_jit()
+             # Cache is empty (first iteration), must JIT all
+             if self.config.verbose:
+                 print(f"[hit_cache_and_respond] Cache empty, running JIT speculate for all", flush=True)
+@@ -1335,6 +1339,63 @@ class DraftRunner(ModelRunner):
+             phase_source, valid_k, _vk_scalar, _profile_cache_status,
+         )
+ 
++    def _restore_previous_tree_kv(self, state, cache_keys, num_tokens,
++                                  draft_block_tables):
++        """Restore the prior accepted path before any new draft forward.
++
++        A cache hit consumes cached tokens/logits, so this work may follow
++        the response send. A miss must call it before its JIT forward.
++        ``state`` owns the previous snapshot even when hit serving installs
++        the next one. Sequence identity and EOS/cap truncation guards remain.
++        """
++        (_served, _staged, served_numtok, served_seq) = state
++        if _served is not None:
++            # Profiling-only marker. Hit restores follow response sending;
++            # miss restores precede JIT. Neither changes target verification.
++            from ssd.engine.helpers.cudagraph_helpers import (
++                duet_record as _mr_kvr, duet_close as _mc_kvr)
++            _ev_kvr = _mr_kvr("tree_kv_restore")
++            _a_eff = int(num_tokens[0]) - served_numtok - 1
++            _T = int(cache_keys[0, 1])
++            # 이슈 #35: 서빙 시점 seq와 다른 seq의 요청이면 (종료 후 새
++            # seq 진입 등) staged KV는 폐기 — a_eff/k_idx가 새 seq
++            # 좌표로 우연히 유효해 보여도 KV 오염이므로 정체 대조 필수.
++            if int(cache_keys[0, 0]) != served_seq:
++                _staged = None
++            if _a_eff > 0 and _T > 0 and _staged is not None:
++                from ssd.engine.helpers.p2_tree import (
++                    parse_tree_ints, tree_parent_path,
++                    validate_tree_ints)
++                _nv_s = self.config.duet_tree_wire_nodes
++                _served_tree = parse_tree_ints(_served, _nv_s)
++                validate_tree_ints(
++                    _served_tree, _nv_s, self.hf_config.vocab_size)
++                _path = tree_parent_path(_served_tree, _T)
++                _path = _path[:_a_eff]
++                # 이슈 #21: src = staging(글루 시점 gather — 물리블록
++                # 해제와 무관), dst = 현재 dbt의 canonical 슬롯.
++                # staging 행 j+1 = 뷰 노드 j ([0]=rec).
++                _p0 = served_numtok - 1
++                _bs = self.block_size
++                _max_pos = _p0 + 1 + len(_path) + 1
++                _dbt0 = draft_block_tables[0, :(_max_pos // _bs) + 1].cpu()
++                _src_rows, _dst = [], []
++                for _k, _jj in enumerate(_path):
++                    _dp = _p0 + 1 + _k
++                    _src_rows.append(1 + _jj)
++                    _dst.append(int(_dbt0[_dp // _bs]) * _bs + _dp % _bs)
++                if _src_rows:
++                    kc = self.kv_cache
++                    _flat = kc.view(kc.shape[0], kc.shape[1], -1,
++                                    kc.shape[4], kc.shape[5])
++                    _sr = torch.tensor(_src_rows, dtype=torch.int64,
++                                       device=kc.device)
++                    _dt = torch.tensor(_dst, dtype=torch.int64,
++                                       device=kc.device)
++                    _flat[:, :, _dt] = _staged[:, :, _sr]
++            _mc_kvr("tree_kv_restore", _ev_kvr)
++
++
+     def _service_spec_request(self):
+         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
+         # Phase B: meta wire is [B, K, F, step_id]. step_id is the per-target
+@@ -1380,61 +1441,22 @@ class DraftRunner(ModelRunner):
+         assert off == fused_total
+         temperatures = temps_as_int64.to(torch.int32).view(torch.float32)
+ 
+-        # === T3.4-b6-2 (D14): 직전 step이 트리 서빙이었으면 수락 경로
+-        # KV를 뷰-순서 셀 → canonical 셀로 복사. rope는 트리 rope
+-        # (pos0+1+depth)가 이미 canonical 위치와 같아 셀 이동만으로
+-        # 재실체화 완성. k_idx = 종단 노드 id (b6-1), a_eff는
+-        # num_tokens 델타 (EOS/max-token 절단을 자동 반영 — 경로
+-        # prefix == 수락 prefix). one-shot 소거.
+-        _served = getattr(self, "_tree_served_ints", None)
+-        if _served is not None:
+-            # Profiling-only marker. This work is part of draft request
+-            # service (and therefore target_spec_wait), not target verify.
+-            from ssd.engine.helpers.cudagraph_helpers import (
+-                duet_record as _mr_kvr, duet_close as _mc_kvr)
+-            _ev_kvr = _mr_kvr("tree_kv_restore")
++        # Snapshot the previous response state before hit serving replaces
++        # it. Cache lookup/rerank/gather do not consume canonical prefix KV.
++        # Restore before JIT on a miss; otherwise send the cached response
++        # first and restore before glue/DS/PS performs any new draft forward.
++        _restore_previous = None
++        if getattr(self, "_tree_served_ints", None) is not None:
++            _pending_restore = [(self._tree_served_ints,
++                getattr(self, "_tree_staged_kv", None),
++                self._tree_served_numtok,
++                getattr(self, "_tree_served_seq", -1))]
+             self._tree_served_ints = None
+-            _staged = getattr(self, "_tree_staged_kv", None)
+             self._tree_staged_kv = None
+-            _a_eff = int(num_tokens[0]) - self._tree_served_numtok - 1
+-            _T = int(cache_keys[0, 1])
+-            # 이슈 #35: 서빙 시점 seq와 다른 seq의 요청이면 (종료 후 새
+-            # seq 진입 등) staged KV는 폐기 — a_eff/k_idx가 새 seq
+-            # 좌표로 우연히 유효해 보여도 KV 오염이므로 정체 대조 필수.
+-            if int(seq_ids[0]) != getattr(self, "_tree_served_seq", -1):
+-                _staged = None
+-            if _a_eff > 0 and _T > 0 and _staged is not None:
+-                from ssd.engine.helpers.p2_tree import (
+-                    parse_tree_ints, tree_parent_path,
+-                    validate_tree_ints)
+-                _nv_s = self.config.duet_tree_wire_nodes
+-                _served_tree = parse_tree_ints(_served, _nv_s)
+-                validate_tree_ints(
+-                    _served_tree, _nv_s, self.hf_config.vocab_size)
+-                _path = tree_parent_path(_served_tree, _T)
+-                _path = _path[:_a_eff]
+-                # 이슈 #21: src = staging(글루 시점 gather — 물리블록
+-                # 해제와 무관), dst = 현재 dbt의 canonical 슬롯.
+-                # staging 행 j+1 = 뷰 노드 j ([0]=rec).
+-                _p0 = self._tree_served_numtok - 1
+-                _bs = self.block_size
+-                _max_pos = _p0 + 1 + len(_path) + 1
+-                _dbt0 = draft_block_tables[0, :(_max_pos // _bs) + 1].cpu()
+-                _src_rows, _dst = [], []
+-                for _k, _jj in enumerate(_path):
+-                    _dp = _p0 + 1 + _k
+-                    _src_rows.append(1 + _jj)
+-                    _dst.append(int(_dbt0[_dp // _bs]) * _bs + _dp % _bs)
+-                if _src_rows:
+-                    kc = self.kv_cache
+-                    _flat = kc.view(kc.shape[0], kc.shape[1], -1,
+-                                    kc.shape[4], kc.shape[5])
+-                    _sr = torch.tensor(_src_rows, dtype=torch.int64,
+-                                       device=kc.device)
+-                    _dt = torch.tensor(_dst, dtype=torch.int64,
+-                                       device=kc.device)
+-                    _flat[:, :, _dt] = _staged[:, :, _sr]
+-            _mc_kvr("tree_kv_restore", _ev_kvr)
++            def _restore_previous():
++                if _pending_restore:
++                    self._restore_previous_tree_kv(_pending_restore.pop(),
++                        cache_keys, num_tokens, draft_block_tables)
+ 
+         target_recovery_activations = torch.zeros(
+             B, 3 * self.config.d_model_target, dtype=self.hf_config.torch_dtype, device=self.device
+@@ -1481,7 +1503,7 @@ class DraftRunner(ModelRunner):
+             profile_cache_status,
+         ) = self.hit_cache_and_respond(
+             cache_keys, B, K, num_tokens, temperatures, draft_block_tables,
+-            target_recovery_activations,
++            target_recovery_activations, before_jit=_restore_previous,
+         )
+         # Set close-time status so hit_cache_respond row carries it AND any
+         # subsequent draft spans for this request inherit it.
+@@ -1566,6 +1588,8 @@ class DraftRunner(ModelRunner):
+                       group=self.async_pg)
+             _mc_s(_q_label, _mev_q)
+         _mc_s("draft_send_response", _mev_ds)
++        if _restore_previous is not None:
++            _restore_previous()
+ 
+         partial_tree_decode_args = {
+             "num_tokens": num_tokens,
+diff --git a/ssd/ssd/engine/helpers/response_snapshot.py b/ssd/ssd/engine/helpers/response_snapshot.py
+new file mode 100644
+index 0000000..34efbbe
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/response_snapshot.py
+@@ -0,0 +1,31 @@
++"""CPU view of one immutable fused response, shared by its consumers.
++
++No model probability, token selection or wire layout changes. The caller
++performs one bounded readback of the existing int64 response envelope.
++"""
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class HostResponse:
++    cache_hits: tuple[int, ...]
++    phase_source: tuple[int, ...]
++    valid_k: tuple[int, ...]
++    tokens: tuple[tuple[int, ...], ...]
++    tree_ints: tuple[tuple[int, ...], ...] | None
++
++
++def parse_host_response(values, batch, width, tree_extra=0):
++    if batch < 1 or width < 1 or tree_extra < 0 or tree_extra % batch:
++        raise ValueError('Invalid fused response dimensions')
++    end=3*batch+batch*width
++    if len(values)!=end+tree_extra:
++        raise ValueError('Fused response length mismatch')
++    def rows(start,columns):
++        return tuple(tuple(int(v) for v in values[start+i*columns:start+(i+1)*columns]) for i in range(batch))
++    valid=tuple(int(v) for v in values[2*batch:3*batch])
++    if any(v<0 or v>width for v in valid):
++        raise ValueError('Fused response valid_k outside token envelope')
++    return HostResponse(tuple(int(v) for v in values[:batch]),
++        tuple(int(v) for v in values[batch:2*batch]),valid,
++        rows(3*batch,width),rows(end,tree_extra//batch) if tree_extra else None)
+diff --git a/ssd/ssd/engine/helpers/single_verify_inputs.py b/ssd/ssd/engine/helpers/single_verify_inputs.py
+new file mode 100644
+index 0000000..54a6740
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/single_verify_inputs.py
+@@ -0,0 +1,78 @@
++"""Persistent B1 verify inputs without rebuilding tokens through host lists."""
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit(do_not_specialize=('prefix','context_length'),
++            do_not_specialize_on_alignment=('prefix','context_length'))
++def _geometry(pages,positions,slots,length,cu, prefix,context_length,
++              rows:tl.constexpr, block_size:tl.constexpr, BLOCK:tl.constexpr):
++    i=tl.arange(0,BLOCK)
++    pos=prefix+i
++    page=tl.load(pages+pos//block_size,mask=i<rows,other=0)
++    tl.store(positions+i,pos,mask=i<rows)
++    tl.store(slots+i,page*block_size+pos%block_size,mask=i<rows)
++    tl.store(length,context_length)
++    tl.store(cu,0)
++    tl.store(cu+1,rows)
++
++
++class SingleVerifyInputs:
++    def __init__(self,device,max_rows,max_pages,block_size):
++        self.device=device
++        self.max_rows=int(max_rows);self.max_pages=int(max_pages);self.block_size=int(block_size)
++        self.ids=torch.empty(max_rows,dtype=torch.int64,device=device)
++        self.positions=torch.empty_like(self.ids)
++        self.slots=torch.empty(max_rows,dtype=torch.int32,device=device)
++        self.length=torch.empty(1,dtype=torch.int32,device=device)
++        self.pages=torch.empty((1,max_pages),dtype=torch.int32,device=device)
++        self.cu=torch.empty(2,dtype=torch.int32,device=device)
++        # Host slots may be reused only after their tiny H2D copies finish.
++        self.host=[(torch.empty(max_rows,dtype=torch.int64,pin_memory=True),
++                    torch.empty(max_pages,dtype=torch.int32,pin_memory=True)) for _ in range(2)]
++        self.done=[torch.cuda.Event() for _ in range(2)]
++        self.pending=[False,False];self.next_slot=0;self.page_key=None
++        # Constructor is first reached in the benchmark's warm requests.
++        # Compile every legal row count here rather than during a measured
++        # request that happens to hit a previously unseen tree size.
++        self.pages.zero_()
++        for rows in range(2,self.max_rows+1):
++            _geometry[(1,)](self.pages,self.positions,self.slots,self.length,self.cu,
++                0,rows,rows,self.block_size,triton.next_power_of_2(rows))
++
++    def prepare(self,seq,k,source_ids=None):
++        rows=int(k)+1
++        if not 1<int(rows)<=self.max_rows:
++            raise ValueError('Verify rows exceed input capacity')
++        total=int(seq.num_tokens);prefix=total-rows
++        if prefix<0 or seq.num_cached_tokens!=prefix:
++            raise AssertionError('Verify window misaligned')
++        page_key=tuple(seq.block_table)
++        if not page_key or len(page_key)>self.max_pages or (total-1)//self.block_size>=len(page_key):
++            raise ValueError('Verify window lacks allocated pages')
++        if any(p<0 for p in page_key[:(total+self.block_size-1)//self.block_size]):
++            raise ValueError('Verify window references negative pages')
++        page_changed=page_key!=self.page_key
++        if source_ids is not None:
++            if source_ids.device!=self.device or source_ids.dtype!=torch.int64 or source_ids.numel()!=rows:
++                raise ValueError('GPU response token input mismatch')
++            ids=source_ids.reshape(-1)
++        else:
++            ids=self.ids[:rows]
++        if source_ids is None or page_changed:
++            slot=self.next_slot;self.next_slot=(slot+1)%2
++            if self.pending[slot] and not self.done[slot].query():
++                self.done[slot].synchronize()
++            host_ids,host_pages=self.host[slot]
++            if source_ids is None:
++                host_ids.numpy()[:rows]=seq.token_ids[prefix:total]
++                ids.copy_(host_ids[:rows],non_blocking=True)
++            if page_changed:
++                hp=host_pages.numpy();hp.fill(-1);hp[:len(page_key)]=page_key
++                self.pages[0].copy_(host_pages,non_blocking=True)
++                self.page_key=page_key
++            self.done[slot].record();self.pending[slot]=True
++        _geometry[(1,)](self.pages,self.positions,self.slots,self.length,self.cu,
++            prefix,total,rows,self.block_size,triton.next_power_of_2(rows))
++        return ids,self.positions[:rows],self.slots[:rows],self.length,self.pages,self.cu
+diff --git a/ssd/ssd/engine/helpers/speculate_types.py b/ssd/ssd/engine/helpers/speculate_types.py
+index 61426f4..d29a008 100644
+--- a/ssd/ssd/engine/helpers/speculate_types.py
++++ b/ssd/ssd/engine/helpers/speculate_types.py
+@@ -29,6 +29,9 @@ class SpeculateResult:
+     # to join target and draft duet_profile rows by request, not by event
+     # index. None on synchronous / non-async paths.
+     step_id: int | None = None
++    # One immutable CPU readback of the fused B1 response. Legacy/sync and
++    # batched callers may omit it and retain the established tensor path.
++    host_response: object | None = None
+ 
+ 
+ @dataclass
+diff --git a/ssd/ssd/engine/model_runner.py b/ssd/ssd/engine/model_runner.py
+index 0157304..251a2f9 100644
+--- a/ssd/ssd/engine/model_runner.py
++++ b/ssd/ssd/engine/model_runner.py
+@@ -1263,6 +1263,23 @@ class ModelRunner:
+             verify_k = getattr(self, "_duet_step_lookahead", self.config.speculate_k)
+         else:
+             verify_k = -1
++        self._duet_verify_context_len_cpu = None
++        if (verify and len(seqs)==1 and not self.is_draft
++                and getattr(self.config,'duet_enabled',False)
++                and not self.config.use_eagle):
++            from ssd.engine.helpers.single_verify_inputs import SingleVerifyInputs
++            buffers=getattr(self,'_single_verify_inputs',None)
++            if buffers is None:
++                max_rows=max(self.config.speculate_k,self.config.duet_response_token_width)+1
++                buffers=self._single_verify_inputs=SingleVerifyInputs(
++                    self.device,max_rows,self.config.max_blocks,self.block_size)
++            source=getattr(self,'_duet_verify_input_ids',None)
++            ids,positions,slots,lengths,pages,cu=buffers.prepare(seqs[0],verify_k,source)
++            self._duet_verify_context_len_cpu=int(seqs[0].num_tokens)
++            set_context(is_prefill=False,cu_seqlens_q=cu,cu_seqlens_k=None,
++                max_seqlen_q=verify_k+1,max_seqlen_k=0,slot_mapping=slots,
++                context_lens=lengths,block_tables=pages)
++            return ids,positions
+         input_ids, positions, slot_mapping, context_lens = \
+             prepare_decode_tensors_from_seqs(seqs, self.block_size, self.is_draft, verify, verify_k)
+ 
+@@ -1613,7 +1630,8 @@ class ModelRunner:
+         assert input_ids.shape[0] == n_rows, (
+             f"tree verify rows {input_ids.shape[0]} != valid+1 {n_rows}")
+         context = get_context()
+-        kv_len = int(context.context_lens[0])
++        _host_kv_len = getattr(self, '_duet_verify_context_len_cpu', None)
++        kv_len = _host_kv_len if _host_kv_len is not None else int(context.context_lens[0])
+         # prepare_decode appends exactly valid speculative scratch rows.  Derive
+         # the recovery position from that already materialised KV length and
+         # avoid a separate GPU scalar read of positions[0].
+@@ -1952,7 +1970,7 @@ class ModelRunner:
+             input_ids, positions = self.prepare_prefill(seqs)
+         else:
+             input_ids, positions = self.prepare_decode(seqs, verify=not last_only)
+-        temperatures = self.prepare_sample(seqs) if self.rank == 0 else None
++        temperatures = self.prepare_sample(seqs) if self.rank == 0 and last_only else None
+ 
+         if _pt:
+             torch.cuda.synchronize()
+diff --git a/ssd/ssd/engine/speculator_async.py b/ssd/ssd/engine/speculator_async.py
+index f123351..0be9925 100644
+--- a/ssd/ssd/engine/speculator_async.py
++++ b/ssd/ssd/engine/speculator_async.py
+@@ -10,7 +10,7 @@ from ssd.utils.misc import decode_tokens
+ from ssd.utils.async_helpers.nccl_pack import send_int64
+ 
+ 
+-def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K):
++def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K, host_response=None):
+     """Extend seq token state for the target verify forward (speculate step).
+ 
+     M6 fix (docs/duet/13): every seq's token_ids is extended by the BATCH
+@@ -34,10 +34,12 @@ def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K):
+ 
+     Returns vk_max (None when valid_k is None → non-DUET, extends by K).
+     """
+-    vk_list = valid_k.tolist() if valid_k is not None else None
++    vk_list = (list(host_response.valid_k) if host_response is not None
++               else valid_k.tolist() if valid_k is not None else None)
+     vk_max = max(vk_list) if vk_list else None
+     ext_w = vk_max if vk_max is not None else K
+-    spec_ext = speculations_tokens[:, :ext_w].tolist()
++    spec_ext = ([list(row[:ext_w]) for row in host_response.tokens]
++                if host_response is not None else speculations_tokens[:, :ext_w].tolist())
+     for i, seq in enumerate(seqs):
+         vk_i = vk_list[i] if vk_list is not None else K
+         seq.verify_valid_k = vk_i
+@@ -213,10 +215,12 @@ class SpeculatorAsync(SpeculatorBase):
+         # vk_i, sliding the target verify window pos0 = num_tokens-(vk_max+1)
+         # back by (vk_max - vk_i) tokens (the B>1 short-row collapse).
+         _vk_max = extend_seqs_for_verify(
+-            seqs, speculations_tokens, valid_k, self.K)
++            seqs, speculations_tokens, valid_k, self.K,
++            host_response=getattr(self, '_response_host', None))
+         if _profile_duet and cache_hits is not None:
+-            _hit_statuses = cache_hits.tolist()
+-            _phase_statuses = (phase_source.tolist()
++            _host = getattr(self, '_response_host', None)
++            _hit_statuses = list(_host.cache_hits) if _host is not None else cache_hits.tolist()
++            _phase_statuses = (list(_host.phase_source) if _host is not None else phase_source.tolist()
+                                if phase_source is not None else [0] * B)
+ 
+         # Slice speculations to the batch's vk_max width before returning
+@@ -264,6 +268,7 @@ class SpeculatorAsync(SpeculatorBase):
+             parent_q_logits=self._tree_parent_q,
+             profile_cache_status=profile_cache_status,
+             step_id=self._request_step_id,
++            host_response=getattr(self, '_response_host', None),
+         )
+ 
+     def _speculation_request(self, seqs: list[Sequence], eagle: bool):
+@@ -350,6 +355,14 @@ class SpeculatorAsync(SpeculatorBase):
+             "target_recv_fused", parent="target_recv_response_wait")
+         dist.recv(self._fused_response, src=self.draft_runner_rank, group=self.async_pg)
+         _mc("target_recv_fused", _mev_recv_fused)
++        # B1: metadata and token ids are needed on the CPU by several
++        # consumers. Read the small existing packet once; never read q here.
++        self._response_host = None
++        if B == 1:
++            from ssd.engine.helpers.response_snapshot import parse_host_response
++            self._response_host = parse_host_response(
++                self._fused_response.tolist(), B, self.response_width,
++                self._tree_wire_extra)
+         cache_hits = self._fused_response[:B]
+         phase_source = self._fused_response[B:2 * B]
+         valid_k = self._fused_response[2 * B:3 * B]
+@@ -363,7 +376,8 @@ class SpeculatorAsync(SpeculatorBase):
+         if self.batched_tree_enabled:
+             # One node-aligned q payload handles mixed chain/tree rows. Its
+             # width comes from the preceding metadata on both peers.
+-            width = int(valid_k.max())
++            width = (max(self._response_host.valid_k) if self._response_host is not None
++                     else int(valid_k.max()))
+             self._logits_q = torch.empty(B,width,self.vocab_size,
+                                          dtype=self.draft_dtype,device=self.device)
+             dist.recv(self._logits_q,src=self.draft_runner_rank,group=self.async_pg)
+@@ -380,9 +394,9 @@ class SpeculatorAsync(SpeculatorBase):
+         _mev_meta = _mr(
+             "target_response_meta_read", parent="target_recv_response_wait")
+         if self._tree_ints_step is not None and B == 1:
+-            _tree_valid = int(self._tree_ints_step[0, 0].item())
++            _tree_valid = self._response_host.tree_ints[0][0]
+             if _tree_valid > 0:
+-                _tree_phase = int(phase_source[0].item())
++                _tree_phase = self._response_host.phase_source[0]
+         _mc("target_response_meta_read", _mev_meta)
+         if _tree_valid > 0:
+             from ssd.engine.helpers.p2_tree import tree_response_logit_rows
+diff --git a/ssd/ssd/engine/verifier.py b/ssd/ssd/engine/verifier.py
+index d8b0497..614037a 100644
+--- a/ssd/ssd/engine/verifier.py
++++ b/ssd/ssd/engine/verifier.py
+@@ -231,6 +231,7 @@ class Verifier(VerifierBase):
+         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
+         batch_size = len(seqs)
+         config = self.target_model_runner.config
++        _host_response = getattr(speculate_result, 'host_response', None)
+ 
+         # Phase B: announce step_id + proc=target_rank0 + status for ALL spans
+         # inside verify (graph_pre/post, exit_logits, proxy_compute_send,
+@@ -262,7 +263,8 @@ class Verifier(VerifierBase):
+             # REPLACES the former torch.unique() GPU→CPU sync (not an extra
+             # one). For non-hybrid path defaults to self.lookahead = K_long.
+             if speculate_result.valid_k is not None and config.duet_phase1_k is not None:
+-                _step_lookahead = int(speculate_result.valid_k.max().item())
++                _step_lookahead = (max(_host_response.valid_k) if _host_response is not None
++                                   else int(speculate_result.valid_k.max().item()))
+             else:
+                 _step_lookahead = self.lookahead
+             # ===== TRACE point 2: speculator → verifier boundary =====
+@@ -295,13 +297,15 @@ class Verifier(VerifierBase):
+                     and getattr(speculate_result, "tree_ints", None)
+                     is not None):
+                 _ti_row = speculate_result.tree_ints[0]
+-                if int(_ti_row[0]) > 0:
++                _host_tree = (_host_response.tree_ints[0] if _host_response is not None
++                              and _host_response.tree_ints is not None else None)
++                if (_host_tree[0] if _host_tree is not None else int(_ti_row[0])) > 0:
+                     from ssd.engine.helpers.cudagraph_helpers import (
+                         duet_record as _mr_tree_prep,
+                         duet_close as _mc_tree_prep)
+                     _ev_wire = _mr_tree_prep(
+                         "tree_wire_parse_validate")
+-                    _tree_meta_arg = _ti_row.tolist()
++                    _tree_meta_arg = list(_host_tree) if _host_tree is not None else _ti_row.tolist()
+                     # Validate on rank 0 before indexing parent_q_ref or
+                     # sending the metadata through SHM to target TP ranks.
+                     # This readback already existed as .tolist().
+@@ -314,8 +318,9 @@ class Verifier(VerifierBase):
+                         _ti_checked, _nv_t, config.hf_config.vocab_size,
+                         sibling_capacity=config.duet_tree_c_tensor)
+                     _tree_wire_gpu_source = _ti_row
+-                    _phase_t = int(speculate_result.phase_source[0]) \
+-                        if speculate_result.phase_source is not None else 0
++                    _phase_t = (_host_response.phase_source[0] if _host_response is not None
++                                else int(speculate_result.phase_source[0])
++                                if speculate_result.phase_source is not None else 0)
+                     _phase_cap = (int(config.duet_p1_tree_verify_nodes)
+                                   if _phase_t == 1 else
+                                   int(config.duet_p2_tree_verify_nodes))
+@@ -427,9 +432,14 @@ class Verifier(VerifierBase):
+         # existing SHM metadata and perform one bounded H2D copy.
+         self.target_model_runner._duet_tree_wire_gpu_source = \
+             _tree_wire_gpu_source
+-        result = self.target_model_runner.call(
+-            "run", seqs, False, False, True, None, _step_lh_arg,
+-            _tree_meta_arg)
++        self.target_model_runner._duet_verify_input_ids = (
++            speculate_result.speculations.reshape(-1) if batch_size==1 else None)
++        try:
++            result = self.target_model_runner.call(
++                "run", seqs, False, False, True, None, _step_lh_arg,
++                _tree_meta_arg)
++        finally:
++            self.target_model_runner._duet_verify_input_ids = None
+ 
+         # DUET: clear proxy function
+         if config.duet_enabled:
+@@ -562,17 +572,20 @@ class Verifier(VerifierBase):
+ 
+         # For async mode, also track accepted suffix lengths only for cache hits
+         if speculate_result.cache_hits is not None:
+-            _ch_cpu = speculate_result.cache_hits.cpu()
++            _ch_cpu = (torch.tensor(_host_response.cache_hits,dtype=torch.int64)
++                       if _host_response is not None else speculate_result.cache_hits.cpu())
+             self.metrics["cache_hits"].append(_ch_cpu.float().mean().item())
+             # DUET-only: split cache hits by which phase populated them.
+             # Non-DUET paths send all-zero phase_source and the rates stay 0.
+             if speculate_result.phase_source is not None:
+-                _ps_cpu = speculate_result.phase_source.cpu()
++                _ps_cpu = (torch.tensor(_host_response.phase_source,dtype=torch.int64)
++                           if _host_response is not None else speculate_result.phase_source.cpu())
+                 self.metrics["phase1_hits"].append((_ps_cpu == 1).float().mean().item())
+                 self.metrics["phase2_hits"].append((_ps_cpu == 2).float().mean().item())
+             else:
+                 _ps_cpu = None
+-            _vk_cpu = (speculate_result.valid_k.cpu()
++            _vk_cpu = ((torch.tensor(_host_response.valid_k,dtype=torch.int64)
++                        if _host_response is not None else speculate_result.valid_k.cpu())
+                        if speculate_result.valid_k is not None else None)
+             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
+                 _src = int(_ps_cpu[i].item()) if _ps_cpu is not None else 0
+diff --git a/ssd/tests/test_b_gt1_m2.py b/ssd/tests/test_b_gt1_m2.py
+index e95406d..a899ff7 100644
+--- a/ssd/tests/test_b_gt1_m2.py
++++ b/ssd/tests/test_b_gt1_m2.py
+@@ -94,6 +94,9 @@ def _make_runner(jit_calls, empty_cache=False):
+         (r.tree_cache_keys, r.tree_cache_tokens,
+          r.tree_cache_logits, r.tree_cache_valid_k) = _make_cache()
+     r.tree_cache_activations = None
++    # Real cache rows carry this flag since mixed chain/tree serving was
++    # added. These sentinel fixtures represent ordinary chain entries.
++    r.tree_cache_is_tree = torch.zeros(r.tree_cache_keys.shape[0], dtype=torch.bool)
+     r._last_n_draft_keys = 2
+ 
+     def _fake_jit(request_keys, num_tokens, out_logits, out_tokens,
+diff --git a/ssd/tests/test_deferred_tree_restore.py b/ssd/tests/test_deferred_tree_restore.py
+new file mode 100644
+index 0000000..5f99559
+--- /dev/null
++++ b/ssd/tests/test_deferred_tree_restore.py
+@@ -0,0 +1,54 @@
++"""Accepted-path restore preserves fragmented pages and termination guards."""
++from types import SimpleNamespace
++import unittest
++import torch
++from ssd.engine.draft_runner import DraftRunner
++from ssd.engine.helpers.p2_tree import pack_tree_ints
++
++
++class DeferredRestoreTests(unittest.TestCase):
++    def make(self):
++        view={k:torch.tensor(v) for k,v in dict(valid=[4],u_valid=[3],
++            tok=[[1,2,3,4]],parent_local=[[-1,-1,0,2]],
++            sib_order=[[0,1,0,0]],parent_q_ref=[[0,0,1,2]]).items()}
++        served=pack_tree_ints(view,0,4)
++        runner=SimpleNamespace(config=SimpleNamespace(duet_tree_wire_nodes=4),
++            hf_config=SimpleNamespace(vocab_size=10),block_size=4,
++            kv_cache=torch.zeros(1,2,8,4,1,1),
++            _tree_served_numtok=100,_tree_served_seq=999)
++        staged=torch.arange(10.).reshape(1,2,5,1,1)
++        return runner,(served,staged,3,7)
++
++    def restore(self,runner,state,num_tokens=7,seq=7,terminal=4):
++        DraftRunner._restore_previous_tree_kv(runner,state,
++            torch.tensor([[seq,terminal,5]]),torch.tensor([num_tokens]),
++            torch.tensor([[5,2,7,1,6,0,3,4]]))
++
++    def test_branch_path_crosses_fragmented_pages_using_previous_snapshot(self):
++        r,state=self.make();self.restore(r,state)
++        actual=r.kv_cache.reshape(1,2,32,1,1)
++        expected=torch.zeros_like(actual)
++        expected[:,:,23]=state[1][:,:,1]
++        expected[:,:,8]=state[1][:,:,3]
++        expected[:,:,9]=state[1][:,:,4]
++        self.assertTrue(torch.equal(actual,expected))
++        self.assertEqual(r._tree_served_numtok,100)
++        self.assertEqual(r._tree_served_seq,999)
++
++    def test_output_truncation_restores_only_actual_accepted_prefix(self):
++        r,state=self.make();self.restore(r,state,num_tokens=6)
++        actual=r.kv_cache.reshape(1,2,32,1,1)
++        self.assertTrue(torch.equal(actual[:,:,23],state[1][:,:,1]))
++        self.assertTrue(torch.equal(actual[:,:,8],state[1][:,:,3]))
++        self.assertTrue(torch.equal(actual[:,:,9],torch.zeros(1,2,1,1)))
++
++    def test_changed_sequence_empty_accept_and_missing_stage_do_not_copy(self):
++        for changes in [dict(seq=8),dict(terminal=0),dict(num_tokens=4),dict(missing=True)]:
++            with self.subTest(changes=changes):
++                r,state=self.make()
++                if changes.pop('missing',False):state=(state[0],None,*state[2:])
++                self.restore(r,state,**changes)
++                self.assertEqual(int(torch.count_nonzero(r.kv_cache)),0)
++
++
++if __name__=='__main__':unittest.main()
+diff --git a/ssd/tests/test_response_snapshot.py b/ssd/tests/test_response_snapshot.py
+new file mode 100644
+index 0000000..be9582e
+--- /dev/null
++++ b/ssd/tests/test_response_snapshot.py
+@@ -0,0 +1,53 @@
++import copy
++from dataclasses import FrozenInstanceError
++import unittest
++import torch
++from ssd.engine.helpers.response_snapshot import parse_host_response
++from ssd.engine.speculator_async import extend_seqs_for_verify
++from ssd.engine.sequence import Sequence
++
++
++class NeverRead:
++    def tolist(self):
++        raise AssertionError('Unexpected second tensor readback')
++
++
++class ResponseSnapshot(unittest.TestCase):
++    def test_existing_wire_and_mutable_packet_do_not_alias_snapshot(self):
++        packet=[1,2,3,11,12,13,14,3,2,1,11,12,13,0]
++        snapshot=parse_host_response(packet,1,4,7)
++        self.assertEqual(snapshot.cache_hits,(1,))
++        self.assertEqual(snapshot.phase_source,(2,))
++        self.assertEqual(snapshot.valid_k,(3,))
++        self.assertEqual(snapshot.tokens,((11,12,13,14),))
++        self.assertEqual(snapshot.tree_ints,((3,2,1,11,12,13,0),))
++        packet[:]=[-1]*len(packet)
++        self.assertEqual(snapshot.tokens[0][0],11)
++        with self.assertRaises(FrozenInstanceError):snapshot.valid_k=(0,)
++
++    def test_ragged_and_uniform_extension_matches_legacy(self):
++        for widths in ((3,),(1,),(0,),(3,1),(1,3),(2,2)):
++            with self.subTest(widths=widths):
++                b=len(widths);w=4
++                tokens=torch.arange(b*w,dtype=torch.int64).reshape(b,w)+20
++                valid=torch.tensor(widths)
++                seqs=[Sequence([1,2,3+i]) for i in range(b)]
++                for seq in seqs:seq.num_draft_cached_tokens=2
++                legacy=copy.deepcopy(seqs)
++                packet=[1]*b+[1]*b+list(widths)+tokens.flatten().tolist()
++                snapshot=parse_host_response(packet,b,w)
++                old=extend_seqs_for_verify(legacy,tokens,valid,3)
++                new=extend_seqs_for_verify(seqs,NeverRead(),NeverRead(),3,snapshot)
++                self.assertEqual(old,new)
++                for a,z in zip(legacy,seqs):
++                    for key in ('token_ids','num_tokens','last_token','num_draft_cached_tokens','verify_valid_k'):
++                        self.assertEqual(getattr(a,key),getattr(z,key))
++
++    def test_invalid_dimensions_and_lengths_fail(self):
++        for packet,b,w,extra in [([],0,1,0),([],1,0,0),([],2,1,1),
++                                  ([1,1,5,0],1,1,0),([1,1,-1,0],1,1,0),([],1,1,0)]:
++            with self.subTest(b=b,w=w,extra=extra),self.assertRaises(ValueError):
++                parse_host_response(packet,b,w,extra)
++
++
++if __name__=='__main__':unittest.main()
+diff --git a/ssd/tests/test_single_verify_inputs.py b/ssd/tests/test_single_verify_inputs.py
+new file mode 100644
+index 0000000..a23a176
+--- /dev/null
++++ b/ssd/tests/test_single_verify_inputs.py
+@@ -0,0 +1,49 @@
++import unittest
++import torch
++from ssd.engine.helpers.single_verify_inputs import SingleVerifyInputs
++from ssd.engine.helpers.runner_helpers import prepare_decode_tensors_from_seqs
++from ssd.engine.sequence import Sequence
++
++
++@unittest.skipUnless(torch.cuda.is_available(),'CUDA required')
++class SingleVerifyInputTests(unittest.TestCase):
++    def test_exact_inputs_for_changed_pages_lengths_and_device_tokens(self):
++        dev=torch.device('cuda:0')
++        fast=SingleVerifyInputs(dev,41,128,16)
++        for prefix in (0,5,15,16,111,517):
++            for k in (1,3,10,39):
++                seq=Sequence(list(range(prefix+k+1)))
++                seq.num_cached_tokens=prefix
++                # Deliberately non-contiguous physical pages.
++                seq.block_table=[3+2*i for i in range((seq.num_tokens+15)//16)]
++                expected=prepare_decode_tensors_from_seqs([seq],16,False,True,k)
++                for gpu_tokens in (False,True):
++                    source=torch.tensor(seq.token_ids[prefix:],dtype=torch.int64,device=dev) if gpu_tokens else None
++                    actual=fast.prepare(seq,k,source)
++                    for a,z in zip(actual[:4],expected):
++                        self.assertEqual(a.dtype,z.dtype)
++                        self.assertTrue(torch.equal(a,z),(prefix,k,gpu_tokens))
++                    self.assertEqual(actual[5].tolist(),[0,k+1])
++                    self.assertEqual(actual[4][0,:len(seq.block_table)].tolist(),seq.block_table)
++
++    def test_reuse_host_staging_without_copy_race(self):
++        dev=torch.device('cuda:0');fast=SingleVerifyInputs(dev,41,128,16)
++        saved=[]
++        for i in range(24):
++            seq=Sequence([100+i,200+i,300+i,400+i]);seq.num_cached_tokens=0
++            seq.block_table=[i+1]
++            result=fast.prepare(seq,3)
++            saved.append((result[0].clone(),result[2].clone(),list(seq.token_ids),i+1))
++        for ids,slots,want,page in saved:
++            self.assertEqual(ids.tolist(),want)
++            self.assertEqual(slots.tolist(),[page*16+j for j in range(4)])
++
++    def test_misalignment_and_missing_pages_still_fail(self):
++        fast=SingleVerifyInputs(torch.device('cuda:0'),41,128,16)
++        seq=Sequence([1,2,3,4]);seq.block_table=[2];seq.num_cached_tokens=1
++        with self.assertRaises(AssertionError):fast.prepare(seq,3)
++        seq.num_cached_tokens=0;seq.block_table=[]
++        with self.assertRaises(ValueError):fast.prepare(seq,3)
++
++
++if __name__=='__main__':unittest.main()

@@ -1,0 +1,115 @@
+{
+  "input_reuse_results": [
+    {
+      "model": "7b",
+      "before_ms": 32.365142871453315,
+      "after_ms": 31.9465517693548,
+      "reduction_pct": 1.2933392686108602,
+      "reduction_pct_ci95": [
+        0.5538263402150667,
+        1.9594957497566514
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1759,
+          "before_ms": 32.0581656233344,
+          "after_ms": 31.917201585018283,
+          "reduction_pct": 0.4397133634293615,
+          "before_verify_ms": 27.758886457080443,
+          "after_verify_ms": 27.56440755600113
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 32.6714236312044,
+          "after_ms": 31.975835362235077,
+          "reduction_pct": 2.1290418098125485,
+          "before_verify_ms": 27.829539337049127,
+          "after_verify_ms": 27.618307446060154
+        }
+      ]
+    },
+    {
+      "model": "13b",
+      "before_ms": 45.21264170760635,
+      "after_ms": 44.53436473917481,
+      "reduction_pct": 1.5001931822918313,
+      "reduction_pct_ci95": [
+        1.2030877468143126,
+        1.8093142653112295
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1919,
+          "before_ms": 45.52722193648696,
+          "after_ms": 44.62888594733167,
+          "reduction_pct": 1.9731842861146265,
+          "before_verify_ms": 40.46407683092204,
+          "after_verify_ms": 40.08687593394341
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.89822532259495,
+          "after_ms": 44.43989276081387,
+          "reduction_pct": 1.0208255637900066,
+          "before_verify_ms": 40.39033701898612,
+          "after_verify_ms": 40.225846838014455
+        }
+      ]
+    },
+    {
+      "model": "7b_chain",
+      "before_ms": 24.74846135267711,
+      "after_ms": 24.02929845379576,
+      "reduction_pct": 2.9058893344234282,
+      "reduction_pct_ci95": [
+        2.7001393766859216,
+        3.139553959507075
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1615,
+          "before_ms": 24.82707583620833,
+          "after_ms": 24.062311396668825,
+          "reduction_pct": 3.080364536624791,
+          "before_verify_ms": 20.787044070861462,
+          "after_verify_ms": 20.484917483115193
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1615,
+          "before_ms": 24.669846869145893,
+          "after_ms": 23.9962855109227,
+          "reduction_pct": 2.7303021449460396,
+          "before_verify_ms": 20.712108010514108,
+          "after_verify_ms": 20.523529309720296
+        }
+      ]
+    }
+  ],
+  "status": "complete",
+  "original_unchanged": true,
+  "automatic_merge": false,
+  "kv_restore_only": [
+    {
+      "model": "7b",
+      "recommend_for_review": true,
+      "whole_step_strength": "consistent",
+      "reason": "both process repetitions improve and UID CI excludes zero"
+    },
+    {
+      "model": "13b",
+      "recommend_for_review": true,
+      "whole_step_strength": "small; repeat b almost neutral",
+      "reason": "both process repetitions improve and UID CI excludes zero"
+    }
+  ],
+  "kv_13b_caution": "repeat b nearly neutral; component reduction is clearer than whole-step speedup",
+  "combined_model_parity_verified": true,
+  "combined_single_process_measured": true,
+  "combined_repeated_ab_measured": false
+}

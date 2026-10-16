@@ -1,0 +1,29 @@
+{
+  "comparisons": [
+    {
+      "model": "7b",
+      "variant": "restore",
+      "matched_steps": 3526,
+      "before_ms": 31.890928209018654,
+      "after_ms": 31.45884364378901,
+      "reduction_pct": 1.3548823740647808
+    },
+    {
+      "model": "13b",
+      "variant": "restore",
+      "matched_steps": 3839,
+      "before_ms": 44.52169328366765,
+      "after_ms": 44.263456145610796,
+      "reduction_pct": 0.5800254190951648
+    },
+    {
+      "model": "7b_chain",
+      "variant": "inputs",
+      "matched_steps": 3230,
+      "before_ms": 24.756858738699655,
+      "after_ms": 24.036495000000006,
+      "reduction_pct": 2.909754207118298
+    }
+  ],
+  "note": "External monotonic wrapper covers the entire original LLMEngine.step call, including bookkeeping outside its internal timer. Same 2x-selected paired cohort."
+}

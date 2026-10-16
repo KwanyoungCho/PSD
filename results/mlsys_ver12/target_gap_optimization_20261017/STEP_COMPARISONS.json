@@ -1,0 +1,1464 @@
+{
+  "status": "complete",
+  "comparisons": [
+    {
+      "model": "7b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "snapshot",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3526,
+      "before_available_steps": 3526,
+      "after_available_steps": 3526,
+      "before_ms": 32.40747118270488,
+      "after_ms": 32.10482635753273,
+      "before_verify_ms": 27.79514012004207,
+      "after_verify_ms": 27.780471859816505,
+      "before_outside_verify_ms": 4.612331062662814,
+      "after_outside_verify_ms": 4.324354497716227,
+      "reduction_ms": 0.30264482517215363,
+      "reduction_pct": 0.9338736227394007,
+      "reduction_ms_ci95": [
+        0.07654563697319582,
+        0.5370806981075501
+      ],
+      "reduction_pct_ci95": [
+        0.23769118673487188,
+        1.6488746267973107
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1763,
+          "before_ms": 32.14351873420537,
+          "after_ms": 32.06200941750527,
+          "reduction_pct": 0.25357932146166107,
+          "before_verify_ms": 27.760740903035014,
+          "after_verify_ms": 27.782204579193486
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 32.6714236312044,
+          "after_ms": 32.14764329756019,
+          "reduction_pct": 1.6031757279898473,
+          "before_verify_ms": 27.829539337049127,
+          "after_verify_ms": 27.77873914043952
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 1,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 25.45437307055548,
+          "after_ms": 25.360206389013285,
+          "reduction_pct": 0.36994303996872313
+        },
+        "2": {
+          "n": 1372,
+          "before_ms": 33.596015426134436,
+          "after_ms": 33.314005402655006,
+          "reduction_pct": 0.8394150910528864
+        },
+        "1": {
+          "n": 1688,
+          "before_ms": 33.360943349930174,
+          "after_ms": 32.983972835863476,
+          "reduction_pct": 1.129975582862175
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "snapshot",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3525,
+      "before_available_steps": 3525,
+      "after_available_steps": 3526,
+      "before_ms": 32.36544710077042,
+      "after_ms": 32.10372213635871,
+      "before_verify_ms": 27.794836013419356,
+      "after_verify_ms": 27.780133679637963,
+      "before_outside_verify_ms": 4.57061108735106,
+      "after_outside_verify_ms": 4.323588456720747,
+      "reduction_ms": 0.2617249644117047,
+      "reduction_pct": 0.8086554886661101,
+      "reduction_ms_ci95": [
+        0.05681892078577877,
+        0.4564001262093081
+      ],
+      "reduction_pct_ci95": [
+        0.1761109978004655,
+        1.40576291733579
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1762,
+          "before_ms": 32.059296917367966,
+          "after_ms": 32.059776048278,
+          "reduction_pct": -0.0014945147152500837,
+          "before_verify_ms": 27.76011299437322,
+          "after_verify_ms": 27.781529010288846
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 32.6714236312044,
+          "after_ms": 32.14764329756019,
+          "reduction_pct": 1.6031757279898473,
+          "before_verify_ms": 27.829539337049127,
+          "after_verify_ms": 27.77873914043952
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 1,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 25.45437307055548,
+          "after_ms": 25.360206389013285,
+          "reduction_pct": 0.36994303996872313
+        },
+        "2": {
+          "n": 1372,
+          "before_ms": 33.596015426134436,
+          "after_ms": 33.314005402655006,
+          "reduction_pct": 0.8394150910528864
+        },
+        "1": {
+          "n": 1687,
+          "before_ms": 33.27369888244245,
+          "after_ms": 32.98218668698376,
+          "reduction_pct": 0.876103965743702
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "inputs",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3526,
+      "before_available_steps": 3526,
+      "after_available_steps": 3526,
+      "before_ms": 32.40747118270488,
+      "after_ms": 31.98387833428107,
+      "before_verify_ms": 27.79514012004207,
+      "after_verify_ms": 27.59280368532593,
+      "before_outside_verify_ms": 4.612331062662814,
+      "after_outside_verify_ms": 4.39107464895514,
+      "reduction_ms": 0.4235928484238156,
+      "reduction_pct": 1.307083931466635,
+      "reduction_ms_ci95": [
+        0.14368998415575163,
+        0.6856284019612838
+      ],
+      "reduction_pct_ci95": [
+        0.4456159193492157,
+        2.1046012052473833
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1763,
+          "before_ms": 32.14351873420537,
+          "after_ms": 31.991921306327058,
+          "reduction_pct": 0.47162673486953466,
+          "before_verify_ms": 27.760740903035014,
+          "after_verify_ms": 27.567299924591705
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 32.6714236312044,
+          "after_ms": 31.975835362235077,
+          "reduction_pct": 2.1290418098125485,
+          "before_verify_ms": 27.829539337049127,
+          "after_verify_ms": 27.618307446060154
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 1,
+          "after": 3
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 25.45437307055548,
+          "after_ms": 25.127834555754927,
+          "reduction_pct": 1.2828385672491005
+        },
+        "2": {
+          "n": 1372,
+          "before_ms": 33.596015426134436,
+          "after_ms": 33.181482652324775,
+          "reduction_pct": 1.2338748168545965
+        },
+        "1": {
+          "n": 1688,
+          "before_ms": 33.360943349930174,
+          "after_ms": 32.90319307150691,
+          "reduction_pct": 1.3721143123017199
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "inputs",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3522,
+      "before_available_steps": 3525,
+      "after_available_steps": 3523,
+      "before_ms": 32.365142871453315,
+      "after_ms": 31.9465517693548,
+      "before_verify_ms": 27.794253017950627,
+      "after_verify_ms": 27.591388108577522,
+      "before_outside_verify_ms": 4.570889853502686,
+      "after_outside_verify_ms": 4.355163660777277,
+      "reduction_ms": 0.418591102098513,
+      "reduction_pct": 1.2933392686108602,
+      "reduction_ms_ci95": [
+        0.17800592708079865,
+        0.6375513378772154
+      ],
+      "reduction_pct_ci95": [
+        0.5538263402150667,
+        1.9594957497566514
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1759,
+          "before_ms": 32.0581656233344,
+          "after_ms": 31.917201585018283,
+          "reduction_pct": 0.4397133634293615,
+          "before_verify_ms": 27.758886457080443,
+          "after_verify_ms": 27.56440755600113
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 32.6714236312044,
+          "after_ms": 31.975835362235077,
+          "reduction_pct": 2.1290418098125485,
+          "before_verify_ms": 27.829539337049127,
+          "after_verify_ms": 27.618307446060154
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 1,
+          "after": 3
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 25.45437307055548,
+          "after_ms": 25.127834555754927,
+          "reduction_pct": 1.2828385672491005
+        },
+        "2": {
+          "n": 1371,
+          "before_ms": 33.59617742718816,
+          "after_ms": 33.149406536792036,
+          "reduction_pct": 1.3298265594780756
+        },
+        "1": {
+          "n": 1685,
+          "before_ms": 33.27473951911261,
+          "after_ms": 32.853619030708565,
+          "reduction_pct": 1.2655861307709348
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b",
+      "stage": "perf",
+      "reference": "snapshot",
+      "variant": "inputs",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3526,
+      "before_available_steps": 3526,
+      "after_available_steps": 3526,
+      "before_ms": 32.10482635753273,
+      "after_ms": 31.98387833428107,
+      "before_verify_ms": 27.780471859816505,
+      "after_verify_ms": 27.59280368532593,
+      "before_outside_verify_ms": 4.324354497716227,
+      "after_outside_verify_ms": 4.39107464895514,
+      "reduction_ms": 0.12094802325166196,
+      "reduction_pct": 0.37672847659954156,
+      "reduction_ms_ci95": [
+        -0.20218042925456137,
+        0.4141172831551459
+      ],
+      "reduction_pct_ci95": [
+        -0.6337906674217986,
+        1.2813853441700747
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1763,
+          "before_ms": 32.06200941750527,
+          "after_ms": 31.991921306327058,
+          "reduction_pct": 0.21860174222251283,
+          "before_verify_ms": 27.782204579193486,
+          "after_verify_ms": 27.567299924591705
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 32.14764329756019,
+          "after_ms": 31.975835362235077,
+          "reduction_pct": 0.5344339979601265,
+          "before_verify_ms": 27.77873914043952,
+          "after_verify_ms": 27.618307446060154
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 3
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 25.360206389013285,
+          "after_ms": 25.127834555754927,
+          "reduction_pct": 0.9162852608290639
+        },
+        "2": {
+          "n": 1372,
+          "before_ms": 33.314005402655006,
+          "after_ms": 33.181482652324775,
+          "reduction_pct": 0.3977989098833179
+        },
+        "1": {
+          "n": 1688,
+          "before_ms": 32.983972835863476,
+          "after_ms": 32.90319307150691,
+          "reduction_pct": 0.2449061086684412
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b",
+      "stage": "perf",
+      "reference": "snapshot",
+      "variant": "inputs",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3523,
+      "before_available_steps": 3526,
+      "after_available_steps": 3523,
+      "before_ms": 32.10429802260449,
+      "after_ms": 31.947532995072493,
+      "before_verify_ms": 27.779828781930064,
+      "after_verify_ms": 27.59172877787118,
+      "before_outside_verify_ms": 4.324469240674426,
+      "after_outside_verify_ms": 4.355804217201316,
+      "reduction_ms": 0.15676502753199817,
+      "reduction_pct": 0.4882991910354795,
+      "reduction_ms_ci95": [
+        -0.11483067820093142,
+        0.42068351786616137
+      ],
+      "reduction_pct_ci95": [
+        -0.3593105453132272,
+        1.3035011901073985
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1760,
+          "before_ms": 32.06087886365739,
+          "after_ms": 31.919182385238607,
+          "reduction_pct": 0.4419606805582732,
+          "before_verify_ms": 27.78092028076406,
+          "after_verify_ms": 27.56510480513415
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 32.14764329756019,
+          "after_ms": 31.975835362235077,
+          "reduction_pct": 0.5344339979601265,
+          "before_verify_ms": 27.77873914043952,
+          "after_verify_ms": 27.618307446060154
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 3
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 25.360206389013285,
+          "after_ms": 25.127834555754927,
+          "reduction_pct": 0.9162852608290639
+        },
+        "2": {
+          "n": 1371,
+          "before_ms": 33.314006744310284,
+          "after_ms": 33.149406536792036,
+          "reduction_pct": 0.4940870931004482
+        },
+        "1": {
+          "n": 1686,
+          "before_ms": 32.984627823194565,
+          "after_ms": 32.855131362228185,
+          "reduction_pct": 0.39259639872401
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b",
+      "stage": "final",
+      "reference": "before",
+      "variant": "restore",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3526,
+      "before_available_steps": 3526,
+      "after_available_steps": 3526,
+      "before_ms": 31.882451803630673,
+      "after_ms": 31.45080931831766,
+      "before_verify_ms": 27.700352869893944,
+      "after_verify_ms": 27.672154587260074,
+      "before_outside_verify_ms": 4.182098933736732,
+      "after_outside_verify_ms": 3.7786547310575864,
+      "reduction_ms": 0.4316424853130129,
+      "reduction_pct": 1.3538559956792873,
+      "reduction_ms_ci95": [
+        0.31862854092314674,
+        0.5515818079267314
+      ],
+      "reduction_pct_ci95": [
+        1.0037702458478281,
+        1.7221685339569361
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1763,
+          "before_ms": 31.939584369129612,
+          "after_ms": 31.51136312620018,
+          "reduction_pct": 1.340722653057802,
+          "before_verify_ms": 27.697545477809566,
+          "after_verify_ms": 27.704552955344642
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 31.825319238131737,
+          "after_ms": 31.390255510435143,
+          "reduction_pct": 1.3670364920497668,
+          "before_verify_ms": 27.70316026197832,
+          "after_verify_ms": 27.639756219175506
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 24.938257025902523,
+          "after_ms": 24.962392888959226,
+          "reduction_pct": -0.09678247774747017
+        },
+        "2": {
+          "n": 1372,
+          "before_ms": 33.15022870592444,
+          "after_ms": 32.69936561088265,
+          "reduction_pct": 1.3600602850779686
+        },
+        "1": {
+          "n": 1688,
+          "before_ms": 32.769066055096474,
+          "after_ms": 32.22722094312919,
+          "reduction_pct": 1.6535262587473287
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b",
+      "stage": "final",
+      "reference": "before",
+      "variant": "restore",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3526,
+      "before_available_steps": 3526,
+      "after_available_steps": 3526,
+      "before_ms": 31.882451803630673,
+      "after_ms": 31.45080931831766,
+      "before_verify_ms": 27.700352869893944,
+      "after_verify_ms": 27.672154587260074,
+      "before_outside_verify_ms": 4.182098933736732,
+      "after_outside_verify_ms": 3.7786547310575864,
+      "reduction_ms": 0.4316424853130129,
+      "reduction_pct": 1.3538559956792873,
+      "reduction_ms_ci95": [
+        0.31862854092314674,
+        0.5515818079267314
+      ],
+      "reduction_pct_ci95": [
+        1.0037702458478281,
+        1.7221685339569361
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1763,
+          "before_ms": 31.939584369129612,
+          "after_ms": 31.51136312620018,
+          "reduction_pct": 1.340722653057802,
+          "before_verify_ms": 27.697545477809566,
+          "after_verify_ms": 27.704552955344642
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1763,
+          "before_ms": 31.825319238131737,
+          "after_ms": 31.390255510435143,
+          "reduction_pct": 1.3670364920497668,
+          "before_verify_ms": 27.70316026197832,
+          "after_verify_ms": 27.639756219175506
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 466,
+          "before_ms": 24.938257025902523,
+          "after_ms": 24.962392888959226,
+          "reduction_pct": -0.09678247774747017
+        },
+        "2": {
+          "n": 1372,
+          "before_ms": 33.15022870592444,
+          "after_ms": 32.69936561088265,
+          "reduction_pct": 1.3600602850779686
+        },
+        "1": {
+          "n": 1688,
+          "before_ms": 32.769066055096474,
+          "after_ms": 32.22722094312919,
+          "reduction_pct": 1.6535262587473287
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "snapshot",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3840,
+      "before_available_steps": 3840,
+      "after_available_steps": 3840,
+      "before_ms": 45.208444649870216,
+      "after_ms": 45.09054528113362,
+      "before_verify_ms": 40.42303664011039,
+      "after_verify_ms": 40.61437709268224,
+      "before_outside_verify_ms": 4.785408009759824,
+      "after_outside_verify_ms": 4.476168188451386,
+      "reduction_ms": 0.1178993687365922,
+      "reduction_pct": 0.2607905882400896,
+      "reduction_ms_ci95": [
+        -0.09282720220866263,
+        0.3222276321345067
+      ],
+      "reduction_pct_ci95": [
+        -0.20702549980768367,
+        0.7058299259505652
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1920,
+          "before_ms": 45.51866397714548,
+          "after_ms": 45.693103504011866,
+          "reduction_pct": -0.38322637710537233,
+          "before_verify_ms": 40.455736261234655,
+          "after_verify_ms": 40.94462650224765
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.89822532259495,
+          "after_ms": 44.487987058255385,
+          "reduction_pct": 0.913707081720927,
+          "before_verify_ms": 40.39033701898612,
+          "after_verify_ms": 40.28412768311682
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 684,
+          "before_ms": 29.730910977058667,
+          "after_ms": 29.669338839223244,
+          "reduction_pct": 0.20709805321114105
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.735920110182654,
+          "after_ms": 48.58023798956043,
+          "reduction_pct": 0.3194401998982688
+        },
+        "1": {
+          "n": 1660,
+          "before_ms": 48.40695654359052,
+          "after_ms": 48.29989763924218,
+          "reduction_pct": 0.2211642953671933
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "snapshot",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3840,
+      "before_available_steps": 3840,
+      "after_available_steps": 3840,
+      "before_ms": 45.208444649870216,
+      "after_ms": 45.09054528113362,
+      "before_verify_ms": 40.42303664011039,
+      "after_verify_ms": 40.61437709268224,
+      "before_outside_verify_ms": 4.785408009759824,
+      "after_outside_verify_ms": 4.476168188451386,
+      "reduction_ms": 0.1178993687365922,
+      "reduction_pct": 0.2607905882400896,
+      "reduction_ms_ci95": [
+        -0.09282720220866263,
+        0.3222276321345067
+      ],
+      "reduction_pct_ci95": [
+        -0.20702549980768367,
+        0.7058299259505652
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1920,
+          "before_ms": 45.51866397714548,
+          "after_ms": 45.693103504011866,
+          "reduction_pct": -0.38322637710537233,
+          "before_verify_ms": 40.455736261234655,
+          "after_verify_ms": 40.94462650224765
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.89822532259495,
+          "after_ms": 44.487987058255385,
+          "reduction_pct": 0.913707081720927,
+          "before_verify_ms": 40.39033701898612,
+          "after_verify_ms": 40.28412768311682
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 684,
+          "before_ms": 29.730910977058667,
+          "after_ms": 29.669338839223244,
+          "reduction_pct": 0.20709805321114105
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.735920110182654,
+          "after_ms": 48.58023798956043,
+          "reduction_pct": 0.3194401998982688
+        },
+        "1": {
+          "n": 1660,
+          "before_ms": 48.40695654359052,
+          "after_ms": 48.29989763924218,
+          "reduction_pct": 0.2211642953671933
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "inputs",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3840,
+      "before_available_steps": 3840,
+      "after_available_steps": 3840,
+      "before_ms": 45.208444649870216,
+      "after_ms": 44.53974044131428,
+      "before_verify_ms": 40.42303664011039,
+      "after_verify_ms": 40.15557783782242,
+      "before_outside_verify_ms": 4.785408009759824,
+      "after_outside_verify_ms": 4.384162603491859,
+      "reduction_ms": 0.6687042085559369,
+      "reduction_pct": 1.4791577408488799,
+      "reduction_ms_ci95": [
+        0.5363212197848439,
+        0.8021970123222537
+      ],
+      "reduction_pct_ci95": [
+        1.1968420373600852,
+        1.760047639466564
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1920,
+          "before_ms": 45.51866397714548,
+          "after_ms": 44.63958812181469,
+          "reduction_pct": 1.9312426563577567,
+          "before_verify_ms": 40.455736261234655,
+          "after_verify_ms": 40.085308837630386
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.89822532259495,
+          "after_ms": 44.43989276081387,
+          "reduction_pct": 1.0208255637900066,
+          "before_verify_ms": 40.39033701898612,
+          "after_verify_ms": 40.225846838014455
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 1
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 684,
+          "before_ms": 29.730910977058667,
+          "after_ms": 29.373151749203647,
+          "reduction_pct": 1.203324136724504
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.735920110182654,
+          "after_ms": 48.02573350437775,
+          "reduction_pct": 1.4572139075230472
+        },
+        "1": {
+          "n": 1660,
+          "before_ms": 48.40695654359052,
+          "after_ms": 47.64751215400146,
+          "reduction_pct": 1.5688744837845214
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "inputs",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3839,
+      "before_available_steps": 3840,
+      "after_available_steps": 3839,
+      "before_ms": 45.21264170760635,
+      "after_ms": 44.53436473917481,
+      "before_verify_ms": 40.42719732091502,
+      "after_verify_ms": 40.156379485862246,
+      "before_outside_verify_ms": 4.785444386691334,
+      "after_outside_verify_ms": 4.377985253312566,
+      "reduction_ms": 0.6782769684315428,
+      "reduction_pct": 1.5001931822918313,
+      "reduction_ms_ci95": [
+        0.5384445917411336,
+        0.8248374446985092
+      ],
+      "reduction_pct_ci95": [
+        1.2030877468143126,
+        1.8093142653112295
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1919,
+          "before_ms": 45.52722193648696,
+          "after_ms": 44.62888594733167,
+          "reduction_pct": 1.9731842861146265,
+          "before_verify_ms": 40.46407683092204,
+          "after_verify_ms": 40.08687593394341
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.89822532259495,
+          "after_ms": 44.43989276081387,
+          "reduction_pct": 1.0208255637900066,
+          "before_verify_ms": 40.39033701898612,
+          "after_verify_ms": 40.225846838014455
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 1
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 683,
+          "before_ms": 29.731840656379628,
+          "after_ms": 29.32073021303156,
+          "reduction_pct": 1.3827278576506674
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.735920110182654,
+          "after_ms": 48.02573350437775,
+          "reduction_pct": 1.4572139075230472
+        },
+        "1": {
+          "n": 1660,
+          "before_ms": 48.40695654359052,
+          "after_ms": 47.64751215400146,
+          "reduction_pct": 1.5688744837845214
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "perf",
+      "reference": "snapshot",
+      "variant": "inputs",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3840,
+      "before_available_steps": 3840,
+      "after_available_steps": 3840,
+      "before_ms": 45.09054528113362,
+      "after_ms": 44.53974044131428,
+      "before_verify_ms": 40.61437709268224,
+      "after_verify_ms": 40.15557783782242,
+      "before_outside_verify_ms": 4.476168188451386,
+      "after_outside_verify_ms": 4.384162603491859,
+      "reduction_ms": 0.5508048398193447,
+      "reduction_pct": 1.221552847465357,
+      "reduction_ms_ci95": [
+        0.40490285562145256,
+        0.7062063412533718
+      ],
+      "reduction_pct_ci95": [
+        0.8980051881550353,
+        1.5596633668366642
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1920,
+          "before_ms": 45.693103504011866,
+          "after_ms": 44.63958812181469,
+          "reduction_pct": 2.305633238733007,
+          "before_verify_ms": 40.94462650224765,
+          "after_verify_ms": 40.085308837630386
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.487987058255385,
+          "after_ms": 44.43989276081387,
+          "reduction_pct": 0.10810625659133377,
+          "before_verify_ms": 40.28412768311682,
+          "after_verify_ms": 40.225846838014455
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 1
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 684,
+          "before_ms": 29.669338839223244,
+          "after_ms": 29.373151749203647,
+          "reduction_pct": 0.9982935299792883
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.58023798956043,
+          "after_ms": 48.02573350437775,
+          "reduction_pct": 1.141419861512083
+        },
+        "1": {
+          "n": 1660,
+          "before_ms": 48.29989763924218,
+          "after_ms": 47.64751215400146,
+          "reduction_pct": 1.3506974489127632
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "perf",
+      "reference": "snapshot",
+      "variant": "inputs",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3839,
+      "before_available_steps": 3840,
+      "after_available_steps": 3839,
+      "before_ms": 45.0941338766668,
+      "after_ms": 44.53436473917481,
+      "before_verify_ms": 40.618235956741984,
+      "after_verify_ms": 40.156379485862246,
+      "before_outside_verify_ms": 4.475897919924822,
+      "after_outside_verify_ms": 4.377985253312566,
+      "reduction_ms": 0.5597691374919934,
+      "reduction_pct": 1.241334713342035,
+      "reduction_ms_ci95": [
+        0.41029926959281454,
+        0.7178908629204309
+      ],
+      "reduction_pct_ci95": [
+        0.908506118232934,
+        1.5862415410201085
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1919,
+          "before_ms": 45.700596561059676,
+          "after_ms": 44.62888594733167,
+          "reduction_pct": 2.345069199033578,
+          "before_verify_ms": 40.952518335772886,
+          "after_verify_ms": 40.08687593394341
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.487987058255385,
+          "after_ms": 44.43989276081387,
+          "reduction_pct": 0.10810625659133377,
+          "before_verify_ms": 40.28412768311682,
+          "after_verify_ms": 40.225846838014455
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 1
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 683,
+          "before_ms": 29.6669309502188,
+          "after_ms": 29.32073021303156,
+          "reduction_pct": 1.1669583812635165
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.58023798956043,
+          "after_ms": 48.02573350437775,
+          "reduction_pct": 1.141419861512083
+        },
+        "1": {
+          "n": 1660,
+          "before_ms": 48.29989763924218,
+          "after_ms": 47.64751215400146,
+          "reduction_pct": 1.3506974489127632
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "final",
+      "reference": "before",
+      "variant": "restore",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3840,
+      "before_available_steps": 3840,
+      "after_available_steps": 3840,
+      "before_ms": 44.538282952559406,
+      "after_ms": 44.256017194175,
+      "before_verify_ms": 40.34803372549808,
+      "after_verify_ms": 40.37182549335133,
+      "before_outside_verify_ms": 4.190249227061334,
+      "after_outside_verify_ms": 3.884191700823673,
+      "reduction_ms": 0.2822657583844072,
+      "reduction_pct": 0.6337598570763658,
+      "reduction_ms_ci95": [
+        0.04883121960452026,
+        0.49151612001033473
+      ],
+      "reduction_pct_ci95": [
+        0.10915961728653667,
+        1.0993643119214889
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1920,
+          "before_ms": 44.727540778846254,
+          "after_ms": 44.18368966683678,
+          "reduction_pct": 1.2159199959115408,
+          "before_verify_ms": 40.42473766588349,
+          "after_verify_ms": 40.30723053880744
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.34902512627256,
+          "after_ms": 44.328344721513226,
+          "reduction_pct": 0.046631024471111004,
+          "before_verify_ms": 40.27132978511266,
+          "after_verify_ms": 40.436420447895216
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 1,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 684,
+          "before_ms": 28.95686860749095,
+          "after_ms": 29.053461744738687,
+          "reduction_pct": -0.3335759075232092
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.06563209219839,
+          "after_ms": 47.77030386341167,
+          "reduction_pct": 0.6144270155861831
+        },
+        "1": {
+          "n": 1660,
+          "before_ms": 47.7797125303467,
+          "after_ms": 47.35311060998006,
+          "reduction_pct": 0.8928515844370044
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "13b",
+      "stage": "final",
+      "reference": "before",
+      "variant": "restore",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3839,
+      "before_available_steps": 3839,
+      "after_available_steps": 3840,
+      "before_ms": 44.51283377906192,
+      "after_ms": 44.25456663001718,
+      "before_verify_ms": 40.34700529120026,
+      "after_verify_ms": 40.370816692478726,
+      "before_outside_verify_ms": 4.165828487861661,
+      "after_outside_verify_ms": 3.8837499375384485,
+      "reduction_ms": 0.25826714904474274,
+      "reduction_pct": 0.5802082840347667,
+      "reduction_ms_ci95": [
+        0.03747474043557754,
+        0.44595642216461273
+      ],
+      "reduction_pct_ci95": [
+        0.0835835616614583,
+        0.99789709282588
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1919,
+          "before_ms": 44.67672779331704,
+          "after_ms": 44.18075009240779,
+          "reduction_pct": 1.1101477780640856,
+          "before_verify_ms": 40.42272023215294,
+          "after_verify_ms": 40.3051787506342
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1920,
+          "before_ms": 44.34902512627256,
+          "after_ms": 44.328344721513226,
+          "reduction_pct": 0.046631024471111004,
+          "before_verify_ms": 40.27132978511266,
+          "after_verify_ms": 40.436420447895216
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 1,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 684,
+          "before_ms": 28.95686860749095,
+          "after_ms": 29.053461744738687,
+          "reduction_pct": -0.3335759075232092
+        },
+        "2": {
+          "n": 1496,
+          "before_ms": 48.06563209219839,
+          "after_ms": 47.77030386341167,
+          "reduction_pct": 0.6144270155861831
+        },
+        "1": {
+          "n": 1659,
+          "before_ms": 47.72277585314413,
+          "after_ms": 47.351620783345886,
+          "reduction_pct": 0.7777315195167667
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b_chain",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "inputs",
+      "cohort": "raw cap/clip-only matched steps",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3230,
+      "before_available_steps": 3230,
+      "after_available_steps": 3230,
+      "before_ms": 24.74846135267711,
+      "after_ms": 24.02929845379576,
+      "before_verify_ms": 20.749576040687785,
+      "after_verify_ms": 20.504223396417746,
+      "before_outside_verify_ms": 3.998885311989327,
+      "after_outside_verify_ms": 3.525075057378016,
+      "reduction_ms": 0.7191628988813493,
+      "reduction_pct": 2.9058893344234282,
+      "reduction_ms_ci95": [
+        0.667517791334745,
+        0.7773296396682718
+      ],
+      "reduction_pct_ci95": [
+        2.7001393766859216,
+        3.139553959507075
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1615,
+          "before_ms": 24.82707583620833,
+          "after_ms": 24.062311396668825,
+          "reduction_pct": 3.080364536624791,
+          "before_verify_ms": 20.787044070861462,
+          "after_verify_ms": 20.484917483115193
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1615,
+          "before_ms": 24.669846869145893,
+          "after_ms": 23.9962855109227,
+          "reduction_pct": 2.7303021449460396,
+          "before_verify_ms": 20.712108010514108,
+          "after_verify_ms": 20.523529309720296
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 258,
+          "before_ms": 29.9525857607964,
+          "after_ms": 29.1211205205696,
+          "reduction_pct": 2.7759381005264205
+        },
+        "1": {
+          "n": 1528,
+          "before_ms": 24.284802685061734,
+          "after_ms": 23.579836686898183,
+          "reduction_pct": 2.902910133987602
+        },
+        "2": {
+          "n": 1444,
+          "before_ms": 24.309269072082593,
+          "after_ms": 23.595148513762414,
+          "reduction_pct": 2.9376471838895912
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    },
+    {
+      "model": "7b_chain",
+      "stage": "perf",
+      "reference": "before",
+      "variant": "inputs",
+      "cohort": "2x-filtered matched intersection",
+      "output_and_event_parity": true,
+      "uid_clusters": 12,
+      "matched_steps": 3230,
+      "before_available_steps": 3230,
+      "after_available_steps": 3230,
+      "before_ms": 24.74846135267711,
+      "after_ms": 24.02929845379576,
+      "before_verify_ms": 20.749576040687785,
+      "after_verify_ms": 20.504223396417746,
+      "before_outside_verify_ms": 3.998885311989327,
+      "after_outside_verify_ms": 3.525075057378016,
+      "reduction_ms": 0.7191628988813493,
+      "reduction_pct": 2.9058893344234282,
+      "reduction_ms_ci95": [
+        0.667517791334745,
+        0.7773296396682718
+      ],
+      "reduction_pct_ci95": [
+        2.7001393766859216,
+        3.139553959507075
+      ],
+      "repeats": [
+        {
+          "repeat": "a",
+          "matched_steps": 1615,
+          "before_ms": 24.82707583620833,
+          "after_ms": 24.062311396668825,
+          "reduction_pct": 3.080364536624791,
+          "before_verify_ms": 20.787044070861462,
+          "after_verify_ms": 20.484917483115193
+        },
+        {
+          "repeat": "b",
+          "matched_steps": 1615,
+          "before_ms": 24.669846869145893,
+          "after_ms": 23.9962855109227,
+          "reduction_pct": 2.7303021449460396,
+          "before_verify_ms": 20.712108010514108,
+          "after_verify_ms": 20.523529309720296
+        }
+      ],
+      "excluded_long_steps": [
+        {
+          "repeat": "a",
+          "before": 0,
+          "after": 0
+        },
+        {
+          "repeat": "b",
+          "before": 0,
+          "after": 0
+        }
+      ],
+      "source": {
+        "0": {
+          "n": 258,
+          "before_ms": 29.9525857607964,
+          "after_ms": 29.1211205205696,
+          "reduction_pct": 2.7759381005264205
+        },
+        "1": {
+          "n": 1528,
+          "before_ms": 24.284802685061734,
+          "after_ms": 23.579836686898183,
+          "reduction_pct": 2.902910133987602
+        },
+        "2": {
+          "n": 1444,
+          "before_ms": 24.309269072082593,
+          "after_ms": 23.595148513762414,
+          "reduction_pct": 2.9376471838895912
+        }
+      },
+      "uncertainty": "UID cluster bootstrap across the fixed 12-input diagnostic set; process-repeat effects reported separately; not full-dataset or multi-hardware evidence"
+    }
+  ],
+  "primary": "Profile OFF complete decode-step time. No inference preparation seconds are subtracted from retained steps."
+}
