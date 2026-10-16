@@ -68,8 +68,10 @@ def make_window(groups, commands, epoch, sid, *, title, metadata, k1, k2):
     for e in groups['draft'].get((epoch, sid-1), []):
         if min(e['wall_end_ns'], wait['wall_end_ns']) > max(e['wall_start_ns'], wait['wall_start_ns']):
             draft.append(e)
+    chain=any(e['label']=='phase1_replay' for e in draft)
     return deepcopy(dict(schema=SCHEMA, title=title, metadata=metadata, epoch=epoch,
-        step_ids=[sid, sid+1], forward_counts={'p1_graph_replay':k1, 'p2_graph_replay':k2},
+        step_ids=[sid, sid+1], forward_counts={} if chain else {'p1_graph_replay':k1, 'p2_graph_replay':k2},
+        native_chain_forward_counts={'phase1_replay':k1,'phase2_replay':k2} if chain else {},
         target_events=target, draft_events=draft, transitions=transitions,
         deadline_definition='start of next target_send_request; observed readiness reference, not guaranteed spare compute budget',
         source_clock='raw wall timestamps mapped from per-process CUDA anchors; no clock shift',
@@ -89,6 +91,10 @@ def display_rows(window):
         preps = sorted((e for e in events if e['label'] == 'p2_prepare'
                         and e['cpu_dispatch_start_ns'] >= build['cpu_dispatch_end_ns']),
                        key=lambda e:e['cpu_dispatch_start_ns'])
+        if any(e['label']=='phase2_replay' for e in events):
+            # Native chain already records every per-round phase2_prepare
+            # and phase2_replay. Retain them, without tree-only aliases.
+            continue
         require(bool(preps), 'No PS preparation events')
         for i, e in enumerate(preps):
             aliases[id(e)] = f'PS prepare {chr(65+i)}: ' + ('roots / visibility' if i == 0 else 'graph input buffers')
@@ -118,6 +124,15 @@ def render(window, pdf, png, phase_summary=None):
     for rows, y in ((target, 1), (draft, 0)):
         native._draw_row(ax, rows, y, y, origin, .53, .38, min_width_ms=0)
     divisions = native.draw_draft_forward_dividers(ax, window['draft_events'], window['forward_counts'], origin)
+    for label,count in window.get('native_chain_forward_counts',{}).items():
+        for sid in window['step_ids']:
+            events=sorted((e for e in window['draft_events'] if e['label']==label and e['step_id']==sid),key=lambda e:e['wall_start_ns'])
+            require(len(events)==count,'Native chain forward count mismatch')
+            for i,e in enumerate(events):
+                ax.text((ms(e['wall_start_ns'])+ms(e['wall_end_ns']))/2,0,str(i+1),
+                        ha='center',va='center',color='white',fontsize=6,zorder=8)
+            divisions.append(dict(label=label,step_id=sid,count=count,measured_boundaries=True,
+                intervals_ns=[[e['wall_start_ns'],e['wall_end_ns']] for e in events]))
     for i, tr in enumerate(window['transitions']):
         deadline = ms(tr['deadline_ns']); ready = ms(tr['draft_receive_ready_ns'])
         cache = ms(tr['cache_ready_ns']); positive = tr['ready_margin_ms'] >= 0
@@ -168,9 +183,9 @@ def render(window, pdf, png, phase_summary=None):
         fig.text(.065,.29,'Margin = next send start minus readiness. Positive means ready before the observed request; negative means preparation ran past it.',fontsize=9)
         fig.text(.065,.266,'This is not a causal stall estimate or a promise that all margin can be used for more forwards. The second next-response wait is outside the two-step view.',fontsize=9)
     else:
-        from phase_averages import HEADERS, table_cells, PERFORMANCE_HEADERS, performance_cells
+        from phase_averages import table_headers, table_cells, PERFORMANCE_HEADERS, performance_cells
         for y,headers,cells in ((.395,PERFORMANCE_HEADERS,performance_cells(phase_summary['rows'])),
-                                (.245,HEADERS,table_cells(phase_summary['rows']))):
+                                (.245,table_headers(phase_summary['rows']),table_cells(phase_summary['rows']))):
             tab=fig.add_axes([.065,y,.91,.12]);tab.axis('off')
             table=tab.table(cellText=cells,colLabels=headers,loc='center',cellLoc='center')
             table.auto_set_font_size(False);table.set_fontsize(9.5);table.scale(1,1.65)
@@ -180,11 +195,20 @@ def render(window, pdf, png, phase_summary=None):
         fig.text(.065,.532,'ALL ELIGIBLE STEPS FOR THIS SETTING (not the two example steps above); Overall is step-weighted.',fontsize=10,weight='bold')
         fig.text(.065,.382,'Rate = source / all steps; Overall rate = total hit (P1 + P2) / all. AL includes recovery/bonus. Profile TPS = emitted tokens / summed step seconds.',fontsize=9)
         fig.text(.065,.222,'Step = current target request start -> next request start. *DS spare = proxy send-ready - DS end; PS spare = next request start - draft receive-ready.',fontsize=9)
-        fig.text(.065,.202,'Positive spare = early; negative = late. Graph/K includes sampling/selection, not isolated transformer latency. These are profiled-subset TPS, not full evaluation TPS.',fontsize=9)
+        if 'ds_forward_once_ms' in phase_summary['rows'][0]:
+            note=('Forward = native model + LM head graph replay (output stores included). '
+                  if window.get('native_chain_forward_counts') else
+                  'Forward = measured model + LM head (markers included). ')
+            note+='Compute* = forward sum + spare, with current non-forward work fixed; not a safe larger-K guarantee.'
+        else:
+            note='Positive spare = early; negative = late. Graph/K includes sampling/selection, not isolated transformer latency. These are profiled-subset TPS, not full evaluation TPS.'
+        fig.text(.065,.202,note,fontsize=9)
     labels=sorted({e['label'] for e in target+draft})
     handles=[Patch(facecolor=native._style(l)[0],hatch=native._style(l)[1],edgecolor='black',linewidth=.3,label=l) for l in labels]
     fig.legend(handles=handles,loc='lower center',bbox_to_anchor=(.51,.047),ncol=6,fontsize=6.8,columnspacing=1.0)
-    fig.text(.065,.025,'Hatched gaps = unprofiled elapsed intervals, NOT proven GPU idle. Nested spans are not additive. White graph dividers show counts, NOT per-forward measurements.',fontsize=8)
+    divider_note=('Numbered blue/green bars are separately measured chain forwards.' if window.get('native_chain_forward_counts') else
+                  'White graph dividers show counts, NOT per-forward measurements.')
+    fig.text(.065,.025,'Hatched gaps = unprofiled elapsed intervals, NOT proven GPU idle. Nested spans are not additive. '+divider_note,fontsize=8)
     fig.text(.065,.009,'Raw intervals retained, no 0.02 ms visibility floor. Cross-device margins inherit CUDA-to-host clock alignment uncertainty; exact raw events and source hashes accompany this figure.',fontsize=8)
     pdf.savefig(fig);fig.savefig(png,dpi=155);plt.close(fig)
     return dict(metrics=metrics,derived_gaps=gaps,forward_dividers=divisions,phase_summary=phase_summary,

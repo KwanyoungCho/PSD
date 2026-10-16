@@ -1,5 +1,16 @@
 # DUET timeline — 현재 사용할 도구
 
+현재 배포 기준은 [MLSys-ver1.3](../../../MLSYS_VER13_HANDOVER.md)이다. 동봉된 과거 그림의
+측정 버전은 보존한다. 아래 기본 모델 모음 외에 로컬 tree/chain 진단은
+`results/mlsys_ver12/local_phase_latency_20261015/`와 `chain40_k10_20261016/`에 있다.
+새 runtime이 반영됐다고 과거 timeline이1.3 실측이 되는 것은 아니다.
+
+이번 도구는 tree의 optional `phase_probe_request_*.json`에서 실제 forward1회 시간을 읽고,
+`preparation_*.jsonl`의 compile/capture 영향 step을 제외한다. Input spec 최상위
+`skip_initial_steps`는 요청당 초기 제외 수(기본2)다. Probe가 없으면 graph/K를 유지한다.
+Native chain의 portable window는 실제 `phase1_replay`/`phase2_replay`를 각각 번호로 표시한다.
+Generic 새-profile exporter는 tree용이고, chain 변환은 동봉된 chain 진단 adapter를 참고한다.
+
 모델별 그림은 **`results/mlsys_ver12/model_timelines/REPORT.md`**에서만 확인한다.
 모델 조합당 `TIMELINE.pdf` 하나, 전체 모음 `ALL_MODELS.pdf`, 브라우저 `index.html`로 통일했다.
 기존 ALIGNED/NATIVE/WAITS/별도 예시의 중복 PDF·PNG·HTML은 삭제했다.

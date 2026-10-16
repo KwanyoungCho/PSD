@@ -12,8 +12,8 @@ from plot_consecutive_steps import make_window, display_rows, render
 from duet_profile_analysis import ProfileAlignmentError
 from matplotlib.backends.backend_pdf import PdfPages
 from pypdf import PdfReader
-from phase_averages import metrics, summarize, table_cells, overlap_summary, performance_cells
-from export_profile_timelines import export, normalize_outcomes
+from phase_averages import metrics, summarize, table_cells, table_headers, overlap_summary, performance_cells
+from export_profile_timelines import export, normalize_outcomes, preparation_affected
 from build_model_timelines import main as build_bundle
 
 
@@ -49,6 +49,13 @@ def build(groups,commands):
 
 
 class ConsecutiveTimeline(unittest.TestCase):
+    def test_preparation_exclusion_uses_intervals_not_latency(self):
+        groups, _=fixture()
+        # Current target request starts at0.5ms; next starts at20.5ms.
+        self.assertTrue(preparation_affected(groups,0,1,[dict(start_ns=1000000,end_ns=1200000)]))
+        self.assertFalse(preparation_affected(groups,0,1,[dict(start_ns=0,end_ns=500000)]))
+        self.assertFalse(preparation_affected(groups,0,1,[dict(start_ns=20500000,end_ns=21000000)]))
+
     def test_cache_completion_is_not_receive_readiness(self):
         groups,commands=fixture();original=deepcopy((groups,commands))
         window=build(groups,commands);tr=window['transitions'][0]
@@ -118,6 +125,16 @@ class ConsecutiveTimeline(unittest.TestCase):
 
 
 class PhaseAverages(unittest.TestCase):
+    def test_optional_forward_probe_is_distinct_from_graph_per_k(self):
+        sample=dict(self.sample(),ds_forward_once_ms=.2,ps_forward_once_ms=.3,
+                    ds_compute_window_ms=-.6,ps_compute_window_ms=-.7)
+        rows=summarize([sample])
+        self.assertEqual(rows[-1]['ds_round_ms'],2)
+        self.assertEqual(rows[-1]['ds_forward_once_ms'],.2)
+        self.assertIn('DS forward (ms)',table_headers(rows))
+        self.assertEqual(table_cells(rows)[-1][4],'-0.600')
+        with self.assertRaises(ProfileAlignmentError):summarize([sample,self.sample(2)])
+
     def sample(self, sid=1, state=1, step_ms=20):
         return dict(run='example',epoch=0,step_id=sid,state=state,k1=2,k2=1,
                     step_start_ns=0,next_step_start_ns=int(step_ms*1e6),
@@ -220,8 +237,8 @@ class PortableExport(unittest.TestCase):
         self.assertEqual(normalize_outcomes(run),data)
 
     def test_export_redraw_without_original_server_files(self):
-        groups,commands=fixture(6)
-        for sid in range(1,7):
+        groups,commands=fixture(7)
+        for sid in range(1,8):
             base=(sid-1)*20
             groups['draft'][(0,sid)]+=[event('p1_root_build',sid,base+3.1,base+3.5),
                                       event('proxy_wait',sid,base+9.5,base+10)]
@@ -233,17 +250,29 @@ class PortableExport(unittest.TestCase):
             for role,prefix in [('target','target_rank0'),('draft','draft')]:
                 events=[e for es in groups[role].values() for e in es]+(commands if role=='draft' else [])
                 (profiles/f'duet_profile_{prefix}_test.json').write_text(json.dumps(events))
-            (original/'outcomes.json').write_text(json.dumps(self.outcomes()))
+            outcomes=self.outcomes()
+            outcomes['requests'][0]['steps'].append(dict(step_id=7,source=2,cap=False,clipped=False))
+            (original/'outcomes.json').write_text(json.dumps(outcomes))
             spec=dict(schema='duet-timeline-inputs-v1',datasets=[dict(model_id='test_model',model_name='Test Model',
                 setting='test',measurement='Synthetic B1 fixture',runs=[dict(outcomes='outcomes.json',profile_dir='profiles')])])
             spec_path=original/'inputs.json';spec_path.write_text(json.dumps(spec))
             output=root/'exported';export(spec_path,output)
+            # A latency campaign can exclude a different initial window;
+            # the default two-step export remains backward-compatible.
+            spec['skip_initial_steps']=1
+            spec_path.write_text(json.dumps(spec))
+            export(spec_path,root/'one_initial')
+            import gzip
+            with gzip.open(root/'one_initial/data/PHASE_SAMPLES.json.gz','rt') as f:
+                custom=json.load(f)['sets'][0]
+            self.assertEqual([s['step_id'] for s in custom['samples']],[2,3,5,6])
+            self.assertEqual(custom['eligibility']['skip_initial_steps'],1)
             # All means need only the compact sample export. The picture needs
             # only the selected window; no lazy read of absolute source paths.
             relocated=root/'another_server';shutil.copytree(output,relocated);shutil.rmtree(original);shutil.rmtree(output)
             build_bundle(['--manifest',str(relocated/'SOURCES.json'),'--output',str(root/'redrawn')])
             result=json.loads((root/'redrawn/PHASE_AVERAGES.json').read_text())['sets'][0]
-            self.assertEqual([r['n'] for r in result['rows']],[1,1,0,2])
+            self.assertEqual([r['n'] for r in result['rows']],[1,2,0,3])
             self.assertEqual(result['rows'][-1]['step_ms'],20)
             self.assertEqual(result['proxy_overlap']['overlapping_steps'],0)
             index=json.loads((root/'redrawn/INDEX.json').read_text())
@@ -251,7 +280,11 @@ class PortableExport(unittest.TestCase):
             self.assertTrue((root/'redrawn/SOURCES.json').is_file())
             self.assertTrue((root/'redrawn/data/PHASE_SAMPLES.json.gz').is_file())
             audit=json.loads((root/'redrawn/test_model/AUDIT.json').read_text())
-            self.assertEqual(audit['panels'][0]['window'],'../data/dataset0_source1.json')
+            # Step3 itself is valid for means, but its second displayed step4
+            # reaches the cap. Only steps5/6 form an eligible two-step picture.
+            self.assertEqual(audit['panels'][0]['window'],'../data/dataset0_source2.json')
+            window=json.loads((relocated/'data/dataset0_source2.json').read_text())
+            self.assertEqual(window['step_ids'],[5,6])
             content=(root/'redrawn/REPORT.md').read_text()
             self.assertIn('Synthetic B1 fixture',content)
             self.assertNotIn('RTX3090',content)

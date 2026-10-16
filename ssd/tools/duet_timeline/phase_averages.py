@@ -15,6 +15,11 @@ from plot_model_wait_timelines import command_index
 
 FIELDS = ('step_ms', 'ds_total_ms', 'ds_margin_ms', 'ds_round_ms',
           'ps_total_ms', 'ps_margin_ms', 'ps_round_ms')
+FORWARD_FIELDS = ('ds_forward_once_ms','ds_compute_window_ms','ps_forward_once_ms','ps_compute_window_ms')
+FORWARD_COLUMNS = ('step_ms','ds_forward_once_ms','ds_compute_window_ms','ds_margin_ms',
+                   'ps_forward_once_ms','ps_compute_window_ms','ps_margin_ms')
+FORWARD_HEADERS = ['Current outcome','Steps','Step (ms)','DS forward (ms)',
+                   'DS compute* (ms)','DS spare* (ms)','PS forward (ms)','PS compute* (ms)','PS spare (ms)']
 HEADERS = ['Current outcome', 'Steps', 'Step (ms)', 'DS total (ms)',
            'DS spare* (ms)', 'DS graph/K1 (ms)', 'PS total (ms)',
            'PS spare (ms)', 'PS graph/K2 (ms)']
@@ -34,7 +39,9 @@ DEFINITIONS = {
     'hit_rate_pct': 'Hit fraction within the row. P1/P2 = 100%, miss = 0%; Overall = (P1+P2)/all.',
     'al': 'Mean accepted_len including correction/recovery or bonus token, from recorded verification outcomes.',
     'tps': 'Sum of actually emitted tokens / sum of target-request-start-to-next-start seconds on the same eligible profiled steps. Ratio of totals, not mean of per-step TPS; not full-dataset or unprofiled TPS.',
-    'limitations': 'Cross-device clocks have alignment uncertainty. Signed spare time is not guaranteed usable compute budget. No per-forward timings exist.',
+    'limitations': 'Cross-device clocks have alignment uncertainty. Signed spare time is not guaranteed usable compute budget. Samples without optional forward probes contain graph/K only, not per-forward timings.',
+    'optional_forward_probe': 'When present: actual model+LMhead GPU envelopes, including timing markers. Compute window = sum of recorded forwards + signed spare. Current non-forward work held fixed; not a guarantee for a larger K.',
+    'native_chain_forward': 'Chain samples use the sum of K separately recorded phase1/phase2 replay events: model+LMhead and captured output-buffer stores, excluding between-round planning/sampling. Their legacy ds/ps_round_ms is first-to-last replay envelope / K, not the isolated forward sum/K.',
 }
 
 
@@ -43,6 +50,16 @@ def sample(groups, commands, row, k1, k2, run_id):
     d, t = groups['draft'][(epoch, sid)], groups['target'][(epoch, sid)]
     tr = transition(groups, commands, epoch, sid)
     p1 = 'phase1_build' if any(e['label'] == 'phase1_build' for e in d) else 'p1_root_build'
+    spans={};native_forward={}
+    for prefix,label,single,count in [('ds','p1_graph_replay','phase1_replay',k1),
+                                      ('ps','p2_graph_replay','phase2_replay',k2)]:
+        if any(e['label']==label for e in d):
+            e=one(d,label);spans[prefix]=(e['wall_start_ns'],e['wall_end_ns'])
+        else:
+            events=sorted((e for e in d if e['label']==single),key=lambda e:e['wall_start_ns'])
+            require(len(events)==count,f'Expected {count} native {single} forwards, found {len(events)}')
+            spans[prefix]=(events[0]['wall_start_ns'],events[-1]['wall_end_ns'])
+            native_forward[prefix]=union_ms(events)
     result = dict(run=run_id, epoch=epoch, step_id=sid, uid=row['uid'],
                 state=row['state'], next_state=row['next_state'], k1=k1, k2=k2,
                 ds_start_ns=one(d, p1)['wall_start_ns'],
@@ -57,10 +74,16 @@ def sample(groups, commands, row, k1, k2, run_id):
                 proxy_end_ns=one(t, 'exit_proxy_side')['wall_end_ns'],
                 target_post_start_ns=one(t, 'graph_post')['wall_start_ns'],
                 target_post_end_ns=one(t, 'graph_post')['wall_end_ns'],
-                ds_graph_start_ns=one(d, 'p1_graph_replay')['wall_start_ns'],
-                ds_graph_end_ns=one(d, 'p1_graph_replay')['wall_end_ns'],
-                ps_graph_start_ns=one(d, 'p2_graph_replay')['wall_start_ns'],
-                ps_graph_end_ns=one(d, 'p2_graph_replay')['wall_end_ns'])
+                ds_graph_start_ns=spans['ds'][0],ds_graph_end_ns=spans['ds'][1],
+                ps_graph_start_ns=spans['ps'][0],ps_graph_end_ns=spans['ps'][1])
+    if native_forward:
+        require(len(native_forward)==2,'Mixed chain/tree phases need separate timing definitions')
+        for prefix,k in [('ds',k1),('ps',k2)]:
+            result[prefix+'_forward_once_ms']=native_forward[prefix]/k
+            margin=((result['proxy_send_ns']-result['ds_end_ns']) if prefix=='ds' else
+                    (result['next_step_start_ns']-result['draft_ready_ns']))/1e6
+            result[prefix+'_compute_window_ms']=native_forward[prefix]+margin
+        result['forward_measurement']='Native chain replay: model + LM head + graph output stores; excludes between-forward preparation/sampling.'
     for field in ('accepted_len', 'emitted_len', 'context_tokens', 'verify_width'):
         result[field] = row.get(field)
     for field,label in [('target_pre_ms','graph_pre'), ('target_post_ms','graph_post'),
@@ -98,8 +121,10 @@ def summarize(samples):
             require(value is None or (type(value) is int and value >= 0), 'Invalid token count')
         require(s.get('accepted_len') is None or s.get('emitted_len') is None or
                 s['emitted_len'] <= s['accepted_len'], 'Emitted tokens exceed accepted length')
+    extras=FORWARD_FIELDS if any(k in s for s in samples for k in FORWARD_FIELDS) else ()
+    require(all(all(k in s for k in extras) for s in samples), 'Incomplete forward probe population')
     values = [dict(state=s['state'], accepted_len=s.get('accepted_len'),
-                   emitted_len=s.get('emitted_len'), **metrics(s)) for s in samples]
+                   emitted_len=s.get('emitted_len'), **metrics(s), **{k:s[k] for k in extras}) for s in samples]
     rows = []
     for state in (1, 2, 0, 'all'):
         subset = [v for v in values if state == 'all' or v['state'] == state]
@@ -114,14 +139,19 @@ def summarize(samples):
                          tps=sum(v['emitted_len'] for v in subset)*1000/elapsed_ms
                              if n and emitted_n==n and elapsed_ms>0 else None,
                          al_samples=al_n,emitted_samples=emitted_n,
-                         **{k: sum(v[k] for v in subset) / n if n else None for k in FIELDS}))
+                         **{k: sum(v[k] for v in subset) / n if n else None for k in (*FIELDS,*extras)}))
     return rows
 
 
 def table_cells(rows):
+    fields=FORWARD_COLUMNS if rows and 'ds_forward_once_ms' in rows[0] else FIELDS
     return [[r['label'], str(r['n'])] +
             ['N/A' if r[k] is None else format(r[k], '+.3f' if 'margin' in k else '.3f')
-             for k in FIELDS] for r in rows]
+             for k in fields] for r in rows]
+
+
+def table_headers(rows):
+    return FORWARD_HEADERS if rows and 'ds_forward_once_ms' in rows[0] else HEADERS
 
 
 def performance_cells(rows):

@@ -17,6 +17,23 @@ from phase_averages import sample, summarize, metrics, DEFINITIONS
 from build_model_timelines import main as build
 
 
+def preparation_intervals(folder):
+    return [json.loads(line) for path in sorted(folder.glob('preparation_*.jsonl'))
+            for line in path.read_text().splitlines() if line.strip()]
+
+
+def preparation_affected(groups, epoch, sid, intervals):
+    # Include preparation from either process, including the previous draft
+    # tail that makes this target request wait. Do not filter by step latency.
+    target=groups['target'][(epoch,sid)]
+    following=groups['target'][(epoch,sid+1)]
+    lo=next(e['cpu_dispatch_start_ns'] for e in target if e['label']=='target_send_request')
+    hi=next(e['cpu_dispatch_start_ns'] for e in following if e['label']=='target_send_request')
+    draft=groups['draft'][(epoch,sid)]
+    hi=max(hi,max(e['cpu_dispatch_end_ns'] for e in draft))
+    return any(c['start_ns']<hi and c['end_ns']>lo for c in intervals)
+
+
 def normalize_outcomes(data):
     """Keep warmup requests for exact anchor alignment; never infer cache source."""
     require(data.get('status') == 'complete', 'Outcomes must be complete')
@@ -65,6 +82,8 @@ def export(spec_path, output):
     spec_path = spec_path.resolve(); output = output.resolve()
     spec = load(spec_path)
     require(spec['schema'] == 'duet-timeline-inputs-v1' and spec['datasets'], 'Invalid input spec')
+    skip_initial = spec.get('skip_initial_steps', 2)
+    require(type(skip_initial) is int and skip_initial >= 0, 'Invalid initial-step exclusion')
     require(not output.exists() or not any(output.iterdir()), 'Use a new/empty output directory; use build_model_timelines.py to redraw an exported bundle')
     data_dir = output/'data'; data_dir.mkdir(parents=True, exist_ok=True)
     models = {}; sets = []; seen = set()
@@ -90,6 +109,17 @@ def export(spec_path, output):
             require(forward_counts in (None, counts), 'Different K1/K2 must use different settings')
             forward_counts = counts
             groups, commands, input_hashes = read_profiles(profile_dir)
+            preparations=preparation_intervals(profile_dir)
+            probes={}
+            for probe_path in sorted(profile_dir.glob('phase_probe_request_*.json')):
+                data=load(probe_path)
+                input_hashes[str(probe_path)]=sha(probe_path)
+                for item in data['records']:
+                    key=(data['epoch'],item['step_id'],item['phase'])
+                    require(key not in probes,'Duplicate forward probe')
+                    probes[key]=item
+            for prep_path in profile_dir.glob('preparation_*.jsonl'):
+                input_hashes[str(prep_path)]=sha(prep_path)
             input_hashes[str(outcomes_path)] = sha(outcomes_path); hashes.update(input_hashes)
             expected = {(r['epoch'], s['step_id']) for r in outcomes['requests'] for s in r['steps']}
             require(expected == set(groups['target']) == set(groups['draft']), 'Outcomes do not cover exactly the recorded profile anchors')
@@ -100,17 +130,29 @@ def export(spec_path, output):
             for request in outcomes['requests']:
                 steps = request['steps']; ep = request['epoch']
                 for i, step in enumerate(steps):
-                    reason = ('warmup' if request['warmup'] else 'first_two' if i < 2 else
+                    reason = ('warmup' if request['warmup'] else 'initial_steps' if i < skip_initial else
                               'terminal' if i == len(steps)-1 else 'cap_clip' if step['cap'] or step['clipped'] else None)
                     if reason:
                         skipped[reason] += 1
                         continue
                     sid = step['step_id']; state = step['source']
+                    if preparation_affected(groups,ep,sid,preparations):
+                        skipped['preparation']+=1
+                        continue
                     row = dict(epoch=ep, step_id=sid, uid=request['uid'], state=state, next_state=steps[i+1]['source'])
                     row.update({k:step[k] for k in ('accepted_len','emitted_len','context_tokens','verify_width') if k in step})
                     record = sample(groups, index, row, *counts, run_id)
+                    if probes:
+                        m=metrics(record)
+                        for phase,prefix in (('p1','ds'),('p2','ps')):
+                            p=probes[(ep,sid,phase)]
+                            duration=sum(f['forward_ms'] for f in p['forward'])
+                            record[prefix+'_forward_once_ms']=duration/len(p['forward'])
+                            record[prefix+'_compute_window_ms']=duration+m[prefix+'_margin_ms']
                     samples.append(record)
-                    if (ep, sid+2) in groups['target'] and (ep, sid+2) in groups['draft']:
+                    if ((ep, sid+2) in groups['target'] and (ep, sid+2) in groups['draft']
+                            and not steps[i+1]['cap'] and not steps[i+1]['clipped']
+                            and not preparation_affected(groups,ep,sid+1,preparations)):
                         window = make_window(groups, commands, ep, sid,
                             title=f'{name} | {setting} | {STATES[state]} -> {STATES[row["next_state"]]} | UID {row["uid"]} | steps {sid}-{sid+1}',
                             metadata=dict(description=f'{entry["measurement"]} | {setting} | B=1, K1/K2 {counts[0]}/{counts[1]}',
@@ -135,7 +177,7 @@ def export(spec_path, output):
         require(any(candidates.values()), 'Need at least one eligible step with two following anchors to draw consecutive steps')
         sets.append(dict(key=f'dataset{dataset_i}', model=ident, setting=setting, measurement=entry['measurement'],
                          k1=forward_counts[0], k2=forward_counts[1], samples=samples, source_hashes=hashes,
-                         eligibility=dict(skipped=dict(skipped), eligible_steps=len(samples),
+                         eligibility=dict(skipped=dict(skipped), skip_initial_steps=skip_initial, eligible_steps=len(samples),
                                           representative_candidates=selection_counts), runs=run_details))
         print(ident, setting, len(samples), 'eligible steps', flush=True)
     portable = dict(schema='duet-phase-samples-v1', definitions=DEFINITIONS, sets=sets,

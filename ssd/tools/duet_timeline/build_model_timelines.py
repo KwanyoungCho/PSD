@@ -16,7 +16,7 @@ from pypdf import PdfReader, PdfWriter
 
 from plot_consecutive_steps import render
 from plot_model_breakdowns import load, require, sha, write_csv, STATES
-from phase_averages import (read_samples, summarize, table_cells, HEADERS,
+from phase_averages import (read_samples, summarize, table_cells, table_headers,
                             DEFINITIONS, overlap_summary, PERFORMANCE_HEADERS, performance_cells, workload_summary)
 
 
@@ -78,7 +78,8 @@ def main(argv=None):
                 if entry['setting'] not in seen_settings:
                     seen_settings.add(entry['setting'])
                     cells=table_cells(summary['rows'])
-                    th=''.join('<th>'+html.escape(v)+'</th>' for v in HEADERS)
+                    headers=table_headers(summary['rows'])
+                    th=''.join('<th>'+html.escape(v)+'</th>' for v in headers)
                     trs=''.join('<tr>'+''.join('<td>'+html.escape(v)+'</td>' for v in r)+'</tr>' for r in cells)
                     perf_cells=performance_cells(summary['rows'])
                     perf_th=''.join('<th>'+html.escape(v)+'</th>' for v in PERFORMANCE_HEADERS)
@@ -97,7 +98,7 @@ def main(argv=None):
                         summary['measurement']+'\n\n'+
                         '| '+' | '.join(PERFORMANCE_HEADERS)+' |\n|'+ '|'.join(['---']*len(PERFORMANCE_HEADERS))+'|\n'+
                         '\n'.join('| '+' | '.join(r)+' |' for r in perf_cells)+'\n\n'+
-                        '| '+' | '.join(HEADERS)+' |\n|'+ '|'.join(['---']*len(HEADERS))+'|\n'+
+                        '| '+' | '.join(headers)+' |\n|'+ '|'.join(['---']*len(headers))+'|\n'+
                         '\n'.join('| '+' | '.join(r)+' |' for r in cells)+'\n\n'+workload_note+'\n')
                 panel=render(window,pdf,images/name,phase_summary=summary)
                 panel.update(window=os.path.relpath(source,dest),window_sha256=entry['sha256'],
