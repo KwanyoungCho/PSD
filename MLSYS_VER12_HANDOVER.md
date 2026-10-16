@@ -1,8 +1,48 @@
 # MLSys ver1.2 — 채택한 PS 준비 최적화와 상세 timeline
 
+> 이 문서는 ver1.2 당시 기록과 승인된 후속 진단을 보존한다. **현재 작업 기준은 `MLSys-ver1.3`**이며 [새 인수인계](MLSYS_VER13_HANDOVER.md)를 먼저 읽는다. 아래의 “미반영”, 작업 경로·성능 수치는 각 기록 당시 상태다.
+
 2026-10-15 KST. **이 서버의 다음 작업 기준은 `MLSys-ver1.2`다.** 작업 폴더 이름은
 `/home/chokwans99/PSD-MLSys-ver0.1` 그대로지만 실제 Git 브랜치는1.2다.
 다른 서버에서 진행 중인 알고리즘은 이 기준 위에서 별도로 병합한다.
+
+## 이후 성능 실험과 파라미터 검토 기준 — 2026-10-15 사용자 결정
+
+- **새 성능 실험은 로컬 서버 `orion`의 RTX4090에서만 실행한다.** eslab18 등 다른 서버의
+  과거 기록은 참고 자료이며 로컬 대조군을 대체하지 않는다. 각 비교는 같은 GPU 배치·모델
+  dtype·입력 UID/길이·출력 상한·온도·seed·batch·runtime을 고정하고 변경 항목을 명시한다.
+- 사용자가 파라미터를 하나씩 검토한 뒤 실험한다. 이 문서화 시점에는 새 실험을 시작하거나
+  현재 설정을 변경하지 않았다. 기존 모델별 timeline의 설정을 최적값으로 간주하지 않는다.
+- 새 tree 기준 실행은 DS/PS tree를 모두 명시적으로 켠다. 일반 Config의 P1 기본값은 off이므로
+  tree preset과 혼동하지 않는다. B=1에서 먼저 검토하고 B>1은 별도 조건으로 평가한다.
+
+| 검토 묶음 | 값과 정확한 의미 | Config 이름 |
+|---|---|---|
+| Exit 위치 | L: proxy를 얻는 target layer 인덱스(0부터) | `duet_exit_layer` |
+| 순차 forward 횟수 | K1/K2: DS/PS의 forward round 수 | `duet_phase1_k`, `duet_phase2_k` |
+| Cache root 수 | U1: DS 위치당 root 수 / R2: DS 중복 제거 후 PS 전체 root 수 | `duet_p1_roots_per_position`, `duet_p2_root_count` |
+| Forward 입력 폭 | W1: DS 첫 회 이후 입력 수 상한 / W2: PS 매 forward 입력 수 | `duet_p1_forward_width`, `duet_p2_forward_width` |
+| Root별 tree 노드 상한 | M1/M2: root 토큰을 제외한 DS/PS tree의 생성·검증 노드 상한 | `duet_p1_tree_verify_nodes`, `duet_p2_tree_verify_nodes` |
+| 자식 수 | C: 부모 하나의 분포에서 샘플링하는 자식 수 상한 | `duet_tree_c_tensor` |
+
+DS 첫 forward는 모든 root R1을 평가하며 이후 입력 폭은 min(R1,W1)이다.
+R1은 현재 처리하는 위치 수×U1이므로 실제 `round_widths`를 기록한다. PS는 R2≤W2이다.
+Root는 서로 다른 cache 결과를 대비한 시작 후보, W는 한 번에 계산하는 행 수, M은 후보
+하나가 hit됐을 때 검증하는 후속 노드 수다. 이 셋을 같은 예산으로 표시하지 않는다.
+M은 G=M 계약에 따라 생성 도중에도 적용되며, 생성 후 임의 rerank를 추가한 것이 아니다.
+
+처음 비교는 현재 기본인 `last` 확장, calibration 없는 draft 경로 점수, root `e(1-q)`,
+`topm` 정규화, 위치 혼합 비중0.25를 고정한다. `last/frontier` 비교는 이후 별도 알고리즘
+비교로 분리한다. 과거 timeline에는 frontier 실행도 있어 설정을 그대로 섞지 않는다.
+`duet_tree_beta`는 현 dynamic 실행기의 예산 배분 분기에서 사용하지 않으므로 이 탐색 대상이 아니다.
+G, 위치별 top-L, 전송 후보 여유분은 자동 파생하고 threshold는0을 유지한다.
+
+검토 순서는 입력 폭·root 수·M·C의 출발점을 고정한 상태에서 L/K1/K2의 시간 배치를 먼저
+확인하고, root 수 → 입력 폭 → M → C를 검토한 뒤 변경된 비용으로 L/K1/K2를 재확인한다.
+L/K1/K2는 서로 연결되므로 한 값만 바꾼 결과와 조합의 결과를 구분한다. 각 단계에서
+DS/PS 준비·graph·정리, deadline 여유, target 검증 시간을 breakdown으로 확인하고,
+P1/P2/miss 비율·조건부 AL·전체 AL·TPS도 같은 모집단으로 함께 보고한다. Profile OFF의
+성능 평가와 profile ON의 구간 진단은 구분한다. 입력별 문맥 길이와 실제 query 수도 기록한다.
 
 ## 이번 전달에서 바뀐 것
 
@@ -149,3 +189,100 @@ spec으로 지정한다. 측정 commit·환경·설정 설명을 실제 실험�
 - PS 전체는 proxy 수신 완료→merge 완료다. 현재 최적화는 **draft 측 준비 overhead** 개선이며,
   Transformer 자체/target forward 가속, TPS/AL 증가, 최적 파라미터 확정 결과가 아니다.
 - 새 graph key 준비는 기존 prewarm 정책을 유지한다. 후속 비교에서도 준비 영향 step을 공개한다.
+
+## 로컬 DS/PS 시간 예산과 입력 폭 진단 (2026-10-15)
+
+사용자가 직접 파라미터를 검토하기 위한 첫 측정은
+[local_phase_latency_20261015/REPORT.md](results/mlsys_ver12/local_phase_latency_20261015/REPORT.md)에 정리한다.
+완료 판정과 검증은 같은 폴더의 `CHECKS.json`, 입력/계획은 `INPUTS.json`/`PLAN.json`에 있다.
+기존 여러 서버의 최적 설정 timeline과 혼합하지 않는다.
+
+- 로컬 orion RTX4090에서 LayerSkip-Llama2-7B/13B + JackFram/llama-68m만 측정한다.
+  7B는 target1장+draft1장,13B는 target2장+draft1장이다.
+- B1, T0.7, BF16, exit21/26(0-based), K1=K2=3, C3, G=M40.
+  DS 위치당 root3, PS 전체 root9. W1/W2는9/9에서 한쪽만18/27로 바꾼다.
+- 7B DS는 GPU4·5, PS는6·7에서 각자9/9 기준과 비교한다.13B는4·5·6이다.
+  원격 서버 성능 데이터를 섞지 않는다.12개 사전 선택 입력×2회이며 full Spec-Bench 품질 평가가 아니다.
+- Benchmark 전용 GPU marker로 **model+LM head의 실제 forward**를 측정했다.
+  graph/K에는 sampling/선택도 포함되므로 다른 지표다. Serving runtime은 변경하지 않는다.
+- DS 첫 forward는 모든 위치 root를 처리하므로 W9가 전체9행이라는 뜻은 아니다.
+  M40에서 최대123행, 짧은 bucket은12행이고, 후속 forward는min(bucket roots,W)다.
+  C3/K3의 root 최대 자손은39개라 M40은 생성 제한에 걸리지 않지만 padding 비용은 발생한다.
+- 첫10step/종료·cap step/실제 컴파일·capture 영향을 제외한다.13B 최초 rank1 커널 컴파일 대기를
+  정상 반복 시간에 포함하지 않는다. 빠른 step만 골라내는 latency cutoff는 없다.
+- 7B base의 telemetry 수집 공백을 공개하고 같은 설정을 추가 반복한다.
+  기존 baseline을 더 빠른 반복으로 교체하지 않으며 출력·시간 차이는 `AUDIT.json`에 보존한다.
+
+새 portable timeline은 `local_phase_latency_20261015/timelines/ALL_MODELS.pdf`와 `index.html`이다.
+두 모델×P1 hit/P2 hit/miss의6개 연속 두-step 그림에 같은 전체 표본의 평균을 붙인다.
+기존 exporter도 optional forward probe와 초기 제외 step 수, 컴파일 구간 제외를 지원한다.
+Probe가 없는 과거 자료는 계속 graph/K로 표시하므로 실제 forward 실측으로 오인하지 않는다.
+그림의 흰 점선은 횟수 표시이며 개별 forward의 실제 경계선은 아니다.
+
+이 진단에서 계산창은 `실제 forward 합 + 관측된 signed 여유`다.
+현재 K3의 나머지 작업을 고정한 값이므로, 이를 forward1회로 나눈 수를 새 K의 보장값으로
+사용하면 안 된다. K를 늘릴 때 sampling/선택·tree 크기·M 제한도 다시 검토한다.
+
+## Native chain 40후보 / K1=K2=10 진단 (2026-10-16)
+
+[chain40_k10_20261016/REPORT.md](results/mlsys_ver12/chain40_k10_20261016/REPORT.md)에
+동일한 두 모델의 새 측정과 AL survival curve를 보존했다. 완료 근거는 같은 폴더의
+`CHECKS.json`, 조건은 `PLAN.json`/`README.md`, 실제 전달한 설정은 `RUN_PROVENANCE.json`이다.
+
+- 기존 native chain을 실행하며 tree executor의 C1 대용 경로를 사용하지 않았다.
+  DS 총40개는11개 위치에 `[4,4,4,4,4,4,4,3,3,3,3]`, PS는 기존 점수와 DS 중복 제거 후40개다.
+  각 phase의 입력40행×10회와 target 검증 길이10을 모든 step의 CPU shape/event로 확인했다.
+- 로컬7B GPU4·5,13B GPU4·5·6에서 순차 실행했다. B1/BF16/T0.7/exit21·26,
+  직전과 같은12입력×2회, 입력512/출력192 상한이다. Full Spec-Bench AL 검증은 아니다.
+- Warmup/초기10step/종료·cap·clip/컴파일 영향 제외 후7B1499,13B1530step이다.
+  P1/P2/miss 평균 AL은7B2.669/2.240/1.739,13B2.613/2.191/1.798이다.
+  `P(AL>=x | source)`를1~11에 대해 그렸다. AL은 correction/bonus를 포함하며
+  각 source의 조건부 확률이다. 초기 구간을 포함한 민감도와 UID bootstrap 구간도 CSV에 있다.
+- `timelines/ALL_MODELS.pdf`는2모델×3source의6페이지다. 각 페이지는 연속 두 step이며,
+  DS/PS10회 각각의 native replay를 실측 경계와 번호로 표시한다. Timeline 도구는 과거
+  tree 전체 graph의 균등 횟수 표시와 native chain의 실측 구간 표시를 구분한다.
+- 두 모델 모두 DS/PS forward1회 약0.214ms. PS 여유 평균은7B−2.130ms,13B−1.099ms다.
+  K10은 요청한 진단 조건이며 최적 설정으로 채택한 값이 아니다. 기존 tree 진단과는
+  root/K/M까지 달라 구조만의 차이에 대한 A/B 비교로 인용하지 않는다.
+- Serving runtime 변경 없음. Reporting 검사26개 통과, 할당 GPU에서 외부 process 관측 없음.
+  원시는 `/data/chokwans99/duet-chain40-k10-20261016/`에 남겼다.
+
+## `tolist()` 생략 시험 — 무효 / 미채택 (2026-10-16)
+
+[tolist_review_20261016/REPORT.md](results/mlsys_ver12/tolist_review_20261016/REPORT.md)에
+동일 GPU의 before/after/after/before 시험을 보존했다. 원래 runtime은 변경하지 않는다.
+13B+68m, B1/K3/C3/W9/G=M40에서 출력48/48 동일, 검사25개 통과였지만,
+PS 준비3.153→3.193ms, PS 전체4.799→4.843ms로 개선이 확인되지 않았다.
+사용자가 무효 처리를 요청하여 **candidate는 미채택**이다. 후속 실험은 원래
+`MLSys-ver1.2`를 계속 사용한다. 미채택 patch와 frozen source는 감사 자료이며
+production 반영 목록에 넣지 않는다. 시험용 detached worktree는 정리한다.
+
+## 향후 성능 집계: 전체 step 중앙값의 2배 초과 제외 (2026-10-16)
+
+사용자가 이후 논문 성능 측정에도 적용하도록 지정했다. 상세 규칙과 검사는
+[step_duration_filter_20261016/REPORT.md](results/mlsys_ver12/step_duration_filter_20261016/REPORT.md)에 있다.
+
+- Profile OFF에서 같은 request group·실제 batch·P1/P2/기타 hit/miss 구성끼리 비교한다.
+  표본5개 이상이면 중앙값의 **2배 초과**인 전체 step만 한 번 제외한다. 구간별 검사는 하지 않는다.
+- 그 step의 시간·토큰·AL/hit event를 함께 빼며, 원시 기록·출력은 유지한다.
+  기존 cap/clip·부분 batch 제외는 유지한다. 모든 비교 방법에 같은 규칙을 적용한다.
+- 콘솔 `Excluded long decode steps`, JSON `summary.excluded_long_steps`,
+  W&B `metrics_excluded_long_steps`로 제외 개수를 보고한다.
+- A/B 후처리는 옛 `PAPER_CHECKOUT`의 집계 구현과 무관하게 현행 공통 모듈을 사용한다.
+  과거 보고서를 조용히 새 정책으로 바꾸지 않는다.
+- 추론 알고리즘·runtime hot path 최적화가 아닌 후처리 변경이다.
+  사용자의 지시대로 모델 실험은 나중에 진행하고, 이번에는 CPU 회귀 검사만 실행한다.
+
+## Target forward 사이 전체 공백 검토 (2026-10-17)
+
+[response_wait_review_20261017/REPORT.md](results/mlsys_ver12/response_wait_review_20261017/REPORT.md)에
+기존 trace와 코드의 분석을 보존했다. 사용자가 지칭한 wait은 개별 recv marker가 아니라
+이전 final head 완료→다음 target Transformer 시작의 전체 공백이다.
+
+- P1-hit 기준 약7.3~9.2ms. 수락 판정 약1.5~1.8ms, draft 응답 약2.8~3.8ms,
+  수신 후 다음 실행 준비 약1.5~2.9ms 등이 직렬로 들어간다.
+- Tree K3에서는 PS 대기보다 요청 처리/KV 복구·tree 포장과 target 입력 재구성이 중요하다.
+  Chain K10은 PS 초과도 실제 대기에 포함된다.
+- 우선 검토는 중복 metadata readback 제거, hit 응답 후 draft KV 복구, 확정된 tree wire 사전 준비다.
+  B1 tree 수락은 현재 Python 제어의 tensor 보행이며 GPU scalar read가 남아 있다.
+- GPU 실험·runtime 변경·신규 채택 없음. 이번 수치는 개선량이 아닌 기존 profile의 병목 진단이다.

@@ -1,7 +1,11 @@
-## DUET — MLSys ver1.0
+## DUET — MLSys ver1.3
 
-This checkout includes DUET integration on `MLSys-ver0.2@1b93104b`.
-For another server, start with the [defaults and handover instructions](../MLSYS_VER1_HANDOVER.md).
+This checkout advances `MLSys-ver1.2@899e4eb1` with response metadata reuse,
+persistent B=1 verification inputs, and cache-hit response scheduling improvements.
+For another server, start with the [ver1.3 changes, evidence, and handover](../MLSYS_VER13_HANDOVER.md).
+The algorithms and parameter contract remain unchanged. Combined output parity is
+verified; a repeated A/B of all three optimizations together remains unmeasured.
+The historical ver1.0 integration is based on `MLSys-ver0.2@1b93104b`.
 Start with the [integration decisions and 70B preset](../MLSYS_VER1_INTEGRATION.md),
 [calibration-free tree algorithm](../TREE_EXPANSION_FINAL.md), and
 [validation report](../results/ver10_integration_20261015/REPORT.md).
