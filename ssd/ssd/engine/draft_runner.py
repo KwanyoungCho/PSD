@@ -1350,8 +1350,8 @@ class DraftRunner(ModelRunner):
         """
         (_served, _staged, served_numtok, served_seq) = state
         if _served is not None:
-            # Profiling-only marker. This work is part of draft request
-            # service (and therefore target_spec_wait), not target verify.
+            # Profiling-only marker. Hit restores follow response sending;
+            # miss restores precede JIT. Neither changes target verification.
             from ssd.engine.helpers.cudagraph_helpers import (
                 duet_record as _mr_kvr, duet_close as _mc_kvr)
             _ev_kvr = _mr_kvr("tree_kv_restore")
