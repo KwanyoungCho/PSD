@@ -1,0 +1,44 @@
+{
+  "status": "complete",
+  "local_only": true,
+  "models": [
+    "layerskip-llama2-7b + llama-68m",
+    "layerskip-llama2-13b + llama-68m"
+  ],
+  "mode": "native chain",
+  "batch": 1,
+  "k1": 10,
+  "k2": 10,
+  "ds_roots": 40,
+  "ps_roots": 40,
+  "ds_fan_out": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    3,
+    3,
+    3,
+    3
+  ],
+  "ds_width": 40,
+  "ps_width": 40,
+  "exit_layers_zero_based": [
+    21,
+    26
+  ],
+  "temperature": 0.7,
+  "dtype": "bfloat16",
+  "independent_input_turns": 12,
+  "passes": 2,
+  "input_cap": 512,
+  "output_cap": 192,
+  "primary_outputs": [
+    "per-source latency timelines",
+    "P(AL >= x | cache source)"
+  ],
+  "limitations": "Short diagnostic sample; not full Spec-Bench AL or an optimized-parameter comparison; detailed profiling enabled."
+}

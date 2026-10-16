@@ -1,0 +1,59 @@
+{
+  "schema": "duet-model-timelines-v1",
+  "models": [
+    {
+      "id": "chain_7b_68m",
+      "name": "LayerSkip Llama2-7B + llama-68m",
+      "note": "Fresh local RTX4090; B1 BF16 T0.7;12 inputs x2; first10/terminal/cap/preparation excluded; separately timed native forwards",
+      "panels": [
+        {
+          "window": "data/dataset0_source1.json",
+          "sha256": "0eacaab907548391f312e80184eb09eca7684214c062e08ec06720bfba0a2436",
+          "source": 1,
+          "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit21"
+        },
+        {
+          "window": "data/dataset0_source2.json",
+          "sha256": "3013b715612be15b2cc9815d76ef9acdd905b7e357b0f535205666e298e0d258",
+          "source": 2,
+          "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit21"
+        },
+        {
+          "window": "data/dataset0_source0.json",
+          "sha256": "6f1aadf99ca02a631475ce018565959fab15e026836ad8127173c71e187e91ff",
+          "source": 0,
+          "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit21"
+        }
+      ]
+    },
+    {
+      "id": "chain_13b_68m",
+      "name": "LayerSkip Llama2-13B + llama-68m",
+      "note": "Fresh local RTX4090; B1 BF16 T0.7;12 inputs x2; first10/terminal/cap/preparation excluded; separately timed native forwards",
+      "panels": [
+        {
+          "window": "data/dataset1_source1.json",
+          "sha256": "ef23932caa0005abc4aaf1f0351abaa59ad35d15385c91727caf1a086c3bb2b3",
+          "source": 1,
+          "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit26"
+        },
+        {
+          "window": "data/dataset1_source2.json",
+          "sha256": "76709c04dc997a704cce5bdfaa405f32724273396f036d04e4b158673bdf7acf",
+          "source": 2,
+          "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit26"
+        },
+        {
+          "window": "data/dataset1_source0.json",
+          "sha256": "c4513aa09228aac11853cf0ac908c16907756bac4aaa1ea477031c1c691b19e5",
+          "source": 0,
+          "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit26"
+        }
+      ]
+    }
+  ],
+  "phase_samples": {
+    "path": "data/PHASE_SAMPLES.json.gz",
+    "sha256": "95805bf8ae9967f64df3549b3e0de88c25acf7d195436325dce963391c8233b7"
+  }
+}

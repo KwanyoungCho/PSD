@@ -1,0 +1,59 @@
+{
+  "schema": "duet-model-timelines-v1",
+  "models": [
+    {
+      "id": "llama2_7b_68m",
+      "name": "LayerSkip Llama2-7B + llama-68m",
+      "note": "Fresh local orion RTX4090; B1 BF16 T0.7; 12 fixed turns x 2; first10/terminal/cap excluded; GPU forward markers enabled",
+      "panels": [
+        {
+          "window": "data/dataset0_source1.json",
+          "sha256": "2d38a1943c4717eb044dab6371dd5493b11c775995bb21b872127e517a77183a",
+          "source": 1,
+          "setting": "Exit 21; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40"
+        },
+        {
+          "window": "data/dataset0_source2.json",
+          "sha256": "6e7e6715a910be8d3dc6317758cd617bd5c61c27458bee4ef905ca1016ac636b",
+          "source": 2,
+          "setting": "Exit 21; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40"
+        },
+        {
+          "window": "data/dataset0_source0.json",
+          "sha256": "1759ba9498ee09054b14c55a2c74600aca4190d3bf7b920dd4eceff0fb1463bc",
+          "source": 0,
+          "setting": "Exit 21; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40"
+        }
+      ]
+    },
+    {
+      "id": "llama2_13b_68m",
+      "name": "LayerSkip Llama2-13B + llama-68m",
+      "note": "Fresh local orion RTX4090; B1 BF16 T0.7; 12 fixed turns x 2; first10/terminal/cap excluded; GPU forward markers enabled",
+      "panels": [
+        {
+          "window": "data/dataset1_source1.json",
+          "sha256": "c35ad8a6b9c2fb1e91f8771c9cef6db3d65d80f139a7b6a946cd1a2901cb635e",
+          "source": 1,
+          "setting": "Exit 26; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40"
+        },
+        {
+          "window": "data/dataset1_source2.json",
+          "sha256": "b46561da64fd03ff8fb57657bc9760cf659f786956e9f560f89336306ef01bb3",
+          "source": 2,
+          "setting": "Exit 26; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40"
+        },
+        {
+          "window": "data/dataset1_source0.json",
+          "sha256": "a461a55ad1f9307990cd33c819c4aa8ec5f697522922024ee5ec9a490b116e6c",
+          "source": 0,
+          "setting": "Exit 26; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40"
+        }
+      ]
+    }
+  ],
+  "phase_samples": {
+    "path": "data/PHASE_SAMPLES.json.gz",
+    "sha256": "29382adcccce844c083422361e490c6eb27eb296b26de9428b610352e0548c02"
+  }
+}

@@ -1,0 +1,359 @@
+{
+  "definitions": {
+    "grouping": "Current step cache source; DS/PS prepare future outcomes.",
+    "weighting": "Arithmetic mean over eligible steps, including all repetitions; overall is step-weighted.",
+    "step_ms": "Next target_send_request.start minus current target_send_request.start, same request.",
+    "ds_total_ms": "P1 root/phase preparation start to proxy_wait.start; excludes glue and proxy wait.",
+    "ds_margin_ms": "Target proxy_send_enqueue.end minus proxy_wait.start (DS complete). Send-side reference, not measured arrival.",
+    "ds_round_ms": "P1 graph replay elapsed / K1; includes sampling/selection inside graph.",
+    "ps_total_ms": "proxy_wait.end to merge_cache.end.",
+    "ps_margin_ms": "Next target_send_request.start minus next draft_recv_cmd.start; includes post-cache cleanup.",
+    "ps_round_ms": "P2 graph replay elapsed / K2; includes sampling/selection inside graph.",
+    "share_pct": "Number of steps in the source divided by all eligible steps; Overall = 100%.",
+    "hit_rate_pct": "Hit fraction within the row. P1/P2 = 100%, miss = 0%; Overall = (P1+P2)/all.",
+    "al": "Mean accepted_len including correction/recovery or bonus token, from recorded verification outcomes.",
+    "tps": "Sum of actually emitted tokens / sum of target-request-start-to-next-start seconds on the same eligible profiled steps. Ratio of totals, not mean of per-step TPS; not full-dataset or unprofiled TPS.",
+    "limitations": "Cross-device clocks have alignment uncertainty. Signed spare time is not guaranteed usable compute budget. Samples without optional forward probes contain graph/K only, not per-forward timings.",
+    "optional_forward_probe": "When present: actual model+LMhead GPU envelopes, including timing markers. Compute window = sum of recorded forwards + signed spare. Current non-forward work held fixed; not a guarantee for a larger K.",
+    "native_chain_forward": "Chain samples use the sum of K separately recorded phase1/phase2 replay events: model+LMhead and captured output-buffer stores, excluding between-round planning/sampling. Their legacy ds/ps_round_ms is first-to-last replay envelope / K, not the isolated forward sum/K."
+  },
+  "sets": [
+    {
+      "model": "chain_7b_68m",
+      "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit21",
+      "measurement": "Fresh local RTX4090; B1 BF16 T0.7;12 inputs x2; first10/terminal/cap/preparation excluded; separately timed native forwards",
+      "k1": 10,
+      "k2": 10,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 750,
+          "share_pct": 50.03335557038025,
+          "hit_rate_pct": 100.0,
+          "al": 2.6693333333333333,
+          "tps": 108.11776193218247,
+          "al_samples": 750,
+          "emitted_samples": 750,
+          "step_ms": 24.68912864666667,
+          "ds_total_ms": 9.79414994,
+          "ds_margin_ms": 1.7725976986666667,
+          "ds_round_ms": 0.49525052253333335,
+          "ps_total_ms": 9.619420285333334,
+          "ps_margin_ms": -2.1979084533333335,
+          "ps_round_ms": 0.4947264105333334,
+          "ds_forward_once_ms": 0.2139090173333333,
+          "ds_compute_window_ms": 3.911687872,
+          "ps_forward_once_ms": 0.21411682026666665,
+          "ps_compute_window_ms": -0.056740250666666665
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 680,
+          "share_pct": 45.36357571714476,
+          "hit_rate_pct": 100.0,
+          "al": 2.239705882352941,
+          "tps": 92.37271788813055,
+          "al_samples": 680,
+          "emitted_samples": 680,
+          "step_ms": 24.24640016617647,
+          "ds_total_ms": 10.073874210294118,
+          "ds_margin_ms": 1.1631285455882352,
+          "ds_round_ms": 0.5250111275,
+          "ps_total_ms": 9.15965420147059,
+          "ps_margin_ms": -2.037134863235294,
+          "ps_round_ms": 0.49325291367647056,
+          "ds_forward_once_ms": 0.21409588941176472,
+          "ds_compute_window_ms": 3.3040874397058824,
+          "ps_forward_once_ms": 0.21433879294117647,
+          "ps_compute_window_ms": 0.10625306617647055
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 69,
+          "share_pct": 4.603068712474983,
+          "hit_rate_pct": 0.0,
+          "al": 1.7391304347826086,
+          "tps": 59.13587489914475,
+          "al_samples": 69,
+          "emitted_samples": 69,
+          "step_ms": 29.409059014492755,
+          "ds_total_ms": 9.998797507246376,
+          "ds_margin_ms": 1.4107271304347826,
+          "ds_round_ms": 0.5024846173913043,
+          "ps_total_ms": 9.676330144927537,
+          "ps_margin_ms": -2.2962266666666666,
+          "ps_round_ms": 0.5222278086956522,
+          "ds_forward_once_ms": 0.21474539130434783,
+          "ds_compute_window_ms": 3.558181043478261,
+          "ps_forward_once_ms": 0.21567129710144928,
+          "ps_compute_window_ms": -0.1395136956521739
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 1499,
+          "share_pct": 100.0,
+          "hit_rate_pct": 95.39693128752502,
+          "al": 2.4316210807204803,
+          "tps": 98.42407085193561,
+          "al_samples": 1499,
+          "emitted_samples": 1499,
+          "step_ms": 24.70555281521014,
+          "ds_total_ms": 9.93046293929286,
+          "ds_margin_ms": 1.4794635470313544,
+          "ds_round_ms": 0.5090839874583055,
+          "ps_total_ms": 9.4134735496998,
+          "ps_margin_ms": -2.1295014589726486,
+          "ps_round_ms": 0.49532388792528353,
+          "ds_forward_once_ms": 0.21403228805870583,
+          "ds_compute_window_ms": 3.6197864276184126,
+          "ps_forward_once_ms": 0.21428906864576383,
+          "ps_compute_window_ms": 0.013389227484989986
+        }
+      ],
+      "workload": {
+        "rows": [
+          {
+            "state": 1,
+            "n": 750,
+            "mean_context_tokens": 294.07866666666666,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 750
+            },
+            "target_pre_ms": 10.786070777333332,
+            "target_post_ms": 4.912585012,
+            "target_head_ms": 0.2925910626666667,
+            "target_wait_ms": 4.7793262106666665,
+            "target_setup_ms": 0.220872048,
+            "target_accept_ms": 1.4471503533333334
+          },
+          {
+            "state": 2,
+            "n": 680,
+            "mean_context_tokens": 307.9294117647059,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 680
+            },
+            "target_pre_ms": 10.789836317647058,
+            "target_post_ms": 4.914314230882353,
+            "target_head_ms": 0.2926344867647059,
+            "target_wait_ms": 4.719164051470588,
+            "target_setup_ms": 0.21934462352941178,
+            "target_accept_ms": 1.434687376470588
+          },
+          {
+            "state": 0,
+            "n": 69,
+            "mean_context_tokens": 342.71014492753625,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 69
+            },
+            "target_pre_ms": 10.812891376811594,
+            "target_post_ms": 4.9241638115942035,
+            "target_head_ms": 0.2926074347826087,
+            "target_wait_ms": 9.811990072463768,
+            "target_setup_ms": 0.22324220289855073,
+            "target_accept_ms": 1.4231372173913044
+          },
+          {
+            "state": "all",
+            "n": 1499,
+            "mean_context_tokens": 302.6004002668446,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 1499
+            },
+            "target_pre_ms": 10.789013531687791,
+            "target_post_ms": 4.913902427618413,
+            "target_head_ms": 0.29261151501000665,
+            "target_wait_ms": 4.983691479653102,
+            "target_setup_ms": 0.22028825350233489,
+            "target_accept_ms": 1.44039136024016
+          }
+        ],
+        "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+      },
+      "proxy_overlap": {
+        "steps": 1499,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    },
+    {
+      "model": "chain_13b_68m",
+      "setting": "Chain; DS/PS roots40/40; K1/K2 10/10; exit26",
+      "measurement": "Fresh local RTX4090; B1 BF16 T0.7;12 inputs x2; first10/terminal/cap/preparation excluded; separately timed native forwards",
+      "k1": 10,
+      "k2": 10,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 728,
+          "share_pct": 47.58169934640523,
+          "hit_rate_pct": 100.0,
+          "al": 2.6126373626373627,
+          "tps": 100.01051030013159,
+          "al_samples": 728,
+          "emitted_samples": 728,
+          "step_ms": 26.12362795467033,
+          "ds_total_ms": 10.38312198489011,
+          "ds_margin_ms": 2.7325441085164837,
+          "ds_round_ms": 0.5071199414835165,
+          "ps_total_ms": 9.43312142445055,
+          "ps_margin_ms": -1.363540076923077,
+          "ps_round_ms": 0.5081549460164835,
+          "ds_forward_once_ms": 0.21353204107142856,
+          "ds_compute_window_ms": 4.8678645192307695,
+          "ps_forward_once_ms": 0.21329889134615385,
+          "ps_compute_window_ms": 0.7694488365384616
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 703,
+          "share_pct": 45.947712418300654,
+          "hit_rate_pct": 100.0,
+          "al": 2.190611664295875,
+          "tps": 84.11611243174488,
+          "al_samples": 703,
+          "emitted_samples": 703,
+          "step_ms": 26.042711687055476,
+          "ds_total_ms": 9.880002046941678,
+          "ds_margin_ms": 2.8752911806543384,
+          "ds_round_ms": 0.4979952951635846,
+          "ps_total_ms": 9.29549872688478,
+          "ps_margin_ms": -0.8355510426742532,
+          "ps_round_ms": 0.5012496149359886,
+          "ds_forward_once_ms": 0.21392816571834994,
+          "ds_compute_window_ms": 5.014572837837838,
+          "ps_forward_once_ms": 0.21393538122332859,
+          "ps_compute_window_ms": 1.3038027695590326
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 99,
+          "share_pct": 6.470588235294118,
+          "hit_rate_pct": 0.0,
+          "al": 1.797979797979798,
+          "tps": 58.244294655657676,
+          "al_samples": 99,
+          "emitted_samples": 99,
+          "step_ms": 30.869629525252527,
+          "ds_total_ms": 10.007011141414141,
+          "ds_margin_ms": 3.0518194343434346,
+          "ds_round_ms": 0.5031018464646465,
+          "ps_total_ms": 9.458039292929293,
+          "ps_margin_ms": -1.0221880303030302,
+          "ps_round_ms": 0.5071563707070708,
+          "ds_forward_once_ms": 0.21518754646464644,
+          "ds_compute_window_ms": 5.203694898989899,
+          "ps_forward_once_ms": 0.21554767272727274,
+          "ps_compute_window_ms": 1.133288696969697
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 1530,
+          "share_pct": 100.0,
+          "hit_rate_pct": 93.52941176470588,
+          "al": 2.366013071895425,
+          "tps": 89.64363260724127,
+          "al_samples": 1530,
+          "emitted_samples": 1530,
+          "step_ms": 26.393543,
+          "ds_total_ms": 10.127613298692811,
+          "ds_margin_ms": 2.818792114379085,
+          "ds_round_ms": 0.5026673808496732,
+          "ps_total_ms": 9.371499275816994,
+          "ps_margin_ms": -1.098853708496732,
+          "ps_round_ms": 0.5049174906535948,
+          "ds_forward_once_ms": 0.21382117222222222,
+          "ds_compute_window_ms": 4.957003836601308,
+          "ps_forward_once_ms": 0.21373685326797384,
+          "ps_compute_window_ms": 1.0385148241830064
+        }
+      ],
+      "workload": {
+        "rows": [
+          {
+            "state": 1,
+            "n": 728,
+            "mean_context_tokens": 277.9958791208791,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 728
+            },
+            "target_pre_ms": 12.080334921703297,
+            "target_post_ms": 5.693384403846154,
+            "target_head_ms": 0.2724108997252747,
+            "target_wait_ms": 3.770320796703297,
+            "target_setup_ms": 0.2447249313186813,
+            "target_accept_ms": 1.51113723489011
+          },
+          {
+            "state": 2,
+            "n": 703,
+            "mean_context_tokens": 316.551920341394,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 703
+            },
+            "target_pre_ms": 12.105680371266002,
+            "target_post_ms": 5.7210265490753915,
+            "target_head_ms": 0.27257918207681364,
+            "target_wait_ms": 4.024586742532005,
+            "target_setup_ms": 0.24493490611664298,
+            "target_accept_ms": 1.5333324395448078
+          },
+          {
+            "state": 0,
+            "n": 99,
+            "mean_context_tokens": 392.3636363636364,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 99
+            },
+            "target_pre_ms": 12.128092030303032,
+            "target_post_ms": 5.72432392929293,
+            "target_head_ms": 0.2720250303030303,
+            "target_wait_ms": 8.71595995959596,
+            "target_setup_ms": 0.24283119191919192,
+            "target_accept_ms": 1.5234649595959597
+          },
+          {
+            "state": "all",
+            "n": 1530,
+            "mean_context_tokens": 303.11176470588236,
+            "mean_logical_query_rows": 11.0,
+            "verify_width_counts": {
+              "10": 1530
+            },
+            "target_pre_ms": 12.095070741830064,
+            "target_post_ms": 5.708087306535947,
+            "target_head_ms": 0.27246325359477125,
+            "target_wait_ms": 4.207162128104575,
+            "target_setup_ms": 0.24469887385620914,
+            "target_accept_ms": 1.5221331
+          }
+        ],
+        "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+      },
+      "proxy_overlap": {
+        "steps": 1530,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    }
+  ],
+  "samples_sha256": "95805bf8ae9967f64df3549b3e0de88c25acf7d195436325dce963391c8233b7"
+}

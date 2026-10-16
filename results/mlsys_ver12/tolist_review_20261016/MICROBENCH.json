@@ -1,0 +1,393 @@
+{
+  "note": "Fixed counts, one process. Synchronize only around each 100-update batch; kernel capture cost excluded. End-to-end PS timings determine adoption.",
+  "results": {
+    "before": {
+      "mean_ms": 0.07200328650000001,
+      "median_ms": 0.072110485,
+      "batches": [
+        0.07341287,
+        0.07314975,
+        0.07237356,
+        0.07235355,
+        0.07310166,
+        0.07216919,
+        0.07191112999999999,
+        0.07205178,
+        0.07150677,
+        0.07127053,
+        0.07159080999999999,
+        0.06934358,
+        0.06964905,
+        0.07100254,
+        0.07220143,
+        0.07259464,
+        0.0718617,
+        0.07412057,
+        0.07238092,
+        0.0720197
+      ],
+      "host_list": true,
+      "profile": [
+        {
+          "name": "aten::arange",
+          "calls": 10,
+          "self_cpu_us": 459.6319999999996
+        },
+        {
+          "name": "aten::empty",
+          "calls": 20,
+          "self_cpu_us": 95.68399999999627
+        },
+        {
+          "name": "aten::resize_",
+          "calls": 10,
+          "self_cpu_us": 36.642000000000735
+        },
+        {
+          "name": "Activity Buffer Request",
+          "calls": 1,
+          "self_cpu_us": 1800.7359999999999
+        },
+        {
+          "name": "cudaLaunchKernel",
+          "calls": 25,
+          "self_cpu_us": 358.52300000000014
+        },
+        {
+          "name": "void (anonymous namespace)::elementwise_kernel_with_index<int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}>(int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}, function_traits<at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}>::result_type*)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "aten::repeat",
+          "calls": 5,
+          "self_cpu_us": 213.31700000000092
+        },
+        {
+          "name": "aten::expand",
+          "calls": 10,
+          "self_cpu_us": 121.97299999999905
+        },
+        {
+          "name": "aten::as_strided",
+          "calls": 15,
+          "self_cpu_us": 12.946000000000367
+        },
+        {
+          "name": "aten::alias",
+          "calls": 5,
+          "self_cpu_us": 7.561000000001968
+        },
+        {
+          "name": "aten::unfold",
+          "calls": 5,
+          "self_cpu_us": 8.845999999999094
+        },
+        {
+          "name": "aten::expand_as",
+          "calls": 5,
+          "self_cpu_us": 3.3290000000010878
+        },
+        {
+          "name": "aten::copy_",
+          "calls": 10,
+          "self_cpu_us": 62.44999999999982
+        },
+        {
+          "name": "cudaMemcpyAsync",
+          "calls": 10,
+          "self_cpu_us": 120.2259999999992
+        },
+        {
+          "name": "Memcpy DtoD (Device -> Device)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "aten::reshape",
+          "calls": 5,
+          "self_cpu_us": 11.27199999999948
+        },
+        {
+          "name": "aten::view",
+          "calls": 5,
+          "self_cpu_us": 18.101999999999407
+        },
+        {
+          "name": "aten::repeat_interleave",
+          "calls": 10,
+          "self_cpu_us": 265.159000000001
+        },
+        {
+          "name": "aten::flatten",
+          "calls": 5,
+          "self_cpu_us": 1.4369999999994434
+        },
+        {
+          "name": "aten::cumsum",
+          "calls": 5,
+          "self_cpu_us": 80.96299999999837
+        },
+        {
+          "name": "aten::to",
+          "calls": 10,
+          "self_cpu_us": 6.899999999999636
+        },
+        {
+          "name": "void at_cuda_detail::cub::DeviceScanInitKernel<at_cuda_detail::cub::ScanTileState<long, true> >(at_cuda_detail::cub::ScanTileState<long, true>, int)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "cudaPeekAtLastError",
+          "calls": 20,
+          "self_cpu_us": 1.3560000000015862
+        },
+        {
+          "name": "cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags",
+          "calls": 5,
+          "self_cpu_us": 6.805000000000746
+        },
+        {
+          "name": "cudaDeviceGetAttribute",
+          "calls": 5,
+          "self_cpu_us": 3.205999999999676
+        },
+        {
+          "name": "void at_cuda_detail::cub::DeviceScanKernel<at_cuda_detail::cub::DeviceScanPolicy<long, std::plus<long> >::Policy900, long const*, long*, at_cuda_detail::cub::ScanTileState<long, true>, std::plus<long>, at_cuda_detail::cub::NullType, unsigned int, long, false>(long const*, long*, at_cuda_detail::cub::ScanTileState<long, true>, int, std::plus<long>, at_cuda_detail::cub::NullType, unsigned int)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "void compute_cuda_kernel<long>(long const*, long const*, long*, long, long)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "aten::index_select",
+          "calls": 5,
+          "self_cpu_us": 43.409000000000106
+        },
+        {
+          "name": "void at::native::(anonymous namespace)::indexSelectSmallIndex<long, long, unsigned int, 1, 1, -2>(at::cuda::detail::TensorInfo<long, unsigned int>, at::cuda::detail::TensorInfo<long const, unsigned int>, at::cuda::detail::TensorInfo<long const, unsigned int>, int, int, unsigned int, long)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "aten::resolve_conj",
+          "calls": 5,
+          "self_cpu_us": 1.385999999998603
+        },
+        {
+          "name": "aten::resolve_neg",
+          "calls": 5,
+          "self_cpu_us": 0.7770000000004984
+        },
+        {
+          "name": "aten::_to_copy",
+          "calls": 5,
+          "self_cpu_us": 15.290000000000873
+        },
+        {
+          "name": "aten::empty_strided",
+          "calls": 5,
+          "self_cpu_us": 14.13899999999876
+        },
+        {
+          "name": "Memcpy DtoH (Device -> Pageable)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "cudaStreamSynchronize",
+          "calls": 5,
+          "self_cpu_us": 9.941000000000258
+        },
+        {
+          "name": "cudaDeviceSynchronize",
+          "calls": 2,
+          "self_cpu_us": 9.450000000000728
+        }
+      ]
+    },
+    "after": {
+      "mean_ms": 0.0644990285,
+      "median_ms": 0.064562815,
+      "batches": [
+        0.06942534,
+        0.06127406,
+        0.06260621999999999,
+        0.0660699,
+        0.05967186,
+        0.06459193,
+        0.06223204,
+        0.06694135,
+        0.0642383,
+        0.06667781,
+        0.06322113,
+        0.06621344,
+        0.06525017,
+        0.06448461,
+        0.06503043,
+        0.0645337,
+        0.06538114,
+        0.06468905999999999,
+        0.06390242,
+        0.06354566
+      ],
+      "host_list": false,
+      "profile": [
+        {
+          "name": "aten::arange",
+          "calls": 10,
+          "self_cpu_us": 47.43800000000101
+        },
+        {
+          "name": "aten::empty",
+          "calls": 20,
+          "self_cpu_us": 55.494999999999266
+        },
+        {
+          "name": "aten::resize_",
+          "calls": 10,
+          "self_cpu_us": 17.012999999999522
+        },
+        {
+          "name": "Activity Buffer Request",
+          "calls": 1,
+          "self_cpu_us": 2069.916
+        },
+        {
+          "name": "cudaLaunchKernel",
+          "calls": 25,
+          "self_cpu_us": 134.766000000001
+        },
+        {
+          "name": "void (anonymous namespace)::elementwise_kernel_with_index<int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}>(int, at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}, function_traits<at::native::arange_cuda_out(c10::Scalar const&, c10::Scalar const&, c10::Scalar const&, at::Tensor&)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}>::result_type*)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "aten::repeat",
+          "calls": 5,
+          "self_cpu_us": 29.404000000000906
+        },
+        {
+          "name": "aten::expand",
+          "calls": 10,
+          "self_cpu_us": 11.111000000000786
+        },
+        {
+          "name": "aten::as_strided",
+          "calls": 15,
+          "self_cpu_us": 8.433999999999742
+        },
+        {
+          "name": "aten::alias",
+          "calls": 5,
+          "self_cpu_us": 4.195999999999913
+        },
+        {
+          "name": "aten::unfold",
+          "calls": 5,
+          "self_cpu_us": 6.192000000000007
+        },
+        {
+          "name": "aten::expand_as",
+          "calls": 5,
+          "self_cpu_us": 2.4689999999991414
+        },
+        {
+          "name": "aten::copy_",
+          "calls": 5,
+          "self_cpu_us": 26.10000000000082
+        },
+        {
+          "name": "cudaMemcpyAsync",
+          "calls": 5,
+          "self_cpu_us": 46.179999999999836
+        },
+        {
+          "name": "Memcpy DtoD (Device -> Device)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "aten::reshape",
+          "calls": 5,
+          "self_cpu_us": 7.880000000000564
+        },
+        {
+          "name": "aten::view",
+          "calls": 5,
+          "self_cpu_us": 12.096999999999298
+        },
+        {
+          "name": "aten::repeat_interleave",
+          "calls": 10,
+          "self_cpu_us": 48.20700000000079
+        },
+        {
+          "name": "aten::flatten",
+          "calls": 5,
+          "self_cpu_us": 0.8390000000003965
+        },
+        {
+          "name": "aten::cumsum",
+          "calls": 5,
+          "self_cpu_us": 66.47699999999713
+        },
+        {
+          "name": "aten::to",
+          "calls": 5,
+          "self_cpu_us": 0.9779999999996107
+        },
+        {
+          "name": "cudaPeekAtLastError",
+          "calls": 20,
+          "self_cpu_us": 1.2430000000013024
+        },
+        {
+          "name": "void at_cuda_detail::cub::DeviceScanInitKernel<at_cuda_detail::cub::ScanTileState<long, true> >(at_cuda_detail::cub::ScanTileState<long, true>, int)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags",
+          "calls": 5,
+          "self_cpu_us": 4.014999999999873
+        },
+        {
+          "name": "cudaDeviceGetAttribute",
+          "calls": 5,
+          "self_cpu_us": 1.9410000000002583
+        },
+        {
+          "name": "void at_cuda_detail::cub::DeviceScanKernel<at_cuda_detail::cub::DeviceScanPolicy<long, std::plus<long> >::Policy900, long const*, long*, at_cuda_detail::cub::ScanTileState<long, true>, std::plus<long>, at_cuda_detail::cub::NullType, unsigned int, long, false>(long const*, long*, at_cuda_detail::cub::ScanTileState<long, true>, int, std::plus<long>, at_cuda_detail::cub::NullType, unsigned int)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "void compute_cuda_kernel<long>(long const*, long const*, long*, long, long)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "aten::index_select",
+          "calls": 5,
+          "self_cpu_us": 32.11599999999953
+        },
+        {
+          "name": "void at::native::(anonymous namespace)::indexSelectSmallIndex<long, long, unsigned int, 1, 1, -2>(at::cuda::detail::TensorInfo<long, unsigned int>, at::cuda::detail::TensorInfo<long const, unsigned int>, at::cuda::detail::TensorInfo<long const, unsigned int>, int, int, unsigned int, long)",
+          "calls": 5,
+          "self_cpu_us": 0
+        },
+        {
+          "name": "cudaDeviceSynchronize",
+          "calls": 2,
+          "self_cpu_us": 14.760999999999513
+        }
+      ]
+    }
+  }
+}

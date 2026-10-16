@@ -1,0 +1,48 @@
+{
+  "status": "complete",
+  "date": "2026-10-16",
+  "branch": "MLSys-ver1.2",
+  "base_commit": "899e4eb1d3e3f053b636343065b364f265cb1f80",
+  "scope": "Postprocessing policy only; no inference algorithm or per-step GPU changes",
+  "rule": {
+    "median_factor": 2.0,
+    "comparison": "strictly_greater",
+    "minimum_group_samples": 5,
+    "groups": "generate/request-group scope, actual batch, P1/P2/other-hit/miss counts",
+    "passes": 1,
+    "profile_off_only": true
+  },
+  "tests": {
+    "passed": 31,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      "test_long_step_filter",
+      "test_step_performance_metrics",
+      "test_mlsys_measurement",
+      "test_request_reporting"
+    ],
+    "mode": "CPU unit tests; no models loaded, no W&B connection",
+    "log": "results/mlsys_ver12/step_duration_filter_20261016/checks/final_cpu_tests.log",
+    "sha256": "50e3d039790a403847d928a85feaf29c69e4fce805e3d60eef32a76bee9f7250"
+  },
+  "diff_check": "passed",
+  "model_experiments_run": false,
+  "gpu_experiments_run": false,
+  "historical_results_reaggregated": false,
+  "committed": false,
+  "pushed": false,
+  "source_sha256": {
+    "ssd/ssd/utils/performance.py": "352bf4b00bbdfd7f7ff0deac4949ea95378acd0aca65f7c14da5076d838ab024",
+    "ssd/ssd/engine/llm_engine.py": "ace80c2a2771f8f46daa1c1dda7ae65dbb511ddaf986c3345bd4a693b46724fe",
+    "ssd/bench/bench.py": "c615bc9f77de3156a939df170637abd9164b39066971eaa87be44c42ef3e513d",
+    "ssd/bench/mlsys_measurement.py": "363aa1fc23ee20f757ab584f0d41c87ee01767ab02f52bc3bac105a20f9bbf22",
+    "ssd/bench/mlsys_tree_results.py": "709ecd549e675990acd33cd8aeef585a10809d9eb9c4367434bb5a21387ee986",
+    "ssd/tests/test_long_step_filter.py": "f06626570c21c108dcfd2c318d34517d84a906cd53aba97cfd20da7faadc1431",
+    "ssd/tests/test_step_performance_metrics.py": "b8a7bfb75534a9a789a75787863a902314ff66c9ea0234f07edd6955aa9e2fd9",
+    "ssd/tests/test_mlsys_measurement.py": "4b77b72ada827aece9e61a636a5d67340d63ca8525f7bb9dad00dfae99643509",
+    "ssd/tests/test_request_reporting.py": "caa2b5642402f93bf06e9cb7dc76b98bc50a969d93a6b704fdbb323a91363154",
+    "results/mlsys_ver12/step_duration_filter_20261016/REPORT.md": "5d2e2f1887b9307fa00ba4f5e76cc085cb935aee232a9fe51c735ff522684e0b"
+  }
+}

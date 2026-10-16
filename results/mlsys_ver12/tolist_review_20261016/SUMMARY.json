@@ -1,0 +1,1876 @@
+{
+  "status": "complete",
+  "model": "LayerSkip-Llama2-13B + JackFram/llama-68m",
+  "schedule": [
+    "before1",
+    "after1",
+    "after2",
+    "before2"
+  ],
+  "paired_outputs": "48/48 output arrays identical",
+  "matched_steps": 3178,
+  "independent_input_turns": 12,
+  "bootstrap": "10000 UID-clustered paired draws, keeping passes and A/B repetitions together; observational run variation remains",
+  "runs": [
+    {
+      "name": "before1",
+      "excluded": {
+        "warmup": 234,
+        "first10": 240,
+        "preparation": 3,
+        "terminal": 24
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0000.json": "0b7e26ee3a53e1eddf2d44d12971fa242e6d60fd64bb5a036608229fdef7cb77",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0001.json": "fc362e541194c71be2651872028a181557a013905dde1f0a3f6874501950ba3e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0002.json": "e8e1bb57e12b0240f6afab0660e5b288fdd0d632d8103ffc4a47d09c17a54c4b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0003.json": "486b2652cb55e0890bb306b64e12c45f54db3a52d61ed194449dd6bf4ab7c780",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0004.json": "61ff39e7ab61c819639778b0ba44a8ba70eee3e6f70c6309942a6d2f4b1f6957",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0005.json": "387869145f8c65f9d72c84667a7cfb4b736a42af07e8b1178fd58df59e345c36",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0006.json": "666ff3c88f01b746488e4c5b87d86353332c7f0f567f318fa11ff7871c786a27",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0007.json": "da6449229f5d2e97bd0305b72e94220962612486b18038021ca17ac5e84ff1bf",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0008.json": "ef979c9d177e598fef6e9db931ac6ef29931f2d27581daccd2c43b1a2f941ce5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0009.json": "e7d4fd9700d0b28352d792c07dfe84277d316d6eba427c0fbc10ab98dc616e32",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0010.json": "ba6a5a05c3b276dc75add86b2139ac9bb8d1039542c2c12fd33e950fff123265",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0011.json": "31fe6c8dc814db6f0a8f9f9aa97e846295be39ed43df224005e5da16ff79bbc0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0012.json": "7ac259d071cfefa89e8ef7af874cddd5de3b069aaed6106705ce703fbeef57a0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0013.json": "81148ddc153dffa09f8d04e3ac1c3ed08315191bdd5045eb920ed002f047f47a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0014.json": "8cd5f2820f62239f7e8bec1cf5a59cb33b9eb01703a3e24adcad2361e9e2b106",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0015.json": "bc32b1087a53bc80807c64a790af8e20ba3e366f9838c848ca3b888b0b956d37",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0016.json": "f873b2c657fa1c52f4d9f22f4174606614d62e6967882dd01c83840c6a1133fa",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0017.json": "f5cac305eb07e1c52de7b555e8085798cc0debdc22eb28193ad56b7908ea0397",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0018.json": "c4fbae6396bfe093b80cd5b7b162055f6fd1bbe8794998bae84eb0157fcc984a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0019.json": "14448006da8cc54a180c3fc2c62e54883b69a1696218076d700165785d1ac7b3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0020.json": "2572998a363a9b616bbd5b06b4e7cfe1deb3ac0b7e5e8990fa3a82ffc67d3829",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0021.json": "555a29a10404024a84e4be4bb8c2c3ac862391f8fa6577220073561c81426b99",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0022.json": "0bbd28701de31e8f7316c26b344330f64b626c9f87f0219696481bc71a151944",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0023.json": "f03b2e4e0547ad65efcbd9b2ae1743151e3f838eaa58ffdd7b9eaf8b90554de8",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0024.json": "a378db979ef94ff666342c2fea2933a6bbf08673a50dea5e0655c02710814617",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0025.json": "81f387a083b85de33a410728e4e433b6dd2bddd30277f6e67878fb7c1b74fc88",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_target_rank0_request_0026.json": "e2f39d812b121396a906948203df8167d3b76c83611298538843135a1bfb5981",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_005623.json": "b0d872520ee40903c07fe2a972566e38090ee8e5bf2a345f1ad47342db0274c5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0000.json": "8cfad22d5c082588703086243067d5cec1929d816bd91b09ccf6b93f0792dc47",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0001.json": "700ce57aa496779462a401fffbab12b115fe74fe2a959efff58f57174d412d19",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0002.json": "ee37e998bcab61b120ea86131a3b836bd4d5d1640f5ea22e40b7072bebb6456c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0003.json": "5f8fd148fb03d94e4903970b11083fa46bed018fd00a32af4127ad63f33e8887",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0004.json": "9e102b893800d686341f6061a59685edd0c77e7cbdcf83a4748b60bd545bd424",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0005.json": "02b958ff9dbcc5902f1859bb04b8131c640be3ce98f788f203712be29538f83f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0006.json": "58961b9fe5a53ca3640127f3e3d5190bb37213d34f51f96ef52b67bb228aa2fc",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0007.json": "84ee791efbe0a21762390b64ec22c46acfaeb282efb9ffa8379974dc188a6d1f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0008.json": "494af4004bc27c4ba06942e98fc185a73fb39eb05d80f27f763c8c39ec2418f7",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0009.json": "91bbef692bd96879d3d391e55a6397b5a598ee23696a7192d924b2d67e682766",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0010.json": "15d71e1e12a842e3d500c6f5c3c3f49dcf0058e25431dee542e2afce9dd41c45",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0011.json": "06204df820f6bec1b2a2435959673222844cdd6c15d4962b728bcdffcbea35bd",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0012.json": "5358f5c71bd20887fecf1362c167157ccf4933ed71b2aee1d03b9e8c1d6dc3ac",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0013.json": "397a833d1b9cc360f19ed2e1ff41e11db38f05ed440eb3f145bbdc6460d5f04a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0014.json": "e7b2aaa4b4d79fcce446bc4d2dc64fed5bb1207bcd3dda62d68063b0fa31fc1a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0015.json": "a874224ee02617b81fe2c7d65348667be9f78f0231a8cd8cb82990e55861674d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0016.json": "16e5a1ee7410e6aedd9b5189b6eae6d638dd5c5bb1b9a52b555e2545fdede77f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0017.json": "0f89f8338802a792626ab307d80f2246b14e9f405417989609d9c4c91a96e61e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0018.json": "0cafef0bcd5fb8744c9c92f6035542b200fc8bb36546b964dc220943ea080064",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0019.json": "643b3c53b14e40e67a4e9e76e8adce282bc3d2b33d36695c76c5058b286e4f0f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0020.json": "4ee622cedd8358e9b244b7a5382e3215758ac373a27eb9a697cda636a29c907b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0021.json": "8638a11b14c434ae85f29b16e94e627bdbb8ee099edc23bcda33e17a6f92454b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0022.json": "c2fb9ef0b655493188065bc9b12537dabd00bba460eb5f43d51ca9d4d8016639",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0023.json": "95934503a6d14696e91c31a5bdae78214e93f8ade413ed4455ab44a2b3ee3bc4",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0024.json": "b8aa541da586a77262307f54d32866cd33e5d55398d5ca6f43dea3c9ae967b8e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/duet_profile_draft_request_0025.json": "5150ca073eb5dcbc55ec72bf6a4e664accfbadda23bc19b3b974d2165242ea59",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/run.json": "bd619829c3d75f64d7750fe1417f5eed38c12aca6375941b4efbb47eaecafa23",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/COMMAND.json": "60e37ab9d3e9d2513b82dfd95a2dee5f6708bf7375582e02af553a548e83e860",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/SOURCE_MANIFEST.json": "fe9f5d45159061e6782241e1ae1cd6b05c8edab2354a4e633fb7e9ded4d2fccd",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0025.json": "1f8a7b414dac3f7c575bf19f100a6556b07627f638862684b27f680613cdf0e6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0008.json": "3303eb378e62dd59cc5b67762a288c59a5baa8a144863a1381c28435bd482a6c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0003.json": "ad3bfb3ff9c15963d8c78e89c1d66dadc0f724c406d0b1b9792f1b75313635db",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0010.json": "b8e8493ba6cd41928c856571b34baea3dfd73cdc1ce90a53fcc41a94340a507f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0006.json": "2606c3eae460e1238caf37961e52fdb8c2cd7e5524fe8af4fa0d3cd41f7fcc5a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0019.json": "c465feb40dc1993d79769bdbcb9c1cb7c561ae9891001ee2c8df75963ceecd76",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0018.json": "d0cc4c5cdc7eaa06a257b1698b2c43955d8d8ca044bfc719a58e57756e53b387",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0009.json": "586b5427de944fc3001a69be9c05171e3c85e9855a95de37007478987d1c1e04",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0002.json": "32eaf96a45f5b4761d7cc85263077e045bb513cc14a5dceb9ba23aefc7fc6564",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0017.json": "b3623fa75bac5b140dffdef726299b8f7148e0758fd314ef24e8a9a23f68bde6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0021.json": "ae28c9b3edaf236510a1bd2c7e4ae8678b523f2b92a6c1ab17a8a000fddc2b21",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0014.json": "9763681712cb9563e0044e5b665e198e7d4c496f4fe32456eb841f289a27a2f4",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0022.json": "d3af95674e406d00ca26b94047eb81650eb510773adc1fc285d1c0110dcfe182",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0005.json": "1a0cc6de579c8835dc3b6e128d9cc3c5c559cf7a50d91bca072d0dd68c0f897f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0024.json": "37a5c653cee632c5084929c7024e9196f0b2d8dfd7a952c5cfd72701095a05bd",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0007.json": "b4693bb9632fce8dea263caed4f323e5fe28a44e8b35d897e67cc83a05751641",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0001.json": "f3892848418766ff6e764d0920cb46c29d106802065413b9c9247c32d2ccfd49",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0000.json": "b86ffba53c4ce5a9c6d2af397f98f2fa4040a4ab80a42b69ce8f2031a386d09a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0013.json": "f6713d9c74d4e243513d0cbd6f0385812e4ec2cce5ff8394d674f88443178173",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0016.json": "a69974f3b5828a70eb3a23d3c7458b76802d1f57a30bba9bffa50fe96565e68d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0023.json": "6e63cd64281f5a732e045b362b3cd18bfdd35ebbf513f3e351cfaf8cabae412b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0020.json": "23ead4b2775e336ebc5ffe809b6d5ed3935aa712c1a56194e2e2c2cc3d976c49",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0004.json": "d97302f54fa7cb43297b2f17f55aa920246c7c7b44d032f9b8f22f95ca34560b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0012.json": "cbfd0e4809750816b682bb0c7261fdf7efaeb323cc3303afffd1a8049d2d67f6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0026.json": "671824b87286fe974702a81ebd9364a2b90baaa3056267f711bd9400d759c49e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0015.json": "9493dffe2b27f3170ef02e959fe2a1cf68e442e50edc9ebaa95d3389f966269e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before1/fanout_audit_request_0011.json": "4cd3fbddf6aad49f62991d8d65ba5b76d8de6d8f12f6429e9fb8167c227ee318"
+      },
+      "summary": {
+        "steps": 1835,
+        "all_steps": 1856,
+        "tokens": 4231,
+        "seconds": 54.018300991505384,
+        "tps": 78.32530683749835,
+        "verify_ms": 24.64217774910035,
+        "step_ms": 29.43776620790484,
+        "al": 2.305722070844687,
+        "hit": 0.8239782016348773,
+        "actual_output_tokens": 4272,
+        "emitted_decode_tokens": 4272
+      },
+      "source_audited_steps": 2090
+    },
+    {
+      "name": "after1",
+      "excluded": {
+        "warmup": 234,
+        "first10": 240,
+        "preparation": 3,
+        "terminal": 24
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0000.json": "fe3e97514c26537a843233f20e40794b36cdf1917057788ef76921c555efa720",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0001.json": "9c803dbe0b49b2bcd2c90893b5e4340cfa03cba26858ebb2fce2be93ebea15b3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0002.json": "bc92ed50a3f7738044a018696957c5e9058919f8695fcd2818ef1f38daa306d2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0003.json": "a7eba49dbd747eec44d3ff121d3594daa4729e5c1e55ab8c3ca1c10b46a995a2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0004.json": "f429111d082dfd4d053eda2157544fb1733d6eeb9768f540c88c395beade76d3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0005.json": "d23d03b2366012857137f3b9b3c6ccde524cb80005933dbc79f41659650b1a33",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0006.json": "31fff44d1d780725715031cc361c5a7a6a38750b367e50a5b60032dfcee52a42",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0007.json": "260625857f454c75dbc7df8e8288981c26e9c2a218db5ada9da1865b46f706e6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0008.json": "3a6720366041272b757c824d60fe4a96c6a82cf5834fba826c322646a06c549b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0009.json": "013b1ec8cf8cb86d469d6f8640f395e5ab0e1b8eafe39cf37e480c221d12b748",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0010.json": "63357f2b32051d68761865f9db463b8ea93ee4651770221536685b7b16fbe3c3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0011.json": "49f6fdec16cac8bd666394a4837d2b9bea9602689b79d1e45b7bbd4ed2e6b148",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0012.json": "5fcd0b4f6859b45982c9cef4a3e599640907ea846b8bc0203aade8dd45134219",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0013.json": "06343b8098d2c17df6b52d66d4fc4d4596e8c76819c9d0b8f1884b017d74af04",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0014.json": "19c944257c836d56b0a916152b398d485190209c69db3353a116c2142983eacd",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0015.json": "a8678255499d0294e926fd968104b5c8a1bd7a59328db491df962d257787f24a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0016.json": "3fb3a40ef92ae79ca036bfaa0e538004c18adda79b6ff7ce3caddc162ade2534",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0017.json": "7c775a318bd630784e1278cf12d23e04a0ea075dff8eeebf913f05770e1c57ac",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0018.json": "d16065e8bb0e8d95acc026897320fd2ab3003e904e8d7fa6e8cbac116a26f5b1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0019.json": "6d3209eb75cae6ddc93ec3faa24ab2c68f2a3a4d31e2627b8d01f6e0495efe99",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0020.json": "28fcd60dd559ff71eec2628b598b3ba9ef638428a59b8b2f49e08d0d82e95448",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0021.json": "ffb5bfff1e3562698eb62ee74e9657cf6089c46f8d9a87c5b2113265ab28875f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0022.json": "f0c5f933ac1eea9ae96ca071f42d230786bba4a0877ba46cb33a7ebbf2fa5989",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0023.json": "33f18525b379793a90ce758a95215b4fa73263c22b95c222f0b45ab857b92d7d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0024.json": "3deb2492a33e0f054ef24a77d362d98eddbe10498f79859022d372ea97a38561",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0025.json": "83d6f31be101a954930a52a6c2e6623a8ff56c13eec3a22d06ee8bc29834ccf2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_target_rank0_request_0026.json": "1deea553764ba0fce9f61af785193437b39fd5d6ce02727a3f3f44e3d2dc37ee",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_005819.json": "6407a670dc47af69bf811342ab48674b07424e8869239f1108be6a6bd860f982",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0000.json": "62d52a08c964991b0915e1623c9834719fee26451f07d3468c4d9d4796a1a95c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0001.json": "78584f16a8c4b59117c721067558bfed73a60a57271f6d4dc4e9a7477c66bc8a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0002.json": "5942eec96ef03ce4deb096e60227506943f5bba3c534d3175de4f49fcd456bf1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0003.json": "cccc6e37c623b754732a048e7e8c941911fbd86eaeeeee7e92a00375009280a5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0004.json": "7fe1d82378c1c933e2771a51cc0743e2f558a85e703395f89843bbbef5294f06",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0005.json": "531fedf461fc76def41fa2ad1ab57dc7950cec4c69cbdfbdd3f7a23aab6d0365",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0006.json": "2197869892534ca4d72d772fc3ccd2e6857da84e1d931b507f5951d5a7ddd3a7",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0007.json": "900fe6095f5ed7c32f1cc338200a16ecb2f480258f54693375a02c9e6453d3eb",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0008.json": "7471b84f7eac9399c4931fda31c56e7dbc70702c955a4b880b0e33162d28f611",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0009.json": "7b3e2c792715c9c2e7187c8f236e5b2fffdb093f2b6de5fed322a06253b7da1f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0010.json": "d5bb7e3b83584090b4f88ac0fa52db0c3fc15acdaf887f55390e9d7a2c26b9d5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0011.json": "3fa8eb166669ec483130c4c2d9f2d5426a5e513bd8448e97a2e4509774fe8896",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0012.json": "6dca8d60d3be8b4148308d17e8f9c256fb8037062e1f8ca9ef9876bf4d7c9ac7",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0013.json": "f2d16f6c1c6b1c0f0472b3ac98ac0cbe6a0eaadbc69e45658ae7d0931431aa89",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0014.json": "040c9243ef8843b5b73dc1604ba9f89df8496dbfd8176c9a5a2ce630522e610f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0015.json": "a4cb395a497b3fe9aea41714c059993c3d7cfd6a0298ae1d3dc91b698e7e3d42",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0016.json": "20c1c0e96d6dc5661c297e3a44c2da5828cf2992fd9de1d0bfb00cf5c535fdf0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0017.json": "e73c60565b15773e3bc733680dd6036c9464932449314ce03eb8a46213cccd13",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0018.json": "5b48f2e249858aa390dc08539652d4330e60fa6fafd06bd978b237b7a234d9a1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0019.json": "665c12f1ade212302babed66906fb65e43d330daa5973600252acac754304554",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0020.json": "cde84466ab5d4061a26335f89d7f9d9e7771202301cf25c24ac9c876a9fc0ab3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0021.json": "0f06085867ec15f820e18e88dfcf398e9c9cd437d3cce97e8693323ef81fa35c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0022.json": "2369811e4f36af9cb11c34e70e64e8d81ea8f861ca7e034c8f56cb8177945649",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0023.json": "d8ab9d6c4712b75cfe49f23638a2998f56e559d14283ff77b24b276ccdbd7b24",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0024.json": "9153c2c9ca9e0c6dfc4cc88e1e5a60abe0165ce5e971ecec8cbd026410f244f0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/duet_profile_draft_request_0025.json": "6b1fbcf0f0bc3566b2ffb26df2fdf54b57871dc04afb5b9d7bbd6a61ca292a6d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/run.json": "5e316a1ccc91704d1c85a1050bfbca4a4f0273ef323466bf9c5fc9d43b9ccfe6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/COMMAND.json": "638b40608c5ae49cc8215fc75702f170e8cf3dc49a1f307a5e328cfa46d8f3c4",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/SOURCE_MANIFEST.json": "38f37c6a98aa94bdfa33fa4f188671aa099101e18b9269262416872cbf83a20a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0025.json": "5892657fcf983a25a2fa595d97bb6df05ee5c71e970dcc51d5f4981e25b2340e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0008.json": "000d83a3ae0e417f4efec3a07c5b7eff93c159a41b269c10c0e536016bc49d7f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0003.json": "491ecc00bf434e635d4d911348de429e7482d4b46d586dad879f9fed0e2312e0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0010.json": "707f3dcd315bc72d585617af836ca5fb8cef5c9eda467756feb0328e3a615d06",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0006.json": "01f88c2e361f44a82a20c7c7accb369b8c376f184733b649cb458ef2def32c3f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0019.json": "88bb0b90613b1942cb4f170bfadad1c74809bd627d884402e860898c66d9ad2a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0018.json": "3216eee35f4a2f1c9b0f2ca20f072d51f00a15a20b117030e891e6dd5886d011",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0009.json": "70d1261e11a0ec7029ebdf8e904c64a6ecaead1bd0bd07d14ca57e44971716bf",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0002.json": "8824c822d03bffbb4509e8da3f694211d2dec2596e3d3f45f8d61a916b73aabe",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0017.json": "a1ba795f3ca36a242b8b27c2e143ee2770e52684e4ca1c565c46ba9d16409a85",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0021.json": "e444cc9abb19e6c307f7498c75738e4f924ab7d124f58d34bff4daabf2c8210c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0014.json": "bdea481ce14b25dd1385940c52101f755705b85055785b6a704917556527e2c4",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0022.json": "4573ab8c7cd304ecfdc5d559850f60548209c975ed9052b8e3f5163da9782054",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0005.json": "39bf3c0f6b665ee70b8d37f3c2a46efa883b1f3e8030cf93fbfd5354dd87e104",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0024.json": "0a7d316a22778d29d708201025cc22edf5629970c00ffcd6316176b0f4233d38",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0007.json": "5009736fe79ad7532d416d163f1fb1b7b4b163ea53754903d7c1e95b9e26a373",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0001.json": "7043756e775dfe7cbc986054f4359dd06f34a589cc97642ba63f714c8c02bee2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0000.json": "7fa3db4e547abb15eb363870e84d650e0cd38f9af295f8e1257a31e51b64ef4f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0013.json": "48d19e59dde38a4f9305c55f7bcd2d13a99eed5944f51fca558186d93854540a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0016.json": "7e6c7a6113745960976d7611f4c87df2769299b1137bb546258bed8596c1aed9",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0023.json": "9e303bf138195de0ecf5b97c29e31231695f5f19a388820fc643b4ba726e3046",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0020.json": "9ece4fb35e5bb53c394e01382db2197adc23e66d5fcdfed4623b233948118a5c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0004.json": "48e0c25651a4690ecef1d656e2a833ac0f9b481e3e4334d1f2d89ff02aacc02e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0012.json": "e3a38a8d209a2520dbd32bd555a462b444b40bf8b5501ff217225002c5f06174",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0026.json": "0088e07259462bc10ad1f3b9ecc9e56da447fa39f095e6a4ea6c865df67c5414",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0015.json": "3151223779caaeea17e594aee1d063c711f2cf35255e86951092870cdcfb64c2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after1/fanout_audit_request_0011.json": "eea3da07db4e5b7755b0bd2e16e6adbf34f438d27b4153e905ac6cfb93c3bdcd"
+      },
+      "summary": {
+        "steps": 1835,
+        "all_steps": 1856,
+        "tokens": 4231,
+        "seconds": 54.22455844236538,
+        "tps": 78.02737581527894,
+        "verify_ms": 24.62035939275041,
+        "step_ms": 29.550168088482494,
+        "al": 2.305722070844687,
+        "hit": 0.8239782016348773,
+        "actual_output_tokens": 4272,
+        "emitted_decode_tokens": 4272
+      },
+      "source_audited_steps": 2090
+    },
+    {
+      "name": "after2",
+      "excluded": {
+        "warmup": 234,
+        "first10": 240,
+        "preparation": 3,
+        "terminal": 24
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0000.json": "7b4af72ca65b19cc44eac8a2b49b014ad377aa36530c154c037c52811fdab5d7",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0001.json": "f024689a65d88bc25988cf4b6123894ab22d9e9b1236c08140126f85884d154a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0002.json": "bbad21560ff92356ea17b567f731af2cc1b5b0036985f3aa6af01938ee8e42b5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0003.json": "96a99d5d8d5a0ec6839b68c0f43d16bae65e011e242d83d73aea245ca7bddfb6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0004.json": "6b84b7c25cc76ba0dfb9a85a2f3440975cd6c72031dc312030e677f421c6926e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0005.json": "753627788038f854ba6b447ca93964e84b268cf90bb8f9fc5505d57d4559215f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0006.json": "468d59a08f706e38bcc16d49f08745afe9d164bad13d45e07ea3133339501937",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0007.json": "d13e3232fc21a229d0ec7b81c26e9bf0f81cfecb9a2533a7b5d89f8d0af5b3af",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0008.json": "11dc3ec4fe593ab278dff4e5a9aa482e5a68086224789c2be0a6843cdf1282cb",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0009.json": "06c59e1b23db51899fc8991587b1fa81deb330836f856914677c611aa76883db",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0010.json": "1cefe0aacd4b0043a644d686ca43a8d5fef91be335696a2180242453fd0bac0b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0011.json": "5dde419d1dac6124fb1355bd4cbde46f146724fe999a3e238262e42fa2b02cb7",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0012.json": "f8f0a6fa4ef6955f8fb5fa330aaabb8ba1ba94e5645db08cb3c3eaff7472d398",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0013.json": "b4e03fda24eded622f60a1c7d77cf7b1714f8e7108d3fb5a438f2369fefcd84d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0014.json": "f59eff98a78599a8b63ded4fbd90fdbf11f551d506a260570179ab610875efb2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0015.json": "81169701942b4cee057ee1f939cfd8132feec050e0aa2f262dc3d20a70574c11",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0016.json": "d6ae2235c472fe865bcbee27d5c77b6f0bcf3020f3f022ca01ffda7d304ba9ea",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0017.json": "245ee2689e490282f3fb9cee6bae2712f38e83d56a730124a093c39fd5c9fa69",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0018.json": "504befaafed909d8142e40b09fed326e8b19ea9f199c64d1bcf7c50f87f0bca1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0019.json": "c302623b62aa7342bf0da05dd5f294c0b64d8cb4152fa19b6d7bdb1843fbee10",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0020.json": "0657a2688bc3f7fa6d865ebead0fb4247fff5a7de7184bdc766e55ce2dc771d3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0021.json": "9aaa5bc0feef611c42fea21b8726d93f0b0acc9273455f1bbf80dce65983f2ef",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0022.json": "b391eead786e705c5a1d18e03960456535fe14f2670eac8b4856ff3d73113c35",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0023.json": "ceaceda340c94bdc609448074a77b8cd96d7d12875688bde4f54f142fcde304f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0024.json": "3c139cc1f326f0512784f1a34774b00228562dca307ddb8e8912d11758dc12c2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0025.json": "755f6cb8b027af8c00414687be546bca83570944d52b844dd41e0d0170c8abf3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_target_rank0_request_0026.json": "6e6be0994610b8285a5dff435b4c257cbec0fbeb359662a623df08ba96a31770",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_010015.json": "68721a2c70c315219525cd4e5bb0550cf0f38a903b052d76c5d0877bab965f0e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0000.json": "c33410769f8f45cd29be1be11edcc486e0cffdbcafc25e50aa25015ed56b28c9",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0001.json": "aa088f5790fc5ee74826125cd3474b00bb9b8309d4f54bd9a1f9d2170e55a9fc",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0002.json": "c5073a65e66c391ea9ac2f35d29be778b74b7b2e517fe38e34bb22ac6d15243c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0003.json": "2d0b3c6bd295fc432635438c4a4a72bb86475b207f2e32be27bbb3549a40f3e1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0004.json": "dbd5c9a6e2e1dd97bc82337a08d8cbbaaa2b9347aa14dadbcdbe95af4bbfb26e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0005.json": "52088466c5d8cbee3bb95e869910ae9b12fd42c4519ccea70b7d2fb1d6a6617d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0006.json": "87566373aa82b064b7c67d8219cde791dcd95d30fd35551fb633ce0d8ebe786c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0007.json": "fbe324502308a922c292a6e7d1199818a77927f8a9f6a03e252820e0d3a31477",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0008.json": "f4867b036bad15d1c6848058f3277f98957b8a9873b36dd72e579293ca7b7554",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0009.json": "2d3960f9ba100189d582ff47759f8ea677a467d971c5c34156eeeac5cb96b3ed",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0010.json": "db31161b77cd8cf5b8b99d8e9fad23891a9b843c4657883be479d52ee006ad18",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0011.json": "1be0d2bd7932f85f12b568ebaa06f9bab7376c1a688be254c37e118a13912387",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0012.json": "56be0a05105a6fecb869b970e217140c4c95c715b711d7232d6214d8e7495eca",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0013.json": "8f51850e823e758945b99711987a5ef800e56a10ad729df3054ff5f4fda199f4",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0014.json": "47a398e3530de195579a146f0f34556b1bc4e1d3713e2c317285cda971413913",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0015.json": "7240bc3a9f62451d359b408dc1daae001d31a4f34d6d0042ab0a9d3c4beafd4e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0016.json": "5865a4e1a9b66d7f5ac0bfab34d7324327fce6f31faf08574d78bcfb78cd169f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0017.json": "53f30081ff42b9d9e21302a948ac4f5f885e10703fe86f8bf9daa64ecbe05662",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0018.json": "2029883983f79651a213f122a329f6da36a49677a162c7219ef8fc914c2b1135",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0019.json": "7a120a1c37aa05e9eaff5db39fbf6ecd821281457946b4576929db7bbcff0434",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0020.json": "ff18143a99ba533b3928d89d18888fa18a409fb14e93771715150927a9965069",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0021.json": "b7dfeab827a2884d16166f9aa0a88c67081b1d17043e6ccf59b6285f880af54c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0022.json": "3ba1d075e3f1dc0f3ab522cd5b9c0638f20cad6dde480fa0fd8820d93648f8be",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0023.json": "7b1141aa4ff0083c7075a7829aa5ca922d1b8cd8d582038ed67713a0d094d3a6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0024.json": "049613a07d2677496ff1ac509c134b4bc1dc08ac9c8b6c2cc72e8f8efb3c3ed5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/duet_profile_draft_request_0025.json": "c5712fc761198676c658cdfe4ee47f3b35537a7c8872ee49946131313ef78418",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/run.json": "489d2500130332dae2b94204d9a63ac4b610b9304e7ac5620d4396f2ec1a194f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/COMMAND.json": "465adb9a486a5c145a95bd6b5f23ae88b4c8f5b0b552371c1f446a47be3fd4a2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/SOURCE_MANIFEST.json": "38f37c6a98aa94bdfa33fa4f188671aa099101e18b9269262416872cbf83a20a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0025.json": "c497cbc29bde65f5160b6dcafbfdb2dd2426b2c06e9b6f89c9defe5d7bd0e008",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0008.json": "41b9f89a540b71b8f1ab9dc59dcef79afa5712cb848464d913ad04f25f0dd8cd",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0003.json": "b26e5aa2cb160a40a2269df724ec2921ba9b74dbc2ed2a5dc8cc59a017a3210d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0010.json": "2ce640424ae49277e9e2874318ec06e178f1a18259212e5896f89303a7e291b0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0006.json": "36b6a24851ab2048df659130c04d4737aa4cad64d29d852aa4e068d05dc04eda",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0019.json": "444562d21c62ec352c8f695a807e5782882c5af6e18ba0bb7beeac9118c1e254",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0018.json": "5e1b89c169e4c5c06bea7a312fcebaa130d2ae4c617a039abb5bc87769186a23",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0009.json": "0e4bf6b8c14503d72230866b8e898cdc6a9c48a98a475ec2855d95e8bf01456e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0002.json": "febd333b834760f6f736d8c8da6f47320514c3329d310ba4bb9c1d7a03ebaa8c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0017.json": "e2627b9cf6f635fa5cd41f5a9fab8a0e1b3e7355d9a8305d007b84e4f4fd72ed",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0021.json": "931af58c8ba1aeac378d14b6e343fdfcbe7cc84d3217570608c774da8ed13f12",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0014.json": "10e7b25ee40e74e30d1e56034eb8b331c4ce8215be440eb0d6c4fdc0b50ea442",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0022.json": "b19a807757695cb4c22b314b4daf7d8e66433d715917627b8f23ec0ccc345cb8",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0005.json": "b244fd2c9dfda1f5d4ed91b7510680209bb6329cd2531e244af74bb8a4bc10de",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0024.json": "edd3a27b57c7d2e1ed15a36c0a3633b97e4070e68a1c706264c6493364ddcefc",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0007.json": "684a1120132e1e3967c52a48371a95ecda318183e4f358fd63f9242f52b870db",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0001.json": "ad28f88c3834ebb7b3947191dec1f9905a7f3c3aa3cf8bfab4698575ee1270e1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0000.json": "a18b13cd16cdeaf5945ecd9a7a62b6f26e61bb5f76d359eac2718c8b141a361b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0013.json": "8f10730102d16a8fde3437fc809d849d3228e59c1be2da49992f41dfafe6212e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0016.json": "3bf507bba2aaa8eb3a166937d729068b4c6f095953f7c04220ab72f301d589ab",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0023.json": "3b3581a9a06e1f84e9e76e62dbb8fe95d046d88366bbc5989cf8754bff18372f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0020.json": "207ae5e59955bd27fe77cea0aaafbf846683ca0c6817ee1662a4f1c05a563f3f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0004.json": "f8b721dc8a6657cf973d2c10a0ab332684144b0631ea505886cd6d27ea3f7368",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0012.json": "ff99cdb7b8b11af24b41741b4c00c6d8ae2dbb277400342b0de73f188074c4c2",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0026.json": "9d1e4533264c5afb501d19793ee9eeacabbaef7580828932f698408ab3b9d4b7",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0015.json": "fd5b8b9f468f410daa70685b4e5229045af3163a0afa865c670c6588d470e2ce",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/after2/fanout_audit_request_0011.json": "1b99a461b55255cfe7c95263bcf65100fb5cb05b06023daaf3f5b8128902f2c7"
+      },
+      "summary": {
+        "steps": 1835,
+        "all_steps": 1856,
+        "tokens": 4231,
+        "seconds": 53.7126880409196,
+        "tps": 78.77095997833368,
+        "verify_ms": 24.51829051050771,
+        "step_ms": 29.27121964082812,
+        "al": 2.305722070844687,
+        "hit": 0.8239782016348773,
+        "actual_output_tokens": 4272,
+        "emitted_decode_tokens": 4272
+      },
+      "source_audited_steps": 2090
+    },
+    {
+      "name": "before2",
+      "excluded": {
+        "warmup": 234,
+        "first10": 240,
+        "preparation": 3,
+        "terminal": 24
+      },
+      "source_hashes": {
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0000.json": "21bbea4ac4a1973a2218f96c468e10be2903e242802e677761d3c8dfa7bd35fe",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0001.json": "36cf57e5e88790102014ab60726044131b8160ab2c8182af3f47522a6a7e2824",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0002.json": "ed3eefe26d91f25c5b16aca64995416dc31f22de43c61194e8bf6421471910e8",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0003.json": "4db44a1f06791b78facc8439c4999f664b2bb0f1143a0df6af3210b416581d05",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0004.json": "5d940f16aba1d51b55e5062c60bc05d7e1c51ccd4866f67ddf4319c29c0980f8",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0005.json": "36ea3405dd67060f44b30a414f2e211e768fb3d575a5530bdd69496e8a238515",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0006.json": "5ebeffdd9e680a0fcb8033c7da56c059c4d73dd4c3f01879419f01f26dc77680",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0007.json": "2ca06c0f3ae85f1d2fa2391e6382ab3517aac6bf684b0a04c2c40f247059e3c9",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0008.json": "25753f111600acdc31d434d6fad959d085df1f3e0ac46bb720defaf58025ed46",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0009.json": "25954d5ac3708986181483aadffe6fb137c060c932f427bc5c58981e0d513723",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0010.json": "832cdc467a73eff260347dbbd361e6e238f8caa4bb3e99334083b36d2481d694",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0011.json": "c7d87d074574fd62066e38ab76a1ac23b1479a9131df4400fa6369d48574c098",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0012.json": "e28fee9827b7db0dcd600c6c1433d27be921675807208f759929a99b42af901e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0013.json": "7adcea2b4482fb32fa16c98023c29798e7558c211f93c4b622cabf197811f0e3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0014.json": "419eab34158f138c7db25a27c5ca0f243d01def463d5c1fc99a95019fe4e5d55",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0015.json": "1068d21c33544b41aecc24c4c365cb2da7b649f5985ff6d3bfefdd8430c4cc31",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0016.json": "771681a8d91e86778dc621cf76f14fc5ecd06cf8158824ea79ea5f1128048c2f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0017.json": "849b4bce2dc12338e49391bcb8cb08c3e4d227ebd4a07952d72981abf22fe4b9",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0018.json": "5b1290490c14f4dfbe21969dfa3e18ec3b64740d59526d9fb4235fb11755c72a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0019.json": "d0f111693618f995d834f60db20a8ec6b499a30bd52c47a7cf1b1fe0ed1022c7",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0020.json": "964de5de738c2e1da5531679d0e93fa60e3adc4df53910810689012b79f50b4c",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0021.json": "00e2955f511433802fc3f8aafa34570fcd21dc3f06eadf653c6a702c9b2375ab",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0022.json": "7d5c38553d35600066f9c77ab5b849514dac0e548584b74cf7dec4891eb0fb4a",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0023.json": "36edc835dab0183c25c522313791b70d3d1c0ac673ffdff55f93959367261595",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0024.json": "edf99f302321ffdfa6f2caef52b2300abe660d8fa5fe6793c22dc8559a76aa7b",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0025.json": "f982339b158a3ac34db45f43492cc656f7894d34eb3aa428758faa016cd8e075",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_target_rank0_request_0026.json": "c599674263744bf7b69508ca65046c966f70eb4a77b19f1dbba1bbfefdd08ca0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_010213.json": "4fd183a8c947952aeaf59b9ce7bee3c2d40c1e707a2e1e44713f3e0b767e48a9",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0000.json": "4dffeae40ffa1483a145a4e0a4c65d671a59af35169f4f10e60ce7fa187c70a6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0001.json": "23172430b057a32bde38a3299de72d08f0131e101e44666884f41fe3a1c5f224",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0002.json": "d194eb0cf793261d4b85e826c50cf09168a94d78d6270a72ffdce999a291a4b5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0003.json": "75e3dcde7c8c724c9883e3e76422c5bf48ff35457a5ba558eacf6de6a37e072e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0004.json": "b1330ec4c943870adaa8aa91e787cff3f5027b81d5fab45ab7b8bbc0480dca91",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0005.json": "422598374df1fab9f9c46599d9da75ff8f364685be25cc400e2a088da2941271",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0006.json": "f93bc18d5acb71875f764b4b2e8fe044761744b140486da10c85581f351e2dec",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0007.json": "a6e93159a93ba76589def821ea85d75867bb43842cc751afdebf913fb56e8507",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0008.json": "6eec0a206022f496a7bb49fa90e6c045a780e37dce9ca42c061386d3dae25170",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0009.json": "b65c8f1b6063ec9a40aafa4d8d7a11e62703f3890fe3aa5cd8c1b176e1c423a0",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0010.json": "8af44b6851ccea406b8f45dc43a5cc2dfe351a12caef859fa355876920b14174",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0011.json": "9a5b5c952a6baf22fade58bc955bcfa8dfd0f154094e4726e13fbe1a6e2167e5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0012.json": "938569fbc0effc6a41e222e820986db85d6aa673767f16f2cc1fb94658fbd561",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0013.json": "192d0bee081c50da0fe4743f2dcc97cf3324a66283adffbd9e6abe3cc047eabd",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0014.json": "9a6a57d199a770e18906020b9631597b337174c7d79bc087943989334f27ea89",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0015.json": "75c8c90f0d1c69de1e007c947383d6f78629672a00efcc5b249b83f9c002a306",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0016.json": "885db7bbc446d36a130cbd0bafc2aed0bc7b2ee6c076ec2cb95b776a24f12003",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0017.json": "4d6447bc7a2eee2f33eff684626c73a4c260698ab186d2d898bca4b6649fed45",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0018.json": "5f87ab4befb4da6fd4d96a7abc7f439beb28b9b4f3c92c81bb889e99f81a2f43",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0019.json": "948e111addd3fa4eb8f9202d5a1f444c93ba390bea7bc865d751beb3b294bbef",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0020.json": "bd49cb5cfb1a4e21a53d5e93c7ebfee6e2a8540eb2c2a0675d4afa7f5aa18fa5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0021.json": "cc48d56d3e56549294d964aeb4f0f3fa9ae4fefa44fc4fe77c409bd79f697209",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0022.json": "59a8f80bec6a187473b619c42801f25331bcf3252c746282dcfcd45817222aed",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0023.json": "9c6f9f642a01b0b1da003b02a15eebe0ae9c36bb80c62dfa2d0c3d8b9ee7fa51",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0024.json": "ec9f5a26232e98c8aee83a8373502ccf0a773e18df1a3b5ee2073eab0eca58ce",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/duet_profile_draft_request_0025.json": "ac68e269cc07bde7f639d22c76fb7ef58100de7a984492fd6059b54e7905ef7e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/run.json": "1b0dca978cfeccfd16efe3a87ce307d7f0f45afb3313480ea4574dd1dea195d5",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/COMMAND.json": "e1226901c9d215895e67b43dd81a53ffc58672de818766b36efd31d7538b41a3",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/SOURCE_MANIFEST.json": "fe9f5d45159061e6782241e1ae1cd6b05c8edab2354a4e633fb7e9ded4d2fccd",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0025.json": "4dd3bfe79d4e468d4dc31d97eabf7520bd83da4f7501ab5f57bc60eb9e8e565f",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0008.json": "df16c3a9e86a6468cfa9f9b0cd966956bee35929a05357cd8d983964b04e5005",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0003.json": "6602e6cd834cad91f9e91be846cbbe18d03e555c4d811112ad78f84a986405b9",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0010.json": "64bda5df42a14b4779d45d7ddad92aa965e2355a264fb803ce79fc65074369f4",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0006.json": "9e7378bbc26b3482a9b2f42e69626af9f15c08b02417808a760fef1596b1b180",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0019.json": "0b2fb2c510b2ea69345a19c8b563fa4cc0ecfdab23deb77f1b04f921ea226bac",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0018.json": "486ba0442c38885987cb65dfd98322f6c22c75e636808abf18760b76ef7a7929",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0009.json": "2184f9d68ba7010747ec487a45da4c2a042c82ef28a7fe2cdcf57d34970664ad",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0002.json": "77501c570d24025a423ff849cc1bf8aa74165f9ddf6e65df7815d2ab6f4b49e1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0017.json": "4527777c6b70094f178a2b1cbc6c93fe5fc559249edf03e56e8608134bce1864",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0021.json": "99ba77577facd01016c7ec43c910cda5a5ff87d3b7f1041a62b33a4aeb6e56ad",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0014.json": "126d8b03ac83f1489f87668813a7a2a1eb9939ce5d0640b544a088e37c031425",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0022.json": "0bc022c0958c510d3dcd927c91c66c93519123fad7180e8a62ed8f7657364257",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0005.json": "4d38e80875ed6d9434bfa875e86457694425c9059e36ec35fecb597042dbbf14",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0024.json": "065df572c028fb68cc3b8cc964d3651a73638c3e786c8062c28c790ab6b854ec",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0007.json": "76f21f91d6eef9dfb01453ac9226a812c44431540d101a4d9a9ffb3c712d0837",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0001.json": "c306501c79c6a732f2a4ae14dbfdb185fb2b9a33ab01104ce5151e40a5db0354",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0000.json": "902cf7e2c056231cf241ed71cee394087010fff12f701f185c2b8059bee15b7d",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0013.json": "6e81d33e8bd663aa6f04443eaddc753e285a58d838108147051a484b789e51c1",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0016.json": "29c58e52cbe751e187db66a20e1b92083b0306afeeed0176217091f380dd57dc",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0023.json": "5b6c40cb00eeabb300646a70b347e07ca47816759fc98fb4cb53a4510997c1e6",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0020.json": "e61baf1e5be4184d58beacf36cce1102d3f30e12f3e6409584e9937e164b3255",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0004.json": "9f443f677b1b4974f495daad051d0649441098dd7d7793556f3c9a14eeecf253",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0012.json": "d1ece5a8686918fa2905e3c1d861a45d708ae3027ca35bd5a786feb2f54dc00e",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0026.json": "3786d7d71c3d4bf101c2daef570303820bbc575cf57991dc27b62506f467b592",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0015.json": "581baaf880db5220971bb6b0c97f4adbb8b5030edc2e462810d17b5c87817e93",
+        "/data/chokwans99/duet-tolist-review-20261016/runs/before2/fanout_audit_request_0011.json": "4661e159eb00e06981063bee319df9350afe0e336328253b3611a77ed3e288c4"
+      },
+      "summary": {
+        "steps": 1835,
+        "all_steps": 1856,
+        "tokens": 4231,
+        "seconds": 53.80960647203028,
+        "tps": 78.62908274936434,
+        "verify_ms": 24.574091408543836,
+        "step_ms": 29.324036224539665,
+        "al": 2.305722070844687,
+        "hit": 0.8239782016348773,
+        "actual_output_tokens": 4272,
+        "emitted_decode_tokens": 4272
+      },
+      "source_audited_steps": 2090
+    }
+  ],
+  "comparisons": [
+    {
+      "before": "before1",
+      "after": "after1",
+      "outputs_equal": true,
+      "matched_steps": 1589,
+      "summary": [
+        {
+          "state": 1,
+          "n": 741,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.1565691363022942,
+              "after": 0.1358752537112011,
+              "delta": -0.020693882591093088,
+              "change_pct": -13.217089319020447,
+              "delta95": [
+                -0.030868991222885972,
+                -0.009194376925356197
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.2536382051282051,
+              "after": 0.25821847638326584,
+              "delta": 0.004580271255060719,
+              "change_pct": 1.805828602495252,
+              "delta95": [
+                -0.01673696550227825,
+                0.027090578601828497
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.3732962280701753,
+              "after": 1.3332889176788123,
+              "delta": -0.04000731039136296,
+              "change_pct": -2.9132323801386417,
+              "delta95": [
+                -0.1397806813240051,
+                0.07238006253491858
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.7427850850202429,
+              "after": 0.7403270917678811,
+              "delta": -0.0024579932523617343,
+              "change_pct": -0.33091580619106775,
+              "delta95": [
+                -0.059592773306548726,
+                0.0608820677799624
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.3316302955465587,
+              "after": 0.3213226464237517,
+              "delta": -0.010307649122807017,
+              "change_pct": -3.1081747540040117,
+              "delta95": [
+                -0.03688799435530198,
+                0.01882950739650419
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.3314308623481781,
+              "after": 0.3233071997300945,
+              "delta": -0.008123662618083616,
+              "change_pct": -2.451088157731507,
+              "delta95": [
+                -0.03807007665501176,
+                0.021914295537615494
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.2363709001349528,
+              "after": 3.15853854925776,
+              "delta": -0.07783235087719298,
+              "change_pct": -2.404926792350881,
+              "delta95": [
+                -0.3297476086174284,
+                0.19489691739099863
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.601371564102564,
+              "after": 1.6053622145748987,
+              "delta": 0.0039906504723346,
+              "change_pct": 0.24920203167033694,
+              "delta95": [
+                -0.0006388402530313027,
+                0.010167375264655434
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.8789127854251015,
+              "after": 4.808008120107963,
+              "delta": -0.07090466531713879,
+              "change_pct": -1.45328823111891,
+              "delta95": [
+                -0.3296272112304802,
+                0.21027252148507375
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 4.300643353576248,
+              "after": 4.310180395411606,
+              "delta": 0.009537041835357307,
+              "change_pct": 0.22175849172487716,
+              "delta95": [
+                -0.25900186789596236,
+                0.23833513753068694
+              ]
+            },
+            "step_ms": {
+              "before": 30.152362974358976,
+              "after": 30.12266147368421,
+              "delta": -0.029701500674764958,
+              "change_pct": -0.09850471984574893,
+              "delta95": [
+                -0.44604467637161993,
+                0.4170767553660007
+              ]
+            }
+          }
+        },
+        {
+          "state": 2,
+          "n": 592,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.15451145945945946,
+              "after": 0.1419806300675676,
+              "delta": -0.012530829391891873,
+              "change_pct": -8.109967659181738,
+              "delta95": [
+                -0.02723070769817927,
+                0.002203648715292163
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.24884724999999996,
+              "after": 0.2731195168918919,
+              "delta": 0.024272266891891936,
+              "change_pct": 9.753881906226392,
+              "delta95": [
+                -0.005345455759684333,
+                0.05400881865892443
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.344806981418919,
+              "after": 1.3915798834459459,
+              "delta": 0.046772902027026886,
+              "change_pct": 3.4780383113178326,
+              "delta95": [
+                -0.09170862304439743,
+                0.1853008514241644
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.730686508445946,
+              "after": 0.7810367685810811,
+              "delta": 0.050350260135135105,
+              "change_pct": 6.890815630662472,
+              "delta95": [
+                -0.035184669042553185,
+                0.1368932997578808
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.3264324577702703,
+              "after": 0.3376933935810811,
+              "delta": 0.01126093581081078,
+              "change_pct": 3.4496985648209577,
+              "delta95": [
+                -0.0231030389832145,
+                0.04750022595892111
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.32658469594594597,
+              "after": 0.34363603547297294,
+              "delta": 0.017051339527026976,
+              "change_pct": 5.2211079510747105,
+              "delta95": [
+                -0.018006689388503083,
+                0.053250130501799275
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.16244177027027,
+              "after": 3.2981817297297296,
+              "delta": 0.1357399594594595,
+              "change_pct": 4.292251662482283,
+              "delta95": [
+                -0.19410920985122473,
+                0.472754512158293
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.6005714560810809,
+              "after": 1.6061885506756757,
+              "delta": 0.005617094594594807,
+              "change_pct": 0.3509430693177551,
+              "delta95": [
+                0.0023053657098213143,
+                0.009260188035278883
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.809401744932432,
+              "after": 4.951109614864865,
+              "delta": 0.14170786993243212,
+              "change_pct": 2.946476036894752,
+              "delta95": [
+                -0.19209591161029846,
+                0.48232254391456325
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 4.447414378378378,
+              "after": 4.289626106418919,
+              "delta": -0.15778827195945855,
+              "change_pct": -3.5478653108323877,
+              "delta95": [
+                -0.46560435855913745,
+                0.14709268417992535
+              ]
+            },
+            "step_ms": {
+              "before": 30.762697376689186,
+              "after": 31.14141535304054,
+              "delta": 0.3787179763513535,
+              "change_pct": 1.23109482797934,
+              "delta95": [
+                -0.12383930796151901,
+                0.8231324685820666
+              ]
+            }
+          }
+        },
+        {
+          "state": 0,
+          "n": 256,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.15396403515625,
+              "after": 0.14243073046875002,
+              "delta": -0.011533304687499996,
+              "change_pct": -7.4909082993281135,
+              "delta95": [
+                -0.0292805231799924,
+                0.009118162584312665
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.25170137109375,
+              "after": 0.28023600390625,
+              "delta": 0.02853463281249996,
+              "change_pct": 11.336701380888314,
+              "delta95": [
+                -0.012172401736888109,
+                0.06938109109813506
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.25384581640625,
+              "after": 1.33128474609375,
+              "delta": 0.07743892968749999,
+              "change_pct": 6.176112618810992,
+              "delta95": [
+                -0.10496543730981821,
+                0.27330874479166667
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.72998641015625,
+              "after": 0.79348453125,
+              "delta": 0.06349812109374997,
+              "change_pct": 8.698534686441416,
+              "delta95": [
+                -0.04791393160947713,
+                0.17912259009009007
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.36310384765625003,
+              "after": 0.41463258984375,
+              "delta": 0.051528742187499976,
+              "change_pct": 14.191185943114037,
+              "delta95": [
+                -0.005730865849717209,
+                0.11285697295008913
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.39797815625,
+              "after": 0.35283899218750003,
+              "delta": -0.04513916406249996,
+              "change_pct": -11.342121006798333,
+              "delta95": [
+                -0.10535783709587797,
+                0.01571528051701566
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.14726476171875,
+              "after": 3.31798351171875,
+              "delta": 0.1707187499999998,
+              "change_pct": 5.424352983470282,
+              "delta95": [
+                -0.29881103274769577,
+                0.66223360528868
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.6014679609375,
+              "after": 1.60714307421875,
+              "delta": 0.005675113281250033,
+              "change_pct": 0.35436945475497694,
+              "delta95": [
+                -0.00013658589785780063,
+                0.011541662164532947
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.785100453125,
+              "after": 4.96370757421875,
+              "delta": 0.17860712109375054,
+              "change_pct": 3.732567849795254,
+              "delta95": [
+                -0.298176305722135,
+                0.6783403087058824
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 2.98535001171875,
+              "after": 2.6612408671875,
+              "delta": -0.32410914453125006,
+              "change_pct": -10.856654772773233,
+              "delta95": [
+                -0.8302249460912698,
+                0.1375543005976095
+              ]
+            },
+            "step_ms": {
+              "before": 24.9320191484375,
+              "after": 24.94987191796875,
+              "delta": 0.017852769531248924,
+              "change_pct": 0.07160579103104858,
+              "delta95": [
+                -0.7210617170249118,
+                0.7556359363120733
+              ]
+            }
+          }
+        },
+        {
+          "state": "all",
+          "n": 1589,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.15538282378854623,
+              "after": 0.139206018250472,
+              "delta": -0.01617680553807424,
+              "change_pct": -10.410935484148853,
+              "delta95": [
+                -0.028361424317838457,
+                -0.0034196147120288596
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.2515412416614223,
+              "after": 0.26731721963499055,
+              "delta": 0.015775977973568278,
+              "change_pct": 6.271726206553008,
+              "delta95": [
+                -0.0095666369471039,
+                0.041353534594417145
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.3434378646947767,
+              "after": 1.3546829918187542,
+              "delta": 0.011245127123977516,
+              "change_pct": 0.8370411032394331,
+              "delta95": [
+                -0.10798024587927406,
+                0.13468357001552794
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.7362156589049718,
+              "after": 0.7640580125865324,
+              "delta": 0.027842353681560628,
+              "change_pct": 3.781820359943522,
+              "delta95": [
+                -0.04310071271167936,
+                0.10127168431211585
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.33476441095028314,
+              "after": 0.34245469666456885,
+              "delta": 0.007690285714285705,
+              "change_pct": 2.297223200176979,
+              "delta95": [
+                -0.023822217444282527,
+                0.04051626602842192
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.34034664380113283,
+              "after": 0.3356387350534928,
+              "delta": -0.004707908747640044,
+              "change_pct": -1.383268744789179,
+              "delta95": [
+                -0.03963127910590621,
+                0.029424244542365592
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.19447208558842,
+              "after": 3.236252,
+              "delta": 0.0417799144115798,
+              "change_pct": 1.3078816559414008,
+              "delta95": [
+                -0.25493107893244876,
+                0.34583752639802623
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.601089005034613,
+              "after": 1.6059569855254876,
+              "delta": 0.004867980490874668,
+              "change_pct": 0.304041841244751,
+              "delta95": [
+                0.0011080782866834758,
+                0.008998750663514646
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.83790177658905,
+              "after": 4.886406575204531,
+              "delta": 0.04850479861548074,
+              "change_pct": 1.0025999049877221,
+              "delta95": [
+                -0.2523785405430915,
+                0.3573951040671051
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 4.1434207929515425,
+              "after": 4.0368659471365635,
+              "delta": -0.10655484581497898,
+              "change_pct": -2.5716636359078393,
+              "delta95": [
+                -0.3949230477516507,
+                0.16265856970062517
+              ]
+            },
+            "step_ms": {
+              "before": 29.5387128464443,
+              "after": 29.668834016362492,
+              "delta": 0.13012116991819056,
+              "change_pct": 0.4405106295410466,
+              "delta95": [
+                -0.3383321057511485,
+                0.5736233333434694
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "before": "before2",
+      "after": "after2",
+      "outputs_equal": true,
+      "matched_steps": 1589,
+      "summary": [
+        {
+          "state": 1,
+          "n": 741,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.1514845492577598,
+              "after": 0.134058314439946,
+              "delta": -0.0174262348178138,
+              "change_pct": -11.503638425963858,
+              "delta95": [
+                -0.022255858512226553,
+                -0.011571661851164193
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.24360640215924426,
+              "after": 0.2570330553306343,
+              "delta": 0.013426653171390052,
+              "change_pct": 5.511617532372215,
+              "delta95": [
+                0.0029097527166357744,
+                0.025614259934106216
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.3279117354925776,
+              "after": 1.3349553117408908,
+              "delta": 0.007043576248313199,
+              "change_pct": 0.5304250320297355,
+              "delta95": [
+                -0.04015634950639106,
+                0.06654062955723303
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.7131745249662618,
+              "after": 0.7439026761133604,
+              "delta": 0.030728151147098592,
+              "change_pct": 4.308643967414882,
+              "delta95": [
+                0.0042835071762597175,
+                0.0633432864235508
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.3214402618083671,
+              "after": 0.3279550053981107,
+              "delta": 0.006514743589743577,
+              "change_pct": 2.026735404299629,
+              "delta95": [
+                -0.004826313640713399,
+                0.019322821515550783
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.3187057314439946,
+              "after": 0.3322860674763833,
+              "delta": 0.013580336032388673,
+              "change_pct": 4.261089366312554,
+              "delta95": [
+                0.00016420424654857896,
+                0.027851960823309683
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.119124724696356,
+              "after": 3.1771123792172746,
+              "delta": 0.057987654520918586,
+              "change_pct": 1.8591002168585558,
+              "delta95": [
+                -0.055947117010645316,
+                0.20000043053610594
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.608423322537112,
+              "after": 1.60780150877193,
+              "delta": -0.000621813765182111,
+              "change_pct": -0.038659832673981764,
+              "delta95": [
+                -0.0020788515640980734,
+                0.0009579040197539106
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.768864110661268,
+              "after": 4.827013241565452,
+              "delta": 0.05814913090418372,
+              "change_pct": 1.2193497142052312,
+              "delta95": [
+                -0.05648356526924802,
+                0.2011759944624689
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 4.369889384615385,
+              "after": 4.254114252361673,
+              "delta": -0.11577513225371128,
+              "change_pct": -2.6493835899212614,
+              "delta95": [
+                -0.2902119781374723,
+                0.052389244430879535
+              ]
+            },
+            "step_ms": {
+              "before": 29.97770030634278,
+              "after": 30.033643264507425,
+              "delta": 0.05594295816464623,
+              "change_pct": 0.18661524264023122,
+              "delta95": [
+                -0.26835574956090386,
+                0.38164223112818585
+              ]
+            }
+          }
+        },
+        {
+          "state": 2,
+          "n": 592,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.15072838513513512,
+              "after": 0.13437326182432432,
+              "delta": -0.016355123310810793,
+              "change_pct": -10.850725492844393,
+              "delta95": [
+                -0.0214437614363724,
+                -0.011879289126063085
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.24553053547297302,
+              "after": 0.25556777364864863,
+              "delta": 0.010037238175675617,
+              "change_pct": 4.0879795893169035,
+              "delta95": [
+                -0.004921666995370947,
+                0.02270163698878909
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.3135612466216215,
+              "after": 1.3391208513513513,
+              "delta": 0.025559604729729735,
+              "change_pct": 1.94582512200836,
+              "delta95": [
+                -0.034297146595091074,
+                0.07987217797105074
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.7159986013513514,
+              "after": 0.738145777027027,
+              "delta": 0.02214717567567559,
+              "change_pct": 3.093187002582942,
+              "delta95": [
+                -0.022869348265960467,
+                0.05951806794902324
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.3251846266891892,
+              "after": 0.32711141891891893,
+              "delta": 0.0019267922297297457,
+              "change_pct": 0.592522546144636,
+              "delta95": [
+                -0.020731713557152216,
+                0.01875197067474919
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.3173680152027027,
+              "after": 0.3277602263513513,
+              "delta": 0.010392211148648633,
+              "change_pct": 3.27449857920028,
+              "delta95": [
+                -0.005813650625713644,
+                0.026028609056581237
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.095999839527027,
+              "after": 3.1682768277027025,
+              "delta": 0.07227698817567552,
+              "change_pct": 2.334528162854088,
+              "delta95": [
+                -0.09268245545139144,
+                0.21767184185380964
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.6071868192567569,
+              "after": 1.6064264746621622,
+              "delta": -0.0007603445945947307,
+              "change_pct": -0.047309036229303825,
+              "delta95": [
+                -0.002650335845331764,
+                0.0008303194912782681
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.748764060810811,
+              "after": 4.820618258445946,
+              "delta": 0.07185419763513501,
+              "change_pct": 1.5131136589436434,
+              "delta95": [
+                -0.09472352807527823,
+                0.21864677788505185
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 4.4935098141891885,
+              "after": 4.351728554054054,
+              "delta": -0.1417812601351347,
+              "change_pct": -3.155245364935688,
+              "delta95": [
+                -0.3429287240346212,
+                0.12433134999973396
+              ]
+            },
+            "step_ms": {
+              "before": 30.746023988175683,
+              "after": 30.647202721283783,
+              "delta": -0.09882126689189974,
+              "change_pct": -0.3214115325282485,
+              "delta95": [
+                -0.35714803573258536,
+                0.16204737114619922
+              ]
+            }
+          }
+        },
+        {
+          "state": 0,
+          "n": 256,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.14956352343749998,
+              "after": 0.12874048437500002,
+              "delta": -0.020823039062499965,
+              "change_pct": -13.92253845316873,
+              "delta95": [
+                -0.02879427534679089,
+                -0.01265018001098901
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.24509209375,
+              "after": 0.2516177734375,
+              "delta": 0.006525679687500036,
+              "change_pct": 2.662541899110127,
+              "delta95": [
+                -0.0041145664397636795,
+                0.016354058872527312
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.24807544140625,
+              "after": 1.20234726171875,
+              "delta": -0.04572817968749998,
+              "change_pct": -3.6638954802264534,
+              "delta95": [
+                -0.1186762312741313,
+                0.028711511365125564
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.7146914570312499,
+              "after": 0.721349625,
+              "delta": 0.006658167968750073,
+              "change_pct": 0.931614321571339,
+              "delta95": [
+                -0.02520306491312003,
+                0.03776811051983474
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.3598752890625,
+              "after": 0.388687,
+              "delta": 0.028811710937500012,
+              "change_pct": 8.006026480049933,
+              "delta95": [
+                0.011295242694817922,
+                0.04833224157855114
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.39130886328125003,
+              "after": 0.3225532578125,
+              "delta": -0.06875560546875004,
+              "change_pct": -17.570674196391124,
+              "delta95": [
+                -0.08844249258423759,
+                -0.04727532125853292
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.119609,
+              "after": 3.0300808125,
+              "delta": -0.08952818750000002,
+              "change_pct": -2.869852840532261,
+              "delta95": [
+                -0.2538479734523339,
+                0.08288512060974798
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.609436640625,
+              "after": 1.60615031640625,
+              "delta": -0.0032863242187499697,
+              "change_pct": -0.20419096569553874,
+              "delta95": [
+                -0.005816775363256608,
+                -0.0007196463838037081
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.76560161328125,
+              "after": 4.673102015625,
+              "delta": -0.09249959765624993,
+              "change_pct": -1.9409846890781401,
+              "delta95": [
+                -0.25924496073606274,
+                0.08235788406896546
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 2.82606483984375,
+              "after": 2.86168934765625,
+              "delta": 0.03562450781250037,
+              "change_pct": 1.2605693723032108,
+              "delta95": [
+                -0.12036072693162869,
+                0.19478231503157203
+              ]
+            },
+            "step_ms": {
+              "before": 24.546236402343748,
+              "after": 24.41533315625,
+              "delta": -0.13090324609374804,
+              "change_pct": -0.5332925339269101,
+              "delta95": [
+                -0.37051721818217126,
+                0.12941462087178268
+              ]
+            }
+          }
+        },
+        {
+          "state": "all",
+          "n": 1589,
+          "independent_uids": 12,
+          "fields": {
+            "fanout_cpu_ms": {
+              "before": 0.15089333983637507,
+              "after": 0.13331890874764002,
+              "delta": -0.01757443108873505,
+              "change_pct": -11.64692299063187,
+              "delta95": [
+                -0.02188782907967148,
+                -0.01258463501498072
+              ]
+            },
+            "state_cpu_ms": {
+              "before": 0.2445626161107615,
+              "after": 0.255614704845815,
+              "delta": 0.011052088735053506,
+              "change_pct": 4.5191243497526346,
+              "delta95": [
+                0.0015002719536817907,
+                0.02194326293895662
+              ]
+            },
+            "phase2_build_ms": {
+              "before": 1.309703062932662,
+              "after": 1.315143064191315,
+              "delta": 0.005440001258653071,
+              "change_pct": 0.4153614214257084,
+              "delta95": [
+                -0.04029940510595337,
+                0.05846627634560846
+              ]
+            },
+            "dispatch_gap_ms": {
+              "before": 0.7144710560100692,
+              "after": 0.7381244096916301,
+              "delta": 0.02365335368156085,
+              "change_pct": 3.3106104834605743,
+              "delta95": [
+                -0.0032154197966053582,
+                0.054356690185405676
+              ]
+            },
+            "prepare_a_ms": {
+              "before": 0.32902744304594084,
+              "after": 0.337425104468219,
+              "delta": 0.008397661422278158,
+              "change_pct": 2.552267781841411,
+              "delta95": [
+                -0.004330136901785033,
+                0.021864183554785373
+              ]
+            },
+            "prepare_b_ms": {
+              "before": 0.32990426746381374,
+              "after": 0.32903188420390184,
+              "delta": -0.0008723832599119019,
+              "change_pct": -0.26443527591154536,
+              "delta95": [
+                -0.013875614721049163,
+                0.013996399765486485
+              ]
+            },
+            "pre_forward_ms": {
+              "before": 3.110587306482064,
+              "after": 3.150132689112649,
+              "delta": 0.039545382630584935,
+              "change_pct": 1.271315630594172,
+              "delta95": [
+                -0.07251034150343291,
+                0.17064429978370826
+              ]
+            },
+            "ps_graph_ms": {
+              "before": 1.6081259024543737,
+              "after": 1.6070232045311517,
+              "delta": -0.0011026979232220402,
+              "change_pct": -0.06857037260198373,
+              "delta95": [
+                -0.0025345915248226767,
+                0.00036577336745215373
+              ]
+            },
+            "ps_total_ms": {
+              "before": 4.760849995594715,
+              "after": 4.799834447451228,
+              "delta": 0.038984451856513225,
+              "change_pct": 0.8188548660971406,
+              "delta95": [
+                -0.07420333717296404,
+                0.1714924852378353
+              ]
+            },
+            "ps_margin_ms": {
+              "before": 4.167223689741976,
+              "after": 4.066151314033984,
+              "delta": -0.1010723757079921,
+              "change_pct": -2.4254127743800202,
+              "delta95": [
+                -0.2626512648706611,
+                0.08262643201662927
+              ]
+            },
+            "step_ms": {
+              "before": 29.388897826935178,
+              "after": 29.35707926872247,
+              "delta": -0.03181855821270929,
+              "change_pct": -0.1082672729004086,
+              "delta95": [
+                -0.2768322318693097,
+                0.23017306716395192
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "combined": [
+    {
+      "state": 1,
+      "n": 1482,
+      "independent_uids": 12,
+      "fields": {
+        "fanout_cpu_ms": {
+          "before": 0.154026842780027,
+          "after": 0.13496678407557355,
+          "delta": -0.01906005870445346,
+          "change_pct": -12.37450457364372,
+          "delta95": [
+            -0.025132907707162318,
+            -0.012498273628472223
+          ]
+        },
+        "state_cpu_ms": {
+          "before": 0.2486223036437247,
+          "after": 0.2576257658569501,
+          "delta": 0.009003462213225372,
+          "change_pct": 3.621341320257132,
+          "delta95": [
+            -0.004339960435538117,
+            0.023467025812871103
+          ]
+        },
+        "phase2_build_ms": {
+          "before": 1.3506039817813764,
+          "after": 1.3341221147098516,
+          "delta": -0.01648186707152477,
+          "change_pct": -1.220333072747648,
+          "delta95": [
+            -0.07735920839969979,
+            0.04795903770342598
+          ]
+        },
+        "dispatch_gap_ms": {
+          "before": 0.7279798049932523,
+          "after": 0.7421148839406209,
+          "delta": 0.01413507894736854,
+          "change_pct": 1.9416855866626115,
+          "delta95": [
+            -0.021584081551779186,
+            0.05316097868158471
+          ]
+        },
+        "prepare_a_ms": {
+          "before": 0.32653527867746285,
+          "after": 0.3246388259109312,
+          "delta": -0.0018964527665316644,
+          "change_pct": -0.5807803598473993,
+          "delta95": [
+            -0.017683264506553952,
+            0.015151377815961792
+          ]
+        },
+        "prepare_b_ms": {
+          "before": 0.32506829689608635,
+          "after": 0.3277966336032389,
+          "delta": 0.0027283367071525566,
+          "change_pct": 0.8393118409897538,
+          "delta95": [
+            -0.015333499781360057,
+            0.021929295310038184
+          ]
+        },
+        "pre_forward_ms": {
+          "before": 3.1777478124156544,
+          "after": 3.167825464237517,
+          "delta": -0.009922348178137419,
+          "change_pct": -0.31224467024633107,
+          "delta95": [
+            -0.1624715705640691,
+            0.15144560945263413
+          ]
+        },
+        "ps_graph_ms": {
+          "before": 1.604897443319838,
+          "after": 1.6065818616734142,
+          "delta": 0.0016844183535762447,
+          "change_pct": 0.10495489045654338,
+          "delta95": [
+            -0.000992999940363774,
+            0.004912465113200544
+          ]
+        },
+        "ps_total_ms": {
+          "before": 4.823888448043185,
+          "after": 4.817510680836707,
+          "delta": -0.006377767206477536,
+          "change_pct": -0.1322121619347305,
+          "delta95": [
+            -0.16225307013973272,
+            0.15847070777278532
+          ]
+        },
+        "ps_margin_ms": {
+          "before": 4.335266369095817,
+          "after": 4.282147323886639,
+          "delta": -0.05311904520917743,
+          "change_pct": -1.2252775420638407,
+          "delta95": [
+            -0.22965913834564614,
+            0.12141240918695421
+          ]
+        },
+        "step_ms": {
+          "before": 30.065031640350874,
+          "after": 30.078152369095818,
+          "delta": 0.013120728744944188,
+          "change_pct": 0.0436411606077769,
+          "delta95": [
+            -0.2275356823449254,
+            0.22405806350417676
+          ]
+        }
+      }
+    },
+    {
+      "state": 2,
+      "n": 1184,
+      "independent_uids": 12,
+      "fields": {
+        "fanout_cpu_ms": {
+          "before": 0.15261992229729726,
+          "after": 0.13817694594594596,
+          "delta": -0.014442976351351305,
+          "change_pct": -9.463362406394749,
+          "delta95": [
+            -0.022240622099098162,
+            -0.006887812288954049
+          ]
+        },
+        "state_cpu_ms": {
+          "before": 0.24718889273648648,
+          "after": 0.2643436452702703,
+          "delta": 0.017154752533783846,
+          "change_pct": 6.939936638686883,
+          "delta95": [
+            0.00011917415775897749,
+            0.033009434901619186
+          ]
+        },
+        "phase2_build_ms": {
+          "before": 1.3291841140202703,
+          "after": 1.3653503673986485,
+          "delta": 0.0361662533783782,
+          "change_pct": 2.720936324538914,
+          "delta95": [
+            -0.03806588438140468,
+            0.10594729264402475
+          ]
+        },
+        "dispatch_gap_ms": {
+          "before": 0.7233425548986486,
+          "after": 0.759591272804054,
+          "delta": 0.0362487179054054,
+          "change_pct": 5.011279601887164,
+          "delta95": [
+            -0.012975777386528832,
+            0.08226264099266846
+          ]
+        },
+        "prepare_a_ms": {
+          "before": 0.3258085422297297,
+          "after": 0.33240240625,
+          "delta": 0.00659386402027029,
+          "change_pct": 2.0238462672414803,
+          "delta95": [
+            -0.014385986037083373,
+            0.02635855476981084
+          ]
+        },
+        "prepare_b_ms": {
+          "before": 0.32197635557432436,
+          "after": 0.33569813091216216,
+          "delta": 0.013721775337837805,
+          "change_pct": 4.261733851034388,
+          "delta95": [
+            -0.006223978153781925,
+            0.03332214915452341
+          ]
+        },
+        "pre_forward_ms": {
+          "before": 3.1292208048986487,
+          "after": 3.233229278716216,
+          "delta": 0.10400847381756728,
+          "change_pct": 3.323781871025111,
+          "delta95": [
+            -0.07840780191853726,
+            0.27678503073670113
+          ]
+        },
+        "ps_graph_ms": {
+          "before": 1.6038791376689188,
+          "after": 1.6063075126689188,
+          "delta": 0.002428375000000038,
+          "change_pct": 0.15140635868169383,
+          "delta95": [
+            0.00041532486261635834,
+            0.0043672944606688606
+          ]
+        },
+        "ps_total_ms": {
+          "before": 4.779082902871622,
+          "after": 4.885863936655406,
+          "delta": 0.10678103378378445,
+          "change_pct": 2.2343415243879283,
+          "delta95": [
+            -0.07758357689541379,
+            0.28132917057675116
+          ]
+        },
+        "ps_margin_ms": {
+          "before": 4.470462096283783,
+          "after": 4.320677330236487,
+          "delta": -0.14978476604729618,
+          "change_pct": -3.3505432508153854,
+          "delta95": [
+            -0.3273065158018764,
+            0.04979730746279753
+          ]
+        },
+        "step_ms": {
+          "before": 30.754360682432434,
+          "after": 30.894309037162166,
+          "delta": 0.13994835472973222,
+          "change_pct": 0.45505206944416177,
+          "delta95": [
+            -0.1036700542258561,
+            0.3572331412257691
+          ]
+        }
+      }
+    },
+    {
+      "state": 0,
+      "n": 512,
+      "independent_uids": 12,
+      "fields": {
+        "fanout_cpu_ms": {
+          "before": 0.151763779296875,
+          "after": 0.13558560742187503,
+          "delta": -0.01617817187499998,
+          "change_pct": -10.660100815855944,
+          "delta95": [
+            -0.028071841801697528,
+            -0.0027506170752908316
+          ]
+        },
+        "state_cpu_ms": {
+          "before": 0.248396732421875,
+          "after": 0.265926888671875,
+          "delta": 0.017530156249999984,
+          "change_pct": 7.05732159963639,
+          "delta95": [
+            -0.005021513585295841,
+            0.04093490674253082
+          ]
+        },
+        "phase2_build_ms": {
+          "before": 1.25096062890625,
+          "after": 1.26681600390625,
+          "delta": 0.015855374999999894,
+          "change_pct": 1.2674559561369092,
+          "delta95": [
+            -0.10077797906401242,
+            0.1358152048340642
+          ]
+        },
+        "dispatch_gap_ms": {
+          "before": 0.72233893359375,
+          "after": 0.757417078125,
+          "delta": 0.03507814453125002,
+          "change_pct": 4.856189096264085,
+          "delta95": [
+            -0.03023175763272742,
+            0.1019322979285714
+          ]
+        },
+        "prepare_a_ms": {
+          "before": 0.361489568359375,
+          "after": 0.401659794921875,
+          "delta": 0.04017022656249997,
+          "change_pct": 11.112416533847181,
+          "delta95": [
+            0.006309406788338011,
+            0.07625424278688524
+          ]
+        },
+        "prepare_b_ms": {
+          "before": 0.394643509765625,
+          "after": 0.337696125,
+          "delta": -0.056947384765625,
+          "change_pct": -14.43008268384941,
+          "delta95": [
+            -0.09439553730916031,
+            -0.019069024125174402
+          ]
+        },
+        "pre_forward_ms": {
+          "before": 3.1334368808593753,
+          "after": 3.174032162109375,
+          "delta": 0.04059528124999989,
+          "change_pct": 1.2955512682568004,
+          "delta95": [
+            -0.2490640638913451,
+            0.33582063241829974
+          ]
+        },
+        "ps_graph_ms": {
+          "before": 1.60545230078125,
+          "after": 1.6066466953125,
+          "delta": 0.0011943945312500315,
+          "change_pct": 0.07439613937261225,
+          "delta95": [
+            -0.0027399913287197157,
+            0.00495610350489725
+          ]
+        },
+        "ps_total_ms": {
+          "before": 4.775351033203124,
+          "after": 4.818404794921875,
+          "delta": 0.04305376171875075,
+          "change_pct": 0.9015831803651064,
+          "delta95": [
+            -0.251173022696813,
+            0.34355138683279746
+          ]
+        },
+        "ps_margin_ms": {
+          "before": 2.90570742578125,
+          "after": 2.7614651074218752,
+          "delta": -0.14424231835937462,
+          "change_pct": -4.96410330508732,
+          "delta95": [
+            -0.4566146487304081,
+            0.13284531804401103
+          ]
+        },
+        "step_ms": {
+          "before": 24.739127775390624,
+          "after": 24.682602537109375,
+          "delta": -0.05652523828124956,
+          "change_pct": -0.22848517051388129,
+          "delta95": [
+            -0.5021757002542272,
+            0.33651987055546984
+          ]
+        }
+      }
+    },
+    {
+      "state": "all",
+      "n": 3178,
+      "independent_uids": 12,
+      "fields": {
+        "fanout_cpu_ms": {
+          "before": 0.15313808181246066,
+          "after": 0.136262463499056,
+          "delta": -0.016875618313404672,
+          "change_pct": -11.019870507501373,
+          "delta95": [
+            -0.024105306499210357,
+            -0.009416394853710815
+          ]
+        },
+        "state_cpu_ms": {
+          "before": 0.24805192888609187,
+          "after": 0.2614659622404028,
+          "delta": 0.013414033354310934,
+          "change_pct": 5.407752084230233,
+          "delta95": [
+            -0.0016698766805638358,
+            0.028892988383678302
+          ]
+        },
+        "phase2_build_ms": {
+          "before": 1.3265704638137192,
+          "after": 1.3349130280050345,
+          "delta": 0.008342564191315294,
+          "change_pct": 0.6288821000379752,
+          "delta95": [
+            -0.06203939842247871,
+            0.07993770655064487
+          ]
+        },
+        "dispatch_gap_ms": {
+          "before": 0.7253433574575204,
+          "after": 0.7510912111390812,
+          "delta": 0.02574785368156074,
+          "change_pct": 3.5497469463031006,
+          "delta95": [
+            -0.016768420514556535,
+            0.06917383691107751
+          ]
+        },
+        "prepare_a_ms": {
+          "before": 0.331895926998112,
+          "after": 0.33993990056639395,
+          "delta": 0.008043973568281959,
+          "change_pct": 2.4236433514074784,
+          "delta95": [
+            -0.010656930474171504,
+            0.027744887535381724
+          ]
+        },
+        "prepare_b_ms": {
+          "before": 0.33512545563247326,
+          "after": 0.33233530962869734,
+          "delta": -0.0027901460037759174,
+          "change_pct": -0.8325676121827774,
+          "delta95": [
+            -0.023981925535591222,
+            0.018129711834679103
+          ]
+        },
+        "pre_forward_ms": {
+          "before": 3.1525296960352427,
+          "after": 3.193192344556325,
+          "delta": 0.04066264852108237,
+          "change_pct": 1.2898418870477713,
+          "delta95": [
+            -0.13514064464162356,
+            0.2184433960955435
+          ]
+        },
+        "ps_graph_ms": {
+          "before": 1.6046074537444932,
+          "after": 1.6064900950283196,
+          "delta": 0.001882641283826425,
+          "change_pct": 0.1173272179082252,
+          "delta95": [
+            -0.00043132185307181227,
+            0.004237711953206881
+          ]
+        },
+        "ps_total_ms": {
+          "before": 4.799375886091882,
+          "after": 4.8431205113278795,
+          "delta": 0.043744625235997425,
+          "change_pct": 0.9114648711463724,
+          "delta95": [
+            -0.1344556402563307,
+            0.22383918660433916
+          ]
+        },
+        "ps_margin_ms": {
+          "before": 4.155322241346759,
+          "after": 4.051508630585274,
+          "delta": -0.10381361076148554,
+          "change_pct": -2.498328763254687,
+          "delta95": [
+            -0.2875481875697333,
+            0.08052315435347294
+          ]
+        },
+        "step_ms": {
+          "before": 29.46380533668974,
+          "after": 29.51295664254248,
+          "delta": 0.04915130585273886,
+          "change_pct": 0.16681927297264032,
+          "delta95": [
+            -0.20174204683052338,
+            0.26450921372274816
+          ]
+        }
+      }
+    }
+  ]
+}

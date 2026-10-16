@@ -1,0 +1,15 @@
+{
+  "outputs_equal": true,
+  "requests": 2,
+  "warm_equal": true,
+  "eligibility": {
+    "skipped": {
+      "warmup": 17,
+      "initial10": 20,
+      "preparation": 4,
+      "terminal": 2
+    },
+    "included": 24
+  },
+  "note": "Earlier probe imported serving sampler before harness seed whereas control imported it after. Sampler has an import-time seed. Imports now have identical order before installing the probe. Pilot arms used different free GPU pairs, so only correctness, not latency comparison."
+}

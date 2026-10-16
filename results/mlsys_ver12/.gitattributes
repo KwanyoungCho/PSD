@@ -1,0 +1,4 @@
+# Historical CSV evidence uses csv.writer's CRLF; retain its recorded hashes.
+*.csv whitespace=cr-at-eol
+# Serialized diffs need their blank context lines to retain a leading space.
+*.patch -whitespace

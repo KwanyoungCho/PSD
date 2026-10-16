@@ -1,0 +1,115 @@
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 89d2b64..5979667 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -4667,21 +4667,23 @@ class DraftRunner(ModelRunner):
+         W = layout.MQ_LEN
+         K2 = cfg.duet_phase2_k
+         V = self.hf_config.vocab_size
+-        # _update_phase2_layout_inplace already paid the single fan-out
+-        # readback.  Reuse that host list instead of synchronizing again.
++        # The captured B1 path only needs a root count and device masks.
++        # Materialize host positions only for reference/eager backends.
+         _fol = layout.fan_out_list
+         fo = _fol[0] if _fol and isinstance(_fol[0], list) else _fol
+-        seed_positions = [p for p, count in enumerate(fo)
+-                          for _ in range(count)]
++        seed_positions = ([p for p, count in enumerate(fo)
++                           for _ in range(count)] if fo is not None else None)
+         toks = proxy_forked[0]
+         _use_arena = os.environ.get("SSD_TREE_ARENA", "1") == "1"
+         # T2.1: selector가 관통시킨 seed별 P_iv (pos-그룹 순서 = seeds 순서)
+         seed_piv = tree_args.get("proxy_piv")
+         # 23번 단계1: fan 합은 layout 폭(pad 흡수)이지만 실제 seed는
+         # piv 폭 — pad 행은 root로 만들지 않는다 (빈 키는 #14 무효화).
+-        if seed_piv is not None and seed_piv.shape[1] < len(seed_positions):
++        if seed_positions is not None and seed_piv is not None and seed_piv.shape[1] < len(seed_positions):
+             seed_positions = seed_positions[:seed_piv.shape[1]]
+-        R = len(seed_positions)
++        R = (len(seed_positions) if seed_positions is not None else
++             min(layout.MQ_LEN, seed_piv.shape[1] if seed_piv is not None
++                 else proxy_forked.shape[1]))
+         toks = toks[:R]
+         root_piv = (seed_piv[0, :R].float() if seed_piv is not None
+                     else torch.full((R,), 1e-6, device=self.device))
+@@ -4711,7 +4713,9 @@ class DraftRunner(ModelRunner):
+                                    torch.zeros_like(root_piv))
+ 
+         if _use_arena:
+-            seeds = [(p, None) for p in seed_positions]
++            # Executor consumes only len(seeds); real positions remain on GPU.
++            seeds = ([(p, None) for p in seed_positions]
++                     if seed_positions is not None else [None] * R)
+         else:
+             seed_tokens = toks.cpu().tolist()
+             seeds = list(zip(seed_positions, seed_tokens))
+@@ -4726,10 +4730,14 @@ class DraftRunner(ModelRunner):
+         else:
+             # 이슈 #7 수정: 글루 폭 = 위치축 길이 (vk+1) — K2+1로 자르면
+             # vk=K1 step에서 미래 토큰 누출/조기 절단 (stub은 vk=K2라 통과)
+-            _n_pos = len(fo)
+-            glue_rows = _np.zeros((R, _n_pos), dtype=_np.uint8)
+-            for r, (p, _t) in enumerate(seeds):
+-                glue_rows[r, :p + 1] = 1
++            _n_pos = layout.position_count
++            if seed_positions is None:
++                glue_rows = (torch.arange(_n_pos, device=self.device)[None, :]
++                             <= layout.fan_idx_hit[:R, None]).to(torch.uint8)
++            else:
++                glue_rows = _np.zeros((R, _n_pos), dtype=_np.uint8)
++                for r, (p, _t) in enumerate(seeds):
++                    glue_rows[r, :p + 1] = 1
+             K_glue_used = _n_pos - 1
+         ctx_len = tree_args.get("_p2_ctx_len")
+         if ctx_len is None:  # direct diagnostic callers only
+@@ -4849,6 +4857,16 @@ class DraftRunner(ModelRunner):
+             if _r is not None:
+                 _CH.cache.pop("_tree_mask_override", None)
+                 return _r
++        if seed_positions is None:
++            # A supported fallback must receive the exact legacy metadata.
++            layout.fan_out_list = layout.fan_out_t.tolist()
++            layout.fan_out_list_miss = layout.fan_out_list
++            fo = layout.fan_out_list[0]
++            seed_positions = [p for p, count in enumerate(fo)
++                              for _ in range(count)][:R]
++            seeds = [(p, None) for p in seed_positions]
++            B, K, _, N = tree_args["metadata_ints"]
++            tree_args["metadata_ints"] = (B, K, fo[0], N)
+         # Both the GPU arena and the CPU reference path end in the same view
+         # conversion stage.  Start its measurement before the branch so the
+         # diagnostic/reference path remains valid when SSD_TREE_ARENA=0.
+@@ -5092,7 +5110,16 @@ class DraftRunner(ModelRunner):
+         # np.repeat(_tril, _fol)). M3: list of per-seq lists [B][K_plus_1]
+         # via ONE .tolist() (the same single allowed sync as pre-M3, now
+         # B×(≤9) elements).
+-        layout.fan_out_list = fan_out_tensor.tolist()
++        device_only = (
++            B == 1 and getattr(self.config, "duet_p2_tree_policy", "off") == "on"
++            and not getattr(self.config, "use_eagle", False)
++            and (getattr(self.config, "greedy_only", False)
++                 or getattr(self.config, "stochastic_only", False))
++            and os.environ.get("SSD_TREE_EXEC", "0") == "1"
++            and os.environ.get("SSD_TREE_ARENA", "1") == "1"
++            and os.environ.get("SSD_TREE_STAGE1", "0") != "1"
++            and not self._lab_active())
++        layout.fan_out_list = None if device_only else fan_out_tensor.tolist()
+         layout.fan_out_list_miss = layout.fan_out_list
+         return layout
+ 
+@@ -5258,9 +5285,12 @@ class DraftRunner(ModelRunner):
+         # metadata F: first-position fan_out as an int. M3: split_k2's
+         # fan_out_list is nested per-seq ([B][P]) — take seq 0's first entry
+         # (same value as the pre-M3 flat list at B=1).
+-        _f0 = layout.fan_out_list[0]
+-        if isinstance(_f0, list):
+-            _f0 = _f0[0]
++        if layout.fan_out_list is None:
++            _f0 = 0  # Unused by the fixed tree executor; restored for fallback.
++        else:
++            _f0 = layout.fan_out_list[0]
++            if isinstance(_f0, list):
++                _f0 = _f0[0]
+         return {
+             "metadata_ints": (B, K, _f0, N),
+             "input_ids": forked_tokens.view(-1),

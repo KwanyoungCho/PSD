@@ -1,0 +1,32 @@
+E
+======================================================================
+ERROR: test_device_fanout_review (unittest.loader._FailedTest.test_device_fanout_review)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_device_fanout_review
+Traceback (most recent call last):
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/loader.py", line 396, in _find_test_path
+    module = self._get_module_from_name(name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/anaconda3/lib/python3.12/unittest/loader.py", line 339, in _get_module_from_name
+    __import__(name)
+  File "/data/chokwans99/duet-tolist-review-20261016/after/ssd/tests/test_device_fanout_review.py", line 8, in <module>
+    from ssd.engine.draft_runner import DraftRunner
+  File "/data/chokwans99/duet-tolist-review-20261016/after/ssd/ssd/__init__.py", line 1, in <module>
+    from ssd.llm import LLM
+  File "/data/chokwans99/duet-tolist-review-20261016/after/ssd/ssd/llm.py", line 1, in <module>
+    from ssd.engine.llm_engine import LLMEngine
+  File "/data/chokwans99/duet-tolist-review-20261016/after/ssd/ssd/engine/llm_engine.py", line 2, in <module>
+    import ssd.paths  # noqa: F401 — sets TORCH_CUDA_ARCH_LIST before flashinfer import
+    ^^^^^^^^^^^^^^^^
+  File "/data/chokwans99/duet-tolist-review-20261016/after/ssd/ssd/paths.py", line 19, in <module>
+    HF_CACHE_DIR = _required_env(
+                   ^^^^^^^^^^^^^^
+  File "/data/chokwans99/duet-tolist-review-20261016/after/ssd/ssd/paths.py", line 13, in _required_env
+    raise RuntimeError(f"Missing required env var {var_name}. {note}")
+RuntimeError: Missing required env var SSD_HF_CACHE. Set it to your HuggingFace cache hub directory (for example: /path/to/huggingface/hub).
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)

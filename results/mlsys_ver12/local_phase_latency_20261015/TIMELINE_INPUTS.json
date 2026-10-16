@@ -1,0 +1,30 @@
+{
+  "schema": "duet-timeline-inputs-v1",
+  "skip_initial_steps": 10,
+  "datasets": [
+    {
+      "model_id": "llama2_7b_68m",
+      "model_name": "LayerSkip Llama2-7B + llama-68m",
+      "setting": "Exit 21; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40",
+      "measurement": "Fresh local orion RTX4090; B1 BF16 T0.7; 12 fixed turns x 2; first10/terminal/cap excluded; GPU forward markers enabled",
+      "runs": [
+        {
+          "outcomes": "/data/chokwans99/duet-local-phase-20261015/7b_base/run.json",
+          "profile_dir": "/data/chokwans99/duet-local-phase-20261015/7b_base"
+        }
+      ]
+    },
+    {
+      "model_id": "llama2_13b_68m",
+      "model_name": "LayerSkip Llama2-13B + llama-68m",
+      "setting": "Exit 26; K1/K2 3/3; DS roots/pos 3, PS roots 9; W1/W2 9/9; C3; M40",
+      "measurement": "Fresh local orion RTX4090; B1 BF16 T0.7; 12 fixed turns x 2; first10/terminal/cap excluded; GPU forward markers enabled",
+      "runs": [
+        {
+          "outcomes": "/data/chokwans99/duet-local-phase-20261015/13b_base/run.json",
+          "profile_dir": "/data/chokwans99/duet-local-phase-20261015/13b_base"
+        }
+      ]
+    }
+  ]
+}
