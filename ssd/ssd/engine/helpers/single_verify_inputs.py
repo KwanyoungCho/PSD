@@ -4,7 +4,8 @@ import triton
 import triton.language as tl
 
 
-@triton.jit
+@triton.jit(do_not_specialize=('prefix','context_length'),
+            do_not_specialize_on_alignment=('prefix','context_length'))
 def _geometry(pages,positions,slots,length,cu, prefix,context_length,
               rows:tl.constexpr, block_size:tl.constexpr, BLOCK:tl.constexpr):
     i=tl.arange(0,BLOCK)
