@@ -231,6 +231,7 @@ class Verifier(VerifierBase):
         _prof = os.environ.get("SSD_PROFILE", "0") == "1"
         batch_size = len(seqs)
         config = self.target_model_runner.config
+        _host_response = getattr(speculate_result, 'host_response', None)
 
         # Phase B: announce step_id + proc=target_rank0 + status for ALL spans
         # inside verify (graph_pre/post, exit_logits, proxy_compute_send,
@@ -262,7 +263,8 @@ class Verifier(VerifierBase):
             # REPLACES the former torch.unique() GPU→CPU sync (not an extra
             # one). For non-hybrid path defaults to self.lookahead = K_long.
             if speculate_result.valid_k is not None and config.duet_phase1_k is not None:
-                _step_lookahead = int(speculate_result.valid_k.max().item())
+                _step_lookahead = (max(_host_response.valid_k) if _host_response is not None
+                                   else int(speculate_result.valid_k.max().item()))
             else:
                 _step_lookahead = self.lookahead
             # ===== TRACE point 2: speculator → verifier boundary =====
@@ -295,13 +297,15 @@ class Verifier(VerifierBase):
                     and getattr(speculate_result, "tree_ints", None)
                     is not None):
                 _ti_row = speculate_result.tree_ints[0]
-                if int(_ti_row[0]) > 0:
+                _host_tree = (_host_response.tree_ints[0] if _host_response is not None
+                              and _host_response.tree_ints is not None else None)
+                if (_host_tree[0] if _host_tree is not None else int(_ti_row[0])) > 0:
                     from ssd.engine.helpers.cudagraph_helpers import (
                         duet_record as _mr_tree_prep,
                         duet_close as _mc_tree_prep)
                     _ev_wire = _mr_tree_prep(
                         "tree_wire_parse_validate")
-                    _tree_meta_arg = _ti_row.tolist()
+                    _tree_meta_arg = list(_host_tree) if _host_tree is not None else _ti_row.tolist()
                     # Validate on rank 0 before indexing parent_q_ref or
                     # sending the metadata through SHM to target TP ranks.
                     # This readback already existed as .tolist().
@@ -314,8 +318,9 @@ class Verifier(VerifierBase):
                         _ti_checked, _nv_t, config.hf_config.vocab_size,
                         sibling_capacity=config.duet_tree_c_tensor)
                     _tree_wire_gpu_source = _ti_row
-                    _phase_t = int(speculate_result.phase_source[0]) \
-                        if speculate_result.phase_source is not None else 0
+                    _phase_t = (_host_response.phase_source[0] if _host_response is not None
+                                else int(speculate_result.phase_source[0])
+                                if speculate_result.phase_source is not None else 0)
                     _phase_cap = (int(config.duet_p1_tree_verify_nodes)
                                   if _phase_t == 1 else
                                   int(config.duet_p2_tree_verify_nodes))
@@ -562,17 +567,20 @@ class Verifier(VerifierBase):
 
         # For async mode, also track accepted suffix lengths only for cache hits
         if speculate_result.cache_hits is not None:
-            _ch_cpu = speculate_result.cache_hits.cpu()
+            _ch_cpu = (torch.tensor(_host_response.cache_hits,dtype=torch.int64)
+                       if _host_response is not None else speculate_result.cache_hits.cpu())
             self.metrics["cache_hits"].append(_ch_cpu.float().mean().item())
             # DUET-only: split cache hits by which phase populated them.
             # Non-DUET paths send all-zero phase_source and the rates stay 0.
             if speculate_result.phase_source is not None:
-                _ps_cpu = speculate_result.phase_source.cpu()
+                _ps_cpu = (torch.tensor(_host_response.phase_source,dtype=torch.int64)
+                           if _host_response is not None else speculate_result.phase_source.cpu())
                 self.metrics["phase1_hits"].append((_ps_cpu == 1).float().mean().item())
                 self.metrics["phase2_hits"].append((_ps_cpu == 2).float().mean().item())
             else:
                 _ps_cpu = None
-            _vk_cpu = (speculate_result.valid_k.cpu()
+            _vk_cpu = ((torch.tensor(_host_response.valid_k,dtype=torch.int64)
+                        if _host_response is not None else speculate_result.valid_k.cpu())
                        if speculate_result.valid_k is not None else None)
             for i, suffix_len in enumerate([len(s) for s in new_suffixes]):
                 _src = int(_ps_cpu[i].item()) if _ps_cpu is not None else 0

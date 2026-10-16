@@ -29,6 +29,9 @@ class SpeculateResult:
     # to join target and draft duet_profile rows by request, not by event
     # index. None on synchronous / non-async paths.
     step_id: int | None = None
+    # One immutable CPU readback of the fused B1 response. Legacy/sync and
+    # batched callers may omit it and retain the established tensor path.
+    host_response: object | None = None
 
 
 @dataclass

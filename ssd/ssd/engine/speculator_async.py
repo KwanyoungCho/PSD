@@ -10,7 +10,7 @@ from ssd.utils.misc import decode_tokens
 from ssd.utils.async_helpers.nccl_pack import send_int64
 
 
-def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K):
+def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K, host_response=None):
     """Extend seq token state for the target verify forward (speculate step).
 
     M6 fix (docs/duet/13): every seq's token_ids is extended by the BATCH
@@ -34,10 +34,12 @@ def extend_seqs_for_verify(seqs, speculations_tokens, valid_k, K):
 
     Returns vk_max (None when valid_k is None → non-DUET, extends by K).
     """
-    vk_list = valid_k.tolist() if valid_k is not None else None
+    vk_list = (list(host_response.valid_k) if host_response is not None
+               else valid_k.tolist() if valid_k is not None else None)
     vk_max = max(vk_list) if vk_list else None
     ext_w = vk_max if vk_max is not None else K
-    spec_ext = speculations_tokens[:, :ext_w].tolist()
+    spec_ext = ([list(row[:ext_w]) for row in host_response.tokens]
+                if host_response is not None else speculations_tokens[:, :ext_w].tolist())
     for i, seq in enumerate(seqs):
         vk_i = vk_list[i] if vk_list is not None else K
         seq.verify_valid_k = vk_i
@@ -213,10 +215,12 @@ class SpeculatorAsync(SpeculatorBase):
         # vk_i, sliding the target verify window pos0 = num_tokens-(vk_max+1)
         # back by (vk_max - vk_i) tokens (the B>1 short-row collapse).
         _vk_max = extend_seqs_for_verify(
-            seqs, speculations_tokens, valid_k, self.K)
+            seqs, speculations_tokens, valid_k, self.K,
+            host_response=getattr(self, '_response_host', None))
         if _profile_duet and cache_hits is not None:
-            _hit_statuses = cache_hits.tolist()
-            _phase_statuses = (phase_source.tolist()
+            _host = getattr(self, '_response_host', None)
+            _hit_statuses = list(_host.cache_hits) if _host is not None else cache_hits.tolist()
+            _phase_statuses = (list(_host.phase_source) if _host is not None else phase_source.tolist()
                                if phase_source is not None else [0] * B)
 
         # Slice speculations to the batch's vk_max width before returning
@@ -264,6 +268,7 @@ class SpeculatorAsync(SpeculatorBase):
             parent_q_logits=self._tree_parent_q,
             profile_cache_status=profile_cache_status,
             step_id=self._request_step_id,
+            host_response=getattr(self, '_response_host', None),
         )
 
     def _speculation_request(self, seqs: list[Sequence], eagle: bool):
@@ -350,6 +355,14 @@ class SpeculatorAsync(SpeculatorBase):
             "target_recv_fused", parent="target_recv_response_wait")
         dist.recv(self._fused_response, src=self.draft_runner_rank, group=self.async_pg)
         _mc("target_recv_fused", _mev_recv_fused)
+        # B1: metadata and token ids are needed on the CPU by several
+        # consumers. Read the small existing packet once; never read q here.
+        self._response_host = None
+        if B == 1:
+            from ssd.engine.helpers.response_snapshot import parse_host_response
+            self._response_host = parse_host_response(
+                self._fused_response.tolist(), B, self.response_width,
+                self._tree_wire_extra)
         cache_hits = self._fused_response[:B]
         phase_source = self._fused_response[B:2 * B]
         valid_k = self._fused_response[2 * B:3 * B]
@@ -363,7 +376,8 @@ class SpeculatorAsync(SpeculatorBase):
         if self.batched_tree_enabled:
             # One node-aligned q payload handles mixed chain/tree rows. Its
             # width comes from the preceding metadata on both peers.
-            width = int(valid_k.max())
+            width = (max(self._response_host.valid_k) if self._response_host is not None
+                     else int(valid_k.max()))
             self._logits_q = torch.empty(B,width,self.vocab_size,
                                          dtype=self.draft_dtype,device=self.device)
             dist.recv(self._logits_q,src=self.draft_runner_rank,group=self.async_pg)
@@ -380,9 +394,9 @@ class SpeculatorAsync(SpeculatorBase):
         _mev_meta = _mr(
             "target_response_meta_read", parent="target_recv_response_wait")
         if self._tree_ints_step is not None and B == 1:
-            _tree_valid = int(self._tree_ints_step[0, 0].item())
+            _tree_valid = self._response_host.tree_ints[0][0]
             if _tree_valid > 0:
-                _tree_phase = int(phase_source[0].item())
+                _tree_phase = self._response_host.phase_source[0]
         _mc("target_response_meta_read", _mev_meta)
         if _tree_valid > 0:
             from ssd.engine.helpers.p2_tree import tree_response_logit_rows
