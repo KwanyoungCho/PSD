@@ -937,7 +937,7 @@ class DraftRunner(ModelRunner):
         _mc_rerank(_served_label, _ev_served)
         return out, 0, packed, packed_cpu, parsed, original_valid
 
-    def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None):
+    def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None, before_jit=None):
         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
         # Draft model now returns full target vocab size logits (after d2t expansion)
         V = self.hf_config.vocab_size
@@ -1069,6 +1069,8 @@ class DraftRunner(ModelRunner):
             # only evaluated on the JIT path, exactly as before).
             _any_hit = bool(cache_hits.any())
             if self.config.jit_speculate and not (_any_hit and bool(cache_hits.all())):
+                if before_jit is not None:
+                    before_jit()
                 # print(f'[hit_cache_and_respond] found a cache miss, running jit speculate', flush=True)
                 if self.config.verbose:
                     print(f"[hit_cache_and_respond] Running JIT speculate for cache misses", flush=True)
@@ -1249,6 +1251,8 @@ class DraftRunner(ModelRunner):
                         # 이슈 #35: staging 소비 가드용 seq 정체 기록
                         self._tree_served_seq = int(request_keys[0, 0])
         elif self.config.jit_speculate:
+            if before_jit is not None:
+                before_jit()
             # Cache is empty (first iteration), must JIT all
             if self.config.verbose:
                 print(f"[hit_cache_and_respond] Cache empty, running JIT speculate for all", flush=True)
@@ -1335,6 +1339,63 @@ class DraftRunner(ModelRunner):
             phase_source, valid_k, _vk_scalar, _profile_cache_status,
         )
 
+    def _restore_previous_tree_kv(self, state, cache_keys, num_tokens,
+                                  draft_block_tables):
+        """Restore the prior accepted path before any new draft forward.
+
+        A cache hit consumes cached tokens/logits, so this work may follow
+        the response send. A miss must call it before its JIT forward.
+        ``state`` owns the previous snapshot even when hit serving installs
+        the next one. Sequence identity and EOS/cap truncation guards remain.
+        """
+        (_served, _staged, served_numtok, served_seq) = state
+        if _served is not None:
+            # Profiling-only marker. This work is part of draft request
+            # service (and therefore target_spec_wait), not target verify.
+            from ssd.engine.helpers.cudagraph_helpers import (
+                duet_record as _mr_kvr, duet_close as _mc_kvr)
+            _ev_kvr = _mr_kvr("tree_kv_restore")
+            _a_eff = int(num_tokens[0]) - served_numtok - 1
+            _T = int(cache_keys[0, 1])
+            # 이슈 #35: 서빙 시점 seq와 다른 seq의 요청이면 (종료 후 새
+            # seq 진입 등) staged KV는 폐기 — a_eff/k_idx가 새 seq
+            # 좌표로 우연히 유효해 보여도 KV 오염이므로 정체 대조 필수.
+            if int(cache_keys[0, 0]) != served_seq:
+                _staged = None
+            if _a_eff > 0 and _T > 0 and _staged is not None:
+                from ssd.engine.helpers.p2_tree import (
+                    parse_tree_ints, tree_parent_path,
+                    validate_tree_ints)
+                _nv_s = self.config.duet_tree_wire_nodes
+                _served_tree = parse_tree_ints(_served, _nv_s)
+                validate_tree_ints(
+                    _served_tree, _nv_s, self.hf_config.vocab_size)
+                _path = tree_parent_path(_served_tree, _T)
+                _path = _path[:_a_eff]
+                # 이슈 #21: src = staging(글루 시점 gather — 물리블록
+                # 해제와 무관), dst = 현재 dbt의 canonical 슬롯.
+                # staging 행 j+1 = 뷰 노드 j ([0]=rec).
+                _p0 = served_numtok - 1
+                _bs = self.block_size
+                _max_pos = _p0 + 1 + len(_path) + 1
+                _dbt0 = draft_block_tables[0, :(_max_pos // _bs) + 1].cpu()
+                _src_rows, _dst = [], []
+                for _k, _jj in enumerate(_path):
+                    _dp = _p0 + 1 + _k
+                    _src_rows.append(1 + _jj)
+                    _dst.append(int(_dbt0[_dp // _bs]) * _bs + _dp % _bs)
+                if _src_rows:
+                    kc = self.kv_cache
+                    _flat = kc.view(kc.shape[0], kc.shape[1], -1,
+                                    kc.shape[4], kc.shape[5])
+                    _sr = torch.tensor(_src_rows, dtype=torch.int64,
+                                       device=kc.device)
+                    _dt = torch.tensor(_dst, dtype=torch.int64,
+                                       device=kc.device)
+                    _flat[:, :, _dt] = _staged[:, :, _sr]
+            _mc_kvr("tree_kv_restore", _ev_kvr)
+
+
     def _service_spec_request(self):
         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
         # Phase B: meta wire is [B, K, F, step_id]. step_id is the per-target
@@ -1380,61 +1441,22 @@ class DraftRunner(ModelRunner):
         assert off == fused_total
         temperatures = temps_as_int64.to(torch.int32).view(torch.float32)
 
-        # === T3.4-b6-2 (D14): 직전 step이 트리 서빙이었으면 수락 경로
-        # KV를 뷰-순서 셀 → canonical 셀로 복사. rope는 트리 rope
-        # (pos0+1+depth)가 이미 canonical 위치와 같아 셀 이동만으로
-        # 재실체화 완성. k_idx = 종단 노드 id (b6-1), a_eff는
-        # num_tokens 델타 (EOS/max-token 절단을 자동 반영 — 경로
-        # prefix == 수락 prefix). one-shot 소거.
-        _served = getattr(self, "_tree_served_ints", None)
-        if _served is not None:
-            # Profiling-only marker. This work is part of draft request
-            # service (and therefore target_spec_wait), not target verify.
-            from ssd.engine.helpers.cudagraph_helpers import (
-                duet_record as _mr_kvr, duet_close as _mc_kvr)
-            _ev_kvr = _mr_kvr("tree_kv_restore")
+        # Snapshot the previous response state before hit serving replaces
+        # it. Cache lookup/rerank/gather do not consume canonical prefix KV.
+        # Restore before JIT on a miss; otherwise send the cached response
+        # first and restore before glue/DS/PS performs any new draft forward.
+        _restore_previous = None
+        if getattr(self, "_tree_served_ints", None) is not None:
+            _pending_restore = [(self._tree_served_ints,
+                getattr(self, "_tree_staged_kv", None),
+                self._tree_served_numtok,
+                getattr(self, "_tree_served_seq", -1))]
             self._tree_served_ints = None
-            _staged = getattr(self, "_tree_staged_kv", None)
             self._tree_staged_kv = None
-            _a_eff = int(num_tokens[0]) - self._tree_served_numtok - 1
-            _T = int(cache_keys[0, 1])
-            # 이슈 #35: 서빙 시점 seq와 다른 seq의 요청이면 (종료 후 새
-            # seq 진입 등) staged KV는 폐기 — a_eff/k_idx가 새 seq
-            # 좌표로 우연히 유효해 보여도 KV 오염이므로 정체 대조 필수.
-            if int(seq_ids[0]) != getattr(self, "_tree_served_seq", -1):
-                _staged = None
-            if _a_eff > 0 and _T > 0 and _staged is not None:
-                from ssd.engine.helpers.p2_tree import (
-                    parse_tree_ints, tree_parent_path,
-                    validate_tree_ints)
-                _nv_s = self.config.duet_tree_wire_nodes
-                _served_tree = parse_tree_ints(_served, _nv_s)
-                validate_tree_ints(
-                    _served_tree, _nv_s, self.hf_config.vocab_size)
-                _path = tree_parent_path(_served_tree, _T)
-                _path = _path[:_a_eff]
-                # 이슈 #21: src = staging(글루 시점 gather — 물리블록
-                # 해제와 무관), dst = 현재 dbt의 canonical 슬롯.
-                # staging 행 j+1 = 뷰 노드 j ([0]=rec).
-                _p0 = self._tree_served_numtok - 1
-                _bs = self.block_size
-                _max_pos = _p0 + 1 + len(_path) + 1
-                _dbt0 = draft_block_tables[0, :(_max_pos // _bs) + 1].cpu()
-                _src_rows, _dst = [], []
-                for _k, _jj in enumerate(_path):
-                    _dp = _p0 + 1 + _k
-                    _src_rows.append(1 + _jj)
-                    _dst.append(int(_dbt0[_dp // _bs]) * _bs + _dp % _bs)
-                if _src_rows:
-                    kc = self.kv_cache
-                    _flat = kc.view(kc.shape[0], kc.shape[1], -1,
-                                    kc.shape[4], kc.shape[5])
-                    _sr = torch.tensor(_src_rows, dtype=torch.int64,
-                                       device=kc.device)
-                    _dt = torch.tensor(_dst, dtype=torch.int64,
-                                       device=kc.device)
-                    _flat[:, :, _dt] = _staged[:, :, _sr]
-            _mc_kvr("tree_kv_restore", _ev_kvr)
+            def _restore_previous():
+                if _pending_restore:
+                    self._restore_previous_tree_kv(_pending_restore.pop(),
+                        cache_keys, num_tokens, draft_block_tables)
 
         target_recovery_activations = torch.zeros(
             B, 3 * self.config.d_model_target, dtype=self.hf_config.torch_dtype, device=self.device
@@ -1481,7 +1503,7 @@ class DraftRunner(ModelRunner):
             profile_cache_status,
         ) = self.hit_cache_and_respond(
             cache_keys, B, K, num_tokens, temperatures, draft_block_tables,
-            target_recovery_activations,
+            target_recovery_activations, before_jit=_restore_previous,
         )
         # Set close-time status so hit_cache_respond row carries it AND any
         # subsequent draft spans for this request inherit it.
@@ -1566,6 +1588,8 @@ class DraftRunner(ModelRunner):
                       group=self.async_pg)
             _mc_s(_q_label, _mev_q)
         _mc_s("draft_send_response", _mev_ds)
+        if _restore_previous is not None:
+            _restore_previous()
 
         partial_tree_decode_args = {
             "num_tokens": num_tokens,
