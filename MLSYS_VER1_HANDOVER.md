@@ -1,6 +1,6 @@
 # MLSys ver1.0 다른 서버 작업자 인수인계
 
-> **현재 작업 기준은 `MLSys-ver1.3`이다.** [ver1.3 인수인계](MLSYS_VER13_HANDOVER.md)에서1.2 대비 전체 변경·검증·수신 절차를 확인한다. 파라미터 계약은 [ver1.1 인수인계](MLSYS_VER11_HANDOVER.md)를 유지한다. 아래 본문은 ver1.0의 역사적 설정이며 새 API에 그대로 복사하지 않는다.
+> **현재 작업 기준은 `MLSys-ver1.4`다.** [ver1.4 인수인계](MLSYS_VER14_HANDOVER.md)에서 ver1.3 대비 채택 변경·직접 성능 비교·수신 절차를 확인한다. 파라미터 계약은 [ver1.1 인수인계](MLSYS_VER11_HANDOVER.md)를 유지한다. 아래 본문은 ver1.0의 역사적 설정이며 새 API에 그대로 복사하지 않는다.
 
 2026년 10월 15일 기준. 다른 서버에서는 **`MLSys-ver1.0`을 별도 worktree로 받아 아래 70B preset부터 검증**한다. 이 브랜치는 최신 ver0.2 위에 현재 서버의 확정된 후보 점수 설정과 calibration 없는 tree 확장을 통합한 버전이다. 기존 연구 브랜치의 파일이나 launcher를 통째로 덮어쓰지 않는다.
 

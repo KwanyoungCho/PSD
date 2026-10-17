@@ -1,0 +1,54 @@
+[
+  {
+    "variant": "before",
+    "tag": "before_{model}_final_a",
+    "passes": 2,
+    "wait": "prepack_{model}_profile",
+    "checks": [
+      "checks_early",
+      "checks_prepack"
+    ]
+  },
+  {
+    "variant": "send",
+    "tag": "send_{model}_final_a",
+    "passes": 2,
+    "reference": "before_{model}_final_a"
+  },
+  {
+    "variant": "early",
+    "tag": "early_{model}_final_a",
+    "passes": 2,
+    "reference": "before_{model}_final_a"
+  },
+  {
+    "variant": "prepack",
+    "tag": "prepack_{model}_final_a",
+    "passes": 2,
+    "reference": "before_{model}_final_a"
+  },
+  {
+    "variant": "prepack",
+    "tag": "prepack_{model}_final_b",
+    "passes": 2,
+    "reference": "before_{model}_final_a"
+  },
+  {
+    "variant": "early",
+    "tag": "early_{model}_final_b",
+    "passes": 2,
+    "reference": "before_{model}_final_a"
+  },
+  {
+    "variant": "send",
+    "tag": "send_{model}_final_b",
+    "passes": 2,
+    "reference": "before_{model}_final_a"
+  },
+  {
+    "variant": "before",
+    "tag": "before_{model}_final_b",
+    "passes": 2,
+    "reference": "before_{model}_final_a"
+  }
+]

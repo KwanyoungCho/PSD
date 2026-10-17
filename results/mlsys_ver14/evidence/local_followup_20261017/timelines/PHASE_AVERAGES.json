@@ -1,0 +1,353 @@
+{
+  "definitions": {
+    "grouping": "Current step cache source; DS/PS prepare future outcomes.",
+    "weighting": "Arithmetic mean over eligible steps, including all repetitions; overall is step-weighted.",
+    "step_ms": "Next target_send_request.start minus current target_send_request.start, same request.",
+    "ds_total_ms": "P1 root/phase preparation start to proxy_wait.start; excludes glue and proxy wait.",
+    "ds_margin_ms": "Target proxy_send_enqueue.end minus proxy_wait.start (DS complete). Send-side reference, not measured arrival.",
+    "ds_round_ms": "P1 graph replay elapsed / K1; includes sampling/selection inside graph.",
+    "ps_total_ms": "proxy_wait.end to merge_cache.end.",
+    "ps_margin_ms": "Next target_send_request.start minus next draft_recv_cmd.start; includes post-cache cleanup.",
+    "ps_round_ms": "P2 graph replay elapsed / K2; includes sampling/selection inside graph.",
+    "share_pct": "Number of steps in the source divided by all eligible steps; Overall = 100%.",
+    "hit_rate_pct": "Hit fraction within the row. P1/P2 = 100%, miss = 0%; Overall = (P1+P2)/all.",
+    "al": "Mean accepted_len including correction/recovery or bonus token, from recorded verification outcomes.",
+    "tps": "Sum of actually emitted tokens / sum of target-request-start-to-next-start seconds on the same eligible profiled steps. Ratio of totals, not mean of per-step TPS; not full-dataset or unprofiled TPS.",
+    "limitations": "Cross-device clocks have alignment uncertainty. Signed spare time is not guaranteed usable compute budget. Samples without optional forward probes contain graph/K only, not per-forward timings.",
+    "optional_forward_probe": "When present: actual model+LMhead GPU envelopes, including timing markers. Compute window = sum of recorded forwards + signed spare. Current non-forward work held fixed; not a guarantee for a larger K.",
+    "native_chain_forward": "Chain samples use the sum of K separately recorded phase1/phase2 replay events: model+LMhead and captured output-buffer stores, excluding between-round planning/sampling. Their legacy ds/ps_round_ms is first-to-last replay envelope / K, not the isolated forward sum/K."
+  },
+  "sets": [
+    {
+      "model": "llama2_7b_68m",
+      "setting": "Before: selected prepack base",
+      "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+      "k1": 8,
+      "k2": 5,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 385,
+          "share_pct": 42.63565891472868,
+          "hit_rate_pct": 100.0,
+          "al": 3.088311688311688,
+          "tps": 157.10636076707823,
+          "al_samples": 385,
+          "emitted_samples": 385,
+          "step_ms": 19.657458,
+          "ds_total_ms": 6.974908716883117,
+          "ds_margin_ms": 3.0702629792207796,
+          "ds_round_ms": 0.6831227954545455,
+          "ps_total_ms": 4.984865067532468,
+          "ps_margin_ms": 0.6264206337662338,
+          "ps_round_ms": 0.5481913605194806
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 409,
+          "share_pct": 45.29346622369878,
+          "hit_rate_pct": 100.0,
+          "al": 2.36919315403423,
+          "tps": 120.52387482063492,
+          "al_samples": 409,
+          "emitted_samples": 409,
+          "step_ms": 19.65745921760391,
+          "ds_total_ms": 7.010606476772616,
+          "ds_margin_ms": 3.0278418435207826,
+          "ds_round_ms": 0.6895272478606357,
+          "ps_total_ms": 4.971609427872861,
+          "ps_margin_ms": 0.6479720024449879,
+          "ps_round_ms": 0.5478808787286064
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 109,
+          "share_pct": 12.070874861572536,
+          "hit_rate_pct": 0.0,
+          "al": 1.889908256880734,
+          "tps": 89.51520120074962,
+          "al_samples": 109,
+          "emitted_samples": 109,
+          "step_ms": 21.112707467889905,
+          "ds_total_ms": 6.596259467889909,
+          "ds_margin_ms": 4.842531477064219,
+          "ds_round_ms": 0.6273357133027523,
+          "ps_total_ms": 4.9721937064220185,
+          "ps_margin_ms": 0.7935160275229357,
+          "ps_round_ms": 0.5476287339449541
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 903,
+          "share_pct": 100.0,
+          "hit_rate_pct": 87.92912513842747,
+          "al": 2.617940199335548,
+          "tps": 131.99840536277708,
+          "al_samples": 903,
+          "emitted_samples": 903,
+          "step_ms": 19.833119893687705,
+          "ds_total_ms": 6.94537119269103,
+          "ds_margin_ms": 3.264977289036545,
+          "ds_round_ms": 0.6792896050664452,
+          "ps_total_ms": 4.977331584717608,
+          "ps_margin_ms": 0.6563518715393134,
+          "ps_round_ms": 0.5479828186046511
+        }
+      ],
+      "workload": {
+        "rows": [
+          {
+            "state": 1,
+            "n": 385,
+            "mean_context_tokens": 305.412987012987,
+            "mean_logical_query_rows": 13.685714285714285,
+            "verify_width_counts": {
+              "15": 310,
+              "3": 72,
+              "6": 3
+            },
+            "target_pre_ms": 10.982426914285714,
+            "target_post_ms": 4.309855090909091,
+            "target_head_ms": 0.2931726909090909,
+            "target_wait_ms": 1.5811154155844156,
+            "target_setup_ms": 0.3229807298701299,
+            "target_accept_ms": 0.7430895090909092
+          },
+          {
+            "state": 2,
+            "n": 409,
+            "mean_context_tokens": 254.13447432762837,
+            "mean_logical_query_rows": 14.7799511002445,
+            "verify_width_counts": {
+              "15": 361,
+              "3": 33,
+              "6": 10,
+              "9": 1,
+              "13": 3,
+              "14": 1
+            },
+            "target_pre_ms": 10.961427276283619,
+            "target_post_ms": 4.304008821515892,
+            "target_head_ms": 0.29313574083129584,
+            "target_wait_ms": 1.5834275892420537,
+            "target_setup_ms": 0.32609301466992663,
+            "target_accept_ms": 0.7597361662591687
+          },
+          {
+            "state": 0,
+            "n": 109,
+            "mean_context_tokens": 291.697247706422,
+            "mean_logical_query_rows": 6.0,
+            "verify_width_counts": {
+              "5": 109
+            },
+            "target_pre_ms": 11.146456559633027,
+            "target_post_ms": 4.3551883853211,
+            "target_head_ms": 0.2919447339449541,
+            "target_wait_ms": 3.309064,
+            "target_setup_ms": 0.16853360550458718,
+            "target_accept_ms": 0.8054099357798165
+          },
+          {
+            "state": "all",
+            "n": 903,
+            "mean_context_tokens": 280.531561461794,
+            "mean_logical_query_rows": 13.25359911406423,
+            "verify_width_counts": {
+              "15": 671,
+              "3": 105,
+              "5": 109,
+              "6": 13,
+              "9": 1,
+              "13": 3,
+              "14": 1
+            },
+            "target_pre_ms": 10.992715263565893,
+            "target_post_ms": 4.312679238095238,
+            "target_head_ms": 0.2930077297895903,
+            "target_wait_ms": 1.7907411904761905,
+            "target_setup_ms": 0.3057472724252492,
+            "target_accept_ms": 0.7581519778516057
+          }
+        ],
+        "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+      },
+      "proxy_overlap": {
+        "steps": 903,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    },
+    {
+      "model": "llama2_7b_68m",
+      "setting": "After: redundant prep removed",
+      "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+      "k1": 8,
+      "k2": 5,
+      "rows": [
+        {
+          "state": 1,
+          "label": "P1 hit",
+          "n": 385,
+          "share_pct": 42.63565891472868,
+          "hit_rate_pct": 100.0,
+          "al": 3.088311688311688,
+          "tps": 159.1576126225587,
+          "al_samples": 385,
+          "emitted_samples": 385,
+          "step_ms": 19.404109155844154,
+          "ds_total_ms": 6.8514831376623375,
+          "ds_margin_ms": 3.2177204857142856,
+          "ds_round_ms": 0.6827182415584415,
+          "ps_total_ms": 4.843433171428571,
+          "ps_margin_ms": 0.6831904337662338,
+          "ps_round_ms": 0.5476847485714286
+        },
+        {
+          "state": 2,
+          "label": "P2 hit",
+          "n": 409,
+          "share_pct": 45.29346622369878,
+          "hit_rate_pct": 100.0,
+          "al": 2.36919315403423,
+          "tps": 122.07488166844882,
+          "al_samples": 409,
+          "emitted_samples": 409,
+          "step_ms": 19.407703875305625,
+          "ds_total_ms": 6.891117051344744,
+          "ds_margin_ms": 3.177417574572127,
+          "ds_round_ms": 0.6891293071515892,
+          "ps_total_ms": 4.861272352078239,
+          "ps_margin_ms": 0.6792480073349633,
+          "ps_round_ms": 0.5474772831295843
+        },
+        {
+          "state": 0,
+          "label": "Miss",
+          "n": 109,
+          "share_pct": 12.070874861572536,
+          "hit_rate_pct": 0.0,
+          "al": 1.889908256880734,
+          "tps": 90.9405618818063,
+          "al_samples": 109,
+          "emitted_samples": 109,
+          "step_ms": 20.78179656880734,
+          "ds_total_ms": 6.454271752293578,
+          "ds_margin_ms": 4.958809633027523,
+          "ds_round_ms": 0.6264721295871559,
+          "ps_total_ms": 4.8349910183486235,
+          "ps_margin_ms": 0.8276075596330276,
+          "ps_round_ms": 0.5472769596330275
+        },
+        {
+          "state": "all",
+          "label": "Overall",
+          "n": 903,
+          "share_pct": 100.0,
+          "hit_rate_pct": 87.92912513842747,
+          "al": 2.617940199335548,
+          "tps": 133.75921470625013,
+          "al_samples": 903,
+          "emitted_samples": 903,
+          "step_ms": 19.572036252491696,
+          "ds_total_ms": 6.821487821705427,
+          "ds_margin_ms": 3.409630592469546,
+          "ds_round_ms": 0.6788326375968993,
+          "ps_total_ms": 4.85049411295681,
+          "ps_margin_ms": 0.6988371827242525,
+          "ps_round_ms": 0.5475415565891473
+        }
+      ],
+      "workload": {
+        "rows": [
+          {
+            "state": 1,
+            "n": 385,
+            "mean_context_tokens": 305.412987012987,
+            "mean_logical_query_rows": 13.685714285714285,
+            "verify_width_counts": {
+              "15": 310,
+              "3": 72,
+              "6": 3
+            },
+            "target_pre_ms": 10.982749615584416,
+            "target_post_ms": 4.30892494025974,
+            "target_head_ms": 0.2931774935064935,
+            "target_wait_ms": 1.4985316805194806,
+            "target_setup_ms": 0.28332400519480516,
+            "target_accept_ms": 0.6832388909090908
+          },
+          {
+            "state": 2,
+            "n": 409,
+            "mean_context_tokens": 254.13447432762837,
+            "mean_logical_query_rows": 14.7799511002445,
+            "verify_width_counts": {
+              "15": 361,
+              "3": 33,
+              "6": 10,
+              "9": 1,
+              "13": 3,
+              "14": 1
+            },
+            "target_pre_ms": 10.961765361858191,
+            "target_post_ms": 4.303280332518337,
+            "target_head_ms": 0.29317436185819074,
+            "target_wait_ms": 1.4940419633251834,
+            "target_setup_ms": 0.2851430586797066,
+            "target_accept_ms": 0.7029751344743277
+          },
+          {
+            "state": 0,
+            "n": 109,
+            "mean_context_tokens": 291.697247706422,
+            "mean_logical_query_rows": 6.0,
+            "verify_width_counts": {
+              "5": 109
+            },
+            "target_pre_ms": 11.144204678899083,
+            "target_post_ms": 4.354616366972477,
+            "target_head_ms": 0.2919311651376147,
+            "target_wait_ms": 3.126662201834862,
+            "target_setup_ms": 0.15570273394495412,
+            "target_accept_ms": 0.7258855871559633
+          },
+          {
+            "state": "all",
+            "n": 903,
+            "mean_context_tokens": 280.531561461794,
+            "mean_logical_query_rows": 13.25359911406423,
+            "verify_width_counts": {
+              "15": 671,
+              "3": 105,
+              "5": 109,
+              "6": 13,
+              "9": 1,
+              "13": 3,
+              "14": 1
+            },
+            "target_pre_ms": 10.992734158361019,
+            "target_post_ms": 4.31188365669989,
+            "target_head_ms": 0.2930256323366556,
+            "target_wait_ms": 1.6930277297895902,
+            "target_setup_ms": 0.26874291362126246,
+            "target_accept_ms": 0.6973259490586933
+          }
+        ],
+        "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+      },
+      "proxy_overlap": {
+        "steps": 903,
+        "overlapping_steps": 0,
+        "mean_overlap_ms": 0.0,
+        "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+      }
+    }
+  ],
+  "samples_sha256": "b1f857366da5c184bf6daf7553fc43238c475215aba9a21f9258c186b7abc717"
+}

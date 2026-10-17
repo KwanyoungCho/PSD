@@ -1,0 +1,43 @@
+{
+  "status": "complete",
+  "baseline_commit": "1dcb10baf2a6d36aee77aa7373ee4b91a422c912",
+  "server": "orion local RTX4090",
+  "gpu_pairs": [
+    [
+      4,
+      5
+    ],
+    [
+      6,
+      7
+    ]
+  ],
+  "model": "LayerSkip-Llama2-7B + JackFram/llama-68m full BF16",
+  "batch": 1,
+  "temperature": 0.7,
+  "K1": 8,
+  "K2": 5,
+  "exit_zero_based": 22,
+  "DS_roots_per_position": 4,
+  "DS_width": 32,
+  "PS_roots": 15,
+  "PS_width": 15,
+  "C": 3,
+  "M1": 15,
+  "M2": 15,
+  "inputs": "12 fixed SpecBench diagnostic inputs, input cap512, output256, 2 passes; warm3; latency controlled A/B, not full-dataset quality evaluation",
+  "candidates": {
+    "buckets": "Internal model row buckets4/8/16; independent of phase budget, targets graph_pre/post after response wait",
+    "overlap": "Receive parent q asynchronously and establish dependency at proxy/accept consumers; targets response wait and pre-forward gap"
+  },
+  "decision": "Exact output/event parity, positive whole-step CI and independent wall improvement across process repeats; profile timing alone is not adoption evidence",
+  "separate_processes": "ABBA within one GPU pair per candidate; candidates use isolated source snapshots",
+  "push": false,
+  "model_runs": 20,
+  "selected": "prep only",
+  "source_branch": "exp/duet-local-followup-20261017",
+  "runtime_commit_before": "1dcb10ba",
+  "working_tree_uncommitted": true,
+  "GPUs_released": true,
+  "additional_candidate": "prep: exact overwrite without redundant clears; immutable validated packet reuse; remove unused CPU proxy packing"
+}

@@ -1,0 +1,113 @@
+{
+  "tree_T07": {
+    "status": "complete",
+    "parity": [
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "v13_pair0_a",
+        "after": "v14_pair0_b"
+      },
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "v13_pair1_a",
+        "after": "v14_pair1_b"
+      }
+    ],
+    "process_pairs": [
+      {
+        "before": "v13_pair0_a",
+        "after": "v14_pair0_b",
+        "n": 2087,
+        "reduction_pct": 3.878416371958182
+      },
+      {
+        "before": "v13_pair1_a",
+        "after": "v14_pair1_b",
+        "n": 2087,
+        "reduction_pct": 2.6612854396827257
+      }
+    ],
+    "reduction_pct": 3.274261545699364,
+    "ci95_pct": [
+      3.0859147859364726,
+      3.4829367767957473
+    ],
+    "sources": {
+      "1": {
+        "n": 1842,
+        "step_ms": [
+          19.067514255737944,
+          18.369750670854096
+        ],
+        "independent_wall_ms": [
+          19.072966399854383,
+          18.37506185232153
+        ],
+        "target_call_accept_ms": [
+          17.23533124490019,
+          17.212582459363855
+        ]
+      },
+      "2": {
+        "n": 1834,
+        "step_ms": [
+          19.089327522857175,
+          18.37302894040032
+        ],
+        "independent_wall_ms": [
+          19.09480237929128,
+          18.37834283570386
+        ],
+        "target_call_accept_ms": [
+          17.23657208982339,
+          17.208325739588382
+        ]
+      },
+      "0": {
+        "n": 498,
+        "step_ms": [
+          20.27736737740686,
+          20.221186071507123
+        ],
+        "independent_wall_ms": [
+          20.282769886155922,
+          20.226525938527352
+        ],
+        "target_call_accept_ms": [
+          17.27479746299665,
+          17.277727031661385
+        ]
+      },
+      "all": {
+        "n": 4174,
+        "step_ms": [
+          19.221446308082886,
+          18.59208588309008
+        ],
+        "independent_wall_ms": [
+          19.226902509692774,
+          18.597401679454663
+        ],
+        "target_call_accept_ms": [
+          17.240585170679104,
+          17.21848451325364
+        ]
+      }
+    },
+    "adopted_candidate": true
+  },
+  "chain_smoke": {
+    "outputs_equal": true,
+    "events_equal": true,
+    "requests": 4
+  },
+  "tree_greedy_smoke": {
+    "outputs_equal": true,
+    "events_equal": true,
+    "requests": 4
+  }
+}

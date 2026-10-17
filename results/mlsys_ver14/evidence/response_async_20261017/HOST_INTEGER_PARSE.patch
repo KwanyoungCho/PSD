@@ -1,0 +1,60 @@
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 8321bd5a..1a4d49b6 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -834,7 +834,7 @@ class DraftRunner(ModelRunner):
+             _ev_equal = _mr_rerank(_equal_label)
+             packed = pack_tree_ints(views, root, wire_cap)
+             packed_cpu = packed.detach().cpu()
+-            parsed = parse_tree_ints(packed_cpu, wire_cap)
++            parsed = parse_tree_ints(packed_cpu.tolist(), wire_cap)
+             validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
+             _mc_rerank(_equal_label, _ev_equal)
+             return views, root, packed, packed_cpu, parsed, int(parsed["valid"])
+diff --git a/ssd/tests/test_response_hostlist.py b/ssd/tests/test_response_hostlist.py
+new file mode 100644
+index 00000000..e0774f38
+--- /dev/null
++++ b/ssd/tests/test_response_hostlist.py
+@@ -0,0 +1,41 @@
++"""Host integer parsing preserves the exact validated equal-cap tree."""
++from types import SimpleNamespace
++from unittest import TestCase, main
++import torch
++from ssd.engine.draft_runner import DraftRunner
++from ssd.engine.helpers.p2_tree import pack_tree_ints, parse_tree_ints, validate_tree_ints
++
++
++class HostListTests(TestCase):
++    def source(self):
++        return dict(tok=torch.tensor([[1,2,3]]),valid=torch.tensor([3]),
++                    u_valid=torch.tensor([2]),parent_local=torch.tensor([[-1,-1,0]]),
++                    sib_order=torch.tensor([[0,1,0]]),parent_q_ref=torch.tensor([[0,0,1]]))
++
++    def runner(self):
++        return SimpleNamespace(config=SimpleNamespace(duet_p1_tree_max_nodes=3,
++            duet_p1_tree_verify_nodes=3,duet_p2_tree_max_nodes=3,
++            duet_p2_tree_verify_nodes=3,duet_tree_wire_nodes=5),
++            hf_config=SimpleNamespace(vocab_size=10))
++
++    def test_identical_wire_metadata_validation_and_snapshot(self):
++        for phase in (1,2):
++            source=self.source();want=pack_tree_ints(source,0,5)
++            baseline=validate_tree_ints(parse_tree_ints(want,5),5,10)
++            actual,root,gpu,cpu,parsed,n=DraftRunner._rerank_tree_hit_view(self.runner(),source,0,phase)
++            self.assertIs(actual,source);self.assertEqual(root,0);self.assertEqual(n,3)
++            self.assertTrue(torch.equal(gpu,want));self.assertTrue(torch.equal(cpu,want))
++            for key in baseline:
++                if torch.is_tensor(baseline[key]):self.assertEqual(parsed[key],baseline[key].tolist())
++                else:self.assertEqual(parsed[key],baseline[key])
++            saved=cpu.clone();source['tok'].fill_(9)
++            self.assertTrue(torch.equal(cpu,saved))
++
++    def test_identical_failures(self):
++        for field in ('valid','u_valid','tok','parent_local','sib_order','parent_q_ref'):
++            with self.subTest(field=field):
++                source=self.source();source[field].reshape(-1)[0]=99
++                with self.assertRaises(RuntimeError):DraftRunner._rerank_tree_hit_view(self.runner(),source,0,1)
++
++
++if __name__=='__main__':main()

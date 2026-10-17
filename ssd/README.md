@@ -1,18 +1,17 @@
-## DUET — MLSys ver1.3
+## DUET — MLSys ver1.4
 
-This checkout advances `MLSys-ver1.2@899e4eb1` with response metadata reuse,
-persistent B=1 verification inputs, and cache-hit response scheduling improvements.
-For another server, start with the [ver1.3 changes, evidence, and handover](../MLSYS_VER13_HANDOVER.md).
-The algorithms and parameter contract remain unchanged. Combined output parity is
-verified; a repeated A/B of all three optimizations together remains unmeasured.
-The historical ver1.0 integration is based on `MLSys-ver0.2@1b93104b`.
-Start with the [integration decisions and 70B preset](../MLSYS_VER1_INTEGRATION.md),
-[calibration-free tree algorithm](../TREE_EXPANSION_FINAL.md), and
-[validation report](../results/ver10_integration_20261015/REPORT.md).
-The report separates functional checks from historical performance evidence;
-it does not claim that the integrated version improves TPS on a full dataset.
-For this version, token debugging is opt-in (`SSD_DEBUG_TOKENS=1`), independent
-of Python's `-O` flag. The SSD documentation below is retained as upstream context.
+This branch advances `MLSys-ver1.3@5642de04` with validated B=1 tree response,
+topology prepacking, and glue/request preparation optimizations. Start with the
+[ver1.4 handover](../MLSYS_VER14_HANDOVER.md) and the
+[direct ver1.3/ver1.4 validation](../results/mlsys_ver14/REPORT.md).
+Algorithms, sampling rules, parameter defaults, and wire format are unchanged.
+The release separates measured 7B/68m B1 latency gains from chain/greedy functional
+checks and historical evidence. Experimental variants that lacked a reliable gain
+are not enabled. The upstream package version remains separate from this branch name.
+
+Historical algorithm and preset context: [integration decisions](../MLSYS_VER1_INTEGRATION.md),
+[tree expansion](../TREE_EXPANSION_FINAL.md), and [ver1.3 handover](../MLSYS_VER13_HANDOVER.md).
+The SSD documentation below is retained as upstream context.
 
 <h1 align="center">Speculative Speculative Decoding</h1>
 

@@ -1,0 +1,45 @@
+{
+  "status": "complete",
+  "branch": "exp/duet-response-async-20261017",
+  "protected_release": "MLSys-ver1.3",
+  "base_commit": "5642de044d9fa2d5e80dfaeeccc8f91cfd1be8e1",
+  "server": "eslab18/nova",
+  "models": [
+    "LayerSkip Llama2-7B + llama-68m",
+    "LayerSkip Llama2-13B + llama-68m"
+  ],
+  "settings": "B1 BF16 T0.7 K1=K2=3 C3 G=M40 DS roots/position3 PS roots9 DS/PS widths9 exit21/26 input512 output192; same fixed12 SpecBench turns",
+  "primary": "profile-OFF entire LLMEngine.step, exact outputs and source/hit/valid/AL sequence",
+  "diagnostic": "native target/draft spans and q-send/receive ordering",
+  "protected_changes": "no production edits, no algorithm/parameters changes, no external process termination",
+  "candidates": [
+    "async_send: retain NCCL work/buffers, defer wait until next request",
+    "early_payload: move draft-only glue and q gather after small token/topology response enqueue",
+    "deferred_q_receive: consider only if baseline shows q receive on target critical path",
+    "prepack: immutable batched topology snapshot during phase build, before next request; no q-logit materialization for unhit roots"
+  ],
+  "selection": "adopt none in production; report evidence, reject nonbeneficial candidates",
+  "gpus": {
+    "7b": [
+      2,
+      3
+    ],
+    "13b": [
+      4,
+      5,
+      6
+    ]
+  },
+  "deferred_q_decision": "Baseline q-receive is only 0.16-0.22ms; larger hit topology pack/validate is 0.56-0.71ms. Prioritize ahead-of-request topology packing rather than complicating target q dependencies.",
+  "final_schedule": "before/send/early/prepack/prepack/early/send/before, profile OFF, 2 passes/process, two independent process repetitions per arm; models run on disjoint GPU groups",
+  "planned_completed_runs": 32,
+  "hostlist_ablation": "Profile showed hit metadata validation dominates; test one-line CPU-tensor->Python-integer parsing, independently of prepack and async. Final_b before serves as first A in a separate ABBA (before final_b -> hostlist a -> hostlist b -> before host_b); then a diagnostic hostlist profile.",
+  "completed_runs": 32,
+  "failed_parity_runs": [
+    "hostlist_13b_host_a"
+  ],
+  "rejected_model_variants": [
+    "13b/hostlist"
+  ],
+  "note": "Execution/analysis complete includes a disclosed rejected candidate. Complete is not all parity checks passed."
+}

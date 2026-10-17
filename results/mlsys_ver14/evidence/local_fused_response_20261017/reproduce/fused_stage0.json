@@ -1,0 +1,37 @@
+{
+  "queues": [
+    {
+      "jobs": [
+        {
+          "tag": "fused_p0_smoke",
+          "variant": "fused",
+          "config": {
+            "limit": 3,
+            "passes": 1,
+            "output_tokens": 128
+          }
+        },
+        {
+          "tag": "base_fused_p0_a",
+          "variant": "baseline"
+        },
+        {
+          "tag": "fused_p0_b",
+          "variant": "fused"
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "tag": "base_fused_p1_a",
+          "variant": "baseline"
+        },
+        {
+          "tag": "fused_p1_b",
+          "variant": "fused"
+        }
+      ]
+    }
+  ]
+}

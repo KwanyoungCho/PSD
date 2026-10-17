@@ -1,0 +1,26 @@
+{
+  "queues": [
+    {
+      "after": [
+        "runs/baseline_pair0_a/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "buckets_pair0_b",
+          "variant": "buckets"
+        }
+      ]
+    },
+    {
+      "after": [
+        "runs/baseline_pair1_a/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "overlap_pair1_b",
+          "variant": "overlap"
+        }
+      ]
+    }
+  ]
+}

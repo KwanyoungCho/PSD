@@ -1,0 +1,49 @@
+test_b1_hit (test_b_gt1_m2.TestB1Identity.test_b1_hit) ... ERROR
+test_b1_miss (test_b_gt1_m2.TestB1Identity.test_b1_miss) ... ERROR
+test_all_hit_skips_jit (test_b_gt1_m2.TestMixedHitMissFill.test_all_hit_skips_jit) ... ok
+test_all_miss_no_overwrite (test_b_gt1_m2.TestMixedHitMissFill.test_all_miss_no_overwrite) ... ok
+test_all_short_batch_dispatches_k2 (test_b_gt1_m2.TestMixedHitMissFill.test_all_short_batch_dispatches_k2) ... ok
+test_empty_cache_jits_all (test_b_gt1_m2.TestMixedHitMissFill.test_empty_cache_jits_all) ... ok
+test_mixed_hit_miss_hit (test_b_gt1_m2.TestMixedHitMissFill.test_mixed_hit_miss_hit) ... ok
+test_mixed_jit_long_default (test_b_gt1_m2.TestMixedHitMissFill.test_mixed_jit_long_default) ... ok
+
+======================================================================
+ERROR: test_b1_hit (test_b_gt1_m2.TestB1Identity.test_b1_hit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/tests/test_b_gt1_m2.py", line 251, in test_b1_hit
+    phase_source, valid_k, vk_scalar, _p) = _call(r, keys)
+                                            ^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/tests/test_b_gt1_m2.py", line 123, in _call
+    return dr_mod.DraftRunner.hit_cache_and_respond(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/ssd/engine/draft_runner.py", line 979, in hit_cache_and_respond
+    fast = try_response(self, request_keys, B, K, num_tokens)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/ssd/engine/helpers/fused_tree_response.py", line 28, in try_response
+    if r.config.verbose or r.config.duet_proxy_on_draft:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: '_StubConfig' object has no attribute 'duet_proxy_on_draft'
+
+======================================================================
+ERROR: test_b1_miss (test_b_gt1_m2.TestB1Identity.test_b1_miss)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/tests/test_b_gt1_m2.py", line 263, in test_b1_miss
+    phase_source, valid_k, vk_scalar, _p) = _call(r, keys)
+                                            ^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/tests/test_b_gt1_m2.py", line 123, in _call
+    return dr_mod.DraftRunner.hit_cache_and_respond(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/ssd/engine/draft_runner.py", line 979, in hit_cache_and_respond
+    fast = try_response(self, request_keys, B, K, num_tokens)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chokwans99/PSD-MLSys-ver1.4/ssd/ssd/engine/helpers/fused_tree_response.py", line 28, in try_response
+    if r.config.verbose or r.config.duet_proxy_on_draft:
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: '_StubConfig' object has no attribute 'duet_proxy_on_draft'
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.031s
+
+FAILED (errors=2)

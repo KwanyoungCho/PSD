@@ -1,0 +1,34 @@
+{
+  "queues": [
+    {
+      "after": [
+        "runs/buckets_pair0_profile/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "prep_pair0_b",
+          "variant": "prep"
+        },
+        {
+          "tag": "prep_pair0_c",
+          "variant": "prep"
+        },
+        {
+          "tag": "baseline_pair0_prep_d",
+          "variant": "baseline"
+        },
+        {
+          "tag": "prep_pair0_profile",
+          "variant": "prep",
+          "profile": true,
+          "config": {
+            "passes": 1
+          }
+        }
+      ]
+    },
+    {
+      "jobs": []
+    }
+  ]
+}

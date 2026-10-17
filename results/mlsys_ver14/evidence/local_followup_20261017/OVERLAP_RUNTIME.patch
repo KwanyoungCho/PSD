@@ -1,0 +1,115 @@
+diff --git a/ssd/ssd/engine/helpers/speculate_types.py b/ssd/ssd/engine/helpers/speculate_types.py
+index d29a008..4ec51a5 100644
+--- a/ssd/ssd/engine/helpers/speculate_types.py
++++ b/ssd/ssd/engine/helpers/speculate_types.py
+@@ -32,6 +32,8 @@ class SpeculateResult:
+     # One immutable CPU readback of the fused B1 response. Legacy/sync and
+     # batched callers may omit it and retain the established tensor path.
+     host_response: object | None = None
++    # Experimental B1 tree receive: establish readiness before reading q.
++    parent_q_ready: object | None = None
+ 
+ 
+ @dataclass
+diff --git a/ssd/ssd/engine/speculator_async.py b/ssd/ssd/engine/speculator_async.py
+index 0be9925..608c562 100644
+--- a/ssd/ssd/engine/speculator_async.py
++++ b/ssd/ssd/engine/speculator_async.py
+@@ -269,9 +269,24 @@ class SpeculatorAsync(SpeculatorBase):
+             profile_cache_status=profile_cache_status,
+             step_id=self._request_step_id,
+             host_response=getattr(self, '_response_host', None),
++            parent_q_ready=(self._wait_parent_q_ready
++                            if getattr(self, '_pending_parent_q', None) is not None
++                            else None),
+         )
+ 
++    def _wait_parent_q_ready(self):
++        work = getattr(self, '_pending_parent_q', None)
++        if work is not None:
++            from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
++            ev = duet_record('target_wait_parent_q_ready')
++            # NCCL Work.wait establishes a dependency on the consuming CUDA
++            # stream. The receive tensor remains owned by this speculator.
++            work.wait()
++            duet_close('target_wait_parent_q_ready', ev)
++
+     def _speculation_request(self, seqs: list[Sequence], eagle: bool):
++        self._wait_parent_q_ready()
++        self._pending_parent_q = None
+         B = len(seqs)
+         if B != self._hs_B:
+             self._alloc_handshake_bufs(B)
+@@ -407,11 +422,17 @@ class SpeculatorAsync(SpeculatorBase):
+             _pq_dst = self._tree_parent_q[:, :_pq_rows]
+             if not _pq_dst.is_contiguous():
+                 raise RuntimeError("tree parent-q receive view must be contiguous")
+-            _recv_q_label = f"target_recv_parent_q_p{_tree_phase}"
++            _defer_q = bool(self.config.duet_enabled and B == 1)
++            _recv_q_label = (f"target_recv_parent_q_enqueue_p{_tree_phase}"
++                             if _defer_q else f"target_recv_parent_q_p{_tree_phase}")
+             _mev_recv_q = _mr(
+                 _recv_q_label, parent="target_recv_response_wait")
+-            dist.recv(_pq_dst, src=self.draft_runner_rank,
+-                      group=self.async_pg)
++            if _defer_q:
++                self._pending_parent_q = dist.irecv(
++                    _pq_dst, src=self.draft_runner_rank, group=self.async_pg)
++            else:
++                dist.recv(_pq_dst, src=self.draft_runner_rank,
++                          group=self.async_pg)
+             _mc(_recv_q_label, _mev_recv_q)
+         else:
+             _recv_q_label = "target_recv_chain_q"
+diff --git a/ssd/ssd/engine/verifier.py b/ssd/ssd/engine/verifier.py
+index 614037a..fe17254 100644
+--- a/ssd/ssd/engine/verifier.py
++++ b/ssd/ssd/engine/verifier.py
+@@ -376,9 +376,14 @@ class Verifier(VerifierBase):
+                 _nv_t = int(config.duet_tree_wire_nodes)
+                 _pq_ref = speculate_result.tree_ints[
+                     0, 3 + 3 * _nv_t:3 + 4 * _nv_t][:_step_lookahead]
+-                logits_q = speculate_result.parent_q_logits[
+-                    0, _pq_ref.to(speculate_result.parent_q_logits.device)
+-                ].unsqueeze(0)                                          # [1, vk, V]
++                if getattr(speculate_result, 'parent_q_ready', None) is None:
++                    logits_q = speculate_result.parent_q_logits[
++                        0, _pq_ref.to(speculate_result.parent_q_logits.device)
++                    ].unsqueeze(0)                                      # [1, vk, V]
++                else:
++                    # Model graph_pre needs token/topology, not q. Defer
++                    # both dependency and q gather to the exit consumer.
++                    logits_q = None
+                 _mc_tree_prep("tree_parent_q_select", _ev_pq)
+             else:
+                 logits_q = speculate_result.logits_q[:, :_step_lookahead, :]        # [B, vk, V]
+@@ -398,10 +403,18 @@ class Verifier(VerifierBase):
+             def _proxy_fn(exit_logits, orig_bs, _vk=_step_lookahead,
+                           _tm=_tree_meta_for_proxy, _tp=_tp0, _td=_td0):
+                 if _tm is not None:
++                    _q_proxy = logits_q
++                    if _q_proxy is None:
++                        speculate_result.parent_q_ready()
++                        _refs = speculate_result.tree_ints[
++                            0, 3 + 3 * _nv_t:3 + 4 * _nv_t][:_vk]
++                        _q_proxy = speculate_result.parent_q_logits[
++                            0, _refs.to(speculate_result.parent_q_logits.device)
++                        ].unsqueeze(0)
+                     # 이슈 #25 (리뷰 2C): 트리 step은 체인 수식 금지 —
+                     # p^E row = parent+1 페어링 + terminal-mass DP.
+                     self._compute_and_send_proxy_tree(
+-                        exit_logits, draft_tokens, logits_q, orig_bs,
++                        exit_logits, draft_tokens, _q_proxy, orig_bs,
+                         _vk, _tm, async_pg, draft_rank,
+                         temp_p=_tp, temp_d=_td)
+                 else:
+@@ -656,6 +669,9 @@ class Verifier(VerifierBase):
+             if _calib:
+                 raise ValueError("Stochastic calibration is not a greedy label")
+         else:
++            _q_ready = getattr(speculate_result, 'parent_q_ready', None)
++            if _q_ready is not None:
++                _q_ready()
+             pq = speculate_result.parent_q_logits[0].float()
+             q_probs = q_probs_from_logits(
+                 pq, torch.full((pq.shape[0],), td, device=pq.device),

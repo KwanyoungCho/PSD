@@ -1,0 +1,36 @@
+{
+  "queues": [
+    {
+      "after": [
+        "runs/buckets_pair0_profile/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "heldout_baseline",
+          "variant": "baseline",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "output_tokens": 256,
+            "passes": 1,
+            "seed": 42
+          }
+        },
+        {
+          "tag": "heldout_overlap",
+          "variant": "overlap",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "output_tokens": 256,
+            "passes": 1,
+            "seed": 42
+          }
+        }
+      ]
+    },
+    {
+      "jobs": []
+    }
+  ]
+}

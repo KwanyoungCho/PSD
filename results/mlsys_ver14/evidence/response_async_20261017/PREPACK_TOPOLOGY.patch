@@ -1,0 +1,169 @@
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 8321bd5a..1fc378bf 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -832,10 +832,14 @@ class DraftRunner(ModelRunner):
+         if verify_cap == generated_cap:
+             _equal_label = f"tree_hit_pack_served_p{phase}"
+             _ev_equal = _mr_rerank(_equal_label)
+-            packed = pack_tree_ints(views, root, wire_cap)
+-            packed_cpu = packed.detach().cpu()
+-            parsed = parse_tree_ints(packed_cpu, wire_cap)
+-            validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
++            snapshot = views.get('_response_topology')
++            if snapshot is not None and snapshot.capacity == wire_cap:
++                packed, packed_cpu, parsed = snapshot.select(root, self.hf_config.vocab_size)
++            else:
++                packed = pack_tree_ints(views, root, wire_cap)
++                packed_cpu = packed.detach().cpu()
++                parsed = parse_tree_ints(packed_cpu, wire_cap)
++                validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
+             _mc_rerank(_equal_label, _ev_equal)
+             return views, root, packed, packed_cpu, parsed, int(parsed["valid"])
+ 
+@@ -937,6 +941,21 @@ class DraftRunner(ModelRunner):
+         _mc_rerank(_served_label, _ev_served)
+         return out, 0, packed, packed_cpu, parsed, original_valid
+ 
++    def _cache_response_topology(self, views, phase):
++        generated = (self.config.duet_p1_tree_max_nodes if phase == 1
++                     else self.config.duet_p2_tree_max_nodes)
++        verify = (self.config.duet_p1_tree_verify_nodes if phase == 1
++                  else self.config.duet_p2_tree_verify_nodes)
++        if generated != verify:
++            return
++        from ssd.engine.helpers.response_topology import prepare_response_topology
++        from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
++        label = f'tree_response_topology_prepare_p{phase}'
++        event = duet_record(label)
++        views['_response_topology'] = prepare_response_topology(
++            views, int(self.config.duet_tree_wire_nodes))
++        duet_close(label, event)
++
+     def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None, before_jit=None):
+         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
+         # Draft model now returns full target vocab size logits (after d2t expansion)
+@@ -3073,10 +3092,12 @@ class DraftRunner(ModelRunner):
+                     # Kept only for diagnostic serve traces.
+                     pool["root_score"] = proxy_piv[0, :rows]
+                 self._tree_views = pool
++                self._cache_response_topology(pool, 2)
+                 return exec_outputs
+             self._tree_views = build_root_views(
+                 pool, rows, self.config.duet_tree_nv,
+                 cell_logits=cell_logits)
++            self._cache_response_topology(self._tree_views, 2)
+             return self._tree_backbone_project(
+                 pool, rows, depth, cell_logits,
+                 n_roots=(proxy_piv.shape[1]
+@@ -3263,6 +3284,7 @@ class DraftRunner(ModelRunner):
+             views["root_context_reach"].clamp_min(1e-30)
+         self._p1_tree_views = views
+         self._precompute_p1_rerank_views(views, real_roots)
++        self._cache_response_topology(views, 1)
+         # Correctness-only tracing.  P1 previously reused the production
+         # executor but had no equivalent of P2's topology/node audit, which
+         # made an AL regression impossible to localize beyond aggregate
+diff --git a/ssd/ssd/engine/helpers/response_topology.py b/ssd/ssd/engine/helpers/response_topology.py
+new file mode 100644
+index 00000000..fc9df34c
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/response_topology.py
+@@ -0,0 +1,39 @@
++"""Immutable small topology packets prepared before the next cache request.
++
++No vocabulary logits are materialized. Validation still happens for the hit
++root before any response is sent. Python integers avoid repeated CPU-tensor
++scalar conversions during that validation.
++"""
++from dataclasses import dataclass
++import torch
++from ssd.engine.helpers.p2_tree import tree_wire_ints_len, parse_tree_ints, validate_tree_ints
++
++
++@dataclass(frozen=True)
++class ResponseTopology:
++    capacity: int
++    device_rows: torch.Tensor
++    host_rows: torch.Tensor
++    integer_rows: tuple
++
++    def select(self, root, vocab_size):
++        if not 0 <= root < len(self.integer_rows):
++            raise IndexError('Response root outside topology snapshot')
++        parsed = parse_tree_ints(self.integer_rows[root], self.capacity)
++        validate_tree_ints(parsed, self.capacity, vocab_size)
++        return self.device_rows[root], self.host_rows[root], parsed
++
++
++def prepare_response_topology(views, capacity):
++    count, width = views['tok'].shape
++    copy_n = min(width, capacity)
++    packed = torch.zeros((count, tree_wire_ints_len(capacity)),
++                         dtype=torch.int64, device=views['valid'].device)
++    packed[:, 0].copy_(views['valid'])
++    packed[:, 1].copy_(views['u_valid'])
++    packed[:, 2].fill_(1)
++    for i, name in enumerate(('tok', 'parent_local', 'sib_order', 'parent_q_ref')):
++        packed[:, 3+i*capacity:3+i*capacity+copy_n].copy_(views[name][:, :copy_n])
++    host = packed.detach().cpu()
++    integers = tuple(tuple(row) for row in host.tolist())
++    return ResponseTopology(capacity, packed, host, integers)
+diff --git a/ssd/tests/test_response_topology.py b/ssd/tests/test_response_topology.py
+new file mode 100644
+index 00000000..6d5fa2aa
+--- /dev/null
++++ b/ssd/tests/test_response_topology.py
+@@ -0,0 +1,52 @@
++from unittest import TestCase, main, skipUnless
++import torch
++from ssd.engine.helpers.response_topology import prepare_response_topology
++from ssd.engine.helpers.p2_tree import pack_tree_ints
++
++
++def views(device):
++    return {k: torch.tensor(v, device=device) for k, v in dict(
++        tok=[[1,2,3],[4,5,6]], valid=[3,2], u_valid=[2,1],
++        parent_local=[[-1,-1,0],[-1,-1,-1]], sib_order=[[0,1,0],[0,1,2]],
++        parent_q_ref=[[0,0,1],[0,0,0]]).items()}
++
++
++class ResponseTopologyTests(TestCase):
++    def check_equivalence(self, device):
++        source=views(device)
++        for cap in (3,5):
++            snapshot=prepare_response_topology(source,cap)
++            for root in range(2):
++                gpu,cpu,parsed=snapshot.select(root,10)
++                expected=pack_tree_ints(source,root,cap)
++                self.assertTrue(torch.equal(gpu,expected))
++                self.assertTrue(torch.equal(cpu,expected.cpu()))
++                self.assertEqual(parsed['valid'],int(source['valid'][root]))
++                self.assertIsInstance(parsed['tok'][0],int)
++
++    def test_exact_padding_and_fields(self):
++        self.check_equivalence('cpu')
++
++    @skipUnless(torch.cuda.is_available(),'CUDA required')
++    def test_cuda_pack_and_readback(self):
++        self.check_equivalence('cuda:0')
++
++    def test_snapshot_does_not_alias_executor_buffers(self):
++        source=views('cpu');snapshot=prepare_response_topology(source,3)
++        for tensor in source.values():tensor.fill_(-1)
++        gpu,cpu,parsed=snapshot.select(0,10)
++        self.assertEqual(parsed['tok'],(1,2,3))
++        self.assertTrue(torch.equal(gpu,cpu))
++
++    def test_malformed_hit_is_still_rejected(self):
++        for key in ('valid','u_valid','tok','parent_local','sib_order','parent_q_ref'):
++            with self.subTest(key=key):
++                source=views('cpu')
++                if key in ('valid','u_valid'):source[key][0]=99
++                else:source[key][0,0]=99
++                snapshot=prepare_response_topology(source,3)
++                with self.assertRaises(RuntimeError):snapshot.select(0,10)
++        with self.assertRaises(IndexError):prepare_response_topology(views('cpu'),3).select(2,10)
++
++
++if __name__=='__main__':main()

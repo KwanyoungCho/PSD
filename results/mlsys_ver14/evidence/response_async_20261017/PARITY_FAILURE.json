@@ -1,0 +1,29 @@
+{
+  "reference": "before_13b_final_b",
+  "candidate": "hostlist_13b_host_a",
+  "first_changed_output_group": 22,
+  "phase": "measured_1",
+  "input_index": 10,
+  "uid": "501_t0",
+  "first_changed_output_token_index": 4,
+  "first_changed_event_step_id": 3,
+  "previous_step_same_source_validk_al": true,
+  "baseline_step3": {
+    "source": 2,
+    "cache_hit": 1,
+    "valid_k": 15,
+    "accepted_len": 3
+  },
+  "candidate_step3": {
+    "source": 0,
+    "cache_hit": 0,
+    "valid_k": 3,
+    "accepted_len": 2
+  },
+  "same_kwargs": true,
+  "same_inputs": true,
+  "source_change": "Only parse_tree_ints(packed_cpu.tolist(), wire_cap) versus CPU tensor argument, plus tests",
+  "interpretation": "Mechanism of first recovery-token difference is unproven. No p/q logits or RNG-state trace was retained at the divergence. Do not classify as a proven parser algorithm bug or as harmless numerical noise.",
+  "performance_comparison_allowed": false,
+  "original_raw_preserved": true
+}

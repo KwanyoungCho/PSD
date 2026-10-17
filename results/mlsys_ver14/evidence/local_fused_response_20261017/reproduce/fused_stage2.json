@@ -1,0 +1,22 @@
+{
+  "queues": [
+    {
+      "after": [
+        "runs/baseline_fused_profile/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "fused_bulk_reference",
+          "variant": "fused"
+        },
+        {
+          "tag": "fused_bulk_candidate",
+          "variant": "fused_bulk"
+        }
+      ]
+    },
+    {
+      "jobs": []
+    }
+  ]
+}

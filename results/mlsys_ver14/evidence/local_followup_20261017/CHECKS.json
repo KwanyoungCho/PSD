@@ -1,0 +1,31 @@
+{
+  "status": "pass",
+  "results": [
+    {
+      "name": "dependency",
+      "command": [
+        "/home/chokwans99/PSD/ssd/.venv/bin/python",
+        "-B",
+        "/home/chokwans99/PSD-local-followup-20261017/results/local_followup_20261017/test_deferred_receive.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "regressions",
+      "command": [
+        "/home/chokwans99/PSD/ssd/.venv/bin/python",
+        "-B",
+        "-m",
+        "unittest",
+        "-v",
+        "test_response_snapshot",
+        "test_response_topology",
+        "test_tree_verify_planless",
+        "test_tree_topology_gpu",
+        "test_tree_verify_mask_direct",
+        "test_tree_accept_port"
+      ],
+      "exit_code": 0
+    }
+  ]
+}

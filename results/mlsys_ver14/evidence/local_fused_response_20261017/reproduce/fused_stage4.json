@@ -1,0 +1,22 @@
+{
+  "queues": [
+    {
+      "jobs": []
+    },
+    {
+      "after": [
+        "runs/heldout_fused_bulk/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "fused_bulk_profile",
+          "variant": "fused_bulk",
+          "profile": true,
+          "config": {
+            "passes": 1
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,274 @@
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 8321bd5a..1b6d3a47 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -937,7 +937,21 @@ class DraftRunner(ModelRunner):
+         _mc_rerank(_served_label, _ev_served)
+         return out, 0, packed, packed_cpu, parsed, original_valid
+ 
+-    def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None, before_jit=None):
++    def _prepare_response_parent_q(self):
++        pending = getattr(self, "_response_parent_q_pending", None)
++        if pending is None:
++            return
++        cells, refs, destination, phase = pending
++        refs = refs.to(device=cells.device, dtype=torch.int64)
++        from ssd.engine.helpers.p2_tree_executor import _gather_backbone_logits
++        from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
++        label = f"tree_hit_parent_q_gather_p{phase}"
++        event = duet_record(label)
++        _gather_backbone_logits(cells, refs, destination)
++        duet_close(label, event)
++        self._response_parent_q_pending = None
++
++    def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None, before_jit=None, defer_response_work=False):
+         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
+         # Draft model now returns full target vocab size logits (after d2t expansion)
+         V = self.hf_config.vocab_size
+@@ -948,6 +962,8 @@ class DraftRunner(ModelRunner):
+         self._tree_hit_views = None
+         self._tree_hit_phase = None
+         self._tree_hit_nv = None
++        self._response_parent_q_pending = None
++        _tree_valid_cpu = None
+ 
+         # Init miss slots with valid random logits so token IDs are in-vocab (fixes B>1 crash)
+         out_logits = torch.empty(
+@@ -1163,16 +1179,13 @@ class DraftRunner(ModelRunner):
+                         self.config.duet_p2_tree_verify_nodes)
+                     _n_valid = int(_parsed["valid"])
+                     if _n_valid > 0:
++                        _tree_valid_cpu = _n_valid
+                         out_tokens[0, :_phase_nv] = \
+                             _tviews["tok"][_root, :_phase_nv].to(self.device)
+                         valid_k[0] = _n_valid
+                         self._tree_wire_ints = _packed_ints.to(self.device)
+                         # 1b: pq는 서빙 시 hit root만 gather (선제
+                         # [R,nv,V] 물질화 제거 — docs/duet/internal/22)
+-                        _pqc = _tviews["parent_q_cells"][
+-                            _root, :_n_valid].to(
+-                                device=_tviews["cell_logits"].device,
+-                                dtype=torch.int64)
+                         if self._tree_wire_parent_q_buf is None:
+                             raise RuntimeError(
+                                 "tree parent-q staging buffer was not "
+@@ -1182,15 +1195,12 @@ class DraftRunner(ModelRunner):
+                         # Direct bounded gather+cast into the persistent wire
+                         # buffer.  ``index_select(...).to(...)`` created two
+                         # full-vocabulary temporaries on every tree hit.
+-                        from ssd.engine.helpers.p2_tree_executor import \
+-                            _gather_backbone_logits
+-                        _gather_label = \
+-                            f"tree_hit_parent_q_gather_p{_phase}"
+-                        _ev_gather = _mr_thr(_gather_label)
+-                        _gather_backbone_logits(
+-                            _tviews["cell_logits"], _pqc,
+-                            self._tree_wire_parent_q[0, :_n_valid])
+-                        _mc_thr(_gather_label, _ev_gather)
++                        self._response_parent_q_pending = (
++                            _tviews["cell_logits"],
++                            _tviews["parent_q_cells"][_root, :_n_valid],
++                            self._tree_wire_parent_q[0, :_n_valid], _phase)
++                        if not defer_response_work:
++                            self._prepare_response_parent_q()
+                         self._tree_hit_root = _root
+                         self._tree_hit_views = _tviews
+                         self._tree_hit_phase = _phase
+@@ -1294,7 +1304,8 @@ class DraftRunner(ModelRunner):
+         # so downstream callers (_glue_decode, _decode_speculate_async)
+         # avoid re-syncing the same value.
+         if self.config.duet_phase1_k is not None and valid_k.numel() > 0:
+-            _vk_scalar = int(valid_k.max().item())
++            _vk_scalar = (_tree_valid_cpu if defer_response_work and _tree_valid_cpu is not None
++                          else int(valid_k.max().item()))
+         else:
+             _vk_scalar = None
+         _profile_cache_status = None
+@@ -1333,7 +1344,8 @@ class DraftRunner(ModelRunner):
+                   f"cache_n_rows={_cache_n} cache_row_width={_cache_w}",
+                   flush=True)
+         # ===== END TRACE =====
+-        glue_input_ids = make_glue_decode_input_ids(out_tokens, rec_toks, valid_k=_vk_scalar)
++        glue_input_ids = (None if defer_response_work else
++                         make_glue_decode_input_ids(out_tokens, rec_toks, valid_k=_vk_scalar))
+         return (
+             out_tokens, out_logits, glue_input_ids, cache_hits, out_activations,
+             phase_source, valid_k, _vk_scalar, _profile_cache_status,
+@@ -1398,6 +1410,11 @@ class DraftRunner(ModelRunner):
+ 
+     def _service_spec_request(self):
+         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
++        # A new request can only follow target consumption of the previous
++        # response. Reap before the persistent q wire can be filled again.
++        _response_sender = getattr(self, "_response_sender", None)
++        if _response_sender is not None:
++            _response_sender.finish()
+         # Phase B: meta wire is [B, K, F, step_id]. step_id is the per-target
+         # spec request id; we set it on the profiler context so all draft
+         # spans for this request inherit it. See docs/duet/06 §4.4.
+@@ -1504,6 +1521,8 @@ class DraftRunner(ModelRunner):
+         ) = self.hit_cache_and_respond(
+             cache_keys, B, K, num_tokens, temperatures, draft_block_tables,
+             target_recovery_activations, before_jit=_restore_previous,
++            defer_response_work=(B == 1 and self.config.duet_enabled
++                                 and not self.config.use_eagle),
+         )
+         # Set close-time status so hit_cache_respond row carries it AND any
+         # subsequent draft spans for this request inherit it.
+@@ -1553,9 +1572,24 @@ class DraftRunner(ModelRunner):
+         fused_response = torch.cat(_fused_parts)
+         _mc_s("draft_response_pack", _mev_pack)
+         _mev_ds = _mr_s("draft_send_response")
+-        _mev_fused = _mr_s("draft_send_fused")
+-        dist.send(fused_response, dst=0, group=self.async_pg)
+-        _mc_s("draft_send_fused", _mev_fused)
++        _async_response = (B == 1 and self.config.duet_enabled
++                           and not self.config.use_eagle)
++        if _async_response:
++            from ssd.engine.helpers.response_send import ResponseSend
++            if _response_sender is None:
++                _response_sender = self._response_sender = ResponseSend()
++        def _send_response(payload):
++            if _async_response:
++                _response_sender.enqueue(payload, 0, self.async_pg)
++            else:
++                dist.send(payload, dst=0, group=self.async_pg)
++        _fused_label = "draft_send_fused_enqueue" if _async_response else "draft_send_fused"
++        _mev_fused = _mr_s(_fused_label)
++        _send_response(fused_response)
++        _mc_s(_fused_label, _mev_fused)
++        # Token IDs/topology are now on their way while q is gathered.
++        # The target posts the matching q receive from the fused metadata.
++        self._prepare_response_parent_q()
+         # The fused metadata is received before either logit tensor, so the
+         # target can take the identical branch.  Ordinary q and tree parent-q
+         # are mutually exclusive consumers; the old protocol sent both plus
+@@ -1563,9 +1597,10 @@ class DraftRunner(ModelRunner):
+         _pq = getattr(self, "_tree_wire_parent_q", None)
+         if _pq is None:
+             _q_label = "draft_send_chain_q"
++            if _async_response:
++                _q_label += "_enqueue"
+             _mev_q = _mr_s(_q_label)
+-            dist.send(out_logits[:, :K, :].contiguous(), dst=0,
+-                      group=self.async_pg)
++            _send_response(out_logits[:, :K, :].contiguous())
+             _mc_s(_q_label, _mev_q)
+         else:
+             if B != 1 or self._tree_hit_phase not in (1, 2):
+@@ -1583,13 +1618,19 @@ class DraftRunner(ModelRunner):
+             # valid-row receive.  Do not send the unused phase-cap tail: P1
+             # root thresholding deliberately produces many shallow trees.
+             _q_label = f"draft_send_parent_q_p{self._tree_hit_phase}"
++            if _async_response:
++                _q_label += "_enqueue"
+             _mev_q = _mr_s(_q_label)
+-            dist.send(_pq[:, :_pq_rows].contiguous(), dst=0,
+-                      group=self.async_pg)
++            _send_response(_pq[:, :_pq_rows].contiguous())
+             _mc_s(_q_label, _mev_q)
+         _mc_s("draft_send_response", _mev_ds)
+         if _restore_previous is not None:
+             _restore_previous()
++        if glue_decode_input_ids is None:
++            _ev_glue = _mr_s("draft_response_glue_prepare")
++            glue_decode_input_ids = make_glue_decode_input_ids(
++                out_tokens, cache_keys[:, 2], valid_k=valid_k_scalar)
++            _mc_s("draft_response_glue_prepare", _ev_glue)
+ 
+         partial_tree_decode_args = {
+             "num_tokens": num_tokens,
+diff --git a/ssd/ssd/engine/helpers/response_send.py b/ssd/ssd/engine/helpers/response_send.py
+new file mode 100644
+index 00000000..2645a269
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/response_send.py
+@@ -0,0 +1,21 @@
++"""Bounded experiment: enqueue the two response payloads without a stream wait.
++
++The target receives both before it can issue its next request. The draft
++reaps here only after that next command arrives, before reusing wire buffers.
++Keep tensor references alive until Work.wait has ordered reuse on this stream.
++"""
++import torch.distributed as dist
++
++
++class ResponseSend:
++    def __init__(self):
++        self.pending = []
++
++    def enqueue(self, tensor, dst, group):
++        work = dist.isend(tensor, dst=dst, group=group)
++        self.pending.append((work, tensor))
++
++    def finish(self):
++        for work, _tensor in self.pending:
++            work.wait()
++        self.pending.clear()
+diff --git a/ssd/tests/test_response_send.py b/ssd/tests/test_response_send.py
+new file mode 100644
+index 00000000..af1b5656
+--- /dev/null
++++ b/ssd/tests/test_response_send.py
+@@ -0,0 +1,61 @@
++"""No wait at enqueue, wire lifetime and bounded next-request retirement."""
++from unittest import TestCase, main
++from unittest.mock import patch, Mock
++import gc
++import weakref
++import torch
++from ssd.engine.helpers.response_send import ResponseSend
++from ssd.engine.draft_runner import DraftRunner
++from types import SimpleNamespace
++
++
++class ResponseSendTests(TestCase):
++    def test_order_lifetime_and_retirement(self):
++        first, second = Mock(), Mock()
++        with patch('ssd.engine.helpers.response_send.dist.isend', side_effect=[first, second]) as send:
++            sender = ResponseSend()
++            tokens, logits = torch.arange(3), torch.ones(2, 11)
++            token_ref, logit_ref = weakref.ref(tokens), weakref.ref(logits)
++            sender.enqueue(tokens, 0, 'pg')
++            sender.enqueue(logits, 0, 'pg')
++            self.assertIs(send.call_args_list[0].args[0], tokens)
++            self.assertIs(send.call_args_list[1].args[0], logits)
++            first.wait.assert_not_called(); second.wait.assert_not_called()
++            send.reset_mock()
++            del tokens, logits
++            gc.collect()
++            self.assertIsNotNone(token_ref()); self.assertIsNotNone(logit_ref())
++            sender.finish()
++            self.assertEqual(sender.pending, [])
++            first.wait.assert_called_once(); second.wait.assert_called_once()
++            gc.collect()
++            self.assertIsNone(token_ref()); self.assertIsNone(logit_ref())
++            sender.finish()
++            self.assertEqual(first.wait.call_count, 1)
++
++    def test_failure_retains_wire_buffers(self):
++        work = Mock(); work.wait.side_effect = RuntimeError('peer failure')
++        sender = ResponseSend()
++        with patch('ssd.engine.helpers.response_send.dist.isend', return_value=work):
++            sender.enqueue(torch.ones(2), 0, None)
++        with self.assertRaisesRegex(RuntimeError, 'peer failure'):
++            sender.finish()
++        self.assertEqual(len(sender.pending), 1)
++
++    def test_parent_q_is_unchanged_and_materialized_once(self):
++        cells = torch.arange(35.).view(5, 7)
++        refs = torch.tensor([3, 1, 3])
++        destination = torch.empty(3, 7)
++        runner = SimpleNamespace(_response_parent_q_pending=(cells, refs, destination, 2))
++        def gather(source, indices, out):
++            out.copy_(source[indices])
++        with patch('ssd.engine.helpers.p2_tree_executor._gather_backbone_logits', side_effect=gather) as call:
++            DraftRunner._prepare_response_parent_q(runner)
++            self.assertTrue(torch.equal(destination, cells[refs]))
++            self.assertIsNone(runner._response_parent_q_pending)
++            DraftRunner._prepare_response_parent_q(runner)
++            self.assertEqual(call.call_count, 1)
++
++
++if __name__ == '__main__':
++    main()

@@ -1,0 +1,18 @@
+[
+  {
+    "variant": "send",
+    "tag": "send_{model}_profile",
+    "passes": 1,
+    "profile": true,
+    "wait": "before_{model}_profile",
+    "reference": "before_{model}_profile"
+  },
+  {
+    "variant": "early",
+    "tag": "early_{model}_profile",
+    "passes": 1,
+    "profile": true,
+    "wait": "before_{model}_profile",
+    "reference": "before_{model}_profile"
+  }
+]

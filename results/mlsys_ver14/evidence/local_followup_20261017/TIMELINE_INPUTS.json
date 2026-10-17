@@ -1,0 +1,30 @@
+{
+  "schema": "duet-timeline-inputs-v1",
+  "skip_initial_steps": 10,
+  "datasets": [
+    {
+      "model_id": "llama2_7b_68m",
+      "model_name": "LayerSkip Llama2-7B + llama-68m",
+      "setting": "Before: selected prepack base",
+      "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+      "runs": [
+        {
+          "outcomes": "raw/runs/baseline_pair0_profile/run.json",
+          "profile_dir": "raw/runs/baseline_pair0_profile"
+        }
+      ]
+    },
+    {
+      "model_id": "llama2_7b_68m",
+      "model_name": "LayerSkip Llama2-7B + llama-68m",
+      "setting": "After: redundant prep removed",
+      "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+      "runs": [
+        {
+          "outcomes": "raw/runs/prep_pair0_profile/run.json",
+          "profile_dir": "raw/runs/prep_pair0_profile"
+        }
+      ]
+    }
+  ]
+}

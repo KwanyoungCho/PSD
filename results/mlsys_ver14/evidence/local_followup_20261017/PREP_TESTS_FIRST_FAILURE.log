@@ -1,0 +1,18 @@
+test_full_and_partial_replay_match_old_zero_then_copy (__main__.ExactOverwrite.test_full_and_partial_replay_match_old_zero_then_copy) ... ERROR
+test_malformed_different_packet_is_rejected (__main__.ValidationCache.test_malformed_different_packet_is_rejected) ... ok
+test_other_packet_and_mutable_packet_validate_normally (__main__.ValidationCache.test_other_packet_and_mutable_packet_validate_normally) ... ok
+test_same_immutable_packet_reuses_prior_validation (__main__.ValidationCache.test_same_immutable_packet_reuses_prior_validation) ... ok
+
+======================================================================
+ERROR: test_full_and_partial_replay_match_old_zero_then_copy (__main__.ExactOverwrite.test_full_and_partial_replay_match_old_zero_then_copy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/chokwans99/PSD-local-followup-20261017/results/local_followup_20261017/test_preparation.py", line 60, in test_full_and_partial_replay_match_old_zero_then_copy
+    b.in_exit.fill_(99);b.in_q.fill_(88);b.in_tokens.fill_(17)
+    ^^^^^^^^^^^^^^^^^^^
+RuntimeError: Inplace update to inference tensor outside InferenceMode is not allowed.You can make a clone to get a normal tensor before doing inplace update.See https://github.com/pytorch/rfcs/pull/17 for more details.
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.725s
+
+FAILED (errors=1)

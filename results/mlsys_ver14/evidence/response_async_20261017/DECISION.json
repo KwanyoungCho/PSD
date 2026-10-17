@@ -1,0 +1,64 @@
+{
+  "decisions": [
+    {
+      "model": "7b",
+      "variant": "send",
+      "improvement_supported_here": false,
+      "automatic_production_adoption": false
+    },
+    {
+      "model": "7b",
+      "variant": "early",
+      "improvement_supported_here": false,
+      "automatic_production_adoption": false
+    },
+    {
+      "model": "7b",
+      "variant": "prepack",
+      "improvement_supported_here": true,
+      "automatic_production_adoption": false
+    },
+    {
+      "model": "7b",
+      "variant": "hostlist",
+      "improvement_supported_here": false,
+      "automatic_production_adoption": false
+    },
+    {
+      "model": "13b",
+      "variant": "send",
+      "improvement_supported_here": false,
+      "automatic_production_adoption": false
+    },
+    {
+      "model": "13b",
+      "variant": "early",
+      "improvement_supported_here": true,
+      "automatic_production_adoption": false
+    },
+    {
+      "model": "13b",
+      "variant": "prepack",
+      "improvement_supported_here": true,
+      "automatic_production_adoption": false
+    },
+    {
+      "model": "13b",
+      "variant": "hostlist",
+      "improvement_supported_here": false,
+      "automatic_production_adoption": false,
+      "reason": "Host_a output/event mismatch; whole comparison rejected"
+    }
+  ],
+  "failed_parity": [
+    {
+      "tag": "hostlist_13b_host_a",
+      "outputs_equal": false,
+      "events_equal": false,
+      "outputs": 24,
+      "events": 1874
+    }
+  ],
+  "production_branch_unchanged": true,
+  "note": "Robust-here requires positive UID-cluster lower CI, both positive process repetitions and positive independent wall decrease. It is not multi-hardware or full-dataset proof."
+}

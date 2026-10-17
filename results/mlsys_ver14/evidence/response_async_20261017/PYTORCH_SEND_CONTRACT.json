@@ -1,0 +1,11 @@
+{
+  "torch_version": "2.8.0+cu128",
+  "send_source_sha256": "2dad025261431ef65874995382cb382272ee649af6b10d2e21f5a3a257f4c83b",
+  "send_tail": [
+    "    _check_not_self_rank(group, group_dst, \"destination\")",
+    "    work = isend(tensor, group=group, tag=tag, group_dst=group_dst)",
+    "    if work is not None:",
+    "        work.wait()"
+  ],
+  "isend_contract": "Modifying tensor before request completes is undefined behavior; retained buffers and delayed reaping preserve this contract."
+}

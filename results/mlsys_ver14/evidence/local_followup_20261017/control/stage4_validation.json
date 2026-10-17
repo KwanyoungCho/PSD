@@ -1,0 +1,44 @@
+{
+  "queues": [
+    {
+      "jobs": []
+    },
+    {
+      "jobs": [
+        {
+          "tag": "heldout_baseline",
+          "variant": "baseline",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "output_tokens": 256,
+            "passes": 1,
+            "seed": 42
+          }
+        },
+        {
+          "tag": "heldout_buckets",
+          "variant": "buckets",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "output_tokens": 256,
+            "passes": 1,
+            "seed": 42
+          }
+        },
+        {
+          "tag": "heldout_prep",
+          "variant": "prep",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "output_tokens": 256,
+            "passes": 1,
+            "seed": 42
+          }
+        }
+      ]
+    }
+  ]
+}

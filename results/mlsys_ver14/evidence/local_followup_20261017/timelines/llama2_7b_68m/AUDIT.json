@@ -1,0 +1,1934 @@
+{
+  "model": "llama2_7b_68m",
+  "name": "LayerSkip Llama2-7B + llama-68m",
+  "note": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+  "pages": 6,
+  "panels": [
+    {
+      "metrics": [
+        {
+          "step_id": 24,
+          "next_step_id": 25,
+          "cache_ready_ns": 2265647765166542,
+          "draft_receive_ready_ns": 2265647765298622,
+          "deadline_ns": 2265647766172417,
+          "cache_margin_ms": 1.005875,
+          "ready_margin_ms": 0.873795,
+          "post_cache_cleanup_ms": 0.13208,
+          "next_send_ms": 0.228363,
+          "next_response_wait_ms": 1.158539,
+          "epoch": 12,
+          "title": "LayerSkip Llama2-7B + llama-68m | Before: selected prepack base | P1 hit -> P1 hit | UID 461_t0 | steps 24-25",
+          "origin_ns": 2265647746368248
+        },
+        {
+          "step_id": 25,
+          "next_step_id": 26,
+          "cache_ready_ns": 2265647784952247,
+          "draft_receive_ready_ns": 2265647785083412,
+          "deadline_ns": 2265647785913139,
+          "cache_margin_ms": 0.960892,
+          "ready_margin_ms": 0.829727,
+          "post_cache_cleanup_ms": 0.131165,
+          "next_send_ms": 0.220124,
+          "next_response_wait_ms": 1.108368,
+          "epoch": 12,
+          "title": "LayerSkip Llama2-7B + llama-68m | Before: selected prepack base | P1 hit -> P1 hit | UID 461_t0 | steps 24-25",
+          "origin_ns": 2265647746368248
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2265647761137092,
+          "wall_end_ns": 2265647761579964,
+          "step_id": 24,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2265647780915657,
+          "wall_end_ns": 2265647781361000,
+          "step_id": 25,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2265647765166542,
+          "wall_end_ns": 2265647765298622,
+          "step_id": 24,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2265647766260872,
+          "wall_end_ns": 2265647766275307,
+          "step_id": 24,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2265647784952247,
+          "wall_end_ns": 2265647785083412,
+          "step_id": 25,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2265647785995430,
+          "wall_end_ns": 2265647786008552,
+          "step_id": 25,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 24,
+          "count": 8,
+          "start_ms": 5.489364,
+          "end_ms": 11.032272,
+          "schematic_boundaries_ms": [
+            6.1822275,
+            6.875091,
+            7.567954500000001,
+            8.260818,
+            8.9536815,
+            9.646545,
+            10.339408500000001
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 24,
+          "count": 5,
+          "start_ms": 15.74678,
+          "end_ms": 18.484939,
+          "schematic_boundaries_ms": [
+            16.2944118,
+            16.8420436,
+            17.3896754,
+            17.9373072
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 25,
+          "count": 8,
+          "start_ms": 25.369308,
+          "end_ms": 30.915268,
+          "schematic_boundaries_ms": [
+            26.062553,
+            26.755798,
+            27.449043,
+            28.142288,
+            28.835533,
+            29.528778000000003,
+            30.222023
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 25,
+          "count": 5,
+          "start_ms": 35.531479,
+          "end_ms": 38.268631,
+          "schematic_boundaries_ms": [
+            36.0789094,
+            36.6263398,
+            37.1737702,
+            37.721200599999996
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "phase_summary": {
+        "model": "llama2_7b_68m",
+        "setting": "Before: selected prepack base",
+        "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+        "k1": 8,
+        "k2": 5,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 385,
+            "share_pct": 42.63565891472868,
+            "hit_rate_pct": 100.0,
+            "al": 3.088311688311688,
+            "tps": 157.10636076707823,
+            "al_samples": 385,
+            "emitted_samples": 385,
+            "step_ms": 19.657458,
+            "ds_total_ms": 6.974908716883117,
+            "ds_margin_ms": 3.0702629792207796,
+            "ds_round_ms": 0.6831227954545455,
+            "ps_total_ms": 4.984865067532468,
+            "ps_margin_ms": 0.6264206337662338,
+            "ps_round_ms": 0.5481913605194806
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 409,
+            "share_pct": 45.29346622369878,
+            "hit_rate_pct": 100.0,
+            "al": 2.36919315403423,
+            "tps": 120.52387482063492,
+            "al_samples": 409,
+            "emitted_samples": 409,
+            "step_ms": 19.65745921760391,
+            "ds_total_ms": 7.010606476772616,
+            "ds_margin_ms": 3.0278418435207826,
+            "ds_round_ms": 0.6895272478606357,
+            "ps_total_ms": 4.971609427872861,
+            "ps_margin_ms": 0.6479720024449879,
+            "ps_round_ms": 0.5478808787286064
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 109,
+            "share_pct": 12.070874861572536,
+            "hit_rate_pct": 0.0,
+            "al": 1.889908256880734,
+            "tps": 89.51520120074962,
+            "al_samples": 109,
+            "emitted_samples": 109,
+            "step_ms": 21.112707467889905,
+            "ds_total_ms": 6.596259467889909,
+            "ds_margin_ms": 4.842531477064219,
+            "ds_round_ms": 0.6273357133027523,
+            "ps_total_ms": 4.9721937064220185,
+            "ps_margin_ms": 0.7935160275229357,
+            "ps_round_ms": 0.5476287339449541
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 903,
+            "share_pct": 100.0,
+            "hit_rate_pct": 87.92912513842747,
+            "al": 2.617940199335548,
+            "tps": 131.99840536277708,
+            "al_samples": 903,
+            "emitted_samples": 903,
+            "step_ms": 19.833119893687705,
+            "ds_total_ms": 6.94537119269103,
+            "ds_margin_ms": 3.264977289036545,
+            "ds_round_ms": 0.6792896050664452,
+            "ps_total_ms": 4.977331584717608,
+            "ps_margin_ms": 0.6563518715393134,
+            "ps_round_ms": 0.5479828186046511
+          }
+        ],
+        "workload": {
+          "rows": [
+            {
+              "state": 1,
+              "n": 385,
+              "mean_context_tokens": 305.412987012987,
+              "mean_logical_query_rows": 13.685714285714285,
+              "verify_width_counts": {
+                "15": 310,
+                "3": 72,
+                "6": 3
+              },
+              "target_pre_ms": 10.982426914285714,
+              "target_post_ms": 4.309855090909091,
+              "target_head_ms": 0.2931726909090909,
+              "target_wait_ms": 1.5811154155844156,
+              "target_setup_ms": 0.3229807298701299,
+              "target_accept_ms": 0.7430895090909092
+            },
+            {
+              "state": 2,
+              "n": 409,
+              "mean_context_tokens": 254.13447432762837,
+              "mean_logical_query_rows": 14.7799511002445,
+              "verify_width_counts": {
+                "15": 361,
+                "3": 33,
+                "6": 10,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.961427276283619,
+              "target_post_ms": 4.304008821515892,
+              "target_head_ms": 0.29313574083129584,
+              "target_wait_ms": 1.5834275892420537,
+              "target_setup_ms": 0.32609301466992663,
+              "target_accept_ms": 0.7597361662591687
+            },
+            {
+              "state": 0,
+              "n": 109,
+              "mean_context_tokens": 291.697247706422,
+              "mean_logical_query_rows": 6.0,
+              "verify_width_counts": {
+                "5": 109
+              },
+              "target_pre_ms": 11.146456559633027,
+              "target_post_ms": 4.3551883853211,
+              "target_head_ms": 0.2919447339449541,
+              "target_wait_ms": 3.309064,
+              "target_setup_ms": 0.16853360550458718,
+              "target_accept_ms": 0.8054099357798165
+            },
+            {
+              "state": "all",
+              "n": 903,
+              "mean_context_tokens": 280.531561461794,
+              "mean_logical_query_rows": 13.25359911406423,
+              "verify_width_counts": {
+                "15": 671,
+                "3": 105,
+                "5": 109,
+                "6": 13,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.992715263565893,
+              "target_post_ms": 4.312679238095238,
+              "target_head_ms": 0.2930077297895903,
+              "target_wait_ms": 1.7907411904761905,
+              "target_setup_ms": 0.3057472724252492,
+              "target_accept_ms": 0.7581519778516057
+            }
+          ],
+          "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+        },
+        "proxy_overlap": {
+          "steps": 903,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/dataset0_source1.json",
+      "window_sha256": "c3910c98a67d17bd7318863318968e65e700b04fd2032f1edb743f7f2b7b95f3",
+      "page": 1,
+      "setting": "Before: selected prepack base",
+      "image": "images/01_p1_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 23,
+          "next_step_id": 24,
+          "cache_ready_ns": 2265637737240367,
+          "draft_receive_ready_ns": 2265637737367350,
+          "deadline_ns": 2265637738348521,
+          "cache_margin_ms": 1.108154,
+          "ready_margin_ms": 0.981171,
+          "post_cache_cleanup_ms": 0.126983,
+          "next_send_ms": 0.217071,
+          "next_response_wait_ms": 1.010223,
+          "epoch": 6,
+          "title": "LayerSkip Llama2-7B + llama-68m | Before: selected prepack base | P2 hit -> P2 hit | UID 221_t0 | steps 23-24",
+          "origin_ns": 2265637718594187
+        },
+        {
+          "step_id": 24,
+          "next_step_id": 25,
+          "cache_ready_ns": 2265637756723002,
+          "draft_receive_ready_ns": 2265637756846904,
+          "deadline_ns": 2265637757535197,
+          "cache_margin_ms": 0.812195,
+          "ready_margin_ms": 0.688293,
+          "post_cache_cleanup_ms": 0.123902,
+          "next_send_ms": 0.213013,
+          "next_response_wait_ms": 1.073609,
+          "epoch": 6,
+          "title": "LayerSkip Llama2-7B + llama-68m | Before: selected prepack base | P2 hit -> P2 hit | UID 221_t0 | steps 23-24",
+          "origin_ns": 2265637718594187
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2265637733192515,
+          "wall_end_ns": 2265637733639506,
+          "step_id": 23,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2265637752738627,
+          "wall_end_ns": 2265637753152079,
+          "step_id": 24,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2265637737240367,
+          "wall_end_ns": 2265637737367350,
+          "step_id": 23,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2265637738427714,
+          "wall_end_ns": 2265637738440928,
+          "step_id": 23,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2265637756723002,
+          "wall_end_ns": 2265637756846904,
+          "step_id": 24,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2265637757614604,
+          "wall_end_ns": 2265637757627635,
+          "step_id": 24,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 23,
+          "count": 8,
+          "start_ms": 4.794526,
+          "end_ms": 10.338471,
+          "schematic_boundaries_ms": [
+            5.487519125,
+            6.1805122500000005,
+            6.873505375000001,
+            7.5664985,
+            8.259491625,
+            8.95248475,
+            9.645477875000001
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 23,
+          "count": 5,
+          "start_ms": 15.591584,
+          "end_ms": 18.31952,
+          "schematic_boundaries_ms": [
+            16.1371712,
+            16.6827584,
+            17.2283456,
+            17.7739328
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 24,
+          "count": 8,
+          "start_ms": 23.907502,
+          "end_ms": 28.903596,
+          "schematic_boundaries_ms": [
+            24.53201375,
+            25.1565255,
+            25.78103725,
+            26.405549,
+            27.03006075,
+            27.6545725,
+            28.27908425
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 24,
+          "count": 5,
+          "start_ms": 35.097779,
+          "end_ms": 37.81955,
+          "schematic_boundaries_ms": [
+            35.6421332,
+            36.186487400000004,
+            36.7308416,
+            37.2751958
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "phase_summary": {
+        "model": "llama2_7b_68m",
+        "setting": "Before: selected prepack base",
+        "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+        "k1": 8,
+        "k2": 5,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 385,
+            "share_pct": 42.63565891472868,
+            "hit_rate_pct": 100.0,
+            "al": 3.088311688311688,
+            "tps": 157.10636076707823,
+            "al_samples": 385,
+            "emitted_samples": 385,
+            "step_ms": 19.657458,
+            "ds_total_ms": 6.974908716883117,
+            "ds_margin_ms": 3.0702629792207796,
+            "ds_round_ms": 0.6831227954545455,
+            "ps_total_ms": 4.984865067532468,
+            "ps_margin_ms": 0.6264206337662338,
+            "ps_round_ms": 0.5481913605194806
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 409,
+            "share_pct": 45.29346622369878,
+            "hit_rate_pct": 100.0,
+            "al": 2.36919315403423,
+            "tps": 120.52387482063492,
+            "al_samples": 409,
+            "emitted_samples": 409,
+            "step_ms": 19.65745921760391,
+            "ds_total_ms": 7.010606476772616,
+            "ds_margin_ms": 3.0278418435207826,
+            "ds_round_ms": 0.6895272478606357,
+            "ps_total_ms": 4.971609427872861,
+            "ps_margin_ms": 0.6479720024449879,
+            "ps_round_ms": 0.5478808787286064
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 109,
+            "share_pct": 12.070874861572536,
+            "hit_rate_pct": 0.0,
+            "al": 1.889908256880734,
+            "tps": 89.51520120074962,
+            "al_samples": 109,
+            "emitted_samples": 109,
+            "step_ms": 21.112707467889905,
+            "ds_total_ms": 6.596259467889909,
+            "ds_margin_ms": 4.842531477064219,
+            "ds_round_ms": 0.6273357133027523,
+            "ps_total_ms": 4.9721937064220185,
+            "ps_margin_ms": 0.7935160275229357,
+            "ps_round_ms": 0.5476287339449541
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 903,
+            "share_pct": 100.0,
+            "hit_rate_pct": 87.92912513842747,
+            "al": 2.617940199335548,
+            "tps": 131.99840536277708,
+            "al_samples": 903,
+            "emitted_samples": 903,
+            "step_ms": 19.833119893687705,
+            "ds_total_ms": 6.94537119269103,
+            "ds_margin_ms": 3.264977289036545,
+            "ds_round_ms": 0.6792896050664452,
+            "ps_total_ms": 4.977331584717608,
+            "ps_margin_ms": 0.6563518715393134,
+            "ps_round_ms": 0.5479828186046511
+          }
+        ],
+        "workload": {
+          "rows": [
+            {
+              "state": 1,
+              "n": 385,
+              "mean_context_tokens": 305.412987012987,
+              "mean_logical_query_rows": 13.685714285714285,
+              "verify_width_counts": {
+                "15": 310,
+                "3": 72,
+                "6": 3
+              },
+              "target_pre_ms": 10.982426914285714,
+              "target_post_ms": 4.309855090909091,
+              "target_head_ms": 0.2931726909090909,
+              "target_wait_ms": 1.5811154155844156,
+              "target_setup_ms": 0.3229807298701299,
+              "target_accept_ms": 0.7430895090909092
+            },
+            {
+              "state": 2,
+              "n": 409,
+              "mean_context_tokens": 254.13447432762837,
+              "mean_logical_query_rows": 14.7799511002445,
+              "verify_width_counts": {
+                "15": 361,
+                "3": 33,
+                "6": 10,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.961427276283619,
+              "target_post_ms": 4.304008821515892,
+              "target_head_ms": 0.29313574083129584,
+              "target_wait_ms": 1.5834275892420537,
+              "target_setup_ms": 0.32609301466992663,
+              "target_accept_ms": 0.7597361662591687
+            },
+            {
+              "state": 0,
+              "n": 109,
+              "mean_context_tokens": 291.697247706422,
+              "mean_logical_query_rows": 6.0,
+              "verify_width_counts": {
+                "5": 109
+              },
+              "target_pre_ms": 11.146456559633027,
+              "target_post_ms": 4.3551883853211,
+              "target_head_ms": 0.2919447339449541,
+              "target_wait_ms": 3.309064,
+              "target_setup_ms": 0.16853360550458718,
+              "target_accept_ms": 0.8054099357798165
+            },
+            {
+              "state": "all",
+              "n": 903,
+              "mean_context_tokens": 280.531561461794,
+              "mean_logical_query_rows": 13.25359911406423,
+              "verify_width_counts": {
+                "15": 671,
+                "3": 105,
+                "5": 109,
+                "6": 13,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.992715263565893,
+              "target_post_ms": 4.312679238095238,
+              "target_head_ms": 0.2930077297895903,
+              "target_wait_ms": 1.7907411904761905,
+              "target_setup_ms": 0.3057472724252492,
+              "target_accept_ms": 0.7581519778516057
+            }
+          ],
+          "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+        },
+        "proxy_overlap": {
+          "steps": 903,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/dataset0_source2.json",
+      "window_sha256": "036dba99b0aaeded08588cf217803a97b64726f205e556f89838a3ca42ad5b25",
+      "page": 2,
+      "setting": "Before: selected prepack base",
+      "image": "images/02_p2_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 47,
+          "next_step_id": 48,
+          "cache_ready_ns": 2265638214783824,
+          "draft_receive_ready_ns": 2265638214909739,
+          "deadline_ns": 2265638215739360,
+          "cache_margin_ms": 0.955536,
+          "ready_margin_ms": 0.829621,
+          "post_cache_cleanup_ms": 0.125915,
+          "next_send_ms": 0.197631,
+          "next_response_wait_ms": 1.005859,
+          "epoch": 6,
+          "title": "LayerSkip Llama2-7B + llama-68m | Before: selected prepack base | Miss -> P2 hit | UID 221_t0 | steps 47-48",
+          "origin_ns": 2265638194470866
+        },
+        {
+          "step_id": 48,
+          "next_step_id": 49,
+          "cache_ready_ns": 2265638234204966,
+          "draft_receive_ready_ns": 2265638234335032,
+          "deadline_ns": 2265638234903544,
+          "cache_margin_ms": 0.698578,
+          "ready_margin_ms": 0.568512,
+          "post_cache_cleanup_ms": 0.130066,
+          "next_send_ms": 0.208923,
+          "next_response_wait_ms": 1.099914,
+          "epoch": 6,
+          "title": "LayerSkip Llama2-7B + llama-68m | Before: selected prepack base | Miss -> P2 hit | UID 221_t0 | steps 47-48",
+          "origin_ns": 2265638194470866
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2265638210718516,
+          "wall_end_ns": 2265638211152354,
+          "step_id": 47,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2265638230167369,
+          "wall_end_ns": 2265638230618785,
+          "step_id": 48,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2265638214783824,
+          "wall_end_ns": 2265638214909739,
+          "step_id": 47,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2265638215811168,
+          "wall_end_ns": 2265638215823192,
+          "step_id": 47,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2265638234204966,
+          "wall_end_ns": 2265638234335032,
+          "step_id": 48,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2265638234986461,
+          "wall_end_ns": 2265638234999522,
+          "step_id": 48,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 47,
+          "count": 8,
+          "start_ms": 5.572479,
+          "end_ms": 10.603363,
+          "schematic_boundaries_ms": [
+            6.2013395000000004,
+            6.8302000000000005,
+            7.4590605,
+            8.087921,
+            8.7167815,
+            9.345642,
+            9.9745025
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 47,
+          "count": 5,
+          "start_ms": 17.283966,
+          "end_ms": 20.006744,
+          "schematic_boundaries_ms": [
+            17.8285216,
+            18.3730772,
+            18.9176328,
+            19.462188400000002
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 48,
+          "count": 8,
+          "start_ms": 25.806671,
+          "end_ms": 31.351654,
+          "schematic_boundaries_ms": [
+            26.499793875,
+            27.192916750000002,
+            27.886039625000002,
+            28.579162500000002,
+            29.272285375,
+            29.96540825,
+            30.658531125
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 48,
+          "count": 5,
+          "start_ms": 36.688751,
+          "end_ms": 39.41568,
+          "schematic_boundaries_ms": [
+            37.2341368,
+            37.7795226,
+            38.324908400000005,
+            38.870294200000004
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "phase_summary": {
+        "model": "llama2_7b_68m",
+        "setting": "Before: selected prepack base",
+        "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+        "k1": 8,
+        "k2": 5,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 385,
+            "share_pct": 42.63565891472868,
+            "hit_rate_pct": 100.0,
+            "al": 3.088311688311688,
+            "tps": 157.10636076707823,
+            "al_samples": 385,
+            "emitted_samples": 385,
+            "step_ms": 19.657458,
+            "ds_total_ms": 6.974908716883117,
+            "ds_margin_ms": 3.0702629792207796,
+            "ds_round_ms": 0.6831227954545455,
+            "ps_total_ms": 4.984865067532468,
+            "ps_margin_ms": 0.6264206337662338,
+            "ps_round_ms": 0.5481913605194806
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 409,
+            "share_pct": 45.29346622369878,
+            "hit_rate_pct": 100.0,
+            "al": 2.36919315403423,
+            "tps": 120.52387482063492,
+            "al_samples": 409,
+            "emitted_samples": 409,
+            "step_ms": 19.65745921760391,
+            "ds_total_ms": 7.010606476772616,
+            "ds_margin_ms": 3.0278418435207826,
+            "ds_round_ms": 0.6895272478606357,
+            "ps_total_ms": 4.971609427872861,
+            "ps_margin_ms": 0.6479720024449879,
+            "ps_round_ms": 0.5478808787286064
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 109,
+            "share_pct": 12.070874861572536,
+            "hit_rate_pct": 0.0,
+            "al": 1.889908256880734,
+            "tps": 89.51520120074962,
+            "al_samples": 109,
+            "emitted_samples": 109,
+            "step_ms": 21.112707467889905,
+            "ds_total_ms": 6.596259467889909,
+            "ds_margin_ms": 4.842531477064219,
+            "ds_round_ms": 0.6273357133027523,
+            "ps_total_ms": 4.9721937064220185,
+            "ps_margin_ms": 0.7935160275229357,
+            "ps_round_ms": 0.5476287339449541
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 903,
+            "share_pct": 100.0,
+            "hit_rate_pct": 87.92912513842747,
+            "al": 2.617940199335548,
+            "tps": 131.99840536277708,
+            "al_samples": 903,
+            "emitted_samples": 903,
+            "step_ms": 19.833119893687705,
+            "ds_total_ms": 6.94537119269103,
+            "ds_margin_ms": 3.264977289036545,
+            "ds_round_ms": 0.6792896050664452,
+            "ps_total_ms": 4.977331584717608,
+            "ps_margin_ms": 0.6563518715393134,
+            "ps_round_ms": 0.5479828186046511
+          }
+        ],
+        "workload": {
+          "rows": [
+            {
+              "state": 1,
+              "n": 385,
+              "mean_context_tokens": 305.412987012987,
+              "mean_logical_query_rows": 13.685714285714285,
+              "verify_width_counts": {
+                "15": 310,
+                "3": 72,
+                "6": 3
+              },
+              "target_pre_ms": 10.982426914285714,
+              "target_post_ms": 4.309855090909091,
+              "target_head_ms": 0.2931726909090909,
+              "target_wait_ms": 1.5811154155844156,
+              "target_setup_ms": 0.3229807298701299,
+              "target_accept_ms": 0.7430895090909092
+            },
+            {
+              "state": 2,
+              "n": 409,
+              "mean_context_tokens": 254.13447432762837,
+              "mean_logical_query_rows": 14.7799511002445,
+              "verify_width_counts": {
+                "15": 361,
+                "3": 33,
+                "6": 10,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.961427276283619,
+              "target_post_ms": 4.304008821515892,
+              "target_head_ms": 0.29313574083129584,
+              "target_wait_ms": 1.5834275892420537,
+              "target_setup_ms": 0.32609301466992663,
+              "target_accept_ms": 0.7597361662591687
+            },
+            {
+              "state": 0,
+              "n": 109,
+              "mean_context_tokens": 291.697247706422,
+              "mean_logical_query_rows": 6.0,
+              "verify_width_counts": {
+                "5": 109
+              },
+              "target_pre_ms": 11.146456559633027,
+              "target_post_ms": 4.3551883853211,
+              "target_head_ms": 0.2919447339449541,
+              "target_wait_ms": 3.309064,
+              "target_setup_ms": 0.16853360550458718,
+              "target_accept_ms": 0.8054099357798165
+            },
+            {
+              "state": "all",
+              "n": 903,
+              "mean_context_tokens": 280.531561461794,
+              "mean_logical_query_rows": 13.25359911406423,
+              "verify_width_counts": {
+                "15": 671,
+                "3": 105,
+                "5": 109,
+                "6": 13,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.992715263565893,
+              "target_post_ms": 4.312679238095238,
+              "target_head_ms": 0.2930077297895903,
+              "target_wait_ms": 1.7907411904761905,
+              "target_setup_ms": 0.3057472724252492,
+              "target_accept_ms": 0.7581519778516057
+            }
+          ],
+          "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+        },
+        "proxy_overlap": {
+          "steps": 903,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/dataset0_source0.json",
+      "window_sha256": "58b64980288d9f0abad609c73fc1af895ba352f111e8ec793a560a6110cf7d21",
+      "page": 3,
+      "setting": "Before: selected prepack base",
+      "image": "images/03_miss.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 90,
+          "next_step_id": 91,
+          "cache_ready_ns": 2266034540854650,
+          "draft_receive_ready_ns": 2266034540983678,
+          "deadline_ns": 2266034541448330,
+          "cache_margin_ms": 0.59368,
+          "ready_margin_ms": 0.464652,
+          "post_cache_cleanup_ms": 0.129028,
+          "next_send_ms": 0.213989,
+          "next_response_wait_ms": 1.141113,
+          "epoch": 5,
+          "title": "LayerSkip Llama2-7B + llama-68m | After: redundant prep removed | P1 hit -> P2 hit | UID 181_t0 | steps 90-91",
+          "origin_ns": 2266034521912441
+        },
+        {
+          "step_id": 91,
+          "next_step_id": 92,
+          "cache_ready_ns": 2266034560240026,
+          "draft_receive_ready_ns": 2266034560379186,
+          "deadline_ns": 2266034560974941,
+          "cache_margin_ms": 0.734915,
+          "ready_margin_ms": 0.595755,
+          "post_cache_cleanup_ms": 0.13916,
+          "next_send_ms": 0.223267,
+          "next_response_wait_ms": 1.112915,
+          "epoch": 5,
+          "title": "LayerSkip Llama2-7B + llama-68m | After: redundant prep removed | P1 hit -> P2 hit | UID 181_t0 | steps 90-91",
+          "origin_ns": 2266034521912441
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2266034536809850,
+          "wall_end_ns": 2266034537260046,
+          "step_id": 90,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2266034556151159,
+          "wall_end_ns": 2266034556617345,
+          "step_id": 91,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2266034540854650,
+          "wall_end_ns": 2266034540983678,
+          "step_id": 90,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2266034541519811,
+          "wall_end_ns": 2266034541532873,
+          "step_id": 90,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2266034560240026,
+          "wall_end_ns": 2266034560379186,
+          "step_id": 91,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2266034561046911,
+          "wall_end_ns": 2266034561060583,
+          "step_id": 91,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 90,
+          "count": 8,
+          "start_ms": 5.660959,
+          "end_ms": 11.213083,
+          "schematic_boundaries_ms": [
+            6.3549745,
+            7.04899,
+            7.7430055,
+            8.437021,
+            9.1310365,
+            9.825052,
+            10.519067499999998
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 90,
+          "count": 5,
+          "start_ms": 15.894724,
+          "end_ms": 18.631906,
+          "schematic_boundaries_ms": [
+            16.4421604,
+            16.9895968,
+            17.5370332,
+            18.084469600000002
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 91,
+          "count": 8,
+          "start_ms": 25.054392,
+          "end_ms": 30.602487,
+          "schematic_boundaries_ms": [
+            25.747903875,
+            26.44141575,
+            27.134927625,
+            27.8284395,
+            28.521951375,
+            29.21546325,
+            29.908975124999998
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 91,
+          "count": 5,
+          "start_ms": 35.275949,
+          "end_ms": 38.009104,
+          "schematic_boundaries_ms": [
+            35.822579999999995,
+            36.369211,
+            36.915842,
+            37.462473
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "phase_summary": {
+        "model": "llama2_7b_68m",
+        "setting": "After: redundant prep removed",
+        "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+        "k1": 8,
+        "k2": 5,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 385,
+            "share_pct": 42.63565891472868,
+            "hit_rate_pct": 100.0,
+            "al": 3.088311688311688,
+            "tps": 159.1576126225587,
+            "al_samples": 385,
+            "emitted_samples": 385,
+            "step_ms": 19.404109155844154,
+            "ds_total_ms": 6.8514831376623375,
+            "ds_margin_ms": 3.2177204857142856,
+            "ds_round_ms": 0.6827182415584415,
+            "ps_total_ms": 4.843433171428571,
+            "ps_margin_ms": 0.6831904337662338,
+            "ps_round_ms": 0.5476847485714286
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 409,
+            "share_pct": 45.29346622369878,
+            "hit_rate_pct": 100.0,
+            "al": 2.36919315403423,
+            "tps": 122.07488166844882,
+            "al_samples": 409,
+            "emitted_samples": 409,
+            "step_ms": 19.407703875305625,
+            "ds_total_ms": 6.891117051344744,
+            "ds_margin_ms": 3.177417574572127,
+            "ds_round_ms": 0.6891293071515892,
+            "ps_total_ms": 4.861272352078239,
+            "ps_margin_ms": 0.6792480073349633,
+            "ps_round_ms": 0.5474772831295843
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 109,
+            "share_pct": 12.070874861572536,
+            "hit_rate_pct": 0.0,
+            "al": 1.889908256880734,
+            "tps": 90.9405618818063,
+            "al_samples": 109,
+            "emitted_samples": 109,
+            "step_ms": 20.78179656880734,
+            "ds_total_ms": 6.454271752293578,
+            "ds_margin_ms": 4.958809633027523,
+            "ds_round_ms": 0.6264721295871559,
+            "ps_total_ms": 4.8349910183486235,
+            "ps_margin_ms": 0.8276075596330276,
+            "ps_round_ms": 0.5472769596330275
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 903,
+            "share_pct": 100.0,
+            "hit_rate_pct": 87.92912513842747,
+            "al": 2.617940199335548,
+            "tps": 133.75921470625013,
+            "al_samples": 903,
+            "emitted_samples": 903,
+            "step_ms": 19.572036252491696,
+            "ds_total_ms": 6.821487821705427,
+            "ds_margin_ms": 3.409630592469546,
+            "ds_round_ms": 0.6788326375968993,
+            "ps_total_ms": 4.85049411295681,
+            "ps_margin_ms": 0.6988371827242525,
+            "ps_round_ms": 0.5475415565891473
+          }
+        ],
+        "workload": {
+          "rows": [
+            {
+              "state": 1,
+              "n": 385,
+              "mean_context_tokens": 305.412987012987,
+              "mean_logical_query_rows": 13.685714285714285,
+              "verify_width_counts": {
+                "15": 310,
+                "3": 72,
+                "6": 3
+              },
+              "target_pre_ms": 10.982749615584416,
+              "target_post_ms": 4.30892494025974,
+              "target_head_ms": 0.2931774935064935,
+              "target_wait_ms": 1.4985316805194806,
+              "target_setup_ms": 0.28332400519480516,
+              "target_accept_ms": 0.6832388909090908
+            },
+            {
+              "state": 2,
+              "n": 409,
+              "mean_context_tokens": 254.13447432762837,
+              "mean_logical_query_rows": 14.7799511002445,
+              "verify_width_counts": {
+                "15": 361,
+                "3": 33,
+                "6": 10,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.961765361858191,
+              "target_post_ms": 4.303280332518337,
+              "target_head_ms": 0.29317436185819074,
+              "target_wait_ms": 1.4940419633251834,
+              "target_setup_ms": 0.2851430586797066,
+              "target_accept_ms": 0.7029751344743277
+            },
+            {
+              "state": 0,
+              "n": 109,
+              "mean_context_tokens": 291.697247706422,
+              "mean_logical_query_rows": 6.0,
+              "verify_width_counts": {
+                "5": 109
+              },
+              "target_pre_ms": 11.144204678899083,
+              "target_post_ms": 4.354616366972477,
+              "target_head_ms": 0.2919311651376147,
+              "target_wait_ms": 3.126662201834862,
+              "target_setup_ms": 0.15570273394495412,
+              "target_accept_ms": 0.7258855871559633
+            },
+            {
+              "state": "all",
+              "n": 903,
+              "mean_context_tokens": 280.531561461794,
+              "mean_logical_query_rows": 13.25359911406423,
+              "verify_width_counts": {
+                "15": 671,
+                "3": 105,
+                "5": 109,
+                "6": 13,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.992734158361019,
+              "target_post_ms": 4.31188365669989,
+              "target_head_ms": 0.2930256323366556,
+              "target_wait_ms": 1.6930277297895902,
+              "target_setup_ms": 0.26874291362126246,
+              "target_accept_ms": 0.6973259490586933
+            }
+          ],
+          "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+        },
+        "proxy_overlap": {
+          "steps": 903,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/dataset1_source1.json",
+      "window_sha256": "d28749cad6e9c0e542f428a075950734c44e7da38081df5365fec370dfadb6c7",
+      "page": 4,
+      "setting": "After: redundant prep removed",
+      "image": "images/04_p1_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 48,
+          "next_step_id": 49,
+          "cache_ready_ns": 2266029740340815,
+          "draft_receive_ready_ns": 2266029740470881,
+          "deadline_ns": 2266029740917883,
+          "cache_margin_ms": 0.577068,
+          "ready_margin_ms": 0.447002,
+          "post_cache_cleanup_ms": 0.130066,
+          "next_send_ms": 0.221191,
+          "next_response_wait_ms": 1.053833,
+          "epoch": 3,
+          "title": "LayerSkip Llama2-7B + llama-68m | After: redundant prep removed | P2 hit -> P1 hit | UID 101_t0 | steps 48-49",
+          "origin_ns": 2266029721394262
+        },
+        {
+          "step_id": 49,
+          "next_step_id": 50,
+          "cache_ready_ns": 2266029759609431,
+          "draft_receive_ready_ns": 2266029759739497,
+          "deadline_ns": 2266029759893591,
+          "cache_margin_ms": 0.28416,
+          "ready_margin_ms": 0.154094,
+          "post_cache_cleanup_ms": 0.130066,
+          "next_send_ms": 0.230408,
+          "next_response_wait_ms": 1.138061,
+          "epoch": 3,
+          "title": "LayerSkip Llama2-7B + llama-68m | After: redundant prep removed | P2 hit -> P1 hit | UID 101_t0 | steps 48-49",
+          "origin_ns": 2266029721394262
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2266029736264277,
+          "wall_end_ns": 2266029736728633,
+          "step_id": 48,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2266029755516597,
+          "wall_end_ns": 2266029756002375,
+          "step_id": 49,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2266029740340815,
+          "wall_end_ns": 2266029740470881,
+          "step_id": 48,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2266029740989985,
+          "wall_end_ns": 2266029741003108,
+          "step_id": 48,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2266029759609431,
+          "wall_end_ns": 2266029759739497,
+          "step_id": 49,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2266029759972468,
+          "wall_end_ns": 2266029759992061,
+          "step_id": 49,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 48,
+          "count": 8,
+          "start_ms": 5.578206,
+          "end_ms": 11.120137,
+          "schematic_boundaries_ms": [
+            6.2709473749999995,
+            6.963688749999999,
+            7.656430125,
+            8.3491715,
+            9.041912875,
+            9.73465425,
+            10.427395624999999
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 48,
+          "count": 5,
+          "start_ms": 15.894002,
+          "end_ms": 18.630147,
+          "schematic_boundaries_ms": [
+            16.441231000000002,
+            16.98846,
+            17.535689,
+            18.082918
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 49,
+          "count": 8,
+          "start_ms": 23.948812,
+          "end_ms": 28.947957,
+          "schematic_boundaries_ms": [
+            24.573705125,
+            25.19859825,
+            25.823491375,
+            26.4483845,
+            27.073277625,
+            27.69817075,
+            28.323063875
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 49,
+          "count": 5,
+          "start_ms": 35.172872,
+          "end_ms": 37.905904,
+          "schematic_boundaries_ms": [
+            35.7194784,
+            36.2660848,
+            36.812691199999996,
+            37.3592976
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "phase_summary": {
+        "model": "llama2_7b_68m",
+        "setting": "After: redundant prep removed",
+        "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+        "k1": 8,
+        "k2": 5,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 385,
+            "share_pct": 42.63565891472868,
+            "hit_rate_pct": 100.0,
+            "al": 3.088311688311688,
+            "tps": 159.1576126225587,
+            "al_samples": 385,
+            "emitted_samples": 385,
+            "step_ms": 19.404109155844154,
+            "ds_total_ms": 6.8514831376623375,
+            "ds_margin_ms": 3.2177204857142856,
+            "ds_round_ms": 0.6827182415584415,
+            "ps_total_ms": 4.843433171428571,
+            "ps_margin_ms": 0.6831904337662338,
+            "ps_round_ms": 0.5476847485714286
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 409,
+            "share_pct": 45.29346622369878,
+            "hit_rate_pct": 100.0,
+            "al": 2.36919315403423,
+            "tps": 122.07488166844882,
+            "al_samples": 409,
+            "emitted_samples": 409,
+            "step_ms": 19.407703875305625,
+            "ds_total_ms": 6.891117051344744,
+            "ds_margin_ms": 3.177417574572127,
+            "ds_round_ms": 0.6891293071515892,
+            "ps_total_ms": 4.861272352078239,
+            "ps_margin_ms": 0.6792480073349633,
+            "ps_round_ms": 0.5474772831295843
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 109,
+            "share_pct": 12.070874861572536,
+            "hit_rate_pct": 0.0,
+            "al": 1.889908256880734,
+            "tps": 90.9405618818063,
+            "al_samples": 109,
+            "emitted_samples": 109,
+            "step_ms": 20.78179656880734,
+            "ds_total_ms": 6.454271752293578,
+            "ds_margin_ms": 4.958809633027523,
+            "ds_round_ms": 0.6264721295871559,
+            "ps_total_ms": 4.8349910183486235,
+            "ps_margin_ms": 0.8276075596330276,
+            "ps_round_ms": 0.5472769596330275
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 903,
+            "share_pct": 100.0,
+            "hit_rate_pct": 87.92912513842747,
+            "al": 2.617940199335548,
+            "tps": 133.75921470625013,
+            "al_samples": 903,
+            "emitted_samples": 903,
+            "step_ms": 19.572036252491696,
+            "ds_total_ms": 6.821487821705427,
+            "ds_margin_ms": 3.409630592469546,
+            "ds_round_ms": 0.6788326375968993,
+            "ps_total_ms": 4.85049411295681,
+            "ps_margin_ms": 0.6988371827242525,
+            "ps_round_ms": 0.5475415565891473
+          }
+        ],
+        "workload": {
+          "rows": [
+            {
+              "state": 1,
+              "n": 385,
+              "mean_context_tokens": 305.412987012987,
+              "mean_logical_query_rows": 13.685714285714285,
+              "verify_width_counts": {
+                "15": 310,
+                "3": 72,
+                "6": 3
+              },
+              "target_pre_ms": 10.982749615584416,
+              "target_post_ms": 4.30892494025974,
+              "target_head_ms": 0.2931774935064935,
+              "target_wait_ms": 1.4985316805194806,
+              "target_setup_ms": 0.28332400519480516,
+              "target_accept_ms": 0.6832388909090908
+            },
+            {
+              "state": 2,
+              "n": 409,
+              "mean_context_tokens": 254.13447432762837,
+              "mean_logical_query_rows": 14.7799511002445,
+              "verify_width_counts": {
+                "15": 361,
+                "3": 33,
+                "6": 10,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.961765361858191,
+              "target_post_ms": 4.303280332518337,
+              "target_head_ms": 0.29317436185819074,
+              "target_wait_ms": 1.4940419633251834,
+              "target_setup_ms": 0.2851430586797066,
+              "target_accept_ms": 0.7029751344743277
+            },
+            {
+              "state": 0,
+              "n": 109,
+              "mean_context_tokens": 291.697247706422,
+              "mean_logical_query_rows": 6.0,
+              "verify_width_counts": {
+                "5": 109
+              },
+              "target_pre_ms": 11.144204678899083,
+              "target_post_ms": 4.354616366972477,
+              "target_head_ms": 0.2919311651376147,
+              "target_wait_ms": 3.126662201834862,
+              "target_setup_ms": 0.15570273394495412,
+              "target_accept_ms": 0.7258855871559633
+            },
+            {
+              "state": "all",
+              "n": 903,
+              "mean_context_tokens": 280.531561461794,
+              "mean_logical_query_rows": 13.25359911406423,
+              "verify_width_counts": {
+                "15": 671,
+                "3": 105,
+                "5": 109,
+                "6": 13,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.992734158361019,
+              "target_post_ms": 4.31188365669989,
+              "target_head_ms": 0.2930256323366556,
+              "target_wait_ms": 1.6930277297895902,
+              "target_setup_ms": 0.26874291362126246,
+              "target_accept_ms": 0.6973259490586933
+            }
+          ],
+          "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+        },
+        "proxy_overlap": {
+          "steps": 903,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/dataset1_source2.json",
+      "window_sha256": "a25b0ba4f78aeface17b4f41dd66a25babe834fc4cd16100ce1cadd3a6f45134",
+      "page": 5,
+      "setting": "After: redundant prep removed",
+      "image": "images/05_p2_hit.png"
+    },
+    {
+      "metrics": [
+        {
+          "step_id": 35,
+          "next_step_id": 36,
+          "cache_ready_ns": 2266045860112184,
+          "draft_receive_ready_ns": 2266045860227846,
+          "deadline_ns": 2266045861110118,
+          "cache_margin_ms": 0.997934,
+          "ready_margin_ms": 0.882272,
+          "post_cache_cleanup_ms": 0.115662,
+          "next_send_ms": 0.182251,
+          "next_response_wait_ms": 0.961609,
+          "epoch": 12,
+          "title": "LayerSkip Llama2-7B + llama-68m | After: redundant prep removed | Miss -> P1 hit | UID 461_t0 | steps 35-36",
+          "origin_ns": 2266045840203136
+        },
+        {
+          "step_id": 36,
+          "next_step_id": 37,
+          "cache_ready_ns": 2266045879375673,
+          "draft_receive_ready_ns": 2266045879501589,
+          "deadline_ns": 2266045880069469,
+          "cache_margin_ms": 0.693796,
+          "ready_margin_ms": 0.56788,
+          "post_cache_cleanup_ms": 0.125916,
+          "next_send_ms": 0.183288,
+          "next_response_wait_ms": 0.891663,
+          "epoch": 12,
+          "title": "LayerSkip Llama2-7B + llama-68m | After: redundant prep removed | Miss -> P1 hit | UID 461_t0 | steps 35-36",
+          "origin_ns": 2266045840203136
+        }
+      ],
+      "derived_gaps": [
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2266045856178957,
+          "wall_end_ns": 2266045856574953,
+          "step_id": 35,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "PS dispatch gap (unprofiled)",
+          "wall_start_ns": 2266045875476259,
+          "wall_end_ns": 2266045875874574,
+          "step_id": 36,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2266045860112184,
+          "wall_end_ns": 2266045860227846,
+          "step_id": 35,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2266045861180910,
+          "wall_end_ns": 2266045861192018,
+          "step_id": 35,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Post-PS gap (unprofiled)",
+          "wall_start_ns": 2266045879375673,
+          "wall_end_ns": 2266045879501589,
+          "step_id": 36,
+          "parent_label": null,
+          "derived": true
+        },
+        {
+          "label": "Command-to-request gap (unprofiled)",
+          "wall_start_ns": 2266045880133303,
+          "wall_end_ns": 2266045880144228,
+          "step_id": 36,
+          "parent_label": null,
+          "derived": true
+        }
+      ],
+      "forward_dividers": [
+        {
+          "label": "p1_graph_replay",
+          "event_step": 35,
+          "count": 8,
+          "start_ms": 5.073294,
+          "end_ms": 10.078604,
+          "schematic_boundaries_ms": [
+            5.69895775,
+            6.3246215,
+            6.95028525,
+            7.575949,
+            8.20161275,
+            8.8272765,
+            9.452940250000001
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 35,
+          "count": 5,
+          "start_ms": 16.90563,
+          "end_ms": 19.637686,
+          "schematic_boundaries_ms": [
+            17.4520412,
+            17.998452399999998,
+            18.5448636,
+            19.091274799999997
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p1_graph_replay",
+          "event_step": 36,
+          "count": 8,
+          "start_ms": 25.114004,
+          "end_ms": 30.67742,
+          "schematic_boundaries_ms": [
+            25.809431,
+            26.504858000000002,
+            27.200285,
+            27.895712000000003,
+            28.591139000000002,
+            29.286566,
+            29.981993000000003
+          ],
+          "measured_boundaries": false
+        },
+        {
+          "label": "p2_graph_replay",
+          "event_step": 36,
+          "count": 5,
+          "start_ms": 36.136343,
+          "end_ms": 38.866324,
+          "schematic_boundaries_ms": [
+            36.682339199999994,
+            37.2283354,
+            37.7743316,
+            38.3203278
+          ],
+          "measured_boundaries": false
+        }
+      ],
+      "phase_summary": {
+        "model": "llama2_7b_68m",
+        "setting": "After: redundant prep removed",
+        "measurement": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+        "k1": 8,
+        "k2": 5,
+        "rows": [
+          {
+            "state": 1,
+            "label": "P1 hit",
+            "n": 385,
+            "share_pct": 42.63565891472868,
+            "hit_rate_pct": 100.0,
+            "al": 3.088311688311688,
+            "tps": 159.1576126225587,
+            "al_samples": 385,
+            "emitted_samples": 385,
+            "step_ms": 19.404109155844154,
+            "ds_total_ms": 6.8514831376623375,
+            "ds_margin_ms": 3.2177204857142856,
+            "ds_round_ms": 0.6827182415584415,
+            "ps_total_ms": 4.843433171428571,
+            "ps_margin_ms": 0.6831904337662338,
+            "ps_round_ms": 0.5476847485714286
+          },
+          {
+            "state": 2,
+            "label": "P2 hit",
+            "n": 409,
+            "share_pct": 45.29346622369878,
+            "hit_rate_pct": 100.0,
+            "al": 2.36919315403423,
+            "tps": 122.07488166844882,
+            "al_samples": 409,
+            "emitted_samples": 409,
+            "step_ms": 19.407703875305625,
+            "ds_total_ms": 6.891117051344744,
+            "ds_margin_ms": 3.177417574572127,
+            "ds_round_ms": 0.6891293071515892,
+            "ps_total_ms": 4.861272352078239,
+            "ps_margin_ms": 0.6792480073349633,
+            "ps_round_ms": 0.5474772831295843
+          },
+          {
+            "state": 0,
+            "label": "Miss",
+            "n": 109,
+            "share_pct": 12.070874861572536,
+            "hit_rate_pct": 0.0,
+            "al": 1.889908256880734,
+            "tps": 90.9405618818063,
+            "al_samples": 109,
+            "emitted_samples": 109,
+            "step_ms": 20.78179656880734,
+            "ds_total_ms": 6.454271752293578,
+            "ds_margin_ms": 4.958809633027523,
+            "ds_round_ms": 0.6264721295871559,
+            "ps_total_ms": 4.8349910183486235,
+            "ps_margin_ms": 0.8276075596330276,
+            "ps_round_ms": 0.5472769596330275
+          },
+          {
+            "state": "all",
+            "label": "Overall",
+            "n": 903,
+            "share_pct": 100.0,
+            "hit_rate_pct": 87.92912513842747,
+            "al": 2.617940199335548,
+            "tps": 133.75921470625013,
+            "al_samples": 903,
+            "emitted_samples": 903,
+            "step_ms": 19.572036252491696,
+            "ds_total_ms": 6.821487821705427,
+            "ds_margin_ms": 3.409630592469546,
+            "ds_round_ms": 0.6788326375968993,
+            "ps_total_ms": 4.85049411295681,
+            "ps_margin_ms": 0.6988371827242525,
+            "ps_round_ms": 0.5475415565891473
+          }
+        ],
+        "workload": {
+          "rows": [
+            {
+              "state": 1,
+              "n": 385,
+              "mean_context_tokens": 305.412987012987,
+              "mean_logical_query_rows": 13.685714285714285,
+              "verify_width_counts": {
+                "15": 310,
+                "3": 72,
+                "6": 3
+              },
+              "target_pre_ms": 10.982749615584416,
+              "target_post_ms": 4.30892494025974,
+              "target_head_ms": 0.2931774935064935,
+              "target_wait_ms": 1.4985316805194806,
+              "target_setup_ms": 0.28332400519480516,
+              "target_accept_ms": 0.6832388909090908
+            },
+            {
+              "state": 2,
+              "n": 409,
+              "mean_context_tokens": 254.13447432762837,
+              "mean_logical_query_rows": 14.7799511002445,
+              "verify_width_counts": {
+                "15": 361,
+                "3": 33,
+                "6": 10,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.961765361858191,
+              "target_post_ms": 4.303280332518337,
+              "target_head_ms": 0.29317436185819074,
+              "target_wait_ms": 1.4940419633251834,
+              "target_setup_ms": 0.2851430586797066,
+              "target_accept_ms": 0.7029751344743277
+            },
+            {
+              "state": 0,
+              "n": 109,
+              "mean_context_tokens": 291.697247706422,
+              "mean_logical_query_rows": 6.0,
+              "verify_width_counts": {
+                "5": 109
+              },
+              "target_pre_ms": 11.144204678899083,
+              "target_post_ms": 4.354616366972477,
+              "target_head_ms": 0.2919311651376147,
+              "target_wait_ms": 3.126662201834862,
+              "target_setup_ms": 0.15570273394495412,
+              "target_accept_ms": 0.7258855871559633
+            },
+            {
+              "state": "all",
+              "n": 903,
+              "mean_context_tokens": 280.531561461794,
+              "mean_logical_query_rows": 13.25359911406423,
+              "verify_width_counts": {
+                "15": 671,
+                "3": 105,
+                "5": 109,
+                "6": 13,
+                "9": 1,
+                "13": 3,
+                "14": 1
+              },
+              "target_pre_ms": 10.992734158361019,
+              "target_post_ms": 4.31188365669989,
+              "target_head_ms": 0.2930256323366556,
+              "target_wait_ms": 1.6930277297895902,
+              "target_setup_ms": 0.26874291362126246,
+              "target_accept_ms": 0.6973259490586933
+            }
+          ],
+          "note": "Logical query rows = verify_width + 1, before graph-bucket padding. Context is the committed prefix before this step, including earlier generated tokens. These compare different measured conditions, not a controlled draft-model ablation."
+        },
+        "proxy_overlap": {
+          "steps": 903,
+          "overlapping_steps": 0,
+          "mean_overlap_ms": 0.0,
+          "note": "exit_proxy_side versus graph_post elapsed envelopes; send enqueue is not transfer completion."
+        }
+      },
+      "minimum_bar_width_ms": 0,
+      "clock_shift_ns": 0,
+      "window": "../data/dataset1_source0.json",
+      "window_sha256": "5a523e232303c9ab14cf5e709d8091bea27baae9fcf741d8661366b312eb1922",
+      "page": 6,
+      "setting": "After: redundant prep removed",
+      "image": "images/06_miss.png"
+    }
+  ],
+  "settings": [
+    "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps | Before: selected prepack base | B=1, K1/K2 8/5",
+    "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps | After: redundant prep removed | B=1, K1/K2 8/5"
+  ],
+  "source_window_hashes_verified": true,
+  "clock_shift_ns": 0
+}

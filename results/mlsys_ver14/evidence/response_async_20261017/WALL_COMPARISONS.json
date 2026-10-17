@@ -1,0 +1,382 @@
+{
+  "comparisons": [
+    {
+      "model": "7b",
+      "variant": "send",
+      "stage": "final",
+      "filtered": false,
+      "n": 3526,
+      "before_ms": 31.00418969377692,
+      "after_ms": 31.008023349356943,
+      "reduction_pct": -0.012364959761534955,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 30.93004383914589,
+          "after_ms": 31.005660204496287,
+          "reduction_pct": -0.24447545481554034
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 31.0103864942176,
+          "reduction_pct": 0.21863800937638178
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "7b",
+      "variant": "send",
+      "stage": "final",
+      "filtered": true,
+      "n": 3526,
+      "before_ms": 31.00418969377692,
+      "after_ms": 31.008023349356943,
+      "reduction_pct": -0.012364959761534955,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 30.93004383914589,
+          "after_ms": 31.005660204496287,
+          "reduction_pct": -0.24447545481554034
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 31.0103864942176,
+          "reduction_pct": 0.21863800937638178
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "7b",
+      "variant": "early",
+      "stage": "final",
+      "filtered": false,
+      "n": 3526,
+      "before_ms": 31.00418969377692,
+      "after_ms": 31.04014712035795,
+      "reduction_pct": -0.1159760243250263,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 30.93004383914589,
+          "after_ms": 30.93720034499913,
+          "reduction_pct": -0.023137716488408344
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 31.143093895716767,
+          "reduction_pct": -0.20837134990048245
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "7b",
+      "variant": "early",
+      "stage": "final",
+      "filtered": true,
+      "n": 3526,
+      "before_ms": 31.00418969377692,
+      "after_ms": 31.04014712035795,
+      "reduction_pct": -0.1159760243250263,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 30.93004383914589,
+          "after_ms": 30.93720034499913,
+          "reduction_pct": -0.023137716488408344
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 31.143093895716767,
+          "reduction_pct": -0.20837134990048245
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "7b",
+      "variant": "prepack",
+      "stage": "final",
+      "filtered": false,
+      "n": 3526,
+      "before_ms": 31.00418969377692,
+      "after_ms": 30.56028828432813,
+      "reduction_pct": 1.4317465279148678,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 30.93004383914589,
+          "after_ms": 30.5402312874205,
+          "reduction_pct": 1.2603039095341773
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 30.58034528123576,
+          "reduction_pct": 1.60237109994682
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "7b",
+      "variant": "prepack",
+      "stage": "final",
+      "filtered": true,
+      "n": 3526,
+      "before_ms": 31.00418969377692,
+      "after_ms": 30.56028828432813,
+      "reduction_pct": 1.4317465279148678,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 30.93004383914589,
+          "after_ms": 30.5402312874205,
+          "reduction_pct": 1.2603039095341773
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 30.58034528123576,
+          "reduction_pct": 1.60237109994682
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "7b",
+      "variant": "hostlist",
+      "stage": "host",
+      "filtered": false,
+      "n": 3526,
+      "before_ms": 31.12094661606076,
+      "after_ms": 30.981134431151002,
+      "reduction_pct": 0.4492542808373412,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 30.796396221416952,
+          "reduction_pct": 0.907189275152287
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.163557683713567,
+          "after_ms": 31.16587264088505,
+          "reduction_pct": -0.007428411078658215
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "7b",
+      "variant": "hostlist",
+      "stage": "host",
+      "filtered": true,
+      "n": 3526,
+      "before_ms": 31.12094661606076,
+      "after_ms": 30.981134431151002,
+      "reduction_pct": 0.4492542808373412,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1763,
+          "before_ms": 31.078335548407953,
+          "after_ms": 30.796396221416952,
+          "reduction_pct": 0.907189275152287
+        },
+        {
+          "repeat": "b",
+          "n": 1763,
+          "before_ms": 31.163557683713567,
+          "after_ms": 31.16587264088505,
+          "reduction_pct": -0.007428411078658215
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "13b",
+      "variant": "send",
+      "stage": "final",
+      "filtered": false,
+      "n": 3840,
+      "before_ms": 44.0928078940639,
+      "after_ms": 44.00821713278068,
+      "reduction_pct": 0.19184707285248015,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1920,
+          "before_ms": 43.963863071197316,
+          "after_ms": 44.05696465073561,
+          "reduction_pct": -0.21176842305126176
+        },
+        {
+          "repeat": "b",
+          "n": 1920,
+          "before_ms": 44.221752716930496,
+          "after_ms": 43.95946961482574,
+          "reduction_pct": 0.59310878920531
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "13b",
+      "variant": "send",
+      "stage": "final",
+      "filtered": true,
+      "n": 3840,
+      "before_ms": 44.0928078940639,
+      "after_ms": 44.00821713278068,
+      "reduction_pct": 0.19184707285248015,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1920,
+          "before_ms": 43.963863071197316,
+          "after_ms": 44.05696465073561,
+          "reduction_pct": -0.21176842305126176
+        },
+        {
+          "repeat": "b",
+          "n": 1920,
+          "before_ms": 44.221752716930496,
+          "after_ms": 43.95946961482574,
+          "reduction_pct": 0.59310878920531
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "13b",
+      "variant": "early",
+      "stage": "final",
+      "filtered": false,
+      "n": 3840,
+      "before_ms": 44.0928078940639,
+      "after_ms": 43.952192105083064,
+      "reduction_pct": 0.3189086739921021,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1920,
+          "before_ms": 43.963863071197316,
+          "after_ms": 43.92939019811214,
+          "reduction_pct": 0.0784118379891896
+        },
+        {
+          "repeat": "b",
+          "n": 1920,
+          "before_ms": 44.221752716930496,
+          "after_ms": 43.97499401205399,
+          "reduction_pct": 0.5580029956208321
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "13b",
+      "variant": "early",
+      "stage": "final",
+      "filtered": true,
+      "n": 3840,
+      "before_ms": 44.0928078940639,
+      "after_ms": 43.952192105083064,
+      "reduction_pct": 0.3189086739921021,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1920,
+          "before_ms": 43.963863071197316,
+          "after_ms": 43.92939019811214,
+          "reduction_pct": 0.0784118379891896
+        },
+        {
+          "repeat": "b",
+          "n": 1920,
+          "before_ms": 44.221752716930496,
+          "after_ms": 43.97499401205399,
+          "reduction_pct": 0.5580029956208321
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "13b",
+      "variant": "prepack",
+      "stage": "final",
+      "filtered": false,
+      "n": 3840,
+      "before_ms": 44.0928078940639,
+      "after_ms": 43.64620494002338,
+      "reduction_pct": 1.0128702964744662,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1920,
+          "before_ms": 43.963863071197316,
+          "after_ms": 43.86813038648446,
+          "reduction_pct": 0.21775312273587533
+        },
+        {
+          "repeat": "b",
+          "n": 1920,
+          "before_ms": 44.221752716930496,
+          "after_ms": 43.4242794935623,
+          "reduction_pct": 1.8033505557161544
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    },
+    {
+      "model": "13b",
+      "variant": "prepack",
+      "stage": "final",
+      "filtered": true,
+      "n": 3840,
+      "before_ms": 44.0928078940639,
+      "after_ms": 43.64620494002338,
+      "reduction_pct": 1.0128702964744662,
+      "repeats": [
+        {
+          "repeat": "a",
+          "n": 1920,
+          "before_ms": 43.963863071197316,
+          "after_ms": 43.86813038648446,
+          "reduction_pct": 0.21775312273587533
+        },
+        {
+          "repeat": "b",
+          "n": 1920,
+          "before_ms": 44.221752716930496,
+          "after_ms": 43.4242794935623,
+          "reduction_pct": 1.8033505557161544
+        }
+      ],
+      "observer": "Independent perf_counter around the complete LLMEngine.step; no GPU synchronization"
+    }
+  ]
+}

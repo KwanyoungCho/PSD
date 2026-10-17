@@ -1,0 +1,69 @@
+{
+  "queues": [
+    {
+      "after": [
+        "runs/fused_p0_b/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "fused_p0_c",
+          "variant": "fused"
+        },
+        {
+          "tag": "base_fused_p0_d",
+          "variant": "baseline"
+        },
+        {
+          "tag": "fused_profile",
+          "variant": "fused",
+          "profile": true,
+          "config": {
+            "passes": 1
+          }
+        },
+        {
+          "tag": "baseline_fused_profile",
+          "variant": "baseline",
+          "profile": true,
+          "config": {
+            "passes": 1
+          }
+        }
+      ]
+    },
+    {
+      "after": [
+        "runs/fused_p1_b/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "mixed_fused_control",
+          "variant": "mixed_fused",
+          "config": {
+            "passes": 4
+          }
+        },
+        {
+          "tag": "heldout_fused",
+          "variant": "fused",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "passes": 1,
+            "seed": 42
+          }
+        },
+        {
+          "tag": "heldout_base_fused",
+          "variant": "baseline",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "passes": 1,
+            "seed": 42
+          }
+        }
+      ]
+    }
+  ]
+}

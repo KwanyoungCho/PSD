@@ -1,0 +1,38 @@
+{
+  "queues": [
+    {
+      "jobs": []
+    },
+    {
+      "after": [
+        "runs/overlap_pair1_b/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "overlap_pair1_c",
+          "variant": "overlap"
+        },
+        {
+          "tag": "baseline_pair1_d",
+          "variant": "baseline"
+        },
+        {
+          "tag": "baseline_pair1_profile",
+          "variant": "baseline",
+          "profile": true,
+          "config": {
+            "passes": 1
+          }
+        },
+        {
+          "tag": "overlap_pair1_profile",
+          "variant": "overlap",
+          "profile": true,
+          "config": {
+            "passes": 1
+          }
+        }
+      ]
+    }
+  ]
+}

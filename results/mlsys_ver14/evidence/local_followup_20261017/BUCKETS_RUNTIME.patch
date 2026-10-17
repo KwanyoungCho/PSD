@@ -1,0 +1,18 @@
+diff --git a/ssd/ssd/engine/model_runner.py b/ssd/ssd/engine/model_runner.py
+index 251a2f9..ed6bb97 100644
+--- a/ssd/ssd/engine/model_runner.py
++++ b/ssd/ssd/engine/model_runner.py
+@@ -274,6 +274,13 @@ class ModelRunner:
+             verify_buckets.add(int(self.config.duet_p2_tree_verify_nodes))
+         if not verify_buckets:
+             verify_buckets.add(nv)
++        # Internal execution buckets only: keep the phase/node budgets and
++        # exact proxy shapes unchanged, while avoiding cap-sized model rows
++        # for small valid trees. Graphs still own separate page workspaces.
++        _rows = 4
++        while _rows - 1 < max(verify_buckets):
++            verify_buckets.add(_rows - 1)
++            _rows *= 2
+         from ssd.utils.workspace import tree_verify_workspace_bytes
+         graph_ws_bytes = tree_verify_workspace_bytes(self.device, max(verify_buckets))
+         self._tree_workspace = torch.zeros(

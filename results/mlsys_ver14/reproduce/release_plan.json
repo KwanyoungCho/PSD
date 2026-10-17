@@ -1,0 +1,71 @@
+{
+  "queues": [
+    {
+      "after": [
+        "checks_done.json"
+      ],
+      "jobs": [
+        {
+          "tag": "v14_pair0_b",
+          "checkout": "/data/chokwans99/duet-ver14-release-20261017/candidate"
+        },
+        {
+          "tag": "v13_pair0_a",
+          "checkout": "/home/chokwans99/PSD-MLSys-ver1.3"
+        },
+        {
+          "tag": "v14_chain",
+          "checkout": "/data/chokwans99/duet-ver14-release-20261017/candidate",
+          "mode": "chain",
+          "config": {
+            "limit": 2,
+            "passes": 1,
+            "output_tokens": 64
+          }
+        },
+        {
+          "tag": "v13_chain",
+          "checkout": "/home/chokwans99/PSD-MLSys-ver1.3",
+          "mode": "chain",
+          "config": {
+            "limit": 2,
+            "passes": 1,
+            "output_tokens": 64
+          }
+        }
+      ]
+    },
+    {
+      "jobs": [
+        {
+          "tag": "v13_pair1_a",
+          "checkout": "/home/chokwans99/PSD-MLSys-ver1.3"
+        },
+        {
+          "tag": "v14_pair1_b",
+          "checkout": "/data/chokwans99/duet-ver14-release-20261017/candidate"
+        },
+        {
+          "tag": "v13_greedy",
+          "checkout": "/home/chokwans99/PSD-MLSys-ver1.3",
+          "config": {
+            "limit": 2,
+            "passes": 1,
+            "output_tokens": 64,
+            "temperature": 0.0
+          }
+        },
+        {
+          "tag": "v14_greedy",
+          "checkout": "/data/chokwans99/duet-ver14-release-20261017/candidate",
+          "config": {
+            "limit": 2,
+            "passes": 1,
+            "output_tokens": 64,
+            "temperature": 0.0
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,178 @@
+{
+  "buckets": {
+    "status": "complete",
+    "parity": [
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 59,
+        "before": "heldout_baseline",
+        "after": "heldout_buckets"
+      }
+    ],
+    "process_pairs": [
+      {
+        "before": "heldout_baseline",
+        "after": "heldout_buckets",
+        "n": 4057,
+        "reduction_pct": -0.282763391867058
+      }
+    ],
+    "reduction_pct": -0.2827633918670358,
+    "ci95_pct": [
+      -0.6145921544653399,
+      0.06750589101311764
+    ],
+    "sources": {
+      "1": {
+        "n": 1685,
+        "step_ms": [
+          18.866600738202695,
+          18.905112040381137
+        ],
+        "independent_wall_ms": [
+          18.87180184978627,
+          18.910647890577508
+        ],
+        "target_call_accept_ms": [
+          17.266525017534235,
+          17.285601682242458
+        ]
+      },
+      "2": {
+        "n": 1947,
+        "step_ms": [
+          18.9264965010209,
+          18.984592225762302
+        ],
+        "independent_wall_ms": [
+          18.931746607695136,
+          18.990222294348506
+        ],
+        "target_call_accept_ms": [
+          17.33259739914864,
+          17.370738683896963
+        ]
+      },
+      "0": {
+        "n": 425,
+        "step_ms": [
+          20.440308693796396,
+          20.53595389951678
+        ],
+        "independent_wall_ms": [
+          20.44567339560565,
+          20.541635921553652
+        ],
+        "target_call_accept_ms": [
+          17.315349345478943,
+          17.393311010125807
+        ]
+      },
+      "all": {
+        "n": 4057,
+        "step_ms": [
+          19.06020264388038,
+          19.11409791937295
+        ],
+        "independent_wall_ms": [
+          19.065444406015455,
+          19.119694298590076
+        ],
+        "target_call_accept_ms": [
+          17.303348598106023,
+          17.337743217014886
+        ]
+      }
+    },
+    "adopted_candidate": false
+  },
+  "prep": {
+    "status": "complete",
+    "parity": [
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 59,
+        "before": "heldout_baseline",
+        "after": "heldout_prep"
+      }
+    ],
+    "process_pairs": [
+      {
+        "before": "heldout_baseline",
+        "after": "heldout_prep",
+        "n": 4057,
+        "reduction_pct": 0.48658620510591
+      }
+    ],
+    "reduction_pct": 0.48658620510591,
+    "ci95_pct": [
+      0.33488243861403977,
+      0.6603781646192725
+    ],
+    "sources": {
+      "1": {
+        "n": 1685,
+        "step_ms": [
+          18.866600738202695,
+          18.7720402845842
+        ],
+        "independent_wall_ms": [
+          18.87180184978627,
+          18.777365094045237
+        ],
+        "target_call_accept_ms": [
+          17.266525017534235,
+          17.21057909725991
+        ]
+      },
+      "2": {
+        "n": 1947,
+        "step_ms": [
+          18.9264965010209,
+          18.845778242046322
+        ],
+        "independent_wall_ms": [
+          18.931746607695136,
+          18.851147610148864
+        ],
+        "target_call_accept_ms": [
+          17.33259739914864,
+          17.282966176372234
+        ]
+      },
+      "0": {
+        "n": 425,
+        "step_ms": [
+          20.440308693796396,
+          20.299671332844916
+        ],
+        "independent_wall_ms": [
+          20.44567339560565,
+          20.305059054756867
+        ],
+        "target_call_accept_ms": [
+          17.315349345478943,
+          17.271899667513722
+        ]
+      },
+      "all": {
+        "n": 4057,
+        "step_ms": [
+          19.06020264388038,
+          18.967458327150027
+        ],
+        "independent_wall_ms": [
+          19.065444406015455,
+          18.97281111133787
+        ],
+        "target_call_accept_ms": [
+          17.303348598106023,
+          17.251742243769538
+        ]
+      }
+    },
+    "adopted_candidate": false
+  }
+}

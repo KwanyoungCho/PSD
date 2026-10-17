@@ -1,0 +1,21 @@
+{
+  "queues": [
+    {
+      "after": [
+        "runs/prep_pair0_profile/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "mixed_prep",
+          "variant": "prep",
+          "config": {
+            "passes": 4
+          }
+        }
+      ]
+    },
+    {
+      "jobs": []
+    }
+  ]
+}

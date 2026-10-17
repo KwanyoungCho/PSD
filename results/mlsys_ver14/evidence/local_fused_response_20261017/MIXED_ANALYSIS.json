@@ -1,0 +1,68 @@
+{
+  "status": "complete",
+  "reference_first24_outputs_and_events_equal": true,
+  "measured_requests": 48,
+  "all": {
+    "samples": 1965,
+    "uid_clusters": 12,
+    "current_ms": -0.3539307802394093,
+    "previous_ms": -0.004855563302702134,
+    "combined_ms": -0.3587863435421115,
+    "current_ci95_ms": [
+      -0.376248871110579,
+      -0.33310565947328497
+    ],
+    "combined_ci95_ms": [
+      -0.3841216608351737,
+      -0.33697883062374506
+    ]
+  },
+  "by_source": {
+    "1": {
+      "samples": 925,
+      "uid_clusters": 12,
+      "current_ms": -0.3631637762821856,
+      "previous_ms": 0.010546061675272672,
+      "combined_ms": -0.35261771460691294,
+      "current_ci95_ms": [
+        -0.3936849685381988,
+        -0.3317984978944116
+      ],
+      "combined_ci95_ms": [
+        -0.3986785557519606,
+        -0.3064465455477598
+      ]
+    },
+    "2": {
+      "samples": 982,
+      "uid_clusters": 12,
+      "current_ms": -0.3760177531499358,
+      "previous_ms": -0.017698332465634976,
+      "combined_ms": -0.39371608561557075,
+      "current_ci95_ms": [
+        -0.40114945678792585,
+        -0.348531567222235
+      ],
+      "combined_ci95_ms": [
+        -0.4419051084224713,
+        -0.3436055467147397
+      ]
+    },
+    "0": {
+      "samples": 58,
+      "uid_clusters": 7,
+      "current_ms": 0.14459100089220925,
+      "previous_ms": -0.011446211347109944,
+      "combined_ms": 0.1331447895450993,
+      "current_ci95_ms": [
+        0.030269816125625716,
+        0.2794522731181709
+      ],
+      "combined_ci95_ms": [
+        -0.020365423137585825,
+        0.4090449249028575
+      ]
+    }
+  },
+  "meaning": "Negative ms means faster. Randomized draft response/glue current/previous mode regression with within uid/pass/source/valid/context128/previous-source strata; UID-cluster CI. Diagnostic adapter only, not deployed runtime."
+}

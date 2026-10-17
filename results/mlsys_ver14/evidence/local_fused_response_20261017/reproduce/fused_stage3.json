@@ -1,0 +1,24 @@
+{
+  "queues": [
+    {
+      "jobs": []
+    },
+    {
+      "after": [
+        "runs/heldout_base_fused/status.json"
+      ],
+      "jobs": [
+        {
+          "tag": "heldout_fused_bulk",
+          "variant": "fused_bulk",
+          "config": {
+            "prompts": "INPUTS_HELDOUT.json",
+            "input_cap": 0,
+            "passes": 1,
+            "seed": 42
+          }
+        }
+      ]
+    }
+  ]
+}

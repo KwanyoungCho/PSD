@@ -1,0 +1,145 @@
+diff --git a/ssd/ssd/engine/draft_runner.py b/ssd/ssd/engine/draft_runner.py
+index 8321bd5a..0f61cf26 100644
+--- a/ssd/ssd/engine/draft_runner.py
++++ b/ssd/ssd/engine/draft_runner.py
+@@ -1398,6 +1398,11 @@ class DraftRunner(ModelRunner):
+ 
+     def _service_spec_request(self):
+         """Receives a speculation request, serves it from cache, and sends results back in a single response."""
++        # A new request can only follow target consumption of the previous
++        # response. Reap before the persistent q wire can be filled again.
++        _response_sender = getattr(self, "_response_sender", None)
++        if _response_sender is not None:
++            _response_sender.finish()
+         # Phase B: meta wire is [B, K, F, step_id]. step_id is the per-target
+         # spec request id; we set it on the profiler context so all draft
+         # spans for this request inherit it. See docs/duet/06 §4.4.
+@@ -1553,9 +1558,21 @@ class DraftRunner(ModelRunner):
+         fused_response = torch.cat(_fused_parts)
+         _mc_s("draft_response_pack", _mev_pack)
+         _mev_ds = _mr_s("draft_send_response")
+-        _mev_fused = _mr_s("draft_send_fused")
+-        dist.send(fused_response, dst=0, group=self.async_pg)
+-        _mc_s("draft_send_fused", _mev_fused)
++        _async_response = (B == 1 and self.config.duet_enabled
++                           and not self.config.use_eagle)
++        if _async_response:
++            from ssd.engine.helpers.response_send import ResponseSend
++            if _response_sender is None:
++                _response_sender = self._response_sender = ResponseSend()
++        def _send_response(payload):
++            if _async_response:
++                _response_sender.enqueue(payload, 0, self.async_pg)
++            else:
++                dist.send(payload, dst=0, group=self.async_pg)
++        _fused_label = "draft_send_fused_enqueue" if _async_response else "draft_send_fused"
++        _mev_fused = _mr_s(_fused_label)
++        _send_response(fused_response)
++        _mc_s(_fused_label, _mev_fused)
+         # The fused metadata is received before either logit tensor, so the
+         # target can take the identical branch.  Ordinary q and tree parent-q
+         # are mutually exclusive consumers; the old protocol sent both plus
+@@ -1563,9 +1580,10 @@ class DraftRunner(ModelRunner):
+         _pq = getattr(self, "_tree_wire_parent_q", None)
+         if _pq is None:
+             _q_label = "draft_send_chain_q"
++            if _async_response:
++                _q_label += "_enqueue"
+             _mev_q = _mr_s(_q_label)
+-            dist.send(out_logits[:, :K, :].contiguous(), dst=0,
+-                      group=self.async_pg)
++            _send_response(out_logits[:, :K, :].contiguous())
+             _mc_s(_q_label, _mev_q)
+         else:
+             if B != 1 or self._tree_hit_phase not in (1, 2):
+@@ -1583,9 +1601,10 @@ class DraftRunner(ModelRunner):
+             # valid-row receive.  Do not send the unused phase-cap tail: P1
+             # root thresholding deliberately produces many shallow trees.
+             _q_label = f"draft_send_parent_q_p{self._tree_hit_phase}"
++            if _async_response:
++                _q_label += "_enqueue"
+             _mev_q = _mr_s(_q_label)
+-            dist.send(_pq[:, :_pq_rows].contiguous(), dst=0,
+-                      group=self.async_pg)
++            _send_response(_pq[:, :_pq_rows].contiguous())
+             _mc_s(_q_label, _mev_q)
+         _mc_s("draft_send_response", _mev_ds)
+         if _restore_previous is not None:
+diff --git a/ssd/ssd/engine/helpers/response_send.py b/ssd/ssd/engine/helpers/response_send.py
+new file mode 100644
+index 00000000..2645a269
+--- /dev/null
++++ b/ssd/ssd/engine/helpers/response_send.py
+@@ -0,0 +1,21 @@
++"""Bounded experiment: enqueue the two response payloads without a stream wait.
++
++The target receives both before it can issue its next request. The draft
++reaps here only after that next command arrives, before reusing wire buffers.
++Keep tensor references alive until Work.wait has ordered reuse on this stream.
++"""
++import torch.distributed as dist
++
++
++class ResponseSend:
++    def __init__(self):
++        self.pending = []
++
++    def enqueue(self, tensor, dst, group):
++        work = dist.isend(tensor, dst=dst, group=group)
++        self.pending.append((work, tensor))
++
++    def finish(self):
++        for work, _tensor in self.pending:
++            work.wait()
++        self.pending.clear()
+diff --git a/ssd/tests/test_response_send.py b/ssd/tests/test_response_send.py
+new file mode 100644
+index 00000000..e27f274a
+--- /dev/null
++++ b/ssd/tests/test_response_send.py
+@@ -0,0 +1,45 @@
++"""No wait at enqueue, wire lifetime and bounded next-request retirement."""
++from unittest import TestCase, main
++from unittest.mock import patch, Mock
++import gc
++import weakref
++import torch
++from ssd.engine.helpers.response_send import ResponseSend
++
++
++class ResponseSendTests(TestCase):
++    def test_order_lifetime_and_retirement(self):
++        first, second = Mock(), Mock()
++        with patch('ssd.engine.helpers.response_send.dist.isend', side_effect=[first, second]) as send:
++            sender = ResponseSend()
++            tokens, logits = torch.arange(3), torch.ones(2, 11)
++            token_ref, logit_ref = weakref.ref(tokens), weakref.ref(logits)
++            sender.enqueue(tokens, 0, 'pg')
++            sender.enqueue(logits, 0, 'pg')
++            self.assertIs(send.call_args_list[0].args[0], tokens)
++            self.assertIs(send.call_args_list[1].args[0], logits)
++            first.wait.assert_not_called(); second.wait.assert_not_called()
++            send.reset_mock()
++            del tokens, logits
++            gc.collect()
++            self.assertIsNotNone(token_ref()); self.assertIsNotNone(logit_ref())
++            sender.finish()
++            self.assertEqual(sender.pending, [])
++            first.wait.assert_called_once(); second.wait.assert_called_once()
++            gc.collect()
++            self.assertIsNone(token_ref()); self.assertIsNone(logit_ref())
++            sender.finish()
++            self.assertEqual(first.wait.call_count, 1)
++
++    def test_failure_retains_wire_buffers(self):
++        work = Mock(); work.wait.side_effect = RuntimeError('peer failure')
++        sender = ResponseSend()
++        with patch('ssd.engine.helpers.response_send.dist.isend', return_value=work):
++            sender.enqueue(torch.ones(2), 0, None)
++        with self.assertRaisesRegex(RuntimeError, 'peer failure'):
++            sender.finish()
++        self.assertEqual(len(sender.pending), 1)
++
++
++if __name__ == '__main__':
++    main()

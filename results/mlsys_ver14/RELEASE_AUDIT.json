@@ -1,0 +1,144 @@
+{
+  "status": "pass",
+  "base": "5642de044d9fa2d5e80dfaeeccc8f91cfd1be8e1",
+  "runtime_commit": "fa9963e56e45f73bba3aa4eb39990ebca3ec32c1",
+  "selected_runtime_exact": true,
+  "runs": [
+    {
+      "tag": "v14_pair0_b",
+      "commit": "fa9963e56e45f73bba3aa4eb39990ebca3ec32c1",
+      "source_clean": true,
+      "gpus": [
+        4,
+        5
+      ],
+      "mode": "tree",
+      "temperature": 0.7,
+      "measured_requests": 24,
+      "steps": 2107,
+      "excluded_long": 0,
+      "cap_clip": 20,
+      "max_processes": 1,
+      "max_temp_c": 52
+    },
+    {
+      "tag": "v13_pair0_a",
+      "commit": "5642de044d9fa2d5e80dfaeeccc8f91cfd1be8e1",
+      "source_clean": true,
+      "gpus": [
+        4,
+        5
+      ],
+      "mode": "tree",
+      "temperature": 0.7,
+      "measured_requests": 24,
+      "steps": 2107,
+      "excluded_long": 0,
+      "cap_clip": 20,
+      "max_processes": 1,
+      "max_temp_c": 58
+    },
+    {
+      "tag": "v13_pair1_a",
+      "commit": "5642de044d9fa2d5e80dfaeeccc8f91cfd1be8e1",
+      "source_clean": true,
+      "gpus": [
+        6,
+        7
+      ],
+      "mode": "tree",
+      "temperature": 0.7,
+      "measured_requests": 24,
+      "steps": 2107,
+      "excluded_long": 0,
+      "cap_clip": 20,
+      "max_processes": 1,
+      "max_temp_c": 47
+    },
+    {
+      "tag": "v14_pair1_b",
+      "commit": "fa9963e56e45f73bba3aa4eb39990ebca3ec32c1",
+      "source_clean": true,
+      "gpus": [
+        6,
+        7
+      ],
+      "mode": "tree",
+      "temperature": 0.7,
+      "measured_requests": 24,
+      "steps": 2107,
+      "excluded_long": 0,
+      "cap_clip": 20,
+      "max_processes": 1,
+      "max_temp_c": 51
+    },
+    {
+      "tag": "v14_chain",
+      "commit": "fa9963e56e45f73bba3aa4eb39990ebca3ec32c1",
+      "source_clean": true,
+      "gpus": [
+        4,
+        5
+      ],
+      "mode": "chain",
+      "temperature": 0.7,
+      "measured_requests": 2,
+      "steps": 45,
+      "excluded_long": 0,
+      "cap_clip": 2,
+      "max_processes": 1,
+      "max_temp_c": 50
+    },
+    {
+      "tag": "v13_chain",
+      "commit": "5642de044d9fa2d5e80dfaeeccc8f91cfd1be8e1",
+      "source_clean": true,
+      "gpus": [
+        4,
+        5
+      ],
+      "mode": "chain",
+      "temperature": 0.7,
+      "measured_requests": 2,
+      "steps": 45,
+      "excluded_long": 0,
+      "cap_clip": 2,
+      "max_processes": 1,
+      "max_temp_c": 46
+    },
+    {
+      "tag": "v13_greedy",
+      "commit": "5642de044d9fa2d5e80dfaeeccc8f91cfd1be8e1",
+      "source_clean": true,
+      "gpus": [
+        6,
+        7
+      ],
+      "mode": "tree",
+      "temperature": 0.0,
+      "measured_requests": 2,
+      "steps": 32,
+      "excluded_long": 0,
+      "cap_clip": 2,
+      "max_processes": 1,
+      "max_temp_c": 43
+    },
+    {
+      "tag": "v14_greedy",
+      "commit": "fa9963e56e45f73bba3aa4eb39990ebca3ec32c1",
+      "source_clean": true,
+      "gpus": [
+        6,
+        7
+      ],
+      "mode": "tree",
+      "temperature": 0.0,
+      "measured_requests": 2,
+      "steps": 32,
+      "excluded_long": 0,
+      "cap_clip": 2,
+      "max_processes": 1,
+      "max_temp_c": 41
+    }
+  ]
+}

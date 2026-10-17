@@ -1,0 +1,52 @@
+{
+  "schema": "duet-model-timelines-v1",
+  "models": [
+    {
+      "id": "llama2_7b_68m",
+      "name": "LayerSkip Llama2-7B + llama-68m",
+      "note": "Local orion RTX4090; B1 T0.7 BF16; K8/5 E22 DS4/W32 PS15/W15 C3 M15; native profile ON, 12 inputs output256; no forward GPU stamps",
+      "panels": [
+        {
+          "window": "data/dataset0_source1.json",
+          "sha256": "c3910c98a67d17bd7318863318968e65e700b04fd2032f1edb743f7f2b7b95f3",
+          "source": 1,
+          "setting": "Before: selected prepack base"
+        },
+        {
+          "window": "data/dataset0_source2.json",
+          "sha256": "036dba99b0aaeded08588cf217803a97b64726f205e556f89838a3ca42ad5b25",
+          "source": 2,
+          "setting": "Before: selected prepack base"
+        },
+        {
+          "window": "data/dataset0_source0.json",
+          "sha256": "58b64980288d9f0abad609c73fc1af895ba352f111e8ec793a560a6110cf7d21",
+          "source": 0,
+          "setting": "Before: selected prepack base"
+        },
+        {
+          "window": "data/dataset1_source1.json",
+          "sha256": "d28749cad6e9c0e542f428a075950734c44e7da38081df5365fec370dfadb6c7",
+          "source": 1,
+          "setting": "After: redundant prep removed"
+        },
+        {
+          "window": "data/dataset1_source2.json",
+          "sha256": "a25b0ba4f78aeface17b4f41dd66a25babe834fc4cd16100ce1cadd3a6f45134",
+          "source": 2,
+          "setting": "After: redundant prep removed"
+        },
+        {
+          "window": "data/dataset1_source0.json",
+          "sha256": "5a523e232303c9ab14cf5e709d8091bea27baae9fcf741d8661366b312eb1922",
+          "source": 0,
+          "setting": "After: redundant prep removed"
+        }
+      ]
+    }
+  ],
+  "phase_samples": {
+    "path": "data/PHASE_SAMPLES.json.gz",
+    "sha256": "b1f857366da5c184bf6daf7553fc43238c475215aba9a21f9258c186b7abc717"
+  }
+}

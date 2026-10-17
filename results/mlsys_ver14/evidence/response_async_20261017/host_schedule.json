@@ -1,0 +1,28 @@
+[
+  {
+    "variant": "hostlist",
+    "tag": "hostlist_{model}_host_a",
+    "passes": 2,
+    "reference": "before_{model}_final_b",
+    "wait": "before_{model}_final_b"
+  },
+  {
+    "variant": "hostlist",
+    "tag": "hostlist_{model}_host_b",
+    "passes": 2,
+    "reference": "before_{model}_final_b"
+  },
+  {
+    "variant": "before",
+    "tag": "before_{model}_host_b",
+    "passes": 2,
+    "reference": "before_{model}_final_b"
+  },
+  {
+    "variant": "hostlist",
+    "tag": "hostlist_{model}_profile",
+    "passes": 1,
+    "profile": true,
+    "reference": "before_{model}_profile"
+  }
+]

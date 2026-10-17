@@ -1,0 +1,310 @@
+{
+  "buckets": {
+    "status": "complete",
+    "parity": [
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "baseline_pair0_a",
+        "after": "buckets_pair0_b"
+      },
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "baseline_pair0_d",
+        "after": "buckets_pair0_c"
+      }
+    ],
+    "process_pairs": [
+      {
+        "before": "baseline_pair0_a",
+        "after": "buckets_pair0_b",
+        "n": 2078,
+        "reduction_pct": 0.05769443195362545
+      },
+      {
+        "before": "baseline_pair0_d",
+        "after": "buckets_pair0_c",
+        "n": 2087,
+        "reduction_pct": 0.18310202074101056
+      }
+    ],
+    "reduction_pct": 0.12075152281466606,
+    "ci95_pct": [
+      0.011771715991105994,
+      0.2137754373306058
+    ],
+    "sources": {
+      "1": {
+        "n": 1839,
+        "step_ms": [
+          18.889851539733538,
+          18.85633735804575
+        ],
+        "independent_wall_ms": [
+          18.89525111759605,
+          18.861741238020972
+        ],
+        "target_call_accept_ms": [
+          17.278677622102457,
+          17.264436548570696
+        ]
+      },
+      "2": {
+        "n": 1828,
+        "step_ms": [
+          18.889115235556318,
+          18.861123582060884
+        ],
+        "independent_wall_ms": [
+          18.89450230107885,
+          18.866511883827524
+        ],
+        "target_call_accept_ms": [
+          17.278549888301683,
+          17.268175934543283
+        ]
+      },
+      "0": {
+        "n": 498,
+        "step_ms": [
+          20.45358270201009,
+          20.487437846632787
+        ],
+        "independent_wall_ms": [
+          20.459065156760644,
+          20.49293804981084
+        ],
+        "target_call_accept_ms": [
+          17.325335807806578,
+          17.38278555541662
+        ]
+      },
+      "all": {
+        "n": 4165,
+        "step_ms": [
+          19.076500316390863,
+          19.053465151759077
+        ],
+        "independent_wall_ms": [
+          19.08190431205236,
+          19.058873711683813
+        ],
+        "target_call_accept_ms": [
+          17.28420037818717,
+          17.28022848205621
+        ]
+      }
+    },
+    "adopted_candidate": true
+  },
+  "overlap": {
+    "status": "complete",
+    "parity": [
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "baseline_pair1_a",
+        "after": "overlap_pair1_b"
+      },
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "baseline_pair1_d",
+        "after": "overlap_pair1_c"
+      }
+    ],
+    "process_pairs": [
+      {
+        "before": "baseline_pair1_a",
+        "after": "overlap_pair1_b",
+        "n": 2077,
+        "reduction_pct": 0.34348038054068386
+      },
+      {
+        "before": "baseline_pair1_d",
+        "after": "overlap_pair1_c",
+        "n": 2087,
+        "reduction_pct": -0.11160625696329252
+      }
+    ],
+    "reduction_pct": 0.1147056467184493,
+    "ci95_pct": [
+      -0.0727429487098441,
+      0.2607421082948421
+    ],
+    "sources": {
+      "1": {
+        "n": 1839,
+        "step_ms": [
+          18.8498389656499,
+          18.82289827265992
+        ],
+        "independent_wall_ms": [
+          18.85536515451218,
+          18.82833426224717
+        ],
+        "target_call_accept_ms": [
+          17.23755065446933,
+          17.23759791516517
+        ]
+      },
+      "2": {
+        "n": 1827,
+        "step_ms": [
+          18.85693540086039,
+          18.83239245254263
+        ],
+        "independent_wall_ms": [
+          18.862499054633467,
+          18.837855394764485
+        ],
+        "target_call_accept_ms": [
+          17.24105775784487,
+          17.2435062064228
+        ]
+      },
+      "0": {
+        "n": 498,
+        "step_ms": [
+          20.448610104291316,
+          20.455482509361214
+        ],
+        "independent_wall_ms": [
+          20.45419157190944,
+          20.46103465714937
+        ],
+        "target_call_accept_ms": [
+          17.310861728142903,
+          17.31167027229316
+        ]
+      },
+      "all": {
+        "n": 4164,
+        "step_ms": [
+          19.044160102579053,
+          19.022315375571292
+        ],
+        "independent_wall_ms": [
+          19.049709340723858,
+          19.02777708303738
+        ],
+        "target_call_accept_ms": [
+          17.247857184862355,
+          17.249049039559367
+        ]
+      }
+    },
+    "adopted_candidate": false
+  },
+  "prep": {
+    "status": "complete",
+    "parity": [
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "baseline_pair0_d",
+        "after": "prep_pair0_b"
+      },
+      {
+        "outputs_equal": true,
+        "events_equal": true,
+        "requests": 27,
+        "before": "baseline_pair0_prep_d",
+        "after": "prep_pair0_c"
+      }
+    ],
+    "process_pairs": [
+      {
+        "before": "baseline_pair0_d",
+        "after": "prep_pair0_b",
+        "n": 2087,
+        "reduction_pct": 0.7742894314090476
+      },
+      {
+        "before": "baseline_pair0_prep_d",
+        "after": "prep_pair0_c",
+        "n": 2087,
+        "reduction_pct": 0.908255794444579
+      }
+    ],
+    "reduction_pct": 0.8412990688036248,
+    "ci95_pct": [
+      0.7102195676945459,
+      0.9607959455928411
+    ],
+    "sources": {
+      "1": {
+        "n": 1842,
+        "step_ms": [
+          18.9536273498169,
+          18.80520094392354
+        ],
+        "independent_wall_ms": [
+          18.959236335076078,
+          18.810402209861415
+        ],
+        "target_call_accept_ms": [
+          17.309051855688715,
+          17.23950256994975
+        ]
+      },
+      "2": {
+        "n": 1834,
+        "step_ms": [
+          18.961425525346524,
+          18.8060683092141
+        ],
+        "independent_wall_ms": [
+          18.96703673674925,
+          18.811301578084088
+        ],
+        "target_call_accept_ms": [
+          17.31271376211761,
+          17.23786400231932
+        ]
+      },
+      "0": {
+        "n": 498,
+        "step_ms": [
+          20.572348546431247,
+          20.34313593669439
+        ],
+        "independent_wall_ms": [
+          20.57806286871074,
+          20.348327382127323
+        ],
+        "target_call_accept_ms": [
+          17.37572379264397,
+          17.304366830377333
+        ]
+      },
+      "all": {
+        "n": 4174,
+        "step_ms": [
+          19.150183413505275,
+          18.989073098773268
+        ],
+        "independent_wall_ms": [
+          19.155805944663683,
+          18.994287254688633
+        ],
+        "target_call_accept_ms": [
+          17.31861547835146,
+          17.24652156100359
+        ]
+      }
+    },
+    "adopted_candidate": true
+  },
+  "baseline_cross_pair_parity": {
+    "outputs_equal": true,
+    "events_equal": true,
+    "requests": 27
+  }
+}
