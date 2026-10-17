@@ -1617,14 +1617,20 @@ class ModelRunner:
         # validation below immediately converted its scalar fields back to
         # Python ints.  parse/validate intentionally accept both lists and
         # tensors, so keep this boundary CPU-native.
-        ti = parse_tree_ints(self._duet_tree_meta, nv)
+        _checked = getattr(self, '_duet_validated_tree', None)
+        _reuse_checked = (_checked is not None
+                         and isinstance(self._duet_tree_meta, tuple)
+                         and _checked[0] is self._duet_tree_meta)
+        ti = (_checked[1] if _reuse_checked else
+              parse_tree_ints(self._duet_tree_meta, nv))
         # Every TP rank receives the same metadata through SHM and performs
         # the same check before entering model collectives.  A corrupt tree
         # therefore fails coherently instead of leaving only rank 0 in the
         # acceptance path while its peers wait forever.
-        validate_tree_ints(
-            ti, nv, cfg.hf_config.vocab_size,
-            sibling_capacity=cfg.duet_tree_c_tensor)
+        if not _reuse_checked:
+            validate_tree_ints(
+                ti, nv, cfg.hf_config.vocab_size,
+                sibling_capacity=cfg.duet_tree_c_tensor)
         valid = int(ti["valid"])
         n_rows = valid + 1
         assert input_ids.shape[0] == n_rows, (

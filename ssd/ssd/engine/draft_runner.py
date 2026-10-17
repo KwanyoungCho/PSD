@@ -832,10 +832,14 @@ class DraftRunner(ModelRunner):
         if verify_cap == generated_cap:
             _equal_label = f"tree_hit_pack_served_p{phase}"
             _ev_equal = _mr_rerank(_equal_label)
-            packed = pack_tree_ints(views, root, wire_cap)
-            packed_cpu = packed.detach().cpu()
-            parsed = parse_tree_ints(packed_cpu, wire_cap)
-            validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
+            snapshot = views.get('_response_topology')
+            if snapshot is not None and snapshot.capacity == wire_cap:
+                packed, packed_cpu, parsed = snapshot.select(root, self.hf_config.vocab_size)
+            else:
+                packed = pack_tree_ints(views, root, wire_cap)
+                packed_cpu = packed.detach().cpu()
+                parsed = parse_tree_ints(packed_cpu, wire_cap)
+                validate_tree_ints(parsed, wire_cap, self.hf_config.vocab_size)
             _mc_rerank(_equal_label, _ev_equal)
             return views, root, packed, packed_cpu, parsed, int(parsed["valid"])
 
@@ -937,6 +941,25 @@ class DraftRunner(ModelRunner):
         _mc_rerank(_served_label, _ev_served)
         return out, 0, packed, packed_cpu, parsed, original_valid
 
+    def _cache_response_topology(self, views, phase):
+        generated = (self.config.duet_p1_tree_max_nodes if phase == 1
+                     else self.config.duet_p2_tree_max_nodes)
+        verify = (self.config.duet_p1_tree_verify_nodes if phase == 1
+                  else self.config.duet_p2_tree_verify_nodes)
+        if generated != verify:
+            return
+        from ssd.engine.helpers.response_topology import prepare_response_topology
+        from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
+        label = f'tree_response_topology_prepare_p{phase}'
+        event = duet_record(label)
+        views['_response_topology'] = prepare_response_topology(
+            views, int(self.config.duet_tree_wire_nodes))
+        from ssd.engine.helpers.fused_tree_response import attach_response_packet
+        views['_response_packet'] = attach_response_packet(
+            views['_response_topology'], phase,
+            int(self.config.duet_response_token_width)).to(self.device)
+        duet_close(label, event)
+
     def hit_cache_and_respond(self, request_keys, B, K, num_tokens, temperatures, draft_block_tables, target_recovery_activations=None, before_jit=None):
         """Hits the cache (tensor-backed) and returns tensors to respond to the spec request."""
         # Draft model now returns full target vocab size logits (after d2t expansion)
@@ -948,6 +971,14 @@ class DraftRunner(ModelRunner):
         self._tree_hit_views = None
         self._tree_hit_phase = None
         self._tree_hit_nv = None
+
+        self._fused_tree_response = None
+        self._fused_miss_match = None
+        self._tree_hit_parsed = None
+        from ssd.engine.helpers.fused_tree_response import try_response
+        fast = try_response(self, request_keys, B, K, num_tokens)
+        if fast is not None:
+            return fast
 
         # Init miss slots with valid random logits so token IDs are in-vocab (fixes B>1 crash)
         out_logits = torch.empty(
@@ -1004,16 +1035,22 @@ class DraftRunner(ModelRunner):
                 and hasattr(self, "_s2_pre"):
             self._stage2_classify(request_keys[0])
         if self.tree_cache_keys.numel() > 0:
-            # Vectorized membership against tensor cache
-            eq = (request_keys.unsqueeze(1) == self.tree_cache_keys.unsqueeze(0))  # [B,T,3]
-            match = torch.all(eq, dim=2)  # [B,T]
-            from ssd.engine.helpers.p2_tree import \
-                filter_unservable_tree_matches
-            match = filter_unservable_tree_matches(
-                match, self.tree_cache_is_tree, B)
-            cache_hits = match.any(dim=1)  # [B]
+            if self._fused_miss_match is not None:
+                # The fast lookup already established a miss. Reuse it;
+                # initial cache_hits/phase_source/valid_k have miss values.
+                match = self._fused_miss_match
+            else:
+                # Vectorized membership against tensor cache
+                eq = (request_keys.unsqueeze(1) == self.tree_cache_keys.unsqueeze(0))  # [B,T,3]
+                match = torch.all(eq, dim=2)  # [B,T]
+                from ssd.engine.helpers.p2_tree import \
+                    filter_unservable_tree_matches
+                match = filter_unservable_tree_matches(
+                    match, self.tree_cache_is_tree, B)
+                cache_hits = match.any(dim=1)  # [B]
 
-            if self.config.duet_enabled and self.tree_cache_valid_k is not None:
+            if (self._fused_miss_match is None and self.config.duet_enabled
+                    and self.tree_cache_valid_k is not None):
                 _hit_idx = match.float().argmax(dim=1).to(torch.int64)
                 _is_phase1 = cache_hits & (_hit_idx < self._last_n_draft_keys)
                 phase_source = torch.where(_is_phase1, torch.full_like(phase_source, 1),
@@ -1067,7 +1104,8 @@ class DraftRunner(ModelRunner):
             # identical cache_hits.any()/.all() syncs the pre-M2 branch
             # condition already paid — no new hot-path GPU sync (.all() is
             # only evaluated on the JIT path, exactly as before).
-            _any_hit = bool(cache_hits.any())
+            _any_hit = (False if self._fused_miss_match is not None
+                        else bool(cache_hits.any()))
             if self.config.jit_speculate and not (_any_hit and bool(cache_hits.all())):
                 if before_jit is not None:
                     before_jit()
@@ -1533,24 +1571,27 @@ class DraftRunner(ModelRunner):
         # Wire layout matches speculator_async._fused_response: cache/phase/
         # valid metadata followed by the independently sized token envelope.
         # Ordinary logits below remain K-wide.
-        _fused_parts = [cache_hits.reshape(-1).to(torch.int64),
-                        phase_source.reshape(-1),
-                        valid_k.reshape(-1).to(torch.int64),
-                        out_tokens.reshape(-1).to(torch.int64)]
-        _tree_enabled = getattr(
-            self.config, "duet_tree_enabled",
-            getattr(self.config, "duet_tree_policy", "off") != "off")
-        if _tree_enabled:
-            # T3.4-b2: 트리 블록 동승 (max-padded — hit 없으면 zero 블록,
-            # 크기·호출 순서 불변). 뷰 내용 채움은 respond 경로(b3).
-            _tb = getattr(self, "_tree_wire_ints", None)
-            _nv = self.config.duet_tree_wire_nodes
-            from ssd.engine.helpers.p2_tree import tree_wire_ints_len
-            if _tb is None:
-                _tb = torch.zeros(B * tree_wire_ints_len(_nv),
-                                  dtype=torch.int64, device=self.device)
-            _fused_parts.append(_tb.reshape(-1))
-        fused_response = torch.cat(_fused_parts)
+        if self._fused_tree_response is not None:
+            fused_response = self._fused_tree_response
+        else:
+            _fused_parts = [cache_hits.reshape(-1).to(torch.int64),
+                            phase_source.reshape(-1),
+                            valid_k.reshape(-1).to(torch.int64),
+                            out_tokens.reshape(-1).to(torch.int64)]
+            _tree_enabled = getattr(
+                self.config, "duet_tree_enabled",
+                getattr(self.config, "duet_tree_policy", "off") != "off")
+            if _tree_enabled:
+                # T3.4-b2: 트리 블록 동승 (max-padded — hit 없으면 zero 블록,
+                # 크기·호출 순서 불변). 뷰 내용 채움은 respond 경로(b3).
+                _tb = getattr(self, "_tree_wire_ints", None)
+                _nv = self.config.duet_tree_wire_nodes
+                from ssd.engine.helpers.p2_tree import tree_wire_ints_len
+                if _tb is None:
+                    _tb = torch.zeros(B * tree_wire_ints_len(_nv),
+                                      dtype=torch.int64, device=self.device)
+                _fused_parts.append(_tb.reshape(-1))
+            fused_response = torch.cat(_fused_parts)
         _mc_s("draft_response_pack", _mev_pack)
         _mev_ds = _mr_s("draft_send_response")
         _mev_fused = _mr_s("draft_send_fused")
@@ -1590,6 +1631,10 @@ class DraftRunner(ModelRunner):
         _mc_s("draft_send_response", _mev_ds)
         if _restore_previous is not None:
             _restore_previous()
+
+        if glue_decode_input_ids is None:
+            glue_decode_input_ids = make_glue_decode_input_ids(
+                out_tokens, cache_keys[:, 2], valid_k=valid_k_scalar)
 
         partial_tree_decode_args = {
             "num_tokens": num_tokens,
@@ -1877,41 +1922,20 @@ class DraftRunner(ModelRunner):
 
         _root = self._tree_hit_root
         _views = self._tree_hit_views
-        par = _views["parent_local"][_root]
-        n_valid = int(_views["valid"][_root])
+        parsed = getattr(self, '_tree_hit_parsed', None)
+        if parsed is None:
+            from ssd.engine.helpers.p2_tree import parse_tree_ints
+            parsed = parse_tree_ints(self._tree_served_ints,
+                                    self.config.duet_tree_wire_nodes)
+        n_valid = int(parsed['valid'])
         n_rows = n_valid + 1
-        if glue_decode_input_ids.numel() != n_rows:
-            raise RuntimeError(
-                f"tree glue width mismatch: ids="
-                f"{glue_decode_input_ids.numel()} vs n_valid+1={n_rows}")
-        if n_rows > W:
-            raise RuntimeError(f"tree glue rows {n_rows} > W {W}")
-
-        # 노드별 depth/조상 (parent_local은 항상 자기보다 앞 — 뷰 invariant)
-        depth = [0] * n_valid
-        anc = [[] for _ in range(n_valid)]
-        for j in range(n_valid):
-            p = int(par[j])
-            if p >= 0:
-                depth[j] = depth[p] + 1
-                anc[j] = anc[p] + [p]
-
-        # Reuse this exact context description for P1 root construction.
-        # ctx 0 is recovery; ctx 1+j is tree node j after its ancestors.
-        context_rows = torch.zeros(
-            n_rows, n_rows, dtype=torch.uint8, device=self.device)
-        context_rows[0, 0] = 1
-        context_depth = torch.zeros(
-            n_rows, dtype=torch.int64, device=self.device)
-        for j in range(n_valid):
-            context_rows[1 + j, 0] = 1
-            if anc[j]:
-                context_rows[1 + j, 1 + torch.tensor(
-                    anc[j], dtype=torch.int64, device=self.device)] = 1
-            context_rows[1 + j, 1 + j] = 1
-            context_depth[1 + j] = 1 + depth[j]
-        self._p1_context_glue_rows = context_rows
-        self._p1_context_depth = context_depth
+        if glue_decode_input_ids.numel() != n_rows or n_rows > W:
+            raise RuntimeError('Tree glue input width outside layout')
+        from ssd.engine.helpers.fused_tree_response import glue_context
+        depth, anc, rows_cpu, depth_cpu = glue_context(
+            parsed['parent_local'][:n_valid])
+        self._p1_context_glue_rows = torch.from_numpy(rows_cpu).to(self.device)
+        self._p1_context_depth = torch.from_numpy(depth_cpu).to(self.device)
 
         ctxt = self.prepare_glue_decode_ctxt(
             num_tokens=num_tokens, input_ids=glue_decode_input_ids,
@@ -3073,10 +3097,12 @@ class DraftRunner(ModelRunner):
                     # Kept only for diagnostic serve traces.
                     pool["root_score"] = proxy_piv[0, :rows]
                 self._tree_views = pool
+                self._cache_response_topology(pool, 2)
                 return exec_outputs
             self._tree_views = build_root_views(
                 pool, rows, self.config.duet_tree_nv,
                 cell_logits=cell_logits)
+            self._cache_response_topology(self._tree_views, 2)
             return self._tree_backbone_project(
                 pool, rows, depth, cell_logits,
                 n_roots=(proxy_piv.shape[1]
@@ -3263,6 +3289,7 @@ class DraftRunner(ModelRunner):
             views["root_context_reach"].clamp_min(1e-30)
         self._p1_tree_views = views
         self._precompute_p1_rerank_views(views, real_roots)
+        self._cache_response_topology(views, 1)
         # Correctness-only tracing.  P1 previously reused the production
         # executor but had no equivalent of P2's topology/node audit, which
         # made an AL regression impossible to localize beyond aggregate

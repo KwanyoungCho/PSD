@@ -305,7 +305,8 @@ class Verifier(VerifierBase):
                         duet_close as _mc_tree_prep)
                     _ev_wire = _mr_tree_prep(
                         "tree_wire_parse_validate")
-                    _tree_meta_arg = list(_host_tree) if _host_tree is not None else _ti_row.tolist()
+                    _tree_meta_arg = (tuple(_host_tree) if _host_tree is not None
+                                      else tuple(_ti_row.tolist()))
                     # Validate on rank 0 before indexing parent_q_ref or
                     # sending the metadata through SHM to target TP ranks.
                     # This readback already existed as .tolist().
@@ -434,12 +435,18 @@ class Verifier(VerifierBase):
             _tree_wire_gpu_source
         self.target_model_runner._duet_verify_input_ids = (
             speculate_result.speculations.reshape(-1) if batch_size==1 else None)
+        # Rank0 has just parsed and validated this exact private CPU packet.
+        # TP followers do not receive this cache and keep boundary validation.
+        self.target_model_runner._duet_validated_tree = (
+            (_tree_meta_arg, self._accept_cpu_tree)
+            if _tree_meta_arg is not None else None)
         try:
             result = self.target_model_runner.call(
                 "run", seqs, False, False, True, None, _step_lh_arg,
                 _tree_meta_arg)
         finally:
             self.target_model_runner._duet_verify_input_ids = None
+            self.target_model_runner._duet_validated_tree = None
 
         # DUET: clear proxy function
         if config.duet_enabled:
@@ -830,9 +837,6 @@ class Verifier(VerifierBase):
         V = exit_logits.shape[-1]
         nv = int(config.duet_tree_wire_nodes)
         valid = int(tree_meta[0])
-        par = [int(x) for x in tree_meta[3 + nv:3 + 2 * nv][:valid]]
-        sib = [int(x) for x in tree_meta[3 + 2 * nv:3 + 3 * nv][:valid]]
-
         _proxy_graph = self._active_tree_proxy_graph
         if _proxy_graph is not None:
             # These two coarse spans are useful in every timeline profile;
@@ -854,6 +858,8 @@ class Verifier(VerifierBase):
             _mc_tree_coarse("proxy_send_enqueue", _ev_send)
             return
 
+        par = [int(x) for x in tree_meta[3 + nv:3 + 2 * nv][:valid]]
+        sib = [int(x) for x in tree_meta[3 + 2 * nv:3 + 3 * nv][:valid]]
         from ssd.engine.helpers.batch_tree_sampling import pack_topologies
         from ssd.engine.helpers.root_policy import tree_candidates, options
         ev = _mr_tree("tree_proxy_candidates") if _detail_profile else None

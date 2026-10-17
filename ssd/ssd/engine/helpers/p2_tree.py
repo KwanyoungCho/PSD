@@ -1169,9 +1169,12 @@ class TreeProxyCUDAGraph:
                 f"q={tuple(q_logits.shape)} tok={tuple(tokens.shape)}")
         from ssd.engine.helpers.proxy_temperature import update_graph_temperatures
         update_graph_temperatures(self, target_temps, draft_temps)
-        self.in_exit.zero_()
-        self.in_q.zero_()
-        self.in_tokens.zero_()
+        # Exact-width production graphs overwrite every input element below.
+        # Preserve zero tails for partial-width callers and reference tests.
+        if valid < self.nv:
+            self.in_exit.zero_()
+            self.in_q.zero_()
+            self.in_tokens.zero_()
         self.in_exit[:valid + 1].copy_(exit_logits[:valid + 1])
         if valid:
             self.in_q[:valid].copy_(q_logits[:valid])

@@ -289,24 +289,29 @@ class SpeculatorAsync(SpeculatorBase):
         )
         _mctx(step_id=self._request_step_id, proc="target_rank0")
 
-        # Fill send buffers in-place (avoids torch.tensor from Python lists)
-        for i, seq in enumerate(seqs):
-            self._cache_keys[i, 0] = seq.seq_id
-            # T3.4-b6-1: 직전 step이 트리 verify였으면 k_idx = 종단 노드
-            # id (0=root-종단, 1+j=노드 j) — draft의 트리-step populate
-            # 키(fan_idx=컨텍스트 id)와 같은 네임스페이스. 체인 step은
-            # 기존 수락-길이 좌표 그대로.
-            _tn = getattr(seq, "tree_terminal_node", None)
-            self._cache_keys[i, 1] = (_tn if _tn is not None
-                                      else seq.last_spec_step_accepted_len - 1)
-            self._cache_keys[i, 2] = seq.recovery_token_id
-            self._num_tokens_buf[i] = seq.num_tokens
-            self._temps_buf[i] = seq.draft_temperature if seq.draft_temperature is not None else seq.temperature
-            bt = seq.draft_block_table
-            bt_len = len(bt)
-            if bt_len > 0:
-                self._block_tables_buf[i, :bt_len] = torch.tensor(bt, dtype=torch.int32, device=self.device)
-            self._block_tables_buf[i, bt_len:] = -1
+        request_packet = None
+        if B == 1 and not eagle:
+            from ssd.engine.helpers.fused_tree_response import request_packet_cpu
+            request_packet = request_packet_cpu(seqs, self.max_blocks).to(self.device)
+        else:
+            # Fill send buffers in-place (avoids torch.tensor from Python lists)
+            for i, seq in enumerate(seqs):
+                self._cache_keys[i, 0] = seq.seq_id
+                # T3.4-b6-1: 직전 step이 트리 verify였으면 k_idx = 종단 노드
+                # id (0=root-종단, 1+j=노드 j) — draft의 트리-step populate
+                # 키(fan_idx=컨텍스트 id)와 같은 네임스페이스. 체인 step은
+                # 기존 수락-길이 좌표 그대로.
+                _tn = getattr(seq, "tree_terminal_node", None)
+                self._cache_keys[i, 1] = (_tn if _tn is not None
+                                          else seq.last_spec_step_accepted_len - 1)
+                self._cache_keys[i, 2] = seq.recovery_token_id
+                self._num_tokens_buf[i] = seq.num_tokens
+                self._temps_buf[i] = seq.draft_temperature if seq.draft_temperature is not None else seq.temperature
+                bt = seq.draft_block_table
+                bt_len = len(bt)
+                if bt_len > 0:
+                    self._block_tables_buf[i, :bt_len] = torch.tensor(bt, dtype=torch.int32, device=self.device)
+                self._block_tables_buf[i, bt_len:] = -1
 
         # Handshake marker: target_send_request — wraps cmd + meta + fused
         # payload send (and EAGLE payloads if applicable). Parent label
@@ -315,12 +320,15 @@ class SpeculatorAsync(SpeculatorBase):
         # Send cmd + meta + fused payload (temps fused into int64 burst)
         dist.send(self._cmd, dst=self.draft_runner_rank, group=self.async_pg)
         dist.send(self._meta, dst=self.draft_runner_rank, group=self.async_pg)
-        temps_as_int64 = self._temps_buf.view(torch.int32).to(torch.int64)
-        send_int64(
-            self.async_pg, self.draft_runner_rank,
-            self._cache_keys, self._num_tokens_buf,
-            self._block_tables_buf.to(torch.int64), temps_as_int64,
-        )
+        if request_packet is not None:
+            dist.send(request_packet, dst=self.draft_runner_rank, group=self.async_pg)
+        else:
+            temps_as_int64 = self._temps_buf.view(torch.int32).to(torch.int64)
+            send_int64(
+                self.async_pg, self.draft_runner_rank,
+                self._cache_keys, self._num_tokens_buf,
+                self._block_tables_buf.to(torch.int64), temps_as_int64,
+            )
 
         if eagle:
             recovery_activations = torch.stack(
