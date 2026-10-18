@@ -18,6 +18,7 @@ def main():
     raw.mkdir(parents=True,exist_ok=True);report.mkdir(parents=True,exist_ok=True)
     if (raw/'QUEUE.json').exists():raise RuntimeError('Existing campaign: inspect status/STOP; do not overwrite')
     tools=base/'tools'
+    assert (tools/'adapter/ssd/ssd/utils/performance.py').read_bytes()==(code/'ssd/ssd/utils/performance.py').read_bytes()
     for name in ('benchmark_wall.py','capacity_adapter.py','run_once_helper.py'):
         shutil.copyfile(tools/name,raw/name)
     if (raw/'adapter').exists():

@@ -79,6 +79,8 @@ RTX4090, PyTorch2.8.0+cu128, BF16, 고정 큰 arena 입력을 모사한 항목�
 
 Live: [performance/REPORT.md](performance/REPORT.md). Raw: `/data/chokwans99/duet-ver15-score-seeds-20261019`. 실행 당시 commit·모델 경로·GPU·telemetry·입력/소스 해시를 seed별로 저장한다. 완료 seed의 전체 TPS/AL/hit/step latency, P1/P2/Miss별 rate/AL/step latency와 제외 수를 표로 공개한다.
 
+최초 campaign 시작 시 benchmark adapter의 상대 경로에 고정 집계기 `performance.py`가 없어 모델 로딩 전에 종료했다. Runtime 오류나 완료 seed가 아니다. 서버 절대 경로 symlink 대신 같은 집계 파일 한 개를 명시적으로 포함하고 prepare 단계에서 runtime 집계기와 byte 일치를 확인하도록 수정했다. 실패한 시작 기록은 development_checks에 보존하고 같은 seed를 다시 시작한다.
+
 ## 검토·재현
 
 [인수인계](../../MLSYS_VER15_HANDOVER.md)의 파일별 순서로 검토한다. `checks/CHECKS.json`은 최종 runtime hash를 담고, full run validator는 공개된 clean commit과 현재 파일 해시를 함께 확인한다. 모델·GPU layout을 검토하지 않고 다른 서버의 launcher를 그대로 덮어쓰지 않는다.
