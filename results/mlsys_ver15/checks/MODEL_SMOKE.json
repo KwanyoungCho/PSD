@@ -1,0 +1,50 @@
+{
+  "smoke_stochastic_v5": {
+    "status": "pass",
+    "mode": "stochastic",
+    "temperature": 0.7,
+    "input_turns": 9,
+    "measured_turns": 6,
+    "warmup_turns": 3,
+    "output_cap": 96,
+    "measured_steps": 219,
+    "sources": {
+      "0": 45,
+      "1": 62,
+      "2": 112
+    },
+    "actual_tokens": 670,
+    "cpu_score_vs_gpu_score_output_match": 9,
+    "input_ids_preserved": true,
+    "all_steps_target_sampling": true,
+    "no_preemption": true,
+    "source_unchanged": true,
+    "dirty_development_run": true,
+    "performance_claim": false,
+    "run_sha256": "f4c16a46758612cd0ba097c4bca60a235814908c0640e48371872cd18b994dfb"
+  },
+  "smoke_greedy_v5": {
+    "status": "pass",
+    "mode": "greedy",
+    "temperature": 0.0,
+    "input_turns": 9,
+    "measured_turns": 6,
+    "warmup_turns": 3,
+    "output_cap": 96,
+    "measured_steps": 140,
+    "sources": {
+      "0": 9,
+      "1": 66,
+      "2": 65
+    },
+    "actual_tokens": 864,
+    "cpu_score_vs_gpu_score_output_match": 9,
+    "input_ids_preserved": true,
+    "all_steps_target_sampling": true,
+    "no_preemption": true,
+    "source_unchanged": true,
+    "dirty_development_run": true,
+    "performance_claim": false,
+    "run_sha256": "ab35ed4b31c26416fa4aa1199d232f89b917d20eec6eaf82758b0c1517f947ba"
+  }
+}

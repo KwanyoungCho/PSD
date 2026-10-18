@@ -1,0 +1,236 @@
+test_dense_and_flat_graph_greedy_and_stochastic_b1_b4 (test_score_tree_v15.Captured.test_dense_and_flat_graph_greedy_and_stochastic_b1_b4) ... ok
+test_score_export_matches_cpu_reference_and_replays_updated_q (test_score_tree_v15.Captured.test_score_export_matches_cpu_reference_and_replays_updated_q) ... ok
+test_actual_arena_export_matches_independent_root_local_views (test_score_tree_v15.ScoreSelection.test_actual_arena_export_matches_independent_root_local_views) ... ok
+test_b1_and_b4_share_safe_tree_route (test_score_tree_v15.ScoreSelection.test_b1_and_b4_share_safe_tree_route) ... ok
+test_high_probability_branch_and_ancestors (test_score_tree_v15.ScoreSelection.test_high_probability_branch_and_ancestors) ... ok
+test_later_sibling_selected_and_renumbered (test_score_tree_v15.ScoreSelection.test_later_sibling_selected_and_renumbered) ... ok
+test_natural_generation_bound (test_score_tree_v15.ScoreSelection.test_natural_generation_bound) ... ok
+test_nonbinding_and_invalid (test_score_tree_v15.ScoreSelection.test_nonbinding_and_invalid) ... ok
+test_phase_caps_have_separate_forward_shapes (test_score_tree_v15.ScoreSelection.test_phase_caps_have_separate_forward_shapes) ... ok
+test_single_and_bulk_export_same_score_policy (test_score_tree_v15.ScoreSelection.test_single_and_bulk_export_same_score_policy) ... ok
+test_zero_probability_and_unit_probability_ties (test_score_tree_v15.ScoreSelection.test_zero_probability_and_unit_probability_ties) ... ok
+test_exact_two_token_target_law_for_arbitrary_pruned_trees (test_score_tree_v15.TargetLaw.test_exact_two_token_target_law_for_arbitrary_pruned_trees) ... ok
+test_flat_dense_match_on_same_context_draws (test_score_tree_v15.TargetLaw.test_flat_dense_match_on_same_context_draws) ... ok
+test_greedy_matches_target_argmax_without_rng (test_score_tree_v15.TargetLaw.test_greedy_matches_target_argmax_without_rng) ... ok
+test_q_equal_p_does_not_save_score_pruned_original_q_verifier (test_score_tree_v15.TargetLaw.test_q_equal_p_does_not_save_score_pruned_original_q_verifier) ... ok
+test_stochastic_empirical_target_law (test_score_tree_v15.TargetLaw.test_stochastic_empirical_target_law) ... ok
+test_captured_inputs_equal_eager_including_padding_and_limit (test_batch_tree_serving.ArenaInputs.test_captured_inputs_equal_eager_including_padding_and_limit) ... ok
+test_graph_uses_updated_topology_and_greedy_logits (test_batch_tree_serving.CapturedAcceptance.test_graph_uses_updated_topology_and_greedy_logits) ... ok
+test_stochastic_graph_refreshes_rng_and_recovers_target (test_batch_tree_serving.CapturedAcceptance.test_stochastic_graph_refreshes_rng_and_recovers_target) ... ok
+test_zero_mass_wor_padding_does_not_bias_target (test_batch_tree_serving.ExhaustedProposal.test_zero_mass_wor_padding_does_not_bias_target) ... ok
+test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.ForwardAttention.test_captured_ancestor_attention_matches_independent_dense) ... ok
+test_ancestors_positions_padding_and_pages (test_batch_tree_serving.Geometry.test_ancestors_positions_padding_and_pages) ... ok
+test_bad_parent_and_unallocated_page (test_batch_tree_serving.Geometry.test_bad_parent_and_unallocated_page) ... ok
+test_restore_truncated_and_reordered_path (test_batch_tree_serving.Geometry.test_restore_truncated_and_reordered_path) ... ok
+test_verification_cap_uses_path_score_and_preserves_request_identity (test_batch_tree_serving.Geometry.test_verification_cap_uses_path_score_and_preserves_request_identity) ... ok
+test_greedy_row_breaks_ties_deterministically_in_sampling_batch (test_batch_tree_serving.MixedTemperatures.test_greedy_row_breaks_ties_deterministically_in_sampling_batch) ... ok
+test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.PackedForwardAttention.test_captured_ancestor_attention_matches_independent_dense) ... ok
+test_batched_p1_matches_ragged_single_request_policy (test_batch_tree_serving.RootRanking.test_batched_p1_matches_ragged_single_request_policy) ... ok
+test_empty_proposal_recovery_follows_target_distribution (test_batch_tree_serving.Sampling.test_empty_proposal_recovery_follows_target_distribution) ... ok
+test_exact_ladder_against_independent_scalar_arithmetic (test_batch_tree_serving.Sampling.test_exact_ladder_against_independent_scalar_arithmetic) ... ok
+test_greedy_mixed_tree_chain_empty (test_batch_tree_serving.Sampling.test_greedy_mixed_tree_chain_empty) ... ok
+test_positive_temperature_specialization_preserves_walk_and_rng (test_batch_tree_serving.Sampling.test_positive_temperature_specialization_preserves_walk_and_rng) ... ok
+test_proxy_matches_existing_single_tree_per_row (test_batch_tree_serving.Sampling.test_proxy_matches_existing_single_tree_per_row) ... ok
+test_sampled_siblings_preserve_target_first_token (test_batch_tree_serving.Sampling.test_sampled_siblings_preserve_target_first_token) ... ok
+test_fixed_node_coins_match_scalar_walk_at_every_depth (test_batch_tree_serving.StochasticWalk.test_fixed_node_coins_match_scalar_walk_at_every_depth) ... ok
+test_bad_config_fails_before_model_loading (test_tree_expansion_modes.Configuration.test_bad_config_fails_before_model_loading) ... ok
+test_default_and_phase_overrides (test_tree_expansion_modes.Configuration.test_default_and_phase_overrides) ... ok
+test_phase_overrides_survive_draft_config_reconstruction (test_tree_expansion_modes.Configuration.test_phase_overrides_survive_draft_config_reconstruction) ... `torch_dtype` is deprecated! Use `dtype` instead!
+ok
+test_phase_resolution_without_calibration_io (test_tree_expansion_modes.Configuration.test_phase_resolution_without_calibration_io) ... ok
+test_q_path_is_root_weight_times_raw_q_not_conditional_wor (test_tree_expansion_modes.Configuration.test_q_path_is_root_weight_times_raw_q_not_conditional_wor) ... ok
+test_rejects_unknown_values (test_tree_expansion_modes.Configuration.test_rejects_unknown_values) ... ok
+test_stale_calibration_environment_fails_loudly (test_tree_expansion_modes.Configuration.test_stale_calibration_environment_fails_loudly) ... ok
+test_both_phases_modes_keep_q_topology_and_capture_parity (test_tree_expansion_modes.NativePhaseGraphs.test_both_phases_modes_keep_q_topology_and_capture_parity) ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 9, "fallback": null, "nodes": 13, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6, 6, 6, 6, 6, 6, 6, 6], "selection": "last", "siblings": 3, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "frontier", "siblings": 3, "width": 10}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 9, "fallback": null, "nodes": 13, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 6, 6, 6, 6, 6, 6, 6, 6], "selection": "frontier", "siblings": 3, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "frontier", "siblings": 3, "width": 10}
+ok
+test_cpu_and_arena_selection_match_independent_oracle (test_tree_expansion_modes.Selection.test_cpu_and_arena_selection_match_independent_oracle) ... ok
+test_default_last_matches_explicit_last (test_tree_expansion_modes.Selection.test_default_last_matches_explicit_last) ... ok
+test_full_cpu_rollout_and_arena_match_for_both_modes (test_tree_expansion_modes.Selection.test_full_cpu_rollout_and_arena_match_for_both_modes) ... ok
+test_serving_selects_high_path_score_before_target_sampling (test_tree_expansion_modes.Selection.test_serving_selects_high_path_score_before_target_sampling) ... ok
+test_branching_and_ties (test_tree_accept_port.PortContracts.test_branching_and_ties) ... ok
+test_greedy_draft_first_child_is_argmax (test_tree_accept_port.PortContracts.test_greedy_draft_first_child_is_argmax) ... ok
+test_ragged_chain_recovery_uses_real_end (test_tree_accept_port.PortContracts.test_ragged_chain_recovery_uses_real_end) ... ok
+test_sampler_positive_parity_and_greedy_no_rng (test_tree_accept_port.PortContracts.test_sampler_positive_parity_and_greedy_no_rng) ... ok
+test_temperature_mode_contract (test_tree_accept_port.PortContracts.test_temperature_mode_contract) ... ok
+test_separate_prefixes_masks_and_captured_replay (test_batched_tree_executor.TestBatchedTreeExecutor.test_separate_prefixes_masks_and_captured_replay) ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "last", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 6, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 3, "round_widths": [3, 3, 3], "selection": "frontier", "siblings": 3, "width": 3}
+ok
+test_backbone_logit_gather_bounds_and_tail (test_p2_executor_parity.TestExecutorMandatoryParity.test_backbone_logit_gather_bounds_and_tail)
+Invalid parent cells must zero-fill without any out-of-bounds read. ... ok
+test_eager_equals_replay_with_fixed_noise (test_p2_executor_parity.TestExecutorMandatoryParity.test_eager_equals_replay_with_fixed_noise) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_executor_passes_sampler_rescaling_to_wor (test_p2_executor_parity.TestExecutorMandatoryParity.test_executor_passes_sampler_rescaling_to_wor)
+Captured sampling and target verification must use the same q. ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_graph_eager_interleave_20 (test_p2_executor_parity.TestExecutorMandatoryParity.test_graph_eager_interleave_20) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_p1_backbone_expands_width_to_cover_overbooked_roots (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_backbone_expands_width_to_cover_overbooked_roots)
+Full backbone must not silently drop R-chain_width root tips. ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 14, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 39, "round_widths": [39, 39, 39, 39, 39, 39, 39, 39], "selection": "last", "siblings": 3, "width": 39}
+ok
+test_p1_backbone_preserves_every_root_depth_at_fixed_width (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_backbone_preserves_every_root_depth_at_fixed_width)
+Coverage policy keeps depth K1 while retaining free siblings. ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 7, "fallback": null, "nodes": 14, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8], "selection": "last", "siblings": 3, "width": 8}
+ok
+test_p1_c1_is_an_exact_chain_forest (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_c1_is_an_exact_chain_forest)
+With matched roots/width and C=1, every P1 view is one chain. ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 7, "fallback": null, "nodes": 14, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8], "selection": "last", "siblings": 1, "width": 8}
+ok
+test_p1_dynamic_executor_eager_equals_replay (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_dynamic_executor_eager_equals_replay)
+P1 evaluates every root, then reallocates lanes globally. ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 9, "fallback": null, "nodes": 13, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 20, "round_widths": [20, 16, 16, 16, 16, 16, 16, 16, 16], "selection": "last", "siblings": 3, "width": 20}
+ok
+test_p1_round_wrappers_separate_different_width_plans (test_p2_executor_parity.TestExecutorMandatoryParity.test_p1_round_wrappers_separate_different_width_plans) ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 9, "fallback": null, "nodes": 13, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 20, "round_widths": [20, 16, 16, 16, 16, 16, 16, 16, 16], "selection": "last", "siblings": 3, "width": 20}
+ok
+test_page_boundary_lpl (test_p2_executor_parity.TestExecutorMandatoryParity.test_page_boundary_lpl) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+[tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+[tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_page_swap_between_replays (test_p2_executor_parity.TestExecutorMandatoryParity.test_page_swap_between_replays) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_round_wrappers_share_only_same_page_plan_workspace (test_p2_executor_parity.TestExecutorMandatoryParity.test_round_wrappers_share_only_same_page_plan_workspace)
+Identical serial round plans should not allocate F private 8MiB buffers. ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_sentinel_kv_replay_writes_only_slots (test_p2_executor_parity.TestExecutorMandatoryParity.test_sentinel_kv_replay_writes_only_slots) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_adaptive_executor_keeps_depth_and_varies_only_width (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_adaptive_executor_keeps_depth_and_varies_only_width) ... [tree-policy-resolved] {"allocation": "adaptive", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots) ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_dynamic_executor_capture_and_dynamic_root_depths (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_dynamic_executor_capture_and_dynamic_root_depths) ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_eagle_multiple_bucket_graphs_keep_live_local_index (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_eagle_multiple_bucket_graphs_keep_live_local_index)
+Later bucket capture must not orphan earlier graph state. ... [tree-policy-resolved] {"allocation": "eagle", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_hybrid_executor_depth_floor_and_capture_parity (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_hybrid_executor_depth_floor_and_capture_parity) ... [tree-policy-resolved] {"allocation": "hybrid", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_prime_capture_inputs_are_finite_and_active (test_p2_executor_parity.TestExecutorMandatoryParity.test_z_prime_capture_inputs_are_finite_and_active) ... [tree-policy-resolved] {"allocation": "eagle", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_backbone_logit_gather_bounds_and_tail (test_p2_executor_parity.TestExecutorModuleParity.test_backbone_logit_gather_bounds_and_tail)
+Invalid parent cells must zero-fill without any out-of-bounds read. ... ok
+test_eager_equals_replay_with_fixed_noise (test_p2_executor_parity.TestExecutorModuleParity.test_eager_equals_replay_with_fixed_noise) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_executor_passes_sampler_rescaling_to_wor (test_p2_executor_parity.TestExecutorModuleParity.test_executor_passes_sampler_rescaling_to_wor)
+Captured sampling and target verification must use the same q. ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_p1_backbone_expands_width_to_cover_overbooked_roots (test_p2_executor_parity.TestExecutorModuleParity.test_p1_backbone_expands_width_to_cover_overbooked_roots)
+Full backbone must not silently drop R-chain_width root tips. ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 8, "fallback": null, "nodes": 14, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 39, "round_widths": [39, 39, 39, 39, 39, 39, 39, 39], "selection": "last", "siblings": 3, "width": 39}
+ok
+test_p1_backbone_preserves_every_root_depth_at_fixed_width (test_p2_executor_parity.TestExecutorModuleParity.test_p1_backbone_preserves_every_root_depth_at_fixed_width)
+Coverage policy keeps depth K1 while retaining free siblings. ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 7, "fallback": null, "nodes": 14, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8], "selection": "last", "siblings": 3, "width": 8}
+ok
+test_p1_c1_is_an_exact_chain_forest (test_p2_executor_parity.TestExecutorModuleParity.test_p1_c1_is_an_exact_chain_forest)
+With matched roots/width and C=1, every P1 view is one chain. ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 7, "fallback": null, "nodes": 14, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 8, "round_widths": [8, 8, 8, 8, 8, 8, 8], "selection": "last", "siblings": 1, "width": 8}
+ok
+test_p1_dynamic_executor_eager_equals_replay (test_p2_executor_parity.TestExecutorModuleParity.test_p1_dynamic_executor_eager_equals_replay)
+P1 evaluates every root, then reallocates lanes globally. ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 9, "fallback": null, "nodes": 13, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 20, "round_widths": [20, 16, 16, 16, 16, 16, 16, 16, 16], "selection": "last", "siblings": 3, "width": 20}
+ok
+test_p1_round_wrappers_separate_different_width_plans (test_p2_executor_parity.TestExecutorModuleParity.test_p1_round_wrappers_separate_different_width_plans) ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 9, "fallback": null, "nodes": 13, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 20, "round_widths": [20, 16, 16, 16, 16, 16, 16, 16, 16], "selection": "last", "siblings": 3, "width": 20}
+ok
+test_round_wrappers_share_only_same_page_plan_workspace (test_p2_executor_parity.TestExecutorModuleParity.test_round_wrappers_share_only_same_page_plan_workspace)
+Identical serial round plans should not allocate F private 8MiB buffers. ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_adaptive_executor_keeps_depth_and_varies_only_width (test_p2_executor_parity.TestExecutorModuleParity.test_z_adaptive_executor_keeps_depth_and_varies_only_width) ... [tree-policy-resolved] {"allocation": "adaptive", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots (test_p2_executor_parity.TestExecutorModuleParity.test_z_backbone_executor_keeps_chain_plus_siblings_for_all_roots) ... [tree-policy-resolved] {"allocation": "backbone", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_dynamic_executor_capture_and_dynamic_root_depths (test_p2_executor_parity.TestExecutorModuleParity.test_z_dynamic_executor_capture_and_dynamic_root_depths) ... [tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_eagle_multiple_bucket_graphs_keep_live_local_index (test_p2_executor_parity.TestExecutorModuleParity.test_z_eagle_multiple_bucket_graphs_keep_live_local_index)
+Later bucket capture must not orphan earlier graph state. ... [tree-policy-resolved] {"allocation": "eagle", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_hybrid_executor_depth_floor_and_capture_parity (test_p2_executor_parity.TestExecutorModuleParity.test_z_hybrid_executor_depth_floor_and_capture_parity) ... [tree-policy-resolved] {"allocation": "hybrid", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_z_prime_capture_inputs_are_finite_and_active (test_p2_executor_parity.TestExecutorModuleParity.test_z_prime_capture_inputs_are_finite_and_active) ... [tree-policy-resolved] {"allocation": "eagle", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_same_noise_same_tree (test_p2_executor_parity.TestExecutorVsArenaSemantics.test_same_noise_same_tree) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_batched_lookup_cannot_downgrade_tree_rows_to_chain (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_batched_lookup_cannot_downgrade_tree_rows_to_chain) ... ok
+test_logit_payloads_are_mutually_exclusive (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_logit_payloads_are_mutually_exclusive) ... ok
+test_token_envelope_widens_without_widening_logits (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_token_envelope_widens_without_widening_logits) ... ok
+test_zero_decode_context_stop_is_reported_without_division (test_p1_dynamic_tree.TestNativeContextMetrics.test_zero_decode_context_stop_is_reported_without_division) ... ok
+test_both_trees_reserve_draft_graph_headroom (test_p1_dynamic_tree.TestP1ShapeBuckets.test_both_trees_reserve_draft_graph_headroom) ... ok
+test_buckets_cover_chain_and_tree_contexts (test_p1_dynamic_tree.TestP1ShapeBuckets.test_buckets_cover_chain_and_tree_contexts) ... ok
+test_glue_positions_slice_wide_response_buffer (test_p1_dynamic_tree.TestP1ShapeBuckets.test_glue_positions_slice_wide_response_buffer)
+A response buffer wider than K must not widen a K-node glue. ... ok
+test_live_tree_cell_beyond_native_context_is_rejected (test_p1_dynamic_tree.TestP1ShapeBuckets.test_live_tree_cell_beyond_native_context_is_rejected) ... ok
+test_masked_canvas_tail_may_extend_past_native_block_table (test_p1_dynamic_tree.TestP1ShapeBuckets.test_masked_canvas_tail_may_extend_past_native_block_table) ... ok
+test_p1_only_never_dispatches_p2_tree (test_p1_dynamic_tree.TestP1ShapeBuckets.test_p1_only_never_dispatches_p2_tree) ... ok
+test_p2_masked_tail_may_alias_past_native_block_table (test_p1_dynamic_tree.TestP1ShapeBuckets.test_p2_masked_tail_may_alias_past_native_block_table) ... ok
+test_phase_switches_select_dynamic_for_p1_only (test_p1_dynamic_tree.TestP1ShapeBuckets.test_phase_switches_select_dynamic_for_p1_only) ... ok
+test_scheduler_reserves_common_tree_glue_and_p1_canvas (test_p1_dynamic_tree.TestP1ShapeBuckets.test_scheduler_reserves_common_tree_glue_and_p1_canvas) ... ok
+test_two_x_depth_budget_uses_nineteen_context_canvas (test_p1_dynamic_tree.TestP1ShapeBuckets.test_two_x_depth_budget_uses_nineteen_context_canvas) ... ok
+test_variable_width_p1_reserves_compact_cell_sum (test_p1_dynamic_tree.TestP1ShapeBuckets.test_variable_width_p1_reserves_compact_cell_sum) ... ok
+test_wide_p1_canvas_reservation_crosses_page_safely (test_p1_dynamic_tree.TestP1ShapeBuckets.test_wide_p1_canvas_reservation_crosses_page_safely) ... ok
+test_context_reach_discounts_late_roots (test_p1_dynamic_tree.TestP1UniformRoots.test_context_reach_discounts_late_roots) ... ok
+test_custom_tree_context_visibility_is_repeated_per_root (test_p1_dynamic_tree.TestP1UniformRoots.test_custom_tree_context_visibility_is_repeated_per_root) ... ok
+test_persistent_output_buffers_are_reused (test_p1_dynamic_tree.TestP1UniformRoots.test_persistent_output_buffers_are_reused) ... ok
+test_root_selection_excludes_returned_without_mutating_logits (test_p1_dynamic_tree.TestP1UniformRoots.test_root_selection_excludes_returned_without_mutating_logits) ... ok
+test_root_width_must_hold_every_uniform_candidate (test_p1_dynamic_tree.TestP1UniformRoots.test_root_width_must_hold_every_uniform_candidate) ... ok
+test_selected_q_matches_full_distribution (test_p1_dynamic_tree.TestP1UniformRoots.test_selected_q_matches_full_distribution) ... ok
+test_uniform_topk_scores_padding_and_glue_rows (test_p1_dynamic_tree.TestP1UniformRoots.test_uniform_topk_scores_padding_and_glue_rows) ... ok
+test_descendant_selection_is_parent_closed_and_remappable (test_p1_dynamic_tree.TestTreeHitRerank.test_descendant_selection_is_parent_closed_and_remappable) ... ok
+test_equal_or_larger_cap_is_exact_identity (test_p1_dynamic_tree.TestTreeHitRerank.test_equal_or_larger_cap_is_exact_identity) ... ok
+test_keeps_ancestors_and_prior_wor_siblings (test_p1_dynamic_tree.TestTreeHitRerank.test_keeps_ancestors_and_prior_wor_siblings) ... ok
+test_rejects_noncontiguous_sibling_order (test_p1_dynamic_tree.TestTreeHitRerank.test_rejects_noncontiguous_sibling_order) ... ok
+test_serving_compaction_remaps_parent_and_parent_q (test_p1_dynamic_tree.TestTreeHitRerank.test_serving_compaction_remaps_parent_and_parent_q) ... ok
+test_fanout_exact_round_robin_with_ties_invalid_rows_and_reserve (test_tree_fused_math.FusedTreeMathTests.test_fanout_exact_round_robin_with_ties_invalid_rows_and_reserve) ... ok
+test_mask_exact_bytes_variable_width_prefix_words_and_replay (test_tree_fused_math.FusedTreeMathTests.test_mask_exact_bytes_variable_width_prefix_words_and_replay) ... ok
+test_small_width_parallel_insert_matches_serial_with_fixed_proposals (test_tree_fused_math.FusedTreeMathTests.test_small_width_parallel_insert_matches_serial_with_fixed_proposals) ... [tree-policy-resolved] {"allocation": "level", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 4, "fallback": null, "nodes": 8, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 10, "round_widths": [10, 10, 10, 10], "selection": "last", "siblings": 3, "width": 10}
+ok
+test_exact_law_and_wire (test_tree_live_siblings.LiveSiblingLaw.test_exact_law_and_wire) ... ok
+test_reference_and_request_isolation (test_flat_tree_review.FlatForestLaw.test_reference_and_request_isolation) ... ok
+test_vocabulary_shapes_and_rng (test_flat_tree_runtime.CompactGraphReuse.test_vocabulary_shapes_and_rng) ... ok
+test_existing_debug_disable (test_tree_warmup_bounds.WarmupBounds.test_existing_debug_disable) ... ok
+test_round_zero_and_clamped_target_families (test_tree_warmup_bounds.WarmupBounds.test_round_zero_and_clamped_target_families) ... ok
+test_captured_greedy (test_tree_payload_prepare.ProposalPayload.test_captured_greedy) ... ok
+test_captured_stochastic (test_tree_payload_prepare.ProposalPayload.test_captured_stochastic) ... ok
+test_eager_greedy (test_tree_payload_prepare.ProposalPayload.test_eager_greedy) ... ok
+test_eager_stochastic (test_tree_payload_prepare.ProposalPayload.test_eager_stochastic) ... ok
+test_canonical_config_drives_both_phase_graphs_with_equal_caps (test_duet_parameters_v11.NativeConfigGraphs.test_canonical_config_drives_both_phase_graphs_with_equal_caps) ... 240 compact persistent graph/RNG comparisons PASS
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 7, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 4, 4], "selection": "last", "siblings": 3, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 5, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 4, "round_widths": [6, 6], "selection": "last", "siblings": 3, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 3, "fallback": null, "nodes": 7, "phase": "p1", "requested": "q_path", "resolved": "q_path", "roots": 6, "round_widths": [6, 4, 4], "selection": "last", "siblings": 3, "width": 6}
+[tree-policy-resolved] {"allocation": "dynamic", "calibration_sha256": {}, "depth": 2, "fallback": null, "nodes": 5, "phase": "p2", "requested": "q_path", "resolved": "q_path", "roots": 4, "round_widths": [6, 6], "selection": "last", "siblings": 3, "width": 6}
+ok
+test_cli_has_no_removed_tuning_knobs (test_duet_parameters_v11.Parameters.test_cli_has_no_removed_tuning_knobs) ... ok
+test_ds_continuation_cap_preserves_root_round_and_short_buckets (test_duet_parameters_v11.Parameters.test_ds_continuation_cap_preserves_root_round_and_short_buckets) ... ok
+test_generation_limit_tracks_the_only_cap (test_duet_parameters_v11.Parameters.test_generation_limit_tracks_the_only_cap) ... ok
+test_integer_contract (test_duet_parameters_v11.Parameters.test_integer_contract) ... ok
+test_legacy_equal_caps_migrate_but_unequal_caps_reject (test_duet_parameters_v11.Parameters.test_legacy_equal_caps_migrate_but_unequal_caps_reject) ... ok
+test_local_top_n_recovers_global_top_n_with_fixed_full_scores (test_duet_parameters_v11.Parameters.test_local_top_n_recovers_global_top_n_with_fixed_full_scores) ... ok
+test_model_api_rejects_removed_and_unknown_duet_fields_before_loading (test_duet_parameters_v11.Parameters.test_model_api_rejects_removed_and_unknown_duet_fields_before_loading) ... ok
+test_preset_shapes_and_reconstruction (test_duet_parameters_v11.Parameters.test_preset_shapes_and_reconstruction) ... ok
+test_ps_roots_cannot_exceed_forward_width (test_duet_parameters_v11.Parameters.test_ps_roots_cannot_exceed_forward_width) ... ok
+test_public_fields_have_one_node_cap_and_no_derived_knobs (test_duet_parameters_v11.Parameters.test_public_fields_have_one_node_cap_and_no_derived_knobs) ... ok
+test_removed_score_and_scale_settings_are_not_silently_ignored (test_duet_parameters_v11.Parameters.test_removed_score_and_scale_settings_are_not_silently_ignored) ... ok
+test_scheduler_reserves_root_round_plus_explicit_continuation_rows (test_duet_parameters_v11.Parameters.test_scheduler_reserves_root_round_plus_explicit_continuation_rows) ... ok
+test_topm_uses_new_local_pool_and_can_change_position_ranking (test_duet_parameters_v11.Parameters.test_topm_uses_new_local_pool_and_can_change_position_ranking) ... ok
+test_completed_block_hash_points_to_its_own_physical_page (test_output_accounting.TestOutputAccounting.test_completed_block_hash_points_to_its_own_physical_page) ... ok
+test_decode_counts_committed_tokens_after_cap_or_eos (test_output_accounting.TestOutputAccounting.test_decode_counts_committed_tokens_after_cap_or_eos) ... ok
+test_preemption_preserves_output_and_remaining_budget (test_output_accounting.TestOutputAccounting.test_preemption_preserves_output_and_remaining_budget) ... ok
+test_ar_and_empty_population (test_step_performance_metrics.StepMetrics.test_ar_and_empty_population) ... ok
+test_historical_speculative_rows_and_unknown_ar (test_step_performance_metrics.StepMetrics.test_historical_speculative_rows_and_unknown_ar) ... ok
+test_primary_log_labels_use_same_population (test_step_performance_metrics.StepMetrics.test_primary_log_labels_use_same_population) ... ok
+test_whole_step_union_keeps_token_time_al_and_hit_populations_equal (test_step_performance_metrics.StepMetrics.test_whole_step_union_keeps_token_time_al_and_hit_populations_equal) ... ok
+
+----------------------------------------------------------------------
+Ran 149 tests in 29.249s
+
+OK
