@@ -3,7 +3,7 @@ from copy import copy
 import os
 import torch
 import torch.distributed as dist
-from ssd.engine.helpers.batch_tree_common import capacity, restore_plan
+from ssd.engine.helpers.batch_tree_common import capacity, restore_plan, verification_widths
 from ssd.engine.helpers.batch_tree_forward import BatchedTreeForward
 from ssd.engine.helpers.tree_host_topology import context_topology
 from ssd.engine.helpers.batched_tree_executor import BatchedTreeExecutor
@@ -60,6 +60,17 @@ class BatchedDuetDraft:
                 else:
                     cfg.duet_tree_policy='backbone'
                     cfg.duet_p2_tree_verify_nodes=cfg.duet_phase2_k
+            if on:
+                from ssd.engine.helpers.score_tree import generation_capacity
+                from ssd.engine.helpers.duet_parameters import p1_continuation_width
+                if phase==1:
+                    roots=contexts*cfg.duet_p1_roots_per_position
+                    widths=(roots,)+(p1_continuation_width(cfg,roots),)*(cfg.duet_phase1_k-1)
+                else:
+                    widths=(cfg.duet_proxy_total_budget,)*cfg.duet_phase2_k
+                # This private executor config owns generation buffers only.
+                # self.cfg keeps the user-facing final verification M.
+                setattr(cfg,f'duet_p{phase}_tree_verify_nodes',generation_capacity(widths,cfg.duet_tree_c_tensor))
             hf=self.r.hf_config
             arenas=[]
             for b in range(capacity(self.cfg.max_num_seqs)):
@@ -73,6 +84,9 @@ class BatchedDuetDraft:
                     ex=P2TreeExecutor(*args,dtype=hf.torch_dtype,
                                       glue_width=contexts,materialize_backbone_logits=False)
                 ex.gen.manual_seed((torch.initial_seed()+100003*phase+1009*contexts+b)%(2**63-1))
+                if on:
+                    from ssd.engine.helpers.score_tree_export import ScoreTreeExport
+                    ex.score_export=ScoreTreeExport(ex,getattr(self.cfg,f'duet_p{phase}_tree_verify_nodes'))
                 arenas.append(ex)
             self.forests[key]=arenas
         arenas=self.forests[key][:batch]
@@ -128,30 +142,7 @@ class BatchedDuetDraft:
         return safe
 
     def _save_entries(self,arena,seq,contexts,tokens,phase,safe):
-        if not safe: return
-        R=len(tokens)
-        meta=torch.cat([arena.out_valid[:R,None],arena.view_tok[:R],arena.view_par[:R],
-                        arena.view_sib[:R],arena.view_pcell[:R]],1).cpu().tolist()
-        roots=torch.stack([contexts,tokens],1).cpu().tolist()
-        N=arena.NV
-        is_tree=getattr(self.cfg,f'duet_p{phase}_tree_policy')=='on'
-        cap=(getattr(self.cfg,f'duet_p{phase}_tree_verify_nodes') if is_tree else
-             getattr(self.cfg,f'duet_phase{phase}_k'))
-        for root,(ctx,token) in enumerate(roots):
-            n=meta[root][0]
-            if n<=0: continue
-            a=meta[root]
-            toks=a[1:1+N][:n]; par=a[1+N:1+2*N][:n]
-            sib=a[1+2*N:1+3*N][:n]; cells=a[1+3*N:1+4*N][:n]
-            if n>cap:
-                # A generation-order prefix preserves ancestry and ordered
-                # WOR prefixes without selecting a child by its sampled
-                # value. Post-sampling score re-ranking would require the
-                # conditional proposal law, not the original parent q.
-                toks=toks[:cap];par=par[:cap];sib=sib[:cap];cells=cells[:cap]
-            self.entries.setdefault((seq,int(ctx),int(token)),dict(
-                tokens=toks,parents=par,siblings=sib,cells=cells,
-                logits=arena.cell_logits,phase=phase,tree=is_tree))
+        self._save_entries_bulk([(arena,seq,contexts,tokens,phase,safe)])
 
     def _prepare_batch(self,executor,pages,rows,params,temps):
         from ssd.engine.helpers.batch_tree_inputs import BatchedArenaInputs
@@ -163,34 +154,92 @@ class BatchedDuetDraft:
         return self.input_graphs[key].replay(rows,params,temps)
 
     def _save_entries_bulk(self, records):
-        """Export all request/phase metadata with one D2H synchronization.
+        """One bounded export of actual arena nodes, not R*search_capacity.
 
-        P1 and P2 arenas have separate storage. Keeping the P1 views until
-        P2 finishes is safe and avoids serializing P2 behind P1 CPU export.
-        Preserve P1-first insertion order for duplicate cache roots.
+        The total node count is bounded by C*phase_inputs. Keeping the full
+        search envelope per root is convenient on GPU, but copying its padded
+        R-fold canvas to Python would add avoidable response latency.
         """
-        pieces=[]; shapes=[]
-        for arena,seq,contexts,tokens,phase,safe in records:
-            if not safe: continue
-            R=len(tokens); N=arena.NV
-            value=torch.cat([contexts[:,None],tokens[:,None],arena.out_valid[:R,None],
-                arena.view_tok[:R],arena.view_par[:R],arena.view_sib[:R],arena.view_pcell[:R]],1)
-            pieces.append(value.reshape(-1)); shapes.append((arena,seq,phase,R,N))
-        if not pieces: return
-        host=torch.cat(pieces).cpu().tolist()
-        offset=0
-        for arena,seq,phase,R,N in shapes:
+        pieces=[];shapes=[]
+        for ar,seq,contexts,tokens,phase,safe in records:
+            if not safe:continue
+            roots=len(tokens)
+            if hasattr(ar,'score_export'):
+                data=ar.score_export.replay()[:roots].double()
+                head=torch.stack([contexts,tokens],1).double()
+                pieces.append(torch.cat([head,data],1).reshape(-1))
+                shapes.append((ar,seq,phase,roots,ar.score_export.M,'selected'))
+            elif hasattr(ar,'arena'):
+                a=ar.arena
+                pc=a.cell.gather(0,a.parent_idx.clamp_min(0))
+                data=torch.stack([a.root,a.tok,a.parent_idx,a.sib,pc,a.raw_q,
+                                  a.valid.long(),a.depth],1).double()
+                head=torch.stack([contexts,tokens],1).double().reshape(-1)
+                pieces.append(torch.cat([head,data.reshape(-1)]))
+                shapes.append((ar,seq,phase,roots,a.capacity,'arena'))
+            else:
+                # Small reference fixtures and tooling may expose only the
+                # canonical root-local views. Same score policy, no fallback
+                # to a value-dependent original-q verifier.
+                n=ar.NV
+                data=torch.cat([contexts[:,None].double(),tokens[:,None].double(),
+                    ar.out_valid[:roots,None].double(),ar.view_tok[:roots].double(),
+                    ar.view_par[:roots].double(),ar.view_sib[:roots].double(),
+                    ar.view_pcell[:roots].double(),ar.view_rawq[:roots].double()],1)
+                pieces.append(data.reshape(-1));shapes.append((ar,seq,phase,roots,n,'views'))
+        if not pieces:return
+        host=torch.cat(pieces).cpu().tolist();offset=0
+        from ssd.engine.helpers.score_tree import select_tree
+        for ar,seq,phase,roots,n,mode in shapes:
             is_tree=getattr(self.cfg,f'duet_p{phase}_tree_policy')=='on'
-            cap=(getattr(self.cfg,f'duet_p{phase}_tree_verify_nodes') if is_tree else
-                 getattr(self.cfg,f'duet_phase{phase}_k'))
-            for root in range(R):
-                a=host[offset:offset+3+4*N]; offset+=3+4*N
-                ctx,token,n=a[:3]; n=min(n,cap)
-                if n<=0: continue
-                self.entries.setdefault((seq,int(ctx),int(token)),dict(
-                    tokens=a[3:3+N][:n],parents=a[3+N:3+2*N][:n],
-                    siblings=a[3+2*N:3+3*N][:n],cells=a[3+3*N:3+4*N][:n],
-                    logits=arena.cell_logits,phase=phase,tree=is_tree))
+            cap=(getattr(self.cfg,f'duet_p{phase}_tree_verify_nodes') if is_tree
+                 else getattr(self.cfg,f'duet_phase{phase}_k'))
+            if mode=='selected':
+                for root in range(roots):
+                    row=host[offset:offset+4+4*n];offset+=4+4*n
+                    ctx,token,count,generated=map(int,row[:4])
+                    if not count:continue
+                    self.entries.setdefault((seq,ctx,token),dict(
+                        tokens=list(map(int,row[4:4+count])),
+                        parents=list(map(int,row[4+n:4+n+count])),
+                        siblings=list(map(int,row[4+2*n:4+2*n+count])),
+                        cells=list(map(int,row[4+3*n:4+3*n+count])),
+                        logits=ar.cell_logits,phase=phase,tree=True,
+                        generated_nodes=generated,selection='path_score_top_m'))
+                continue
+            forests=[[] for _ in range(roots)]
+            if mode=='arena':
+                identities=[host[offset+2*r:offset+2*r+2] for r in range(roots)]
+                offset+=2*roots;local={}
+                for j in range(n):
+                    root,tok,parent,sibling,cell,q,valid,depth=host[offset:offset+8];offset+=8
+                    if not valid or depth<=0:continue
+                    root,parent=int(root),int(parent)
+                    if not 0<=root<roots:continue
+                    if parent>=ar.R and parent not in local:
+                        raise RuntimeError('Generated tree lost its ancestor')
+                    par=-1 if parent<ar.R else local[parent]
+                    local[j]=len(forests[root])
+                    forests[root].append((int(tok),par,int(sibling),int(cell),q))
+            else:
+                identities=[]
+                for r in range(roots):
+                    row=host[offset:offset+3+5*n];offset+=3+5*n
+                    ctx,tok,valid=map(int,row[:3]);identities.append((ctx,tok))
+                    for j in range(valid):
+                        forests[r].append((int(row[3+j]),int(row[3+n+j]),
+                            int(row[3+2*n+j]),int(row[3+3*n+j]),row[3+4*n+j]))
+            for root,nodes in enumerate(forests):
+                if not nodes:continue
+                ctx,token=map(int,identities[root])
+                toks,par,sib,cells,q=map(list,zip(*nodes))
+                if is_tree:
+                    keep,par,sib=select_tree(par,q,cap)
+                    toks=[toks[j] for j in keep];cells=[cells[j] for j in keep]
+                else:toks=toks[:cap];par=par[:cap];sib=sib[:cap];cells=cells[:cap]
+                self.entries.setdefault((seq,ctx,token),dict(tokens=toks,parents=par,
+                    siblings=sib,cells=cells,logits=ar.cell_logits,phase=phase,tree=is_tree,
+                    generated_nodes=len(nodes),selection='path_score_top_m' if is_tree else 'chain'))
 
     @torch.inference_mode()
     def serve(self):
@@ -286,8 +335,7 @@ class BatchedDuetDraft:
                 duet_close('batch_proxy_receive',_ready)
         _glue=duet_record('batch_glue')
         # One ancestor-masked draft forward covers both tree and chain rows.
-        glue_width=next(x for x in sorted({cfg.duet_phase1_k+1,cfg.duet_phase2_k+1,
-                                           cfg.duet_response_token_width+1}) if x>=max_valid+1)
+        glue_width=next(n+1 for n in verification_widths(cfg) if n+1>=max_valid+1)
         glue_forward_event=duet_record('batch_glue_forward',parent='batch_glue')
         glue=self.glue.run(rows,glue_width)
         duet_close('batch_glue_forward',glue_forward_event)
@@ -311,8 +359,7 @@ class BatchedDuetDraft:
         bulk_export=os.getenv('SSD_BATCH_TREE_BULK_EXPORT','1')=='1'
         export_records=[]
         contexts=max(len(row['tokens']) for row in rows)
-        cb=next(x for x in sorted({cfg.duet_phase2_k+1,cfg.duet_phase1_k+1,
-                                 cfg.duet_response_token_width+1}) if x>=contexts)
+        cb=next(n+1 for n in verification_widths(cfg) if n+1>=contexts)
         bc=capacity(B)
         padded=[]
         _p1=duet_record("batch_p1_total")

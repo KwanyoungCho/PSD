@@ -21,9 +21,9 @@ def prewarm_draft(service):
     import torch,time
     from ssd.engine.helpers.batch_tree_inputs import BatchedArenaInputs
     from ssd.engine.helpers.batch_tree_roots import BatchedP1Roots
-    from ssd.engine.helpers.batch_tree_common import capacity
+    from ssd.engine.helpers.batch_tree_common import capacity, verification_widths
     r=service.r;cfg=service.cfg;start=time.perf_counter()
-    widths=sorted({cfg.duet_phase1_k+1,cfg.duet_phase2_k+1,cfg.duet_response_token_width+1})
+    widths=[n+1 for n in verification_widths(cfg)]
     # The first forward evaluates roots across all contexts, not max_nodes
     # of one root's tree. Include its full footprint even near a length cap,
     # where execution is masked but the wrapper still needs a page bucket.
@@ -64,13 +64,13 @@ def prewarm_draft(service):
 
 def prewarm_target(r):
     import torch,time
-    from ssd.engine.helpers.batch_tree_common import capacity
+    from ssd.engine.helpers.batch_tree_common import capacity, verification_widths
     from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy,BatchedTreeAccept
     cfg=r.config;start=time.perf_counter()
     pages=page_buckets(cfg)
     if not pages:return
     batches=[1<<i for i in range(capacity(cfg.max_num_seqs).bit_length())]
-    widths=sorted({cfg.duet_phase1_k,cfg.duet_phase2_k,cfg.duet_response_token_width})
+    widths=verification_widths(cfg)
     r._batch_tree_proxies={};r._batch_tree_proxy_pool=None
     r._batch_tree_accept={};r._batch_tree_accept_pool=None
     with torch.inference_mode():
@@ -83,7 +83,7 @@ def prewarm_target(r):
                 r._batch_tree_proxies[b,n]=p
                 if r._batch_tree_proxy_pool is None:r._batch_tree_proxy_pool=p.graph.pool()
                 a=BatchedTreeAccept(p,cfg.sampler_x,cfg.async_fan_out,cfg.greedy_only,
-                    pool=r._batch_tree_accept_pool,stochastic_only=cfg.stochastic_only)
+                    pool=r._batch_tree_accept_pool,stochastic_only=cfg.stochastic_only,target_only=True)
                 r._batch_tree_accept[b,n,cfg.greedy_only,cfg.stochastic_only]=a
                 if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=a.graph.pool()
                 for page in pages:r.call('warm_batched_tree_forward',b,n+1,page)
@@ -104,7 +104,7 @@ def prewarm_target(r):
                             torch.zeros(b,n,device=r.device,dtype=torch.long),torch.zeros_like(p.q),[.7]*b,[.7]*b)
                         if fa is None:
                             fa=FlatAccept(fp,cfg.sampler_x,cfg.async_fan_out,cfg.greedy_only,
-                                pool=r._batch_tree_accept_pool,stochastic_only=cfg.stochastic_only)
+                                pool=r._batch_tree_accept_pool,stochastic_only=cfg.stochastic_only,target_only=True)
                             r._batch_tree_accept[b,n,cfg.greedy_only,cfg.stochastic_only,'flat']=fa
                         else:fa._capture()
         torch.cuda.set_rng_state(rng,r.device);torch.cuda.synchronize(r.device)

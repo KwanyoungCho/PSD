@@ -40,7 +40,10 @@ def runtime_manifest(config, hf, rank, is_draft, target_tp, device):
     if config.duet_enabled:
         from ssd.engine.helpers.root_policy_config import options
         result['duet_parameters'] = dict(
-            version='1.1', generation_equals_verification=True,
+            version='1.5', generation_equals_verification=not config.duet_tree_enabled,
+            tree_selection='path_score_top_m' if config.duet_tree_enabled else 'chain',
+            tree_verification='target_sample_match' if config.duet_tree_enabled else 'original_q_rejection',
+            search_bound='C*actual_phase_inputs' if config.duet_tree_enabled else 'chain_length',
             ds_roots_per_position=config.duet_p1_roots_per_position,
             ps_roots=config.duet_p2_active_root_count,
             ds_continuation_input_cap=config.duet_p1_forward_width,

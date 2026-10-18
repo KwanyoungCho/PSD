@@ -122,7 +122,7 @@ class Selection(unittest.TestCase):
                         torch.testing.assert_close(rope1, rope2)
                         self.assertEqual(mask1.tobytes(), mask2.tobytes())
 
-    def test_serving_keeps_generation_prefix_without_score_rerank(self):
+    def test_serving_selects_high_path_score_before_target_sampling(self):
         from ssd.engine.helpers.batch_tree_draft import BatchedDuetDraft
         service = BatchedDuetDraft.__new__(BatchedDuetDraft)
         service.entries = {}
@@ -132,13 +132,14 @@ class Selection(unittest.TestCase):
             view_par=torch.tensor([[-1, -1, 0, 0, 1, 2]]),
             view_sib=torch.tensor([[0, 1, 0, 1, 0, 0]]),
             view_pcell=torch.tensor([[0, 0, 1, 1, 2, 3]]),
+            view_rawq=torch.tensor([[.1,.9,.1,.1,.9,.1]]),
             cell_logits=torch.randn(4, 20))
         service._save_entries(arena, 1, torch.tensor([0]), torch.tensor([5]), 1, True)
         entry = service.entries[1, 0, 5]
-        self.assertEqual(entry['tokens'], [10, 11, 12, 13])
-        self.assertEqual(entry['parents'], [-1, -1, 0, 0])
-        self.assertEqual(entry['siblings'], [0, 1, 0, 1])
-        self.assertEqual(entry['cells'], [0, 0, 1, 1])
+        self.assertEqual(entry['tokens'], [10, 11, 12, 14])
+        self.assertEqual(entry['parents'], [-1, -1, 0, 1])
+        self.assertEqual(entry['siblings'], [0, 1, 0, 0])
+        self.assertEqual(entry['cells'], [0, 0, 1, 2])
 
     def test_cpu_and_arena_selection_match_independent_oracle(self):
         # Multiple depths, an expanded high-score node, ties and zero-cap roots.

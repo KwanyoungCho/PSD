@@ -217,9 +217,10 @@ class FlatProxy:
 
 
 class FlatAccept:
-    def __init__(self,proxy,sampler_x,fan_out,greedy,pool=None,stochastic_only=False):
+    def __init__(self,proxy,sampler_x,fan_out,greedy,pool=None,stochastic_only=False,target_only=False):
         self.proxy=proxy;self.sampler_x=sampler_x;self.fan_out=fan_out
         self.greedy=greedy;self.stochastic_only=stochastic_only;self.pool=pool;self.cells={}
+        self.target_only=target_only
         self.logit_buffer=torch.zeros_like(proxy.logit_buffer)
         self._capture()
 
@@ -228,8 +229,13 @@ class FlatAccept:
         p=self.proxy;c=p.current;key=c['logits'].shape[0]
         if key not in self.cells:
             logits=self.logit_buffer[:key]
-            def run():return verify(logits,c['q'],c['tokens'],c['topo'],p.n,c['tt'],c['dt'],
-                self.sampler_x,self.fan_out,self.greedy,stochastic_only=self.stochastic_only)
+            def run():
+                if self.target_only:
+                    from ssd.engine.helpers.target_tree_sampling import verify_flat
+                    return verify_flat(logits,c['tokens'],c['topo'],p.n,c['tt'],
+                        greedy=self.greedy,stochastic_only=self.stochastic_only)
+                return verify(logits,c['q'],c['tokens'],c['topo'],p.n,c['tt'],c['dt'],
+                    self.sampler_x,self.fan_out,self.greedy,stochastic_only=self.stochastic_only)
             for _ in range(2):run()
             torch.cuda.synchronize(p.device);graph=torch.cuda.CUDAGraph()
             with torch.cuda.graph(graph,pool=self.pool):out=run()

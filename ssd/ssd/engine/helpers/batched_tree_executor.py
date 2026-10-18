@@ -154,5 +154,8 @@ class BatchedTreeExecutor:
     @torch.inference_mode()
     def replay(self, page_bucket):
         self.graphs[page_bucket].replay()
-        for ex in self.executors:
-            ex._finalize_outputs()
+        # Serving consumes node-local q cells, not the quadratic legacy
+        # unique-parent/backbone projection of the full search envelope.
+        if not self.staging_only:
+            for ex in self.executors:
+                ex._finalize_outputs()

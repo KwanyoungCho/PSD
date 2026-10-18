@@ -7,7 +7,7 @@ from ssd.engine.helpers.batch_tree_sampling import pack_topologies, ladder, cand
 from ssd.engine.helpers.p2_tree import tree_proxy_candidates_fixed, unpack_piv
 
 class Geometry(unittest.TestCase):
-    def test_verification_cap_preserves_generation_prefix_and_request_identity(self):
+    def test_verification_cap_uses_path_score_and_preserves_request_identity(self):
         from types import SimpleNamespace as NS
         from ssd.engine.helpers.batch_tree_draft import BatchedDuetDraft
         service=object.__new__(BatchedDuetDraft)
@@ -20,14 +20,14 @@ class Geometry(unittest.TestCase):
             view_rawq=torch.tensor([[.01,.99,.01,.99]]),cell_logits=torch.randn(9,11))
         service._save_entries(arena,31,torch.tensor([1]),torch.tensor([9]),2,True)
         entry=service.entries[31,1,9]
-        self.assertEqual(entry['tokens'],[8,2,6])
-        self.assertEqual(entry['parents'],[-1,-1,0])
+        self.assertEqual(entry['tokens'],[8,2,5])
+        self.assertEqual(entry['parents'],[-1,-1,1])
         self.assertEqual(entry['siblings'],[0,1,0])
-        self.assertEqual(entry['cells'],[3,3,7])
+        self.assertEqual(entry['cells'],[3,3,8])
         arena.view_tok=torch.tensor([[4,7,1,3]])
         service._save_entries(arena,52,torch.tensor([1]),torch.tensor([9]),2,True)
-        self.assertEqual(service.entries[31,1,9]['tokens'],[8,2,6])
-        self.assertEqual(service.entries[52,1,9]['tokens'],[4,7,1])
+        self.assertEqual(service.entries[31,1,9]['tokens'],[8,2,5])
+        self.assertEqual(service.entries[52,1,9]['tokens'],[4,7,3])
 
     def test_ancestors_positions_padding_and_pages(self):
         rows=[dict(tokens=[10,11,12,13,14],parents=[-1,-1,0,1],prefix=3,blocks=[7,2]),

@@ -979,13 +979,16 @@ class Config:
                     "only 'b' (unified K+1) remains. Policy A was removed "
                     "(2026-07); see git history."
                 )
-            print(f'[Config] DUET v1.1: exit={self.duet_exit_layer}, '
+            print(f'[Config] DUET v1.5 (v1.1 parameter names): exit={self.duet_exit_layer}, '
                   f'K_DS/PS={self.duet_phase1_k}/{self.duet_phase2_k}, '
                   f'DS_roots_per_position={self.duet_p1_roots_per_position}, '
                   f'PS_roots={self.duet_p2_active_root_count}, '
                   f'DS_continuation_input_cap={self.duet_p1_forward_width}, '
                   f'PS_forward_inputs={self.duet_proxy_total_budget}, '
-                  f'DS/PS_G=M={self.duet_p1_tree_verify_nodes}/{self.duet_p2_tree_verify_nodes}, '
+                  f'DS/PS_verify_M={self.duet_p1_tree_verify_nodes}/{self.duet_p2_tree_verify_nodes}, '
+                  f'tree_selection={"path_score_top_m" if self.duet_tree_enabled else "chain"}, '
+                  f'tree_verify={"target_sample_match" if self.duet_tree_enabled else "original_q_rejection"}, '
+                  f'search_bound={"C*actual_phase_inputs" if self.duet_tree_enabled else "chain_length"}, '
                   f'C={self.duet_tree_c_tensor}, '
                   f'auto_top_L={self.duet_proxy_top_k}, wire_N={self.duet_proxy_wire_N}, '
                   f'normalization={self.duet_root_normalization}, '

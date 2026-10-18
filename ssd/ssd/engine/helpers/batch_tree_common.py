@@ -5,14 +5,23 @@ from ssd.engine.helpers.tree_host_topology import context_topology
 
 
 def enabled(config):
+    # One tree selection/verifier contract for B=1 and B>1. The legacy B1
+    # original-q verifier cannot consume score-conditioned proposals.
     return (getattr(config, 'duet_enabled', False)
-            and getattr(config, 'duet_tree_enabled', False)
-            and (int(config.max_num_seqs) > 1
-                 or os.environ.get('SSD_BATCHED_TREE', '0') == '1'))
+            and getattr(config, 'duet_tree_enabled', False))
 
 
 def capacity(n):
     return 1 << max(0, int(n-1).bit_length())
+
+
+def verification_widths(config):
+    """Keep both phase M values, so PS does not pad up to the DS cap."""
+    widths={int(config.duet_phase1_k),int(config.duet_phase2_k),int(config.duet_response_token_width)}
+    for phase in (1,2):
+        if getattr(config,f'duet_p{phase}_tree_policy','off')=='on':
+            widths.add(int(getattr(config,f'duet_p{phase}_tree_verify_nodes')))
+    return tuple(sorted(widths))
 
 
 def build_forward_inputs(rows, width, batch_capacity, pages, block_size):

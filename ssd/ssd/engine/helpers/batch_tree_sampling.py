@@ -202,13 +202,17 @@ def verify_batch(logits_p,logits_q,tokens,topology,target_temps,draft_temps,
 class BatchedTreeAccept:
     """Capture the entire exact walk, including independent CUDA RNG draws."""
     @torch.inference_mode()
-    def __init__(self, proxy, sampler_x, fan_out, greedy, pool=None, stochastic_only=False):
+    def __init__(self, proxy, sampler_x, fan_out, greedy, pool=None, stochastic_only=False,target_only=False):
         self.proxy=proxy
         self.logits=torch.zeros_like(proxy.exit)
         b=proxy.tokens.shape[0]
         self.tt=torch.ones(b,dtype=torch.float32,device=proxy.tokens.device)
         self.dt=torch.ones_like(self.tt)
         def run():
+            if target_only:
+                from ssd.engine.helpers.target_tree_sampling import verify_dense
+                return verify_dense(self.logits,proxy.tokens,proxy.topology,self.tt,
+                    greedy=greedy,stochastic_only=stochastic_only)
             return verify_batch(self.logits,proxy.q,proxy.tokens,proxy.topology,
                                 self.tt,self.dt,sampler_x,fan_out,greedy,
                                 stochastic_only=stochastic_only)

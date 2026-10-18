@@ -2,7 +2,7 @@
 from time import perf_counter
 import os
 import torch
-from ssd.engine.helpers.batch_tree_common import capacity
+from ssd.engine.helpers.batch_tree_common import capacity, verification_widths
 from ssd.engine.helpers.batch_tree_sampling import BatchedTreeProxy, BatchedTreeAccept, verify_batch
 from ssd.engine.helpers.flat_tree_sampling import FlatProxy, FlatAccept, verify as verify_flat
 from ssd.engine.helpers.p2_tree import parse_tree_ints, validate_tree_ints, commit_copy_plan
@@ -22,7 +22,7 @@ def verify(verifier,seqs,result):
     step_width=result.speculations.shape[1]-1
     N=cfg.duet_response_token_width
     if os.getenv('SSD_BATCH_TREE_FIXED_VERIFY','0')!='1':
-        widths={cfg.duet_phase1_k,cfg.duet_phase2_k,N}
+        widths=verification_widths(cfg)
         N=next(n for n in sorted(widths) if n>=step_width)
     valid=[s.verify_valid_k for s in seqs]
     wire=result.tree_ints.cpu()
@@ -107,20 +107,20 @@ def verify(verifier,seqs,result):
             capture_event=duet_record('batch_accept_capture') if DETAIL_TREE else None
             graph=accept_type(proxy,verifier.sampler_x,verifier.async_fan_out,
                                     greedy,pool=r._batch_tree_accept_pool,
-                                    stochastic_only=cfg.stochastic_only)
+                                    stochastic_only=cfg.stochastic_only,target_only=True)
             r._batch_tree_accept[key]=graph
             if r._batch_tree_accept_pool is None:r._batch_tree_accept_pool=graph.graph.pool()
             if DETAIL_TREE:duet_close('batch_accept_capture',capture_event)
         paths,recoveries,terminal=r._batch_tree_accept[key].replay(logits,tt,dt)
     elif compact:
+        from ssd.engine.helpers.target_tree_sampling import verify_flat as target_verify_flat
         c=proxy.current
-        paths,recoveries,terminal=verify_flat(logits,c['q'],c['tokens'],c['topo'],N,
-            c['tt'],c['dt'],verifier.sampler_x,verifier.async_fan_out,greedy,
+        paths,recoveries,terminal=target_verify_flat(logits,c['tokens'],c['topo'],N,c['tt'],greedy=greedy,
             stochastic_only=cfg.stochastic_only)
     else:
-        paths,recoveries,terminal=verify_batch(logits,proxy.q[:B],proxy.tokens[:B],topology,tt,dt,
-                                              verifier.sampler_x,verifier.async_fan_out,greedy,
-                                              stochastic_only=cfg.stochastic_only)
+        from ssd.engine.helpers.target_tree_sampling import verify_dense
+        paths,recoveries,terminal=verify_dense(logits,proxy.tokens[:B],topology,tt,
+            greedy=greedy,stochastic_only=cfg.stochastic_only)
     result_cpu=torch.cat([paths,recoveries,terminal],1).cpu().tolist()
     if DETAIL_TREE:duet_close('batch_tree_accept',accept_event)
     commit_event=duet_record('batch_tree_commit') if DETAIL_TREE else None
@@ -147,6 +147,7 @@ def verify(verifier,seqs,result):
                           if os.getenv('SSD_PACKED_TREE_VERIFY','0')=='1'
                           else cap*(N+1))
         m['phase_events'].append(dict(tree=is_tree[b],batch_size=B,verify_width=step_width,
+            verification='target_sample_match',tree_selection='path_score_top_m',
             physical_verify_width=N,
             physical_batch_queries=physical_queries,
             probability_queries=flat_q if compact else cap*(N+1),
