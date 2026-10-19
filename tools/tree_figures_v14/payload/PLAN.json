@@ -1,0 +1,42 @@
+{
+  "job": {
+    "checkout": "/home/chokwans99/PSD-MLSys-ver1.4",
+    "mode": "tree",
+    "profile": false,
+    "async_send": 1,
+    "replica": 0,
+    "proxy_stream": 0,
+    "shapes": true,
+    "config": {
+      "exit_layer": 21,
+      "k1": 10,
+      "k2": 5,
+      "p1_verify": 23,
+      "p2_verify": 15,
+      "roots": 4,
+      "siblings": 3,
+      "ds_width": 56,
+      "ps_width": 28,
+      "ps_roots": 24,
+      "passes": 1,
+      "output_tokens": 1024,
+      "input_cap": 0,
+      "warm_prompts": 3,
+      "prompts": "INPUTS_FULL.json",
+      "limit": 0,
+      "seed": 42,
+      "temperature": 0.7
+    }
+  },
+  "pairs": [
+    [
+      6,
+      7
+    ],
+    [
+      4,
+      5
+    ]
+  ],
+  "baseline_commit": "dedc85ccb299df2d76fcf34d50f05f2d8747a32a"
+}

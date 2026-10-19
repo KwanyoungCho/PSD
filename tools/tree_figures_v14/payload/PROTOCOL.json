@@ -1,0 +1,64 @@
+{
+  "seed_priority_prefix": [
+    42,
+    123,
+    2026
+  ],
+  "seed_priority_after_prefix": "0,1,2,3,...",
+  "requested_seeds": [
+    42,
+    123,
+    2026
+  ],
+  "dataset_questions": 480,
+  "dataset_turns": 560,
+  "passes_per_seed": 1,
+  "raw_prompt_order_preserved": true,
+  "chat_template": false,
+  "input_truncation": false,
+  "context_limit": 2048,
+  "nominal_output_cap": 1024,
+  "per_request_output_cap": "min(1024,2048-len(input_ids))",
+  "ignore_eos": false,
+  "existing_context_guard": true,
+  "target_temperature": 0.7,
+  "draft_temperature": 0.7,
+  "nucleus_cutoff": null,
+  "warmup_requests": 3,
+  "warmup_scope": "within_dataset",
+  "profile": false,
+  "parameters": {
+    "exit_layer": 21,
+    "k1": 10,
+    "k2": 5,
+    "ds_roots_per_position": 4,
+    "ds_width": 56,
+    "ps_roots": 24,
+    "ps_width": 28,
+    "siblings": 3,
+    "p1_G_equals_M": 23,
+    "p2_G_equals_M": 15
+  },
+  "async_proxy_send": true,
+  "exit_replica": false,
+  "proxy_stream": false,
+  "warmup_counted_in_560": true,
+  "measured_turns_per_seed": 557,
+  "excluded_initial_input_uids": [
+    "81_t0",
+    "81_t1",
+    "82_t0"
+  ],
+  "draft_kv_free_memory_fraction": 0.35,
+  "measurement": "Native v1.4 trajectory; same-hit residual shadow forest mechanism, not TPS",
+  "allow_nonnegative_continuation": true,
+  "stop_policy": "until_user_stop",
+  "shadow_R_W_K": 10,
+  "shadow_G_equals_M": 300,
+  "shadow_sampling": {
+    "full_run_stride": 8,
+    "rule": "(generation_step-1)%8 == 0; chosen before hit/AL",
+    "preflight_stride": 1
+  },
+  "P1_subset_rotation": "seeded private random cyclic shift, seed*1000003+seq*503+generation_step*101; independent of later hits"
+}
