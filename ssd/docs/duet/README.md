@@ -16,6 +16,8 @@
 
 공개 스위치는 phase별로 `off|on` 두 값만 쓴다. 두 phase를 하나의 스위치로
 묶지 않는 이유는 P1만 또는 P2만 tree로 켜는 분해 실험이 필요하기 때문이다.
+MLSys ver1.6의 2026-10-23 갱신부터 API와 benchmark CLI 모두 P1/P2 기본값은
+`on`/`on`이다. 과거 P2-only 실행을 재현할 때는 P1 `off`를 명시한다.
 
 ```bash
 --duet_p1_tree_policy off|on      # proxy 도착 전 draft-source phase
@@ -25,7 +27,7 @@
 | 설정 | 의미 |
 |---|---|
 | `off` / `off` | **chain. 현재 성능 기준선이자 champion** |
-| `on` / `on` | P1·P2 모두 동적 tree. 논문의 token-axis/구조 실험용 |
+| `on` / `on` | P1·P2 모두 동적 tree. API/CLI 기본값 |
 | `off` / `on` | P2만 tree. phase 분해용 |
 | `on` / `off` | P1만 tree. phase 분해용 |
 

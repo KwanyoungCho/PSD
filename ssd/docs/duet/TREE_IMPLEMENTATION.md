@@ -48,8 +48,9 @@
 
 ### 1.2 기본값 변경의 정확한 의미
 
-공개 CLI에는 외부 기법 이름을 사용하지 않는다. 현재 기본값은 P1 `off`, P2
-`on`이지만 재현 실험은 두 값을 모두 명시한다. 전체 chain은
+공개 CLI에는 외부 기법 이름을 사용하지 않는다. MLSys ver1.6의 2026-10-23
+갱신부터 API와 CLI 기본값은 P1 `on`, P2 `on`이다. 재현 실험은 두 값을
+모두 명시한다. 과거 기본 P2-only 실행은 P1 `off`를 지정한다. 전체 chain은
 `--duet_p1_tree_policy off --duet_p2_tree_policy off`, 전체 동적 tree는 두 값을
 모두 `on`으로 둔다. 과거 `duet_tree_policy` 값들은 저장된 실험의 재현용 내부
 호환 경로로만 남아 있다.
@@ -968,7 +969,9 @@ evaluated-cell audit에서 오류와 중복 평가는 모두 0이었다. 실제 
 
 따라서 P1 branch는 실제로 사용되고 AL에 기여하지만, 현재 70B target/1B draft
 배치에서는 낮은 node 이용률과 재귀 context 비용 때문에 그 이득보다 시간이
-더 크다. P1은 정확한 연구 arm으로 유지하되 production 기본값은 계속 `off`다.
+더 크다. 이 실험 당시 P1은 연구 arm으로 유지하고 production 기본값은 `off`였다.
+이 역사적 성능 판정과 별도로, MLSys ver1.6은 2026-10-23부터 P1/P2 기본값을
+모두 `on`으로 맞췄다. 기본값 변경 자체가 모든 workload의 TPS 우위를 뜻하지는 않는다.
 원 로그는 `p1_compute_matched_gate_20260808`, `p1_nodes{12,15,18}_gate_20260808`,
 `p1_nodes18_audit_20260808`에 있다.
 
@@ -1304,7 +1307,7 @@ SSD_DUET_EXIT_REPLICA=1 SSD_ASYNC_PROXY_SEND=1 SSD_PROXY_STREAM=0 \
 
 | 인자 | 기본값 | 역할 |
 |---|---:|---|
-| `--duet_p1_tree_policy` | `off` | P1 chain/dynamic 선택 |
+| `--duet_p1_tree_policy` | `on` | P1 chain/dynamic 선택 |
 | `--duet_p2_tree_policy` | `on` | P2 chain/dynamic 선택 |
 | `--duet_p1_roots_per_position` | 2 | P1 context별 균등 시작 후보 수 U1 |
 | `--duet_p1_tree_forward_scale` | 1.0 | P1 W/R; 1에서도 round 1부터 전역 동적 선택 |

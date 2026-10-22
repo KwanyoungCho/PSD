@@ -4,6 +4,8 @@ MLSys ver1.6은 **ver1.4의 DUET 생성 및 검증 알고리즘을 유지하면�
 
 ## 변경 내용
 
+2026-10-23부터 P1 draft-source tree의 API 및 benchmark CLI 기본값을 `off`에서 `on`으로 바꿨다. P2는 기존처럼 `on`이므로 DUET의 두 phase가 기본적으로 동적 tree를 사용한다. Chain 실험은 `duet_p1_tree_policy='off', duet_p2_tree_policy='off'` 또는 CLI의 `--duet_p1_tree_policy off --duet_p2_tree_policy off`를 모두 명시한다. 기본값에 의존한 과거 P2-only 실행을 재현하려면 P1을 명시적으로 `off`로 둔다. 기존 주 실험은 두 값을 이미 `on`으로 지정했으므로 이 기본값 변경으로 설정이 바뀌지 않는다.
+
 초기 배포 `bcb4a1e443`에는 `enforce_eager=True`의 dense attention planner 회귀가 있었다. 실행 모드를 prefill 여부와 혼동하여 decode/verify의 `cu_seqlens_k=None`을 읽는 오류다. 후속 수정은 planner의 layout 분류를 ver1.4와 동일하게 복구하고, non-mixing eager 안전 동기화는 `run_model` 진입부에 둔다. 이 회귀는 최적화 flag를 꺼도 eager 실행에서 발생했으므로 초기 commit 대신 수정된 최신 ver1.6을 받는다. 일반 CUDA graph 검증의 분기와 수락 수식은 이 수정으로 바뀌지 않는다.
 
 기존 TP 검증은 captured transformer graph 사이에 eager 중간층 LM head와 TP gather를 실행했다. 이 서버에서는 NCCL의 captured/eager collective 혼용 경로에서 `cudaGraphLaunch`의 CPU 제출 시간이 수십 ms까지 늘어났다. 고정 graph에서는 특정 폭의 지연이 반복됐지만, graph를 다시 구성하면 느린 폭도 이동했다. 따라서 특정 G 자체가 항상 느리다는 의미는 아니다.
@@ -17,7 +19,7 @@ ver1.6은 중간층 head/gather를 pre graph에, 최종 head/gather를 post grap
 | `ssd/ssd/engine/model_runner.py` | 해당 graph dispatch, 짧은 tree의 최종 head 입력 trimming, startup bucket 선택 |
 | `ssd/ssd/engine/helpers/target_verify_buckets.py` | 선택적 짧은 query bucket 추가와 가장 작은 수용 bucket 선택 |
 
-Verifier, draft 생성기, P1/P2 후보 점수, q-path 경쟁, ordered WOR, 수락/보정 수식, sampler, 모델 가중치와 Config 기본값은 ver1.4 그대로다. G는 여전히 생성되는 **root 제외 노드 상한**이다. Tree를 생성한 뒤 점수순 top-M으로 자르는 알고리즘은 도입하지 않았다.
+Verifier, draft 생성기, P1/P2 후보 점수, q-path 경쟁, ordered WOR, 수락/보정 수식, sampler와 모델 가중치는 ver1.4 그대로다. Config 기본값 중 P1 tree 스위치만 위와 같이 `on`으로 바뀌었다. G는 여전히 생성되는 **root 제외 노드 상한**이다. Tree를 생성한 뒤 점수순 top-M으로 자르는 알고리즘은 도입하지 않았다.
 
 ## 다른 서버에서 받기
 

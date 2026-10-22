@@ -59,7 +59,7 @@ def _diff(a, b):
 class TestOldNewEquivalence(unittest.TestCase):
     def test_dynamic_tree_is_the_duet_default_and_chain_is_explicit(self):
         dynamic = _mk({})
-        self.assertEqual(dynamic.duet_p1_tree_policy, "off")
+        self.assertEqual(dynamic.duet_p1_tree_policy, "on")
         self.assertEqual(dynamic.duet_p2_tree_policy, "on")
         self.assertEqual(dynamic.duet_tree_policy, "dynamic")
         self.assertEqual(dynamic.duet_p2_seed_count,
@@ -69,7 +69,8 @@ class TestOldNewEquivalence(unittest.TestCase):
         self.assertEqual(smaller_r.duet_tree_policy, "dynamic")
         self.assertEqual(smaller_r.duet_p2_active_root_count, 6)
 
-        chain = _mk({}, duet_p2_tree_policy="off")
+        chain = _mk({}, duet_p1_tree_policy="off", duet_p2_tree_policy="off")
+        self.assertEqual(chain.duet_p1_tree_policy, "off")
         self.assertEqual(chain.duet_p2_tree_policy, "off")
         self.assertEqual(chain.duet_tree_policy, "off")
 
@@ -81,7 +82,7 @@ class TestOldNewEquivalence(unittest.TestCase):
         self.assertEqual(dynamic.duet_p2_tree_max_nodes, 7)
         self.assertEqual(dynamic.duet_tree_nv, 7)
 
-        chain = _mk({}, duet_tree_policy="off")
+        chain = _mk({}, duet_p1_tree_policy="off", duet_tree_policy="off")
         self.assertEqual(chain.duet_p2_tree_policy, "off")
         self.assertEqual(chain.duet_tree_policy, "off")
 

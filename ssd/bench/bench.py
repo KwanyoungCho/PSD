@@ -122,8 +122,9 @@ def parse_arguments():
                         help="PS input rows per forward (separate from PS root count). "
                              "Default: derived pfo*(K1+1) where pfo = f - p1_fanout.")
     parser.add_argument("--duet_p1_tree_policy", choices=("off", "on"),
-                        default="off",
-                        help="Enable DUET's dynamic Phase-1 tree.")
+                        default="on",
+                        help="DUET's dynamic Phase-1 tree (default: on). "
+                             "For chain, explicitly set both phase policies off.")
     parser.add_argument("--duet_p2_tree_policy", choices=("off", "on"),
                         default="on",
                         help="Enable DUET's dynamic Phase-2 tree.")

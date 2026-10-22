@@ -1,0 +1,65 @@
+{
+  "release": "MLSys-ver1.6",
+  "state": "passed",
+  "change_date_kst": "2026-10-23",
+  "parent_commit": "1d0f39024f749300791e3a9f64ec5730955a16f2",
+  "scope": "Set the P1 tree default to on in Config and benchmark CLI; P2 already defaults to on.",
+  "defaults": {
+    "duet_p1_tree_policy": "on",
+    "duet_p2_tree_policy": "on",
+    "duet_p1_tree_allocation_policy": "dynamic",
+    "duet_tree_expansion": "last"
+  },
+  "explicit_chain": {
+    "duet_p1_tree_policy": "off",
+    "duet_p2_tree_policy": "off"
+  },
+  "legacy_p2_only_reproduction": "Explicitly set duet_p1_tree_policy=off; omitting it now enables P1 tree.",
+  "algorithm_changed": false,
+  "only_runtime_file_changed": "ssd/ssd/config.py",
+  "normalized_config_ast_change": "Only Config.duet_p1_tree_policy default off -> on; comments are non-semantic.",
+  "unchanged": [
+    "P1/P2 dynamic selection and node allocation",
+    "q-path and candidate scoring",
+    "verifier acceptance and correction equations",
+    "sampler and model weights",
+    "explicit on/on and explicit off/off runtime configurations"
+  ],
+  "regressions": {
+    "new_default_contract_tests": 7,
+    "new_contract_against_parent": {
+      "tests_run": 7,
+      "expected_default_mismatch_failures": 3,
+      "passed_explicit_override_cases": 4
+    },
+    "final_suite": {
+      "tests_run": 143,
+      "passed": 139,
+      "skipped_cuda_only": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    "modules": [
+      "test_tree_policy_defaults",
+      "test_args_cleanup_equiv",
+      "test_duet_parameters_v11",
+      "test_blackwell_review",
+      "test_p1_dynamic_tree",
+      "test_tree_expansion_modes",
+      "test_only_proxy_contract",
+      "test_verify_logit_graphs",
+      "test_target_verify_buckets",
+      "test_flashinfer_eager_dispatch",
+      "test_ver10_root_settings",
+      "test_chain_latency_reporting",
+      "test_duet_tps_summary",
+      "test_request_reporting"
+    ],
+    "cuda_visible_devices": "",
+    "environment_note": "Existing pypdf render_deps supplied on PYTHONPATH for timeline helper tests; no package installation or GPU build.",
+    "runtime_manifest_check": "97 runtime Python files match the updated manifest."
+  },
+  "new_gpu_measurement": false,
+  "running_campaign_engine_modified": false,
+  "running_campaign_note": "The current K9/K4 versus K10/K5 seed42 campaign remains pinned to the unchanged parent checkout and explicitly enables both tree phases."
+}

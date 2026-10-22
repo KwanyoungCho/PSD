@@ -134,9 +134,9 @@ class Config:
     duet_p2_forward_width: int | None = None
     # DUET dynamic trees.  Public policy names deliberately describe whether
     # *our* method is enabled; they do not expose the name of an external
-    # baseline that inspired part of the selector.  P2 stays enabled by
-    # default; P1 is opt-in while its quality/performance gate is finalized.
-    duet_p1_tree_policy: str = "off"          # off | on
+    # baseline that inspired part of the selector. Both phases default to
+    # dynamic trees; a chain arm explicitly sets both phase switches off.
+    duet_p1_tree_policy: str = "on"           # off | on
     duet_p2_tree_policy: str = "on"           # off | on
     # Deprecated compatibility input for old experiment scripts.  New code
     # and documentation use only the phase-specific on/off controls above.
