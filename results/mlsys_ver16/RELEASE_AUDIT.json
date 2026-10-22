@@ -1,165 +1,180 @@
 {
+  "release": "MLSys-ver1.6",
   "state": "passed",
-  "commit": "42f616fd59029503d6f4f6c8436d2e7c91d03179",
-  "branch": "exp/duet-target-dispatch-20261022",
-  "production_engine_unchanged": true,
-  "production_commit": "dedc85ccb299df2d76fcf34d50f05f2d8747a32a",
-  "original_formula_and_verifier_files_unchanged": [
-    "engine/verifier.py",
-    "engine/draft_runner.py",
-    "engine/helpers/p2_tree.py",
-    "engine/helpers/p2_tree_executor.py",
-    "engine/helpers/tree_topology_gpu.py",
-    "layers/sampler.py",
-    "config.py"
-  ],
-  "cpu_regressions_passed": 15,
-  "fixed_input_original_logit_comparisons": [
-    {
-      "rows": 13,
-      "path": "chain:graphed",
-      "max_logit_error": 0
-    },
-    {
-      "rows": 13,
-      "path": "tree:graphed",
-      "max_logit_error": 0
-    },
-    {
-      "rows": 14,
-      "path": "chain:graphed",
-      "max_logit_error": 0
-    },
-    {
-      "rows": 14,
-      "path": "tree:graphed",
-      "max_logit_error": 0
-    },
-    {
-      "rows": 16,
-      "path": "chain:graphed",
-      "max_logit_error": 0
-    },
-    {
-      "rows": 16,
-      "path": "tree:graphed",
-      "max_logit_error": 0
-    },
-    {
-      "rows": 17,
-      "path": "chain:graphed",
-      "max_logit_error": 0
-    },
-    {
-      "rows": 17,
-      "path": "tree:graphed",
-      "max_logit_error": 0
-    }
-  ],
-  "padded_proxy_and_final_parity": {
+  "algorithm_base_commit": "dedc85ccb299df2d76fcf34d50f05f2d8747a32a",
+  "initial_release_validation": {
     "state": "passed",
-    "cases": [
+    "commit": "42f616fd59029503d6f4f6c8436d2e7c91d03179",
+    "branch": "exp/duet-target-dispatch-20261022",
+    "production_engine_unchanged": true,
+    "production_commit": "dedc85ccb299df2d76fcf34d50f05f2d8747a32a",
+    "original_formula_and_verifier_files_unchanged": [
+      "engine/verifier.py",
+      "engine/draft_runner.py",
+      "engine/helpers/p2_tree.py",
+      "engine/helpers/p2_tree_executor.py",
+      "engine/helpers/tree_topology_gpu.py",
+      "layers/sampler.py",
+      "config.py"
+    ],
+    "cpu_regressions_passed": 15,
+    "fixed_input_original_logit_comparisons": [
       {
-        "real_rows": 2,
-        "physical_rows": 13,
-        "proxy_max_error": 0,
-        "final_max_error": 0,
-        "head_path": "exact-row auxiliary graph"
+        "rows": 13,
+        "path": "chain:graphed",
+        "max_logit_error": 0
       },
       {
-        "real_rows": 3,
-        "physical_rows": 13,
-        "proxy_max_error": 0,
-        "final_max_error": 0,
-        "head_path": "exact-row auxiliary graph"
+        "rows": 13,
+        "path": "tree:graphed",
+        "max_logit_error": 0
       },
       {
-        "real_rows": 5,
-        "physical_rows": 13,
-        "proxy_max_error": 0,
-        "final_max_error": 0,
-        "head_path": "exact-row auxiliary graph"
+        "rows": 14,
+        "path": "chain:graphed",
+        "max_logit_error": 0
       },
       {
-        "real_rows": 7,
-        "physical_rows": 13,
-        "proxy_max_error": 0,
-        "final_max_error": 0,
-        "head_path": "exact-row auxiliary graph"
+        "rows": 14,
+        "path": "tree:graphed",
+        "max_logit_error": 0
       },
       {
-        "real_rows": 9,
-        "physical_rows": 13,
-        "proxy_max_error": 0,
-        "final_max_error": 0,
-        "head_path": "exact-row auxiliary graph"
+        "rows": 16,
+        "path": "chain:graphed",
+        "max_logit_error": 0
       },
       {
-        "real_rows": 11,
-        "physical_rows": 13,
-        "proxy_max_error": 0,
-        "final_max_error": 0,
-        "head_path": "exact-row auxiliary graph"
+        "rows": 16,
+        "path": "tree:graphed",
+        "max_logit_error": 0
       },
       {
-        "real_rows": 13,
-        "physical_rows": 13,
-        "proxy_max_error": 0,
-        "final_max_error": 0,
-        "head_path": "fused"
+        "rows": 17,
+        "path": "chain:graphed",
+        "max_logit_error": 0
+      },
+      {
+        "rows": 17,
+        "path": "tree:graphed",
+        "max_logit_error": 0
       }
     ],
-    "reference": "Original eager heads with explicit safe synchronization, same physical bucket and true rows. Correctness only, not a timing baseline."
-  },
-  "fused_chain_tree_causal_controls": 72,
-  "online_smokes": [
-    {
-      "kind": "tree",
-      "warmup_turns": 2,
-      "measured_turns": 6,
-      "total_output_tokens": 955,
-      "sources": {
-        "0": 37,
-        "1": 131,
-        "2": 88
-      }
+    "padded_proxy_and_final_parity": {
+      "state": "passed",
+      "cases": [
+        {
+          "real_rows": 2,
+          "physical_rows": 13,
+          "proxy_max_error": 0,
+          "final_max_error": 0,
+          "head_path": "exact-row auxiliary graph"
+        },
+        {
+          "real_rows": 3,
+          "physical_rows": 13,
+          "proxy_max_error": 0,
+          "final_max_error": 0,
+          "head_path": "exact-row auxiliary graph"
+        },
+        {
+          "real_rows": 5,
+          "physical_rows": 13,
+          "proxy_max_error": 0,
+          "final_max_error": 0,
+          "head_path": "exact-row auxiliary graph"
+        },
+        {
+          "real_rows": 7,
+          "physical_rows": 13,
+          "proxy_max_error": 0,
+          "final_max_error": 0,
+          "head_path": "exact-row auxiliary graph"
+        },
+        {
+          "real_rows": 9,
+          "physical_rows": 13,
+          "proxy_max_error": 0,
+          "final_max_error": 0,
+          "head_path": "exact-row auxiliary graph"
+        },
+        {
+          "real_rows": 11,
+          "physical_rows": 13,
+          "proxy_max_error": 0,
+          "final_max_error": 0,
+          "head_path": "exact-row auxiliary graph"
+        },
+        {
+          "real_rows": 13,
+          "physical_rows": 13,
+          "proxy_max_error": 0,
+          "final_max_error": 0,
+          "head_path": "fused"
+        }
+      ],
+      "reference": "Original eager heads with explicit safe synchronization, same physical bucket and true rows. Correctness only, not a timing baseline."
     },
-    {
-      "kind": "chain",
-      "warmup_turns": 2,
-      "measured_turns": 6,
-      "total_output_tokens": 1024,
-      "sources": {
-        "0": 57,
-        "1": 145,
-        "2": 106
+    "fused_chain_tree_causal_controls": 72,
+    "online_smokes": [
+      {
+        "kind": "tree",
+        "warmup_turns": 2,
+        "measured_turns": 6,
+        "total_output_tokens": 955,
+        "sources": {
+          "0": 37,
+          "1": 131,
+          "2": 88
+        }
+      },
+      {
+        "kind": "chain",
+        "warmup_turns": 2,
+        "measured_turns": 6,
+        "total_output_tokens": 1024,
+        "sources": {
+          "0": 57,
+          "1": 145,
+          "2": 106
+        }
       }
-    }
-  ],
-  "all_runtime_sources_match_final_commit": true,
-  "tested_profile": {
-    "SSD_VERIFY_GRAPH_LOGITS": "1",
-    "NCCL_GRAPH_MIXING_SUPPORT": "0",
-    "SSD_DUET_EXIT_REPLICA": "0",
-    "SSD_PROXY_STREAM": "0",
-    "batch": 1,
-    "target_tp": 2
+    ],
+    "all_runtime_sources_match_final_commit": true,
+    "tested_profile": {
+      "SSD_VERIFY_GRAPH_LOGITS": "1",
+      "NCCL_GRAPH_MIXING_SUPPORT": "0",
+      "SSD_DUET_EXIT_REPLICA": "0",
+      "SSD_PROXY_STREAM": "0",
+      "batch": 1,
+      "target_tp": 2
+    },
+    "torch_version": "2.8.0+cu128",
+    "nccl_version": [
+      2,
+      27,
+      3
+    ],
+    "limitations": [
+      "Only selected widths 13/14/16/17 and fixed prefix512 used for latency comparison, with captured real 3-seed inputs.",
+      "No full-dataset online TPS remeasurement or entire generated-output identity claim.",
+      "Do not disable NCCL mixing alone in an unmodified engine. Profile is opt-in and not promoted to production.",
+      "graph_pre now includes the exit head/gather, graph_post includes the final head/gather; old span labels are not directly comparable."
+    ],
+    "release": "MLSys-ver1.6",
+    "algorithm_base_commit": "dedc85ccb299df2d76fcf34d50f05f2d8747a32a",
+    "runtime_tip": "42f616fd59029503d6f4f6c8436d2e7c91d03179",
+    "cpu_checks_repeated_for_release": true,
+    "whole_width_and_full_performance": "scheduled separately, not included in these preliminary validation numbers"
   },
-  "torch_version": "2.8.0+cu128",
-  "nccl_version": [
-    2,
-    27,
-    3
-  ],
-  "limitations": [
-    "Only selected widths 13/14/16/17 and fixed prefix512 used for latency comparison, with captured real 3-seed inputs.",
-    "No full-dataset online TPS remeasurement or entire generated-output identity claim.",
-    "Do not disable NCCL mixing alone in an unmodified engine. Profile is opt-in and not promoted to production.",
-    "graph_pre now includes the exit head/gather, graph_post includes the final head/gather; old span labels are not directly comparable."
-  ],
-  "release": "MLSys-ver1.6",
-  "algorithm_base_commit": "dedc85ccb299df2d76fcf34d50f05f2d8747a32a",
-  "runtime_tip": "42f616fd59029503d6f4f6c8436d2e7c91d03179",
-  "cpu_checks_repeated_for_release": true,
-  "whole_width_and_full_performance": "scheduled separately, not included in these preliminary validation numbers"
+  "post_review_eager_regression": "EAGER_REGRESSION.json",
+  "post_review_tests": {
+    "tests_run": 57,
+    "passed": 53,
+    "skipped_cuda_only": 4,
+    "failures": 0,
+    "errors": 0
+  },
+  "post_review_native_gpu_cases": 4,
+  "core_algorithm_changed": false
 }

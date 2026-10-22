@@ -4,6 +4,8 @@ MLSys ver1.6은 **ver1.4의 DUET 생성 및 검증 알고리즘을 유지하면�
 
 ## 변경 내용
 
+초기 배포 `bcb4a1e443`에는 `enforce_eager=True`의 dense attention planner 회귀가 있었다. 실행 모드를 prefill 여부와 혼동하여 decode/verify의 `cu_seqlens_k=None`을 읽는 오류다. 후속 수정은 planner의 layout 분류를 ver1.4와 동일하게 복구하고, non-mixing eager 안전 동기화는 `run_model` 진입부에 둔다. 이 회귀는 최적화 flag를 꺼도 eager 실행에서 발생했으므로 초기 commit 대신 수정된 최신 ver1.6을 받는다. 일반 CUDA graph 검증의 분기와 수락 수식은 이 수정으로 바뀌지 않는다.
+
 기존 TP 검증은 captured transformer graph 사이에 eager 중간층 LM head와 TP gather를 실행했다. 이 서버에서는 NCCL의 captured/eager collective 혼용 경로에서 `cudaGraphLaunch`의 CPU 제출 시간이 수십 ms까지 늘어났다. 고정 graph에서는 특정 폭의 지연이 반복됐지만, graph를 다시 구성하면 느린 폭도 이동했다. 따라서 특정 G 자체가 항상 느리다는 의미는 아니다.
 
 ver1.6은 중간층 head/gather를 pre graph에, 최종 head/gather를 post graph에 포함한다. 이 경로에서는 NCCL graph mixing을 끌 수 있다. 실제 입력이 tree bucket보다 짧으면 실제 행 수에 맞는 보조 head graph를 사용한다. Eager prefill 및 진단 fallback에는 안전한 경계를 둔다. **NCCL 설정만 기존 엔진에 적용하면 안 된다.** Captured collective가 실행 중일 때 같은 communicator의 eager collective를 시작하는 것은 안전하지 않다. [NCCL CUDA graph 안내](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/cudagraph.html)와 [graph mixing 제약](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#nccl-graph-mixing-support)을 참고한다.
@@ -82,6 +84,12 @@ export SSD_TREE_VERIFY_BUCKETS=''
 ```bash
 cd ssd/tests
 python -B -m unittest -v test_verify_logit_graphs test_target_verify_buckets
+```
+
+Eager 회귀도 함께 검사한다.
+
+```bash
+python -B -m unittest -v test_flashinfer_eager_dispatch
 ```
 
 그다음 확보한 GPU에서 기존 서버의 **동일 모델·입력·seed·K1/K2·G·온도·검증기**를 유지해 짧은 chain과 tree smoke를 각각 실행한다. 해당 서버의 원래 실행 명령에 활성화 환경변수만 더하고, 두 경로의 정상 종료·토큰 accounting·실제 행 수·source/AL event·source hash를 확인한 뒤 full 실행한다. 상세 계측은 성능 측정과 분리한다. 실행 중 소스나 환경을 바꾸지 않고 실패 attempt도 보존한다.

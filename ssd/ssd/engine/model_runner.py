@@ -1347,7 +1347,10 @@ class ModelRunner:
             attn.scale,
             self.hf_config.torch_dtype,
         )
-        if is_prefill or self.enforce_eager:
+        # Execution mode does not determine KV metadata layout. Decode and
+        # verify contexts intentionally have no cu_seqlens_k, even in eager
+        # mode; they use context_lens via the branches below.
+        if is_prefill:
             if context.block_tables is not None:
                 kv_lens = (
                     context.cu_seqlens_k[1:] - context.cu_seqlens_k[:-1]
@@ -1425,7 +1428,7 @@ class ModelRunner:
 
     @torch.inference_mode()
     def run_model(self, input_ids: torch.Tensor, positions: torch.Tensor, is_prefill: bool, last_only: bool = True, tree_decode_step: int = -1, cache_hits: torch.Tensor | None = None, hidden_states: torch.Tensor | None = None):
-        if is_prefill:
+        if is_prefill or self.enforce_eager:
             from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
             synchronize_eager()
         is_tree_decode = self.is_draft and self.config.draft_async and tree_decode_step >= 0

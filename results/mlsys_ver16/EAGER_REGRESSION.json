@@ -1,0 +1,83 @@
+{
+  "state": "passed",
+  "initial_release_commit": "bcb4a1e443ebca3f8667f94a2910fb2fe26ded6b",
+  "root_cause": "enforce_eager was incorrectly treated as prefill in the FlashInfer layout planner, dereferencing absent cumulative KV lengths",
+  "fix": "Restore the v1.4 planner condition and put non-mixing eager synchronization at run_model entry",
+  "planner_ast_identical_to_ver14": true,
+  "previous_cuda_graph_path_unchanged": true,
+  "core_verifier_and_proposal_algorithms_unchanged": true,
+  "new_cpu_tests": 9,
+  "related_suite": {
+    "tests_run": 57,
+    "passed": 53,
+    "skipped_cuda_only": 4,
+    "failures": 0,
+    "errors": 0
+  },
+  "gpu_smoke": {
+    "state": "passed",
+    "model": "/home/eslab/models/hub/models--TinyLlama--TinyLlama-1.1B-Chat-v1.0/snapshots/fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+    "precision": "BF16",
+    "target_tp": 2,
+    "batch_sizes": [
+      1,
+      2
+    ],
+    "enforce_eager": true,
+    "flashinfer": true,
+    "optimization_not_exercised": "No CUDA graph capture in this eager fallback test",
+    "nccl_graph_mixing_support": "0",
+    "cases": [
+      {
+        "batch": 1,
+        "path": "decode",
+        "shape": [
+          1,
+          32000
+        ],
+        "max_logit_error": 0,
+        "reported_error": "'NoneType' object is not subscriptable"
+      },
+      {
+        "batch": 1,
+        "path": "verify",
+        "shape": [
+          1,
+          4,
+          32000
+        ],
+        "max_logit_error": 0,
+        "reported_error": "'NoneType' object is not subscriptable"
+      },
+      {
+        "batch": 2,
+        "path": "decode",
+        "shape": [
+          2,
+          32000
+        ],
+        "max_logit_error": 0,
+        "reported_error": "'NoneType' object is not subscriptable"
+      },
+      {
+        "batch": 2,
+        "path": "verify",
+        "shape": [
+          2,
+          4,
+          32000
+        ],
+        "max_logit_error": 0,
+        "reported_error": "'NoneType' object is not subscriptable"
+      }
+    ],
+    "source_unchanged": true,
+    "dense_planner_ast_matches_v14": true
+  },
+  "model_runner_sha256": "64c4b286624db3e640a813f1da20e429e10986a4ab56bbe0b134a526d304d7e2",
+  "limitations": [
+    "GPU eager regression smoke used TinyLlama-1.1B as target for B1/B2 TP2, not a 70B throughput benchmark.",
+    "Prior 70B graph-head numerical controls and latency receipts refer to pre-hotfix source; measured CUDA graph dispatch is unchanged.",
+    "No new full-dataset online performance numbers are supplied in this fix receipt."
+  ]
+}
