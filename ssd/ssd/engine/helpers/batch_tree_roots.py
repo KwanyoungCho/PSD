@@ -2,6 +2,7 @@
 import torch
 from ssd.engine.helpers.p2_tree import selected_q_probs_from_logits
 from ssd.engine.helpers.tree_host_topology import context_topology
+from ssd.engine.helpers.p1_root_selection import select_batched_root_tokens
 
 
 def root_candidates(logits,tokens,visibility,lengths,temps,roots_per_position,sampler_x,fan_out):
@@ -9,22 +10,18 @@ def root_candidates(logits,tokens,visibility,lengths,temps,roots_per_position,sa
     U=roots_per_position
     dev=logits.device
     idx=torch.arange(P,device=dev)
-    candidates=logits.topk(U+1,-1).indices
-    excluded=torch.cat([tokens[:,1:],tokens.new_full((B,1),-1)],1)
-    excluded=torch.where(idx[None]<lengths[:,None]-1,excluded,-1)
-    rank=torch.arange(U+1,device=dev).expand(B,P,U+1)
-    keep=torch.where(candidates!=excluded[:,:,None],rank,U+1).topk(U,-1,largest=False).values
-    chosen=candidates.gather(2,keep)
     parent=torch.where(visibility.bool()&(idx[None,:]<idx[:,None]),idx,0).amax(-1)
+    chosen,valid=select_batched_root_tokens(logits,tokens,parent,lengths,U)
     offset=torch.arange(B,device=dev)[:,None]*P
     sources=(idx+offset)[:,:,None].expand(B,P,U+1).clone()
     sources[:,:,-1]=parent+offset
     ids=torch.cat([chosen,tokens[:,:,None]],2)
     probs=selected_q_probs_from_logits(logits.reshape(B*P,V),temps[:,None].expand(B,P).reshape(-1),
         ids.reshape(B*P,U+1),sampler_x,fan_out,source_rows=sources.reshape(B*P,U+1)).view(B,P,U+1)
-    edge=probs[:,:,-1].clone();edge[:,0]=1
+    edge=probs[:,:,-1].clone();edge[:,:1].fill_(1)
     reach=torch.exp(torch.bmm(visibility.float(),edge.clamp_min(1e-30).log()[:,:,None])).squeeze(-1)
     scores=probs[:,:,:U]*reach[:,:,None]*(idx[None,:,None]<lengths[:,None,None])
+    if valid is not None:scores*=valid
     return chosen.reshape(B,P*U),scores.reshape(B,P*U)
 
 

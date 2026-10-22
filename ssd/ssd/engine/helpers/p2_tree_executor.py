@@ -612,7 +612,12 @@ class P2TreeExecutor:
         self.arena = PT.TreeArena(
             R + self.total_cells * C, d, max_cells=self.total_cells)
         self.gen = torch.Generator(device=d)
-        self.gen.manual_seed(torch.initial_seed() % (2**31))
+        # Independent executors must not restart the same Philox stream when
+        # a sampled prefix moves between phases/context buckets. Derive once
+        # at construction; replay keeps its existing generator and offset.
+        from ssd.engine.helpers.tree_rng import tree_rng_seed
+        self.gen.manual_seed(tree_rng_seed(
+            torch.initial_seed(), self.phase, self.gw_max))
         # 출력의 물리 행 수는 root 수 R이 아니라 layout/cache-key 폭 W.
         # R<W일 때도 소비자는 proxy root id 0..W-1로 뷰를 조회한다.
         # 앞 R행만 실제 root이고 뒤 W-R행은 valid=0 padding이다.
@@ -935,8 +940,7 @@ class P2TreeExecutor:
         remaining = budgets.clone()
         ar.tok[:R] = self.in_root_tok
         ar.root[:R] = self.arange_R
-        ar.logpri[:R] = self.in_root_piv.clamp_min(1e-9) \
-            .log().double()
+        ar.logpri[:R] = self.in_root_piv.log().double()
         # Keep physical roots present for arena/reference index parity.  A
         # zero P_iv gives them zero child budget, while sanitized token/rope
         # values keep their fixed-width padding forwards model-safe.

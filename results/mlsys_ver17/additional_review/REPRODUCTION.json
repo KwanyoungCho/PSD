@@ -1,0 +1,65 @@
+{
+  "scheduler": {
+    "before": {
+      "returned": [
+        1
+      ],
+      "running": [
+        2
+      ],
+      "allocated": [
+        0,
+        2
+      ],
+      "missing_unfinished": [
+        0
+      ]
+    },
+    "after": {
+      "returned": [
+        1
+      ],
+      "running": [
+        0,
+        2
+      ],
+      "allocated": [
+        0,
+        2
+      ],
+      "missing_unfinished": []
+    }
+  },
+  "rng": {
+    "samples": 131072,
+    "joint": {
+      "old": {
+        "seeds": [
+          42,
+          42
+        ],
+        "counts": [
+          65875,
+          0,
+          0,
+          65197
+        ],
+        "same_token_fraction": 1.0
+      },
+      "new": {
+        "seeds": [
+          14652288315682712210,
+          10991210303335520272
+        ],
+        "counts": [
+          32931,
+          32841,
+          32703,
+          32597
+        ],
+        "same_token_fraction": 0.49993896484375
+      }
+    },
+    "limitation": "Production sampler on fixed uniform logits, not measured bias of a full LLM."
+  }
+}

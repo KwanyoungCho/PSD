@@ -533,7 +533,7 @@ def alloc_root_budgets(piv: torch.Tensor, total: int, beta: float,
     # 이슈 #24: piv<=0은 예산 제외 sentinel (root_count 분리 — cap
     # 포화 후 water-filling이 무자격 root로 새지 않게 명시 배제)
     _elig = piv > 0
-    w = piv.clamp_min(1e-9).double().pow(beta)
+    w = piv.double().clamp_min(0).pow(beta)
     w = torch.where(_elig, w, torch.zeros_like(w))
     if not bool(_elig.any()):
         return torch.zeros(R, dtype=torch.int64)
@@ -1409,34 +1409,33 @@ def tree_sample_wor(logits: torch.Tensor, temperatures: torch.Tensor,
 
 # --- T2.0: P_iv wire 비트-pack (설계 v6 D2; tree policy != off 게이트) ---
 PIV_SHIFT = 32                      # uint32 token IDs
-PIV_BITS = 16                       # log10 P_iv ∈ [-6, 0] 16비트 양자화
-PIV_VER_BIT = 48                    # v2 format marker; old wire is rejected
-_PIV_QMAX = (1 << PIV_BITS) - 1
+PIV_BITS = 31                       # nonnegative FP32 magnitude bits
+PIV_VER_BIT = 63                    # v3 marker; signed int64 payload is negative
 _TOK_MASK = (1 << PIV_SHIFT) - 1
-_LOG_MIN = -6.0
+_PIV_MAG_MASK = (1 << PIV_BITS) - 1
+_PIV_MARKER = -(1 << PIV_VER_BIT)
 
 
 def pack_piv(chosen_tok: torch.Tensor, piv: torch.Tensor) -> torch.Tensor:
-    """Pack uint32 tokens (bits0-31) and score (32-47), marker48.
+    """V3: uint32 token + exact nonnegative FP32 score in one int64.
 
-    Both endpoints use v2. Payload remains one int64 per candidate.
-
-    양자화 오차 ≤ 반스텝 (6데케이드/65535 ≈ 9.2e-5 데케이드). NCCL
-    호출 수·크기 불변 (같은 int64 자리). 수신측은 dedup **이전**에
-    unpack해야 한다 (D2 정확성 함정 — draft_runner에서 보장)."""
-    q = ((piv.clamp_min(1e-9).log10().clamp(_LOG_MIN, 0.0) - _LOG_MIN)
-         / (-_LOG_MIN) * _PIV_QMAX).round().long()
-    return chosen_tok | (q << PIV_SHIFT) | (1 << PIV_VER_BIT)
+    Scores are finite probabilities in [0,1]. Their unused sign bit is the
+    version marker. No log quantization/floor: zero and tiny positives keep
+    their original bits. Both endpoints must upgrade together. Payload size
+    and NCCL calls are unchanged. Decode before token comparison/dedup.
+    """
+    bits = piv.float().contiguous().view(torch.int32).to(torch.int64)
+    return chosen_tok | (bits << PIV_SHIFT) | _PIV_MARKER
 
 
 def unpack_piv(packed: torch.Tensor):
     """→ (clean_tok [.,N] int64, piv [.,N] float32). 버전 비트 검증."""
-    if not bool((packed >> PIV_VER_BIT & 1).all()):
-        raise ValueError("unpack_piv: version bit missing — "
-                         "pack 게이트 불일치 (tree policy 양단 확인)")
+    if not bool((packed < 0).all()):
+        raise ValueError("unpack_piv: v3 version bit missing; "
+                         "upgrade both proxy wire endpoints together")
     tok = packed & _TOK_MASK
-    q = (packed >> PIV_SHIFT) & _PIV_QMAX
-    piv = torch.pow(10.0, q.float() / _PIV_QMAX * (-_LOG_MIN) + _LOG_MIN)
+    bits = ((packed >> PIV_SHIFT).to(torch.int32) & _PIV_MAG_MASK)
+    piv = bits.view(torch.float32)
     return tok, piv
 
 
@@ -1688,7 +1687,7 @@ def rollout_reference(root_toks, root_piv, root_pos, *, policy, W, F_total,
     budgets = alloc_policy_root_budgets(
         root_piv, policy, total=F_total * W, beta=beta, cap=nv)
     remaining = budgets.clone()
-    logpiv = root_piv.clamp_min(1e-9).log()
+    logpiv = root_piv.log()
     for r in range(R):
         pool.add(root_toks[r], -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
     eval_log = []
@@ -1833,7 +1832,7 @@ def run_rollout(root_toks, root_piv, *, policy, W, F_total, c_tensor, nv,
     budgets = alloc_policy_root_budgets(
         root_piv, policy, total=F_total * W, beta=beta, cap=nv)
     remaining = budgets.clone()
-    logpiv = root_piv.clamp_min(1e-9).log()
+    logpiv = root_piv.log()
     for r in range(R):
         pool.add(int(root_toks[r]), -1, -1, 0, r, 0, float(logpiv[r]), 1.0)
     eval_log = []
@@ -2485,7 +2484,7 @@ def alloc_root_budgets_gpu(piv: torch.Tensor, total: int, beta: float,
     R = piv.numel()
     dev = piv.device
     elig = piv > 0
-    w = torch.where(elig, piv.clamp_min(1e-9).double().pow(beta),
+    w = torch.where(elig, piv.double().clamp_min(0).pow(beta),
                     torch.zeros(R, dtype=torch.float64, device=dev))
     quota = torch.zeros(R, dtype=torch.float64, device=dev)
     active = elig.clone()
@@ -2941,7 +2940,7 @@ def run_rollout_arena(root_toks, root_piv, *, policy, W, F_total,
     remaining = budgets.clone()
     # CPU 경로와 동일 정밀도: f32 log 후 double 확장 (리뷰6 —
     # double-log는 near-tie에서 1ULP 차이로 선택 순서를 바꿀 수 있음)
-    logpiv = piv.clamp_min(1e-9).float().log().double()
+    logpiv = piv.float().log().double()
     aR = torch.arange(R, device=dev)
     ar.tok[:R] = toks0
     ar.root[:R] = aR

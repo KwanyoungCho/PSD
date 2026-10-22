@@ -238,6 +238,10 @@ class Scheduler:
                     self.draft_block_manager.deallocate(seq)
                 # ``None`` tells LLMEngine.step that no model kernel should be
                 # launched; the returned sequence is already complete.
+                # Earlier requests were popped for this same decode batch.
+                # They have not run: restore them in order, keeping their KV
+                # reservations, before returning only the guarded completion.
+                self.running.extendleft(reversed(scheduled_seqs))
                 return [seq], None
             
             while not self.bms_can_append(seq, target_lookahead_len, draft_lookahead_len):

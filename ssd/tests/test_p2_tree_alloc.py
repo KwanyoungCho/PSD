@@ -804,14 +804,13 @@ class TestPivPack(unittest.TestCase):
         from ssd.engine.helpers.p2_tree import unpack_piv
         with self.assertRaises(ValueError):
             unpack_piv(torch.tensor([[5]], dtype=torch.int64))  # pack 안 됨
-    def test_extreme_piv_clamped(self):
+    def test_zero_and_tiny_piv_preserved(self):
         from ssd.engine.helpers.p2_tree import pack_piv, unpack_piv
         tok = torch.tensor([[1, 2, 3]], dtype=torch.int64)
         piv = torch.tensor([[1.0, 1e-9, 0.0]])
         _, piv2 = unpack_piv(pack_piv(tok, piv))
         self.assertAlmostEqual(piv2[0, 0].item(), 1.0, places=3)
-        self.assertAlmostEqual(piv2[0, 1].item(), 1e-6, places=8)  # 하한 clamp
-        self.assertAlmostEqual(piv2[0, 2].item(), 1e-6, places=8)
+        self.assertTrue(torch.equal(piv2, piv))
 
 
 class TestRolloutReference(unittest.TestCase):

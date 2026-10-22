@@ -5212,6 +5212,11 @@ class DraftRunner(ModelRunner):
             eq = eq & msk
         in_draft = eq.any(-1)                                         # [B, N]
         valid = pos_valid & ~in_draft                                 # [B, N]
+        _piv = duet_proxy.get("chosen_piv")
+        if _piv is not None:
+            # A fixed wire may contain zero-score padding. Keep the physical
+            # shape but never admit that padding as an active root.
+            valid &= _piv > 0
 
         # Pick first total_budget valid per seq (score-sorted preserved).
         rank = valid.to(torch.int64).cumsum(1)                        # [B, N]
@@ -5226,7 +5231,7 @@ class DraftRunner(ModelRunner):
         # critical path (immediately after proxy_wait). Since the invariant
         # is guaranteed by config-time buffer sizing (see 05-policy-b-fix.md
         # §3.3), gate under __debug__ so it's stripped under `python -O`.
-        if __debug__:
+        if __debug__ and _piv is None:
             _take_sums = take.sum(dim=1)
             assert bool((_take_sums == total_budget).all().item()), (
                 f"Policy B underfill: take.sum(per seq)={_take_sums.tolist()} != "
@@ -5251,8 +5256,6 @@ class DraftRunner(ModelRunner):
             torch.zeros_like(_sel_idx))
         # T2.1 (P2-tree): 잔존 seed의 P_iv를 토큰과 동일 인덱싱으로 관통
         # (기존 역매칭 브릿지 제거 — 결정 ③ 라이브 값 사용).
-        _piv = duet_proxy.get("chosen_piv") if isinstance(duet_proxy, dict) \
-            else None
         taken_piv = (torch.where(
             selected_valid, _piv.gather(1, _sel_idx),
             torch.zeros_like(_sel_idx, dtype=_piv.dtype))

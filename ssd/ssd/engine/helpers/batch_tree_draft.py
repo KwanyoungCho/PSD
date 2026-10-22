@@ -72,7 +72,9 @@ class BatchedDuetDraft:
                 else:
                     ex=P2TreeExecutor(*args,dtype=hf.torch_dtype,
                                       glue_width=contexts,materialize_backbone_logits=False)
-                ex.gen.manual_seed((torch.initial_seed()+100003*phase+1009*contexts+b)%(2**63-1))
+                from ssd.engine.helpers.tree_rng import tree_rng_seed
+                ex.gen.manual_seed(tree_rng_seed(
+                    torch.initial_seed(), f'p{phase}', contexts, b))
                 arenas.append(ex)
             self.forests[key]=arenas
         arenas=self.forests[key][:batch]
@@ -379,6 +381,7 @@ class BatchedDuetDraft:
         proxy=r._unpack_duet_proxy(proxy_buf,B,K)
         pos,tok,score=proxy['chosen_pos'],proxy['chosen_tok'],proxy['chosen_piv']
         valid=(pos>=0)&(pos<torch.tensor([len(row['tokens']) for row in rows],device=r.device)[:,None])
+        valid &= score > 0
         if padded:
             roots=torch.stack(padded)
             bi=torch.arange(B,device=r.device)[:,None]
