@@ -1,4 +1,4 @@
-"""CPU-only ver1.6 runtime integrity check; never import torch or run a GPU."""
+"""CPU-only current release runtime integrity check; never import torch or run a GPU."""
 import hashlib
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def main():
-    manifest = json.loads((ROOT / 'results/mlsys_ver16/RUNTIME_MANIFEST.json').read_text())
+    manifest = json.loads((ROOT / 'results/mlsys_ver17/RUNTIME_MANIFEST.json').read_text())
     actual = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / 'ssd/ssd').rglob('*.py'))}
     if actual != manifest['sha256']:

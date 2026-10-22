@@ -1,0 +1,118 @@
+test_chain_implicit_and_explicit_visibility_agree (test_p1_child_exclusion.ChildExclusionCPU.test_chain_implicit_and_explicit_visibility_agree) ... ok
+test_equal_scores_choose_eligible_tokens_with_maximum_values (test_p1_child_exclusion.ChildExclusionCPU.test_equal_scores_choose_eligible_tokens_with_maximum_values) ... ok
+test_exhausted_tiny_vocabulary_is_invalid_padding (test_p1_child_exclusion.ChildExclusionCPU.test_exhausted_tiny_vocabulary_is_invalid_padding) ... ok
+test_original_q_and_context_reach_are_not_renormalized (test_p1_child_exclusion.ChildExclusionCPU.test_original_q_and_context_reach_are_not_renormalized) ... ok
+test_random_topologies_match_full_vocabulary_oracle (test_p1_child_exclusion.ChildExclusionCPU.test_random_topologies_match_full_vocabulary_oracle) ... ok
+test_same_token_at_another_prefix_remains_eligible (test_p1_child_exclusion.ChildExclusionCPU.test_same_token_at_another_prefix_remains_eligible) ... ok
+test_siblings_unrelated_tokens_and_leaf (test_p1_child_exclusion.ChildExclusionCPU.test_siblings_unrelated_tokens_and_leaf) ... ok
+test_cuda_matches_cpu_for_all_native_shapes (test_p1_child_exclusion.ChildExclusionCUDA.test_cuda_matches_cpu_for_all_native_shapes) ... ok
+test_graph_replay_uses_live_parent_and_token_inputs (test_p1_child_exclusion.ChildExclusionCUDA.test_graph_replay_uses_live_parent_and_token_inputs) ... ok
+test_maximum_fanout_and_exhaustion_mask (test_p1_child_exclusion.ChildExclusionCUDA.test_maximum_fanout_and_exhaustion_mask) ... ok
+test_native_context_sizes_reuse_compiled_selector (test_p1_child_exclusion.ChildExclusionCUDA.test_native_context_sizes_reuse_compiled_selector) ... ok
+test_batched_lookup_cannot_downgrade_tree_rows_to_chain (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_batched_lookup_cannot_downgrade_tree_rows_to_chain) ... ok
+test_logit_payloads_are_mutually_exclusive (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_logit_payloads_are_mutually_exclusive) ... ok
+test_token_envelope_widens_without_widening_logits (test_p1_dynamic_tree.TestAsyncResponseEnvelope.test_token_envelope_widens_without_widening_logits) ... ok
+test_zero_decode_context_stop_is_reported_without_division (test_p1_dynamic_tree.TestNativeContextMetrics.test_zero_decode_context_stop_is_reported_without_division) ... ok
+test_both_trees_reserve_draft_graph_headroom (test_p1_dynamic_tree.TestP1ShapeBuckets.test_both_trees_reserve_draft_graph_headroom) ... ok
+test_buckets_cover_chain_and_tree_contexts (test_p1_dynamic_tree.TestP1ShapeBuckets.test_buckets_cover_chain_and_tree_contexts) ... ok
+test_glue_positions_slice_wide_response_buffer (test_p1_dynamic_tree.TestP1ShapeBuckets.test_glue_positions_slice_wide_response_buffer)
+A response buffer wider than K must not widen a K-node glue. ... ok
+test_live_tree_cell_beyond_native_context_is_rejected (test_p1_dynamic_tree.TestP1ShapeBuckets.test_live_tree_cell_beyond_native_context_is_rejected) ... ok
+test_masked_canvas_tail_may_extend_past_native_block_table (test_p1_dynamic_tree.TestP1ShapeBuckets.test_masked_canvas_tail_may_extend_past_native_block_table) ... ok
+test_p1_only_never_dispatches_p2_tree (test_p1_dynamic_tree.TestP1ShapeBuckets.test_p1_only_never_dispatches_p2_tree) ... ok
+test_p2_masked_tail_may_alias_past_native_block_table (test_p1_dynamic_tree.TestP1ShapeBuckets.test_p2_masked_tail_may_alias_past_native_block_table) ... ok
+test_phase_switches_select_dynamic_for_p1_only (test_p1_dynamic_tree.TestP1ShapeBuckets.test_phase_switches_select_dynamic_for_p1_only) ... ok
+test_scheduler_reserves_common_tree_glue_and_p1_canvas (test_p1_dynamic_tree.TestP1ShapeBuckets.test_scheduler_reserves_common_tree_glue_and_p1_canvas) ... ok
+test_two_x_depth_budget_uses_nineteen_context_canvas (test_p1_dynamic_tree.TestP1ShapeBuckets.test_two_x_depth_budget_uses_nineteen_context_canvas) ... ok
+test_variable_width_p1_reserves_compact_cell_sum (test_p1_dynamic_tree.TestP1ShapeBuckets.test_variable_width_p1_reserves_compact_cell_sum) ... ok
+test_wide_p1_canvas_reservation_crosses_page_safely (test_p1_dynamic_tree.TestP1ShapeBuckets.test_wide_p1_canvas_reservation_crosses_page_safely) ... ok
+test_context_reach_discounts_late_roots (test_p1_dynamic_tree.TestP1UniformRoots.test_context_reach_discounts_late_roots) ... ok
+test_custom_tree_context_visibility_is_repeated_per_root (test_p1_dynamic_tree.TestP1UniformRoots.test_custom_tree_context_visibility_is_repeated_per_root) ... ok
+test_persistent_output_buffers_are_reused (test_p1_dynamic_tree.TestP1UniformRoots.test_persistent_output_buffers_are_reused) ... ok
+test_root_selection_excludes_returned_without_mutating_logits (test_p1_dynamic_tree.TestP1UniformRoots.test_root_selection_excludes_returned_without_mutating_logits) ... ok
+test_root_width_must_hold_every_uniform_candidate (test_p1_dynamic_tree.TestP1UniformRoots.test_root_width_must_hold_every_uniform_candidate) ... ok
+test_selected_q_matches_full_distribution (test_p1_dynamic_tree.TestP1UniformRoots.test_selected_q_matches_full_distribution) ... ok
+test_uniform_topk_scores_padding_and_glue_rows (test_p1_dynamic_tree.TestP1UniformRoots.test_uniform_topk_scores_padding_and_glue_rows) ... ok
+test_descendant_selection_is_parent_closed_and_remappable (test_p1_dynamic_tree.TestTreeHitRerank.test_descendant_selection_is_parent_closed_and_remappable) ... ok
+test_equal_or_larger_cap_is_exact_identity (test_p1_dynamic_tree.TestTreeHitRerank.test_equal_or_larger_cap_is_exact_identity) ... ok
+test_keeps_ancestors_and_prior_wor_siblings (test_p1_dynamic_tree.TestTreeHitRerank.test_keeps_ancestors_and_prior_wor_siblings) ... ok
+test_rejects_noncontiguous_sibling_order (test_p1_dynamic_tree.TestTreeHitRerank.test_rejects_noncontiguous_sibling_order) ... ok
+test_serving_compaction_remaps_parent_and_parent_q (test_p1_dynamic_tree.TestTreeHitRerank.test_serving_compaction_remaps_parent_and_parent_q) ... ok
+test_exact_law_and_wire (test_tree_live_siblings.LiveSiblingLaw.test_exact_law_and_wire) ... ok
+test_api_default_matches_explicit_on_and_draft_reconstruction (test_tree_policy_defaults.TreePolicyDefaults.test_api_default_matches_explicit_on_and_draft_reconstruction) ... `torch_dtype` is deprecated! Use `dtype` instead!
+ok
+test_api_field_defaults_enable_both_phases (test_tree_policy_defaults.TreePolicyDefaults.test_api_field_defaults_enable_both_phases) ... ok
+test_cli_defaults_match_api (test_tree_policy_defaults.TreePolicyDefaults.test_cli_defaults_match_api) ... ok
+test_cli_explicit_chain_and_single_phase_override (test_tree_policy_defaults.TreePolicyDefaults.test_cli_explicit_chain_and_single_phase_override) ... ok
+test_explicit_chain_stays_off_in_both_runners (test_tree_policy_defaults.TreePolicyDefaults.test_explicit_chain_stays_off_in_both_runners) ... ok
+test_phase_only_overrides_stay_independent (test_tree_policy_defaults.TreePolicyDefaults.test_phase_only_overrides_stay_independent) ... ok
+test_tree_flags_do_not_enable_duet_by_themselves (test_tree_policy_defaults.TreePolicyDefaults.test_tree_flags_do_not_enable_duet_by_themselves) ... ok
+test_budget_at_default_formula (test_args_cleanup_equiv.TestOldNewEquivalence.test_budget_at_default_formula) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_direct_budget_equals_derived (test_args_cleanup_equiv.TestOldNewEquivalence.test_direct_budget_equals_derived) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+/home/chokwans99/PSD-ver16-p1-exclusion-review-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p2_budget->duet_p2_forward_width
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_dynamic_tree_is_the_duet_default_and_chain_is_explicit (test_args_cleanup_equiv.TestOldNewEquivalence.test_dynamic_tree_is_the_duet_default_and_chain_is_explicit) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+/home/chokwans99/PSD-ver16-p1-exclusion-review-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_tree_root_count->duet_p2_root_count
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=6, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=46, wire_N=46, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=28, wire_N=28, normalization=topm, expansion=last, DS/PS_tree=off/off
+ok
+test_env_free_equals_old_env_style (test_args_cleanup_equiv.TestOldNewEquivalence.test_env_free_equals_old_env_style) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_env_jit_short_off_still_wins (test_args_cleanup_equiv.TestOldNewEquivalence.test_env_jit_short_off_still_wins) ... [Config][deprecated] SSD_DUET_JIT_SHORT=0 env overrides duet_jit_short=True (prefer --duet_no_jit_short)
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_even_k1_is_valid_when_all_shape_inputs_agree (test_args_cleanup_equiv.TestOldNewEquivalence.test_even_k1_is_valid_when_all_shape_inputs_agree) ... /home/chokwans99/PSD-ver16-p1-exclusion-review-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p2_budget->duet_p2_forward_width, duet_tree_root_count->duet_p2_root_count, duet_p1_tree_max_nodes->duet_p1_tree_verify_nodes, duet_p2_tree_max_nodes->duet_p2_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=8/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=16/8, C=3, auto_top_L=46, wire_N=46, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_k2_gt_k1_early_raise (test_args_cleanup_equiv.TestOldNewEquivalence.test_k2_gt_k1_early_raise) ... ok
+test_legacy_tree_names_normalize_to_public_on_off (test_args_cleanup_equiv.TestOldNewEquivalence.test_legacy_tree_names_normalize_to_public_on_off) ... /home/chokwans99/PSD-ver16-p1-exclusion-review-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_tree_nv->duet_p2_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/7, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=28, wire_N=28, normalization=topm, expansion=last, DS/PS_tree=off/off
+ok
+test_missing_k1k2_early_raise (test_args_cleanup_equiv.TestOldNewEquivalence.test_missing_k1k2_early_raise) ... ok
+test_normalized_config_is_dataclasses_replace_safe (test_args_cleanup_equiv.TestOldNewEquivalence.test_normalized_config_is_dataclasses_replace_safe) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_p1_tree_node_envelope_is_not_a_depth_constraint (test_args_cleanup_equiv.TestOldNewEquivalence.test_p1_tree_node_envelope_is_not_a_depth_constraint) ... /home/chokwans99/PSD-ver16-p1-exclusion-review-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p1_tree_max_nodes->duet_p1_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=8/8, C=3, auto_top_L=32, wire_N=32, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=28/8, C=3, auto_top_L=70, wire_N=70, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_stale_total_k_is_rejected_with_value_error (test_args_cleanup_equiv.TestOldNewEquivalence.test_stale_total_k_is_rejected_with_value_error) ... ok
+test_tree_response_can_exceed_chain_depth (test_args_cleanup_equiv.TestOldNewEquivalence.test_tree_response_can_exceed_chain_depth) ... /home/chokwans99/PSD-ver16-p1-exclusion-review-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p1_tree_max_nodes->duet_p1_tree_verify_nodes, duet_p2_tree_max_nodes->duet_p2_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, C=3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_unequal_generation_and_verification_caps_are_rejected (test_args_cleanup_equiv.TestOldNewEquivalence.test_unequal_generation_and_verification_caps_are_rejected) ... ok
+test_wire_capacity_is_derived_from_phase_maxima (test_args_cleanup_equiv.TestOldNewEquivalence.test_wire_capacity_is_derived_from_phase_maxima) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=12/8, C=3, auto_top_L=38, wire_N=38, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+
+----------------------------------------------------------------------
+Ran 62 tests in 1.406s
+
+OK

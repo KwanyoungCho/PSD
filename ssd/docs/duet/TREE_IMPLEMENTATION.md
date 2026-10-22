@@ -48,6 +48,21 @@
 
 ### 1.2 기본값 변경의 정확한 의미
 
+#### 2026-10-23 P1 직접 자식 제외 수정
+
+동적 P1의 root 후보는 해당 context의 **기존 직접 자식 token 전체**를 제외한다.
+Tree의 저장 배열에서 다음 token 하나를 제외하는 chain 규칙은 사용할 수 없다.
+다른 prefix의 같은 token은 후보로 남기고 leaf에는 제외 집합이 없다. 이는 모든
+기존 자식을 거절한 뒤의 residual recovery를 준비하는 coverage 규칙이다.
+제외 후 q를 재정규화하지 않으며 원래 proposal q, ordered WOR와 target residual
+검증 수식은 그대로 유지한다.
+
+구현은 context reach 계산의 parent 배열을 재사용하고 작은 top 후보 표만
+fused CUDA kernel로 걸러낸다. Vocabulary 크기의 mask/copy나 host readback을
+추가하지 않는다. 현재 측정의 context1..24는 실행 시 길이를 입력받는 같은 kernel을
+사용한다. 수정 및 latency 검사 범위는
+[`p1_child_exclusion_fix_20261023/REPORT.md`](../../../results/mlsys_ver16/p1_child_exclusion_fix_20261023/REPORT.md)에 남긴다.
+
 공개 CLI에는 외부 기법 이름을 사용하지 않는다. MLSys ver1.6의 2026-10-23
 갱신부터 API와 CLI 기본값은 P1 `on`, P2 `on`이다. 재현 실험은 두 값을
 모두 명시한다. 과거 기본 P2-only 실행은 P1 `off`를 지정한다. 전체 chain은

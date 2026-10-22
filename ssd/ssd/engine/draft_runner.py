@@ -3319,7 +3319,11 @@ class DraftRunner(ModelRunner):
             "logits": ex.out_backbone_logits[:real_roots],
             "padded_roots": roots["tokens"][:real_roots].view(
                 1, contexts, pfo),
-            "root_mask": None,
+            # Normally all roots are valid. Tiny vocabularies may exhaust
+            # eligible alternatives; never deduplicate PS against padding.
+            "root_mask": (roots["valid"][:real_roots].view(contexts,pfo)
+                          if self.hf_config.vocab_size < pfo+contexts-1
+                          else None),
             "context_ids": roots["context_ids"][:real_roots],
             "views": views,
         }

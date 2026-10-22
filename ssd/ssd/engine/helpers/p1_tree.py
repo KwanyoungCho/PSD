@@ -114,44 +114,9 @@ def build_uniform_p1_roots(
         raise ValueError(
             f"root_width {width} cannot hold {real_roots} uniform roots")
 
-    # Same exclusion contract as the chain P1 selector: at context j, the
-    # already returned next token lives at returned_tokens[j+1].  The final
-    # context has no next returned token to exclude.  Asking for U+1 tokens
-    # and dropping the one excluded id is mathematically identical to
-    # cloning the full [P,V] logits and scattering -inf, while avoiding that
-    # multi-megabyte allocation/copy on every P1 step.
-    vocab = int(glue_logits.shape[1])
-    if p > 1 and roots_per_position >= vocab:
-        raise ValueError(
-            f"roots_per_position={roots_per_position} must be < "
-            f"vocab={vocab} when a returned token is excluded")
-    candidate_k = min(vocab, roots_per_position + 1)
-    candidates = glue_logits.topk(candidate_k, dim=-1).indices
-    excluded = torch.full(
-        (p,), -1, dtype=returned_tokens.dtype, device=glue_logits.device)
-    if p > 1:
-        excluded[:-1].copy_(returned_tokens[1:])
-    candidate_pos = torch.arange(
-        candidate_k, dtype=torch.int64, device=glue_logits.device) \
-        .expand(p, candidate_k)
-    kept_pos = torch.where(
-        candidates != excluded.unsqueeze(1), candidate_pos,
-        torch.full_like(candidate_pos, candidate_k))
-    chosen_pos = kept_pos.topk(
-        roots_per_position, dim=-1, largest=False, sorted=True).values
-    root_tok = candidates.gather(1, chosen_pos)
-
-    temps = temperatures.to(device=glue_logits.device, dtype=torch.float32)
-    if temps.numel() == 1:
-        temps = temps.expand(p)
-    elif temps.shape != (p,):
-        raise ValueError(
-            f"temperatures must be scalar or [{p}]; got {tuple(temps.shape)}")
-    # Candidate exclusion is a coverage rule, not a probability
-    # renormalization.  Score the selected alternative under the original
-    # draft distribution; otherwise a context whose returned token owns
-    # almost all mass would make a tiny alternative look spuriously certain.
-    # Approximate the probability that verification reaches each context.
+    # Reuse the exact same ancestry/parents for candidate exclusion and
+    # context reach. A tree's next stored row may be an unrelated sibling;
+    # every existing DIRECT child of this prefix must be excluded instead.
     # context_glue_rows[c] contains context c plus all of its ancestors.  The
     # direct parent is therefore the largest visible earlier context index.
     # Multiplying the edge probabilities on that row yields the same reach
@@ -173,6 +138,19 @@ def build_uniform_p1_roots(
         reach_rows.bool() & prior, idx.unsqueeze(0),
         torch.zeros((), dtype=torch.int64, device=glue_logits.device)
     ).amax(dim=1)
+    from ssd.engine.helpers.p1_root_selection import select_root_tokens
+    root_tok, root_valid = select_root_tokens(
+        glue_logits, returned_tokens, parent, roots_per_position,
+        chain=context_glue_rows is None)
+
+    temps = temperatures.to(device=glue_logits.device, dtype=torch.float32)
+    if temps.numel() == 1:
+        temps = temps.expand(p)
+    elif temps.shape != (p,):
+        raise ValueError(
+            f"temperatures must be scalar or [{p}]; got {tuple(temps.shape)}")
+    # Exclusion changes coverage only. Keep the ORIGINAL proposal law and
+    # its normalization when scoring roots and computing context reach.
     # Only U root candidates and one parent->returned-token edge per context
     # are consumed.  ``source_rows`` lets all pair probabilities share one
     # scaled-logit/logsumexp pass even for tree-shaped contexts whose parent
@@ -188,12 +166,16 @@ def build_uniform_p1_roots(
     root_probs = selected_probs[:, :roots_per_position]
     edge = selected_probs[:, -1]
     edge = edge.clone()
-    edge[0] = 1.0
+    # Scalar-index assignment stages a host scalar; a device fill also
+    # makes root preparation safe to capture without a CPU->GPU copy.
+    edge[:1].fill_(1.0)
     context_reach = torch.exp(
         reach_rows.to(torch.float32).matmul(edge.clamp_min(1e-30).log()))
     root_score = (
         root_probs
         * context_reach.unsqueeze(1)).reshape(-1)
+    if root_valid is not None:
+        root_score = root_score * root_valid.reshape(-1)
     root_tok = root_tok.reshape(-1)
     ctx = torch.arange(p, device=glue_logits.device, dtype=torch.int64) \
         .repeat_interleave(roots_per_position)
@@ -231,7 +213,10 @@ def build_uniform_p1_roots(
     out_tok[:real_roots] = root_tok
     out_score[:real_roots] = root_score
     out_ctx[:real_roots] = ctx
-    out_valid[:real_roots] = True
+    if root_valid is None:
+        out_valid[:real_roots] = True
+    else:
+        out_valid[:real_roots].copy_(root_valid.reshape(-1))
     out_glue[:real_roots] = root_glue
     out_reach.copy_(context_reach)
     return {

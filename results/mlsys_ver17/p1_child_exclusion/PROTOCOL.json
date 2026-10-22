@@ -1,0 +1,107 @@
+{
+  "requested_seeds": [
+    42,
+    123,
+    2026
+  ],
+  "warmup_scope": "within_dataset",
+  "warmup_requests": 3,
+  "dataset_questions": 72,
+  "dataset_turns": 84,
+  "measured_turns_per_seed": 81,
+  "passes_per_seed": 1,
+  "seed_order": [
+    42,
+    123,
+    2026
+  ],
+  "input_sha256": "916df8661fd391466ad7ab2a6084d1d86a767102ebd7158e912f5beb9cf6a2e6",
+  "canonical_source": "/home/chokwans99/PSD-ver16-review-20261022/experiments/ver16_7b_graph_timeline_20261022/INPUTS84.json",
+  "input_truncation": false,
+  "raw_prompt_order_preserved": true,
+  "chat_template": false,
+  "natural_eos": true,
+  "context_limit": 2048,
+  "output_cap": 128,
+  "effective_output_cap": "min(128,2048-input_tokens)",
+  "existing_context_guard": true,
+  "target_temperature": 0.7,
+  "draft_temperature": 0.7,
+  "top_p": 1.0,
+  "dtype": "bfloat16",
+  "batch": 1,
+  "target_tp": 1,
+  "draft_tp": 1,
+  "model": "LayerSkip-Llama2-7B + JackFram/llama-68m",
+  "runtime_commit": "4c7e43382db6215166265ed1f19d0a5d6bdd72b3",
+  "profile": false,
+  "phase_probe": false,
+  "async_proxy_send": true,
+  "graph_logits": true,
+  "nccl_graph_mixing": false,
+  "exit_replica": false,
+  "topm_gather": false,
+  "proxy_stream": false,
+  "additional_target_buckets": "",
+  "parameters": {
+    "exit_layer": 21,
+    "roots_per_position": 4,
+    "ds_width": 56,
+    "p1_G_eq_M": 23,
+    "ps_roots": 24,
+    "ps_width": 28,
+    "p2_G_eq_M": 15,
+    "siblings": 3
+  },
+  "arms": {
+    "before": {
+      "k1": 10,
+      "k2": 5,
+      "selector": "legacy"
+    },
+    "after": {
+      "k1": 10,
+      "k2": 5,
+      "selector": "parent-aware fused CUDA"
+    }
+  },
+  "lanes": [
+    {
+      "gpus": [
+        1,
+        2
+      ],
+      "seed": 42,
+      "order": [
+        "before",
+        "after"
+      ]
+    },
+    {
+      "gpus": [
+        4,
+        5
+      ],
+      "seed": 123,
+      "order": [
+        "after",
+        "before"
+      ]
+    },
+    {
+      "gpus": [
+        6,
+        7
+      ],
+      "seed": 2026,
+      "order": [
+        "before",
+        "after"
+      ]
+    }
+  ],
+  "aggregation": "turn ratios -> equal mean valid turns within question -> common complete question mean -> equal mean of three predefined seeds",
+  "long_step_filter": ">2x same-request, actual batch, P1/P2/miss-count mixture median; keep raw and disclose count",
+  "comparison": "Same current runtime, inputs, K10/5, params and graph path; only legacy vs parent-aware P1 root preparation differs",
+  "performance_scope": "Short 84 raw-turn controlled latency check; not paper full-dataset TPS"
+}
