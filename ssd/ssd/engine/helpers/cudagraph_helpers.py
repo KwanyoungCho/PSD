@@ -135,6 +135,9 @@ def run_verify_cudagraph(model_runner, input_ids, positions, last_only, graph_va
 
     # Extract outputs for the ORIGINAL batch size only
     outputs = graph_vars["outputs"][:orig_bs * k_plus_1]
+    if not model_runner.is_draft:
+        from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+        synchronize_eager()
     logits = model_runner.model.compute_logits(outputs, last_only)
 
     if _pt:
@@ -189,6 +192,9 @@ def run_decode_cudagraph(model_runner, input_ids, positions, last_only, graph_va
     graph.replay()
 
     outputs = graph_vars["outputs"][:flat_batch_size]
+    if not model_runner.is_draft:
+        from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+        synchronize_eager()
     logits = model_runner.model.compute_logits(outputs, last_only)
     # EAGLE draft: outputs is prenorm, return both
     if "hidden_states" in graph_vars:
@@ -1413,6 +1419,24 @@ def capture_tree_verify_cudagraph(model_runner, graph_pool=None):
                 init_residual=bufs["exit_residual"])
             bufs["outputs"].copy_(
                 o if not isinstance(o, tuple) else o[0])
+        from ssd.engine.helpers.verify_logit_graphs import enabled, capture
+        if enabled(config, is_draft=model_runner.is_draft):
+            # Keep original graphs for short requests: fused heads are used
+            # only when real and physical query rows are exactly equal.
+            def pre_body():
+                hs,res=model_runner.model(bufs["input_ids"],bufs["rope"],end_layer=exit_layer+1)
+                bufs["exit_hidden"].copy_(hs);bufs["exit_residual"].copy_(res)
+            def post_body():
+                value=model_runner.model(bufs["input_ids"],bufs["rope"],start_layer=exit_layer+1,
+                    init_hidden_states=bufs["exit_hidden"],init_residual=bufs["exit_residual"])
+                bufs["outputs"].copy_(value if not isinstance(value,tuple) else value[0])
+            bufs["head_graphs"] = capture(model_runner,pre_body,post_body,
+                bufs["exit_hidden"],bufs["exit_residual"],bufs["outputs"],r)
+            # All TP collectives remain captured even when the model graph
+            # is larger than the real request. Never send dummy rows to a head.
+            bufs["head_aux"] = {actual:capture(model_runner,lambda:None,lambda:None,
+                bufs["exit_hidden"],bufs["exit_residual"],bufs["outputs"],actual)
+                for actual in range(2,r)}
         reset_context()
         out[(nv_b, n_pages)] = {
             "bufs": bufs, "pre": g_pre, "post": g_post,
@@ -1538,6 +1562,25 @@ def capture_duet_verify_cudagraph(model_runner, lookahead=None, graph_pool=None)
         outputs=outputs,
         lookahead=lookahead,  # so run_duet_verify_cudagraph picks the right k_plus_1
     )
+    from ssd.engine.helpers.verify_logit_graphs import enabled, capture
+    if enabled(config, is_draft=model_runner.is_draft):
+        def pre_body():
+            hs,res=model_runner.model(input_ids[:k_plus_1],positions[:k_plus_1],end_layer=exit_layer+1)
+            exit_hidden[:k_plus_1].copy_(hs);exit_residual[:k_plus_1].copy_(res)
+        def post_body():
+            value=model_runner.model(input_ids[:k_plus_1],positions[:k_plus_1],start_layer=exit_layer+1,
+                init_hidden_states=exit_hidden[:k_plus_1],init_residual=exit_residual[:k_plus_1])
+            outputs[:k_plus_1].copy_(value if not isinstance(value,tuple) else value[0])
+        set_context(is_prefill=False,slot_mapping=slot_mapping[:k_plus_1],
+            context_lens=context_lens[:1],block_tables=block_tables[:1],
+            cu_seqlens_q=cu_seqlens_q[:2],max_seqlen_q=k_plus_1)
+        _fi_prepare_capture_lens(model_runner,context_lens[:1])
+        from ssd.layers.fi_attn import duet_graph_name
+        _fi_plan_graph(model_runner,duet_graph_name(k_plus_1),all_N,model_runner.max_num_blocks,
+            k_plus_1,1,block_tables[:1],context_lens[:1],causal=True)
+        graph_vars["head_graphs"] = capture(
+            model_runner,pre_body,post_body,exit_hidden,exit_residual,outputs,k_plus_1)
+        reset_context()
     return graph_vars, graph_pool, graphs_pre, graphs_post, all_N
 
 
@@ -1633,9 +1676,13 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         x for x in model_runner.graph_bs_list[bucket] if x >= orig_bs)
     graph_pre = model_runner.graphs[f"{bucket}_pre"][wrapper_bs]
     graph_post = model_runner.graphs[f"{bucket}_post"][wrapper_bs]
+    _heads = graph_vars.get("head_graphs")
+    if _heads is not None:
+        graph_pre=_heads["exit"][0]
+        graph_post=_heads["final"][0]
 
     for k, v in graph_vars.items():
-        if k not in ("outputs", "exit_hidden", "exit_residual", "lookahead"):
+        if k not in ("outputs", "exit_hidden", "exit_residual", "lookahead", "head_graphs"):
             v.zero_()
 
     # Padding (same pattern as run_verify_cudagraph)
@@ -1740,9 +1787,15 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
         # ====== Mid-forward: exit logits (norm + lm_head on exit_hidden) ======
         _ev_el = duet_record("exit_logits")
         flat = orig_bs * k_plus_1
-        exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
-        normed = model_runner.model.model.norm(exit_h, None)
-        if getattr(config, "duet_exit_topm_gather", False):
+        _heads = graph_vars.get("head_graphs")
+        if _heads is not None:
+            from ssd.engine.helpers.verify_logit_graphs import output
+            exit_logits = output(_heads, "exit", chain=True)
+        elif getattr(config, "duet_exit_topm_gather", False):
+            from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+            synchronize_eager()
+            exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
+            normed = model_runner.model.model.norm(exit_h, None)
             # B>1 not supported for this gate (docs/duet/13 §6) — the y_tok
             # slice inside _duet_exit_topm_gather crosses seq boundaries.
             assert orig_bs == 1, "duet_exit_topm_gather: B>1 not supported (docs/duet/13 §6)"
@@ -1753,10 +1806,17 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
             exit_logits = _duet_exit_topm_gather(
                 model_runner, normed, input_ids[:flat], config.duet_proxy_topm)
         else:
+            from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+            synchronize_eager()
+            exit_h = graph_vars["exit_hidden"][:flat] + graph_vars["exit_residual"][:flat]
+            normed = model_runner.model.model.norm(exit_h, None)
             # ALL TP ranks call compute_logits → gather participation.
             # rank 0: exit_logits = [flat, V]; rank 1+: exit_logits = None
             exit_logits = model_runner.model.compute_logits(normed, last_only=False)
         duet_close("exit_logits", _ev_el)
+        if _heads is None:
+            from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+            synchronize_eager()
 
         # ====== proxy compute + isend (rank 0 only does real work) ======
         # Batch 3b (docs/duet/08 §1.2): if SSD_PROXY_STREAM=1, dispatch the
@@ -1806,7 +1866,14 @@ def run_duet_verify_cudagraph(model_runner, input_ids, positions, last_only,
     # ====== Final logits ======
     _ev_fl = duet_record("final_logits")
     outputs = graph_vars["outputs"][:flat]
-    logits = model_runner.model.compute_logits(outputs, last_only)
+    _heads=graph_vars.get("head_graphs")
+    if _heads is not None:
+        from ssd.engine.helpers.verify_logit_graphs import output
+        logits=output(_heads,"final",chain=True)
+    else:
+        from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+        synchronize_eager()
+        logits = model_runner.model.compute_logits(outputs, last_only)
     duet_close("final_logits", _ev_fl)
     return logits
 

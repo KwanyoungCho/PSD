@@ -261,12 +261,10 @@ class ModelRunner:
         self._tree_wire_device = torch.empty(
             3 + 4 * nv, dtype=torch.int64, device=self.device)
         self.tree_verify_wrappers = {}
-        # Production backbone generation fills the configured per-root cap.
-        # Capture only the active phase caps; intermediate valid counts pad
-        # to the next cap (and the rare support-exhaustion shape can use the
-        # same bucket).  Capturing every even node count multiplied by every
-        # page count wastes several GiB once each graph gets the isolated
-        # FlashInfer state required for correctness.
+        # Keep legacy phase-cap shapes by default. Short trees can opt in to
+        # additional exact-width graphs before KV sizing/capture. This changes
+        # only physical query rows, not wire capacity, proposals or verification.
+        # Be explicit: every extra width owns one workspace per KV page count.
         verify_buckets = set()
         if self.config.duet_p1_tree_policy == "on":
             verify_buckets.add(int(self.config.duet_p1_tree_verify_nodes))
@@ -274,6 +272,10 @@ class ModelRunner:
             verify_buckets.add(int(self.config.duet_p2_tree_verify_nodes))
         if not verify_buckets:
             verify_buckets.add(nv)
+        from ssd.engine.helpers.target_verify_buckets import target_verify_buckets
+        verify_buckets = target_verify_buckets(
+            verify_buckets, os.environ.get("SSD_TREE_VERIFY_BUCKETS", ""))
+        self._tree_verify_buckets = tuple(verify_buckets)
         from ssd.utils.workspace import tree_verify_workspace_bytes
         graph_ws_bytes = tree_verify_workspace_bytes(self.device, max(verify_buckets))
         self._tree_workspace = torch.zeros(
@@ -312,7 +314,8 @@ class ModelRunner:
         # isolation rule already used by P2TreeExecutor.
         print(f'[tree-verify-workspace] graph={graph_ws_bytes/2**20:g} MiB '
               f'eager={self._tree_workspace.numel()/2**20:g} MiB '
-              f'node_buckets={sorted(verify_buckets)} pages={max_blocks}',flush=True)
+              f'node_buckets={sorted(verify_buckets)} pages={max_blocks} '
+              f'graph_float_total={len(verify_buckets)*max_blocks*graph_ws_bytes/2**30:g} GiB',flush=True)
         self._tree_verify_graph_workspaces = {}
         self.tree_verify_graph_wrappers = {}
         for nv_b in sorted(verify_buckets):
@@ -1344,7 +1347,7 @@ class ModelRunner:
             attn.scale,
             self.hf_config.torch_dtype,
         )
-        if is_prefill:
+        if is_prefill or self.enforce_eager:
             if context.block_tables is not None:
                 kv_lens = (
                     context.cu_seqlens_k[1:] - context.cu_seqlens_k[:-1]
@@ -1422,6 +1425,9 @@ class ModelRunner:
 
     @torch.inference_mode()
     def run_model(self, input_ids: torch.Tensor, positions: torch.Tensor, is_prefill: bool, last_only: bool = True, tree_decode_step: int = -1, cache_hits: torch.Tensor | None = None, hidden_states: torch.Tensor | None = None):
+        if is_prefill:
+            from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+            synchronize_eager()
         is_tree_decode = self.is_draft and self.config.draft_async and tree_decode_step >= 0
         is_mq_kp1 = self.config.speculate and not last_only
         spec_and_dec = not is_prefill and self.config.speculate
@@ -1651,8 +1657,11 @@ class ModelRunner:
         # Bucket selection is host-only.  Row padding, depth/RoPE derivation,
         # and packed ancestor mask construction move to one fused GPU kernel.
         _ev_mask = duet_record("tree_verify_mask_prepare")
-        _buckets = sorted(self.tree_verify_wrappers.keys())
-        nv_b = next(b for b in _buckets if b + 1 >= n_rows)
+        from ssd.engine.helpers.target_verify_buckets import select_target_verify_bucket
+        _buckets = getattr(self, "_tree_verify_buckets", None)
+        if _buckets is None:
+            _buckets = sorted(self.tree_verify_wrappers)
+        nv_b = select_target_verify_bucket(_buckets, valid)
         r_b = nv_b + 1
 
         bs = self.block_size
@@ -1811,12 +1820,15 @@ class ModelRunner:
             duet_close("tree_verify_attention_buffers", _ev_plan)
             duet_close("verify_setup", _ev_setup)
             _ev = duet_record("graph_pre")
-            _cg["pre"].replay()
+            _fused=(_cg["bufs"].get("head_graphs") if n_rows==r_b else None)
+            (_fused["exit"][0] if _fused is not None else _cg["pre"]).replay()
             duet_close("graph_pre", _ev)
             hs = bufs["exit_hidden"]
             res = bufs["exit_residual"]
         else:
             # eager 폴백: CG-제약 없는 지연-생성 wrapper
+            from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+            synchronize_eager()
             w = getattr(self, "_tree_eager_wrapper", None)
             if w is None:
                 import flashinfer
@@ -1886,15 +1898,34 @@ class ModelRunner:
             duet_close("exit_proxy_launch", _ev_el)
         else:
             _ev_el = duet_record("exit_logits")
-            normed = self.model.model.norm((hs + res)[:n_rows], None)
-            if getattr(cfg, "duet_exit_topm_gather", False):
+            _heads = (_cg["bufs"].get("head_graphs")
+                      if _cg is not None and n_rows==r_b else None)
+            _aux=(_cg["bufs"].get("head_aux",{}).get(n_rows)
+                  if _cg is not None and _heads is None else None)
+            if _heads is not None:
+                from ssd.engine.helpers.verify_logit_graphs import output
+                exit_logits = output(_heads, "exit")
+            elif _aux is not None:
+                from ssd.engine.helpers.verify_logit_graphs import output
+                _aux["exit"][0].replay()
+                exit_logits=output(_aux,"exit")
+            elif getattr(cfg, "duet_exit_topm_gather", False):
+                from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+                synchronize_eager()
+                normed = self.model.model.norm((hs + res)[:n_rows], None)
                 exit_logits = _duet_exit_topm_gather(
                     self, normed, input_ids[:n_rows], cfg.duet_proxy_topm)
             else:
+                from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+                synchronize_eager()
+                normed = self.model.model.norm((hs + res)[:n_rows], None)
                 # 전 rank compute_logits (gather 참여) — rank0만 실값
                 exit_logits = self.model.compute_logits(
                     normed, last_only=False)
             duet_close("exit_logits", _ev_el)
+            if _heads is None and _aux is None:
+                from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+                synchronize_eager()
             _ev_ps = duet_record("exit_proxy_launch")
             if duet_proxy_fn is not None:
                 _proxy_stream = getattr(self, "_duet_proxy_stream", None)
@@ -1920,7 +1951,8 @@ class ModelRunner:
 
         _ev = duet_record("graph_post")
         if _cg is not None:
-            _cg["post"].replay()
+            _fused=(_cg["bufs"].get("head_graphs") if n_rows==r_b else None)
+            (_fused["final"][0] if _fused is not None else _cg["post"]).replay()
             out = _cg["bufs"]["outputs"]
         else:
             out = self.model(input_ids, rope, start_layer=exit_layer + 1,
@@ -1930,7 +1962,24 @@ class ModelRunner:
         duet_close("graph_post", _ev)
 
         _ev_fl = duet_record("final_logits")
-        logits = self.model.compute_logits(out, last_only)
+        # A cap-sized graph may still be used for an uncaptured short tree.
+        # Dummy rows have no consumer: discard them BEFORE the final LM head
+        # and TP gather, just as the exit head already does. The tree path
+        # retains its flat [real rows, vocab] result contract.
+        _heads=(_cg["bufs"].get("head_graphs") if _cg is not None and n_rows==r_b else None)
+        if _heads is not None:
+            from ssd.engine.helpers.verify_logit_graphs import output
+            logits=output(_heads,"final")
+        else:
+            _aux=(_cg["bufs"].get("head_aux",{}).get(n_rows) if _cg is not None else None)
+            if _aux is not None:
+                from ssd.engine.helpers.verify_logit_graphs import output
+                _aux["final"][0].replay()
+                logits=output(_aux,"final")
+            else:
+                from ssd.engine.helpers.verify_logit_graphs import synchronize_eager
+                synchronize_eager()
+                logits = self.model.compute_logits(out[:n_rows], last_only)
         duet_close("final_logits", _ev_fl)
         # pad 행 절단 — 소비자는 [n_rows, V]만 본다
         if logits is not None and not last_only and logits.shape[0] == r_b:
