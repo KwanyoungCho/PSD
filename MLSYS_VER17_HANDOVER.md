@@ -18,7 +18,8 @@ CPU/CUDA/graph 회귀 62개 통과. 동일 입력의 eager root 준비 평균은
 따라 약 6–19µs 감소했다. 실제 짧은 84턴×3-seed 검사에서 step은
 19.122→19.095ms였으나, AL 2.859→2.798, TPS 147.85→144.68이었다.
 Hit rate는 87.98→88.67%였다. **성능 향상 릴리스라고 주장하지 않는다.**
-전체 Spec-Bench best-3(2,0,10) 재측정은 추가 검토 완료 후 별도로 진행한다.
+전체 Spec-Bench best-3(2,0,10) 재측정은 추가 검토를 반영한 뒤 완료했다.
+아래 최종 비교를 참고한다.
 
 [측정·검증 보고서](results/mlsys_ver17/p1_child_exclusion/REPORT.md)와
 [요약 수치](results/mlsys_ver17/p1_child_exclusion/SUMMARY.json)를 참고한다.
@@ -70,3 +71,42 @@ GPU 번호와 Python 경로는 각 서버 환경에 맞춘다.
 287개 회귀 검사 및 latency 측정을 기록했다. Uniform toy CUDA sampling의 난수
 중복은 재현했으나, 기존 실제 모델 출력의 편향 크기를 측정한 것은 아니다.
 논문 best-3 seed는 기존과 같은 2·0·10을 고정하며 새 결과로 다시 고르지 않는다.
+
+신규 수정 중심의 회귀 검사는 다음과 같다. 전체 287개 검사의 결과는 위 보고서에 있다.
+
+```bash
+PYTHONPATH=ssd:ssd/tests SSD_HF_CACHE=/tmp SSD_DATASET_DIR=/tmp \
+python -B -m unittest -v test_ver17_review test_p1_child_exclusion \
+  test_batch_tree_serving test_batched_tree_executor
+```
+
+## Full best-3 최종 비교
+
+런타임 커밋은 `0654bd68caa76158865487bd2c70cdee9efadaed`다.
+v1.6 `4c7e4338`와 동일 파라미터·입력 ID·seed를 사용해 각각 3회, 총 6회를
+로컬 PIX 세 쌍에서 완료했고, 모든 실행이 검증을 통과했다. GPU 작업은 종료됐다.
+K1=10/K2=5, exit21, P1 W56·G=M23·위치당4, P2 R24·W28·G=M15, C3,
+BF16/B1/graph/async proxy send, 전체480문항·560턴, 출력1024 조건이다.
+
+| 공통 367문항·422턴의 3-seed 평균 | v1.6 | v1.7 |
+|---|---:|---:|
+| 전체 hit % | 92.07 | 92.28 |
+| AL | 3.325 | 3.286 |
+| Step ms | 19.249 | 19.259 |
+| TPS | 171.58 | 169.47 |
+
+전체 step 변화는 +0.05%, TPS는 -1.23%다. Seed별 성능 변화 방향이 달라
+속도 향상을 주장하지 않는다. 직접 수정한 준비 구간 비용은 감소했으며,
+독립 CPU wall 계측으로도 전체 step 호출 시간이 내부 계측보다 약0.0055ms
+큰 정도임을 확인했다. 기존 residual 검증·sampling 소스 7개의 SHA는 동일하다.
+
+각 실행은 전체560턴을 처리했다. 위 공통 문항 표는 모든 실행에서 측정 대상
+턴이 유효한 문항의 교집합이다. 출력2토큰 미만·문맥 보호·warmup 제외 등에
+따른 표본 수와 실행별 전체 유효 문항 결과를 함께 공개한다. 기존 논문 표와
+같은 필터 없는 집계에서는 v1.6 168.58 TPS → v1.7 167.27 TPS다.
+긴 step 제외 수는 seed2/0/10 순서로 이전6/6/1, 수정6/4/2다.
+
+[상세 성능 비교](results/mlsys_ver17/best3_20261023/REPORT.md),
+[요약·분모](results/mlsys_ver17/best3_20261023/SUMMARY.json),
+[측정 코드와 재현 안내](experiments/ver17_best3_20261023/README.md)를 참고한다.
+원시 결과는 로컬에 보존하며 기존 논문 성능 표는 덮어쓰지 않았다.

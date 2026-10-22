@@ -1,0 +1,22 @@
+{
+  "role": "target",
+  "parameter": "torch.bfloat16",
+  "kv_cache": "torch.bfloat16",
+  "hf_dtype": "torch.bfloat16",
+  "enforce_eager": false,
+  "target_tp": 1,
+  "device_name": "NVIDIA GeForce RTX 4090",
+  "torch": "2.8.0+cu128",
+  "nccl": [
+    2,
+    27,
+    3
+  ],
+  "tree_graphs": 16,
+  "fused_tree_graphs": 16,
+  "fused_chain_graphs": [
+    "duet_verify_k1",
+    "duet_verify_k2"
+  ],
+  "rng_domains": {}
+}

@@ -1,0 +1,108 @@
+{
+  "requested_seeds": [
+    2,
+    0,
+    10
+  ],
+  "warmup_scope": "within_dataset",
+  "warmup_requests": 3,
+  "dataset_questions": 480,
+  "dataset_turns": 560,
+  "measured_turns_per_seed": 557,
+  "passes_per_seed": 1,
+  "seed_order": [
+    2,
+    0,
+    10
+  ],
+  "input_sha256": "41c5cd09b717d0045a4d6b0746ae724e474aa6f28060630135fd49ff7f3b363e",
+  "canonical_source": "/data/chokwans99/duet-seeds-e21-k10w56g23-20261018-dual/INPUTS_FULL.json",
+  "input_truncation": false,
+  "raw_prompt_order_preserved": true,
+  "chat_template": false,
+  "natural_eos": true,
+  "context_limit": 2048,
+  "output_cap": 1024,
+  "effective_output_cap": "min(1024,2048-input_tokens)",
+  "existing_context_guard": true,
+  "target_temperature": 0.7,
+  "draft_temperature": 0.7,
+  "top_p": 1.0,
+  "dtype": "bfloat16",
+  "batch": 1,
+  "target_tp": 1,
+  "draft_tp": 1,
+  "model": "LayerSkip-Llama2-7B + JackFram/llama-68m",
+  "runtime_commit": "per-arm; see arms",
+  "profile": false,
+  "phase_probe": false,
+  "async_proxy_send": true,
+  "graph_logits": true,
+  "nccl_graph_mixing": false,
+  "exit_replica": false,
+  "topm_gather": false,
+  "proxy_stream": false,
+  "additional_target_buckets": "",
+  "parameters": {
+    "exit_layer": 21,
+    "roots_per_position": 4,
+    "ds_width": 56,
+    "p1_G_eq_M": 23,
+    "ps_roots": 24,
+    "ps_width": 28,
+    "p2_G_eq_M": 15,
+    "siblings": 3
+  },
+  "arms": {
+    "before": {
+      "k1": 10,
+      "k2": 5,
+      "root": "/home/chokwans99/PSD-ver17-baseline-20261023",
+      "commit": "4c7e43382db6215166265ed1f19d0a5d6bdd72b3"
+    },
+    "after": {
+      "k1": 10,
+      "k2": 5,
+      "root": "/home/chokwans99/PSD-ver17-20261023",
+      "commit": "0654bd68caa76158865487bd2c70cdee9efadaed"
+    }
+  },
+  "lanes": [
+    {
+      "gpus": [
+        1,
+        2
+      ],
+      "seed": 2,
+      "order": [
+        "before",
+        "after"
+      ]
+    },
+    {
+      "gpus": [
+        4,
+        5
+      ],
+      "seed": 0,
+      "order": [
+        "after",
+        "before"
+      ]
+    },
+    {
+      "gpus": [
+        6,
+        7
+      ],
+      "seed": 10,
+      "order": [
+        "before",
+        "after"
+      ]
+    }
+  ],
+  "aggregation": "turn ratios -> equal mean valid turns within question -> common complete question mean -> equal mean of three predefined seeds",
+  "long_step_filter": ">2x same-request, actual batch, P1/P2/miss-count mixture median; keep raw and disclose count",
+  "comparison": "Same historically selected best-3 seeds; do not reselect winners. Remeasure 4c7e433 baseline and ver1.7 with identical raw token IDs and same PIX GPU pair per seed. Historical v1.4 reported separately."
+}

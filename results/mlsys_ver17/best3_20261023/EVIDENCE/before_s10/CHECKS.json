@@ -1,0 +1,181 @@
+{
+  "status": "passed",
+  "turns": 560,
+  "warmup_turns": 3,
+  "measured_turns": 557,
+  "classifications": {
+    "decoded": 550,
+    "context_guard_no_decode": 10
+  },
+  "context_guard_no_decode_uids": [
+    "253_t0",
+    "273_t0",
+    "279_t0",
+    "288_t0",
+    "295_t0",
+    "297_t0",
+    "306_t0",
+    "316_t0",
+    "317_t0",
+    "318_t0"
+  ],
+  "both_tree_phases_enabled": true,
+  "expansion": "last",
+  "source_unchanged": true,
+  "input_order_and_ids_identical": true,
+  "dtype": "bfloat16",
+  "graph_path": true,
+  "question_mean": {
+    "1": {
+      "share_pct": 48.592336944206394,
+      "hit_pct": 100.0,
+      "al": 3.733668193304061,
+      "step_ms": 19.546970303255343,
+      "tps": 190.66264318834612,
+      "target_call_and_accept_ms": 18.32613366386251,
+      "label": "P1 hit",
+      "n": 44622,
+      "metric_questions": {
+        "share_pct": 449,
+        "hit_pct": 449,
+        "al": 449,
+        "step_ms": 449,
+        "tps": 449,
+        "target_call_and_accept_ms": 449
+      },
+      "metric_turns": {
+        "share_pct": 522,
+        "hit_pct": 522,
+        "al": 522,
+        "step_ms": 522,
+        "tps": 522,
+        "target_call_and_accept_ms": 522
+      },
+      "accepted_length_survival": {
+        "1": 1.0,
+        "2": 0.7630606507624765,
+        "3": 0.5532818158937006,
+        "4": 0.4019752127208841,
+        "5": 0.2716646601720806,
+        "6": 0.19445869241636365,
+        "7": 0.15119118080149074,
+        "8": 0.12630696849276182,
+        "9": 0.1062557598929016
+      }
+    },
+    "2": {
+      "share_pct": 43.56345591555206,
+      "hit_pct": 100.0,
+      "al": 2.6879312176877836,
+      "step_ms": 18.6235304346008,
+      "tps": 144.39461798514756,
+      "target_call_and_accept_ms": 17.401082060844278,
+      "label": "P2 hit",
+      "n": 42706,
+      "metric_questions": {
+        "share_pct": 449,
+        "hit_pct": 449,
+        "al": 449,
+        "step_ms": 449,
+        "tps": 449,
+        "target_call_and_accept_ms": 449
+      },
+      "metric_turns": {
+        "share_pct": 522,
+        "hit_pct": 522,
+        "al": 522,
+        "step_ms": 522,
+        "tps": 522,
+        "target_call_and_accept_ms": 522
+      },
+      "accepted_length_survival": {
+        "1": 1.0,
+        "2": 0.6826799023259875,
+        "3": 0.4754281382237249,
+        "4": 0.26046997205067324,
+        "5": 0.1589622876472783,
+        "6": 0.11039091744011956,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    "0": {
+      "share_pct": 7.844207140241545,
+      "hit_pct": 0.0,
+      "al": 2.0197728629510685,
+      "step_ms": 20.5135451719259,
+      "tps": 87.57842840425539,
+      "target_call_and_accept_ms": 17.441509915062397,
+      "label": "Miss",
+      "n": 5975,
+      "metric_questions": {
+        "share_pct": 449,
+        "hit_pct": 449,
+        "al": 449,
+        "step_ms": 449,
+        "tps": 449,
+        "target_call_and_accept_ms": 449
+      },
+      "metric_turns": {
+        "share_pct": 522,
+        "hit_pct": 522,
+        "al": 522,
+        "step_ms": 522,
+        "tps": 522,
+        "target_call_and_accept_ms": 522
+      },
+      "accepted_length_survival": {
+        "1": 1.0,
+        "2": 0.4722070133437158,
+        "3": 0.25290775236408464,
+        "4": 0.14714256275551765,
+        "5": 0.08946105257866169,
+        "6": 0.05805448190908877,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    "all": {
+      "share_pct": 100.0,
+      "hit_pct": 92.15579285975845,
+      "al": 3.2586206306200336,
+      "step_ms": 19.234651336165008,
+      "tps": 168.23115360149464,
+      "target_call_and_accept_ms": 17.8696115664655,
+      "label": "Overall",
+      "n": 93303,
+      "metric_questions": {
+        "share_pct": 449,
+        "hit_pct": 449,
+        "al": 449,
+        "step_ms": 449,
+        "tps": 449,
+        "target_call_and_accept_ms": 449
+      },
+      "metric_turns": {
+        "share_pct": 522,
+        "hit_pct": 522,
+        "al": 522,
+        "step_ms": 522,
+        "tps": 522,
+        "target_call_and_accept_ms": 522
+      },
+      "accepted_length_survival": {
+        "1": 1.0,
+        "2": 0.7087616170400834,
+        "3": 0.5021572550839047,
+        "4": 0.3317763539478757,
+        "5": 0.21959400059640247,
+        "6": 0.15696299244630618,
+        "7": 0.0904657839630455,
+        "8": 0.07714577968969154,
+        "9": 0.06586782378982006
+      }
+    }
+  },
+  "long_excluded": 1,
+  "raw_steps": 93461,
+  "run_sha256": "0ec8faa792b032a357768da1b4d6367b13c9660d8d7e8cceecdf12c4ffc01d39"
+}
