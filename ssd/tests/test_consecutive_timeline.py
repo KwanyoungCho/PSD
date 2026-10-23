@@ -154,6 +154,26 @@ class PhaseAverages(unittest.TestCase):
         self.assertIsNone(rows[2]['step_ms'])
         self.assertEqual(table_cells(rows)[2][2],'N/A')
 
+    def test_question_mean_does_not_weight_long_questions_more(self):
+        # A has two turns (20ms and 40ms); B has three 60ms steps.
+        a=dict(self.sample(1,1,20),uid='A_t0',question_id='A')
+        b=dict(self.sample(1,2,40),epoch=1,uid='A_t1',question_id='A')
+        cc=[dict(self.sample(i,1,60),epoch=2,uid='B_t0',question_id='B') for i in (1,2,3)]
+        rows=summarize([a,b,*cc])
+        self.assertEqual(rows[-1]['n'],5)
+        self.assertEqual(rows[-1]['step_ms'],45)  # mean(mean(20,40),60)
+        self.assertEqual(rows[0]['share_pct'],75) # mean(mean(100,0),100)
+        self.assertEqual(rows[1]['share_pct'],25)
+        self.assertEqual(rows[-1]['metric_questions']['step_ms'],2)
+        self.assertEqual(rows[-1]['metric_turns']['step_ms'],3)
+
+    def test_repeated_uid_is_a_separate_turn_when_epoch_changes(self):
+        a=dict(self.sample(1,1,20),uid='A_t0')
+        bb=[dict(self.sample(i,1,60),epoch=1,uid='A_t0') for i in (1,2,3)]
+        row=summarize([a,*bb])[-1]
+        self.assertEqual(row['step_ms'],40)
+        self.assertEqual(row['metric_turns']['step_ms'],2)
+
     def test_negative_spare_and_graph_per_round_preserved(self):
         m=metrics(self.sample())
         self.assertEqual(m['ds_margin_ms'],-1)

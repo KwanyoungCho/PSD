@@ -1,4 +1,5 @@
 """Batched target tree verification and request-specific KV commits."""
+from ssd.engine.helpers.tree_fanout_config import sibling_capacity
 from time import perf_counter
 import os
 import torch
@@ -35,7 +36,7 @@ def verify(verifier,seqs,result):
         if tree:
             ti=parse_tree_ints(wire[b],cfg.duet_tree_wire_nodes)
             validate_tree_ints(ti,cfg.duet_tree_wire_nodes,cfg.hf_config.vocab_size,
-                               sibling_capacity=cfg.duet_tree_c_tensor)
+                               sibling_capacity=sibling_capacity(cfg))
             n=ti['valid']
             if n!=valid[b] or ti['epoch']!=2:
                 raise RuntimeError('Batched tree wire version/length mismatch')
@@ -66,7 +67,7 @@ def verify(verifier,seqs,result):
         p=proxy_type(cap,N,cfg.hf_config.vocab_size,cfg.hf_config.torch_dtype,r.device,
                            cfg.duet_proxy_wire_N,N,
                            cfg.duet_proxy_top_k,pool=r._batch_tree_proxy_pool,
-                           q_dtype=result.logits_q.dtype,c_max=cfg.duet_tree_c_tensor,
+                           q_dtype=result.logits_q.dtype,c_max=sibling_capacity(cfg),
                            policy=options(cfg))
         r._batch_tree_proxies[proxy_key]=p
         if DETAIL_TREE:duet_close('batch_proxy_capture',capture_event)

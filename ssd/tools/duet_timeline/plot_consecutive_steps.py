@@ -160,6 +160,8 @@ def render(window, pdf, png, phase_summary=None):
     ax.grid(axis='x',alpha=.25,ls=':')
     fig.suptitle(window['title'],y=.98,fontsize=14)
     fig.text(.5,.94,window['metadata'].get('description',''),ha='center',fontsize=10)
+    if window['metadata'].get('fused_heads'):
+        fig.text(.5,.923,'Fused target graph_pre = layers + exit norm/head; graph_post = layers + final head. Head spans are included, not missing.',ha='center',fontsize=8.5,color='#54278f')
     fig.text(.5,.908,'Red dashed line = next target request starts (observed deadline reference).  Green circle = PS cache ready; triangle = draft ready to receive.',ha='center',fontsize=10)
     fig.text(.5,.883,'Both target steps and their DS/PS work share one time axis. Only the following request boundary is used for the second deadline.',ha='center',fontsize=9)
     if phase_summary is not None and phase_summary.get('proxy_overlap', {}).get('overlapping_steps') == 0:
@@ -192,8 +194,8 @@ def render(window, pdf, png, phase_summary=None):
             for (r,c),cell in table.get_celld().items():
                 if r==0:cell.set_facecolor('#e1eaf0');cell.set_text_props(weight='bold')
                 elif r==4:cell.set_facecolor('#edf4ec');cell.set_text_props(weight='bold')
-        fig.text(.065,.532,'ALL ELIGIBLE STEPS FOR THIS SETTING (not the two example steps above); Overall is step-weighted.',fontsize=10,weight='bold')
-        fig.text(.065,.382,'Rate = source / all steps; Overall rate = total hit (P1 + P2) / all. AL includes recovery/bonus. Profile TPS = emitted tokens / summed step seconds.',fontsize=9)
+        fig.text(.065,.532,'QUESTION MEANS over eligible diagnostic turns (not the two example steps); n = observed step count.',fontsize=10,weight='bold')
+        fig.text(.065,.382,'Rate, AL, latency and TPS: per-turn ratios -> within-question means -> question mean. Missing-source conditional metrics are undefined.',fontsize=9)
         fig.text(.065,.222,'Step = current target request start -> next request start. *DS spare = proxy send-ready - DS end; PS spare = next request start - draft receive-ready.',fontsize=9)
         if 'ds_forward_once_ms' in phase_summary['rows'][0]:
             note=('Forward = native model + LM head graph replay (output stores included). '
@@ -204,7 +206,7 @@ def render(window, pdf, png, phase_summary=None):
             note='Positive spare = early; negative = late. Graph/K includes sampling/selection, not isolated transformer latency. These are profiled-subset TPS, not full evaluation TPS.'
         fig.text(.065,.202,note,fontsize=9)
     labels=sorted({e['label'] for e in target+draft})
-    handles=[Patch(facecolor=native._style(l)[0],hatch=native._style(l)[1],edgecolor='black',linewidth=.3,label=l) for l in labels]
+    handles=[Patch(facecolor=native._style(l)[0],hatch=native._style(l)[1],edgecolor='black',linewidth=.3,label=({'graph_pre':'graph_pre (layers + exit head)','graph_post':'graph_post (layers + final head)'}.get(l,l) if window['metadata'].get('fused_heads') else l)) for l in labels]
     fig.legend(handles=handles,loc='lower center',bbox_to_anchor=(.51,.047),ncol=6,fontsize=6.8,columnspacing=1.0)
     divider_note=('Numbered blue/green bars are separately measured chain forwards.' if window.get('native_chain_forward_counts') else
                   'White graph dividers show counts, NOT per-forward measurements.')

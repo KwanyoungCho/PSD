@@ -137,6 +137,9 @@ def parse_arguments():
                         help=argparse.SUPPRESS)
     parser.add_argument("--duet_tree_c_tensor", type=int, default=3,
                         help="Dynamic tree: maximum ordered child samples per parent.")
+    for phase in ("p1", "p2"):
+        parser.add_argument(f"--duet_{phase}_tree_c_tensor", type=int, default=None,
+                            help="Phase child-sample cap; default inherits --duet_tree_c_tensor.")
     parser.add_argument("--duet_tree_expansion", choices=("last", "frontier"),
                         default="last", help="Q-path expansion: last depth or all unexpanded leaves.")
     for phase in ("p1", "p2"):
@@ -375,6 +378,8 @@ def create_llm_kwargs(args, draft_path):
             llm_kwargs["duet_p1_tree_expansion"] = args.duet_p1_tree_expansion
             llm_kwargs["duet_p2_tree_expansion"] = args.duet_p2_tree_expansion
             llm_kwargs["duet_tree_c_tensor"] = args.duet_tree_c_tensor
+            llm_kwargs["duet_p1_tree_c_tensor"] = args.duet_p1_tree_c_tensor
+            llm_kwargs["duet_p2_tree_c_tensor"] = args.duet_p2_tree_c_tensor
             if args.duet_p1_tree_verify_nodes is not None:
                 llm_kwargs["duet_p1_tree_verify_nodes"] = \
                     args.duet_p1_tree_verify_nodes

@@ -1,3 +1,4 @@
+from ssd.engine.helpers.tree_fanout_config import phase_fanout
 import os
 import time
 import torch
@@ -115,6 +116,8 @@ class DraftRunner(ModelRunner):
         if batch_tree_enabled(cfg):
             # Batch forests retain separate arenas and captured page plans.
             draft_memory_utilization = 0.55
+        if cfg.draft_gpu_memory_utilization is not None:
+            draft_memory_utilization = cfg.draft_gpu_memory_utilization
         draft_cfg = dataclasses.replace(
             cfg,
             model=cfg.draft,
@@ -3978,7 +3981,7 @@ class DraftRunner(ModelRunner):
         ar, ev, cl = _PT.run_rollout_arena(
             st["toks"].to(self.device), st["piv"].to(self.device),
             workspace={}, policy=cfg.duet_tree_policy, W=W, F_total=K2,
-            c_tensor=cfg.duet_tree_c_tensor, nv=cfg.duet_tree_nv,
+            c_tensor=phase_fanout(cfg, 'p2'), nv=cfg.duet_tree_nv,
             beta=cfg.duet_tree_beta, depth_cap=K2,
             temps=torch.full((W,), st["temps"], device=self.device),
             forward_fn=forward_fn, glue_rows_by_root=st["glue"],
@@ -4930,14 +4933,14 @@ class DraftRunner(ModelRunner):
                 from ssd.engine.helpers.tree_expansion_policy import TreeExpansionPolicy
                 if not hasattr(self,'_p2_eager_expansion'):
                     self._p2_eager_expansion=TreeExpansionPolicy(SimpleNamespace(cfg=cfg,phase='p2',
-                        C=cfg.duet_tree_c_tensor,NV=cfg.duet_tree_nv,
+                        C=phase_fanout(cfg, 'p2'),NV=cfg.duet_tree_nv,
                         policy=cfg.duet_tree_policy,dev=self.device))
                 _expansion=self._p2_eager_expansion
                 _ar, eval_log, cell_logits = _PT.run_rollout_arena(
                     toks[:len(seeds)], root_piv,
                     workspace=self._tree_arena_ws, expansion_policy=_expansion,
                     policy=cfg.duet_tree_policy, W=W, F_total=K2,
-                    c_tensor=cfg.duet_tree_c_tensor,
+                    c_tensor=phase_fanout(cfg, 'p2'),
                     nv=cfg.duet_tree_nv, beta=cfg.duet_tree_beta,
                     depth_cap=K2, temps=temps[:1].expand(W).float(),
                     forward_fn=forward_fn, glue_rows_by_root=glue_rows,
@@ -5012,7 +5015,7 @@ class DraftRunner(ModelRunner):
                     [t for _p, t in seeds], root_piv,
                     all_frontier=resolve_tree_expansion(cfg, 'p2') == 'frontier',
                     policy=cfg.duet_tree_policy, W=W, F_total=K2,
-                    c_tensor=cfg.duet_tree_c_tensor,
+                    c_tensor=phase_fanout(cfg, 'p2'),
                     nv=cfg.duet_tree_nv,
                     beta=cfg.duet_tree_beta, depth_cap=K2,
                     temps=temps[:1].expand(W).float(),

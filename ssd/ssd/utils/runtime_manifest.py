@@ -1,4 +1,5 @@
 """Startup-only resolved settings; no inference-step synchronization."""
+from ssd.engine.helpers.tree_fanout_config import phase_fanout, sibling_capacity
 import importlib.metadata
 import json
 import os
@@ -40,14 +41,16 @@ def runtime_manifest(config, hf, rank, is_draft, target_tp, device):
     if config.duet_enabled:
         from ssd.engine.helpers.root_policy_config import options
         result['duet_parameters'] = dict(
-            version='1.1', generation_equals_verification=True,
+            version='1.8', generation_equals_verification=True,
             ds_roots_per_position=config.duet_p1_roots_per_position,
             ps_roots=config.duet_p2_active_root_count,
             ds_continuation_input_cap=config.duet_p1_forward_width,
             ps_forward_inputs=config.duet_proxy_total_budget,
             ds_nodes=config.duet_p1_tree_verify_nodes,
             ps_nodes=config.duet_p2_tree_verify_nodes,
-            siblings=config.duet_tree_c_tensor,
+            siblings=sibling_capacity(config),
+            ds_siblings=phase_fanout(config, 'p1'),
+            ps_siblings=phase_fanout(config, 'p2'),
             local_top_L=config.duet_proxy_top_k,
             transmitted_candidates=config.duet_proxy_wire_N,
             expansion_thresholds=0)

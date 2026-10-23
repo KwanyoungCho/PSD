@@ -27,7 +27,7 @@ PERFORMANCE_HEADERS = ['Current outcome', 'Steps', 'Rate (%)',
                        'AL (tokens/step)', 'Profile TPS (tokens/s)']
 DEFINITIONS = {
     'grouping': 'Current step cache source; DS/PS prepare future outcomes.',
-    'weighting': 'Arithmetic mean over eligible steps, including all repetitions; overall is step-weighted.',
+    'weighting': 'Ratios within each diagnostic request -> mean turns within question -> equal-weight question mean. Physical step counts are descriptive, not metric weights.',
     'step_ms': 'Next target_send_request.start minus current target_send_request.start, same request.',
     'ds_total_ms': 'P1 root/phase preparation start to proxy_wait.start; excludes glue and proxy wait.',
     'ds_margin_ms': 'Target proxy_send_enqueue.end minus proxy_wait.start (DS complete). Send-side reference, not measured arrival.',
@@ -35,10 +35,10 @@ DEFINITIONS = {
     'ps_total_ms': 'proxy_wait.end to merge_cache.end.',
     'ps_margin_ms': 'Next target_send_request.start minus next draft_recv_cmd.start; includes post-cache cleanup.',
     'ps_round_ms': 'P2 graph replay elapsed / K2; includes sampling/selection inside graph.',
-    'share_pct': 'Number of steps in the source divided by all eligible steps; Overall = 100%.',
-    'hit_rate_pct': 'Hit fraction within the row. P1/P2 = 100%, miss = 0%; Overall = (P1+P2)/all.',
+    'share_pct': 'Source fraction within each eligible diagnostic turn, averaged within question then across questions; Overall share_pct = 100%.',
+    'hit_rate_pct': 'Hit fraction within each eligible diagnostic turn, averaged within question then questions. P1/P2 conditional = 100%, miss = 0%.',
     'al': 'Mean accepted_len including correction/recovery or bonus token, from recorded verification outcomes.',
-    'tps': 'Sum of actually emitted tokens / sum of target-request-start-to-next-start seconds on the same eligible profiled steps. Ratio of totals, not mean of per-step TPS; not full-dataset or unprofiled TPS.',
+    'tps': 'Within each retained middle-request diagnostic segment: emitted tokens / observed target-start-to-next-start time; mean turns within question then questions. Initial steps already excluded; not full-dataset or unprofiled TPS.',
     'limitations': 'Cross-device clocks have alignment uncertainty. Signed spare time is not guaranteed usable compute budget. Samples without optional forward probes contain graph/K only, not per-forward timings.',
     'optional_forward_probe': 'When present: actual model+LMhead GPU envelopes, including timing markers. Compute window = sum of recorded forwards + signed spare. Current non-forward work held fixed; not a guarantee for a larger K.',
     'native_chain_forward': 'Chain samples use the sum of K separately recorded phase1/phase2 replay events: model+LMhead and captured output-buffer stores, excluding between-round planning/sampling. Their legacy ds/ps_round_ms is first-to-last replay envelope / K, not the isolated forward sum/K.',
@@ -110,7 +110,7 @@ def metrics(s):
     return result
 
 
-def summarize(samples):
+def _step_summary(samples):
     require(bool(samples), 'Empty population')
     keys = [(s['run'], s['epoch'], s['step_id']) for s in samples]
     require(len(set(keys)) == len(keys), 'Duplicate step')
@@ -272,6 +272,37 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(gzip.compress((json.dumps(data, ensure_ascii=False)+'\n').encode(), mtime=0))
 
+
+
+
+def summarize(samples):
+    """Diagnostic performance/timings: turn -> question; retain physical counts."""
+    import re
+    from collections import defaultdict
+    from statistics import mean
+    turns=defaultdict(list)
+    for sample in samples:
+        uid=sample.get('uid', f"request_epoch_{sample['epoch']}")
+        turns[(sample['run'],uid,sample['epoch'])].append(sample)
+    by_question=defaultdict(list)
+    for (_,uid,_),rows in turns.items():
+        match=re.fullmatch(r'(.*)_t[0-9]+',uid)
+        question=rows[0].get('question_id', match.group(1) if match else uid)
+        by_question[str(question)].append(_step_summary(rows))
+    result=_step_summary(samples)
+    excluded={'state','label','n','al_samples','emitted_samples'}
+    for index,row in enumerate(result):
+        fields=[key for key in row if key not in excluded]
+        qq={key:[] for key in fields};counts={key:0 for key in fields}
+        for question,tt in by_question.items():
+            for key in fields:
+                values=[turn[index][key] for turn in tt if turn[index][key] is not None]
+                if values:qq[key].append(mean(values));counts[key]+=len(values)
+        for key,values in qq.items():row[key]=mean(values) if values else None
+        row['metric_questions']={key:len(values) for key,values in qq.items()}
+        row['metric_turns']=counts
+        row['aggregation']='turn_then_question_mean_profile_middle_steps_v1'
+    return result
 
 if __name__ == '__main__':
     main()

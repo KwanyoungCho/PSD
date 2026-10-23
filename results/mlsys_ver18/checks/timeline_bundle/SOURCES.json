@@ -1,0 +1,34 @@
+{
+  "schema": "duet-model-timelines-v1",
+  "models": [
+    {
+      "id": "duet7b",
+      "name": "LayerSkip-Llama2-7B + llama-68M",
+      "note": "ver1.8 working tree; local RTX4090 PIX 4,5; FP16 B1 T0.7; 12 raw turns cap128; diagnostic",
+      "panels": [
+        {
+          "window": "data/dataset0_source1.json",
+          "sha256": "d6cc93d099a70419675d59ca09eca0597a45a4c85e4c976eaa5854357fd0493e",
+          "source": 1,
+          "setting": "E21 P1 K10 R4 W40 M15 C2 / P2 K5 R16 W20 M15 C3"
+        },
+        {
+          "window": "data/dataset0_source2.json",
+          "sha256": "76b20f7826c97510db2e9e7e3b830c46428bf4a652002a9fbc3b509a7f51fbe1",
+          "source": 2,
+          "setting": "E21 P1 K10 R4 W40 M15 C2 / P2 K5 R16 W20 M15 C3"
+        },
+        {
+          "window": "data/dataset0_source0.json",
+          "sha256": "3b65035e1c7e96a367c29d976f38f9aac9cc9dd0777617892c44bd955e5c7d84",
+          "source": 0,
+          "setting": "E21 P1 K10 R4 W40 M15 C2 / P2 K5 R16 W20 M15 C3"
+        }
+      ]
+    }
+  ],
+  "phase_samples": {
+    "path": "data/PHASE_SAMPLES.json.gz",
+    "sha256": "b3702d666a26905a1f2809bca463039ba688432e012e88bf83d982e654e4a10d"
+  }
+}

@@ -1,4 +1,5 @@
 """Batched DUET service: request-owned cache, staged KV and phase forests."""
+from ssd.engine.helpers.tree_fanout_config import sibling_capacity
 from copy import copy
 import os
 import torch
@@ -52,6 +53,7 @@ class BatchedDuetDraft:
             on=getattr(cfg,f'duet_p{phase}_tree_policy')=='on'
             if not on:
                 cfg.duet_tree_c_tensor=1
+                setattr(cfg, f'duet_p{phase}_tree_c_tensor', 1)
                 if phase==1:
                     cfg.duet_p1_tree_allocation_policy='backbone'
                     cfg.duet_p1_tree_verify_nodes=cfg.duet_phase1_k
@@ -230,7 +232,7 @@ class BatchedDuetDraft:
         miss_depth=default_k
         miss_width=1
         miss_k=miss_depth*miss_width
-        if not (1<=miss_width<=cfg.duet_tree_c_tensor and 1<=miss_k<=cfg.duet_response_token_width):
+        if not (1<=miss_width<=sibling_capacity(cfg) and 1<=miss_k<=cfg.duet_response_token_width):
             raise ValueError('Miss tree/chain exceeds node or sibling capacity')
         miss_q=torch.zeros(len(miss),cfg.duet_response_token_width,r.hf_config.vocab_size,dtype=r.hf_config.torch_dtype,device=r.device)
         miss_t=torch.zeros(len(miss),cfg.duet_response_token_width,dtype=torch.int64,device=r.device)

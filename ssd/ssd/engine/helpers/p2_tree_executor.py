@@ -1,3 +1,4 @@
+from ssd.engine.helpers.tree_fanout_config import phase_fanout
 """23번 단계 2 — 전체-P2 CUDA graph 실행기 (실모델, 단일 버킷 v1).
 
 캡처 범위: [arena reset → GPU 예산 → (select → fanout → 입력/rope
@@ -552,7 +553,7 @@ class P2TreeExecutor:
         _continuation_cells = self.total_cells - self.round_ends[0]
         self.canvas_extra_pages = max(
             1, (_continuation_cells + self.bs - 1) // self.bs)
-        self.C = int(config.duet_tree_c_tensor)
+        self.C = int(phase_fanout(config, phase))
         self.NV = int(
             max_nodes if max_nodes is not None
             else (getattr(config, "duet_p1_tree_max_nodes",

@@ -5,6 +5,7 @@ import torch
 from ssd.paths import DEFAULT_TARGET, DEFAULT_DRAFT
 from ssd.engine.helpers.tree_expansion_config import resolve_tree_expansion, validate_tree_score_mode
 from ssd.engine.helpers.duet_parameters import canonical_config, positive_int
+from ssd.engine.helpers.tree_fanout_config import phase_fanout, validate_fanout
 
 
 def _normalize_tree_switches(p1_policy: str, p2_policy: str,
@@ -69,6 +70,8 @@ class Config:
     max_num_seqs: int = 1 
     max_model_len: int = 4096 
     gpu_memory_utilization: float = 0.7
+    # Optional draft-only capacity reservation (None keeps the legacy rule).
+    draft_gpu_memory_utilization: float | None = None
     num_gpus: int = 1
     enforce_eager: bool = False
     greedy_only: bool = False  # Compile homogeneous T=0 draft paths without RNG.
@@ -148,7 +151,9 @@ class Config:
     duet_tree_expansion: str = "last"
     duet_p1_tree_expansion: str | None = None
     duet_p2_tree_expansion: str | None = None
-    duet_tree_c_tensor: int = 3              # 노드당 일괄 샘플 폭 C_tensor
+    duet_tree_c_tensor: int = 3  # Common fallback for old API/CLI callers.
+    duet_p1_tree_c_tensor: int | None = None
+    duet_p2_tree_c_tensor: int | None = None
     # One node cap per phase: generation G and verification M are identical.
     duet_p1_tree_verify_nodes: int = 18
     duet_p2_tree_verify_nodes: int = 8
@@ -782,10 +787,7 @@ class Config:
                             "duet_p1_tree_allocation_policy must be "
                             "dynamic|backbone|hybrid; got "
                             f"{self.duet_p1_tree_allocation_policy!r}")
-                    if not (1 <= self.duet_tree_c_tensor <= 8):
-                        raise ValueError(
-                            f"duet_tree_c_tensor must be in [1,8]; "
-                            f"got {self.duet_tree_c_tensor}")
+                    validate_fanout(self)
                     # Tree response width is independent of sequential draft
                     # depth.  The fixed int64 token envelope and topology
                     # sidecar grow to the active phase maximum, while the
@@ -826,12 +828,12 @@ class Config:
                             and self.duet_tree_policy in (
                                 "coverage", "backbone", "adaptive")
                             and self.duet_tree_nv
-                            > self.duet_phase2_k * self.duet_tree_c_tensor):
+                            > self.duet_phase2_k * phase_fanout(self, 'p2')):
                         raise ValueError(
                             f"{self.duet_tree_policy} Nv="
                             f"{self.duet_tree_nv} is not "
                             f"generatable by K2={self.duet_phase2_k} rounds "
-                            f"and C={self.duet_tree_c_tensor}")
+                            f"and C={phase_fanout(self, 'p2')}")
                     # 이슈 #27: tip 의무 lane이 W(=P2 예산)를 초과하면
                     # rollout이 구조적으로 불가 — config에서 조기 차단.
                     if (self.duet_p2_tree_policy == "on"
@@ -986,7 +988,7 @@ class Config:
                   f'DS_continuation_input_cap={self.duet_p1_forward_width}, '
                   f'PS_forward_inputs={self.duet_proxy_total_budget}, '
                   f'DS/PS_G=M={self.duet_p1_tree_verify_nodes}/{self.duet_p2_tree_verify_nodes}, '
-                  f'C={self.duet_tree_c_tensor}, '
+                  f'DS/PS_C={phase_fanout(self, "p1")}/{phase_fanout(self, "p2")}, '
                   f'auto_top_L={self.duet_proxy_top_k}, wire_N={self.duet_proxy_wire_N}, '
                   f'normalization={self.duet_root_normalization}, '
                   f'expansion={self.duet_tree_expansion}, '
@@ -994,5 +996,9 @@ class Config:
                   flush=True)
 
 
+        if self.draft_gpu_memory_utilization is not None:
+            value = self.draft_gpu_memory_utilization
+            if not isinstance(value, (int, float)) or not 0 < value < 1:
+                raise ValueError('draft_gpu_memory_utilization must be between 0 and 1')
         if not (self.max_num_batched_tokens >= self.max_model_len):
             raise ValueError('Invalid config.py contract: self.max_num_batched_tokens >= self.max_model_len')

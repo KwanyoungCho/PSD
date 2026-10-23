@@ -47,6 +47,8 @@ def normalize_outcomes(data):
             require(group['n'] == 1 and len(group['request_records']) == 1, 'Expected one request per group')
             steps = []
             record = group['request_records'][0]
+            if not group['steps']:
+                continue  # Context-guard completion has no profile anchors.
             context = record.get('input_tokens')
             for i, step in enumerate(group['steps'], 1):
                 require(len(step['events']) == 1 and step['events'][0]['batch_size'] == 1, 'Expected B=1 event')
@@ -60,7 +62,9 @@ def normalize_outcomes(data):
                     item['context_tokens']=context
                     context=context+step['emitted'] if 'emitted' in step else None
                 steps.append(item)
-            requests.append(dict(epoch=epoch, uid=record['paper_uid'], warmup=group['phase'] == 'warm', steps=steps))
+            requests.append(dict(epoch=len(requests), uid=record['paper_uid'],
+                warmup=group['phase'] == 'warm', steps=steps))
+            if 'question_id' in record:requests[-1]['question_id']=str(record['question_id'])
         result = dict(schema='duet-timeline-outcomes-v1', status='complete', batch_size=1,
                       k1=data['args']['k1'], k2=data['args']['k2'], requests=requests)
     require(result['batch_size'] == 1, 'Only B=1 supported')
@@ -140,8 +144,10 @@ def export(spec_path, output):
                         skipped['preparation']+=1
                         continue
                     row = dict(epoch=ep, step_id=sid, uid=request['uid'], state=state, next_state=steps[i+1]['source'])
+                    if 'question_id' in request:row['question_id']=request['question_id']
                     row.update({k:step[k] for k in ('accepted_len','emitted_len','context_tokens','verify_width') if k in step})
                     record = sample(groups, index, row, *counts, run_id)
+                    if 'question_id' in row:record['question_id']=row['question_id']
                     if probes:
                         m=metrics(record)
                         for phase,prefix in (('p1','ds'),('p2','ps')):
@@ -157,6 +163,7 @@ def export(spec_path, output):
                             title=f'{name} | {setting} | {STATES[state]} -> {STATES[row["next_state"]]} | UID {row["uid"]} | steps {sid}-{sid+1}',
                             metadata=dict(description=f'{entry["measurement"]} | {setting} | B=1, K1/K2 {counts[0]}/{counts[1]}',
                                           state=state, next_state=row['next_state'], uid=row['uid'],
+                                          fused_heads=entry.get('fused_heads', original.get('env', {}).get('SSD_VERIFY_GRAPH_LOGITS')=='1'),
                                           source_hashes=input_hashes, run=run_id,
                                           selection='median current target-send-to-next-send duration among eligible same-source steps with two following anchors'),
                             k1=counts[0], k2=counts[1])

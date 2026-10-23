@@ -92,7 +92,7 @@ def main(argv=None):
                     if workload['mean_context_tokens'] is not None and workload['mean_logical_query_rows'] is not None:
                         workload_note=(f'유효 step 평균 target query: {workload["mean_logical_query_rows"]:.3f}개(padding 전), '
                                        f'기존 KV 문맥: {workload["mean_context_tokens"]:.3f} tokens. Query 수와 문맥 길이는 다른 양이다.')
-                    mean_cards.append(f'<h3>{html.escape(entry["setting"])} — K1/K2 {summary["k1"]}/{summary["k2"]}</h3><p>{html.escape(summary["measurement"])}</p><table><thead><tr>{perf_th}</tr></thead><tbody>{perf_trs}</tbody></table><p>Rate: 전체 step 중 해당 경우의 비율. Overall 행은 전체 hit rate(P1+P2 비율). AL은 recovery/bonus 포함. TPS는 같은 유효 profile step의 반환 토큰 합÷시간 합.</p><table><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table><p>{overlap_note}</p><p>{workload_note}</p>')
+                    mean_cards.append(f'<h3>{html.escape(entry["setting"])} — K1/K2 {summary["k1"]}/{summary["k2"]}</h3><p>{html.escape(summary["measurement"])}</p><table><thead><tr>{perf_th}</tr></thead><tbody>{perf_trs}</tbody></table><p>문항 평균: 요청별 비율을 문항 내에서 먼저 평균한 뒤 문항 간 평균. 조건부 AL·latency는 해당 source가 있는 턴만 사용. TPS는 초기 step을 뺀 진단 구간의 요청별 비율이며 논문 전체 TPS가 아님. n은 실제 step 수.</p><table><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table><p>{overlap_note}</p><p>{workload_note}</p>')
                     overlap_report.append(f'- {model["name"]} / {entry["setting"]}: {overlap_note}')
                     mean_report.append('\n### '+model['name']+' — '+entry['setting']+'\n\n'+
                         summary['measurement']+'\n\n'+
@@ -136,13 +136,13 @@ def main(argv=None):
 같은 모델의 여러 설정은 같은 PDF 안에서 구분합니다.</p>
 <p>빨간 점선: 다음 target 요청 시작(deadline 기준). 초록 원: PS cache 완성. 삼각형: draft 수신 준비.
 흰 점선은 forward 횟수 표시이며 실측 개별 forward 경계가 아닙니다. 양수 여유 시간이 모두 추가 계산 예산이라는 뜻은 아닙니다.</p>
-<p><b>표는 P1 hit·P2 hit·Miss·Overall(전체 평균)의 네 행입니다.</b> 그림 위의 두 step은 실제 예시이고, 표는 해당 설정의 유효 step 전체 평균입니다.
+<p><b>표는 P1 hit·P2 hit·Miss·Overall(전체 평균)의 네 행입니다.</b> 그림 위의 두 step은 실제 예시이고, 표는 해당 설정의 유효 진단 구간에 대한 문항 평균입니다.
 Step: 현재 target 요청 시작→다음 요청 시작. DS/PS total: 준비·정리 포함 phase 시간.
 DS spare*: proxy 전송 준비 완료−DS 완료(수신 도착 시점은 아님). PS spare: 다음 target 요청 시작−draft 수신 준비.
 양수는 여유, 음수는 초과입니다. Graph/K1·K2는 graph 시간을 forward 횟수로 나눈 값이며 sampling·tree 선택을 포함합니다.</p>
-<p>분류는 <b>현재 step에서 사용한 cache</b> 기준입니다. 전체 평균은 실제 step 수로 가중합니다. 표본이 없으면 0 대신 N/A입니다.</p>
+<p>분류는 <b>현재 step에서 사용한 cache</b> 기준입니다. 전체 평균은 요청별 지표를 문항 내에서 평균한 뒤 문항 간 동일 비중으로 평균합니다. n은 관측 step 수입니다. 표본이 없으면 0 대신 N/A입니다.</p>
 <p>Rate는 P1/P2 hit·miss의 발생 비율이며, Overall 행에서는 전체 cache hit rate를 표시합니다.
-AL은 recovery/bonus를 포함한 수락 길이입니다. Profile TPS는 같은 유효 step의 실제 반환 토큰 합÷시간 합으로,
+AL은 recovery/bonus를 포함한 수락 길이입니다. Profile TPS는 요청별 유효 진단 구간의 반환 토큰 수÷시간을 구한 뒤 문항 평균한 값으로,
 profile OFF 또는 전체 데이터셋 TPS와 구분합니다. 토큰 수 기록이 없으면 AL/TPS를 추정하지 않고 N/A로 표시합니다.</p>
 <p><b>Proxy 계산과 target 후반 forward의 중첩 여부는 설정별로 기록에서 계산합니다.</b> exit_proxy_side라는 이름만으로 별도 stream 실행을 뜻하지 않습니다.
 전송은 비동기 enqueue만 기록되어 실제 통신 완료·중첩 시간은 알 수 없습니다. Target와 별도 draft GPU의 병렬 실행과는 별개입니다.</p>
@@ -177,15 +177,15 @@ profile OFF 또는 전체 데이터셋 TPS와 구분합니다. 토큰 수 기록
 그래프 하단의 절대 시각 표를 **P1 hit / P2 hit / Miss / Overall** 평균 표로 교체했다.
 그림의 두 step은 실제 예시이며, 표는 같은 모델·설정의 유효 step 전체를 사용한다.
 분류는 현재 step에서 사용한 cache source다. 그 step의 DS/PS는 다음 결과를 대비하는 생성이다.
-전체 평균은 실제 step 수로 가중하며, 표본이 없는 경우는 N/A로 표시한다.
+전체 평균은 요청별 지표 → 문항 내 턴 평균 → 문항 평균이며, 표본이 없는 조건부 지표는 N/A로 표시한다.
 
 성능 표와 latency 표는 **동일한 유효 step 집합**이다.
 
 - Rate: 해당 경우 step 수 / 전체 step 수. P1 hit·P2 hit·Miss 비율의 합은100%다.
-  **Overall 행의 Rate는 전체 hit rate, 즉 (P1+P2)/전체**다.
+  **Overall 행의 Rate는 요청별 hit 비율을 문항 평균한 값**이다.
   표본이 없는 source의 Rate는0%, 조건부 AL/TPS는N/A다.
 - AL: 원시 `accepted_len` 평균. Correction/recovery 또는 bonus token을 포함한다.
-- Profile TPS: **실제로 반환한 토큰 합 / 아래 Step 시간의 합**이다. Per-step TPS의 평균이 아니다.
+- Profile TPS: 각 요청의 유효 진단 구간에서 반환 토큰 수÷시간을 계산한 뒤 문항 안 턴 평균 → 문항 평균을 적용한다.
   Profile을 켠 제한된 표본의 값이며 full-dataset/비계측 TPS로 인용하지 않는다.
 - 반환 토큰 수가 없으면 AL로 대체하지 않는다. 일부 step의 기록이 빠진 행도 AL/TPS는N/A다.
 

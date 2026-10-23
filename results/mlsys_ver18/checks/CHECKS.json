@@ -1,0 +1,207 @@
+{
+  "status": "passed",
+  "base_commit": "521810df73d2add8eb42564c4c2e769c881fdb00",
+  "cpu": {
+    "tests": 119,
+    "skipped": 15,
+    "log": "CPU_REGRESSION.log"
+  },
+  "gpu": {
+    "tests": 35,
+    "skipped": 0,
+    "log": "GPU_REGRESSION.log"
+  },
+  "final_measurement_and_timeline": {
+    "log": "MEASUREMENT_TIMELINE.log",
+    "tests": 34,
+    "skipped": 0
+  },
+  "native_equivalence": {
+    "status": "passed",
+    "inputs": 12,
+    "output_cap": 256,
+    "seed": 42,
+    "dtype": "float16",
+    "warmup": 3,
+    "adapter_source": "521810df + startup phase-C config-copy adapter",
+    "native": "ver1.8 working tree",
+    "all_output_ids_equal": true,
+    "all_recorded_verification_events_equal": true,
+    "total_steps": 927,
+    "profile_artifacts_absent": true,
+    "native_profile_environment": {
+      "SSD_PROFILE_DUET": "0",
+      "SSD_PROFILE_DUET_DETAIL": "0",
+      "SSD_PROFILE": "0",
+      "SSD_PROFILE_DRAFT": "0",
+      "SSD_PROFILE_DIR": "/home/chokwans99/PSD-ver18-20261023/results/mlsys_ver18/checks/native_equivalence/native_v18"
+    },
+    "rows": [
+      {
+        "uid": "81_t0",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 33
+      },
+      {
+        "uid": "81_t1",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 56
+      },
+      {
+        "uid": "82_t0",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 77
+      },
+      {
+        "uid": "82_t1",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 95
+      },
+      {
+        "uid": "83_t0",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 72
+      },
+      {
+        "uid": "83_t1",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 91
+      },
+      {
+        "uid": "84_t0",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 67
+      },
+      {
+        "uid": "84_t1",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 114
+      },
+      {
+        "uid": "85_t0",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 99
+      },
+      {
+        "uid": "85_t1",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 80
+      },
+      {
+        "uid": "86_t0",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 87
+      },
+      {
+        "uid": "86_t1",
+        "outputs_equal": true,
+        "verification_equal": true,
+        "steps": 56
+      }
+    ],
+    "native_resolved_executors": [
+      {
+        "allocation": "dynamic",
+        "calibration_sha256": {},
+        "depth": 5,
+        "fallback": null,
+        "nodes": 15,
+        "phase": "p2",
+        "requested": "q_path",
+        "resolved": "q_path",
+        "roots": 16,
+        "round_widths": [
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "selection": "last",
+        "siblings": 3,
+        "width": 20
+      },
+      {
+        "allocation": "dynamic",
+        "calibration_sha256": {},
+        "depth": 10,
+        "fallback": null,
+        "nodes": 15,
+        "phase": "p1",
+        "requested": "q_path",
+        "resolved": "q_path",
+        "roots": 24,
+        "round_widths": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "selection": "last",
+        "siblings": 2,
+        "width": 24
+      },
+      {
+        "allocation": "dynamic",
+        "calibration_sha256": {},
+        "depth": 10,
+        "fallback": null,
+        "nodes": 15,
+        "phase": "p1",
+        "requested": "q_path",
+        "resolved": "q_path",
+        "roots": 64,
+        "round_widths": [
+          64,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "selection": "last",
+        "siblings": 2,
+        "width": 64
+      }
+    ]
+  },
+  "timeline": {
+    "status": "passed",
+    "profile_mode": "explicit timeline",
+    "eligible_steps": 375,
+    "pdf_pages": 3,
+    "measurement_status": "instrumented CUDA profile; not TPS evidence",
+    "export_log": "TIMELINE_EXPORT.log"
+  },
+  "runtime_files": 100,
+  "measurement_tool_files": 19,
+  "default": {
+    "mode": "performance",
+    "dtype": "float16",
+    "p1_c": 2,
+    "p2_c": 3,
+    "profile": false,
+    "forward_probe": false
+  }
+}

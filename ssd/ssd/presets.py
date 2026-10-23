@@ -27,3 +27,24 @@ def duet_70b_paper_kwargs(draft, *, expansion='last', normalization='topm'):
         duet_p1_tree_allocation_policy='dynamic', duet_tree_c_tensor=3,
         duet_tree_expansion=expansion,
         duet_p1_tree_verify_nodes=12, duet_p2_tree_verify_nodes=8)
+
+
+def duet_7b_measurement_kwargs(draft, *, dtype='float16', p1_c=2, p2_c=3):
+    """B1 7B+68M starting point from the completed C/dtype comparison.
+
+    Runtime instrumentation is configured separately by configure_measurement.
+    This does not claim a global optimum, or single-host three-seed throughput.
+    """
+    return dict(draft=draft, dtype=dtype, num_gpus=2, max_num_seqs=1,
+        max_model_len=2048, max_num_batched_tokens=2048,
+        gpu_memory_utilization=.45, draft_gpu_memory_utilization=.35,
+        speculate=True, draft_async=True, jit_speculate=True,
+        stochastic_only=True, duet_enabled=True, speculate_k=15,
+        duet_phase1_k=10, duet_phase2_k=5, duet_exit_layer=21,
+        async_fan_out=5, duet_draft_fan_out=4,
+        duet_p1_tree_policy='on', duet_p2_tree_policy='on',
+        duet_p1_roots_per_position=4, duet_p1_forward_width=40,
+        duet_p2_root_count=16, duet_p2_forward_width=20,
+        duet_tree_c_tensor=3, duet_p1_tree_c_tensor=p1_c,
+        duet_p2_tree_c_tensor=p2_c, duet_tree_expansion='last',
+        duet_p1_tree_verify_nodes=15, duet_p2_tree_verify_nodes=15)

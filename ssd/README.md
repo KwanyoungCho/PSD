@@ -1,17 +1,17 @@
-## DUET — MLSys ver1.4
+## DUET — MLSys ver1.8
 
-This branch advances `MLSys-ver1.3@5642de04` with validated B=1 tree response,
-topology prepacking, and glue/request preparation optimizations. Start with the
-[ver1.4 handover](../MLSYS_VER14_HANDOVER.md) and the
-[direct ver1.3/ver1.4 validation](../results/mlsys_ver14/REPORT.md).
-Algorithms, sampling rules, parameter defaults, and wire format are unchanged.
-The release separates measured 7B/68m B1 latency gains from chain/greedy functional
-checks and historical evidence. Experimental variants that lacked a reliable gain
-are not enabled. The upstream package version remains separate from this branch name.
+Start with the [ver1.8 handover](../MLSYS_VER18_HANDOVER.md). The portable B1
+measurement runner defaults to **performance mode** (profiling/probes OFF),
+with native independent P1/P2 child caps. Detailed timelines require explicit
+`--measurement-mode timeline`. The recommended 7B/68M preset is FP16,
+K1/K2=10/5, P1 R4-per-position/W40/M15/C2, P2 R16/W20/M15/C3, exit21.
+Generic library configuration remains compatible with the shared C fallback.
 
-Historical algorithm and preset context: [integration decisions](../MLSYS_VER1_INTEGRATION.md),
-[tree expansion](../TREE_EXPANSION_FINAL.md), and [ver1.3 handover](../MLSYS_VER13_HANDOVER.md).
-The SSD documentation below is retained as upstream context.
+The [completed C/dtype and server-control study](../results/mlsys_ver18/evidence/FINAL_REPORT.md)
+was measured on ver1.7 plus a startup phase-C adapter. Native ver1.8 equivalence
+is checked separately; these are not fourteen full ver1.8 reruns. Residual
+stochastic verification and the ver1.7 correctness fixes are retained.
+The upstream package version is separate from this release branch name.
 
 <h1 align="center">Speculative Speculative Decoding</h1>
 

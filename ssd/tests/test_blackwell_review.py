@@ -142,16 +142,17 @@ class ReviewContracts(unittest.TestCase):
 
     def test_pack_rounding_boundary_preserves_ids_and_zero_mask(self):
         from ssd.engine.helpers.p2_tree import pack_piv,unpack_piv
-        # Scores on either side of one logarithmic bin boundary are close
-        # in FP32 but can legally quantize into adjacent 16-bit codes.
+        # Historical log-bin boundary: v3 now preserves both FP32 scores
+        # exactly, including exact zero, rather than quantizing either one.
         boundary=torch.tensor(10**(-6+6*(50000.5)/65535),dtype=torch.float32)
         a=torch.nextafter(boundary,torch.tensor(0.))
         z=torch.nextafter(boundary,torch.tensor(float('inf')))
         ids=torch.tensor([128255,9,12]);values=torch.stack([a,torch.tensor(0.),z])
         packed=pack_piv(ids,values);actual,_=unpack_piv(packed)
         self.assertTrue(torch.equal(ids,actual))
-        codes=(packed>>32)&65535
-        self.assertLessEqual(int((codes[0]-codes[2]).abs()),1)
+        _, decoded = unpack_piv(packed)
+        self.assertTrue(torch.equal(decoded.view(torch.int32), values.view(torch.int32)))
+        self.assertEqual(decoded[1].item(), 0.)
         self.assertEqual((values>0).tolist(),[True,False,True])
         torch.testing.assert_close(a,z,rtol=1e-5,atol=1e-7)
 

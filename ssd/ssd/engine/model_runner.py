@@ -1,3 +1,4 @@
+from ssd.engine.helpers.tree_fanout_config import sibling_capacity
 from ssd.engine.helpers.root_policy import options as root_options
 
 import pickle
@@ -1168,7 +1169,7 @@ class ModelRunner:
                 depth_steps=tree_depth_steps,
                 top_k=cfg.duet_proxy_top_k,
                 dtype=cfg.hf_config.torch_dtype,
-                device=self.device, policy=root_options(cfg), c_max=cfg.duet_tree_c_tensor)
+                device=self.device, policy=root_options(cfg), c_max=sibling_capacity(cfg))
             # Compile and initialize the GPU topology packer for this exact
             # proxy bucket.  Live requests overwrite these representative
             # chain values before replay.
@@ -1639,7 +1640,7 @@ class ModelRunner:
         if not _reuse_checked:
             validate_tree_ints(
                 ti, nv, cfg.hf_config.vocab_size,
-                sibling_capacity=cfg.duet_tree_c_tensor)
+                sibling_capacity=sibling_capacity(cfg))
         valid = int(ti["valid"])
         n_rows = valid + 1
         assert input_ids.shape[0] == n_rows, (

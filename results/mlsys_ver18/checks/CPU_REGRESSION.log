@@ -1,0 +1,180 @@
+test_benchmark_parser_defaults_to_performance_and_current_settings (test_ver18_measurement.MeasurementMode.test_benchmark_parser_defaults_to_performance_and_current_settings) ... ok
+test_named_preset_matches_tested_parameters (test_ver18_measurement.MeasurementMode.test_named_preset_matches_tested_parameters) ... `torch_dtype` is deprecated! Use `dtype` instead!
+ok
+test_performance_clears_stale_profile_and_review_settings (test_ver18_measurement.MeasurementMode.test_performance_clears_stale_profile_and_review_settings) ... ok
+test_timeline_is_explicit (test_ver18_measurement.MeasurementMode.test_timeline_is_explicit) ... ok
+test_batched_chain_override_resets_phase_specific_c (test_ver18_measurement.PhaseFanout.test_batched_chain_override_resets_phase_specific_c) ... ok
+test_cli_exposes_both_overrides_without_enabling_duet (test_ver18_measurement.PhaseFanout.test_cli_exposes_both_overrides_without_enabling_duet) ... ok
+test_explicit_draft_memory_fraction_survives_reconstruction (test_ver18_measurement.PhaseFanout.test_explicit_draft_memory_fraction_survives_reconstruction) ... ok
+test_invalid_fanout_rejected_before_loading_models (test_ver18_measurement.PhaseFanout.test_invalid_fanout_rejected_before_loading_models) ... ok
+test_legacy_common_fallback_and_independent_overrides (test_ver18_measurement.PhaseFanout.test_legacy_common_fallback_and_independent_overrides) ... ok
+test_p2_backbone_capacity_uses_p2_fanout (test_ver18_measurement.PhaseFanout.test_p2_backbone_capacity_uses_p2_fanout) ... ok
+test_ragged_forests_match_cpu_and_captured_topology_changes (test_ver17_review.BatchedChildExclusion.test_ragged_forests_match_cpu_and_captured_topology_changes) ... skipped 'CUDA required'
+test_captured_executor_preserves_tiny_root_prior_and_ignores_zero (test_ver17_review.ExactScoreWire.test_captured_executor_preserves_tiny_root_prior_and_ignores_zero) ... skipped 'CUDA required'
+test_exact_bits_zero_subnormal_tiny_and_large_token_ids (test_ver17_review.ExactScoreWire.test_exact_bits_zero_subnormal_tiny_and_large_token_ids) ... ok
+test_legacy_payload_rejected (test_ver17_review.ExactScoreWire.test_legacy_payload_rejected) ... ok
+test_no_clipping_or_rank_ties_for_tiny_positive_scores (test_ver17_review.ExactScoreWire.test_no_clipping_or_rank_ties_for_tiny_positive_scores) ... ok
+test_selector_ignores_zeros_after_dedup_and_underfills_safely (test_ver17_review.ExactScoreWire.test_selector_ignores_zeros_after_dedup_and_underfills_safely) ... ok
+test_strided_and_low_precision_inputs (test_ver17_review.ExactScoreWire.test_strided_and_low_precision_inputs) ... ok
+test_zero_score_has_no_budget (test_ver17_review.ExactScoreWire.test_zero_score_has_no_budget) ... ok
+test_domains_unique_stable_and_full_seed_bits_used (test_ver17_review.RNGDomains.test_domains_unique_stable_and_full_seed_bits_used) ... ok
+test_graph_replay_advances_and_restores_each_domain (test_ver17_review.RNGDomains.test_graph_replay_advances_and_restores_each_domain) ... skipped 'CUDA required'
+test_real_executors_start_in_distinct_domains (test_ver17_review.RNGDomains.test_real_executors_start_in_distinct_domains) ... skipped 'CUDA required'
+test_uniform_two_token_joint_after_bucket_switch (test_ver17_review.RNGDomains.test_uniform_two_token_joint_after_bucket_switch) ... skipped 'CUDA required'
+test_middle_guard_keeps_popped_and_unvisited_requests (test_ver17_review.SchedulerOwnership.test_middle_guard_keeps_popped_and_unvisited_requests) ... ok
+test_non_speculative_guard_and_single_request (test_ver17_review.SchedulerOwnership.test_non_speculative_guard_and_single_request) ... ok
+test_repeated_guards_never_lose_or_duplicate_selected_request (test_ver17_review.SchedulerOwnership.test_repeated_guards_never_lose_or_duplicate_selected_request) ... ok
+test_chain_implicit_and_explicit_visibility_agree (test_p1_child_exclusion.ChildExclusionCPU.test_chain_implicit_and_explicit_visibility_agree) ... ok
+test_equal_scores_choose_eligible_tokens_with_maximum_values (test_p1_child_exclusion.ChildExclusionCPU.test_equal_scores_choose_eligible_tokens_with_maximum_values) ... ok
+test_exhausted_tiny_vocabulary_is_invalid_padding (test_p1_child_exclusion.ChildExclusionCPU.test_exhausted_tiny_vocabulary_is_invalid_padding) ... ok
+test_original_q_and_context_reach_are_not_renormalized (test_p1_child_exclusion.ChildExclusionCPU.test_original_q_and_context_reach_are_not_renormalized) ... ok
+test_random_topologies_match_full_vocabulary_oracle (test_p1_child_exclusion.ChildExclusionCPU.test_random_topologies_match_full_vocabulary_oracle) ... ok
+test_same_token_at_another_prefix_remains_eligible (test_p1_child_exclusion.ChildExclusionCPU.test_same_token_at_another_prefix_remains_eligible) ... ok
+test_siblings_unrelated_tokens_and_leaf (test_p1_child_exclusion.ChildExclusionCPU.test_siblings_unrelated_tokens_and_leaf) ... ok
+test_cuda_matches_cpu_for_all_native_shapes (test_p1_child_exclusion.ChildExclusionCUDA.test_cuda_matches_cpu_for_all_native_shapes) ... skipped 'CUDA required'
+test_graph_replay_uses_live_parent_and_token_inputs (test_p1_child_exclusion.ChildExclusionCUDA.test_graph_replay_uses_live_parent_and_token_inputs) ... skipped 'CUDA required'
+test_maximum_fanout_and_exhaustion_mask (test_p1_child_exclusion.ChildExclusionCUDA.test_maximum_fanout_and_exhaustion_mask) ... skipped 'CUDA required'
+test_native_context_sizes_reuse_compiled_selector (test_p1_child_exclusion.ChildExclusionCUDA.test_native_context_sizes_reuse_compiled_selector) ... skipped 'CUDA required'
+test_ar_debug_off_never_decodes_and_same_tokens (test_blackwell_review.ReviewContracts.test_ar_debug_off_never_decodes_and_same_tokens) ... ok
+test_canonical_mass_does_not_depend_on_padding_strides (test_blackwell_review.ReviewContracts.test_canonical_mass_does_not_depend_on_padding_strides) ... ok
+test_constructor_failure_terminates_own_workers_and_preserves_error (test_blackwell_review.ReviewContracts.test_constructor_failure_terminates_own_workers_and_preserves_error) ... ok
+test_dead_target_worker_aborts_draft_as_well (test_blackwell_review.ReviewContracts.test_dead_target_worker_aborts_draft_as_well) ... [LLMEngine] FATAL: target rank 1 exited unexpectedly (exitcode=23); stopping this engine's workers
+ok
+test_debug_tokens_default_off_independent_of_python_debug (test_blackwell_review.ReviewContracts.test_debug_tokens_default_off_independent_of_python_debug) ... ok
+test_invalid_contracts_are_errors (test_blackwell_review.ReviewContracts.test_invalid_contracts_are_errors) ... /home/chokwans99/PSD-ver18-20261023/ssd/tests/test_blackwell_review.py:96: FutureWarning: Deprecated DUET parameters: duet_p2_budget->duet_p2_forward_width
+  make_config(**kwargs)
+ok
+test_optimized_python_keeps_contracts (test_blackwell_review.ReviewContracts.test_optimized_python_keeps_contracts) ... ok
+test_original_fanout_and_target_exit_survive_draft_reconstruction (test_blackwell_review.ReviewContracts.test_original_fanout_and_target_exit_survive_draft_reconstruction) ... ok
+test_pack_rounding_boundary_preserves_ids_and_zero_mask (test_blackwell_review.ReviewContracts.test_pack_rounding_boundary_preserves_ids_and_zero_mask) ... ok
+test_runtime_manifest_reports_uncalibrated_default_and_explicit_override (test_blackwell_review.ReviewContracts.test_runtime_manifest_reports_uncalibrated_default_and_explicit_override) ... ok
+test_single_request_tree_workspace_covers_blackwell_plan (test_blackwell_review.ReviewContracts.test_single_request_tree_workspace_covers_blackwell_plan) ... ok
+test_sparse_fanout_is_valid (test_blackwell_review.ReviewContracts.test_sparse_fanout_is_valid) ... ok
+test_speculative_debug_switch_preserves_counts_and_rng (test_blackwell_review.ReviewContracts.test_speculative_debug_switch_preserves_counts_and_rng) ... ok
+test_workspace_budget_and_original_failure (test_blackwell_review.ReviewContracts.test_workspace_budget_and_original_failure) ... ok
+test_api_default_matches_explicit_on_and_draft_reconstruction (test_tree_policy_defaults.TreePolicyDefaults.test_api_default_matches_explicit_on_and_draft_reconstruction) ... ok
+test_api_field_defaults_enable_both_phases (test_tree_policy_defaults.TreePolicyDefaults.test_api_field_defaults_enable_both_phases) ... ok
+test_cli_defaults_match_api (test_tree_policy_defaults.TreePolicyDefaults.test_cli_defaults_match_api) ... ok
+test_cli_explicit_chain_and_single_phase_override (test_tree_policy_defaults.TreePolicyDefaults.test_cli_explicit_chain_and_single_phase_override) ... ok
+test_explicit_chain_stays_off_in_both_runners (test_tree_policy_defaults.TreePolicyDefaults.test_explicit_chain_stays_off_in_both_runners) ... ok
+test_phase_only_overrides_stay_independent (test_tree_policy_defaults.TreePolicyDefaults.test_phase_only_overrides_stay_independent) ... ok
+test_tree_flags_do_not_enable_duet_by_themselves (test_tree_policy_defaults.TreePolicyDefaults.test_tree_flags_do_not_enable_duet_by_themselves) ... ok
+test_budget_at_default_formula (test_args_cleanup_equiv.TestOldNewEquivalence.test_budget_at_default_formula) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_direct_budget_equals_derived (test_args_cleanup_equiv.TestOldNewEquivalence.test_direct_budget_equals_derived) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+/home/chokwans99/PSD-ver18-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p2_budget->duet_p2_forward_width
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_dynamic_tree_is_the_duet_default_and_chain_is_explicit (test_args_cleanup_equiv.TestOldNewEquivalence.test_dynamic_tree_is_the_duet_default_and_chain_is_explicit) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+/home/chokwans99/PSD-ver18-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_tree_root_count->duet_p2_root_count
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=6, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=46, wire_N=46, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=28, wire_N=28, normalization=topm, expansion=last, DS/PS_tree=off/off
+ok
+test_env_free_equals_old_env_style (test_args_cleanup_equiv.TestOldNewEquivalence.test_env_free_equals_old_env_style) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_env_jit_short_off_still_wins (test_args_cleanup_equiv.TestOldNewEquivalence.test_env_jit_short_off_still_wins) ... [Config][deprecated] SSD_DUET_JIT_SHORT=0 env overrides duet_jit_short=True (prefer --duet_no_jit_short)
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_even_k1_is_valid_when_all_shape_inputs_agree (test_args_cleanup_equiv.TestOldNewEquivalence.test_even_k1_is_valid_when_all_shape_inputs_agree) ... /home/chokwans99/PSD-ver18-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p2_budget->duet_p2_forward_width, duet_tree_root_count->duet_p2_root_count, duet_p1_tree_max_nodes->duet_p1_tree_verify_nodes, duet_p2_tree_max_nodes->duet_p2_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=8/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=16/8, DS/PS_C=3/3, auto_top_L=46, wire_N=46, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_k2_gt_k1_early_raise (test_args_cleanup_equiv.TestOldNewEquivalence.test_k2_gt_k1_early_raise) ... ok
+test_legacy_tree_names_normalize_to_public_on_off (test_args_cleanup_equiv.TestOldNewEquivalence.test_legacy_tree_names_normalize_to_public_on_off) ... /home/chokwans99/PSD-ver18-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_tree_nv->duet_p2_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/7, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=28, wire_N=28, normalization=topm, expansion=last, DS/PS_tree=off/off
+ok
+test_missing_k1k2_early_raise (test_args_cleanup_equiv.TestOldNewEquivalence.test_missing_k1k2_early_raise) ... ok
+test_normalized_config_is_dataclasses_replace_safe (test_args_cleanup_equiv.TestOldNewEquivalence.test_normalized_config_is_dataclasses_replace_safe) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_p1_tree_node_envelope_is_not_a_depth_constraint (test_args_cleanup_equiv.TestOldNewEquivalence.test_p1_tree_node_envelope_is_not_a_depth_constraint) ... /home/chokwans99/PSD-ver18-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p1_tree_max_nodes->duet_p1_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=8/8, DS/PS_C=3/3, auto_top_L=32, wire_N=32, normalization=topm, expansion=last, DS/PS_tree=on/on
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=28/8, DS/PS_C=3/3, auto_top_L=70, wire_N=70, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_stale_total_k_is_rejected_with_value_error (test_args_cleanup_equiv.TestOldNewEquivalence.test_stale_total_k_is_rejected_with_value_error) ... ok
+test_tree_response_can_exceed_chain_depth (test_args_cleanup_equiv.TestOldNewEquivalence.test_tree_response_can_exceed_chain_depth) ... /home/chokwans99/PSD-ver18-20261023/ssd/tests/test_args_cleanup_equiv.py:42: FutureWarning: Deprecated DUET parameters: duet_p1_tree_max_nodes->duet_p1_tree_verify_nodes, duet_p2_tree_max_nodes->duet_p2_tree_verify_nodes
+  cfg = Config(**{**_CHAMPION_KW, **overrides})
+[DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=18/8, DS/PS_C=3/3, auto_top_L=50, wire_N=50, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_unequal_generation_and_verification_caps_are_rejected (test_args_cleanup_equiv.TestOldNewEquivalence.test_unequal_generation_and_verification_caps_are_rejected) ... ok
+test_wire_capacity_is_derived_from_phase_maxima (test_args_cleanup_equiv.TestOldNewEquivalence.test_wire_capacity_is_derived_from_phase_maxima) ... [DUET policy] root=complement normalization=topm position=0.75 observed + 0.25 overlap; tree_requested=q_path expansion_p1=last expansion_p2=last (resolved per executor)
+[Config] DUET v1.1: exit=56, K_DS/PS=9/4, DS_roots_per_position=2, PS_roots=10, DS_continuation_input_cap=None, PS_forward_inputs=10, DS/PS_G=M=12/8, DS/PS_C=3/3, auto_top_L=38, wire_N=38, normalization=topm, expansion=last, DS/PS_tree=on/on
+ok
+test_captured_inputs_equal_eager_including_padding_and_limit (test_batch_tree_serving.ArenaInputs.test_captured_inputs_equal_eager_including_padding_and_limit) ... skipped 'CUDA required'
+test_graph_uses_updated_topology_and_greedy_logits (test_batch_tree_serving.CapturedAcceptance.test_graph_uses_updated_topology_and_greedy_logits) ... skipped 'CUDA required'
+test_stochastic_graph_refreshes_rng_and_recovers_target (test_batch_tree_serving.CapturedAcceptance.test_stochastic_graph_refreshes_rng_and_recovers_target) ... skipped 'CUDA required'
+test_zero_mass_wor_padding_does_not_bias_target (test_batch_tree_serving.ExhaustedProposal.test_zero_mass_wor_padding_does_not_bias_target) ... ok
+test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.ForwardAttention.test_captured_ancestor_attention_matches_independent_dense) ... skipped 'CUDA required'
+test_ancestors_positions_padding_and_pages (test_batch_tree_serving.Geometry.test_ancestors_positions_padding_and_pages) ... ok
+test_bad_parent_and_unallocated_page (test_batch_tree_serving.Geometry.test_bad_parent_and_unallocated_page) ... ok
+test_restore_truncated_and_reordered_path (test_batch_tree_serving.Geometry.test_restore_truncated_and_reordered_path) ... ok
+test_verification_cap_preserves_generation_prefix_and_request_identity (test_batch_tree_serving.Geometry.test_verification_cap_preserves_generation_prefix_and_request_identity) ... ok
+test_greedy_row_breaks_ties_deterministically_in_sampling_batch (test_batch_tree_serving.MixedTemperatures.test_greedy_row_breaks_ties_deterministically_in_sampling_batch) ... ok
+test_captured_ancestor_attention_matches_independent_dense (test_batch_tree_serving.PackedForwardAttention.test_captured_ancestor_attention_matches_independent_dense) ... skipped 'CUDA required'
+test_batched_p1_matches_ragged_single_request_policy (test_batch_tree_serving.RootRanking.test_batched_p1_matches_ragged_single_request_policy) ... ok
+test_empty_proposal_recovery_follows_target_distribution (test_batch_tree_serving.Sampling.test_empty_proposal_recovery_follows_target_distribution) ... ok
+test_exact_ladder_against_independent_scalar_arithmetic (test_batch_tree_serving.Sampling.test_exact_ladder_against_independent_scalar_arithmetic) ... ok
+test_greedy_mixed_tree_chain_empty (test_batch_tree_serving.Sampling.test_greedy_mixed_tree_chain_empty) ... ok
+test_positive_temperature_specialization_preserves_walk_and_rng (test_batch_tree_serving.Sampling.test_positive_temperature_specialization_preserves_walk_and_rng) ... ok
+test_proxy_matches_existing_single_tree_per_row (test_batch_tree_serving.Sampling.test_proxy_matches_existing_single_tree_per_row) ... ok
+test_sampled_siblings_preserve_target_first_token (test_batch_tree_serving.Sampling.test_sampled_siblings_preserve_target_first_token) ... ok
+test_fixed_node_coins_match_scalar_walk_at_every_depth (test_batch_tree_serving.StochasticWalk.test_fixed_node_coins_match_scalar_walk_at_every_depth) ... ok
+test_separate_prefixes_masks_and_captured_replay (test_batched_tree_executor.TestBatchedTreeExecutor.test_separate_prefixes_masks_and_captured_replay) ... skipped 'CUDA required'
+test_cache_completion_is_not_receive_readiness (test_consecutive_timeline.ConsecutiveTimeline.test_cache_completion_is_not_receive_readiness) ... ok
+test_commands_associated_by_time_not_stale_step_id (test_consecutive_timeline.ConsecutiveTimeline.test_commands_associated_by_time_not_stale_step_id) ... ok
+test_display_aliases_do_not_mutate_raw_and_skip_early_prepare (test_consecutive_timeline.ConsecutiveTimeline.test_display_aliases_do_not_mutate_raw_and_skip_early_prepare) ... ok
+test_late_ready_margin_remains_negative (test_consecutive_timeline.ConsecutiveTimeline.test_late_ready_margin_remains_negative) ... ok
+test_missing_or_ambiguous_command_is_rejected (test_consecutive_timeline.ConsecutiveTimeline.test_missing_or_ambiguous_command_is_rejected) ... ok
+test_missing_third_or_cross_request_anchor_fails (test_consecutive_timeline.ConsecutiveTimeline.test_missing_third_or_cross_request_anchor_fails) ... ok
+test_overlapping_tail_is_not_silently_clock_shifted (test_consecutive_timeline.ConsecutiveTimeline.test_overlapping_tail_is_not_silently_clock_shifted) ... ok
+test_portable_render_and_forward_count_annotations (test_consecutive_timeline.ConsecutiveTimeline.test_portable_render_and_forward_count_annotations) ... ok
+test_preparation_exclusion_uses_intervals_not_latency (test_consecutive_timeline.ConsecutiveTimeline.test_preparation_exclusion_uses_intervals_not_latency) ... ok
+test_two_steps_retained_and_third_only_supplies_boundary (test_consecutive_timeline.ConsecutiveTimeline.test_two_steps_retained_and_third_only_supplies_boundary) ... ok
+test_duplicate_step_rejected_but_separate_repeats_allowed (test_consecutive_timeline.PhaseAverages.test_duplicate_step_rejected_but_separate_repeats_allowed) ... ok
+test_impossible_token_counts_rejected (test_consecutive_timeline.PhaseAverages.test_impossible_token_counts_rejected) ... ok
+test_missing_emitted_tokens_are_not_inferred_from_al (test_consecutive_timeline.PhaseAverages.test_missing_emitted_tokens_are_not_inferred_from_al) ... ok
+test_negative_spare_and_graph_per_round_preserved (test_consecutive_timeline.PhaseAverages.test_negative_spare_and_graph_per_round_preserved) ... ok
+test_optional_forward_probe_is_distinct_from_graph_per_k (test_consecutive_timeline.PhaseAverages.test_optional_forward_probe_is_distinct_from_graph_per_k) ... ok
+test_overall_uses_step_weights_and_empty_source_is_not_zero (test_consecutive_timeline.PhaseAverages.test_overall_uses_step_weights_and_empty_source_is_not_zero) ... ok
+test_overlap_comes_from_intervals_not_label (test_consecutive_timeline.PhaseAverages.test_overlap_comes_from_intervals_not_label) ... ok
+test_question_mean_does_not_weight_long_questions_more (test_consecutive_timeline.PhaseAverages.test_question_mean_does_not_weight_long_questions_more) ... ok
+test_rates_al_and_tps_have_correct_denominators (test_consecutive_timeline.PhaseAverages.test_rates_al_and_tps_have_correct_denominators) ... ok
+test_render_shows_all_population_means_without_changing_windows (test_consecutive_timeline.PhaseAverages.test_render_shows_all_population_means_without_changing_windows) ... ok
+test_existing_benchmark_outcomes_adapter (test_consecutive_timeline.PortableExport.test_existing_benchmark_outcomes_adapter) ... ok
+test_export_redraw_without_original_server_files (test_consecutive_timeline.PortableExport.test_export_redraw_without_original_server_files) ... test_model test 3 eligible steps
+test_model test 4 eligible steps
+test_model 1 pages
+ok
+test_rejects_ambiguous_sources_and_batched_outcomes (test_consecutive_timeline.PortableExport.test_rejects_ambiguous_sources_and_batched_outcomes) ... ok
+test_ar_and_empty_population (test_step_performance_metrics.StepMetrics.test_ar_and_empty_population) ... ok
+test_historical_speculative_rows_and_unknown_ar (test_step_performance_metrics.StepMetrics.test_historical_speculative_rows_and_unknown_ar) ... ok
+test_primary_log_labels_use_same_population (test_step_performance_metrics.StepMetrics.test_primary_log_labels_use_same_population) ... ok
+test_whole_step_union_keeps_token_time_al_and_hit_populations_equal (test_step_performance_metrics.StepMetrics.test_whole_step_union_keeps_token_time_al_and_hit_populations_equal) ... ok
+
+----------------------------------------------------------------------
+Ran 119 tests in 19.390s
+
+OK (skipped=15)

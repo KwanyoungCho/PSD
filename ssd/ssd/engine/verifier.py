@@ -1,3 +1,4 @@
+from ssd.engine.helpers.tree_fanout_config import sibling_capacity
 from ssd.utils.debug import debug_tokens_enabled
 from ssd.engine.helpers.root_policy import options as root_options
 import os
@@ -76,7 +77,7 @@ class Verifier(VerifierBase):
                     depth_steps=_tree_depth_steps,
                     top_k=_cfg.duet_proxy_top_k,
                     dtype=_cfg.hf_config.torch_dtype,
-                    device=self.device, policy=root_options(_cfg), c_max=_cfg.duet_tree_c_tensor)
+                    device=self.device, policy=root_options(_cfg), c_max=sibling_capacity(_cfg))
             if self._tree_proxy_graphs:
                 print("[DUET tree] captured target proxy graphs lazily "
                       f"(buckets={sorted(self._tree_proxy_graphs)})",
@@ -317,7 +318,7 @@ class Verifier(VerifierBase):
                     self._accept_cpu_tree = _ti_checked
                     validate_tree_ints(
                         _ti_checked, _nv_t, config.hf_config.vocab_size,
-                        sibling_capacity=config.duet_tree_c_tensor)
+                        sibling_capacity=sibling_capacity(config))
                     _tree_wire_gpu_source = _ti_row
                     _phase_t = (_host_response.phase_source[0] if _host_response is not None
                                 else int(speculate_result.phase_source[0])
@@ -864,7 +865,7 @@ class Verifier(VerifierBase):
         from ssd.engine.helpers.root_policy import tree_candidates, options
         ev = _mr_tree("tree_proxy_candidates") if _detail_profile else None
         topology=pack_topologies([par],[sib],valid,exit_logits.device,
-                                 config.duet_tree_c_tensor)
+                                 sibling_capacity(config))
         pos,tok,_=tree_candidates(exit_logits[:,:valid+1],logits_q[:,:valid],
             draft_tokens[:,:valid],topology,config.duet_proxy_wire_N,valid,
             config.duet_proxy_top_k,temp_p,temp_d,**options(config))

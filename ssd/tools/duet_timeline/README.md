@@ -1,9 +1,10 @@
 # DUET timeline — 현재 사용할 도구
 
-현재 배포 기준은 [MLSys-ver1.3](../../../MLSYS_VER13_HANDOVER.md)이다. 동봉된 과거 그림의
+현재 배포 기준은 [MLSys-ver1.8](../../../MLSYS_VER18_HANDOVER.md)이다.
+새 계측은 `duet_measure.py --measurement-mode timeline`으로 명시한다. 기본 performance 모드에서는 profile/probe가 모두 꺼진다. 동봉된 과거 그림의
 측정 버전은 보존한다. 아래 기본 모델 모음 외에 로컬 tree/chain 진단은
 `results/mlsys_ver12/local_phase_latency_20261015/`와 `chain40_k10_20261016/`에 있다.
-새 runtime이 반영됐다고 과거 timeline이1.3 실측이 되는 것은 아니다.
+새 runtime이 반영돼도 과거 timeline의 실제 측정 버전은 바뀌지 않는다.
 
 이번 도구는 tree의 optional `phase_probe_request_*.json`에서 실제 forward1회 시간을 읽고,
 `preparation_*.jsonl`의 compile/capture 영향 step을 제외한다. Input spec 최상위
@@ -54,10 +55,10 @@ python3 -m venv /tmp/duet-timeline-venv
   Graph/K1·K2는 샘플링·선택을 포함한 round당 평균이고 순수 transformer latency가 아니다.
 - **Rate·AL·TPS 표:** P1/P2/Miss의 Rate는 전체 유효 step 중 발생 비율이다.
   Overall 행은 전체 hit rate `(P1+P2)/전체`를 표시한다. AL은 recovery/bonus token을
-  포함한 `accepted_len` 평균이다. Profile TPS는 같은 유효 step의 **실제 반환 토큰 합 / 시간 합**이다.
+  포함한 `accepted_len` 평균이다. Profile TPS는 각 턴의 유효 진단 구간에서 **실제 반환 토큰 합 / 시간 합**을 계산한 뒤 문항 내 턴 평균 → 문항 평균한 값이다.
   Per-step TPS의 평균이나 full dataset의 비계측 TPS가 아니다.
 
-평균은 `PHASE_AVERAGES.csv/json`으로도 저장한다. Overall은 실제 step 수로 가중하고
+평균은 `PHASE_AVERAGES.csv/json`으로도 저장한다. Overall은 턴 내 지표 → 문항 내 턴 평균 → 문항 평균이며
 빈 source는 N/A로 표시한다. 원시 시각이 담긴 `data/PHASE_SAMPLES.json.gz`로 재계산하며,
 원본 profile 경로 없이도 그림과 평균을 모두 재생성할 수 있다.
 
@@ -203,6 +204,8 @@ PS가 없는 chain 등의 기존 trace는 `plot.sh`/`plot_representatives.py`로
 python -B -m unittest discover -s ssd/tests -p test_consecutive_timeline.py -v
 ```
 
-음수 여유, 경우별 가중 평균, hit/AL/TPS의 분모·누락 토큰 처리, 빈 표본, 요청 경계, 중첩 판별 및 **원본 profile 삭제 후 다른
+음수 여유, 경우별 문항 평균, hit/AL/TPS의 분모·누락 토큰 처리, 빈 표본, 요청 경계, 중첩 판별 및 **원본 profile 삭제 후 다른
 경로로 옮긴 bundle 재생성**을 검사한다. 이번 전달의 전체 검사 기록은
 `results/mlsys_ver12/model_timelines/checks/CHECKS.json`에 있다.
+
+ver1.8부터 `question_id`를 우선 사용하고, 없으면 `UID_tN`의 공통 question 부분으로 묶는다. 과거 identity 없는 기록은 request epoch를 독립 문항으로 취급한다. 표의 n은 관측 step 수이고 가중치가 아니다. Fused graph 사용 기록에서는 graph_pre에 exit head, graph_post에 final head가 포함됨을 표시한다.
