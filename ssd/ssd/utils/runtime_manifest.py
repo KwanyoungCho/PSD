@@ -34,6 +34,9 @@ def runtime_manifest(config, hf, rank, is_draft, target_tp, device):
         async_fan_out=config.async_fan_out, fan_out_list=config.fan_out_list,
         mq_len=getattr(config,'MQ_LEN',None), exit_layer=config.duet_exit_layer,
         k1=config.duet_phase1_k, k2=config.duet_phase2_k,
+        preparation_optimizations=dict(
+            scoped_default_device=os.getenv('SSD_SCOPED_DEFAULT_DEVICE', '1') == '1',
+            fused_response_topology=os.getenv('SSD_FUSED_RESPONSE_TOPOLOGY', '0') == '1'),
         p2_budget=config.duet_p2_budget,
         workspace_mib={k:os.getenv(k,str(v)) for k,v in (
             ('SSD_BATCH_TREE_WORKSPACE_MB',256),('SSD_TREE_EXEC_WORKSPACE_MB',128),
@@ -41,7 +44,7 @@ def runtime_manifest(config, hf, rank, is_draft, target_tp, device):
     if config.duet_enabled:
         from ssd.engine.helpers.root_policy_config import options
         result['duet_parameters'] = dict(
-            version='1.8', generation_equals_verification=True,
+            version='1.9', generation_equals_verification=True,
             ds_roots_per_position=config.duet_p1_roots_per_position,
             ps_roots=config.duet_p2_active_root_count,
             ds_continuation_input_cap=config.duet_p1_forward_width,

@@ -15,6 +15,7 @@ from ssd.utils.async_helpers.nccl_pack import recv_int64
 from ssd.engine.helpers.cudagraph_helpers import flush_draft_profile
 
 PROFILE_DRAFT = os.environ.get("SSD_PROFILE_DRAFT", "0") == "1"
+_FUSED_RESPONSE_TOPOLOGY = os.environ.get("SSD_FUSED_RESPONSE_TOPOLOGY", "0") == "1"
 
 # Split-only K1/K2 mode (per docs/duet/04-split-k1k2-design.md):
 #   - Draft pass = K1 forwards → draft-sourced rows of depth K1
@@ -955,6 +956,15 @@ class DraftRunner(ModelRunner):
         from ssd.engine.helpers.cudagraph_helpers import duet_record, duet_close
         label = f'tree_response_topology_prepare_p{phase}'
         event = duet_record(label)
+        if _FUSED_RESPONSE_TOPOLOGY:
+            from ssd.engine.helpers.fused_response_topology import prepare_response_topology_packet
+            snapshot, packet = prepare_response_topology_packet(
+                views, int(self.config.duet_tree_wire_nodes), phase,
+                int(self.config.duet_response_token_width))
+            views['_response_topology'] = snapshot
+            views['_response_packet'] = packet
+            duet_close(label, event)
+            return
         views['_response_topology'] = prepare_response_topology(
             views, int(self.config.duet_tree_wire_nodes))
         from ssd.engine.helpers.fused_tree_response import attach_response_packet

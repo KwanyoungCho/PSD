@@ -1,11 +1,20 @@
-## DUET — MLSys ver1.8
+## DUET — MLSys ver1.9
 
-Start with the [ver1.8 handover](../MLSYS_VER18_HANDOVER.md). The portable B1
+Start with the [ver1.9 handover](../MLSYS_VER19_HANDOVER.md). The portable B1
 measurement runner defaults to **performance mode** (profiling/probes OFF),
 with native independent P1/P2 child caps. Detailed timelines require explicit
 `--measurement-mode timeline`. The recommended 7B/68M preset is FP16,
 K1/K2=10/5, P1 R4-per-position/W40/M15/C2, P2 R16/W20/M15/C3, exit21.
 Generic library configuration remains compatible with the shared C fallback.
+
+ver1.9 scopes the default CUDA device to model initialization, avoiding a
+persistent Python device-dispatch hook during inference. This is ON by default
+(`SSD_SCOPED_DEFAULT_DEVICE=1`); set it to `0` for the legacy comparison path.
+Optional GPU response-packet assembly is available through
+`SSD_FUSED_RESPONSE_TOPOLOGY=1` and remains OFF by default: packet preparation
+improved, but a whole-step improvement was not established. Both resolved flags
+are recorded at startup. The preset and residual stochastic verifier are unchanged.
+See the handover for the profiling results, correctness checks and their limits.
 
 The [completed C/dtype and server-control study](../results/mlsys_ver18/evidence/FINAL_REPORT.md)
 was measured on ver1.7 plus a startup phase-C adapter. Native ver1.8 equivalence

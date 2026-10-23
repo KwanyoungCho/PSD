@@ -1,0 +1,145 @@
+{
+  "checks": {
+    "0": {
+      "outputs_identical": true,
+      "events_identical": true,
+      "output_tokens": 2199
+    },
+    "1": {
+      "outputs_identical": true,
+      "events_identical": true,
+      "output_tokens": 2199
+    }
+  },
+  "summary": {
+    "0": {
+      "n": 1024,
+      "by_pair": {
+        "0": {
+          "tree_kv_restore": 0.49002255611286644,
+          "glue": 1.2561707386123135,
+          "p1_root_build": 0.8069387050006649,
+          "p1_slot_prepare": 0.2274691580005919,
+          "p1_prepare": 0.3226122474145184,
+          "p1_graph_replay": 7.809627580749746,
+          "root_to_graph_ms": 1.4368779916220336,
+          "prep_sum_ms": 3.1032134051409552,
+          "native_step_ms": 20.039287953198187,
+          "response_wait_ms": 1.0637651699963635,
+          "target_compute_ms": 16.460646249054754
+        },
+        "1": {
+          "tree_kv_restore": 0.473634767712332,
+          "glue": 1.205029646018472,
+          "p1_root_build": 0.765414595383023,
+          "p1_slot_prepare": 0.22072024354602876,
+          "p1_prepare": 0.3104373629662015,
+          "p1_graph_replay": 7.965311670835926,
+          "root_to_graph_ms": 1.3734926582781493,
+          "prep_sum_ms": 2.9752366156260575,
+          "native_step_ms": 19.86396865456058,
+          "response_wait_ms": 0.9388065572722765,
+          "target_compute_ms": 16.434059094694923
+        }
+      },
+      "means": {
+        "tree_kv_restore": 0.4818286619125992,
+        "glue": 1.2306001923153929,
+        "p1_root_build": 0.7861766501918439,
+        "p1_slot_prepare": 0.22409470077331034,
+        "p1_prepare": 0.31652480519035997,
+        "p1_graph_replay": 7.887469625792836,
+        "root_to_graph_ms": 1.4051853249500914,
+        "prep_sum_ms": 3.0392250103835066,
+        "native_step_ms": 19.95162830387938,
+        "response_wait_ms": 1.00128586363432,
+        "target_compute_ms": 16.44735267187484
+      },
+      "quantiles": {
+        "p1_root_build": {
+          "0.5": 0.784423,
+          "0.95": 0.9676775000000001,
+          "0.99": 1.4400458599999992,
+          "1": 2.41153
+        },
+        "root_to_graph_ms": {
+          "0.5": 1.4085995,
+          "0.95": 1.7205203999999994,
+          "0.99": 2.4764626599999997,
+          "1": 3.083283
+        },
+        "prep_sum_ms": {
+          "0.5": 3.078582,
+          "0.95": 3.6315980999999997,
+          "0.99": 4.634699509999999,
+          "1": 5.669433
+        }
+      }
+    },
+    "1": {
+      "n": 1024,
+      "by_pair": {
+        "0": {
+          "tree_kv_restore": 0.26578870451303405,
+          "glue": 1.0087628413033831,
+          "p1_root_build": 0.5289923167193014,
+          "p1_slot_prepare": 0.1742127111691979,
+          "p1_prepare": 0.2222961582678565,
+          "p1_graph_replay": 7.808920605438951,
+          "root_to_graph_ms": 0.9943246024073109,
+          "prep_sum_ms": 2.200052731972773,
+          "native_step_ms": 19.40141808720527,
+          "response_wait_ms": 0.7880971302154068,
+          "target_compute_ms": 16.459489814044804
+        },
+        "1": {
+          "tree_kv_restore": 0.28080271666552115,
+          "glue": 1.0460046309119917,
+          "p1_root_build": 0.5621067693162212,
+          "p1_slot_prepare": 0.18158011036676663,
+          "p1_prepare": 0.23309527955358453,
+          "p1_graph_replay": 8.019519429708026,
+          "root_to_graph_ms": 1.0504838080148984,
+          "prep_sum_ms": 2.303589506814085,
+          "native_step_ms": 19.459125086830582,
+          "response_wait_ms": 0.8572640593347273,
+          "target_compute_ms": 16.431136867589288
+        }
+      },
+      "means": {
+        "tree_kv_restore": 0.2732957105892776,
+        "glue": 1.0273837361076874,
+        "p1_root_build": 0.5455495430177613,
+        "p1_slot_prepare": 0.17789641076798227,
+        "p1_prepare": 0.22769571891072052,
+        "p1_graph_replay": 7.914220017573489,
+        "root_to_graph_ms": 1.0224042052111046,
+        "prep_sum_ms": 2.251821119393429,
+        "native_step_ms": 19.430271587017927,
+        "response_wait_ms": 0.822680594775067,
+        "target_compute_ms": 16.445313340817044
+      },
+      "quantiles": {
+        "p1_root_build": {
+          "0.5": 0.5500484999999999,
+          "0.95": 0.6894169499999995,
+          "0.99": 1.0097791199999997,
+          "1": 1.60669
+        },
+        "root_to_graph_ms": {
+          "0.5": 1.0326995,
+          "0.95": 1.28174175,
+          "0.99": 1.7571267599999993,
+          "1": 2.622315
+        },
+        "prep_sum_ms": {
+          "0.5": 2.2951655,
+          "0.95": 2.6618713499999993,
+          "0.99": 3.5321311799999986,
+          "1": 4.896973
+        }
+      }
+    }
+  },
+  "note": "6 identical selected raw turns on each PIX pair, order reversed across pairs; profile ON, first10/cap/clip/last excluded, no long-step removal for tail investigation. Means: question mean per pair then mean pairs."
+}

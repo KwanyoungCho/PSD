@@ -196,17 +196,28 @@ class ModelRunner:
         # is enabled and original model is fp16, so this sets the correct dtype
         # for both the model weights and any helpers reading hf_config.torch_dtype.
         torch.set_default_dtype(self.hf_config.torch_dtype)
-        torch.set_default_device("cuda")
+        scoped_device = os.getenv("SSD_SCOPED_DEFAULT_DEVICE", "1") == "1"
+        if not scoped_device:
+            torch.set_default_device("cuda")
         
         if self.is_draft:
             assert num_tp_gpus == 1, "ERROR in ModelRunner: draft should have tp_size=1"
             self.tp_pg = None # every rank is given an object from self.tp_pg, even tho draft doesnt participate it gets GROUP_NON_MEMBER object != None back, so we can't assert None here, we 
         
         print(f'[model_runner] about to setup and warmup model and cudagraphs, is use_eagle={self.use_eagle}', flush=True)
-        model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
+        if scoped_device:
+            # Restore the caller's mode stack at the end of initialization.
+            # set_default_device("cpu") leaves a Python DeviceContext hook
+            # on EVERY torch call, including explicit CUDA operations.
+            with torch.device("cuda"):
+                model_type = self.setup_and_warmup_model_and_cudagraphs(
+                    config, self.hf_config, init_q, is_draft)
+        else:
+            model_type = self.setup_and_warmup_model_and_cudagraphs(config, self.hf_config, init_q, is_draft)
 
         if self.verbose: print(f'-----CAPTURED {model_type}CUDAGRAPH----', flush=True)
-        torch.set_default_device("cpu")
+        if not scoped_device:
+            torch.set_default_device("cpu")
         torch.set_default_dtype(default_dtype)
 
         if self.config.draft_async:

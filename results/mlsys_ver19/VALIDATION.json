@@ -1,0 +1,128 @@
+{
+  "state": "passed",
+  "base_commit": "fc2f0cd93e66d82c148b1b3653c4e1ff74591582",
+  "unit_tests": {
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "packet_parity_cases": 200,
+    "rng_unchanged": true,
+    "modules": [
+      "test_scoped_default_device",
+      "test_fused_response_topology",
+      "test_response_topology",
+      "test_fused_tree_response",
+      "test_response_snapshot",
+      "test_ver18_measurement",
+      "test_p1_child_exclusion"
+    ],
+    "log_sha256": "3c0c9ab87c2a2dfd63f23d3bb20f3e28be0c7dd34dd7a89b8d31a536d0df430c"
+  },
+  "model_smoke": {
+    "python": "3.12.7",
+    "torch": "2.8.0",
+    "gpu": "RTX4090",
+    "target": "LayerSkip-Llama2-7B",
+    "draft": "JackFram/llama-68m",
+    "dtype": "float16",
+    "batch": 1,
+    "seed": 42,
+    "raw_turns": 6,
+    "warmup_turns": 3,
+    "measured_turns": 3,
+    "output_cap": 128,
+    "profiling": false,
+    "p1": {
+      "k": 10,
+      "roots_per_position": 4,
+      "width": 40,
+      "nodes": 15,
+      "c": 2
+    },
+    "p2": {
+      "k": 5,
+      "roots": 16,
+      "width": 20,
+      "nodes": 15,
+      "c": 3
+    },
+    "exit_layer_zero_based": 21,
+    "inputs_sha256": "42064dfe44f2d185687612dbe71430ae79c6428521704a4dfce11423c6c8597b",
+    "arms": {
+      "legacy": {
+        "state": "passed",
+        "gpus": "1,2",
+        "preparation_optimizations": {
+          "scoped_default_device": false,
+          "fused_response_topology": false
+        },
+        "steps": 154,
+        "output_tokens": 384,
+        "phase_counts": {
+          "0": 15,
+          "1": 76,
+          "2": 63
+        },
+        "outputs_equal_legacy": true,
+        "phase_events_equal_legacy": true,
+        "warmup_outputs_equal_legacy": true,
+        "raw_input_ids_equal": true,
+        "runtime_source_hashes_match_release": true,
+        "run_sha256": "ec4f9329880171538ed1abedf8a98c396bf798fac762ed5eaae40e9dd19fcaed",
+        "process_log_sha256": "3fcd2277d579110d610546ed3c11a8f6589568380ca17f7b9c2018d4c3cab4d9",
+        "outputs_sha256": "b25259b2f6bfca5818537663734467324883296b2729275e10c730c05555e15a",
+        "phase_events_sha256": "0fd5ac385ef1811b8a85cdda8f4b697b3f87b93896efb655d3c5e61b02e1ca78"
+      },
+      "release_default": {
+        "state": "passed",
+        "gpus": "4,5",
+        "preparation_optimizations": {
+          "scoped_default_device": true,
+          "fused_response_topology": false
+        },
+        "steps": 154,
+        "output_tokens": 384,
+        "phase_counts": {
+          "0": 15,
+          "1": 76,
+          "2": 63
+        },
+        "outputs_equal_legacy": true,
+        "phase_events_equal_legacy": true,
+        "warmup_outputs_equal_legacy": true,
+        "raw_input_ids_equal": true,
+        "runtime_source_hashes_match_release": true,
+        "run_sha256": "076312109d6a2cb4813f4e00230767367f88bac5999eb070d689bb7d3720c974",
+        "process_log_sha256": "fbc2bad77789020e7d71953b86719dc6e564ed4b893cdc921113d56deb5487b6",
+        "outputs_sha256": "b25259b2f6bfca5818537663734467324883296b2729275e10c730c05555e15a",
+        "phase_events_sha256": "0fd5ac385ef1811b8a85cdda8f4b697b3f87b93896efb655d3c5e61b02e1ca78"
+      },
+      "release_fused": {
+        "state": "passed",
+        "gpus": "6,7",
+        "preparation_optimizations": {
+          "scoped_default_device": true,
+          "fused_response_topology": true
+        },
+        "steps": 154,
+        "output_tokens": 384,
+        "phase_counts": {
+          "0": 15,
+          "1": 76,
+          "2": 63
+        },
+        "outputs_equal_legacy": true,
+        "phase_events_equal_legacy": true,
+        "warmup_outputs_equal_legacy": true,
+        "raw_input_ids_equal": true,
+        "runtime_source_hashes_match_release": true,
+        "run_sha256": "acccb7cfbc6c18ae15ab5fab9dcca24f7bec2f2dbd4ce0bf89697d080c9980e9",
+        "process_log_sha256": "65a81971f7c34cabc67b44ffc4015d8e1ad989cae884add10471bb416fa59568",
+        "outputs_sha256": "b25259b2f6bfca5818537663734467324883296b2729275e10c730c05555e15a",
+        "phase_events_sha256": "0fd5ac385ef1811b8a85cdda8f4b697b3f87b93896efb655d3c5e61b02e1ca78"
+      }
+    },
+    "note": "Finite correctness check. Concurrent separate PIX pairs; not a throughput comparison or full-dataset evaluation. All three arms emitted the existing shutdown resource_tracker semaphore warning and exited successfully."
+  },
+  "raw_validation_artifacts": "/data/chokwans99/ver19_release_validation_20261024"
+}

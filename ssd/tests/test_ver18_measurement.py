@@ -78,6 +78,18 @@ class PhaseFanout(unittest.TestCase):
 
 
 class MeasurementMode(unittest.TestCase):
+    def test_preparation_defaults_and_explicit_overrides(self):
+        for mode in ('performance', 'timeline'):
+            with patch.dict(os.environ, {}, clear=True):
+                configure_measurement(mode)
+                self.assertEqual(os.environ['SSD_SCOPED_DEFAULT_DEVICE'], '1')
+                self.assertEqual(os.environ['SSD_FUSED_RESPONSE_TOPOLOGY'], '0')
+            with patch.dict(os.environ, {'SSD_SCOPED_DEFAULT_DEVICE': '0',
+                                        'SSD_FUSED_RESPONSE_TOPOLOGY': '1'}, clear=True):
+                configure_measurement(mode)
+                self.assertEqual(os.environ['SSD_SCOPED_DEFAULT_DEVICE'], '0')
+                self.assertEqual(os.environ['SSD_FUSED_RESPONSE_TOPOLOGY'], '1')
+
     def test_performance_clears_stale_profile_and_review_settings(self):
         with patch.dict(os.environ,dict.fromkeys(PROFILE_FLAGS,'1')|{
             'DUET_REVIEW_FLAT':'1','DUET_EQUAL_ROOTS':'1'},clear=True):

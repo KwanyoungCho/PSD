@@ -24,6 +24,9 @@ def configure_measurement(mode='performance'):
     os.environ['SSD_P1_TREE_EXEC_WARMUP'] = 'all'
     os.environ['SSD_VERIFY_GRAPH_LOGITS'] = '1'
     os.environ['SSD_ASYNC_PROXY_SEND'] = '1'
+    # Release defaults, while retaining explicit A/B and opt-in settings.
+    os.environ.setdefault('SSD_SCOPED_DEFAULT_DEVICE', '1')
+    os.environ.setdefault('SSD_FUSED_RESPONSE_TOPOLOGY', '0')
     os.environ['SSD_DUET_EXIT_REPLICA'] = '0'
     os.environ['SSD_DUET_EXIT_TOPM_GATHER'] = '0'
     os.environ['SSD_PROXY_STREAM'] = '0'

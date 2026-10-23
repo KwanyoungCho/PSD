@@ -1,7 +1,7 @@
-"""Portable ver1.8 B1 measurement; performance is the default, timeline explicit.
+"""Portable ver1.9 B1 measurement; performance is the default, timeline explicit.
 
 Uses native phase fanout configuration. No sampler, verifier or per-step
-algorithm replacement. See MLSYS_VER18_HANDOVER.md for the fixed protocol.
+algorithm replacement. See MLSYS_VER19_HANDOVER.md for the fixed protocol.
 """
 import argparse
 import copy
@@ -120,7 +120,7 @@ def main():
     protocol=dict(warmup_scope='within_dataset', requested_seeds=[args.seed],
         warmup_requests=args.warm_prompts, measurement_mode=args.measurement_mode)
     os.environ['SSD_PROFILE_DIR'] = str(args.output.resolve().parent)
-    os.environ.setdefault('SSD_SHM_NAME', 'duet18_'+str(os.getpid()))
+    os.environ.setdefault('SSD_SHM_NAME', 'duet19_'+str(os.getpid()))
     os.environ.setdefault('SSD_DIST_PORT', '49618')
     args.output.parent.mkdir(parents=True,exist_ok=True)
     if min(args.k1,args.k2,args.roots,args.siblings,args.passes)<1: raise ValueError('Positive rounds, roots, siblings and passes required')

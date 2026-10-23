@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "cases": 160,
+  "bitwise_identical": true,
+  "rng_unchanged": true,
+  "microbenchmark": {
+    "32": {
+      "existing": {
+        "median_ms": 0.374751,
+        "mean_ms": 0.37722968,
+        "p95_ms": 0.395412,
+        "max_ms": 0.419081
+      },
+      "fused": {
+        "median_ms": 0.15546949999999998,
+        "mean_ms": 0.15655156,
+        "p95_ms": 0.162152,
+        "max_ms": 0.173817
+      }
+    },
+    "128": {
+      "existing": {
+        "median_ms": 1.1635655,
+        "mean_ms": 1.17585624,
+        "p95_ms": 1.183766,
+        "max_ms": 2.136893
+      },
+      "fused": {
+        "median_ms": 0.416497,
+        "mean_ms": 0.41873001,
+        "p95_ms": 0.445224,
+        "max_ms": 0.452816
+      }
+    }
+  },
+  "note": "Isolated call, synchronized boundaries, no model workload; not end-to-end TPS."
+}

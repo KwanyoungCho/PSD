@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def main():
-    manifest = json.loads((ROOT / 'results/mlsys_ver18/RUNTIME_MANIFEST.json').read_text())
+    manifest = json.loads((ROOT / 'results/mlsys_ver19/RUNTIME_MANIFEST.json').read_text())
     actual = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / 'ssd/ssd').rglob('*.py'))}
     if actual != manifest['sha256']:
