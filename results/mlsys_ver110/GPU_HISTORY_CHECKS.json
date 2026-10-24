@@ -1,0 +1,24 @@
+{
+  "state": "passed",
+  "protocol": "specbench_base_token_history_v1",
+  "turns": 9,
+  "first_turns": 5,
+  "followup_turns": 4,
+  "generated_turns": 7,
+  "warmup_generated": 3,
+  "measured_generated": 4,
+  "finish_reasons": {
+    "output_limit": 2,
+    "context_limit_guard": 1,
+    "eos": 4,
+    "context_limit_input": 1,
+    "history_unavailable": 1
+  },
+  "unadmitted_uids": [
+    "release_context_overflow_t0",
+    "release_context_overflow_t1"
+  ],
+  "exact_answer_history": true,
+  "other_task_frozen_inputs_preserved": true,
+  "note": "Input/accounting validation, not a performance comparison"
+}

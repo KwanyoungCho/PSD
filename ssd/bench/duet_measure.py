@@ -1,7 +1,8 @@
-"""Portable ver1.9 B1 measurement; performance is the default, timeline explicit.
+"""Portable ver1.10 B1 measurement; performance default, generated MT history.
 
 Uses native phase fanout configuration. No sampler, verifier or per-step
-algorithm replacement. See MLSYS_VER19_HANDOVER.md for the fixed protocol.
+algorithm replacement. See bench/README.md for the base-history input protocol;
+independent-raw retains the historical MLSYS_VER19_HANDOVER.md workload.
 """
 import argparse
 import copy
@@ -85,7 +86,12 @@ def parse_arguments():
     p.add_argument('--batch', type=int, default=1)
     p.add_argument('--temperature', type=float, default=.7)
     p.add_argument('--prompts', type=Path, required=True)
-    p.add_argument('--limit', type=int, default=0)
+    p.add_argument('--input-protocol', choices=['base-history', 'independent-raw'], default='base-history',
+        help='Base-model answer history by default; independent-raw reproduces historical inputs')
+    p.add_argument('--task', choices=['all','mt_bench','translation','summarization','qa','math_reasoning','rag'], default='all',
+        help='Select a complete task for partial remeasurement (base-history only)')
+    p.add_argument('--limit', type=int, default=0,
+        help='base-history: first N complete questions; independent-raw: historical spaced turn selection')
     p.add_argument('--output-tokens', type=int, default=1024)
     p.add_argument('--input-cap', type=int, default=0)
     p.add_argument('--seed', type=int, default=42)
@@ -117,10 +123,12 @@ def main():
         raise ValueError('This preset supports B1, target TP1 and one pass per seed')
     if args.input_cap != 0 or args.warm_prompts < 0:
         raise ValueError('Raw inputs must be preserved; warmup must be nonnegative')
+    if args.input_protocol == 'independent-raw' and args.task != 'all':
+        raise ValueError('Task selection requires base-history; legacy input selection is unchanged')
     protocol=dict(warmup_scope='within_dataset', requested_seeds=[args.seed],
         warmup_requests=args.warm_prompts, measurement_mode=args.measurement_mode)
     os.environ['SSD_PROFILE_DIR'] = str(args.output.resolve().parent)
-    os.environ.setdefault('SSD_SHM_NAME', 'duet19_'+str(os.getpid()))
+    os.environ.setdefault('SSD_SHM_NAME', 'duet110_'+str(os.getpid()))
     os.environ.setdefault('SSD_DIST_PORT', '49618')
     args.output.parent.mkdir(parents=True,exist_ok=True)
     if min(args.k1,args.k2,args.roots,args.siblings,args.passes)<1: raise ValueError('Positive rounds, roots, siblings and passes required')
@@ -130,9 +138,22 @@ def main():
     from ssd import LLM, SamplingParams
     from ssd.engine.llm_engine import METRICS
     from transformers import AutoTokenizer
-    token = AutoTokenizer.from_pretrained(args.target)
+    token = AutoTokenizer.from_pretrained(args.target, use_fast=True)
     from mlsys_equal_dataset import load as load_inputs, attach as attach_input_identity
-    prompts, indexes, input_metadata = load_inputs(args.prompts, token, args.limit, args.input_cap)
+    history = None
+    if args.input_protocol == 'base-history':
+        from specbench_history import BaseTokenHistory, load_turns, manifest
+        rows = load_turns(args.prompts, args.limit, args.task)
+        history = BaseTokenHistory(rows, token, context=2048, output_cap=args.output_tokens)
+        prompts = [None] * len(rows)  # Filled just before each turn, after its own previous answer.
+        indexes = list(range(len(rows)))
+        input_metadata = [{k:r[k] for k in ('uid','question_id','question_index','group','turn')} for r in rows]
+        protocol.update(input_protocol=manifest(args.target, token, args.prompts, rows), selected_task=args.task,
+            seed_policy='seed at engine startup and at warm/measured phase boundaries; history survives the boundary',
+            cold_prefix=os.getenv('PAPER_COLD_PREFIX', '1') == '1')
+        protocol['input_protocol']['requested_output_cap'] = args.output_tokens
+    else:
+        prompts, indexes, input_metadata = load_inputs(args.prompts, token, args.limit, args.input_cap)
     if len(prompts) <= args.warm_prompts or not input_metadata:
         raise ValueError('Use structured raw-turn records, with measured turns after warmup')
     tree, spec = args.mode == 'tree', True
@@ -160,15 +181,19 @@ def main():
         adapter_hashes={f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in [Path(__file__),Path(__file__).with_name('mlsys_measurement.py')]},
         kwargs=kwargs, experiment_protocol=protocol, prompt_ids=prompts, question_indexes=indexes,
         env={k:v for k,v in os.environ.items() if k.startswith(('SSD_','PAPER_','DUET_REVIEW_')) or k=='CUDA_VISIBLE_DEVICES'},
-        groups=[], warm_groups=[], steps=[], prefill=[], outputs=[],
+        groups=[], warm_groups=[], steps=[], prefill=[], outputs=[], turn_ledger=[],
         request_records=[] if report_requests else None,
         input_metadata=input_metadata,
-        request_scope=('paper flattened raw turns; no generated conversation history'
+        request_scope=('base-model raw inputs with actual generated-token history; same-seed same-method answers'
+                       if history else 'paper flattened raw turns; no generated conversation history'
                        if input_metadata else 'first turn of each question; repeated passes are not independent questions'))
     reporting_source = Path(__file__).with_name('mlsys_request_reporting.py')
     report['adapter_hashes'][reporting_source.name] = hashlib.sha256(reporting_source.read_bytes()).hexdigest()
     data_source=Path(__file__).with_name('mlsys_equal_dataset.py')
     report['adapter_hashes'][data_source.name]=hashlib.sha256(data_source.read_bytes()).hexdigest()
+    if history:
+        data_source=Path(__file__).with_name('specbench_history.py')
+        report['adapter_hashes'][data_source.name]=hashlib.sha256(data_source.read_bytes()).hexdigest()
     def save():
         temp=args.output.with_suffix('.tmp');temp.write_text(json.dumps(report));temp.replace(args.output)
     args.output.parent.mkdir(parents=True,exist_ok=True);save()
@@ -238,6 +263,16 @@ def main():
                 group_steps.clear();group_prefill.clear()
                 group_sequences.clear();terminal_reasons.clear()
                 if args.batch != 1:raise ValueError('This frozen protocol adapter supports B1 only')
+                prepared = history.prepare(start) if history else None
+                if prepared is not None:
+                    data[start] = prompts[start] = prepared['input_ids']
+                    if prepared['admission_reason']:
+                        row=history.complete([])
+                        row.update(phase=phase, performance_excluded=True)
+                        report['turn_ledger'].append(row)
+                        save()
+                        print('PAPER_CONTEXT_SKIP',row['uid'],row['finish_reason'],row['input_tokens'],flush=True)
+                        continue
                 effective_output_cap=min(args.output_tokens,llm.config.max_model_len-len(data[start]))
                 if effective_output_cap < 1:raise ValueError('Input leaves no output capacity')
                 params=SamplingParams(temperature=args.temperature,draft_temperature=args.temperature,max_new_tokens=effective_output_cap,ignore_eos=False)
@@ -250,6 +285,14 @@ def main():
                 records=dict(phase=phase,index=start,n=len(outputs),wall=wall,steps=copy.deepcopy(group_steps),
                     prefill=copy.deepcopy(group_prefill),outputs=[o['token_ids'] for o in outputs])
                 records['native_performance']=copy.deepcopy(metrics.get('performance'))
+                if history:
+                    if len(outputs) != 1:
+                        raise AssertionError('One prepared turn must produce exactly one output record')
+                    row=history.complete(records['outputs'][0],
+                        'context_limit_guard' if terminal_reasons else None)
+                    row.update(phase=phase, performance_excluded=phase=='warm')
+                    report['turn_ledger'].append(row)
+                    records['conversation'] = row
                 records['request_records'] = build_requests(group_sequences, group_steps,
                     terminal_reasons, indexes[start:start+len(outputs)],
                     records['outputs'], phase, llm.config.max_model_len, spec) if report_requests else None
@@ -261,12 +304,26 @@ def main():
                         request['target_temperature']=params.temperature
                         request['draft_temperature']=params.draft_temperature
                         request['ignore_eos']=params.ignore_eos
+                        if history:
+                            request['native_finish_reason']=request['finish_reason']
+                            request['finish_reason']=row['finish_reason']
+                            request['input_ids_sha256']=row['input_ids_sha256']
+                            request['previous_uid']=row['previous_uid']
                 report['warm_groups' if phase=='warm' else 'groups'].append(records)
                 if phase.startswith('measured'):
                     report['steps'].extend(records['steps']);report['prefill'].extend(records['prefill']);report['outputs'].extend(records['outputs'])
                     if report_requests:
                         report['request_records'].extend(records['request_records'])
                 if start%16==0:save();print('PAPER_GROUP',arm,phase,start,flush=True)
+        if history:
+            if history.cursor != len(rows):raise AssertionError('Incomplete conversation population')
+            from collections import Counter
+            report['conversation_population']=dict(
+                total_turns=len(report['turn_ledger']),
+                warmup_turns=sum(r['phase']=='warm' for r in report['turn_ledger']),
+                finish_reasons=dict(Counter(r['finish_reason'] for r in report['turn_ledger'])),
+                unadmitted_uids=[r['uid'] for r in report['turn_ledger'] if r['admission_reason']],
+                valid_timing_note='Unadmitted turns have no timing/TPS; listed explicitly, never silently dropped or assigned zero TPS')
         included=[s for s in report['steps'] if s['batch']==args.batch and not s['cap'] and not s['clipped']]
         events=[e for s in included for e in s['events']]
         def mean(v):

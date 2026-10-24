@@ -1,0 +1,187 @@
+{
+  "release": "MLSys-ver1.10",
+  "validated_at": "2026-10-24T17:05:56.987331+09:00",
+  "base_commit": "a12ebc25dab2cddf1e3a5bd65938c74396c858f5",
+  "cpu_regressions": {
+    "tests": 46,
+    "passed": 46,
+    "skipped": 0,
+    "log": "CPU_TESTS.log"
+  },
+  "unchanged_runtime_files": 101,
+  "runtime_identical_to_ver19": true,
+  "data": {
+    "state": "passed",
+    "full_questions": 480,
+    "full_turns": 560,
+    "mt_questions": 80,
+    "mt_turns": 160,
+    "non_mt_frozen_inputs_identical": 400,
+    "groups": {
+      "mt_bench": 160,
+      "translation": 80,
+      "summarization": 80,
+      "qa": 80,
+      "math_reasoning": 80,
+      "rag": 80
+    },
+    "gpu_work": false
+  },
+  "gpu": {
+    "host": "orion (local server19)",
+    "gpus": [
+      6,
+      7
+    ],
+    "topology": "PIX",
+    "dtype": "float16",
+    "batch": 1,
+    "seed": 42,
+    "target": "facebook/layerskip-llama2-7B",
+    "draft": "JackFram/llama-68m",
+    "context": 2048,
+    "output_cap": 1024,
+    "expansion": "frontier",
+    "mode": "performance",
+    "process_exit_code": 0,
+    "checks": {
+      "state": "passed",
+      "protocol": "specbench_base_token_history_v1",
+      "turns": 9,
+      "first_turns": 5,
+      "followup_turns": 4,
+      "generated_turns": 7,
+      "warmup_generated": 3,
+      "measured_generated": 4,
+      "finish_reasons": {
+        "output_limit": 2,
+        "context_limit_guard": 1,
+        "eos": 4,
+        "context_limit_input": 1,
+        "history_unavailable": 1
+      },
+      "unadmitted_uids": [
+        "release_context_overflow_t0",
+        "release_context_overflow_t1"
+      ],
+      "exact_answer_history": true,
+      "other_task_frozen_inputs_preserved": true,
+      "note": "Input/accounting validation, not a performance comparison"
+    },
+    "examples": [
+      {
+        "uid": "81_t0",
+        "phase": "warm",
+        "input_tokens": 28,
+        "completion_tokens": 1024,
+        "effective_output_cap": 1024,
+        "finish_reason": "output_limit",
+        "previous_uid": null
+      },
+      {
+        "uid": "81_t1",
+        "phase": "warm",
+        "input_tokens": 1069,
+        "completion_tokens": 540,
+        "effective_output_cap": 979,
+        "finish_reason": "context_limit_guard",
+        "previous_uid": "81_t0"
+      },
+      {
+        "uid": "82_t0",
+        "phase": "warm",
+        "input_tokens": 55,
+        "completion_tokens": 1,
+        "effective_output_cap": 1024,
+        "finish_reason": "eos",
+        "previous_uid": null
+      },
+      {
+        "uid": "82_t1",
+        "phase": "measured_0",
+        "input_tokens": 69,
+        "completion_tokens": 1024,
+        "effective_output_cap": 1024,
+        "finish_reason": "output_limit",
+        "previous_uid": "82_t0"
+      },
+      {
+        "uid": "83_t0",
+        "phase": "measured_0",
+        "input_tokens": 60,
+        "completion_tokens": 554,
+        "effective_output_cap": 1024,
+        "finish_reason": "eos",
+        "previous_uid": null
+      },
+      {
+        "uid": "83_t1",
+        "phase": "measured_0",
+        "input_tokens": 631,
+        "completion_tokens": 18,
+        "effective_output_cap": 1024,
+        "finish_reason": "eos",
+        "previous_uid": "83_t0"
+      },
+      {
+        "uid": "release_context_overflow_t0",
+        "phase": "measured_0",
+        "input_tokens": 3002,
+        "completion_tokens": 0,
+        "effective_output_cap": 0,
+        "finish_reason": "context_limit_input",
+        "previous_uid": null
+      },
+      {
+        "uid": "release_context_overflow_t1",
+        "phase": "measured_0",
+        "input_tokens": 3012,
+        "completion_tokens": 0,
+        "effective_output_cap": 0,
+        "finish_reason": "history_unavailable",
+        "previous_uid": "release_context_overflow_t0"
+      },
+      {
+        "uid": "161_t0",
+        "phase": "measured_0",
+        "input_tokens": 29,
+        "completion_tokens": 269,
+        "effective_output_cap": 1024,
+        "finish_reason": "eos",
+        "previous_uid": null
+      }
+    ],
+    "runtime_hashes_match_release": true,
+    "adapter_hashes_match_release": true,
+    "input_file": "GPU_SMOKE_INPUTS.json",
+    "input_sha256": "1d648562311744b46a452333eeb59ec226bb847e4081112f0f8cac6f2c55e09c",
+    "raw_run_sha256": "17e5568181af0c8ca392f2d4acbc023b1e55d830a5ce7f183d47c90d62cf8667",
+    "raw_run_local_path": "/home/chokwans99/PSD-mtbench-history-20261024/results/mlsys_ver110/gpu_smoke/run.json",
+    "note": "Short release verification: 3 real MT conversations, 2 deliberately overlong history cases, 1 real translation. Not full MT or 3-seed performance.",
+    "shutdown": "Exit 0; NCCL process-group/semaphore cleanup warnings logged, no GPU processes or allocation remained"
+  },
+  "audit_negative_checks": [
+    {
+      "case": "standalone_followup",
+      "result": "rejected",
+      "reason": "Reported model input differs from history"
+    },
+    {
+      "case": "wrong_warmup_phase",
+      "result": "rejected",
+      "reason": "Wrong warmup population"
+    },
+    {
+      "case": "wrong_engine_input_length",
+      "result": "rejected",
+      "reason": "Engine input length mismatch"
+    },
+    {
+      "case": "missing_context_exclusions",
+      "result": "rejected",
+      "reason": "Missing context exclusions"
+    }
+  ],
+  "full_mt_performance_remeasured": false,
+  "old_results_modified": false
+}

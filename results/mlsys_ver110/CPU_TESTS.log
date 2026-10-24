@@ -1,0 +1,54 @@
+test_answer_tokens_are_preserved_and_only_terminal_eos_is_removed (test_specbench_history.HistoryTests.test_answer_tokens_are_preserved_and_only_terminal_eos_is_removed) ... ok
+test_completion_reasons_and_empty_answer (test_specbench_history.HistoryTests.test_completion_reasons_and_empty_answer) ... ok
+test_context_cap_preserves_all_answer_tokens (test_specbench_history.HistoryTests.test_context_cap_preserves_all_answer_tokens) ... ok
+test_first_three_warmup_turns_still_feed_measured_followup (test_specbench_history.HistoryTests.test_first_three_warmup_turns_still_feed_measured_followup) ... ok
+test_limit_selects_complete_questions (test_specbench_history.HistoryTests.test_limit_selects_complete_questions) ... ok
+test_missing_history_and_repeated_turn_rejected (test_specbench_history.HistoryTests.test_missing_history_and_repeated_turn_rejected) ... ok
+test_new_question_resets_history (test_specbench_history.HistoryTests.test_new_question_resets_history) ... ok
+test_nonadmitted_first_turn_blocks_later_turn_then_resets (test_specbench_history.HistoryTests.test_nonadmitted_first_turn_blocks_later_turn_then_resets) ... ok
+test_overflow_is_explicit_and_does_not_truncate (test_specbench_history.HistoryTests.test_overflow_is_explicit_and_does_not_truncate) ... ok
+test_preserve_frozen_raw_input_ids (test_specbench_history.HistoryTests.test_preserve_frozen_raw_input_ids) ... ok
+test_source_question_categories_are_grouped_as_mt (test_specbench_history.HistoryTests.test_source_question_categories_are_grouped_as_mt) ... ok
+test_task_filter_preserves_whole_dialogue_and_original_identity (test_specbench_history.HistoryTests.test_task_filter_preserves_whole_dialogue_and_original_identity) ... ok
+test_template_is_not_silently_overridden (test_specbench_history.HistoryTests.test_template_is_not_silently_overridden) ... ok
+test_unexplained_stop_and_tokens_after_eos_rejected (test_specbench_history.HistoryTests.test_unexplained_stop_and_tokens_after_eos_rejected) ... ok
+test_legacy_first_turn_unchanged (test_equal_dataset.Inputs.test_legacy_first_turn_unchanged) ... ok
+test_no_cap_and_legacy_cap (test_equal_dataset.Inputs.test_no_cap_and_legacy_cap) ... ok
+test_preserve_paper_ids_when_default_tokenizer_differs (test_equal_dataset.Inputs.test_preserve_paper_ids_when_default_tokenizer_differs) ... ok
+test_reject_duplicate_or_incomplete_identity (test_equal_dataset.Inputs.test_reject_duplicate_or_incomplete_identity) ... ok
+test_async_record_schema_does_not_reinterpret_ar_or_sync_sd (test_request_reporting.RequestReporting.test_async_record_schema_does_not_reinterpret_ar_or_sync_sd) ... ok
+test_batch_mapping_discloses_guard_without_fake_step (test_request_reporting.RequestReporting.test_batch_mapping_discloses_guard_without_fake_step) ... ok
+test_common_requires_all_turns_decoded (test_request_reporting.RequestReporting.test_common_requires_all_turns_decoded) ... ok
+test_duplicate_and_empty (test_request_reporting.RequestReporting.test_duplicate_and_empty) ... ok
+test_empty_comparison_is_undefined (test_request_reporting.RequestReporting.test_empty_comparison_is_undefined) ... ok
+test_explicit_guard_is_undefined_not_zero (test_request_reporting.RequestReporting.test_explicit_guard_is_undefined_not_zero) ... ok
+test_positive_accounting_and_mismatch (test_request_reporting.RequestReporting.test_positive_accounting_and_mismatch) ... ok
+test_question_mean_not_independent_mt_turns (test_request_reporting.RequestReporting.test_question_mean_not_independent_mt_turns) ... ok
+test_reject_invalid_time_positive_and_guard (test_request_reporting.RequestReporting.test_reject_invalid_time_positive_and_guard) ... ok
+test_reject_other_zero_or_contradictory_guard (test_request_reporting.RequestReporting.test_reject_other_zero_or_contradictory_guard) ... ok
+test_safe_tps_keeps_empty_distinct_from_bad_steps (test_request_reporting.RequestReporting.test_safe_tps_keeps_empty_distinct_from_bad_steps) ... ok
+test_default_still_clamps_to_native_draft_window (test_context_length_contract.TestDraftRopeExtension.test_default_still_clamps_to_native_draft_window) ... ok
+test_draft_runner_preserves_extended_window_after_replace (test_context_length_contract.TestDraftRopeExtension.test_draft_runner_preserves_extended_window_after_replace) ... [Config] Extending draft RoPE cache: 2048 -> 4096 positions (draft quality beyond its trained window is not guaranteed)
+ok
+test_opt_in_extends_rope_but_keeps_target_as_hard_cap (test_context_length_contract.TestDraftRopeExtension.test_opt_in_extends_rope_but_keeps_target_as_hard_cap) ... [Config] Extending draft RoPE cache: 2048 -> 4096 positions (draft quality beyond its trained window is not guaranteed)
+ok
+test_permanent_draft_lookahead_block_is_identified (test_context_length_contract.TestSchedulerLengthBoundary.test_permanent_draft_lookahead_block_is_identified) ... ok
+test_prompt_without_generation_room_is_rejected_at_admission (test_context_length_contract.TestSchedulerLengthBoundary.test_prompt_without_generation_room_is_rejected_at_admission) ... ok
+test_schedule_finishes_cleanly_instead_of_reprefill_livelock (test_context_length_contract.TestSchedulerLengthBoundary.test_schedule_finishes_cleanly_instead_of_reprefill_livelock) ... ok
+test_benchmark_parser_defaults_to_performance_and_current_settings (test_ver18_measurement.MeasurementMode.test_benchmark_parser_defaults_to_performance_and_current_settings) ... ok
+test_named_preset_matches_tested_parameters (test_ver18_measurement.MeasurementMode.test_named_preset_matches_tested_parameters) ... `torch_dtype` is deprecated! Use `dtype` instead!
+ok
+test_performance_clears_stale_profile_and_review_settings (test_ver18_measurement.MeasurementMode.test_performance_clears_stale_profile_and_review_settings) ... ok
+test_preparation_defaults_and_explicit_overrides (test_ver18_measurement.MeasurementMode.test_preparation_defaults_and_explicit_overrides) ... ok
+test_timeline_is_explicit (test_ver18_measurement.MeasurementMode.test_timeline_is_explicit) ... ok
+test_batched_chain_override_resets_phase_specific_c (test_ver18_measurement.PhaseFanout.test_batched_chain_override_resets_phase_specific_c) ... ok
+test_cli_exposes_both_overrides_without_enabling_duet (test_ver18_measurement.PhaseFanout.test_cli_exposes_both_overrides_without_enabling_duet) ... ok
+test_explicit_draft_memory_fraction_survives_reconstruction (test_ver18_measurement.PhaseFanout.test_explicit_draft_memory_fraction_survives_reconstruction) ... ok
+test_invalid_fanout_rejected_before_loading_models (test_ver18_measurement.PhaseFanout.test_invalid_fanout_rejected_before_loading_models) ... ok
+test_legacy_common_fallback_and_independent_overrides (test_ver18_measurement.PhaseFanout.test_legacy_common_fallback_and_independent_overrides) ... ok
+test_p2_backbone_capacity_uses_p2_fanout (test_ver18_measurement.PhaseFanout.test_p2_backbone_capacity_uses_p2_fanout) ... ok
+
+----------------------------------------------------------------------
+Ran 46 tests in 0.102s
+
+OK

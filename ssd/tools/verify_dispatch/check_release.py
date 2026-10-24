@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def main():
-    manifest = json.loads((ROOT / 'results/mlsys_ver19/RUNTIME_MANIFEST.json').read_text())
+    manifest = json.loads((ROOT / 'results/mlsys_ver110/RUNTIME_MANIFEST.json').read_text())
     actual = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / 'ssd/ssd').rglob('*.py'))}
     if actual != manifest['sha256']:
@@ -19,6 +19,9 @@ def main():
         path = ROOT / name
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
             raise SystemExit('Measurement/tool integrity FAILED: ' + name)
+    source = manifest.get('input')
+    if source and hashlib.sha256((ROOT / source['path']).read_bytes()).hexdigest() != source['sha256']:
+        raise SystemExit('Input integrity FAILED: ' + source['path'])
     print(json.dumps(dict(state='passed', release=manifest['release'],
                           runtime_files=len(actual), gpu_work=False)))
 
